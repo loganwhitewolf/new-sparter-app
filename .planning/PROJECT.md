@@ -2,7 +2,7 @@
 
 ## What This Is
 
-App di personal finance per il mercato italiano, ricostruita da zero in Next.js 15 App Router partendo da una versione Express esistente. Permette di importare estratti conto da banche e piattaforme fintech italiane, categorizzare automaticamente le spese e visualizzare KPI e dashboard di riepilogo.
+App di personal finance per il mercato italiano, ricostruita da zero in Next.js 16 App Router partendo da una versione Express esistente. Permette di importare estratti conto da banche e piattaforme fintech italiane, categorizzare automaticamente le spese e visualizzare KPI e dashboard di riepilogo.
 
 ## Core Value
 
@@ -17,7 +17,7 @@ L'utente vede in un colpo d'occhio dove vanno i suoi soldi — importa il CSV de
 ### Active
 
 - [ ] Design system con token colore/typo e componenti base (button, input, card, layout shell)
-- [ ] Auth con email/password, sessione NextAuth JWT, route protection, bypass staging
+- [ ] Auth con email/password, sessione Better Auth, route protection, bypass staging
 - [ ] CRUD manuale expense: crea, modifica, categorizza, lista con filtri
 - [ ] Dashboard KPI: overview mensile, breakdown categorie, trend mensile
 - [ ] Import file bancari su R2: upload, analisi colonne, matching piattaforma, import transazioni
@@ -36,7 +36,7 @@ L'utente vede in un colpo d'occhio dove vanno i suoi soldi — importa il CSV de
 
 ## Context
 
-Migrazione da architettura Express + Sequelize a Next.js 15 App Router + Drizzle ORM. Il business logic è documentato in `docs/init/BUSINESS_LOGIC_HANDOFF.md`. I dati di seed (26 categorie, ~120 subcategorie, 6 piattaforme, 28 pattern regex) sono pronti in `docs/init/seed.ts` e vanno portati in `drizzle/seed.ts`.
+Migrazione da architettura Express + Sequelize a Next.js 16 App Router + Drizzle ORM. Il business logic è documentato in `docs/init/BUSINESS_LOGIC_HANDOFF.md`. I dati di seed (26 categorie, ~120 subcategorie, 6 piattaforme, 28 pattern regex) sono pronti in `docs/init/seed.ts` e vanno portati in `drizzle/seed.ts`.
 
 **Pipeline di categorizzazione (Tier 1 + 2 in v1):**
 - Tier 1 — Regex patterns (globali + custom utente): match su descrizione normalizzata, method='regex', confidence=1.0
@@ -54,7 +54,7 @@ Migrazione da architettura Express + Sequelize a Next.js 15 App Router + Drizzle
 
 ## Constraints
 
-- **Stack**: Next.js 15 App Router, Drizzle ORM + MySQL, NextAuth v5 (Credentials provider, JWT), Cloudflare R2, Zod, Decimal.js, Tailwind CSS + shadcn/ui — stack fisso, non negoziabile
+- **Stack**: Next.js 16 App Router, Drizzle ORM + MySQL, Better Auth, Cloudflare R2, Zod, Decimal.js, Tailwind CSS + shadcn/ui — stack fisso, non negoziabile
 - **Storage**: Cloudflare R2 per tutti i file CSV/Excel (`uploads/{userId}/{fileId}.{ext}`) — nessun upload locale
 - **Arithmetic**: Decimal.js obbligatorio per tutti i calcoli su amount — mai float JS nativo
 - **Dedup**: transactionHash (MD5 amount+description+timestamp) per transazioni; descriptionHash per expense — logica invariante
@@ -64,9 +64,9 @@ Migrazione da architettura Express + Sequelize a Next.js 15 App Router + Drizzle
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Next.js 15 App Router invece di Express | Rimpiazza architettura Express, unifica frontend e API, deploy semplice su Railway | — Pending |
+| Next.js 16 App Router invece di Express | Rimpiazza architettura Express, unifica frontend e API, deploy semplice su Railway | — Pending |
 | Drizzle ORM invece di Sequelize | Type-safe, migrations con drizzle-kit, query complesse con sql template literals | — Pending |
-| NextAuth v5 Credentials + JWT session | Stateless, compatibile Railway, nessun DB session store | — Pending |
+| Better Auth invece di NextAuth | Soluzione auth moderna, API più pulita, sessioni flessibili | — Pending |
 | Cloudflare R2 invece di storage locale | S3-compatible, scalabile, audit trail dei file importati | — Pending |
 | Expense come aggregazione semantica | N transazioni con stessa descrizione → 1 Expense; evita duplicati di categorizzazione | — Pending |
 | Regex custom utente in Fase 6 | Funzionalità avanzata, dipende dalla pipeline base già funzionante | — Pending |

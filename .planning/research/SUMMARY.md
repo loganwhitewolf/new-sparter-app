@@ -2,7 +2,7 @@
 
 **Researched:** 2026-04-22
 **Domain:** Personal finance web app, Italian market
-**Stack:** Next.js 15 App Router, Drizzle ORM + MySQL, NextAuth v5, Cloudflare R2, Tailwind + shadcn/ui
+**Stack:** Next.js 16 App Router, Drizzle ORM + MySQL, NextAuth v5, Cloudflare R2, Tailwind + shadcn/ui
 
 ---
 
@@ -10,11 +10,7 @@
 
 **React 19 è obbligatorio con Next.js 15.** Non usare React 18 — compila ma crasha in runtime (le API `cookies()`, `headers()`, `params` sono ora async).
 
-**NextAuth v5 è un rewrite completo rispetto a v4:**
-- Config in `auth.ts` alla root, non in `pages/api/auth/[...nextauth].ts`
-- `getServerSession()` rimosso — usare `auth()` dal proprio `auth.ts`
-- Restituire `null` (non `false`) da `authorize` per rifiutare
-- Env var: `AUTH_SECRET` (non `NEXTAUTH_SECRET`)
+**Better Auth sostituisce NextAuth v5** — ricercare l'API corrente al momento di pianificare la Fase 2. Le note su NextAuth v5 presenti in STACK.md e PITFALLS.md sono superate per la parte auth.
 
 **Drizzle restituisce le colonne DECIMAL come stringhe** — passare direttamente a `new Decimal(stringValue)`, mai convertire a `Number` prima. Creare utils `toDecimal()` e `toDbDecimal()` in Fase 3.
 

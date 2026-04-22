@@ -23,9 +23,9 @@ Questo progetto usa GSD (Get Shit Done) per la pianificazione e l'esecuzione.
 ## Stack
 
 ```
-Next.js 15 App Router
+Next.js 16 App Router
 Drizzle ORM + MySQL (drizzle-kit per migrations)
-NextAuth v5 (Credentials provider, JWT session)
+Better Auth (auth provider)
 Cloudflare R2 (storage file CSV/Excel)
 Zod (validazione)
 Decimal.js (aritmetica monetaria — OBBLIGATORIO)
@@ -54,11 +54,10 @@ type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
 ### Upload file
 Presigned PUT URL → browser carica direttamente su R2. MAI proxiare upload attraverso server actions o route handlers.
 
-### NextAuth v5
-- Config in `auth.ts` alla root del progetto
-- Usare `auth()` non `getServerSession()`
-- Campi custom (`subscriptionPlan`, `role`, `userId`) devono essere nei callback `jwt` e `session` + TypeScript augmentation
-- Middleware: JWT check only, nessuna query DB (edge runtime)
+### Better Auth
+- Sostituisce NextAuth v5 — ricercare l'API corrente prima di pianificare la Fase 2
+- Verificare: Drizzle adapter, gestione sessioni, route protection middleware, campi custom utente (`subscriptionPlan`, `role`)
+- Middleware: session check only, nessuna query DB diretta se edge runtime
 
 ### Drizzle migrations
 MAI usare `drizzle-kit push` in produzione. Sempre `generate` + `migrate`.
