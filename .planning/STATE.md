@@ -93,5 +93,5 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-04-24
-Stopped at: Phase 1 planning complete — 5 PLAN.md files verified, ready to execute
-Resume file: .planning/phases/01-design-system/01-01-PLAN.md
+Stopped at: Phase 2 context gathered — pronto a pianificare Phase 2
+Resume file: .planning/phases/02-authentication/02-CONTEXT.md
