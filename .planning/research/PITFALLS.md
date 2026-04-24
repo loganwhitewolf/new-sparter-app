@@ -174,23 +174,25 @@ The v5 trap specific to Credentials provider: the `authorize()` function's retur
 **What goes wrong:**
 Next.js Server Actions have a default body size limit of **1 MB** (configurable, but not designed for large file uploads). The temptation is to use a `<form action={serverAction}>` with `<input type="file">` to upload a CSV directly through a Server Action. This breaks for files over 1 MB and silently fails or throws a cryptic error.
 
-The correct pattern for file uploads in Next.js 15 is a **Route Handler** (`app/api/upload/route.ts`) that accepts `multipart/form-data`, streams the file to R2, and returns a file ID. Server Actions are for form mutations on small data only.
+The correct pattern for Sparter is **presigned upload**: a Route Handler (`POST /api/files/initiate`) creates the `files` row and returns a presigned R2 PUT URL, the browser uploads directly to R2, then `POST /api/files/confirm` records that the upload completed. Server Actions are for small mutations only.
 
-Second trap: Next.js 15 Route Handlers also have a default body size limit (`bodyParser` equivalent). The default is 4 MB. For large Excel files (some Italian bank exports can be 5–20 MB), this requires explicit configuration.
+Second trap: proxying bytes through a Next.js Route Handler reintroduces body size and memory pressure. For large Excel files (some Italian bank exports can be 5–20 MB), browser-direct presigned PUT keeps the app server out of the data path.
 
 **Warning signs:**
 - Upload works in dev with small test files but fails in staging with real bank exports
 - The error message is `PayloadTooLargeError` or the request just hangs
-- Using `const formData = await request.formData()` buffers the entire file in memory before streaming to R2
+- Using `const formData = await request.formData()` buffers the entire file in memory before sending it to R2
 
 **Prevention:**
-1. Use a Route Handler (`POST /api/files/upload`) for all file uploads, not a Server Action.
-2. Set `export const config = { api: { bodyParser: false } }` in the route (or use `request.body` as a stream directly).
-3. For R2 upload, use the `PutObjectCommand` with a `Body: readableStream` — stream directly, do not buffer in memory.
-4. Set `maxDuration = 60` on the upload route (Vercel/Railway timeout). Railway default is 30s, which is tight for large files on slow connections.
-5. Client-side: enforce a file size limit in the `<input>` onChange handler before the upload starts (e.g., 20 MB max) with a user-friendly Italian error message.
+1. Use Route Handlers only to initiate/confirm uploads, not to receive the file bytes.
+2. Generate a presigned R2 PUT URL scoped to `uploads/{userId}/{fileId}.{ext}`, content type, file size policy and short expiry.
+3. Return only `{ fileId, presignedUrl }` to the frontend unless the UI truly needs more; never expose R2 credentials, and keep `storageKey` backend-only.
+4. Let the browser upload directly to R2, then confirm by `fileId`; keep the file status `pending` until import starts.
+5. In `confirm`, verify ownership and use an R2 `HEAD`/metadata check before marking the upload as completed.
+6. On analysis/import, verify `file.userId === session.user.id` before reading from R2.
+7. Client-side: enforce a file size limit in the `<input>` onChange handler before the upload starts (e.g., 20 MB max) with a user-friendly Italian error message.
 
-**Phase guidance:** Phase 5. Design the upload route as a streaming Route Handler from the start — do not prototype with Server Actions and refactor later.
+**Phase guidance:** Phase 5. Design upload as initiate → browser presigned PUT → confirm from the start; do not prototype with Server Actions and refactor later.
 
 ---
 
@@ -410,7 +412,7 @@ The dashboard page has complex requirements: Server Components for initial data 
 **Affects phases:** 5 (Import file bancari)
 
 **What goes wrong:**
-If the upload goes through the Next.js Route Handler (browser → Next.js → R2), CORS on R2 doesn't matter. But if you switch to presigned URL uploads (browser uploads directly to R2 to skip server bandwidth), R2 CORS must be configured explicitly — R2 buckets have no CORS rules by default, and the browser will silently fail the upload with a CORS error, showing no useful message to the user.
+Because Sparter uses presigned URL uploads (browser uploads directly to R2 to skip server bandwidth), R2 CORS must be configured explicitly — R2 buckets have no CORS rules by default, and the browser will silently fail the upload with a CORS error, showing no useful message to the user.
 
 R2 presigned URL gotcha: `PutObjectCommand` presigned URLs are valid for a maximum of 7 days, but R2's implementation has a practical limit of 1 hour for browser uploads (the bucket must be configured to accept the token). If the user opens the upload dialog and leaves it open for more than the presigned URL's expiry, the upload silently fails.
 
@@ -420,13 +422,13 @@ R2 presigned URL gotcha: `PutObjectCommand` presigned URLs are valid for a maxim
 - Upload fails for users who keep the tab open a long time
 
 **Prevention:**
-1. For Phase 5, use server-side upload (browser → Next.js Route Handler → R2). Simpler, no CORS needed.
-2. If switching to presigned URLs later, configure R2 CORS rules via the Cloudflare dashboard:
+1. Configure R2 CORS rules via the Cloudflare dashboard before testing browser upload:
    ```json
    [{"AllowedOrigins": ["https://yourdomain.com"], "AllowedMethods": ["PUT"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 3000}]
    ```
+2. Include the local dev origin and production Railway/app domain explicitly; do not use wildcard origins in production.
 3. Set presigned URL expiry to 15 minutes (not the max) and handle expiry gracefully on the client (retry with a new presigned URL).
-4. Test uploads from the actual production domain, not `localhost` — CORS rules differ.
+4. Test uploads from the actual production domain, not only `localhost` — CORS rules differ.
 
 **Phase guidance:** Phase 5. If using direct browser-to-R2 upload, configure CORS before any integration testing.
 
@@ -569,7 +571,7 @@ Second trap: if the bypass creates a mock session without all custom fields (`su
 | 3 – Expense management | Cache invalidation | H-3 | `revalidateTag` pattern established on first mutation |
 | 4 – Dashboard KPI | Aggregation precision | L-4 | Decimal accumulation for sums; string serialization for API responses |
 | 5 – Import | Transaction atomicity | C-2 | `db.transaction(tx => ...)` wrapping full import; `DbOrTx` type for helpers |
-| 5 – Import | File upload route | H-2 | Route Handler (not Server Action); streaming to R2 |
+| 5 – Import | File upload route | H-2 | Route Handler creates presigned URL; browser uploads directly to R2 |
 | 5 – Import | Encoding detection | M-1 | `chardet` + `iconv-lite`; strip BOM; fixture test files per platform |
 | 5 – Import | Hash stability | M-6 | `computeTransactionHash` unit tested; locked before any data is stored |
 | 5 – Import | R2 access control | L-3 | Bucket private; userId check before presigned URL |

@@ -16,7 +16,7 @@
 ### Authentication
 
 - [ ] **AUTH-01**: L'utente può registrarsi con email e password (hash bcrypt, validazione Zod)
-- [ ] **AUTH-02**: L'utente può effettuare il login e mantenere la sessione attiva attraverso il refresh del browser (JWT, NextAuth v5)
+- [ ] **AUTH-02**: L'utente può effettuare il login e mantenere la sessione attiva attraverso il refresh del browser (JWT, BetterAuth)
 - [ ] **AUTH-03**: Le route protette reindirizzano al login gli utenti non autenticati; l'header `x-staging-key` bypassa l'auth in ambienti non-produzione (middleware Next.js)
 
 ### Expense Management
@@ -33,10 +33,11 @@
 
 ### File Import
 
-- [ ] **IMP-01**: L'utente può caricare un file CSV o Excel — il file viene caricato su Cloudflare R2 via presigned URL, con record in tabella `files` (status: pending → processing → done/error)
-- [ ] **IMP-02**: Il sistema analizza il file e propone la piattaforma bancaria più compatibile in base al mapping delle colonne; l'utente può confermare o scegliere manualmente
-- [ ] **IMP-03**: Prima di confermare l'import, l'utente vede un'anteprima con: numero di righe rilevate, numero di duplicati (già importati), sample di righe parsed
-- [ ] **IMP-04**: Il sistema importa le transazioni con deduplicazione (transactionHash), aggrega in expense per descrizione normalizzata (descriptionHash), ed esegue la pipeline di categorizzazione (Tier 1 regex + Tier 2 history, gated per subscription)
+- [ ] **IMP-01**: L'utente può caricare un file CSV o Excel; il file viene caricato su Cloudflare R2 via presigned URL, con record in tabella `files` e stato `pending → processing → done/error`.
+- [ ] **IMP-02**: Il sistema gestisce le piattaforme bancarie come entità separate dai formati di import. Ogni piattaforma può avere una o più versioni di tracciato file, ciascuna con mapping colonne, regole di detection, parser e stato di validità.
+- [ ] **IMP-03**: Durante l'analisi del file, il sistema identifica la piattaforma bancaria e la versione del tracciato più compatibile sulla base di colonne, header, formato date, separatori, valuta e altri segnali strutturali. L'utente può confermare la proposta o scegliere manualmente piattaforma e versione.
+- [ ] **IMP-04**: Prima di confermare l'import, l'utente vede un'anteprima con numero di righe rilevate, numero di duplicati già importati, piattaforma rilevata, versione tracciato rilevata, livello di confidenza e sample di righe parsed.
+- [ ] **IMP-05**: Il sistema importa le transazioni usando il mapping della specifica versione del tracciato, applica deduplicazione tramite `transactionHash`, aggrega in expense per descrizione normalizzata tramite `descriptionHash`, ed esegue la pipeline di categorizzazione Tier 1 regex + Tier 2 history, gated per subscription.
 
 ### Import Avanzato & Categorizzazione
 
@@ -112,6 +113,7 @@
 | IMP-02 | Phase 5 | Pending |
 | IMP-03 | Phase 5 | Pending |
 | IMP-04 | Phase 5 | Pending |
+| IMP-05 | Phase 5 | Pending |
 | ADV-01 | Phase 6 | Pending |
 | ADV-02 | Phase 6 | Pending |
 | ADV-03 | Phase 6 | Pending |
@@ -119,10 +121,10 @@
 | PROF-01 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 21 total
-- Mapped to phases: 21
+- v1 requirements: 22 total
+- Mapped to phases: 22
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-22*
-*Last updated: 2026-04-22 after initial definition*
+*Last updated: 2026-04-24 after File Import requirements update*

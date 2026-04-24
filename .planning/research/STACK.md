@@ -326,6 +326,8 @@ Browser → POST /api/files/confirm { fileId }
          ← { file record }
 ```
 
+The browser never receives R2 credentials and should not need the backend `storageKey`; the backend stores `storageKey` on the `files` record and uses it later for `confirm`, `analyzeFile()` and `importFile()`.
+
 **Generating the presigned URL:**
 
 ```ts

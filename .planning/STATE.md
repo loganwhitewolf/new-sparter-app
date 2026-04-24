@@ -75,5 +75,5 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-04-24
-Stopped at: Phase 1 context gathered — pronto a pianificare Phase 1
-Resume file: .planning/phases/01-design-system/01-CONTEXT.md
+Stopped at: Phase 1 UI-SPEC approved — pronto a pianificare Phase 1
+Resume file: .planning/phases/01-design-system/01-UI-SPEC.md

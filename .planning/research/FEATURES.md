@@ -13,10 +13,10 @@ These are features users expect from any personal finance app. They are already 
 
 ### 1.1 CSV/Excel Import from Italian Banks
 **Coverage:** Confirmed in scope.
-Six platforms seeded: General (generic), Satispay, Intesa SP (conto corrente), Intesa SP Carta Credito, Revolut, Fineco.
+Initial bank/payment platforms are seeded with versioned import formats: General (generic), Satispay, Intesa Sanpaolo, Revolut, Fineco, and other existing adapters from the handoff. Platform identity must stay separate from file format versions so a bank can evolve its export layout without becoming a new platform.
 
 **Coverage assessment — HIGH confidence:**
-- Intesa Sanpaolo is the largest Italian bank by retail account volume. Having both conto corrente and carta di credito as separate formats is correct: they export different column layouts and the `multiplyBy: -1` on the credit card adapter is essential (credit card CSVs from Intesa SP list charges as positive values, unlike current account statements).
+- Intesa Sanpaolo is the largest Italian bank by retail account volume. Having both conto corrente and carta di credito as separate format versions under the platform is correct: they export different column layouts and the `multiplyBy: -1` on the credit card format is essential (credit card CSVs from Intesa SP list charges as positive values, unlike current account statements).
 - Fineco is a top-3 digital bank in Italy with high adoption among tech-savvy users. The `separate` amount type (Entrate/Uscite columns) is well-known among Italian developers who work with Fineco exports.
 - Satispay is a dominant P2P/payment wallet in Italy, especially for under-40 users. Correct inclusion.
 - Revolut is used heavily by Italian digital nomads and remote workers.
@@ -92,15 +92,17 @@ These are items that Italian users plausibly expect or that the import/categoriz
 ### Gap 2.2 — Import UX: Preview Step Before Commit (HIGH confidence)
 **Severity:** HIGH — this is the difference between a polished import and an anxiety-inducing one.
 
-The current import flow is:
+The target v1 import flow is:
 1. Upload → R2
-2. Analyze columns
-3. User confirms platform
-4. `importFile()` — creates transactions, expenses, runs categorization
+2. Analyze structural signals (columns, headers, date format, delimiter, currency, amount shape)
+3. User confirms detected platform + format version or chooses manually
+4. Preview shows row count, duplicate count, confidence and sample parsed rows
+5. `importFile()` — creates transactions, expenses, runs categorization
 
-**What's missing:** A preview/dry-run step between step 3 and step 4 that shows the user:
+**What's needed:** A preview/dry-run step before the final import commit that shows the user:
 - How many rows will be imported
 - How many rows will be skipped (duplicates)
+- Which platform and format version were detected, with confidence
 - A sample of the first N parsed rows with their detected date, description, and amount
 - A warning if the date format was guessed (e.g., "We detected dates in DD/MM/YYYY format — does this look right?")
 
@@ -115,7 +117,7 @@ When a row fails to parse (malformed date, non-numeric amount, empty description
 - "X rows were imported successfully, Y rows had errors"
 - Optionally: show the problematic rows with the specific error
 
-This is especially important for the `General` platform where column mapping is user-defined and prone to misconfiguration.
+This is especially important for the `General` import format where column mapping is user-defined and prone to misconfiguration.
 
 **Confidence:** MEDIUM — behavior of current implementation on parse errors not documented in HANDOFF.
 
@@ -166,9 +168,9 @@ The `ignore` category exists for this purpose, with subcategories `trasferimento
 ### Gap 2.8 — "General" Platform Column Mapping UI (MEDIUM confidence)
 **Severity:** HIGH for users of unsupported banks.
 
-The `General` platform uses standard `description`, `amount`, `timestamp` column names. If a user uploads a UniCredit CSV (which has `Causale`, `Importo EUR`, `Data`) and selects "General", the import will produce empty descriptions and zero amounts because the column names don't match.
+The `General` import format uses standard `description`, `amount`, `timestamp` column names. If a user uploads a UniCredit CSV (which has `Causale`, `Importo EUR`, `Data`) and selects "General", the import will produce empty descriptions and zero amounts because the column names don't match.
 
-**What's needed:** When "General" is selected (or when `findBestMatchingPlatform()` returns low confidence), show a column-mapping UI where the user can drag/select which CSV column maps to description, amount, date.
+**What's needed:** When "General" is selected (or when import format detection returns low confidence), show a column-mapping UI where the user can drag/select which CSV column maps to description, amount, date.
 
 This is a high-effort feature but may be critical for v1 usability given that only 5 specific Italian banks are supported.
 
@@ -259,7 +261,7 @@ Auth
                           └─► AI Categorization (v2)
 
 Import
-  └─► Platform matching
+  └─► Platform + format-version matching
         └─► Column mapping UI (Gap 2.8 — needed for General platform usability)
 
 Expense Aggregation
@@ -283,7 +285,7 @@ Expense Aggregation
 
 ### Should Add to v1 (High Impact, Low Effort)
 1. **Food delivery regex patterns** (Deliveroo, JustEat, Glovo, Wolt) — 30 min of dev, high categorization hit rate for target demographic
-2. **Import preview step** — show row count, duplicate count, sample rows before committing import
+2. **Import preview step** — show row count, duplicate count, detected platform/version, confidence and sample rows before committing import
 3. **Row-level import error reporting** — "3 rows skipped due to parse errors" with row details
 4. **Persistent uncategorized badge** in nav/header — always visible, drives categorization completion
 

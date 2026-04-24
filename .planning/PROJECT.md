@@ -20,8 +20,8 @@ L'utente vede in un colpo d'occhio dove vanno i suoi soldi — importa il CSV de
 - [ ] Auth con email/password, sessione Better Auth, route protection, bypass staging
 - [ ] CRUD manuale expense: crea, modifica, categorizza, lista con filtri
 - [ ] Dashboard KPI: overview mensile, breakdown categorie, trend mensile
-- [ ] Import file bancari su R2: upload, analisi colonne, matching piattaforma, import transazioni
-- [ ] Import avanzato: regex pattern sistema + regex custom utente, history-based categorization
+- [ ] Import file bancari su R2: upload via presigned URL, record `files`, detection piattaforma + versione tracciato, preview, import transazioni con dedup e categorizzazione gated
+- [ ] Import avanzato: regex pattern sistema + regex custom utente, rafforzamento history-based categorization e subscription gates
 - [ ] User profile: schermata impostazioni account
 
 ### Out of Scope
@@ -36,7 +36,12 @@ L'utente vede in un colpo d'occhio dove vanno i suoi soldi — importa il CSV de
 
 ## Context
 
-Migrazione da architettura Express + Sequelize a Next.js 16 App Router + Drizzle ORM. Il business logic è documentato in `docs/init/BUSINESS_LOGIC_HANDOFF.md`. I dati di seed (26 categorie, ~120 subcategorie, 6 piattaforme, 28 pattern regex) sono pronti in `docs/init/seed.ts` e vanno portati in `drizzle/seed.ts`.
+Migrazione da architettura Express + Sequelize a Next.js 16 App Router + Drizzle ORM. Il business logic è documentato in `docs/init/BUSINESS_LOGIC_HANDOFF.md`. I dati di seed (26 categorie, ~120 subcategorie, piattaforme bancarie/pagamento, versioni iniziali di tracciato, 28 pattern regex) sono pronti in `docs/init/seed.ts` e vanno portati in `drizzle/seed.ts`.
+
+**File import model:**
+- Le piattaforme bancarie sono entità distinte dai formati/versioni di import.
+- Ogni piattaforma può esporre una o più versioni di tracciato con mapping colonne, regole di detection, parser e stato di validità.
+- L'analisi propone piattaforma + versione tracciato con confidence; l'utente può confermare o scegliere manualmente prima dell'import.
 
 **Pipeline di categorizzazione (Tier 1 + 2 in v1):**
 - Tier 1 — Regex patterns (globali + custom utente): match su descrizione normalizzata, method='regex', confidence=1.0
@@ -68,6 +73,7 @@ Migrazione da architettura Express + Sequelize a Next.js 16 App Router + Drizzle
 | Drizzle ORM invece di Sequelize | Type-safe, migrations con drizzle-kit, query complesse con sql template literals | — Pending |
 | Better Auth invece di NextAuth | Soluzione auth moderna, API più pulita, sessioni flessibili | — Pending |
 | Cloudflare R2 invece di storage locale | S3-compatible, scalabile, audit trail dei file importati | — Pending |
+| Piattaforme separate dalle versioni tracciato | Le banche cambiano export nel tempo; detection e parser devono evolvere senza duplicare la piattaforma bancaria | — Pending |
 | Expense come aggregazione semantica | N transazioni con stessa descrizione → 1 Expense; evita duplicati di categorizzazione | — Pending |
 | Regex custom utente in Fase 6 | Funzionalità avanzata, dipende dalla pipeline base già funzionante | — Pending |
 | PendingAiExpense creata in v1 ma vuota | Schema pronto per v2, nessun impatto su v1 | — Pending |
@@ -90,4 +96,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-22 after initialization*
+*Last updated: 2026-04-24 after File Import requirements update*
