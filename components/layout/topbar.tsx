@@ -1,0 +1,52 @@
+'use client'
+
+import { LogOut, User } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
+export function Topbar() {
+  return (
+    <header className="flex h-14 items-center justify-between border-b border-border bg-background px-6">
+      <div className="flex items-center">
+        <span className="text-lg font-semibold tracking-tight">Sparter</span>
+      </div>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src="" alt="Avatar utente" />
+              <AvatarFallback className="bg-primary text-xs font-medium text-primary-foreground">
+                U
+              </AvatarFallback>
+            </Avatar>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium">Utente</p>
+              <p className="text-xs text-muted-foreground">utente@example.com</p>
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem>
+            <User className="mr-2 h-4 w-4" />
+            Profilo
+          </DropdownMenuItem>
+          <DropdownMenuItem className="text-destructive focus:text-destructive">
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </header>
+  )
+}
