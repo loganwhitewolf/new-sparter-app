@@ -19,15 +19,13 @@ export function Topbar() {
       </div>
 
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src="" alt="Avatar utente" />
-              <AvatarFallback className="bg-primary text-xs font-medium text-primary-foreground">
-                U
-              </AvatarFallback>
-            </Avatar>
-          </button>
+        <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src="" alt="Avatar utente" />
+            <AvatarFallback className="bg-primary text-xs font-medium text-primary-foreground">
+              U
+            </AvatarFallback>
+          </Avatar>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuLabel className="font-normal">
