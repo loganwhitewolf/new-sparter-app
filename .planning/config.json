@@ -14,5 +14,13 @@
   "planning": {
     "commit_docs": true,
     "search_gitignored": false
-  }
+  },
+  "resolve_model_ids": "omit",  
+  "model_overrides": {  
+    "gsd-planner": "claude-sonnet-4-6",  
+    "gsd-phase-researcher": "claude-sonnet-4-6",  
+    "gsd-roadmapper": "claude-sonnet-4-6",  
+    "gsd-executor": "codex-default",  
+    "gsd-debugger": "codex-default"  
+  }  
 }
