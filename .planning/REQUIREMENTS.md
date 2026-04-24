@@ -9,9 +9,9 @@
 
 ### Design System
 
-- [ ] **DS-01**: L'app usa token di colore e tipografia coerenti (palette, scala tipografica, CSS variables Tailwind)
+- [x] **DS-01**: L'app usa token di colore e tipografia coerenti (palette, scala tipografica, CSS variables Tailwind)
 - [ ] **DS-02**: Sono disponibili i componenti base: Button, Input, Card, Badge, Select, Modal
-- [ ] **DS-03**: Il layout shell è implementato con route group `(auth)` (pagine pubbliche) e `(app)` (shell autenticata con sidebar e topbar)
+- [x] **DS-03**: Il layout shell è implementato con route group `(auth)` (pagine pubbliche) e `(app)` (shell autenticata con sidebar e topbar)
 
 ### Authentication
 
