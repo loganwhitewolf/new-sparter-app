@@ -1,6 +1,18 @@
 import 'server-only'
+import { drizzle } from 'drizzle-orm/mysql2'
+import mysql from 'mysql2/promise'
+import * as schema from './schema'
 
-export const db =
-  null as unknown as import('drizzle-orm/mysql2').MySql2Database
+const pool = mysql.createPool({
+  uri: process.env.DATABASE_URL!,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  ssl: { rejectUnauthorized: false },
+})
 
-export type DbOrTx = typeof db
+export const db = drizzle(pool, { schema, mode: 'default' })
+
+export type DbOrTx =
+  | typeof db
+  | Parameters<Parameters<typeof db.transaction>[0]>[0]
