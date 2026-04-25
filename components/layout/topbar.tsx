@@ -10,8 +10,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { authClient } from '@/lib/auth-client'
+import { signOutAction } from '@/lib/actions/auth'
 
 export function Topbar() {
+  const { data: session } = authClient.useSession()
+  const email = session?.user?.email ?? ''
+  const fallback = email.charAt(0).toUpperCase() || 'U'
+
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-background px-6">
       <div className="flex items-center">
@@ -23,15 +29,15 @@ export function Topbar() {
           <Avatar className="h-8 w-8">
             <AvatarImage src="" alt="Avatar utente" />
             <AvatarFallback className="bg-primary text-xs font-medium text-primary-foreground">
-              U
+              {fallback}
             </AvatarFallback>
           </Avatar>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium">Utente</p>
-              <p className="text-xs text-muted-foreground">utente@example.com</p>
+              <p className="text-sm font-medium">{email || 'Utente'}</p>
+              <p className="text-xs text-muted-foreground">{email || 'utente@example.com'}</p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -39,7 +45,10 @@ export function Topbar() {
             <User className="mr-2 h-4 w-4" />
             Profilo
           </DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive focus:text-destructive">
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={() => signOutAction()}
+          >
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </DropdownMenuItem>

@@ -5,17 +5,17 @@ import { AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { signInAction } from '@/lib/actions/auth'
+import { signUpAction } from '@/lib/actions/auth'
 
-export default function LoginPage() {
-  const [state, action, isPending] = useActionState(signInAction, { error: null })
+export default function RegisterPage() {
+  const [state, action, isPending] = useActionState(signUpAction, { error: null })
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1 text-center">
-        <h1 className="text-xl font-semibold">Accedi</h1>
+        <h1 className="text-xl font-semibold">Crea account</h1>
         <p className="text-sm text-muted-foreground">
-          Inserisci le tue credenziali per accedere.
+          Inserisci email e password per creare il tuo account.
         </p>
       </div>
       {state.error && (
@@ -35,20 +35,20 @@ export default function LoginPage() {
           type="password"
           name="password"
           placeholder="Password"
-          autoComplete="current-password"
+          autoComplete="new-password"
         />
         <Button type="submit" className="w-full" disabled={isPending}>
           {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Accedi
+          Registrati
         </Button>
       </form>
       <p className="text-center text-sm text-muted-foreground">
-        Non hai un account?{' '}
+        Hai già un account?{' '}
         <Link
-          href="/register"
+          href="/login"
           className="text-foreground underline underline-offset-4 hover:text-primary"
         >
-          Registrati
+          Accedi
         </Link>
       </p>
     </div>
