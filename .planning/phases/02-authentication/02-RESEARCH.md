@@ -742,17 +742,19 @@ The CLI command `npx @better-auth/cli@latest generate` generates the Drizzle-com
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does `@better-auth/cli generate` append to `lib/db/schema.ts` or create a separate file?**
    - What we know: The CLI generates Drizzle schema; `--output` flag controls destination
    - What's unclear: Whether it creates a standalone file to merge, or directly patches the existing schema file
    - Recommendation: Run `npx @better-auth/cli@latest generate --help` first. If it creates a separate file, manually integrate the table definitions into `lib/db/schema.ts`.
+   - **RESOLVED:** Plan 02 Task 1 handles both paths — action instructs the executor to check the output destination and merge into `lib/db/schema.ts` if a separate file is generated.
 
 2. **Does `auth.api.getSession()` in `proxy.ts` add meaningful latency per request?**
    - What we know: The Drizzle adapter queries the `session` table by token (indexed lookup); Railway MySQL RTT is ~1-5ms
    - What's unclear: Whether Better Auth has an in-memory/cookie cache path for proxy.ts to avoid the DB query
    - Recommendation: Use `auth.api.getSession()` directly in proxy.ts for correctness. If latency is a concern, the `getCookieCache()` approach documented in Better Auth (optimistic, less secure) is available as an alternative.
+   - **RESOLVED:** Plan 04 Task 1 uses `auth.api.getSession()` directly. proxy.ts runs in Node.js runtime — latency is acceptable for v1 (Railway MySQL RTT ~1-5ms).
 
 ---
 
