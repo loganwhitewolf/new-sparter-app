@@ -63,7 +63,13 @@ Plans:
   2. Un utente registrato può effettuare il login e la sessione persiste al refresh del browser
   3. Tentare di accedere a `/dashboard` senza sessione reindirizza a `/login`
   4. Una richiesta con header `x-staging-key` corretto bypassa l'autenticazione in ambiente non-produzione
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 02-00-PLAN.md — Wave 0: Test stubs (tests/auth.spec.ts) + update tests/layout.spec.ts for proxy.ts compatibility
+- [ ] 02-01-PLAN.md — Wave 1: lib/db/index.ts real mysql2 pool + auth.ts Better Auth config + lib/auth-client.ts + route handler
+- [ ] 02-02-PLAN.md — Wave 2: lib/db/schema.ts Better Auth tables + [BLOCKING] Drizzle migration + lib/validations/auth.ts Zod v4
+- [ ] 02-03-PLAN.md — Wave 3: lib/dal/auth.ts verifySession() + lib/actions/auth.ts (signIn/signUp/signOut)
+- [ ] 02-04-PLAN.md — Wave 4: proxy.ts route protection + login/register pages wired + topbar live session [checkpoint]
 
 ### Phase 3: Expense Management
 **Goal**: L'utente può gestire manualmente le proprie expense — creare, modificare, eliminare, filtrare e categorizzare in bulk
@@ -132,7 +138,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Design System | 0/5 | Not started | - |
-| 2. Authentication | 0/? | Not started | - |
+| 2. Authentication | 0/5 | Not started | - |
 | 3. Expense Management | 0/? | Not started | - |
 | 4. Dashboard KPI | 0/? | Not started | - |
 | 5. File Import | 0/? | Not started | - |
