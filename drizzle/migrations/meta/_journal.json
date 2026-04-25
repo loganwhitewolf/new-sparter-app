@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1777125674585,
+      "tag": "0000_yielding_lilith",
+      "breakpoints": true
+    }
+  ]
+}
