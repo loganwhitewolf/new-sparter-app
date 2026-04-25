@@ -66,7 +66,7 @@ Exceptions:
 - Form page heading ("Accedi" / "Registrati"): Heading — 20px, semibold, 1.2 line-height
 - Form subheading/descriptor line: Label — 14px, regular, `text-muted-foreground`
 - Input placeholder text: Label — 14px, regular, `text-muted-foreground`
-- Submit button label: Body — 16px, weight 500 (New York default for Button)
+- Submit button label: Body — 16px, weight 600 (semibold)
 - Error banner text: Label — 14px, regular
 - Link text ("Hai già un account?"): Label — 14px, regular
 
@@ -118,6 +118,8 @@ No new accent usages in Phase 2. Active sidebar indicator, KPI colors, and badge
   7. Navigation link: text + anchor to the other auth page — 14px, text-center
 
 No form wrapper card (`Card`) — the form sits directly on the white background, matching the Phase 1 stub pattern.
+
+**Primary visual anchor:** the full-width emerald submit button at the base of the form.
 
 **Source:** Phase 2 CONTEXT.md D-03, D-04; Phase 1 `(auth)/layout.tsx` inspection
 
