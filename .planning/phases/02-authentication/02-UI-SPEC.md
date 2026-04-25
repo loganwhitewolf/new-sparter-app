@@ -1,10 +1,11 @@
 ---
 phase: 2
 slug: authentication
-status: draft
+status: approved
 shadcn_initialized: true
 preset: "style=new-york base-color=slate primary=emerald radius=0.5rem"
 created: 2026-04-24
+reviewed_at: 2026-04-25
 ---
 
 # Phase 2 — UI Design Contract
