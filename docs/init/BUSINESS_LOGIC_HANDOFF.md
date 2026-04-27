@@ -259,7 +259,7 @@ Tutti gli amount: `DECIMAL(10,2)`
 
 ```
 Next.js 15 App Router
-Drizzle ORM + MySQL (drizzle-kit per migrations)
+Drizzle ORM + PostgreSQL (drizzle-kit per migrations)
 NextAuth v5 (Credentials provider, JWT session)
 Cloudflare R2 (storage file CSV/Excel)
 Zod (porta direttamente i validator esistenti)

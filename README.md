@@ -1,4 +1,22 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sparter
+
+Personal finance app for the Italian market, built with Next.js 16 App Router, Drizzle ORM, PostgreSQL, Better Auth, Cloudflare R2, Zod, Decimal.js, Tailwind CSS, and shadcn/ui.
+
+## Database
+
+Set `DATABASE_URL` to a Postgres connection string before running auth flows or migrations:
+
+```bash
+DATABASE_URL=postgres://postgres:sparter@localhost:5432/sparter
+npm run db:generate
+npm run db:migrate
+```
+
+For hosted Postgres instances that require strict TLS, also set:
+
+```bash
+DATABASE_SSL=true
+```
 
 ## Getting Started
 

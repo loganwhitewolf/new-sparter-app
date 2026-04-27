@@ -4,6 +4,11 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 
+type SessionUserWithAccessFields = {
+  subscriptionPlan?: 'free' | 'basic' | 'pro'
+  role?: 'user' | 'admin'
+}
+
 export const verifySession = cache(async () => {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -11,10 +16,12 @@ export const verifySession = cache(async () => {
   if (!session?.user) {
     redirect('/login')
   }
+  const user = session.user as typeof session.user & SessionUserWithAccessFields
+
   return {
-    userId: session.user.id,
-    email: session.user.email,
-    subscriptionPlan: (session.user as any).subscriptionPlan as 'free' | 'basic' | 'pro',
-    role: (session.user as any).role as 'user' | 'admin',
+    userId: user.id,
+    email: user.email,
+    subscriptionPlan: user.subscriptionPlan ?? 'free',
+    role: user.role ?? 'user',
   }
 })

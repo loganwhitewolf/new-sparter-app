@@ -88,7 +88,7 @@ All versions verified against npm registry on 2026-04-24.
 | react-dom | 19.2.5 | [VERIFIED: npm registry] | Must match react version |
 | drizzle-orm | 0.45.2 | [VERIFIED: npm registry] | Use `drizzle-orm@latest` |
 | drizzle-kit | 0.31.10 | [VERIFIED: npm registry] | Use `drizzle-kit@latest` |
-| mysql2 | 3.22.2 | [VERIFIED: npm registry] | |
+| pg | 8.20.0 | [VERIFIED: npm registry] | PostgreSQL driver |
 | better-auth | 1.6.9 | [VERIFIED: npm registry] | Replaces NextAuth — research API in Phase 2 |
 | zod | 4.3.6 | [VERIFIED: npm registry] | Major version jump from 3.x; verify API in Phase 2 |
 | decimal.js | 10.6.0 | [VERIFIED: npm registry] | |
@@ -611,7 +611,7 @@ This installs Radix primitives automatically. No manual Radix installs needed.
 ### Step 4: Install Stack Packages
 
 ```bash
-npm install drizzle-orm mysql2 better-auth zod decimal.js \
+npm install drizzle-orm pg better-auth zod decimal.js \
   @aws-sdk/client-s3 @aws-sdk/s3-request-presigner \
   server-only
 ```
@@ -633,7 +633,7 @@ Expected warnings: React peer dependency warnings from some packages that still 
 [VERIFIED: npm view checks]
 
 - Next.js 16 peer deps: `react ^18.2.0 || ^19.0.0` — React 19.2 satisfies this
-- drizzle-orm 0.45: optional peer deps (mysql2, pg, etc.) — install mysql2 explicitly
+- drizzle-orm 0.45: optional peer deps (pg, mysql2, etc.) — install pg explicitly
 - better-auth 1.6.9: no conflicting peers observed
 - zod 4.3.6: standalone, no peer deps
 - decimal.js 10.6.0: standalone
@@ -647,22 +647,22 @@ Expected warnings: React peer dependency warnings from some packages that still 
 
 Phase 1 creates a placeholder `lib/db/index.ts` that:
 1. Has `import 'server-only'` to prevent client-side imports
-2. Is typed correctly for future Drizzle MySQL connection
+2. Is typed correctly for future Drizzle PostgreSQL connection
 3. Does NOT actually connect to a database (no DATABASE_URL required in Phase 1)
 
 ```ts
 // lib/db/index.ts
 import 'server-only'
 
-// Drizzle ORM MySQL client — initialized in Phase 2 when DATABASE_URL is available
+// Drizzle ORM PostgreSQL client — initialized in Phase 2 when DATABASE_URL is available
 // Import shape for reference:
-// import { drizzle } from 'drizzle-orm/mysql2'
-// import mysql from 'mysql2/promise'
+// import { drizzle } from 'drizzle-orm/node-postgres'
+// import { Pool } from 'pg'
 // import * as schema from './schema'
 
 // Phase 1 stub — db is undefined until Phase 2 wires the connection
 // Do not import this file anywhere in Phase 1 UI code
-export const db = null as unknown as import('drizzle-orm/mysql2').MySql2Database
+export const db = null as unknown as import('drizzle-orm/node-postgres').NodePgDatabase
 
 export type DbOrTx = typeof db
 ```
@@ -697,7 +697,7 @@ import { defineConfig } from 'drizzle-kit'
 export default defineConfig({
   schema: './lib/db/schema.ts',
   out: './drizzle/migrations',
-  dialect: 'mysql',
+  dialect: 'postgresql',
   dbCredentials: {
     url: process.env.DATABASE_URL!,
   },
@@ -778,8 +778,8 @@ Create at project root documenting all future env vars:
 ```bash
 # .env.example — copy to .env.local and fill in values
 
-# Database (Railway MySQL — available in Phase 2+)
-DATABASE_URL=mysql://user:password@host.railway.app:3306/railway
+# Database (Railway PostgreSQL — available in Phase 2+)
+DATABASE_URL=postgres://user:password@host.railway.app:5432/railway
 
 # Better Auth (Phase 2)
 BETTER_AUTH_SECRET=your-32-char-secret-here
@@ -1016,7 +1016,7 @@ Wave 0 first: Playwright must be installed before the app is built so tests can 
 | Node.js | All | ✓ | v25.8.1 | — |
 | npm | All | ✓ | 11.11.0 | — |
 | Playwright chromium | Test suite | ✗ | — | Install in Wave 0 |
-| MySQL database | lib/db (Phase 2+) | ✗ | — | Not needed in Phase 1 — db stub is offline |
+| PostgreSQL database | lib/db (Phase 2+) | ✗ | — | Not needed in Phase 1 — db stub is offline |
 | Cloudflare R2 | File upload (Phase 5+) | ✗ | — | Not needed in Phase 1 |
 
 **Note:** Node.js v25.8.1 exceeds the minimum Next.js 16 requirement of v20.9.

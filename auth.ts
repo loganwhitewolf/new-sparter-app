@@ -12,7 +12,7 @@ export const auth = betterAuth({
     autoSignIn: true,
   },
   database: drizzleAdapter(db, {
-    provider: 'mysql',
+    provider: 'pg',
   }),
   user: {
     additionalFields: {

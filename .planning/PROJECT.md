@@ -59,7 +59,7 @@ Migrazione da architettura Express + Sequelize a Next.js 16 App Router + Drizzle
 
 ## Constraints
 
-- **Stack**: Next.js 16 App Router, Drizzle ORM + MySQL, Better Auth, Cloudflare R2, Zod, Decimal.js, Tailwind CSS + shadcn/ui — stack fisso, non negoziabile
+- **Stack**: Next.js 16 App Router, Drizzle ORM + PostgreSQL, Better Auth, Cloudflare R2, Zod, Decimal.js, Tailwind CSS + shadcn/ui — stack fisso, non negoziabile
 - **Storage**: Cloudflare R2 per tutti i file CSV/Excel (`uploads/{userId}/{fileId}.{ext}`) — nessun upload locale
 - **Arithmetic**: Decimal.js obbligatorio per tutti i calcoli su amount — mai float JS nativo
 - **Dedup**: transactionHash (MD5 amount+description+timestamp) per transazioni; descriptionHash per expense — logica invariante
@@ -71,6 +71,7 @@ Migrazione da architettura Express + Sequelize a Next.js 16 App Router + Drizzle
 |----------|-----------|---------|
 | Next.js 16 App Router invece di Express | Rimpiazza architettura Express, unifica frontend e API, deploy semplice su Railway | — Pending |
 | Drizzle ORM invece di Sequelize | Type-safe, migrations con drizzle-kit, query complesse con sql template literals | — Pending |
+| PostgreSQL invece di MySQL | Allinea il progetto al database target corrente, usa `pg` + `drizzle-orm/node-postgres`, mantiene migrations generate + migrate | — Active |
 | Better Auth invece di NextAuth | Soluzione auth moderna, API più pulita, sessioni flessibili | — Pending |
 | Cloudflare R2 invece di storage locale | S3-compatible, scalabile, audit trail dei file importati | — Pending |
 | Piattaforme separate dalle versioni tracciato | Le banche cambiano export nel tempo; detection e parser devono evolvere senza duplicare la piattaforma bancaria | — Pending |

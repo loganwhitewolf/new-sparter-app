@@ -1,11 +1,11 @@
 {
   "version": "7",
-  "dialect": "mysql",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "5",
-      "when": 1777125674585,
+      "version": "7",
+      "when": 1777295263684,
       "tag": "0000_yielding_lilith",
       "breakpoints": true
     }

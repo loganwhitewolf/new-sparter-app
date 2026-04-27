@@ -2,7 +2,7 @@
 
 **Researched:** 2026-04-22
 **Domain:** Personal finance web app, Italian market
-**Stack:** Next.js 16 App Router, Drizzle ORM + MySQL, Better Auth, Cloudflare R2, Tailwind + shadcn/ui
+**Stack:** Next.js 16 App Router, Drizzle ORM + PostgreSQL, Better Auth, Cloudflare R2, Tailwind + shadcn/ui
 
 ---
 
@@ -91,7 +91,7 @@ auth.ts             # Better Auth config/server helpers (root del progetto)
 
 **C-4 — CSV encoding:** Le banche italiane usano spesso ISO-8859-1. Il parser deve rilevare l'encoding o forzare UTF-8 con fallback.
 
-**C-5 — Middleware edge runtime:** Drizzle (mysql2) usa Node.js `net` — crasha sull'Edge Runtime. Il middleware deve fare solo JWT check (nessuna query DB). `import 'server-only'` in `lib/db/index.ts` previene errori accidentali.
+**C-5 — Proxy/runtime:** Drizzle con `pg` usa moduli Node.js e non deve finire nel client bundle. Il proxy Next.js 16 deve fare solo session check Better Auth + redirect; `import 'server-only'` in `lib/db/index.ts` previene import accidentali lato client.
 
 ---
 

@@ -2,15 +2,15 @@
 phase: 02-authentication
 plan: "02"
 subsystem: database
-tags: [better-auth, drizzle-orm, mysql, zod, migrations, schema]
+tags: [better-auth, drizzle-orm, postgres, zod, migrations, schema]
 
 # Dependency graph
 requires:
   - phase: 02-01
-    provides: auth.ts Better Auth config with additionalFields (subscriptionPlan, role), lib/db/index.ts real mysql2 pool
+    provides: auth.ts Better Auth config with additionalFields (subscriptionPlan, role), lib/db/index.ts real pg pool
 
 provides:
-  - lib/db/schema.ts with 4 Better Auth mysqlTable definitions (user, session, account, verification)
+  - lib/db/schema.ts with 4 Better Auth pgTable definitions (user, session, account, verification)
   - user table with subscriptionPlan enum (free|basic|pro) and role enum (user|admin) columns
   - drizzle/migrations/0000_yielding_lilith.sql with CREATE TABLE statements for all 4 tables
   - lib/validations/auth.ts with LoginSchema and RegisterSchema using Zod v4 API
@@ -26,7 +26,7 @@ tech-stack:
     - "Better Auth CLI generates authoritative Drizzle schema — never hand-craft auth tables"
     - "drizzle-kit generate + migrate (never drizzle-kit push)"
     - "Zod v4 API: z.email() top-level, { error: } key (not message:)"
-    - "mysqlEnum for constrained columns (subscriptionPlan, role)"
+    - "pgEnum for constrained columns (subscriptionPlan, role)"
 
 key-files:
   created:
@@ -38,7 +38,7 @@ key-files:
     - lib/db/schema.ts
 
 key-decisions:
-  - "Used CLI-generated schema as authoritative source — mysqlEnum over varchar for subscriptionPlan and role"
+  - "Used CLI-generated schema as authoritative source — pgEnum over varchar for subscriptionPlan and role"
   - "Used Zod v4 top-level z.email() and { error: } key per Zod v4.3.6 API"
   - "Added AuthActionState type to lib/validations/auth.ts for server action return type"
   - "Database migration pending: DATABASE_URL not available locally; SQL files committed for production deployment"
@@ -68,8 +68,8 @@ completed: 2026-04-25
 - **Files modified:** 5
 
 ## Accomplishments
-- Generated Better Auth schema via `@better-auth/cli@1.4.21` into lib/db/schema.ts — 4 tables (user, session, account, verification) with proper MySQL types, indexes, FK constraints, and Drizzle relations
-- user table includes `subscriptionPlan` as `mysqlEnum(['free','basic','pro'])` and `role` as `mysqlEnum(['user','admin'])` (D-09 custom fields)
+- Generated Better Auth schema via `@better-auth/cli@1.4.21` into lib/db/schema.ts — 4 tables (user, session, account, verification) with proper PostgreSQL types, indexes, FK constraints, and Drizzle relations
+- user table includes `subscriptionPlan` as `pgEnum(['free','basic','pro'])` and `role` as `pgEnum(['user','admin'])` (D-09 custom fields)
 - Created drizzle/migrations/0000_yielding_lilith.sql with all CREATE TABLE statements ready for production deployment
 - Created lib/validations/auth.ts with Zod v4 API (z.email() top-level, { error: } key, Italian error messages)
 - TypeScript: 0 errors across all modified/created files
@@ -91,7 +91,7 @@ Each task was committed atomically:
 - `lib/validations/auth.ts` - LoginSchema, RegisterSchema (Zod v4), AuthActionState type
 
 ## Decisions Made
-- Used CLI-generated schema as authoritative source rather than hand-crafting — CLI produced `mysqlEnum` for `subscriptionPlan` and `role` (better than `varchar` for type safety and DB-level constraints)
+- Used CLI-generated schema as authoritative source rather than hand-crafting — CLI produced `pgEnum` for `subscriptionPlan` and `role` (better than `varchar` for type safety and DB-level constraints)
 - Added `AuthActionState` type to `lib/validations/auth.ts` (not in original plan template) — needed by lib/actions/auth.ts in Plan 03; avoids circular import
 - `database migration pending` — DATABASE_URL not available in local worktree; SQL files exist in drizzle/migrations/ and are ready for `drizzle-kit migrate` once DATABASE_URL is set
 
@@ -119,9 +119,9 @@ Each task was committed atomically:
 ## User Setup Required
 None - no external service configuration required beyond what is documented in .env.example.
 
-Note: To apply the database migration to Railway MySQL, set DATABASE_URL in .env.local and run:
+Note: To apply the database migration to Railway PostgreSQL, set DATABASE_URL in .env.local and run:
 ```bash
-npx drizzle-kit migrate
+npm run db:migrate
 ```
 
 ## Next Phase Readiness

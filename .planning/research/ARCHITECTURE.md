@@ -2,7 +2,7 @@
 
 **Domain:** Personal finance web app (Italian market)
 **Researched:** 2026-04-22
-**Stack:** Next.js 16 App Router, Drizzle ORM + MySQL, Better Auth, Cloudflare R2, Tailwind + shadcn/ui
+**Stack:** Next.js 16 App Router, Drizzle ORM + PostgreSQL, Better Auth, Cloudflare R2, Tailwind + shadcn/ui
 
 ---
 
@@ -228,7 +228,7 @@ Browser
   ├──POST /api/files/initiate ──────────────────────────────────────────────┐
   │                                                                         │
   │  lib/dal/files.ts                                                       │
-  │  insert({ status:'pending', storageKey })  ───► MySQL                  │
+  │  insert({ status:'pending', storageKey })  ───► PostgreSQL                  │
   │                                                                         │
   │  lib/services/r2.ts                                                     │
   │  createPresignedPutUrl(storageKey) ───────────► Cloudflare R2          │
@@ -239,15 +239,15 @@ Browser
   │
   ├──POST /api/files/confirm { fileId }
   │    HEAD/check object(storageKey) ─────────────── Cloudflare R2
-  │    update file upload metadata ───────────────── MySQL
+  │    update file upload metadata ───────────────── PostgreSQL
   │
   │  Step 2: Analyze + preview (Server Action)
   ├──analyzeFileAction(fileId)
   │    lib/services/import.ts → analyzeFile()
   │      getObject(storageKey) ──────────────────── Cloudflare R2
   │      detect columns/header/dates/delimiter/currency
-  │      detectImportFormat() ───────────────────── MySQL (platforms + format versions)
-  │      dry-run parse + duplicate checks ───────── MySQL
+  │      detectImportFormat() ───────────────────── PostgreSQL (platforms + format versions)
+  │      dry-run parse + duplicate checks ───────── PostgreSQL
   │    return { detectedPlatform, detectedFormatVersion, confidence, rowCount,
   │             duplicateCount, sampleRows, candidates }
   │
@@ -257,13 +257,13 @@ Browser
   └──importFileAction(fileId, platformId, formatVersionId)
        lib/services/import.ts → importFile()
          db.transaction(tx => ...)
-           file.status = 'processing' ───────────── MySQL
+           file.status = 'processing' ───────────── PostgreSQL
            for each parsed row:
-             transactionHash check ──────────────── MySQL (skip dup)
-             findOrCreateExpense() ──────────────── MySQL
-             insertTransaction() ────────────────── MySQL
-             runCategorizationPipeline() ────────── MySQL
-           file.status = 'done' | 'error' ───────── MySQL
+             transactionHash check ──────────────── PostgreSQL (skip dup)
+             findOrCreateExpense() ──────────────── PostgreSQL
+             insertTransaction() ────────────────── PostgreSQL
+             runCategorizationPipeline() ────────── PostgreSQL
+           file.status = 'done' | 'error' ───────── PostgreSQL
        revalidatePath('/dashboard')
 ```
 
@@ -622,7 +622,7 @@ app/(app)/expenses/page.tsx          ← Server Component
           └─────────┬──────────┘
                     │
           ┌─────────▼──────────┐
-          │  MySQL (Drizzle)   │
+          │  PostgreSQL (Drizzle)   │
           │                    │
           │  users             │
           │  transactions      │

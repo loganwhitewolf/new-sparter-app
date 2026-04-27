@@ -24,7 +24,7 @@ Questo progetto usa GSD (Get Shit Done) per la pianificazione e l'esecuzione.
 
 ```
 Next.js 16 App Router
-Drizzle ORM + MySQL (drizzle-kit per migrations)
+Drizzle ORM + PostgreSQL (drizzle-kit per migrations)
 Better Auth (auth provider)
 Cloudflare R2 (storage file CSV/Excel)
 Zod (validazione)
@@ -56,8 +56,8 @@ Presigned PUT URL → browser carica direttamente su R2. MAI proxiare upload att
 
 ### Better Auth
 - Sostituisce NextAuth v5 — ricercare l'API corrente prima di pianificare la Fase 2
-- Verificare: Drizzle adapter, gestione sessioni, route protection middleware, campi custom utente (`subscriptionPlan`, `role`)
-- Middleware: session check only, nessuna query DB diretta se edge runtime
+- Drizzle adapter configurato con provider `pg`; gestione sessioni, route protection proxy, campi custom utente (`subscriptionPlan`, `role`)
+- Proxy: session check only, nessuna query DB diretta se edge runtime
 
 ### Drizzle migrations
 MAI usare `drizzle-kit push` in produzione. Sempre `generate` + `migrate`.
@@ -77,8 +77,8 @@ lib/
 └── validations/     # Zod schemas
 
 drizzle/seed.ts      # Seed data (portato da docs/init/seed.ts)
-middleware.ts        # Route protection + staging bypass
-auth.ts              # NextAuth v5 config
+proxy.ts             # Route protection + staging bypass
+auth.ts              # Better Auth config
 ```
 
 ## Seed Data

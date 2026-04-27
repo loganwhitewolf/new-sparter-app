@@ -1,10 +1,12 @@
 # Phase 2: Authentication - Research
 
 **Researched:** 2026-04-25
-**Domain:** Better Auth v1.6.9 + Next.js 16 App Router + Drizzle ORM MySQL + Zod v4
+**Domain:** Better Auth v1.6.9 + Next.js 16 App Router + Drizzle ORM PostgreSQL + Zod v4
 **Confidence:** HIGH (core Better Auth API), MEDIUM (some edge cases and exact generated schema)
 
 ---
+
+> **Update 2026-04-27:** The database stack changed from MySQL/mysql2 to PostgreSQL/pg. Treat any remaining MySQL-specific examples in this historical research file as superseded by `.planning/research/STACK.md`, `drizzle.config.ts`, `lib/db/index.ts`, and `lib/db/schema.ts`.
 
 <user_constraints>
 ## User Constraints (from CONTEXT.md)
@@ -23,8 +25,8 @@
 - **D-10:** `userId` must be available in the server session for DAL queries (Phase 3+).
 - **D-11:** Password minimum: 8 characters (Zod v4 `z.string().min(8)`). No complexity requirements.
 - **D-12:** Better Auth config file: `auth.ts` at project root.
-- **D-13:** Better Auth uses Drizzle adapter with MySQL (`drizzle-orm/mysql2`). Tables generated via schema generation + `drizzle-kit generate` + `drizzle-kit migrate`.
-- **D-14:** `lib/db/index.ts` stub replaced with real mysql2 connection in Phase 2.
+- **D-13:** Better Auth uses Drizzle adapter with PostgreSQL (`drizzle-orm/node-postgres`) and provider `pg`. Tables generated via schema generation + `drizzle-kit generate` + `npm run db:migrate`.
+- **D-14:** `lib/db/index.ts` stub replaced with real `pg` Pool connection in Phase 2.
 
 ### Claude's Discretion
 
@@ -58,7 +60,7 @@
 
 ## Summary
 
-Phase 2 installs and wires Better Auth v1.6.9 — the project's locked auth provider — with the Drizzle MySQL adapter. The phase connects the existing `lib/db/index.ts` stub to a real mysql2 pool, generates and migrates the Better Auth schema (users, sessions, accounts, verifications tables plus custom `subscriptionPlan` and `role` columns), configures `auth.ts` at the project root, creates the `/api/auth/[...all]` route handler, and wires the login/register form pages (currently static stubs) to server actions backed by `auth.api.signInEmail` / `auth.api.signUpEmail`.
+Phase 2 installs and wires Better Auth v1.6.9 — the project's locked auth provider — with the Drizzle PostgreSQL adapter. The phase connects the existing `lib/db/index.ts` stub to a real `pg` Pool, generates and migrates the Better Auth schema (users, sessions, accounts, verifications tables plus custom `subscriptionPlan` and `role` columns), configures `auth.ts` at the project root, creates the `/api/auth/[...all]` route handler, and wires the login/register form pages (currently static stubs) to server actions backed by `auth.api.signInEmail` / `auth.api.signUpEmail`.
 
 Route protection moves from the Phase 1 pass-through `proxy.ts` to a real session check via `auth.api.getSession`. The staging bypass (`x-staging-key`) is checked first, before the auth check, and activates whenever `STAGING_KEY` env var is set. A `verifySession()` helper in `lib/dal/auth.ts` provides the authoritative session check for all downstream phases. Topbar is wired to show live session data.
 
@@ -89,8 +91,8 @@ Route protection moves from the Phase 1 pass-through `proxy.ts` to a real sessio
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
 | better-auth | 1.6.9 | Auth provider — sessions, hashing, DB adapter | Locked decision (D-12/D-13) — replaces NextAuth v5 |
-| drizzle-orm | 0.45.2 | ORM + Better Auth Drizzle adapter | Already installed; adapter is `drizzleAdapter(db, { provider: "mysql" })` |
-| mysql2 | 3.22.2 | MySQL driver for Drizzle + Better Auth | Already installed |
+| drizzle-orm | 0.45.2 | ORM + Better Auth Drizzle adapter | Already installed; adapter is `drizzleAdapter(db, { provider: "pg" })` |
+| pg | 8.20.0 | PostgreSQL driver for Drizzle + Better Auth | Installed |
 | zod | 4.3.6 | Form validation schema (client + server) | Already installed; **Zod v4 API — see breaking changes below** |
 | better-auth/react | (bundled with better-auth) | Client-side `createAuthClient`, `useSession` hook | Part of better-auth package |
 
@@ -147,7 +149,7 @@ Server Action: signInAction / signUpAction (lib/actions/auth.ts)
   ▼
 Better Auth (auth.ts)
   ├── emailAndPassword: { enabled: true, minPasswordLength: 8, autoSignIn: true }
-  ├── database: drizzleAdapter(db, { provider: "mysql" })
+  ├── database: drizzleAdapter(db, { provider: "pg" })
   ├── user.additionalFields: { subscriptionPlan, role }
   ├── plugins: [nextCookies()] — must be LAST plugin
   └── Session cookie (HttpOnly, Secure, SameSite=lax) set by Better Auth
@@ -159,7 +161,7 @@ lib/dal/auth.ts — verifySession()
   └── Return { userId, email, subscriptionPlan, role }
   │
   ▼
-MySQL (Railway) — Tables: user, session, account, verification
+PostgreSQL — Tables: user, session, account, verification
 ```
 
 ### Recommended Project Structure (additions for Phase 2)
@@ -178,7 +180,7 @@ app/
 
 lib/
 ├── db/
-│   ├── index.ts                    # Replace null stub with real mysql2 pool
+│   ├── index.ts                    # Replace null stub with real pg Pool
 │   └── schema.ts                   # Add Better Auth tables (from CLI generate)
 ├── dal/
 │   └── auth.ts                     # verifySession() helper (CREATE)
@@ -213,7 +215,7 @@ export const auth = betterAuth({
     autoSignIn: true,  // D-02: auto-login after signup → redirect to /dashboard
   },
   database: drizzleAdapter(db, {
-    provider: "mysql",
+    provider: "pg",
   }),
   user: {
     additionalFields: {
@@ -365,7 +367,7 @@ export type RegisterInput = z.infer<typeof RegisterSchema>
 
 **Critical notes:**
 - proxy.ts runs in Node.js runtime by default in Next.js 16 [VERIFIED: nextjs.org/docs/app/api-reference/file-conventions/proxy]
-- `auth.api.getSession()` requires Node.js runtime (it connects to MySQL via Drizzle) — compatible
+- `auth.api.getSession()` requires Node.js runtime (it connects to PostgreSQL via Drizzle) — compatible
 - Staging bypass MUST be checked FIRST (D-08) before the session check
 - STAGING_KEY check is env-var-gated (not NODE_ENV-gated) per D-07
 - Export function must be named `proxy` (not `middleware`)
@@ -501,28 +503,29 @@ export default function LoginPage() {
 }
 ```
 
-### Pattern 8: `lib/db/index.ts` — Real mysql2 Connection
+### Pattern 8: `lib/db/index.ts` — Real pg Connection
 
-**What:** Replace the Phase 1 null stub with a real mysql2 connection pool.
+**What:** Replace the Phase 1 null stub with a real pg connection pool.
 **When to use:** Phase 2 — first time the database is actually needed.
 
 ```typescript
 // Source: .planning/research/STACK.md (verified pattern) + CLAUDE.md
 // lib/db/index.ts
 import "server-only"
-import { drizzle } from "drizzle-orm/mysql2"
-import mysql from "mysql2/promise"
+import { drizzle } from "drizzle-orm/node-postgres"
+import { Pool } from "pg"
 import * as schema from "./schema"
 
-const pool = mysql.createPool({
-  uri: process.env.DATABASE_URL!,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  ssl: { rejectUnauthorized: false },  // Required for Railway MySQL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL!,
+  max: 10,
+  ssl:
+    process.env.DATABASE_SSL === "true"
+      ? { rejectUnauthorized: true }
+      : undefined,
 })
 
-export const db = drizzle(pool, { schema, mode: "default" })
+export const db = drizzle(pool, { schema })
 
 export type DbOrTx =
   | typeof db
@@ -581,7 +584,7 @@ export function Topbar() {
 ### Anti-Patterns to Avoid
 
 - **Using `getServerSession()` anywhere:** This is NextAuth v5 API. Better Auth uses `auth.api.getSession()`. Zero imports of `getServerSession`.
-- **Importing `auth` in Client Components:** `auth.ts` uses Node.js modules (mysql2). Only import it in server files.
+- **Importing `auth` in Client Components:** `auth.ts` uses Node.js modules (`pg`, Drizzle). Only import it in server files.
 - **Calling `auth.api.*` without `headers: await headers()`:** The session cookie is read from headers. Without them, session is always null.
 - **Using Better Auth client SDK in Server Actions:** The `authClient` is for browser use only. Server Actions must use `auth.api.*`.
 - **Missing `nextCookies()` as last plugin:** Without it, session cookies are not set in Server Actions, and the browser never receives the session cookie after login/registration.
@@ -679,7 +682,7 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     autoSignIn: true,
   },
-  database: drizzleAdapter(db, { provider: "mysql" }),
+  database: drizzleAdapter(db, { provider: "pg" }),
   user: {
     additionalFields: {
       subscriptionPlan: {
@@ -709,7 +712,7 @@ Better Auth generates four tables. [CITED: better-auth.com/docs/concepts/databas
 - `account`: `id`, `userId`, `accountId`, `providerId`, `accessToken`, `refreshToken`, `password`, `createdAt`, `updatedAt`
 - `verification`: `id`, `identifier`, `value`, `expiresAt`, `createdAt`, `updatedAt`
 
-The CLI command `npx @better-auth/cli@latest generate` generates the Drizzle-compatible TypeScript schema. For MySQL provider, column types will use `mysqlTable`, `varchar`, `boolean`, `timestamp`, `text` from `drizzle-orm/mysql-core`.
+The CLI command `npx @better-auth/cli@latest generate` generates the Drizzle-compatible TypeScript schema. For PostgreSQL provider, column types use `pgTable`, `varchar`, `boolean`, `timestamp`, `text`, and `pgEnum` from `drizzle-orm/pg-core`.
 
 ---
 
@@ -735,7 +738,7 @@ The CLI command `npx @better-auth/cli@latest generate` generates the Drizzle-com
 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
-| A1 | `npx @better-auth/cli@latest generate` outputs Drizzle MySQL schema compatible with existing `lib/db/schema.ts` structure | Architecture Patterns (Pattern 9) | May require manual schema merge or different CLI flags; executor must verify with `--help` |
+| A1 | `npx @better-auth/cli@latest generate` outputs Drizzle PostgreSQL schema compatible with existing `lib/db/schema.ts` structure | Architecture Patterns (Pattern 9) | May require manual schema merge or different CLI flags; executor must verify with `--help` |
 | A2 | `auth.api.getSession()` return type automatically includes `subscriptionPlan` and `role` from `additionalFields` at runtime (TypeScript casting required for safety) | Pattern 6 (verifySession) | If fields not in return type, executor needs to type-assert or use Better Auth's TypeScript inference helpers |
 | A3 | `autoSignIn: true` triggers automatic sign-in after `auth.api.signUpEmail()`, setting the session cookie via `nextCookies()`, so `redirect('/dashboard')` after signUp is sufficient | Pattern 3 (Server Actions) | If `autoSignIn` doesn't work with the server API (only client?), executor needs to call `signInEmail` after `signUpEmail` |
 | A4 | Existing `layout.spec.ts` test for `/dashboard` returning 200 will break once proxy.ts is wired (unauthenticated request redirects to /login, not 200) | Validation Architecture | Test needs to be updated or staging bypass must be used in test setup |
@@ -751,10 +754,10 @@ The CLI command `npx @better-auth/cli@latest generate` generates the Drizzle-com
    - **RESOLVED:** Plan 02 Task 1 handles both paths — action instructs the executor to check the output destination and merge into `lib/db/schema.ts` if a separate file is generated.
 
 2. **Does `auth.api.getSession()` in `proxy.ts` add meaningful latency per request?**
-   - What we know: The Drizzle adapter queries the `session` table by token (indexed lookup); Railway MySQL RTT is ~1-5ms
+   - What we know: The Drizzle adapter queries the `session` table by token (indexed lookup)
    - What's unclear: Whether Better Auth has an in-memory/cookie cache path for proxy.ts to avoid the DB query
    - Recommendation: Use `auth.api.getSession()` directly in proxy.ts for correctness. If latency is a concern, the `getCookieCache()` approach documented in Better Auth (optimistic, less secure) is available as an alternative.
-   - **RESOLVED:** Plan 04 Task 1 uses `auth.api.getSession()` directly. proxy.ts runs in Node.js runtime — latency is acceptable for v1 (Railway MySQL RTT ~1-5ms).
+   - **RESOLVED:** Plan 04 Task 1 uses `auth.api.getSession()` directly. proxy.ts runs in Node.js runtime — latency is acceptable for v1.
 
 ---
 
@@ -763,17 +766,17 @@ The CLI command `npx @better-auth/cli@latest generate` generates the Drizzle-com
 | Dependency | Required By | Available | Version | Fallback |
 |------------|------------|-----------|---------|----------|
 | Node.js | All (runtime) | ✓ | v25.8.1 | — |
-| MySQL (Railway) | All DB operations | ✗ locally | — | Requires DATABASE_URL in .env.local pointing to Railway or local MySQL |
+| PostgreSQL | All DB operations | ✗ locally | — | Requires DATABASE_URL pointing to local or hosted Postgres |
 | better-auth | Auth provider | ✓ | 1.6.9 | — |
 | @better-auth/cli | Schema generation | available via npx | 1.4.21 | — |
 | drizzle-kit | Migrations | ✓ | 0.31.10 | — |
 | Playwright | E2E tests | ✓ | 1.59.1 | — |
 
 **Missing dependencies with no fallback:**
-- MySQL database: `DATABASE_URL` must point to a reachable MySQL instance for Phase 2 to function. Local dev requires either Railway tunnel or a local MySQL server.
+- PostgreSQL database: `DATABASE_URL` must point to a reachable Postgres instance for Phase 2 to function.
 
 **Missing dependencies with fallback:**
-- None identified beyond MySQL.
+- None identified beyond PostgreSQL availability.
 
 ---
 
@@ -862,7 +865,7 @@ The CLI command `npx @better-auth/cli@latest generate` generates the Drizzle-com
 
 ### Tertiary (LOW confidence / [ASSUMED])
 
-- Better Auth CLI `--output` flag behavior for Drizzle schema placement — could not get concrete example of generated MySQL Drizzle schema output
+- Better Auth CLI `--output` flag behavior for Drizzle schema placement — could not get concrete example of generated PostgreSQL Drizzle schema output
 
 ---
 
@@ -871,7 +874,7 @@ The CLI command `npx @better-auth/cli@latest generate` generates the Drizzle-com
 - **Better Auth replaces NextAuth v5** — Zero use of `next-auth`, `getServerSession`, `handlers` (NextAuth exports)
 - **Drizzle migrations: NEVER `drizzle-kit push`** — Always `generate` + `migrate`
 - **Middleware edge runtime**: `proxy.ts` must do JWT/session check only, no business logic — confirmed: `auth.api.getSession()` with Drizzle adapter runs in Node.js runtime (proxy.ts defaults to Node.js in Next.js 16)
-- **`import 'server-only'`** in `lib/db/index.ts` — must remain after mysql2 initialization
+- **`import 'server-only'`** in `lib/db/index.ts` — must remain after pg initialization
 - **`DbOrTx` type**: Must be updated when `lib/db/index.ts` is replaced with real connection (type is based on `typeof db`)
 - **`auth.ts` at project root** — required by CLAUDE.md (D-12)
 - **`proxy.ts` (not `middleware.ts`)** — Next.js 16 uses `proxy.ts`

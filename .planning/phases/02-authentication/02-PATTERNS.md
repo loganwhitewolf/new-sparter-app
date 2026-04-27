@@ -55,7 +55,7 @@ import { db } from "@/lib/db"
 import 'server-only'
 
 export const db =
-  null as unknown as import('drizzle-orm/mysql2').MySql2Database
+  null as unknown as import('drizzle-orm/node-postgres').NodePgDatabase
 
 export type DbOrTx = typeof db
 ```
@@ -67,19 +67,20 @@ export type DbOrTx = typeof db
 **Pattern to replace with** (RESEARCH.md Pattern 8):
 ```typescript
 import "server-only"
-import { drizzle } from "drizzle-orm/mysql2"
-import mysql from "mysql2/promise"
+import { drizzle } from "drizzle-orm/node-postgres"
+import { Pool } from "pg"
 import * as schema from "./schema"
 
-const pool = mysql.createPool({
-  uri: process.env.DATABASE_URL!,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  ssl: { rejectUnauthorized: false },  // Required for Railway MySQL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL!,
+  max: 10,
+  ssl:
+    process.env.DATABASE_SSL === "true"
+      ? { rejectUnauthorized: true }
+      : undefined,
 })
 
-export const db = drizzle(pool, { schema, mode: "default" })
+export const db = drizzle(pool, { schema })
 
 export type DbOrTx =
   | typeof db
@@ -101,17 +102,18 @@ export type DbOrTx =
 
 **Drizzle config** (`drizzle.config.ts` lines 6–7) shows `schema: './lib/db/schema.ts'` — all table definitions live here.
 
-**Workflow:** Run `npx @better-auth/cli@latest generate` first (outputs Drizzle MySQL schema), then integrate the generated table definitions into this file. The CLI generates four tables: `user`, `session`, `account`, `verification`. The `user` table will include the custom columns `subscriptionPlan` and `role` from `additionalFields` in `auth.ts`.
+**Workflow:** Run `npx @better-auth/cli@latest generate` first (outputs Drizzle PostgreSQL schema), then integrate the generated table definitions into this file. The CLI generates four tables: `user`, `session`, `account`, `verification`. The `user` table will include the custom columns `subscriptionPlan` and `role` from `additionalFields` in `auth.ts`.
 
-**Import pattern for Drizzle MySQL schema files** (inferred from `drizzle.config.ts` dialect and RESEARCH.md):
+**Import pattern for Drizzle PostgreSQL schema files**:
 ```typescript
 import {
-  mysqlTable,
+  pgTable,
+  pgEnum,
   varchar,
   boolean,
   timestamp,
   text,
-} from "drizzle-orm/mysql-core"
+} from "drizzle-orm/pg-core"
 ```
 
 ---
@@ -177,7 +179,7 @@ if (!PUBLIC_ROUTES.includes(path) && !isAuthenticated) {
 return NextResponse.next()
 ```
 
-**Note on runtime:** proxy.ts runs in Node.js runtime by default in Next.js 16. `auth.api.getSession()` requires Node.js (connects to MySQL via Drizzle) — compatible. No `export const runtime = 'edge'` here.
+**Note on runtime:** proxy.ts runs in Node.js runtime by default in Next.js 16. `auth.api.getSession()` requires Node.js (connects to PostgreSQL via Drizzle) — compatible. No `export const runtime = 'edge'` here.
 
 ---
 

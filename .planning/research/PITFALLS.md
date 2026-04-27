@@ -1,6 +1,6 @@
 # Domain Pitfalls — Sparter
 
-**Domain:** Personal finance web app (Next.js 15 + Drizzle + MySQL + NextAuth v5)
+**Domain:** Personal finance web app (Next.js 16 + Drizzle + PostgreSQL + Better Auth)
 **Researched:** 2026-04-22
 **Confidence note:** External tool access (WebSearch, WebFetch, Context7) was unavailable during this research session. All findings are drawn from training knowledge of the listed technologies (cutoff August 2025). Confidence levels reflect how stable/well-documented each pitfall is. Flag for re-verification against current official docs where noted.
 
@@ -27,9 +27,9 @@
 **Affects phases:** 3 (Expense management), 4 (Dashboard KPI), 5 (Import)
 
 **What goes wrong:**
-Drizzle ORM maps MySQL `DECIMAL(10,2)` columns to TypeScript `string`, not `number`. When you pass a raw value from a Drizzle query result to `new Decimal(value)`, it works — Decimal.js accepts strings. The trap is the reverse path: when you call `toNumber()` or `parseFloat(d.toFixed(2))` on a Decimal result and then store it back, Drizzle's insert/update expects either a string (`"12.50"`) or a number. If you pass a JS `number` with floating-point representation (`12.499999999`) through an intermediate calculation, the ORM silently inserts the wrong value.
+Drizzle ORM maps PostgreSQL `numeric`/`decimal` columns to TypeScript `string`, not `number`. When you pass a raw value from a Drizzle query result to `new Decimal(value)`, it works — Decimal.js accepts strings. The trap is the reverse path: when you call `toNumber()` or `parseFloat(d.toFixed(2))` on a Decimal result and then store it back, Drizzle's insert/update expects a string representation. If you pass a JS `number` with floating-point representation (`12.499999999`) through an intermediate calculation, the ORM can persist the wrong value.
 
-The second trap: Drizzle `decimal` column type does NOT validate precision client-side. You can insert `"1234567890.99"` (10 digits + 2 decimals = DECIMAL(10,2) overflow) and MySQL will silently truncate it — no Drizzle-level error.
+The second trap: Drizzle `decimal` column type does NOT validate precision client-side. Validate monetary precision before insert/update instead of relying on the database error path.
 
 **Warning signs:**
 - Amount totals are slightly off in the dashboard (off-by-one-cent errors)
@@ -144,8 +144,8 @@ The v5 trap specific to Credentials provider: the `authorize()` function's retur
 `drizzle-kit generate` creates migration SQL files by diffing the current schema against the last snapshot. Common traps:
 
 1. **Renaming a column** is detected as `DROP COLUMN` + `ADD COLUMN`, not `RENAME COLUMN`. Running the migration against production silently drops data.
-2. **Changing a column type** (e.g., `varchar(255)` to `text`) generates an `ALTER TABLE MODIFY COLUMN` that on MySQL can lock the table for a full copy on large tables.
-3. **Adding a NOT NULL column without a default** to a table with existing rows causes the migration to fail on MySQL in strict mode — but only in production (dev DB is usually empty).
+2. **Changing a column type** (e.g., `varchar(255)` to `text`) can generate a blocking `ALTER TABLE` on large production tables.
+3. **Adding a NOT NULL column without a default** to a table with existing rows causes the migration to fail in production, even if dev DB is empty.
 4. **Multiple developers** running `drizzle-kit generate` against the same branch creates conflicting migration files that reference the same base snapshot. The first `drizzle-kit migrate` to run wins; the second breaks.
 5. **`drizzle-kit push`** (used in development) does not create migration files. If push was used in dev and `generate` is run later, the diff can be empty or wrong depending on what's in the snapshots directory.
 
@@ -273,7 +273,7 @@ NextAuth v5 replaces `getServerSession(authOptions)` (v4 pattern) with `auth()` 
 Traps:
 1. **Mixing v4 and v5 imports**: Copy-pasted code from Stack Overflow, blog posts, or the LLM's training data often uses `getServerSession`. This compiles fine (the import resolves) but returns `null` in v5 because the internals changed. The bug is silent — auth check passes as `session == null` → unauthenticated, redirect loop or unprotected route.
 2. **Middleware gotcha**: In Next.js 15 Middleware, `auth()` must be called as a middleware wrapper (`export default auth(middleware)`), not as `const session = await auth()`. Calling `auth()` directly in middleware body works but requires the full JWT decode on every request, which has performance implications.
-3. **Edge runtime**: NextAuth v5 JWT session works in Edge runtime. Drizzle + MySQL does NOT. If Middleware uses auth and also tries to query the DB, it will fail in Edge. Keep middleware auth-only (JWT decode), never DB queries.
+3. **Edge runtime**: Better Auth session checks and Drizzle `pg` database access require Node-compatible runtime. Keep proxy lightweight and never import DAL helpers into client components.
 
 **Warning signs:**
 - `getServerSession` appears anywhere in the codebase (wrong v5 pattern)
@@ -361,7 +361,7 @@ Second trap: SheetJS Community Edition (`xlsx` package on npm) has had security 
 **What goes wrong:**
 Drizzle maps nullable DB columns to `T | null` in TypeScript (correct). However, when building insert/update objects, TypeScript allows passing `undefined` for optional keys but Drizzle will throw at runtime if a non-nullable column receives `undefined`. The distinction between `null` (explicit DB null) and `undefined` (key omitted from object) is invisible in some code patterns.
 
-Specific trap: `expenseId` on `Transactions` is nullable (a transaction may not yet be linked to an expense). If you accidentally pass `expenseId: undefined` instead of `expenseId: null` when creating a transaction without an expense, Drizzle may throw or insert `NULL` depending on the MySQL driver version — inconsistent behavior.
+Specific trap: `expenseId` on `Transactions` is nullable (a transaction may not yet be linked to an expense). If you accidentally pass `expenseId: undefined` instead of `expenseId: null` when creating a transaction without an expense, Drizzle may omit the key instead of explicitly writing `NULL`.
 
 **Warning signs:**
 - Runtime error `ER_BAD_NULL_ERROR` on insert despite TypeScript showing no error

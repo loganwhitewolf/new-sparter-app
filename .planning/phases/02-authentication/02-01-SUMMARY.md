@@ -2,22 +2,22 @@
 phase: 02-authentication
 plan: "01"
 subsystem: auth
-tags: [better-auth, drizzle, mysql2, server-only, nextcookies]
+tags: [better-auth, drizzle, pg, server-only, nextcookies]
 
 # Dependency graph
 requires:
   - phase: 02-00
     provides: auth.spec.ts stubs and layout test staging bypass
 provides:
-  - lib/db/index.ts real mysql2 connection pool with DbOrTx union type
-  - auth.ts: Better Auth instance configured with emailAndPassword, Drizzle MySQL adapter, subscriptionPlan/role custom fields, nextCookies() plugin
+  - lib/db/index.ts real pg connection pool with DbOrTx union type
+  - auth.ts: Better Auth instance configured with emailAndPassword, Drizzle PostgreSQL adapter, subscriptionPlan/role custom fields, nextCookies() plugin
   - lib/auth-client.ts: createAuthClient for client-side useSession()
   - app/api/auth/[...all]/route.ts: GET/POST catch-all for Better Auth HTTP endpoints
 affects: [02-02, 02-03, 02-04, 03-dal, all phases using auth session]
 
 # Tech tracking
 tech-stack:
-  added: [better-auth/adapters/drizzle, better-auth/next-js, mysql2/promise connection pool]
+  added: [better-auth/adapters/drizzle, better-auth/next-js, pg Pool connection]
   patterns: [nextCookies() as last plugin, server-only import guard, DbOrTx union type for transactions, toNextJsHandler() route delegation]
 
 key-files:
@@ -50,7 +50,7 @@ completed: 2026-04-25
 
 # Phase 2 Plan 01: DB Client + Better Auth Core Summary
 
-**mysql2 connection pool with ssl for Railway + Better Auth betterAuth() config with Drizzle MySQL adapter, custom user fields (subscriptionPlan/role), and nextCookies() plugin**
+**pg Pool connection + Better Auth betterAuth() config with Drizzle PostgreSQL adapter, custom user fields (subscriptionPlan/role), and nextCookies() plugin**
 
 ## Performance
 
@@ -61,8 +61,8 @@ completed: 2026-04-25
 - **Files modified:** 5
 
 ## Accomplishments
-- Replaced lib/db/index.ts null stub with real mysql2 createPool() with Railway SSL, proper DbOrTx union type including transaction parameter type
-- Created auth.ts at project root with full Better Auth configuration: emailAndPassword (autoSignIn, 8-char minimum), drizzleAdapter MySQL, subscriptionPlan/role additionalFields with input:false, nextCookies() as last plugin
+- Replaced lib/db/index.ts null stub with real pg Pool, proper DbOrTx union type including transaction parameter type
+- Created auth.ts at project root with full Better Auth configuration: emailAndPassword (autoSignIn, 8-char minimum), drizzleAdapter PostgreSQL, subscriptionPlan/role additionalFields with input:false, nextCookies() as last plugin
 - Created lib/auth-client.ts with createAuthClient using NEXT_PUBLIC_BETTER_AUTH_URL
 - Created app/api/auth/[...all]/route.ts delegating all Better Auth HTTP endpoints via toNextJsHandler(auth)
 - Fixed schema.ts placeholder to export {} enabling TypeScript module resolution
@@ -71,21 +71,21 @@ completed: 2026-04-25
 
 Each task was committed atomically:
 
-1. **Task 1: Replace lib/db/index.ts stub with real mysql2 pool** - `0767638` (feat)
+1. **Task 1: Replace lib/db/index.ts stub with real pg pool** - `0767638` (feat)
 2. **Task 2: Create auth.ts, lib/auth-client.ts, and auth route handler** - `b810bd9` (feat)
 
 **Deviation fix:** `32a6aff` (fix: schema.ts empty export for TS module resolution)
 
 ## Files Created/Modified
-- `lib/db/index.ts` - Real mysql2 createPool, drizzle() with mode:'default', DbOrTx union type, import 'server-only'
+- `lib/db/index.ts` - Real pg Pool, drizzle() with schema, DbOrTx union type, import 'server-only'
 - `lib/db/schema.ts` - Added `export {}` to make it a valid TypeScript module (was comment-only)
-- `auth.ts` - Better Auth config: emailAndPassword, drizzleAdapter MySQL, subscriptionPlan/role custom fields, nextCookies() plugin
+- `auth.ts` - Better Auth config: emailAndPassword, drizzleAdapter PostgreSQL, subscriptionPlan/role custom fields, nextCookies() plugin
 - `lib/auth-client.ts` - createAuthClient with NEXT_PUBLIC_BETTER_AUTH_URL fallback
 - `app/api/auth/[...all]/route.ts` - Catch-all route handler: GET and POST via toNextJsHandler(auth)
 
 ## Decisions Made
-- Used `mode: 'default'` (not 'planetscale') for Drizzle MySQL — Railway MySQL is standard MySQL, not PlanetScale
-- `ssl: { rejectUnauthorized: false }` required for Railway MySQL TLS setup
+- Used `drizzle(pool, { schema })` with `drizzle-orm/node-postgres`
+- `DATABASE_SSL=true` enables strict TLS when the hosting provider requires it
 - `plugins: [nextCookies()]` as only and last plugin — ordering is critical per research (Pitfall 2)
 - `input: false` on both additionalFields implements threat model mitigation T-2-01-01 (privilege escalation at signup)
 
@@ -131,7 +131,7 @@ No new threat surface introduced beyond what was specified in the plan's threat 
 ## Self-Check: PASSED
 
 Verified:
-- `lib/db/index.ts` exists and contains real mysql2 pool
+- `lib/db/index.ts` exists and contains real pg pool
 - `auth.ts` exists at project root with betterAuth() config
 - `lib/auth-client.ts` exists with createAuthClient
 - `app/api/auth/[...all]/route.ts` exists with GET/POST exports

@@ -15,7 +15,7 @@ tech-stack:
     - react@19.2.4
     - drizzle-orm
     - drizzle-kit
-    - mysql2
+    - pg
     - better-auth
     - zod
     - decimal.js
@@ -79,7 +79,7 @@ completed: 2026-04-24
 - `tsconfig.json` - TypeScript config with `@/*` alias.
 - `proxy.ts` - Next.js 16 passthrough proxy placeholder.
 - `.env.example` - Required env vars for database, Better Auth, R2, and staging bypass.
-- `drizzle.config.ts` - MySQL Drizzle Kit config stub.
+- `drizzle.config.ts` - PostgreSQL Drizzle Kit config stub.
 - `.next-font-google-mocks.cjs` - Build-time Geist font response mock.
 - `app/layout.tsx` and `app/page.tsx` - Base scaffold pages from create-next-app.
 

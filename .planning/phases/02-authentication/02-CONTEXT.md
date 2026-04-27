@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-La Fase 2 consegna il sistema di autenticazione completo: registrazione con email+password, login, gestione sessione JWT persistente, route protection (redirect /dashboard → /login se non autenticato), e staging bypass via header `x-staging-key`. Usa Better Auth v1.6.9 con Drizzle adapter e MySQL.
+La Fase 2 consegna il sistema di autenticazione completo: registrazione con email+password, login, gestione sessione JWT persistente, route protection (redirect /dashboard → /login se non autenticato), e staging bypass via header `x-staging-key`. Usa Better Auth v1.6.9 con Drizzle adapter e PostgreSQL.
 
 **Non include:** OAuth/social login, password reset via email, gestione profilo utente (firstName/lastName → Phase 7).
 
@@ -41,8 +41,8 @@ La Fase 2 consegna il sistema di autenticazione completo: registrazione con emai
 
 ### Architettura Better Auth
 - **D-12:** Il file di configurazione Better Auth è `auth.ts` nella root del progetto (come indicato in CLAUDE.md).
-- **D-13:** Better Auth usa il **Drizzle adapter** con MySQL (`drizzle-orm/mysql2`). Le tabelle Better Auth (users, sessions, accounts, verifications) vengono generate dallo schema e migrated con `drizzle-kit generate`.
-- **D-14:** Il `db` viene inizializzato nella Fase 2 in `lib/db/index.ts` sostituendo lo stub null con la connessione reale `mysql2`.
+- **D-13:** Better Auth usa il **Drizzle adapter** con PostgreSQL (`drizzle-orm/node-postgres`) e provider `pg`. Le tabelle Better Auth (users, sessions, accounts, verifications) vengono generate dallo schema e migrated con `drizzle-kit generate`.
+- **D-14:** Il `db` viene inizializzato nella Fase 2 in `lib/db/index.ts` sostituendo lo stub null con la connessione reale `pg` Pool.
 
 ### Claude's Discretion
 - Struttura esatta del Drizzle schema per Better Auth (generato dall'adapter)

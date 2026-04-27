@@ -1,81 +1,101 @@
 import { relations } from "drizzle-orm";
 import {
-  mysqlTable,
+  pgTable,
   varchar,
   text,
   timestamp,
   boolean,
-  mysqlEnum,
+  pgEnum,
   index,
-} from "drizzle-orm/mysql-core";
+} from "drizzle-orm/pg-core";
 
-export const user = mysqlTable("user", {
-  id: varchar("id", { length: 36 }).primaryKey(),
+export const subscriptionPlanEnum = pgEnum("subscription_plan", [
+  "free",
+  "basic",
+  "pro",
+]);
+
+export const roleEnum = pgEnum("user_role", ["user", "admin"]);
+
+export const user = pgTable("user", {
+  id: text("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
-  createdAt: timestamp("created_at", { fsp: 3 }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { fsp: 3 })
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-  subscriptionPlan: mysqlEnum(["free", "basic", "pro"]).default("free"),
-  role: mysqlEnum(["user", "admin"]).default("user"),
+  subscriptionPlan: subscriptionPlanEnum("subscriptionPlan").default("free"),
+  role: roleEnum("role").default("user"),
 });
 
-export const session = mysqlTable(
+export const session = pgTable(
   "session",
   {
-    id: varchar("id", { length: 36 }).primaryKey(),
-    expiresAt: timestamp("expires_at", { fsp: 3 }).notNull(),
+    id: text("id").primaryKey(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     token: varchar("token", { length: 255 }).notNull().unique(),
-    createdAt: timestamp("created_at", { fsp: 3 }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { fsp: 3 })
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
-    userId: varchar("user_id", { length: 36 })
+    userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
   },
   (table) => [index("session_userId_idx").on(table.userId)],
 );
 
-export const account = mysqlTable(
+export const account = pgTable(
   "account",
   {
-    id: varchar("id", { length: 36 }).primaryKey(),
+    id: text("id").primaryKey(),
     accountId: text("account_id").notNull(),
     providerId: text("provider_id").notNull(),
-    userId: varchar("user_id", { length: 36 })
+    userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     accessToken: text("access_token"),
     refreshToken: text("refresh_token"),
     idToken: text("id_token"),
-    accessTokenExpiresAt: timestamp("access_token_expires_at", { fsp: 3 }),
-    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { fsp: 3 }),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", {
+      withTimezone: true,
+    }),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
+      withTimezone: true,
+    }),
     scope: text("scope"),
     password: text("password"),
-    createdAt: timestamp("created_at", { fsp: 3 }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { fsp: 3 })
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
   },
   (table) => [index("account_userId_idx").on(table.userId)],
 );
 
-export const verification = mysqlTable(
+export const verification = pgTable(
   "verification",
   {
-    id: varchar("id", { length: 36 }).primaryKey(),
+    id: text("id").primaryKey(),
     identifier: varchar("identifier", { length: 255 }).notNull(),
     value: text("value").notNull(),
-    expiresAt: timestamp("expires_at", { fsp: 3 }).notNull(),
-    createdAt: timestamp("created_at", { fsp: 3 }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { fsp: 3 })
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
