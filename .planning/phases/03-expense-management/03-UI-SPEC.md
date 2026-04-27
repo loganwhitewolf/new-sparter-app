@@ -54,12 +54,16 @@ Exceptions:
 
 All text uses Geist Sans unless noted. Numbers in tables use Geist Mono.
 
+**Weights: exactly 2 — 400 (normal) and 600 (semibold).**
+
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body | 14px (text-sm) | 400 (normal) | 1.5 | Table cell content, filter labels, form helper text |
-| Label | 14px (text-sm) | 500 (medium) | 1.4 | Form field labels, column headers, badge text |
+| Label | 14px (text-sm) | 400 (normal) | 1.4 | Form field labels; column headers use `uppercase tracking-wide text-xs` to differentiate visually |
 | Heading | 20px (text-xl) | 600 (semibold) | 1.2 | Page title "Spese"; modal dialog title |
 | Display | 28px (text-3xl) | 600 (semibold) | 1.2 | Not used in Phase 3 — reserved for dashboard KPI |
+
+Label differentiation: column headers are styled `text-xs uppercase tracking-wide text-muted-foreground font-normal` — visual distinction is achieved via size + case + color, not weight.
 
 Mono override (apply `font-mono` class):
 - Expense title in table cells (normalised bank descriptions, often uppercase) — Geist Mono 14px/400, `tracking-tight`, `uppercase` if source is all-caps, `truncate` after 48ch
@@ -82,7 +86,7 @@ CSS custom properties from globals.css — use these tokens, not raw hex values.
 Accent (`--primary` / emerald-600) is reserved for exactly these elements:
 1. "Nuova spesa" Button (primary variant) in page header
 2. "Categorizza (N)" Button in floating action bar (primary variant)
-3. "Salva" / "Conferma" submit Button inside modals (primary variant)
+3. "Salva spesa" / "Conferma" submit Button inside modals (primary variant)
 4. Checkbox checked state (inherits `--primary` via shadcn ring)
 5. Focus ring on Select, Input, Textarea (via `--ring: var(--primary)`)
 
@@ -108,7 +112,7 @@ All components below are already installed. `Table` must be added before impleme
 | Select | `components/ui/select.tsx` | Installed | Category filter, status filter, period filter, category picker in modal/bulk dialog |
 | Badge | `components/ui/badge.tsx` | Installed | Status column: "Categorizzata" / "Da categorizzare" |
 | Dialog | `components/ui/dialog.tsx` | Installed | Create/edit expense modal; bulk categorization confirmation dialog |
-| DropdownMenu | `components/ui/dropdown-menu.tsx` | Installed | Per-row context menu (three-dots: Modifica, Elimina) |
+| DropdownMenu | `components/ui/dropdown-menu.tsx` | Installed | Per-row context menu (three-dots: Modifica, Elimina) — trigger must carry `aria-label="Azioni per {titolo}"` |
 | Card | `components/ui/card.tsx` | Installed | Filter toolbar wrapper |
 | Separator | `components/ui/separator.tsx` | Installed | Sidebar settings separator (already used) |
 | Sheet | `components/ui/sheet.tsx` | Installed | Not used in Phase 3 |
@@ -160,9 +164,9 @@ Textarea: use `<textarea>` with shadcn Input-style classes (`border-input bg-bac
 | 3 | Categoria | 180px | left | "Categoria · Subcategoria" or "—" (em dash) if uncategorized |
 | 4 | Stato | 140px | center | Status Badge |
 | 5 | Data | 100px | right | `createdAt` formatted as `dd MMM yyyy` in Geist Mono, `tabular-nums` |
-| 6 | Azioni | 40px | center | `<DropdownMenu>` trigger — `<MoreHorizontal>` icon (lucide) |
+| 6 | Azioni | 40px | center | `<DropdownMenu>` trigger — `<MoreHorizontal>` icon (lucide), `aria-label="Azioni per {titolo}"` |
 
-Table header row: `bg-secondary text-muted-foreground text-xs font-medium uppercase tracking-wide py-2`.
+Table header row: `bg-secondary text-muted-foreground text-xs font-normal uppercase tracking-wide py-2`.
 
 Table body rows: `hover:bg-muted/50 transition-colors`. Selected rows: `bg-primary/5` (emerald tint).
 
@@ -184,7 +188,7 @@ Dialog width: `max-w-md` (448px).
 
 Hierarchy Select: single `<Select>` with `<SelectGroup>` per category, `<SelectItem>` per subcategory. Category name is a `<SelectLabel>` (non-selectable). Users pick a subcategory, not a parent category.
 
-Modal footer: `[Annulla]` (ghost) — `[Salva]` (primary) for create; `[Annulla]` (ghost) — `[Aggiorna]` (primary) for edit.
+Modal footer: `[Annulla]` (ghost) — `[Salva spesa]` (primary) for create; `[Annulla]` (ghost) — `[Aggiorna spesa]` (primary) for edit.
 
 ---
 
@@ -238,8 +242,8 @@ All copy is in Italian. Formal "tu" (informal second person, standard for Italia
 | Modal form — field label titolo | Titolo |
 | Modal form — field label category | Categoria |
 | Modal form — field label note | Note |
-| Modal submit — create | Salva |
-| Modal submit — edit | Aggiorna |
+| Modal submit — create | Salva spesa |
+| Modal submit — edit | Aggiorna spesa |
 | Modal cancel | Annulla |
 | Bulk dialog — title | Assegna categoria |
 | Bulk dialog — body | Assegna una categoria a **{N} spese** selezionate. |
@@ -288,7 +292,7 @@ Default URL state (no params): all categories, all statuses, "Questo mese".
 
 ### Loading States
 - Filter change: table rows show `opacity-50` skeleton shimmer while revalidating (use `isPending` from `useTransition`).
-- Form submit: Salva/Aggiorna/Conferma button shows `<Loader2 className="animate-spin" />` icon + disabled state while Server Action is pending.
+- Form submit: Salva spesa/Aggiorna spesa/Conferma button shows `<Loader2 className="animate-spin" />` icon + disabled state while Server Action is pending.
 - Delete: row shows `opacity-50` while deletion is pending; removed from list on success.
 
 ### Responsive Behavior
