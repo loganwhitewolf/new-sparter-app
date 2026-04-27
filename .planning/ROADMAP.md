@@ -80,7 +80,13 @@ Plans:
   2. L'utente può modificare o eliminare un'expense esistente
   3. La lista expense si filtra per categoria, intervallo di date e status di categorizzazione
   4. L'utente può selezionare multiple expense e assegnare una categoria a tutte in un'unica operazione
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 03-00-PLAN.md — Wave 0: Test stubs (tests/expenses.spec.ts) + shadcn Table install + Toaster in layout + lib/utils/decimal.ts
+- [ ] 03-01-PLAN.md — Wave 1: lib/db/schema.ts extension (category, sub_category, expense tables + enums + relations)
+- [ ] 03-02-PLAN.md — Wave 2: [BLOCKING] Drizzle migration + drizzle/seed.ts (26 categories + ~120 subcategories)
+- [ ] 03-03-PLAN.md — Wave 3: lib/dal/expenses.ts + lib/dal/categories.ts + lib/validations/expense.ts + lib/actions/expenses.ts
+- [ ] 03-04-PLAN.md — Wave 4: app/(app)/spese/page.tsx + 5 Client Components + human-verify checkpoint
 **UI hint**: yes
 
 ### Phase 4: Dashboard KPI
@@ -139,7 +145,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Design System | 0/5 | Not started | - |
 | 2. Authentication | 0/5 | Not started | - |
-| 3. Expense Management | 0/? | Not started | - |
+| 3. Expense Management | 0/5 | Not started | - |
 | 4. Dashboard KPI | 0/? | Not started | - |
 | 5. File Import | 0/? | Not started | - |
 | 6. Import Avanzato & Categorizzazione | 0/? | Not started | - |
