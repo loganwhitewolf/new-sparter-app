@@ -8,5 +8,6 @@ export default defineConfig({
   dialect: 'mysql',
   dbCredentials: {
     url: process.env.DATABASE_URL!,
+    ssl: { rejectUnauthorized: true },
   },
 })
