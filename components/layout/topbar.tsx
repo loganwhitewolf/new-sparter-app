@@ -33,11 +33,11 @@ export function Topbar() {
             </AvatarFallback>
           </Avatar>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium">{email || 'Utente'}</p>
-              <p className="text-xs text-muted-foreground">{email || 'utente@example.com'}</p>
+              <p className="truncate text-sm font-medium">{email || 'Utente'}</p>
+              <p className="truncate text-xs text-muted-foreground">{email || 'utente@example.com'}</p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
