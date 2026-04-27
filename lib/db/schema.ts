@@ -7,6 +7,9 @@ import {
   boolean,
   pgEnum,
   index,
+  integer,
+  serial,
+  unique,
 } from "drizzle-orm/pg-core";
 
 export const subscriptionPlanEnum = pgEnum("subscription_plan", [
@@ -16,6 +19,10 @@ export const subscriptionPlanEnum = pgEnum("subscription_plan", [
 ]);
 
 export const roleEnum = pgEnum("user_role", ["user", "admin"]);
+
+export const categoryTypeEnum = pgEnum('category_type', ['in', 'out', 'system'])
+
+export const expenseStatusEnum = pgEnum('expense_status', ['1', '2', '3', '4'])
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -103,9 +110,51 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+export const category = pgTable('category', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  slug: varchar('slug', { length: 100 }).notNull().unique(),
+  type: categoryTypeEnum('type').notNull(),
+  displayOrder: integer('display_order').default(0),
+  isActive: boolean('is_active').default(true).notNull(),
+}, (table) => [
+  index('category_slug_idx').on(table.slug),
+  index('category_type_idx').on(table.type),
+])
+
+export const subCategory = pgTable('sub_category', {
+  id: serial('id').primaryKey(),
+  categoryId: integer('category_id').notNull().references(() => category.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 100 }).notNull(),
+  slug: varchar('slug', { length: 100 }).notNull(),
+  displayOrder: integer('display_order').default(0),
+  isActive: boolean('is_active').default(true).notNull(),
+}, (table) => [
+  index('sub_category_categoryId_idx').on(table.categoryId),
+  unique('sub_category_category_slug_unique').on(table.categoryId, table.slug),
+])
+
+export const expense = pgTable('expense', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  title: varchar('title', { length: 120 }).notNull(),
+  descriptionHash: varchar('description_hash', { length: 64 }),
+  subCategoryId: integer('sub_category_id').references(() => subCategory.id, { onDelete: 'set null' }),
+  status: expenseStatusEnum('status').notNull().default('1'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+  index('expense_userId_idx').on(table.userId),
+  index('expense_userId_status_idx').on(table.userId, table.status),
+  index('expense_userId_createdAt_idx').on(table.userId, table.createdAt),
+  index('expense_subCategoryId_idx').on(table.subCategoryId),
+])
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  expenses: many(expense),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -121,3 +170,26 @@ export const accountRelations = relations(account, ({ one }) => ({
     references: [user.id],
   }),
 }));
+
+export const categoryRelations = relations(category, ({ many }) => ({
+  subCategories: many(subCategory),
+}))
+
+export const subCategoryRelations = relations(subCategory, ({ one, many }) => ({
+  category: one(category, {
+    fields: [subCategory.categoryId],
+    references: [category.id],
+  }),
+  expenses: many(expense),
+}))
+
+export const expenseRelations = relations(expense, ({ one }) => ({
+  user: one(user, {
+    fields: [expense.userId],
+    references: [user.id],
+  }),
+  subCategory: one(subCategory, {
+    fields: [expense.subCategoryId],
+    references: [subCategory.id],
+  }),
+}))
