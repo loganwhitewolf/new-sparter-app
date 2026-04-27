@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "tsx scripts/migrate.ts",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:seed": "tsx drizzle/seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1037.0",
