@@ -67,7 +67,7 @@ Label differentiation: column headers are styled `text-xs uppercase tracking-wid
 
 Mono override (apply `font-mono` class):
 - Expense title in table cells (normalised bank descriptions, often uppercase) — Geist Mono 14px/400, `tracking-tight`, `uppercase` if source is all-caps, `truncate` after 48ch
-- `createdAt` date column — Geist Mono 13px/400, `tabular-nums`
+- `createdAt` date column — Geist Mono text-sm/400, `tabular-nums` (14px — same scale as body; monospace + tabular-nums provides visual differentiation)
 - Row count in floating action bar label — Geist Mono inline
 
 ---
