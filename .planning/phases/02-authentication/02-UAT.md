@@ -58,11 +58,14 @@ blocked: 0
 ## Gaps
 
 - truth: "Email address shown in full in avatar dropdown"
-  status: failed
+  status: fixed
   reason: "User reported: loganwhitewolf@gmail.com non entra completamente nel riquadro — non si legge la m finale di .com"
   severity: cosmetic
   test: 4
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "DropdownMenuContent w-48 troppo stretto per email lunghe"
+  artifacts:
+    - path: "components/layout/topbar.tsx"
+      issue: "w-48 su DropdownMenuContent, nessun truncate sui <p> email"
+  missing:
+    - "Allargato a w-56, aggiunto classe truncate"
   debug_session: ""

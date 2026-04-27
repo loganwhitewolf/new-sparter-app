@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 planning complete — 5 PLAN.md files verified, ready to execute
-last_updated: "2026-04-25T00:00:00.000Z"
-last_activity: 2026-04-25
+stopped_at: Phase 2 complete — UAT passed (7/8, 1 cosmetic fix applied). Ready for Phase 3.
+last_updated: "2026-04-27T00:00:00.000Z"
+last_activity: 2026-04-27
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
-  completed_plans: 5
-  percent: 50
+  completed_plans: 10
+  percent: 28
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 
 ## Current Position
 
-Phase: 02 (authentication) — READY TO EXECUTE
-Plans: 5 (02-00 through 02-04), 4 waves
-Status: Ready to execute
-Last activity: 2026-04-25
+Phase: 03 (expense-management) — NOT STARTED
+Plans: TBD
+Status: Ready to plan
+Last activity: 2026-04-27
 
 Progress: [██████████] 100%
 
@@ -60,7 +60,7 @@ Progress: [██████████] 100%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Init: Stack fisso — Next.js 16 App Router, Drizzle ORM + MySQL, Better Auth, Cloudflare R2
+- Init: Stack fisso — Next.js 16 App Router, Drizzle ORM + PostgreSQL, Better Auth, Cloudflare R2
 - Init: DAL pattern — lib/dal/ → lib/services/ → lib/actions/
 - Init: Decimal.js obbligatorio per tutti gli amount — mai float JS nativo
 - Init: Upload R2 via presigned URL (browser → R2 diretto, mai proxiato)

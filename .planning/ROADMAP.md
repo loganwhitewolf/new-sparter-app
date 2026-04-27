@@ -8,7 +8,7 @@ Sparter migrates from Express + Sequelize to Next.js 16 App Router + Drizzle ORM
 
 All plan-phase agents must be aware of these constraints:
 
-- **Stack**: Next.js 16 App Router, Drizzle ORM + MySQL, Better Auth, Cloudflare R2, Zod, Decimal.js, Tailwind CSS + shadcn/ui
+- **Stack**: Next.js 16 App Router, Drizzle ORM + PostgreSQL, Better Auth, Cloudflare R2, Zod, Decimal.js, Tailwind CSS + shadcn/ui
 - **DAL pattern**: `lib/dal/` (Drizzle queries) → `lib/services/` (business logic) → `lib/actions/` (server actions, thin wrappers)
 - **Seed data**: `docs/init/seed.ts` contains 26 categories, ~120 subcategories, initial bank/payment platforms, import format versions, 28 regex patterns — port to `drizzle/seed.ts`
 - **Monetary arithmetic**: NEVER use JS native `+`, `-`, `*`, `/` on amounts — always `Decimal.js`. `toDecimal()` / `toDbDecimal()` utils must be created in Phase 3 before any amount writes
@@ -24,8 +24,8 @@ All plan-phase agents must be aware of these constraints:
 
 ## Phases
 
-- [ ] **Phase 1: Design System** - Tokens colore/tipografia, componenti base shadcn/ui, layout shell `(auth)` / `(app)`
-- [ ] **Phase 2: Authentication** - Registrazione, login JWT, middleware di route protection con staging bypass
+- [x] **Phase 1: Design System** - Tokens colore/tipografia, componenti base shadcn/ui, layout shell `(auth)` / `(app)`
+- [x] **Phase 2: Authentication** - Registrazione, login JWT, middleware di route protection con staging bypass
 - [ ] **Phase 3: Expense Management** - CRUD manuale expense, lista con filtri, bulk categorization
 - [ ] **Phase 4: Dashboard KPI** - Overview mensile, breakdown categorie, trend mensile
 - [ ] **Phase 5: File Import** - Upload CSV/Excel su R2, record `files`, rilevamento piattaforma + versione tracciato, preview, import con deduplicazione e categorizzazione gated
@@ -66,7 +66,7 @@ Plans:
 **Plans**: 5 plans
 Plans:
 - [ ] 02-00-PLAN.md — Wave 0: Test stubs (tests/auth.spec.ts) + update tests/layout.spec.ts for proxy.ts compatibility
-- [ ] 02-01-PLAN.md — Wave 1: lib/db/index.ts real mysql2 pool + auth.ts Better Auth config + lib/auth-client.ts + route handler
+- [ ] 02-01-PLAN.md — Wave 1: lib/db/index.ts real pg pool + auth.ts Better Auth config + lib/auth-client.ts + route handler
 - [ ] 02-02-PLAN.md — Wave 2: lib/db/schema.ts Better Auth tables + [BLOCKING] Drizzle migration + lib/validations/auth.ts Zod v4
 - [ ] 02-03-PLAN.md — Wave 3: lib/dal/auth.ts verifySession() + lib/actions/auth.ts (signIn/signUp/signOut)
 - [ ] 02-04-PLAN.md — Wave 4: proxy.ts route protection + login/register pages wired + topbar live session [checkpoint]
