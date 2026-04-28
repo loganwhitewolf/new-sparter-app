@@ -105,7 +105,7 @@ Plans:
 **Wave 1 (blocked on Wave 0 completion)**
 - [x] 04-01-PLAN.md — Backend: dashboard validation + user-scoped KPI/breakdown/trend DAL
 **Wave 2 (blocked on Wave 0 and Wave 1 completion)**
-- [ ] 04-02-PLAN.md — UI components: filters, KPI cards, breakdown chart, trend chart, skeletons
+- [x] 04-02-PLAN.md — UI components: filters, KPI cards, breakdown chart, trend chart, skeletons
 **Wave 3 (blocked on Wave 1 and Wave 2 completion)**
 - [ ] 04-03-PLAN.md — Page integration: data-backed `/dashboard` route + Playwright verification
 
@@ -162,7 +162,7 @@ Cross-cutting constraints:
 | 1. Design System | 0/5 | Not started | - |
 | 2. Authentication | 0/5 | Not started | - |
 | 3. Expense Management | 6/6 | Complete | 2026-04-28 |
-| 4. Dashboard KPI | 2/4 | In progress | - |
+| 4. Dashboard KPI | 3/4 | In progress | - |
 | 5. File Import | 0/? | Not started | - |
 | 6. Import Avanzato & Categorizzazione | 0/? | Not started | - |
 | 7. User Profile | 0/? | Not started | - |
