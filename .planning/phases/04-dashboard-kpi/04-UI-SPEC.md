@@ -1,10 +1,11 @@
 ---
 phase: 4
 slug: dashboard-kpi
-status: draft
+status: approved
 shadcn_initialized: true
 preset: new-york / zinc base / CSS variables
 created: 2026-04-28
+reviewed_at: 2026-04-28
 ---
 
 # Phase 4 — UI Design Contract
