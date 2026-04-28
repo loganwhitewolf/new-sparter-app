@@ -98,7 +98,22 @@ Plans:
   1. La dashboard mostra totalIn, totalOut, balance, savingsRate e uncategorizedCount del mese corrente con delta rispetto al mese precedente (categoria `ignore` esclusa)
   2. L'utente può vedere il breakdown delle spese per categoria e subcategoria con percentuale sul totale, filtrabile per preset (last-month, last-3-months, last-6-months, this-year, last-year)
   3. L'utente può vedere il trend mensile con totalIn, totalOut, non categorizzato e ignorato per ogni mese del periodo selezionato
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 0**
+- [ ] 04-00-PLAN.md — Setup: shadcn chart/tabs, dashboard test stubs, shared date + Decimal helpers
+**Wave 1 (blocked on Wave 0 completion)**
+- [ ] 04-01-PLAN.md — Backend: dashboard validation + user-scoped KPI/breakdown/trend DAL
+**Wave 2 (blocked on Wave 0 and Wave 1 completion)**
+- [ ] 04-02-PLAN.md — UI components: filters, KPI cards, breakdown chart, trend chart, skeletons
+**Wave 3 (blocked on Wave 1 and Wave 2 completion)**
+- [ ] 04-03-PLAN.md — Page integration: data-backed `/dashboard` route + Playwright verification
+
+Cross-cutting constraints:
+- Every dashboard data path is scoped through `verifySession()` and `eq(expense.userId, userId)`.
+- Monetary fields remain explicit `"0.00"` strings until Phase 5 introduces transaction amounts; count-based fallback data must be labelled and typed.
+- Client chart components must not runtime-import server-only DAL modules.
+- Next.js 16 async `searchParams` and `useSearchParams` Suspense requirements are mandatory.
 **UI hint**: yes
 
 ### Phase 5: File Import
@@ -147,7 +162,7 @@ Plans:
 | 1. Design System | 0/5 | Not started | - |
 | 2. Authentication | 0/5 | Not started | - |
 | 3. Expense Management | 6/6 | Complete | 2026-04-28 |
-| 4. Dashboard KPI | 0/? | Not started | - |
+| 4. Dashboard KPI | 0/4 | Planned | - |
 | 5. File Import | 0/? | Not started | - |
 | 6. Import Avanzato & Categorizzazione | 0/? | Not started | - |
 | 7. User Profile | 0/? | Not started | - |
