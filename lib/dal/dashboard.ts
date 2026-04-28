@@ -1,11 +1,11 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, count, eq, gte, inArray, isNotNull, isNull, lte, ne, or } from 'drizzle-orm'
+import { and, count, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { db } from '@/lib/db'
 import { category, expense, subCategory } from '@/lib/db/schema'
-import type { DashboardFilters } from '@/lib/validations/dashboard'
-import { dashboardPresetToDateRange } from '@/lib/utils/date'
+import type { DashboardFilters, DashboardPreset } from '@/lib/validations/dashboard'
+import { dashboardPresetToDateRange, monthLabel, monthsBetween } from '@/lib/utils/date'
 import {
   computeBreakdownPercentages,
   computeDeltaPercent,
@@ -228,5 +228,76 @@ export const getCategoriesBreakdown = cache(
           breakdownCategory.subCategories.sort((a, b) => b.count - a.count)
         ),
       }))
+  }
+)
+
+export const getAggregatedTransactionsData = cache(
+  async (preset: DashboardPreset): Promise<MonthlyTrendPoint[]> => {
+    const { userId } = await verifySession()
+    const { from, to } = dashboardPresetToDateRange(preset)
+    const buckets = new Map<string, MonthlyTrendPoint>(
+      monthsBetween(from, to).map((month) => [
+        month,
+        {
+          month,
+          label: monthLabel(month),
+          totalIn: '0.00',
+          totalOut: '0.00',
+          totalNc: 0,
+          totalIgn: 0,
+        },
+      ])
+    )
+    const monthSql = sql<string>`to_char(${expense.createdAt}, 'YYYY-MM')`
+
+    const uncategorizedRows = await db
+      .select({
+        month: monthSql,
+        total: count(),
+      })
+      .from(expense)
+      .where(
+        and(
+          eq(expense.userId, userId),
+          gte(expense.createdAt, from),
+          lte(expense.createdAt, to),
+          eq(expense.status, '1')
+        )
+      )
+      .groupBy(monthSql)
+
+    const ignoredRows = await db
+      .select({
+        month: monthSql,
+        total: count(),
+      })
+      .from(expense)
+      .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+      .leftJoin(category, eq(subCategory.categoryId, category.id))
+      .where(
+        and(
+          eq(expense.userId, userId),
+          gte(expense.createdAt, from),
+          lte(expense.createdAt, to),
+          eq(category.slug, 'ignore')
+        )
+      )
+      .groupBy(monthSql)
+
+    for (const row of uncategorizedRows) {
+      const bucket = buckets.get(row.month)
+      if (bucket) {
+        bucket.totalNc = Number(row.total ?? 0)
+      }
+    }
+
+    for (const row of ignoredRows) {
+      const bucket = buckets.get(row.month)
+      if (bucket) {
+        bucket.totalIgn = Number(row.total ?? 0)
+      }
+    }
+
+    return Array.from(buckets.values())
   }
 )
