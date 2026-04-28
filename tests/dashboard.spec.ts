@@ -53,10 +53,10 @@ test.describe('Dashboard - DASH-03: Monthly trend', () => {
     await openDashboard(page)
 
     await expect(page.getByText('Trend mensile')).toBeVisible()
-    await expect(page.getByText('Entrate')).toBeVisible()
-    await expect(page.getByText('Uscite')).toBeVisible()
-    await expect(page.getByText('Non categorizzato')).toBeVisible()
-    await expect(page.getByText('Ignorato')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Entrate' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Uscite' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Non categorizzato' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Ignorato' })).toBeVisible()
   })
 
   test('DASH-03 legend click toggles a series', async ({ page }) => {
