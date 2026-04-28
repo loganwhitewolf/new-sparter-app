@@ -45,14 +45,8 @@ type Props =
 export function ExpenseFormDialog({ mode, categories, expense, trigger, onSuccess }: Props) {
   const [open, setOpen] = useState(false)
 
-  const initialCategoryId = expense?.subCategoryId
-    ? String(categories.find((c) => c.subCategories.some((s) => s.id === expense.subCategoryId))?.id ?? '')
-    : ''
-
-  const [categoryId, setCategoryId] = useState<string>(initialCategoryId)
-  const [subCategoryId, setSubCategoryId] = useState<string>(
-    expense?.subCategoryId ? String(expense.subCategoryId) : ''
-  )
+  const [categoryId, setCategoryId] = useState<string>('')
+  const [subCategoryId, setSubCategoryId] = useState<string>('')
 
   const selectedCategory = categories.find((c) => String(c.id) === categoryId)
 
@@ -63,13 +57,25 @@ export function ExpenseFormDialog({ mode, categories, expense, trigger, onSucces
   useEffect(() => {
     if (submittedRef.current && state.error === null) {
       setOpen(false)
-      setCategoryId('')
-      setSubCategoryId('')
       toast.success(mode === 'create' ? 'Spesa creata con successo.' : 'Spesa aggiornata.')
       submittedRef.current = false
       onSuccess?.()
     }
   }, [state, mode, onSuccess])
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen && mode === 'edit' && expense.subCategoryId) {
+      const catId = String(
+        categories.find((c) => c.subCategories.some((s) => s.id === expense.subCategoryId))?.id ?? ''
+      )
+      setCategoryId(catId)
+      setSubCategoryId(String(expense.subCategoryId))
+    } else if (!nextOpen) {
+      setCategoryId('')
+      setSubCategoryId('')
+    }
+    setOpen(nextOpen)
+  }
 
   function handleCategoryChange(value: string) {
     setCategoryId(value)
@@ -77,7 +83,7 @@ export function ExpenseFormDialog({ mode, categories, expense, trigger, onSucces
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger ?? (
           <Button size="sm">
