@@ -58,7 +58,7 @@ Declared values (multiples of 4):
 Exceptions:
 - KPI card touch target on mobile: minimum 44px height (accessibility, iOS tap target)
 - Chart container minimum height: 300px (Recharts layout constraint)
-- YAxis label column in horizontal bar chart: 110px left margin (`margin={{ left: 120 }}`)
+- YAxis label column in horizontal bar chart: 112px (4×28) left margin (`margin={{ left: 120 }}`)
 
 ---
 
@@ -228,7 +228,7 @@ Section wrapper: Card with CardHeader ("Breakdown Categorie") + CardContent
     ├── ChartContainer — min-h-[300px] w-full
     └── BarChart layout="vertical" margin={{ left: 120 }}
         ├── XAxis type="number" domain={[0, 100]} unit="%" hide
-        ├── YAxis dataKey="name" type="category" width=110 tick fontSize=12
+        ├── YAxis dataKey="name" type="category" width={112} tick fontSize=12
         │   onClick → toggles category expansion (shows subcategory rows)
         └── Bar dataKey="pct" fill="var(--total-out)" radius={[0, 4, 4, 0]}
             └── Cell for subcategory rows: fill="var(--muted)" (lighter shade)
@@ -352,6 +352,18 @@ Phase 4 operates on manual expenses only. Monetary amounts (totalIn, totalOut, b
 
 Destructive actions in Phase 4: none. No confirmation dialogs required.
 
+### Error States
+
+One error card per Suspense boundary. Displayed when a DAL fetch fails (network error, DB timeout, or unexpected exception).
+
+| Boundary | Copy (Italian) |
+|----------|----------------|
+| KPI cards (OverviewSection) | Impossibile caricare i dati. Riprova tra qualche istante. |
+| Breakdown chart (BreakdownSection) | Impossibile caricare i dati. Riprova tra qualche istante. |
+| Trend chart (TrendSection) | Impossibile caricare i dati. Riprova tra qualche istante. |
+
+Error card structure: same Card wrapper as empty state, no icon, body text in `text-muted-foreground` at 14px. No retry button in Phase 4 (user reloads the page manually).
+
 ---
 
 ## Number Formatting
@@ -432,3 +444,5 @@ No third-party registries declared. Registry vetting gate: not applicable.
 | Static drill-down (no animation) | CONTEXT.md Claude's Discretion, RESEARCH.md A2 | Layout Contract — Breakdown |
 | Delta null sentinel → "—" | RESEARCH.md Pattern 5, A3 | Copywriting + Color |
 | Italian copy | CLAUDE.md ("mercato italiano"), REQUIREMENTS.md | Copywriting Contract |
+| YAxis width 112px (4×28) | Checker revision — spacing must be multiple of 4 | Layout Contract — Breakdown |
+| Error state copy per Suspense boundary | Checker revision — Dimension 1 recommendation | Copywriting Contract — Error States |
