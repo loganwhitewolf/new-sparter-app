@@ -103,9 +103,9 @@
 | AUTH-01 | Phase 2 | Pending |
 | AUTH-02 | Phase 2 | Pending |
 | AUTH-03 | Phase 2 | Pending |
-| EXP-01 | Phase 3 | Pending |
-| EXP-02 | Phase 3 | Pending |
-| EXP-03 | Phase 3 | Pending |
+| EXP-01 | Phase 3 | Validated in Phase 3: Expense Management (2026-04-28) |
+| EXP-02 | Phase 3 | Validated in Phase 3: Expense Management (2026-04-28) |
+| EXP-03 | Phase 3 | Validated in Phase 3: Expense Management (2026-04-28) |
 | DASH-01 | Phase 4 | Pending |
 | DASH-02 | Phase 4 | Pending |
 | DASH-03 | Phase 4 | Pending |
