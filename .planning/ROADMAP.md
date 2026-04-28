@@ -26,7 +26,7 @@ All plan-phase agents must be aware of these constraints:
 
 - [x] **Phase 1: Design System** - Tokens colore/tipografia, componenti base shadcn/ui, layout shell `(auth)` / `(app)`
 - [x] **Phase 2: Authentication** - Registrazione, login JWT, middleware di route protection con staging bypass
-- [ ] **Phase 3: Expense Management** - CRUD manuale expense, lista con filtri, bulk categorization
+- [x] **Phase 3: Expense Management** - CRUD manuale expense, lista con filtri, bulk categorization
 - [ ] **Phase 4: Dashboard KPI** - Overview mensile, breakdown categorie, trend mensile
 - [ ] **Phase 5: File Import** - Upload CSV/Excel su R2, record `files`, rilevamento piattaforma + versione tracciato, preview, import con deduplicazione e categorizzazione gated
 - [ ] **Phase 6: Import Avanzato & Categorizzazione** - Pattern regex custom utente, rafforzamento history-based Tier 2, subscription gating e strumenti avanzati
@@ -146,7 +146,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Design System | 0/5 | Not started | - |
 | 2. Authentication | 0/5 | Not started | - |
-| 3. Expense Management | 0/5 | Not started | - |
+| 3. Expense Management | 6/6 | Complete | 2026-04-28 |
 | 4. Dashboard KPI | 0/? | Not started | - |
 | 5. File Import | 0/? | Not started | - |
 | 6. Import Avanzato & Categorizzazione | 0/? | Not started | - |
