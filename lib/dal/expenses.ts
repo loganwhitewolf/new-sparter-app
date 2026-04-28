@@ -4,6 +4,9 @@ import { db } from '@/lib/db'
 import { expense, subCategory, category } from '@/lib/db/schema'
 import { eq, and, gte, lte, or, desc } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
+import { periodToDateRange } from '@/lib/utils/date'
+
+export { periodToDateRange } from '@/lib/utils/date'
 
 export type ExpenseFilters = {
   categorySlug?: string
@@ -21,26 +24,6 @@ export type ExpenseRow = {
   subCategoryName: string | null
   categoryName: string | null
   categorySlug: string | null
-}
-
-export function periodToDateRange(period: string): { from: Date; to: Date } {
-  const now = new Date()
-  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
-  switch (period) {
-    case 'last-3-months':
-      return { from: new Date(now.getFullYear(), now.getMonth() - 2, 1), to }
-    case 'last-6-months':
-      return { from: new Date(now.getFullYear(), now.getMonth() - 5, 1), to }
-    case 'this-year':
-      return { from: new Date(now.getFullYear(), 0, 1), to }
-    case 'last-year':
-      return {
-        from: new Date(now.getFullYear() - 1, 0, 1),
-        to: new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999),
-      }
-    default: // 'this-month'
-      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to }
-  }
 }
 
 export const getExpenses = cache(async (filters: ExpenseFilters = {}): Promise<ExpenseRow[]> => {
