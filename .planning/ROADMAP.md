@@ -101,7 +101,7 @@ Plans:
 **Plans**: 4 plans
 Plans:
 **Wave 0**
-- [ ] 04-00-PLAN.md — Setup: shadcn chart/tabs, dashboard test stubs, shared date + Decimal helpers
+- [x] 04-00-PLAN.md — Setup: shadcn chart/tabs, dashboard test stubs, shared date + Decimal helpers
 **Wave 1 (blocked on Wave 0 completion)**
 - [ ] 04-01-PLAN.md — Backend: dashboard validation + user-scoped KPI/breakdown/trend DAL
 **Wave 2 (blocked on Wave 0 and Wave 1 completion)**
