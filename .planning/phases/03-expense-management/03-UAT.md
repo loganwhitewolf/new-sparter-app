@@ -70,29 +70,54 @@ blocked: 0
   reason: "User reported: Warning: Missing Description or aria-describedby={undefined} for DialogContent — affects all Dialog components (ExpenseFormDialog, BulkCategorizeDialog, delete confirmation)"
   severity: cosmetic
   test: 2
-  artifacts: []
-  missing: []
+  root_cause: "Nessun <DialogDescription> aggiunto nei tre dialog. shadcn/Radix richiede Description o aria-describedby={undefined} esplicito."
+  artifacts:
+    - path: "components/expenses/expense-form-dialog.tsx"
+      issue: "DialogContent senza DialogDescription"
+    - path: "components/expenses/bulk-categorize-dialog.tsx"
+      issue: "DialogContent senza DialogDescription"
+    - path: "components/expenses/expense-table.tsx"
+      issue: "DeleteExpenseMenuItem DialogContent senza DialogDescription"
+  missing:
+    - "Aggiungere <DialogDescription className='sr-only'> a ogni DialogContent"
 
 - truth: "Il dialog 'Nuova spesa' mostra la select a due livelli (categoria + sottocategoria); la spesa creata senza sottocategoria appare con badge 'Da categorizzare'"
   status: failed
   reason: "User reported: La select mostra solo la categoria, non la sottocategoria. Dopo la creazione la spesa appare come categorizzata anche senza aver selezionato una sottocategoria."
   severity: major
   test: 3
-  artifacts: []
-  missing: []
+  root_cause: "SelectContent in shadcn usa SelectPrimitive.Portal che renderizza il dropdown fuori dal DOM del DialogContent. Il Dialog di Radix (modal=true) restringe i pointer-events al solo DialogContent, rendendo le SelectItem nel portal non cliccabili. Le categorie (SelectLabel) appaiono ma le sottocategorie (SelectItem) non sono interagibili. Fix: sostituire con due Select separate (categoria → sottocategoria filtrata) che rimangono nel DOM del Dialog."
+  artifacts:
+    - path: "components/expenses/expense-form-dialog.tsx"
+      issue: "SelectGroup gerarchico dentro Dialog — SelectContent portal non riceve pointer events"
+    - path: "components/ui/select.tsx"
+      issue: "SelectContent wrappato in SelectPrimitive.Portal"
+  missing:
+    - "Sostituire Select gerarchico con due Select separati: prima categoria, poi sottocategoria filtrata per categoria selezionata"
 
 - truth: "Il DropdownMenu si chiude dopo che il dialog di modifica viene confermato e la riga aggiornata"
   status: failed
   reason: "User reported: Il DropdownMenu rimane visibile in sovrapposizione dopo aver aggiornato la spesa."
   severity: minor
   test: 4
-  artifacts: []
-  missing: []
+  root_cause: "DropdownMenu è uncontrolled — quando ExpenseFormDialog chiude il dialog interno, il DropdownMenu genitore non ha un meccanismo per sapere che l'azione è completata e quindi rimane aperto. Fix: aggiungere onSuccess prop a ExpenseFormDialog in mode=edit e controllare DropdownMenu open state dall'esterno."
+  artifacts:
+    - path: "components/expenses/expense-table.tsx"
+      issue: "DropdownMenu uncontrolled — nessun close on edit success"
+    - path: "components/expenses/expense-form-dialog.tsx"
+      issue: "Nessun onSuccess callback esposto in mode=edit"
+  missing:
+    - "Aggiungere onSuccess prop a ExpenseFormDialog (opzionale, solo mode=edit)"
+    - "In ExpenseTable, controllare DropdownMenu open state e chiuderlo su onSuccess"
 
 - truth: "Il dialog di categorizzazione bulk mostra la select a due livelli (categoria + sottocategoria) e permette di selezionare una sottocategoria"
   status: failed
   reason: "User reported: Il dialog si apre ma non fa selezionare la sottocategoria."
   severity: major
   test: 7
-  artifacts: []
-  missing: []
+  root_cause: "Stesso bug dei test 3: SelectContent portal fuori dal DOM del Dialog — pointer events non raggiungono le SelectItem. Fix identico: due Select separati (categoria → sottocategoria filtrata)."
+  artifacts:
+    - path: "components/expenses/bulk-categorize-dialog.tsx"
+      issue: "SelectGroup gerarchico dentro Dialog — stesso problema portal"
+  missing:
+    - "Sostituire Select gerarchico con due Select separati in BulkCategorizeDialog"
