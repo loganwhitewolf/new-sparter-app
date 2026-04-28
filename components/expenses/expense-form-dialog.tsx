@@ -188,7 +188,7 @@ export function ExpenseFormDialog({ mode, categories, expense, trigger, onSucces
                 Annulla
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || !subCategoryId}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {mode === 'create' ? 'Salva spesa' : 'Aggiorna spesa'}
             </Button>
