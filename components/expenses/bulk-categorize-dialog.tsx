@@ -8,6 +8,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -15,9 +16,7 @@ import {
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -39,24 +38,36 @@ export function BulkCategorizeDialog({
   categories,
   onSuccess,
 }: Props) {
+  const [categoryId, setCategoryId] = useState<string>('')
   const [subCategoryId, setSubCategoryId] = useState<string>('')
   const [state, formAction, isPending] = useActionState(bulkCategorize, { error: null })
   const submittedRef = useRef(false)
 
+  const selectedCategory = categories.find((c) => String(c.id) === categoryId)
+
   useEffect(() => {
     if (submittedRef.current && state.error === null) {
       toast.success(`${selectedIds.length} spese categorizzate.`)
+      setCategoryId('')
       setSubCategoryId('')
       submittedRef.current = false
       onSuccess()
     }
   }, [state, selectedIds.length, onSuccess])
 
+  function handleCategoryChange(value: string) {
+    setCategoryId(value)
+    setSubCategoryId('')
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Assegna categoria</DialogTitle>
+          <DialogDescription className="sr-only">
+            Seleziona una categoria e una sottocategoria da assegnare alle spese selezionate.
+          </DialogDescription>
         </DialogHeader>
 
         <form
@@ -66,7 +77,6 @@ export function BulkCategorizeDialog({
           }}
           className="flex flex-col gap-4"
         >
-          {/* Hidden inputs: IDs array + subCategoryId */}
           <input type="hidden" name="ids" value={JSON.stringify(selectedIds)} />
           <input type="hidden" name="subCategoryId" value={subCategoryId} />
 
@@ -75,23 +85,35 @@ export function BulkCategorizeDialog({
             <strong>{selectedIds.length} spese</strong> selezionate.
           </p>
 
-          <Select value={subCategoryId} onValueChange={setSubCategoryId}>
+          {/* Categoria */}
+          <Select value={categoryId} onValueChange={handleCategoryChange}>
             <SelectTrigger>
               <SelectValue placeholder="Seleziona una categoria" />
             </SelectTrigger>
             <SelectContent>
               {categories.map((cat) => (
-                <SelectGroup key={cat.id}>
-                  <SelectLabel>{cat.name}</SelectLabel>
-                  {cat.subCategories.map((sub) => (
-                    <SelectItem key={sub.id} value={String(sub.id)}>
-                      {sub.name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
+                <SelectItem key={cat.id} value={String(cat.id)}>
+                  {cat.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
+
+          {/* Sottocategoria */}
+          {selectedCategory && (
+            <Select value={subCategoryId} onValueChange={setSubCategoryId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona una sottocategoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {selectedCategory.subCategories.map((sub) => (
+                  <SelectItem key={sub.id} value={String(sub.id)}>
+                    {sub.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           {state.error && (
             <Alert variant="destructive">

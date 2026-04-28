@@ -22,6 +22,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -43,6 +44,7 @@ type Props = {
 export function ExpenseTable({ expenses, categories }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false)
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
 
   const allSelected = expenses.length > 0 && selectedIds.length === expenses.length
   const someSelected = selectedIds.length > 0 && selectedIds.length < expenses.length
@@ -161,7 +163,10 @@ export function ExpenseTable({ expenses, categories }: Props) {
                     {formatDate(exp.createdAt)}
                   </TableCell>
                   <TableCell className="w-10 text-center">
-                    <DropdownMenu>
+                    <DropdownMenu
+                      open={openDropdownId === exp.id}
+                      onOpenChange={(o) => setOpenDropdownId(o ? exp.id : null)}
+                    >
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
@@ -177,6 +182,7 @@ export function ExpenseTable({ expenses, categories }: Props) {
                           categories={categories}
                           mode="edit"
                           expense={exp}
+                          onSuccess={() => setOpenDropdownId(null)}
                           trigger={
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                               Modifica
@@ -187,6 +193,7 @@ export function ExpenseTable({ expenses, categories }: Props) {
                           expense={exp}
                           onDeleted={() => {
                             setSelectedIds((prev) => prev.filter((id) => id !== exp.id))
+                            setOpenDropdownId(null)
                           }}
                         />
                       </DropdownMenuContent>
@@ -257,6 +264,9 @@ function DeleteExpenseMenuItem({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Elimina spesa</DialogTitle>
+          <DialogDescription className="sr-only">
+            Conferma l&apos;eliminazione della spesa selezionata.
+          </DialogDescription>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
           Sei sicuro di voler eliminare &ldquo;{expense.title}&rdquo;? Questa azione non
