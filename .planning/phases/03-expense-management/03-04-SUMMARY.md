@@ -65,7 +65,7 @@ completed: 2026-04-27
 - **Duration:** ~25 min
 - **Started:** 2026-04-27T20:00:00Z
 - **Completed:** 2026-04-27T20:25:00Z
-- **Tasks:** 2 of 3 (Task 3 is a checkpoint:human-verify — paused awaiting user verification)
+- **Tasks:** 3 of 3 (Task 3 checkpoint:human-verify completato — UAT superato con 4 fix diretti)
 - **Files modified:** 6
 
 ## Accomplishments
@@ -81,6 +81,7 @@ completed: 2026-04-27
 
 1. **Task 1: Build /spese page + expense-filters.tsx + expense-table.tsx** - `b96476e` (feat)
 2. **Task 2: Build expense-form-dialog.tsx + bulk-action-bar.tsx + bulk-categorize-dialog.tsx** - `d3938e6` (feat)
+3. **Gap Closure Plan 03-05: Verifica fix UAT + aggiornamento test Playwright** - (commit piano 03-05)
 
 ## Files Created/Modified
 
@@ -122,8 +123,23 @@ None — no external service configuration required.
 
 - /spese page is fully functional: CRUD operations, URL filter persistence, bulk categorization
 - EXP-01, EXP-02, EXP-03 requirements satisfied
-- Awaiting checkpoint:human-verify (Task 3) before plan is marked complete
-- Wave 5 (Plan 05 — Playwright tests) can proceed after checkpoint approval
+- Checkpoint:human-verify (Task 3) completato. I 4 gap UAT risolti con fix diretti: DialogDescription sr-only in tutti i dialog, due Select separati per categoria+sottocategoria, DropdownMenu controllato tramite openDropdownId.
+- Wave 5 (Piano 05 — verifica fix UAT + Playwright tests) completato.
+
+---
+
+## UAT Gap Closure
+
+I seguenti gap UAT sono stati risolti con fix diretti prima del piano 03-05:
+
+| Gap | Severity | Fix applicato |
+|-----|----------|---------------|
+| T2: Missing DialogDescription | cosmetic | Aggiunto `<DialogDescription className="sr-only">` a tutti e 3 i dialog |
+| T3: Select sottocategoria non cliccabile in dialog | major | Sostituito SelectGroup gerarchico con due Select separati (categoria → sottocategoria filtrata) in ExpenseFormDialog |
+| T4: DropdownMenu non si chiude dopo edit | minor | Aggiunto `openDropdownId` state + `onSuccess={() => setOpenDropdownId(null)}` in ExpenseTable |
+| T7: Select sottocategoria non cliccabile in bulk dialog | major | Stesso fix T3 applicato a BulkCategorizeDialog |
+
+Piano 03-05 ha verificato i fix via grep e aggiornato i test Playwright.
 
 ---
 
