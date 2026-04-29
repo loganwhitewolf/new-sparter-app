@@ -1,6 +1,6 @@
 # Domain Pitfalls — Sparter
 
-**Domain:** Personal finance web app (Next.js 15 + Drizzle + MySQL + NextAuth v5)
+**Domain:** Personal finance web app (Next.js 16 + Drizzle + PostgreSQL + Better Auth)
 **Researched:** 2026-04-22
 **Confidence note:** External tool access (WebSearch, WebFetch, Context7) was unavailable during this research session. All findings are drawn from training knowledge of the listed technologies (cutoff August 2025). Confidence levels reflect how stable/well-documented each pitfall is. Flag for re-verification against current official docs where noted.
 
@@ -27,9 +27,9 @@
 **Affects phases:** 3 (Expense management), 4 (Dashboard KPI), 5 (Import)
 
 **What goes wrong:**
-Drizzle ORM maps MySQL `DECIMAL(10,2)` columns to TypeScript `string`, not `number`. When you pass a raw value from a Drizzle query result to `new Decimal(value)`, it works — Decimal.js accepts strings. The trap is the reverse path: when you call `toNumber()` or `parseFloat(d.toFixed(2))` on a Decimal result and then store it back, Drizzle's insert/update expects either a string (`"12.50"`) or a number. If you pass a JS `number` with floating-point representation (`12.499999999`) through an intermediate calculation, the ORM silently inserts the wrong value.
+Drizzle ORM maps PostgreSQL `numeric`/`decimal` columns to TypeScript `string`, not `number`. When you pass a raw value from a Drizzle query result to `new Decimal(value)`, it works — Decimal.js accepts strings. The trap is the reverse path: when you call `toNumber()` or `parseFloat(d.toFixed(2))` on a Decimal result and then store it back, Drizzle's insert/update expects a string representation. If you pass a JS `number` with floating-point representation (`12.499999999`) through an intermediate calculation, the ORM can persist the wrong value.
 
-The second trap: Drizzle `decimal` column type does NOT validate precision client-side. You can insert `"1234567890.99"` (10 digits + 2 decimals = DECIMAL(10,2) overflow) and MySQL will silently truncate it — no Drizzle-level error.
+The second trap: Drizzle `decimal` column type does NOT validate precision client-side. Validate monetary precision before insert/update instead of relying on the database error path.
 
 **Warning signs:**
 - Amount totals are slightly off in the dashboard (off-by-one-cent errors)
@@ -144,8 +144,8 @@ The v5 trap specific to Credentials provider: the `authorize()` function's retur
 `drizzle-kit generate` creates migration SQL files by diffing the current schema against the last snapshot. Common traps:
 
 1. **Renaming a column** is detected as `DROP COLUMN` + `ADD COLUMN`, not `RENAME COLUMN`. Running the migration against production silently drops data.
-2. **Changing a column type** (e.g., `varchar(255)` to `text`) generates an `ALTER TABLE MODIFY COLUMN` that on MySQL can lock the table for a full copy on large tables.
-3. **Adding a NOT NULL column without a default** to a table with existing rows causes the migration to fail on MySQL in strict mode — but only in production (dev DB is usually empty).
+2. **Changing a column type** (e.g., `varchar(255)` to `text`) can generate a blocking `ALTER TABLE` on large production tables.
+3. **Adding a NOT NULL column without a default** to a table with existing rows causes the migration to fail in production, even if dev DB is empty.
 4. **Multiple developers** running `drizzle-kit generate` against the same branch creates conflicting migration files that reference the same base snapshot. The first `drizzle-kit migrate` to run wins; the second breaks.
 5. **`drizzle-kit push`** (used in development) does not create migration files. If push was used in dev and `generate` is run later, the diff can be empty or wrong depending on what's in the snapshots directory.
 
@@ -174,23 +174,25 @@ The v5 trap specific to Credentials provider: the `authorize()` function's retur
 **What goes wrong:**
 Next.js Server Actions have a default body size limit of **1 MB** (configurable, but not designed for large file uploads). The temptation is to use a `<form action={serverAction}>` with `<input type="file">` to upload a CSV directly through a Server Action. This breaks for files over 1 MB and silently fails or throws a cryptic error.
 
-The correct pattern for file uploads in Next.js 15 is a **Route Handler** (`app/api/upload/route.ts`) that accepts `multipart/form-data`, streams the file to R2, and returns a file ID. Server Actions are for form mutations on small data only.
+The correct pattern for Sparter is **presigned upload**: a Route Handler (`POST /api/files/initiate`) creates the `files` row and returns a presigned R2 PUT URL, the browser uploads directly to R2, then `POST /api/files/confirm` records that the upload completed. Server Actions are for small mutations only.
 
-Second trap: Next.js 15 Route Handlers also have a default body size limit (`bodyParser` equivalent). The default is 4 MB. For large Excel files (some Italian bank exports can be 5–20 MB), this requires explicit configuration.
+Second trap: proxying bytes through a Next.js Route Handler reintroduces body size and memory pressure. For large Excel files (some Italian bank exports can be 5–20 MB), browser-direct presigned PUT keeps the app server out of the data path.
 
 **Warning signs:**
 - Upload works in dev with small test files but fails in staging with real bank exports
 - The error message is `PayloadTooLargeError` or the request just hangs
-- Using `const formData = await request.formData()` buffers the entire file in memory before streaming to R2
+- Using `const formData = await request.formData()` buffers the entire file in memory before sending it to R2
 
 **Prevention:**
-1. Use a Route Handler (`POST /api/files/upload`) for all file uploads, not a Server Action.
-2. Set `export const config = { api: { bodyParser: false } }` in the route (or use `request.body` as a stream directly).
-3. For R2 upload, use the `PutObjectCommand` with a `Body: readableStream` — stream directly, do not buffer in memory.
-4. Set `maxDuration = 60` on the upload route (Vercel/Railway timeout). Railway default is 30s, which is tight for large files on slow connections.
-5. Client-side: enforce a file size limit in the `<input>` onChange handler before the upload starts (e.g., 20 MB max) with a user-friendly Italian error message.
+1. Use Route Handlers only to initiate/confirm uploads, not to receive the file bytes.
+2. Generate a presigned R2 PUT URL scoped to `uploads/{userId}/{fileId}.{ext}`, content type, file size policy and short expiry.
+3. Return only `{ fileId, presignedUrl }` to the frontend unless the UI truly needs more; never expose R2 credentials, and keep `storageKey` backend-only.
+4. Let the browser upload directly to R2, then confirm by `fileId`; keep the file status `pending` until import starts.
+5. In `confirm`, verify ownership and use an R2 `HEAD`/metadata check before marking the upload as completed.
+6. On analysis/import, verify `file.userId === session.user.id` before reading from R2.
+7. Client-side: enforce a file size limit in the `<input>` onChange handler before the upload starts (e.g., 20 MB max) with a user-friendly Italian error message.
 
-**Phase guidance:** Phase 5. Design the upload route as a streaming Route Handler from the start — do not prototype with Server Actions and refactor later.
+**Phase guidance:** Phase 5. Design upload as initiate → browser presigned PUT → confirm from the start; do not prototype with Server Actions and refactor later.
 
 ---
 
@@ -271,7 +273,7 @@ NextAuth v5 replaces `getServerSession(authOptions)` (v4 pattern) with `auth()` 
 Traps:
 1. **Mixing v4 and v5 imports**: Copy-pasted code from Stack Overflow, blog posts, or the LLM's training data often uses `getServerSession`. This compiles fine (the import resolves) but returns `null` in v5 because the internals changed. The bug is silent — auth check passes as `session == null` → unauthenticated, redirect loop or unprotected route.
 2. **Middleware gotcha**: In Next.js 15 Middleware, `auth()` must be called as a middleware wrapper (`export default auth(middleware)`), not as `const session = await auth()`. Calling `auth()` directly in middleware body works but requires the full JWT decode on every request, which has performance implications.
-3. **Edge runtime**: NextAuth v5 JWT session works in Edge runtime. Drizzle + MySQL does NOT. If Middleware uses auth and also tries to query the DB, it will fail in Edge. Keep middleware auth-only (JWT decode), never DB queries.
+3. **Edge runtime**: Better Auth session checks and Drizzle `pg` database access require Node-compatible runtime. Keep proxy lightweight and never import DAL helpers into client components.
 
 **Warning signs:**
 - `getServerSession` appears anywhere in the codebase (wrong v5 pattern)
@@ -359,7 +361,7 @@ Second trap: SheetJS Community Edition (`xlsx` package on npm) has had security 
 **What goes wrong:**
 Drizzle maps nullable DB columns to `T | null` in TypeScript (correct). However, when building insert/update objects, TypeScript allows passing `undefined` for optional keys but Drizzle will throw at runtime if a non-nullable column receives `undefined`. The distinction between `null` (explicit DB null) and `undefined` (key omitted from object) is invisible in some code patterns.
 
-Specific trap: `expenseId` on `Transactions` is nullable (a transaction may not yet be linked to an expense). If you accidentally pass `expenseId: undefined` instead of `expenseId: null` when creating a transaction without an expense, Drizzle may throw or insert `NULL` depending on the MySQL driver version — inconsistent behavior.
+Specific trap: `expenseId` on `Transactions` is nullable (a transaction may not yet be linked to an expense). If you accidentally pass `expenseId: undefined` instead of `expenseId: null` when creating a transaction without an expense, Drizzle may omit the key instead of explicitly writing `NULL`.
 
 **Warning signs:**
 - Runtime error `ER_BAD_NULL_ERROR` on insert despite TypeScript showing no error
@@ -410,7 +412,7 @@ The dashboard page has complex requirements: Server Components for initial data 
 **Affects phases:** 5 (Import file bancari)
 
 **What goes wrong:**
-If the upload goes through the Next.js Route Handler (browser → Next.js → R2), CORS on R2 doesn't matter. But if you switch to presigned URL uploads (browser uploads directly to R2 to skip server bandwidth), R2 CORS must be configured explicitly — R2 buckets have no CORS rules by default, and the browser will silently fail the upload with a CORS error, showing no useful message to the user.
+Because Sparter uses presigned URL uploads (browser uploads directly to R2 to skip server bandwidth), R2 CORS must be configured explicitly — R2 buckets have no CORS rules by default, and the browser will silently fail the upload with a CORS error, showing no useful message to the user.
 
 R2 presigned URL gotcha: `PutObjectCommand` presigned URLs are valid for a maximum of 7 days, but R2's implementation has a practical limit of 1 hour for browser uploads (the bucket must be configured to accept the token). If the user opens the upload dialog and leaves it open for more than the presigned URL's expiry, the upload silently fails.
 
@@ -420,13 +422,13 @@ R2 presigned URL gotcha: `PutObjectCommand` presigned URLs are valid for a maxim
 - Upload fails for users who keep the tab open a long time
 
 **Prevention:**
-1. For Phase 5, use server-side upload (browser → Next.js Route Handler → R2). Simpler, no CORS needed.
-2. If switching to presigned URLs later, configure R2 CORS rules via the Cloudflare dashboard:
+1. Configure R2 CORS rules via the Cloudflare dashboard before testing browser upload:
    ```json
    [{"AllowedOrigins": ["https://yourdomain.com"], "AllowedMethods": ["PUT"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 3000}]
    ```
+2. Include the local dev origin and production Railway/app domain explicitly; do not use wildcard origins in production.
 3. Set presigned URL expiry to 15 minutes (not the max) and handle expiry gracefully on the client (retry with a new presigned URL).
-4. Test uploads from the actual production domain, not `localhost` — CORS rules differ.
+4. Test uploads from the actual production domain, not only `localhost` — CORS rules differ.
 
 **Phase guidance:** Phase 5. If using direct browser-to-R2 upload, configure CORS before any integration testing.
 
@@ -569,7 +571,7 @@ Second trap: if the bypass creates a mock session without all custom fields (`su
 | 3 – Expense management | Cache invalidation | H-3 | `revalidateTag` pattern established on first mutation |
 | 4 – Dashboard KPI | Aggregation precision | L-4 | Decimal accumulation for sums; string serialization for API responses |
 | 5 – Import | Transaction atomicity | C-2 | `db.transaction(tx => ...)` wrapping full import; `DbOrTx` type for helpers |
-| 5 – Import | File upload route | H-2 | Route Handler (not Server Action); streaming to R2 |
+| 5 – Import | File upload route | H-2 | Route Handler creates presigned URL; browser uploads directly to R2 |
 | 5 – Import | Encoding detection | M-1 | `chardet` + `iconv-lite`; strip BOM; fixture test files per platform |
 | 5 – Import | Hash stability | M-6 | `computeTransactionHash` unit tested; locked before any data is stored |
 | 5 – Import | R2 access control | L-3 | Bucket private; userId check before presigned URL |
