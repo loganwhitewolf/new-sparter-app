@@ -28,8 +28,8 @@ Template for `.planning/codebase/STACK.md` - captures the technology foundation.
 - [Additional requirements if any]
 
 **Package Manager:**
-- [Manager] [Version] - [e.g., "Yarn Berry 4.x"]
-- Lockfile: [e.g., "yarn.lock present"]
+- [Manager] [Version] - [e.g., "npm 10.x"]
+- Lockfile: [e.g., "package-lock.json present"]
 
 ## Frameworks
 
@@ -90,7 +90,7 @@ Template for `.planning/codebase/STACK.md` - captures the technology foundation.
 ## Languages
 
 **Primary:**
-- TypeScript 6.x - All application code
+- TypeScript 5.3 - All application code
 
 **Secondary:**
 - JavaScript - Build scripts, config files
@@ -102,9 +102,8 @@ Template for `.planning/codebase/STACK.md` - captures the technology foundation.
 - No browser runtime (CLI tool only)
 
 **Package Manager:**
-- Yarn Berry 4.x
-- Lockfile: `yarn.lock` present
-- `nodeLinker: node-modules` when ecosystem compatibility is more important than Plug'n'Play strictness
+- npm 10.x
+- Lockfile: `package-lock.json` present
 
 ## Frameworks
 
@@ -116,8 +115,7 @@ Template for `.planning/codebase/STACK.md` - captures the technology foundation.
 - tsx - TypeScript execution without build step
 
 **Build/Dev:**
-- TypeScript 6.x - Compilation to JavaScript
-- ESLint 10.x - Linting with flat config
+- TypeScript 5.3 - Compilation to JavaScript
 - esbuild - Used by Vitest for fast transforms
 
 ## Key Dependencies

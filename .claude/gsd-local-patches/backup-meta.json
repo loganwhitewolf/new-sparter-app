@@ -1,0 +1,11 @@
+{
+  "backed_up_at": "2026-04-28T12:38:25.864Z",
+  "from_version": "1.38.3",
+  "from_manifest_timestamp": "2026-04-22T13:08:39.262Z",
+  "files": [
+    "get-shit-done/templates/codebase/stack.md"
+  ],
+  "pristine_hashes": {
+    "get-shit-done/templates/codebase/stack.md": "116e7e67dd87ddecddc3068cb59de482390cea12e27d8b3672a7444d235b0827"
+  }
+}
