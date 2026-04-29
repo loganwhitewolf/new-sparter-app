@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 04-dashboard-kpi
 source: 04-00-SUMMARY.md, 04-01-SUMMARY.md, 04-02-SUMMARY.md, 04-03-SUMMARY.md
 started: 2026-04-28T15:00:00Z
@@ -53,7 +53,10 @@ blocked: 0
   reason: "User reported: Le spese manuali (Expense records senza Transaction) compaiono nel breakdown Uscite con valori conteggio. Il valore di un'uscita dipende dalle Transaction, non dall'esistenza dell'Expense."
   severity: major
   test: 3
-  root_cause: ""
-  artifacts: []
+  root_cause: "getCategoriesBreakdown() usava count() su righe expense e hardcodava amount:'0.00' — nessun join su transaction. Fix applicato: funzione ora restituisce [] finché Phase 5 non introduce JOIN su transaction con SUM(amount)."
+  artifacts:
+    - path: "lib/dal/dashboard.ts"
+      issue: "RISOLTO — getCategoriesBreakdown ora stub che restituisce []; rebuild reale in Phase 5"
   missing: []
   debug_session: ""
+  status: resolved
