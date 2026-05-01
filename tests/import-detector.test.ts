@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { detectImportFormat } from '../lib/services/import-format-detector'
+import { parseImportFile } from '../lib/services/import-parsers'
+import { platforms as seedPlatforms } from '../docs/init/seed'
 
 const fixturePath = (name: string) => join(process.cwd(), 'tests', 'fixtures', 'import', name)
 
@@ -12,6 +15,26 @@ const expectedFixtureHeaders = [
   ['revolut.csv', 'Completed Date,Description,Amount'],
   ['fineco.csv', 'Data,Descrizione_Completa,Entrate,Uscite'],
 ] as const
+
+const formats = seedPlatforms.map((platform) => ({
+  id: platform.id * 10,
+  platformId: platform.id,
+  platform,
+  version: 1,
+  headerSignature: [
+    platform.timestampColumn,
+    platform.descriptionColumn,
+    platform.amountColumn,
+    platform.positiveAmountColumn,
+    platform.negativeAmountColumn,
+  ].filter((column): column is string => Boolean(column)).join(platform.delimiter),
+  isActive: true,
+}))
+
+async function detectFixture(fileName: string) {
+  const parsed = await parseImportFile(readFileSync(fixturePath(fileName)), { fileName })
+  return detectImportFormat({ parsed, formats, userId: 'user-1' })
+}
 
 describe('import detector fixture contracts', () => {
   it.each(expectedFixtureHeaders)('tracks %s with its seeded header signature', (fileName, expectedHeader) => {
@@ -26,11 +49,52 @@ describe('import detector fixture contracts', () => {
     }
   })
 
-  it.todo('detects General CSV by timestamp, description, and amount headers')
-  it.todo('detects Satispay CSV by Data, Nome, and Importo headers')
-  it.todo('detects Intesa SP CSV by Data, Operazione, and Importo headers')
-  it.todo('detects Intesa SP credit-card CSV by Data operazione, Descrizione, and Addebiti headers')
-  it.todo('detects Revolut CSV by Completed Date, Description, and Amount headers')
-  it.todo('detects Fineco CSV by separate Entrate and Uscite amount columns')
-  it.todo('returns a structured non-secret error when no seeded format matches')
+  it.each([
+    ['general.csv', 'general'],
+    ['satispay.csv', 'satispay'],
+    ['intesa-sp.csv', 'intesa-sp'],
+    ['intesa-sp-carta-credito.csv', 'intesa-sp-carta-credito'],
+    ['revolut.csv', 'revolut'],
+    ['fineco.csv', 'fineco'],
+  ] as const)('detects %s by seeded columns, parseability, and amount shape', async (fileName, slug) => {
+    const result = await detectFixture(fileName)
+
+    expect(result.bestCandidate?.platform.slug).toBe(slug)
+    expect(result.bestCandidate?.confidence).toBeGreaterThanOrEqual(0.8)
+    expect(result.candidates[0]?.platform.slug).toBe(slug)
+    expect(result.preview.rowCount).toBe(3)
+    expect(result.preview.sampleRows).toHaveLength(3)
+    expect(result.preview.duplicateCount).toBe(1)
+    expect(result.errors).toEqual([])
+  })
+
+  it('parses BOM-prefixed CSV headers without poisoning detection', async () => {
+    const csv = `\uFEFF${readFileSync(fixturePath('general.csv'), 'utf8')}`
+    const parsed = await parseImportFile(Buffer.from(csv, 'utf8'), { fileName: 'general.csv' })
+    const result = detectImportFormat({ parsed, formats, userId: 'user-1' })
+
+    expect(parsed.headers).toEqual(['timestamp', 'description', 'amount'])
+    expect(result.bestCandidate?.platform.slug).toBe('general')
+  })
+
+  it('returns a structured non-secret error when no seeded format matches', async () => {
+    const parsed = await parseImportFile(Buffer.from('Quando;Cosa;Valore\nfoo;bar;baz\n', 'utf8'), {
+      fileName: 'unknown.csv',
+    })
+    const result = detectImportFormat({ parsed, formats, userId: 'user-1' })
+
+    expect(result.bestCandidate).toBeNull()
+    expect(result.errors).toContain('No supported import format matched the uploaded file headers and sample rows.')
+    expect(result.candidates).toHaveLength(formats.length)
+  })
+
+  it('bounds oversized file parsing before parser work', async () => {
+    const parsed = await parseImportFile(Buffer.from('timestamp,description,amount\n', 'utf8'), {
+      fileName: 'oversized.csv',
+      maxBytes: 5,
+    })
+
+    expect(parsed.rows).toEqual([])
+    expect(parsed.errors[0]).toContain('exceeds the maximum import size')
+  })
 })
