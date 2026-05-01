@@ -15,6 +15,13 @@
       "when": 1777320519272,
       "tag": "0001_chilly_clea",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777644498303,
+      "tag": "0002_far_may_parker",
+      "breakpoints": true
     }
   ]
 }

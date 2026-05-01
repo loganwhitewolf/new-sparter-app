@@ -4,7 +4,8 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { existsSync } from 'node:fs'
-import { category, subCategory } from '../lib/db/schema'
+import { category, subCategory, platform, importFormatVersion, categorizationPattern } from '../lib/db/schema'
+import { platforms as seedPlatforms, categorizationPatterns as seedCategorizationPatterns } from '../docs/init/seed'
 
 // Load local env before anything else (same pattern as scripts/migrate.ts)
 for (const envFile of ['.env.local', '.env']) {
@@ -218,6 +219,18 @@ const subCategories = [
   { categoryId: 34, name: 'rimborsi', slug: 'rimborsi', displayOrder: 0, isActive: true },
 ]
 
+function headerSignatureFor(platformSeed: (typeof seedPlatforms)[number]) {
+  const columns = [
+    platformSeed.timestampColumn,
+    platformSeed.descriptionColumn,
+    platformSeed.amountColumn,
+    platformSeed.positiveAmountColumn,
+    platformSeed.negativeAmountColumn,
+  ].filter((column): column is string => Boolean(column))
+
+  return columns.join(platformSeed.delimiter)
+}
+
 async function seed() {
   console.log('Seeding categories...')
   await db.insert(category).values(categories).onConflictDoNothing()
@@ -227,6 +240,62 @@ async function seed() {
   // Insert subCategories AFTER categories (FK constraint — Pitfall 5)
   await db.insert(subCategory).values(subCategories).onConflictDoNothing()
   console.log(`  ${subCategories.length} sottocategorie inserite (o già presenti).`)
+
+  console.log('Seeding import platforms...')
+  await db
+    .insert(platform)
+    .values(seedPlatforms.map((platformSeed) => ({ ...platformSeed, isActive: true })))
+    .onConflictDoNothing()
+  console.log(`  ${seedPlatforms.length} piattaforme inserite (o già presenti).`)
+
+  console.log('Seeding import format versions...')
+  await db
+    .insert(importFormatVersion)
+    .values(
+      seedPlatforms.map((platformSeed) => ({
+        platformId: platformSeed.id,
+        version: 1,
+        headerSignature: headerSignatureFor(platformSeed),
+        notes: `Initial ${platformSeed.name} CSV import contract`,
+        isActive: true,
+      })),
+    )
+    .onConflictDoNothing()
+  console.log(`  ${seedPlatforms.length} versioni formato inserite (o già presenti).`)
+
+  console.log('Seeding system categorization patterns...')
+  const seededSubCategories = await db.select({ id: subCategory.id, slug: subCategory.slug }).from(subCategory)
+  const subCategoryIdBySlug = new Map(seededSubCategories.map((row) => [row.slug, row.id]))
+  const missingSlugs = Array.from(
+    new Set(
+      seedCategorizationPatterns
+        .map((patternSeed) => patternSeed.subCategorySlug)
+        .filter((slug) => !subCategoryIdBySlug.has(slug)),
+    ),
+  )
+
+  if (missingSlugs.length > 0) {
+    throw new Error(
+      `Missing subcategory slugs for system categorization patterns: ${missingSlugs.join(', ')}`,
+    )
+  }
+
+  await db
+    .insert(categorizationPattern)
+    .values(
+      seedCategorizationPatterns.map((patternSeed) => ({
+        userId: null,
+        pattern: patternSeed.pattern,
+        subCategoryId: subCategoryIdBySlug.get(patternSeed.subCategorySlug)!,
+        amountSign: patternSeed.amountSign,
+        confidence: patternSeed.confidence.toFixed(2),
+        priority: patternSeed.priority,
+        description: patternSeed.description,
+        isActive: true,
+      })),
+    )
+    .onConflictDoNothing()
+  console.log(`  ${seedCategorizationPatterns.length} pattern sistema inseriti (o già presenti).`)
 
   console.log('Seed completato.')
 }
