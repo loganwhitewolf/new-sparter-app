@@ -30,10 +30,10 @@ export function computeDeltaPercent(
   return roundedPercent(currentValue.minus(previousValue).div(previousValue.abs()).times(100))
 }
 
-export function computeBreakdownPercentages<T extends { count: number }>(
+export function computeBreakdownPercentages<T extends { amount: string | number }>(
   rows: T[]
 ): Array<T & { percentage: number }> {
-  const total = rows.reduce((sum, row) => sum.plus(row.count), new Decimal(0))
+  const total = rows.reduce((sum, row) => sum.plus(toDecimal(row.amount).abs()), new Decimal(0))
 
   if (total.isZero()) {
     return rows.map((row) => ({ ...row, percentage: 0 }))
@@ -41,6 +41,6 @@ export function computeBreakdownPercentages<T extends { count: number }>(
 
   return rows.map((row) => ({
     ...row,
-    percentage: roundedPercent(new Decimal(row.count).div(total).times(100)),
+    percentage: roundedPercent(toDecimal(row.amount).abs().div(total).times(100)),
   }))
 }
