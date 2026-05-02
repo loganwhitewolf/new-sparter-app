@@ -4,12 +4,23 @@ Personal finance app for the Italian market, built with Next.js 16 App Router, D
 
 ## Database
 
-Set `DATABASE_URL` to a Postgres connection string before running auth flows or migrations:
+Auth and registration require PostgreSQL. For local development, start the bundled database and apply migrations before using `/register`:
+
+```bash
+npm run db:up
+npm run db:migrate
+```
+
+The local compose service matches the default connection string:
 
 ```bash
 DATABASE_URL=postgres://postgres:sparter@localhost:5432/sparter
+```
+
+Generate new migrations after schema changes with:
+
+```bash
 npm run db:generate
-npm run db:migrate
 ```
 
 For hosted Postgres instances that require strict TLS, also set:
