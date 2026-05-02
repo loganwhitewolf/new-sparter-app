@@ -15,6 +15,7 @@ import {
 import { db } from '@/lib/db'
 import { expense } from '@/lib/db/schema'
 import { and, eq, inArray } from 'drizzle-orm'
+import { writeClassificationHistory } from '@/lib/dal/classification-history'
 
 export async function createExpense(
   _prev: ActionState,
@@ -93,7 +94,7 @@ export async function bulkCategorize(
   try {
     // CRITICAL SECURITY: inArray alone is NOT sufficient — must also include eq(expense.userId, userId)
     // This prevents IDOR: a user submitting IDs belonging to another user's expenses
-    await db
+    const updated = await db
       .update(expense)
       .set({
         subCategoryId: parsed.data.subCategoryId,
@@ -106,6 +107,25 @@ export async function bulkCategorize(
           eq(expense.userId, userId) // SECURITY: userId scope — see T-3-02
         )
       )
+      .returning({ id: expense.id, subCategoryId: expense.subCategoryId, status: expense.status })
+
+    // Write classification history rows for manual categorization (ADV-02).
+    // Non-fatal: history loss is acceptable vs a failed bulk-categorize action.
+    try {
+      await Promise.all(
+        updated.map((row) =>
+          writeClassificationHistory(db, {
+            userId,
+            expenseId: row.id,
+            toSubCategoryId: parsed.data.subCategoryId,
+            toStatus: '3',
+            source: 'manual',
+          }),
+        ),
+      )
+    } catch {
+      // history write failure is non-fatal
+    }
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }

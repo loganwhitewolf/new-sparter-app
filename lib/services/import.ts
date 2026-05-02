@@ -3,7 +3,6 @@ import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import {
   expense,
-  expenseClassificationHistory,
   importFormatVersion,
   platform,
   transaction as transactionTable,
@@ -29,6 +28,7 @@ import {
 } from '@/lib/services/categorization'
 import { normalizeTransactionRow } from '@/lib/utils/import'
 import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
+import { writeClassificationHistory } from '@/lib/dal/classification-history'
 
 export type ImportAnalysisResult = {
   fileId: string
@@ -399,7 +399,7 @@ export async function importFile(input: {
 
         if (catResult) {
           try {
-            await tx.insert(expenseClassificationHistory).values({
+            await writeClassificationHistory(tx, {
               userId: input.userId,
               expenseId,
               toSubCategoryId: catResult.subCategoryId,

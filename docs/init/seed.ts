@@ -725,4 +725,13 @@ export const categorizationPatterns = [
     priority: 35,
     description: "Take away: focaccerie, pizza al taglio, rosticcerie",
   },
+  {
+    pattern:
+      "(?:\\bdeliveroo\\b|\\bjust\\s*eat\\b|\\bglovo\\b|\\bwolt\\b)",
+    subCategorySlug: "take-away",
+    amountSign: "negative" as AmountSign,
+    confidence: 0.95,
+    priority: 25,
+    description: "Delivery app orders",
+  },
 ];
