@@ -76,6 +76,8 @@ export const ProfileSchema = z.object({
 export type ProfileInput = z.input<typeof ProfileSchema>
 export type ProfileValues = z.output<typeof ProfileSchema>
 
+export type ActionState = { error: string | null }
+
 export function normalizeProfileInput(input: ProfileInput): ProfileValues {
   return ProfileSchema.parse(input)
 }
