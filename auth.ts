@@ -16,6 +16,36 @@ export const auth = betterAuth({
   }),
   user: {
     additionalFields: {
+      firstName: {
+        type: 'string',
+        required: false,
+        input: false,
+      },
+      lastName: {
+        type: 'string',
+        required: false,
+        input: false,
+      },
+      jobTitle: {
+        type: 'string',
+        required: false,
+        input: false,
+      },
+      location: {
+        type: 'string',
+        required: false,
+        input: false,
+      },
+      phone: {
+        type: 'string',
+        required: false,
+        input: false,
+      },
+      timezone: {
+        type: 'string',
+        required: false,
+        input: false,
+      },
       subscriptionPlan: {
         type: ['free', 'basic', 'pro'] as const,
         required: false,

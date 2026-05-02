@@ -54,6 +54,12 @@ export const user = pgTable("user", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
+  firstName: varchar("first_name", { length: 80 }),
+  lastName: varchar("last_name", { length: 80 }),
+  jobTitle: varchar("job_title", { length: 120 }),
+  location: varchar("location", { length: 120 }),
+  phone: varchar("phone", { length: 40 }),
+  timezone: varchar("timezone", { length: 64 }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

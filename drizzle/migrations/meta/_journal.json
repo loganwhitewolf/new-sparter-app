@@ -22,6 +22,13 @@
       "when": 1777644498303,
       "tag": "0002_far_may_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777726802303,
+      "tag": "0003_user_profile_fields",
+      "breakpoints": true
     }
   ]
 }
