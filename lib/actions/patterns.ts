@@ -90,7 +90,10 @@ export async function deletePatternAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const { userId } = await verifySession()
+  const { userId, subscriptionPlan } = await verifySession()
+
+  const planError = requirePaidPlan(subscriptionPlan)
+  if (planError) return planError
 
   const id = Number(formData.get('id'))
   if (!id || isNaN(id)) return { error: 'ID pattern mancante.' }

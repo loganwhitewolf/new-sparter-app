@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, eq, isNull, or } from 'drizzle-orm'
+import { and, asc, eq, isNull, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { categorizationPattern } from '@/lib/db/schema'
 import type { CreatePatternInput, UpdatePatternInput } from '@/lib/validations/pattern'
@@ -31,7 +31,10 @@ export async function getUserPatterns(userId: string, database: DbOrTx = db): Pr
         ),
       ),
     )
-    .orderBy(asc(categorizationPattern.priority))
+    .orderBy(
+      sql`case when ${categorizationPattern.userId} is null then 1 else 0 end`,
+      asc(categorizationPattern.priority),
+    )
   return rows as PatternRow[]
 }
 

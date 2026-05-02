@@ -92,40 +92,61 @@ export async function bulkCategorize(
   // SECURITY: verifySession() first, then scope update to userId (T-3-02)
   const { userId } = await verifySession()
   try {
-    // CRITICAL SECURITY: inArray alone is NOT sufficient — must also include eq(expense.userId, userId)
-    // This prevents IDOR: a user submitting IDs belonging to another user's expenses
-    const updated = await db
-      .update(expense)
-      .set({
-        subCategoryId: parsed.data.subCategoryId,
-        status: '3',
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          inArray(expense.id, parsed.data.ids),
-          eq(expense.userId, userId) // SECURITY: userId scope — see T-3-02
+    await db.transaction(async (tx) => {
+      const beforeRows = await tx
+        .select({
+          id: expense.id,
+          subCategoryId: expense.subCategoryId,
+          status: expense.status,
+        })
+        .from(expense)
+        .where(
+          and(
+            inArray(expense.id, parsed.data.ids),
+            eq(expense.userId, userId),
+          ),
         )
-      )
-      .returning({ id: expense.id, subCategoryId: expense.subCategoryId, status: expense.status })
 
-    // Write classification history rows for manual categorization (ADV-02).
-    // Non-fatal: history loss is acceptable vs a failed bulk-categorize action.
-    try {
+      const beforeById = new Map(beforeRows.map((row) => [row.id, row]))
+
+      // CRITICAL SECURITY: inArray alone is NOT sufficient — must also include eq(expense.userId, userId).
+      // This prevents IDOR: a user submitting IDs belonging to another user's expenses.
+      const updated = await tx
+        .update(expense)
+        .set({
+          subCategoryId: parsed.data.subCategoryId,
+          status: '3',
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            inArray(expense.id, parsed.data.ids),
+            eq(expense.userId, userId),
+          ),
+        )
+        .returning({ id: expense.id })
+
+      // Write classification history rows for manual categorization (ADV-02).
+      // Non-fatal per row: history loss is acceptable vs a failed bulk-categorize action.
       await Promise.all(
-        updated.map((row) =>
-          writeClassificationHistory(db, {
-            userId,
-            expenseId: row.id,
-            toSubCategoryId: parsed.data.subCategoryId,
-            toStatus: '3',
-            source: 'manual',
-          }),
-        ),
+        updated.map(async (row) => {
+          const before = beforeById.get(row.id)
+          try {
+            await writeClassificationHistory(tx, {
+              userId,
+              expenseId: row.id,
+              fromSubCategoryId: before?.subCategoryId ?? null,
+              toSubCategoryId: parsed.data.subCategoryId,
+              fromStatus: before?.status ?? null,
+              toStatus: '3',
+              source: 'manual',
+            })
+          } catch {
+            // history write failure is non-fatal
+          }
+        }),
       )
-    } catch {
-      // history write failure is non-fatal
-    }
+    })
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }

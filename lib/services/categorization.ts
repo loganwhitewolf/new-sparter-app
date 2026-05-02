@@ -49,7 +49,10 @@ export async function loadActivePatterns(
         ),
       ),
     )
-    .orderBy(asc(categorizationPattern.priority))
+    .orderBy(
+      sql`case when ${categorizationPattern.userId} is null then 1 else 0 end`,
+      asc(categorizationPattern.priority),
+    )
 
   return rows as ActivePattern[]
 }

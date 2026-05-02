@@ -22,12 +22,39 @@ const mocks = vi.hoisted(() => ({
   loadActivePatterns: vi.fn(),
   categorizePipeline: vi.fn(),
 
+  // actions/patterns
+  verifySession: vi.fn(),
+  createPattern: vi.fn(),
+  updatePattern: vi.fn(),
+  deletePattern: vi.fn(),
+  writeClassificationHistory: vi.fn(),
+
   // db
   dbTransaction: vi.fn(),
 }))
 
 // Mock server-only to avoid Next.js server boundary errors in tests
 vi.mock('server-only', () => ({}))
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
+vi.mock('@/lib/dal/patterns', () => ({
+  createPattern: mocks.createPattern,
+  updatePattern: mocks.updatePattern,
+  deletePattern: mocks.deletePattern,
+}))
+vi.mock('@/lib/validations/pattern', () => ({
+  CreatePatternSchema: {
+    safeParse: (value: Record<string, unknown>) => {
+      if (!value.pattern || !value.subCategoryId || !value.amountSign || value.confidence === undefined) {
+        return { success: false, error: { issues: [{ message: 'Dati pattern mancanti.' }] } }
+      }
+      return { success: true, data: value }
+    },
+  },
+  UpdatePatternSchema: {
+    safeParse: (value: Record<string, unknown>) => ({ success: true, data: value }),
+  },
+}))
 
 vi.mock('@/lib/db/schema', () => ({
   categorizationPattern: {
@@ -137,6 +164,10 @@ vi.mock('@/lib/dal/files', () => ({
 vi.mock('@/lib/dal/transactions', () => ({
   getDuplicateHashes: mocks.getDuplicateHashes,
   insertTransactionBatch: mocks.insertTransactionBatch,
+}))
+
+vi.mock('@/lib/dal/classification-history', () => ({
+  writeClassificationHistory: mocks.writeClassificationHistory,
 }))
 
 vi.mock('@/lib/services/r2', () => ({
@@ -252,6 +283,7 @@ vi.mock('@/lib/services/import-format-detector', () => ({
 
 // Import the modules under test AFTER mocks are registered
 const { applyTier1Regex } = await import('../lib/services/categorization')
+const { createPatternAction } = await import('../lib/actions/patterns')
 const { importFile, analyzeFile } = await import('../lib/services/import')
 
 // ---------------------------------------------------------------------------
@@ -379,9 +411,74 @@ describe('applyTier1Regex', () => {
     expect(result).toBeNull()
   })
 
+  it('prefers a user pattern over a matching system pattern when the ordered pattern list puts user rules first', () => {
+    const result = applyTier1Regex('Amazon marketplace', '-22.00', [
+      {
+        id: 10,
+        userId: 'user-1',
+        pattern: 'amazon',
+        subCategoryId: 99,
+        amountSign: 'negative',
+        confidence: '0.96',
+        priority: 100,
+      },
+      {
+        id: 11,
+        userId: null,
+        pattern: 'amazon',
+        subCategoryId: 11,
+        amountSign: 'negative',
+        confidence: '0.90',
+        priority: 20,
+      },
+    ])
+
+    expect(result).toMatchObject({
+      subCategoryId: 99,
+      source: 'user_pattern',
+      patternId: 10,
+    })
+  })
+
   it('returns null when no pattern matches', () => {
     const result = applyTier1Regex('Totally unknown transaction', '-10.00', patterns)
     expect(result).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// pattern server action tests
+// ---------------------------------------------------------------------------
+describe('createPatternAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.verifySession.mockResolvedValue({
+      userId: USER_ID,
+      email: 'user@example.test',
+      subscriptionPlan: 'basic',
+      role: 'user',
+    })
+    mocks.createPattern.mockResolvedValue({ id: 1 })
+  })
+
+  it('returns an authorization error for free users', async () => {
+    mocks.verifySession.mockResolvedValue({
+      userId: USER_ID,
+      email: 'user@example.test',
+      subscriptionPlan: 'free',
+      role: 'user',
+    })
+
+    const formData = new FormData()
+    formData.set('pattern', 'deliveroo')
+    formData.set('subCategoryId', '42')
+    formData.set('amountSign', 'negative')
+    formData.set('confidence', '0.95')
+
+    const result = await createPatternAction({ error: null }, formData)
+
+    expect(result.error).toContain('Basic o Pro')
+    expect(mocks.createPattern).not.toHaveBeenCalled()
   })
 })
 
@@ -398,6 +495,7 @@ describe('importFile', () => {
     mocks.loadActivePatterns.mockResolvedValue([])
     mocks.categorizePipeline.mockResolvedValue(null)
     mocks.insertTransactionBatch.mockResolvedValue([])
+    mocks.writeClassificationHistory.mockResolvedValue(undefined)
     // Default: return a readable stream from GENERAL_CSV
     mocks.readObjectBody.mockResolvedValue(
       (async function* () { yield GENERAL_CSV })(),

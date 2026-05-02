@@ -74,7 +74,15 @@ export default async function PatternPage() {
                   {p.description ?? '—'}
                 </TableCell>
                 <TableCell>
-                  <PatternActions id={p.id} pattern={p.pattern} description={p.description} categories={categories} />
+                  <PatternActions
+                    id={p.id}
+                    pattern={p.pattern}
+                    subCategoryId={p.subCategoryId}
+                    amountSign={p.amountSign}
+                    confidence={p.confidence}
+                    description={p.description}
+                    categories={categories}
+                  />
                 </TableCell>
               </TableRow>
             ))}
