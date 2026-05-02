@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { LoginSchema, RegisterSchema } from '@/lib/validations/auth'
+import { getSafeSignUpErrorMessage } from '@/lib/actions/auth-errors'
 
 export type { AuthActionState } from '@/lib/validations/auth'
 
@@ -51,9 +52,9 @@ export async function signUpAction(
       },
       headers: await headers(),
     })
-  } catch {
-    // D-06: generic message — do not reveal email already registered
-    return { error: 'Si è verificato un errore. Riprova.' }
+  } catch (error) {
+    // D-06: keep credential/account errors generic, but surface safe local DB setup failures.
+    return { error: getSafeSignUpErrorMessage(error) }
   }
   redirect('/dashboard') // D-02: auto-login via autoSignIn:true → redirect directly to dashboard
 }
