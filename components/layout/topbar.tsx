@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { authClient } from '@/lib/auth-client'
 import { signOutAction } from '@/lib/actions/auth'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export function Topbar() {
   const { data: session } = authClient.useSession()
@@ -25,7 +26,9 @@ export function Topbar() {
         <span className="text-lg font-semibold tracking-tight">Sparter</span>
       </div>
 
-      <DropdownMenu>
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+        <DropdownMenu>
         <DropdownMenuTrigger aria-label="Menu utente" className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Avatar className="h-8 w-8">
             <AvatarImage src="" alt="Avatar utente" />
@@ -56,7 +59,8 @@ export function Topbar() {
             Logout
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
+        </DropdownMenu>
+      </div>
     </header>
   )
 }

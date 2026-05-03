@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { geistSans, geistMono } from './fonts'
 import './globals.css'
 import { Toaster } from 'sonner'
+import { ThemeProvider } from '@/components/theme-provider'
 
 export const metadata: Metadata = {
   title: 'Sparter',
@@ -14,10 +15,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="it" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="it" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body className={`${geistSans.className} antialiased`}>
-        {children}
-        <Toaster />
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )
