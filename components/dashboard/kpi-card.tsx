@@ -11,10 +11,7 @@ type Props = {
   className?: string
 }
 
-function formatDelta(delta: number | null): string {
-  if (delta === null) {
-    return '--'
-  }
+function formatDelta(delta: number): string {
   if (delta === 0) {
     return '0%'
   }
@@ -31,8 +28,8 @@ function valueColor(tone: Props['tone'], value: string): string {
   return 'text-foreground'
 }
 
-function deltaColor(delta: number | null, goodWhenPositive: boolean): string {
-  if (delta === null || delta === 0) {
+function deltaColor(delta: number, goodWhenPositive: boolean): string {
+  if (delta === 0) {
     return 'text-muted-foreground'
   }
 
@@ -60,12 +57,17 @@ export function KpiCard({
             {value}
           </p>
         </div>
-        <Badge
-          variant="outline"
-          className={cn('border-border bg-background font-mono', deltaColor(delta, goodWhenPositive))}
-        >
-          {formatDelta(delta)}
-        </Badge>
+        {delta !== null ? (
+          <Badge
+            variant="outline"
+            title="Variazione rispetto al periodo precedente"
+            aria-label={`${formatDelta(delta)} rispetto al periodo precedente`}
+            className={cn('border-border bg-background font-mono', deltaColor(delta, goodWhenPositive))}
+          >
+            <span>{formatDelta(delta)}</span>
+            <span className="hidden lg:inline"> vs periodo prec.</span>
+          </Badge>
+        ) : null}
       </CardContent>
     </Card>
   )
