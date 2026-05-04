@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('server-only', () => ({}))
+
 const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   createFileRecord: vi.fn(),
@@ -8,6 +10,9 @@ const mocks = vi.hoisted(() => ({
   markFileUploaded: vi.fn(),
   createPresignedPutUrl: vi.fn(),
   headObject: vi.fn(),
+  loggerInfo: vi.fn(),
+  loggerWarn: vi.fn(),
+  loggerError: vi.fn(),
 }))
 
 vi.mock('@/lib/dal/auth', () => ({
@@ -28,6 +33,15 @@ vi.mock('@/lib/dal/files', () => ({
 vi.mock('@/lib/services/r2', () => ({
   createPresignedPutUrl: mocks.createPresignedPutUrl,
   headObject: mocks.headObject,
+}))
+
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    info: mocks.loggerInfo,
+    warn: mocks.loggerWarn,
+    error: mocks.loggerError,
+  },
+  withLogContext: (_context: unknown, callback: () => unknown) => callback(),
 }))
 
 vi.mock('@/lib/validations/import', async () => {
@@ -113,6 +127,10 @@ describe('file import upload API contracts', () => {
     expect(body.error.details.issues.length).toBeGreaterThanOrEqual(1)
     expect(mocks.createFileRecord).not.toHaveBeenCalled()
     expect(mocks.createPresignedPutUrl).not.toHaveBeenCalled()
+    expect(mocks.loggerWarn).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'upload_initiate_malformed',
+      issueCount: expect.any(Number),
+    }))
   })
 
   it('returns unauthorized initiate responses without anonymous file rows', async () => {
@@ -144,6 +162,13 @@ describe('file import upload API contracts', () => {
     })
     expect(JSON.stringify(body)).not.toContain('ACCESS_KEY')
     expect(JSON.stringify(body)).not.toContain('signed-put')
+    expect(mocks.loggerError).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'upload_initiate_failed',
+      userId: 'user-1',
+      fileId: expect.any(String),
+      code: 'r2_configuration_missing',
+      status: 503,
+    }))
     expect(mocks.markFileFailed).toHaveBeenCalledWith(expect.objectContaining({
       userId: 'user-1',
       errorMessage: 'Upload storage is not configured. Please try again later.',
@@ -178,6 +203,21 @@ describe('file import upload API contracts', () => {
       expiresIn: 600,
       headers: { 'Content-Type': 'text/csv' },
     })
+    expect(mocks.verifySession).toHaveBeenCalledTimes(1)
+    expect(mocks.loggerInfo).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'upload_initiate_started',
+      userId: 'user-1',
+      fileName: 'fineco.csv',
+      sizeBytes: 128,
+      contentType: 'text/csv',
+    }))
+    expect(mocks.loggerInfo).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'upload_initiate_succeeded',
+      userId: 'user-1',
+      fileId: expect.any(String),
+      objectKey: expect.stringMatching(/^users\/user-1\/imports\/.+\.csv$/),
+      expiresIn: 600,
+    }))
   })
 
   it('treats cross-user or missing file ids as not found during confirm', async () => {
@@ -196,6 +236,11 @@ describe('file import upload API contracts', () => {
       fileId: '11111111-1111-4111-8111-111111111111',
     })
     expect(mocks.headObject).not.toHaveBeenCalled()
+    expect(mocks.loggerWarn).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'upload_confirm_not_found',
+      userId: 'user-1',
+      fileId: '11111111-1111-4111-8111-111111111111',
+    }))
   })
 
   it('rejects malformed confirm payloads before R2 HEAD', async () => {
@@ -206,6 +251,11 @@ describe('file import upload API contracts', () => {
     expect(body.error.code).toBe('invalid_confirm_request')
     expect(mocks.getFileForUser).not.toHaveBeenCalled()
     expect(mocks.headObject).not.toHaveBeenCalled()
+    expect(mocks.loggerWarn).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'upload_confirm_malformed',
+      userId: 'user-1',
+      issueCount: expect.any(Number),
+    }))
   })
 
   it('marks the file failed when R2 HEAD cannot verify the object', async () => {
@@ -228,6 +278,14 @@ describe('file import upload API contracts', () => {
       userId: 'user-1',
       fileId: '11111111-1111-4111-8111-111111111111',
       errorMessage: 'Uploaded object was not found. Please upload again.',
+    }))
+    expect(mocks.loggerError).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'upload_confirm_failed',
+      userId: 'user-1',
+      fileId: '11111111-1111-4111-8111-111111111111',
+      objectKey: 'users/user-1/imports/11111111-1111-4111-8111-111111111111.csv',
+      code: 'r2_object_not_found',
+      status: 404,
     }))
   })
 
@@ -269,5 +327,19 @@ describe('file import upload API contracts', () => {
       duplicateCount: 0,
       errorMessage: null,
     })
+    expect(mocks.verifySession).toHaveBeenCalledTimes(1)
+    expect(mocks.loggerInfo).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'upload_confirm_started',
+      userId: 'user-1',
+      fileId: '11111111-1111-4111-8111-111111111111',
+    }))
+    expect(mocks.loggerInfo).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'upload_confirm_succeeded',
+      userId: 'user-1',
+      fileId: '11111111-1111-4111-8111-111111111111',
+      objectKey: 'users/user-1/imports/11111111-1111-4111-8111-111111111111.csv',
+      eTag: 'etag-1',
+      contentLength: 128,
+    }))
   })
 })

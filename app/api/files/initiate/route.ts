@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { verifySession } from '@/lib/dal/auth'
 import { buildUserImportObjectKey, createFileRecord, markFileFailed } from '@/lib/dal/files'
+import { logger, withLogContext } from '@/lib/logger'
 import { createPresignedPutUrl } from '@/lib/services/r2'
 import { InitiateUploadSchema } from '@/lib/validations/import'
 
@@ -27,14 +28,26 @@ async function readJson(request: Request) {
   }
 }
 
+function errorCode(error: unknown, fallback: string) {
+  return typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : fallback
+}
+
+function errorStatus(error: unknown, fallback = 500) {
+  return typeof error === 'object' && error !== null && 'status' in error && typeof error.status === 'number'
+    ? error.status
+    : fallback
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
 function serviceError(error: unknown) {
-  const code = typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : 'upload_initiate_failed'
-  const status =
-    typeof error === 'object' && error !== null && 'status' in error && typeof error.status === 'number'
-      ? error.status
-      : 500
-  const message = error instanceof Error ? error.message : 'Could not initiate upload. Please retry.'
-  return errorResponse(status, code, message)
+  return errorResponse(
+    errorStatus(error),
+    errorCode(error, 'upload_initiate_failed'),
+    errorMessage(error, 'Could not initiate upload. Please retry.'),
+  )
 }
 
 export async function POST(request: Request) {
@@ -45,62 +58,105 @@ export async function POST(request: Request) {
     return errorResponse(401, 'unauthorized', 'Sign in to upload import files.')
   }
 
-  const parsed = InitiateUploadSchema.safeParse(await readJson(request))
-  if (!parsed.success) {
-    return errorResponse(422, 'invalid_upload_request', 'Upload request is invalid.', {
-      issues: parsed.error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })),
-    })
-  }
+  return withLogContext({ userId: session.userId, stage: 'upload_initiate' }, async () => {
+    const parsed = InitiateUploadSchema.safeParse(await readJson(request))
+    if (!parsed.success) {
+      logger.warn({
+        event: 'upload_initiate_malformed',
+        userId: session.userId,
+        issueCount: parsed.error.issues.length,
+      })
+      return errorResponse(422, 'invalid_upload_request', 'Upload request is invalid.', {
+        issues: parsed.error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })),
+      })
+    }
 
-  let createdFile: Awaited<ReturnType<typeof createFileRecord>> | null = null
-  try {
-    const fileId = crypto.randomUUID()
-    const objectKey = buildUserImportObjectKey({
+    logger.info({
+      event: 'upload_initiate_started',
       userId: session.userId,
-      fileId,
-      originalName: parsed.data.name,
-    })
-
-    createdFile = await createFileRecord({
-      id: fileId,
-      userId: session.userId,
-      originalName: parsed.data.name,
-      objectKey,
-      mimeType: parsed.data.type,
+      fileName: parsed.data.name,
       sizeBytes: parsed.data.size,
-    })
-
-    const signed = await createPresignedPutUrl({
-      objectKey: createdFile.objectKey,
       contentType: parsed.data.type,
-      contentLength: parsed.data.size,
     })
 
-    return NextResponse.json({
-      file: {
-        id: createdFile.id,
-        originalName: createdFile.originalName,
-        status: createdFile.status,
-        sizeBytes: createdFile.sizeBytes,
-        mimeType: createdFile.mimeType,
-      },
-      upload: {
-        method: 'PUT',
-        url: signed.url,
-        expiresIn: signed.expiresIn,
-        headers: {
-          'Content-Type': parsed.data.type,
-        },
-      },
-    })
-  } catch (error) {
-    if (createdFile) {
-      await markFileFailed({
+    let createdFile: Awaited<ReturnType<typeof createFileRecord>> | null = null
+    try {
+      const fileId = crypto.randomUUID()
+      const objectKey = buildUserImportObjectKey({
+        userId: session.userId,
+        fileId,
+        originalName: parsed.data.name,
+      })
+
+      createdFile = await createFileRecord({
+        id: fileId,
+        userId: session.userId,
+        originalName: parsed.data.name,
+        objectKey,
+        mimeType: parsed.data.type,
+        sizeBytes: parsed.data.size,
+      })
+
+      const signed = await createPresignedPutUrl({
+        objectKey: createdFile.objectKey,
+        contentType: parsed.data.type,
+        contentLength: parsed.data.size,
+      })
+
+      logger.info({
+        event: 'upload_initiate_succeeded',
         userId: session.userId,
         fileId: createdFile.id,
-        errorMessage: error instanceof Error ? error.message : 'Upload initiate failed.',
-      }).catch(() => undefined)
+        objectKey: createdFile.objectKey,
+        expiresIn: signed.expiresIn,
+      })
+
+      return NextResponse.json({
+        file: {
+          id: createdFile.id,
+          originalName: createdFile.originalName,
+          status: createdFile.status,
+          sizeBytes: createdFile.sizeBytes,
+          mimeType: createdFile.mimeType,
+        },
+        upload: {
+          method: 'PUT',
+          url: signed.url,
+          expiresIn: signed.expiresIn,
+          headers: {
+            'Content-Type': parsed.data.type,
+          },
+        },
+      })
+    } catch (error) {
+      if (createdFile) {
+        await markFileFailed({
+          userId: session.userId,
+          fileId: createdFile.id,
+          errorMessage: errorMessage(error, 'Upload initiate failed.'),
+        }).catch((markError) => {
+          logger.error({
+            event: 'upload_initiate_mark_failed_error',
+            userId: session.userId,
+            fileId: createdFile?.id,
+            objectKey: createdFile?.objectKey,
+            code: errorCode(markError, 'mark_file_failed_error'),
+            status: errorStatus(markError),
+            error: errorMessage(markError, 'Could not mark initiated file as failed.'),
+          })
+        })
+      }
+
+      logger.error({
+        event: 'upload_initiate_failed',
+        userId: session.userId,
+        fileId: createdFile?.id,
+        objectKey: createdFile?.objectKey,
+        code: errorCode(error, 'upload_initiate_failed'),
+        status: errorStatus(error),
+        error: errorMessage(error, 'Could not initiate upload. Please retry.'),
+      })
+      return serviceError(error)
     }
-    return serviceError(error)
-  }
+  })
 }
