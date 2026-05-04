@@ -42,6 +42,15 @@ describe('import detector fixture contracts', () => {
     expect(header).toBe(expectedHeader)
   })
 
+  it('keeps seeded platform countries within the database varchar(2) constraint', () => {
+    expect(seedPlatforms.map((platform) => [platform.slug, platform.country])).toEqual(
+      expect.arrayContaining([['general', 'ZZ']]),
+    )
+    for (const platform of seedPlatforms) {
+      expect(platform.country).toHaveLength(2)
+    }
+  })
+
   it('keeps duplicate fixture rows for later duplicate detection previews', () => {
     for (const [fileName] of expectedFixtureHeaders) {
       const [, ...dataRows] = readFileSync(fixturePath(fileName), 'utf8').trim().split('\n')

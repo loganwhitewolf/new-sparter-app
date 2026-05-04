@@ -379,7 +379,9 @@ export const platforms = [
     id: 1,
     name: "General",
     slug: "general",
-    country: "ALL",
+    // ISO 3166-1 alpha-2 placeholder for the catch-all import format.
+    // The platform.country column is varchar(2), so values must remain two characters.
+    country: "ZZ",
     delimiter: ",",
     descriptionColumn: "description",
     amountType: "single" as AmountType,
