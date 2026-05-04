@@ -39,12 +39,17 @@ vi.mock('@/lib/utils/decimal', async () => {
 })
 
 const {
+  DASHBOARD_TOTAL_EXPENSE_STATUSES,
   buildBreakdownData,
   buildMonthlyTrendData,
   buildOverviewData,
 } = await import('../lib/dal/dashboard')
 
 describe('dashboard DAL amount mapping', () => {
+  it('includes manually and automatically categorized expenses in dashboard totals', () => {
+    expect(DASHBOARD_TOTAL_EXPENSE_STATUSES).toEqual(['1', '2', '3'])
+  })
+
   it('builds overview KPI strings from Decimal aggregate rows', () => {
     const overview = buildOverviewData({
       current: { totalIn: '2500.125', totalOut: '1500.115' },

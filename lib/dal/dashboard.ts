@@ -2,10 +2,10 @@ import 'server-only'
 import { cache } from 'react'
 import {
   and,
-  count,
   countDistinct,
   eq,
   gte,
+  inArray,
   isNull,
   lte,
   ne,
@@ -99,6 +99,8 @@ type TrendAggregateRow = {
 
 const ZERO_AMOUNT = '0.00'
 
+export const DASHBOARD_TOTAL_EXPENSE_STATUSES = ['1', '2', '3'] as const
+
 function currentMonthRange(now = new Date()) {
   return {
     from: new Date(now.getFullYear(), now.getMonth(), 1),
@@ -137,8 +139,12 @@ function dateScopedTransactions(userId: string, from: Date, to: Date) {
   )
 }
 
-function expenseStatusActive() {
+function expenseStatusUncategorized() {
   return eq(expense.status, '1')
+}
+
+function expenseStatusIncludedInDashboardTotals() {
+  return inArray(expense.status, [...DASHBOARD_TOTAL_EXPENSE_STATUSES])
 }
 
 async function getUncategorizedCount(userId: string, from: Date, to: Date): Promise<number> {
@@ -152,7 +158,7 @@ async function getUncategorizedCount(userId: string, from: Date, to: Date): Prom
       .where(
         and(
           dateScopedTransactions(userId, from, to),
-          expenseStatusActive(),
+          expenseStatusUncategorized(),
           isNull(expense.subCategoryId),
           notIgnoredCategory()
         )
@@ -175,7 +181,7 @@ async function getOverviewAmountTotals(userId: string, from: Date, to: Date): Pr
       .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
-      .where(and(dateScopedTransactions(userId, from, to), expenseStatusActive(), notIgnoredCategory()))
+      .where(and(dateScopedTransactions(userId, from, to), expenseStatusIncludedInDashboardTotals(), notIgnoredCategory()))
 
     return rows[0] ?? { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT }
   } catch {
@@ -357,7 +363,7 @@ export const getCategoriesBreakdown = cache(
         .where(
           and(
             dateScopedTransactions(userId, from, to),
-            expenseStatusActive(),
+            expenseStatusIncludedInDashboardTotals(),
             ne(category.slug, 'ignore'),
             typeFilter
           )
@@ -384,8 +390,8 @@ export const getAggregatedTransactionsData = cache(
       rows = await db
         .select({
           month: monthSql,
-          totalIn: sql<string>`coalesce(sum(case when ${transactionTable.amount} > 0 and (${category.slug} is null or ${category.slug} <> 'ignore') and ${expense.status} = '1' then ${transactionTable.amount} else 0 end), 0)::text`,
-          totalOut: sql<string>`coalesce(abs(sum(case when ${transactionTable.amount} < 0 and (${category.slug} is null or ${category.slug} <> 'ignore') and ${expense.status} = '1' then ${transactionTable.amount} else 0 end)), 0)::text`,
+          totalIn: sql<string>`coalesce(sum(case when ${transactionTable.amount} > 0 and (${category.slug} is null or ${category.slug} <> 'ignore') then ${transactionTable.amount} else 0 end), 0)::text`,
+          totalOut: sql<string>`coalesce(abs(sum(case when ${transactionTable.amount} < 0 and (${category.slug} is null or ${category.slug} <> 'ignore') then ${transactionTable.amount} else 0 end)), 0)::text`,
           totalNc: sql<number>`count(distinct case when ${expense.status} = '1' and ${expense.subCategoryId} is null then ${expense.id} end)`,
           totalIgn: sql<number>`count(distinct case when ${category.slug} = 'ignore' then ${expense.id} end)`,
         })
@@ -393,7 +399,7 @@ export const getAggregatedTransactionsData = cache(
         .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
         .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
         .leftJoin(category, eq(subCategory.categoryId, category.id))
-        .where(dateScopedTransactions(userId, from, to))
+        .where(and(dateScopedTransactions(userId, from, to), expenseStatusIncludedInDashboardTotals()))
         .groupBy(monthSql)
     } catch {
       rows = []
