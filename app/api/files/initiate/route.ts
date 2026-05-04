@@ -123,9 +123,7 @@ export async function POST(request: Request) {
           method: 'PUT',
           url: signed.url,
           expiresIn: signed.expiresIn,
-          headers: {
-            'Content-Type': parsed.data.type,
-          },
+          headers: {},
         },
       })
     } catch (error) {

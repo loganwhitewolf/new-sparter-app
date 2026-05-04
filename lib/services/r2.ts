@@ -242,7 +242,6 @@ export async function createPresignedPutUrl(input: {
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: input.objectKey,
-      ContentType: input.contentType,
       ContentLength: input.contentLength,
     })
     const expiresIn = ttlSeconds()
