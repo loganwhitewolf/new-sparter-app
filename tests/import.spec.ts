@@ -71,6 +71,110 @@ test.describe('Import - IMP-01: Accepted file validation', () => {
   })
 })
 
+test.describe('Import - IMP-01: Upload retry integration', () => {
+  test('IMP-01 retries transient presigned PUT failures and confirms only after upload success', async ({ page }) => {
+    const fileId = '00000000-0000-4000-8000-000000000123'
+    const presignedUrl = 'https://r2-upload.test/imports/statement.csv?signature=secret-signature'
+    const putRequestOrder: number[] = []
+    let confirmCalledAtPutAttempt: number | null = null
+
+    await page.addInitScript(() => {
+      window.addEventListener('upload-put-diagnostic', (event) => {
+        const detail = event instanceof CustomEvent ? event.detail : null
+        const current = (window as Window & { __uploadPutDiagnostics?: unknown[] }).__uploadPutDiagnostics ?? []
+        ;(window as Window & { __uploadPutDiagnostics: unknown[] }).__uploadPutDiagnostics = [...current, detail]
+      })
+    })
+
+    await page.route('**/api/files/initiate', async (route) => {
+      expect(route.request().method()).toBe('POST')
+      const body = route.request().postDataJSON() as { name: string; size: number; type: string }
+      expect(body).toMatchObject({ name: 'statement.csv', type: 'text/csv' })
+      expect(body.size).toBeGreaterThan(0)
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          file: {
+            id: fileId,
+            originalName: body.name,
+            status: 'pending',
+            sizeBytes: body.size,
+            mimeType: body.type,
+          },
+          upload: {
+            method: 'PUT',
+            url: presignedUrl,
+            expiresIn: 900,
+            headers: { 'Content-Type': body.type },
+          },
+        }),
+      })
+    })
+
+    await page.route('https://r2-upload.test/imports/statement.csv**', async (route) => {
+      const request = route.request()
+      if (request.method() === 'OPTIONS') {
+        await route.fulfill({
+          status: 204,
+          headers: {
+            'access-control-allow-origin': '*',
+            'access-control-allow-methods': 'PUT, OPTIONS',
+            'access-control-allow-headers': 'content-type, content-length',
+          },
+        })
+        return
+      }
+
+      expect(request.method()).toBe('PUT')
+      putRequestOrder.push(putRequestOrder.length + 1)
+      await route.fulfill({
+        status: putRequestOrder.length < 3 ? 503 : 200,
+        headers: {
+          'access-control-allow-origin': '*',
+          'access-control-expose-headers': 'etag',
+        },
+        body: putRequestOrder.length < 3 ? 'temporary unavailable' : '',
+      })
+    })
+
+    await page.route('**/api/files/confirm', async (route) => {
+      expect(route.request().method()).toBe('POST')
+      expect(route.request().postDataJSON()).toEqual({ fileId })
+      confirmCalledAtPutAttempt = putRequestOrder.length
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+    })
+
+    await openImportPage(page)
+
+    await page.getByLabel(/file bancario/i).setInputFiles({
+      name: 'statement.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from('date,description,amount\n2024-01-01,Test,100.00'),
+    })
+    await page.getByRole('button', { name: /carica file/i }).click()
+
+    await page.waitForURL(`**/import/${fileId}/analyze`)
+
+    expect(putRequestOrder).toEqual([1, 2, 3])
+    expect(confirmCalledAtPutAttempt).toBe(3)
+
+    const diagnostics = await page.evaluate(() => (
+      (window as Window & { __uploadPutDiagnostics?: Array<Record<string, unknown>> }).__uploadPutDiagnostics ?? []
+    ))
+    expect(diagnostics.map((event) => event.event)).toEqual([
+      'upload_put_attempt',
+      'upload_put_retrying',
+      'upload_put_attempt',
+      'upload_put_retrying',
+      'upload_put_attempt',
+    ])
+    expect(diagnostics.filter((event) => event.event === 'upload_put_attempt')).toHaveLength(3)
+    expect(diagnostics.filter((event) => event.event === 'upload_put_retrying')).toHaveLength(2)
+    expect(JSON.stringify(diagnostics)).not.toContain('secret-signature')
+  })
+})
+
 test.describe('Import - IMP-02: Analyze preview page', () => {
   test('IMP-02 /import/[fileId]/analyze renders preview structure when mocked', async ({ page }) => {
     test.fixme(true, 'Requires seeded DB + R2 file — run against staging with a real uploaded file')
