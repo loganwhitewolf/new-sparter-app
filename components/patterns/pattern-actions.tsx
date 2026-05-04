@@ -35,6 +35,12 @@ type Props = {
   categories: CategoryWithSubCategories[]
 }
 
+function getOwningCategoryId(categories: CategoryWithSubCategories[], subCategoryId: number) {
+  return categories.find((category) =>
+    category.subCategories.some((subCategory) => subCategory.id === subCategoryId),
+  )?.id
+}
+
 export function PatternActions({
   id,
   pattern,
@@ -44,9 +50,10 @@ export function PatternActions({
   description,
   categories,
 }: Props) {
+  const initialCategoryId = getOwningCategoryId(categories, initialSubCategoryId)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [categoryId, setCategoryId] = useState('')
+  const [categoryId, setCategoryId] = useState(initialCategoryId ? String(initialCategoryId) : '')
   const [subCategoryId, setSubCategoryId] = useState(String(initialSubCategoryId))
   const [amountSign, setAmountSign] = useState(initialAmountSign)
   const [confidence, setConfidence] = useState(initialConfidence)
@@ -61,15 +68,20 @@ export function PatternActions({
     [categories, categoryId],
   )
 
-  useEffect(() => {
-    const owningCategoryId = categories.find((category) =>
-      category.subCategories.some((subCategory) => subCategory.id === initialSubCategoryId),
-    )?.id
+  function resetEditForm() {
+    const owningCategoryId = getOwningCategoryId(categories, initialSubCategoryId)
     setCategoryId(owningCategoryId ? String(owningCategoryId) : '')
     setSubCategoryId(String(initialSubCategoryId))
     setAmountSign(initialAmountSign)
     setConfidence(initialConfidence)
-  }, [categories, initialAmountSign, initialConfidence, initialSubCategoryId, editOpen])
+  }
+
+  function handleEditOpenChange(open: boolean) {
+    if (open) {
+      resetEditForm()
+    }
+    setEditOpen(open)
+  }
 
   useEffect(() => {
     if (editSubmittedRef.current && editState.error === null) {
@@ -94,7 +106,7 @@ export function PatternActions({
 
   return (
     <div className="flex justify-end gap-1">
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      <Dialog open={editOpen} onOpenChange={handleEditOpenChange}>
         <DialogTrigger asChild>
           <Button type="button" variant="ghost" size="icon-sm" aria-label="Modifica pattern">
             <Pencil className="h-4 w-4" />
