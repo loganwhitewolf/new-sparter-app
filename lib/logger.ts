@@ -1,7 +1,9 @@
 import 'server-only'
 
 import { AsyncLocalStorage } from 'node:async_hooks'
+import { headers } from 'next/headers'
 import pino from 'pino'
+import { auth } from '@/auth'
 
 export const DEFAULT_BETTERSTACK_ENDPOINT = 'https://in.logs.betterstack.com'
 const REDACTED = '[Redacted]'
@@ -40,8 +42,40 @@ export function withLogContext<T>(context: LogContext, callback: () => T): T {
   return logContextStorage.run({ ...parentContext, ...context }, callback)
 }
 
-export function withUserId<T>(userId: string, callback: () => T): T {
-  return withLogContext({ userId }, callback)
+export async function withUserId<T>(
+  callback: () => T | Promise<T>,
+  extraContext: LogContext = {},
+): Promise<T> {
+  let context = extraContext
+
+  try {
+    const requestHeaders = await headers()
+
+    if (
+      process.env.STAGING_KEY &&
+      requestHeaders.get('x-staging-key') === process.env.STAGING_KEY
+    ) {
+      context = {
+        ...extraContext,
+        userId: process.env.STAGING_USER_ID ?? 'staging-user',
+      }
+    } else {
+      const session = await auth.api.getSession({
+        headers: requestHeaders,
+      })
+
+      if (session?.user?.id) {
+        context = {
+          ...extraContext,
+          userId: session.user.id,
+        }
+      }
+    }
+  } catch {
+    context = extraContext
+  }
+
+  return withLogContext(context, callback)
 }
 
 export function buildTransportConfig(env: LoggerEnv = process.env): pino.LoggerOptions['transport'] {

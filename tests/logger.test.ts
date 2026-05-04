@@ -1,13 +1,32 @@
 import pino from 'pino'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
+
+const mocks = vi.hoisted(() => ({
+  getSession: vi.fn(),
+  headers: vi.fn(),
+}))
+
+vi.mock('next/headers', () => ({
+  headers: mocks.headers,
+}))
+
+vi.mock('@/auth', () => ({
+  auth: {
+    api: {
+      getSession: mocks.getSession,
+    },
+  },
+}))
 
 const {
   DEFAULT_BETTERSTACK_ENDPOINT,
   buildTransportConfig,
   createLoggerOptions,
+  getLogContext,
   logger,
+  withLogContext,
   withUserId,
 } = await import('../lib/logger')
 
@@ -23,6 +42,22 @@ function writeOnce(options: pino.LoggerOptions, payload: Record<string, unknown>
 
   return JSON.parse(line) as Record<string, unknown>
 }
+
+function requestHeaders(values: Record<string, string> = {}) {
+  return new Headers(values)
+}
+
+beforeEach(() => {
+  vi.unstubAllEnvs()
+  mocks.getSession.mockReset()
+  mocks.headers.mockReset()
+  mocks.headers.mockResolvedValue(requestHeaders())
+  mocks.getSession.mockResolvedValue(null)
+})
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
 
 describe('logger configuration', () => {
   it('uses development pretty output with colorized translated time and noisy bindings ignored', () => {
@@ -124,13 +159,138 @@ describe('logger configuration', () => {
     expect(serialized).toContain('https://r2.example.test/object.csv?[Redacted]')
   })
 
-  it('adds request-scoped userId from AsyncLocalStorage to emitted records', () => {
-    const emitted = withUserId('user-123', () => writeOnce(createLoggerOptions({ NODE_ENV: 'production' }), {
-      event: 'sample-event',
-    }))
+  it('adds request-scoped context from AsyncLocalStorage to emitted records', () => {
+    const emitted = withLogContext({ requestId: 'req-123', userId: 'user-123' }, () =>
+      writeOnce(createLoggerOptions({ NODE_ENV: 'production' }), {
+        event: 'sample-event',
+      }),
+    )
 
     expect(emitted.userId).toBe('user-123')
+    expect(emitted.requestId).toBe('req-123')
     expect(emitted.event).toBe('sample-event')
+  })
+
+  it('merges nested log contexts and lets inner keys override parent keys', () => {
+    const emitted = withLogContext({ requestId: 'outer-request', userId: 'outer-user' }, () =>
+      withLogContext({ requestId: 'inner-request', tenantId: 'tenant-1' }, () =>
+        writeOnce(createLoggerOptions({ NODE_ENV: 'production' }), {
+          event: 'nested-event',
+        }),
+      ),
+    )
+
+    expect(emitted).toMatchObject({
+      event: 'nested-event',
+      requestId: 'inner-request',
+      tenantId: 'tenant-1',
+      userId: 'outer-user',
+    })
+    expect(getLogContext()).toEqual({})
+  })
+
+  it('resolves a Better Auth session once and includes userId plus extra context inside withUserId', async () => {
+    const headers = requestHeaders({ cookie: 'better-auth.session_token=test' })
+    mocks.headers.mockResolvedValue(headers)
+    mocks.getSession.mockResolvedValue({
+      user: {
+        id: 'auth-user-123',
+      },
+    })
+
+    const emitted = await withUserId(
+      async () =>
+        writeOnce(createLoggerOptions({ NODE_ENV: 'production' }), {
+          event: 'session-event',
+        }),
+      { requestId: 'req-1' },
+    )
+
+    expect(mocks.getSession).toHaveBeenCalledTimes(1)
+    expect(mocks.getSession).toHaveBeenCalledWith({ headers })
+    expect(emitted).toMatchObject({
+      event: 'session-event',
+      requestId: 'req-1',
+      userId: 'auth-user-123',
+    })
+    expect(getLogContext()).toEqual({})
+  })
+
+  it('runs with only extra context when no session is available', async () => {
+    mocks.getSession.mockResolvedValue(null)
+
+    const emitted = await withUserId(
+      () =>
+        writeOnce(createLoggerOptions({ NODE_ENV: 'production' }), {
+          event: 'anonymous-event',
+        }),
+      { requestId: 'anon-req' },
+    )
+
+    expect(mocks.getSession).toHaveBeenCalledTimes(1)
+    expect(emitted.userId).toBeUndefined()
+    expect(emitted).toMatchObject({
+      event: 'anonymous-event',
+      requestId: 'anon-req',
+    })
+  })
+
+  it('runs with only extra context when session lookup throws', async () => {
+    mocks.getSession.mockRejectedValue(new Error('auth unavailable'))
+
+    const emitted = await withUserId(
+      () =>
+        writeOnce(createLoggerOptions({ NODE_ENV: 'production' }), {
+          event: 'auth-failure-event',
+        }),
+      { requestId: 'failure-req' },
+    )
+
+    expect(emitted.userId).toBeUndefined()
+    expect(emitted).toMatchObject({
+      event: 'auth-failure-event',
+      requestId: 'failure-req',
+    })
+    expect(getLogContext()).toEqual({})
+  })
+
+  it('uses the staging header shortcut without calling Better Auth', async () => {
+    vi.stubEnv('STAGING_KEY', 'staging-key')
+    vi.stubEnv('STAGING_USER_ID', 'staging-user-42')
+    mocks.headers.mockResolvedValue(requestHeaders({ 'x-staging-key': 'staging-key' }))
+
+    const emitted = await withUserId(() =>
+      writeOnce(createLoggerOptions({ NODE_ENV: 'production' }), {
+        event: 'staging-event',
+      }),
+    )
+
+    expect(mocks.getSession).not.toHaveBeenCalled()
+    expect(emitted).toMatchObject({
+      event: 'staging-event',
+      userId: 'staging-user-42',
+    })
+  })
+
+  it('cleans up user context after the wrapper completes', async () => {
+    mocks.getSession.mockResolvedValue({
+      user: {
+        id: 'scoped-user',
+      },
+    })
+
+    await withUserId(() =>
+      writeOnce(createLoggerOptions({ NODE_ENV: 'production' }), {
+        event: 'scoped-event',
+      }),
+    )
+
+    const emittedAfterWrapper = writeOnce(createLoggerOptions({ NODE_ENV: 'production' }), {
+      event: 'after-wrapper-event',
+    })
+
+    expect(getLogContext()).toEqual({})
+    expect(emittedAfterWrapper.userId).toBeUndefined()
   })
 
   it('exports a usable process-wide Pino logger', () => {
