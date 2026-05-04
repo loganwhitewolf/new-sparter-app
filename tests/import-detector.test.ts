@@ -9,6 +9,7 @@ const fixturePath = (name: string) => join(process.cwd(), 'tests', 'fixtures', '
 
 const expectedFixtureHeaders = [
   ['general.csv', 'timestamp,description,amount'],
+  ['crypto-com.csv', 'Timestamp (UTC),Transaction Description,Amount'],
   ['satispay.csv', 'Data,Nome,Importo'],
   ['intesa-sp.csv', 'Data,Operazione,Importo'],
   ['intesa-sp-carta-credito.csv', 'Data operazione,Descrizione,Addebiti'],
@@ -60,6 +61,7 @@ describe('import detector fixture contracts', () => {
 
   it.each([
     ['general.csv', 'general'],
+    ['crypto-com.csv', 'crypto-com'],
     ['satispay.csv', 'satispay'],
     ['intesa-sp.csv', 'intesa-sp'],
     ['intesa-sp-carta-credito.csv', 'intesa-sp-carta-credito'],
