@@ -116,14 +116,13 @@ function getR2Config(operation: R2Operation, objectKey: string): R2Config {
   const accessKeyId = env('R2_ACCESS_KEY_ID')
   const secretAccessKey = env('R2_SECRET_ACCESS_KEY')
   const bucketName = env('R2_BUCKET_NAME')
-  const missingEnvVars = [
+  const requiredEnvVars: Array<[name: string, value: string | null]> = [
     ['R2_ACCOUNT_ID', accountId],
     ['R2_ACCESS_KEY_ID', accessKeyId],
     ['R2_SECRET_ACCESS_KEY', secretAccessKey],
     ['R2_BUCKET_NAME', bucketName],
   ]
-    .filter(([, value]) => !value)
-    .map(([name]) => name)
+  const missingEnvVars = requiredEnvVars.flatMap(([name, value]) => (value ? [] : [name]))
 
   if (missingEnvVars.length > 0) {
     const error = new R2ServiceError(

@@ -5,6 +5,7 @@ import { AlertCircle, FileUp, Loader2 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { UploadPutError, uploadFileToPresignedUrl } from '@/components/import/upload-put'
 import {
   MAX_IMPORT_FILE_SIZE_BYTES,
   IMPORT_CONTENT_TYPES,
@@ -114,21 +115,14 @@ export function ImportUploader() {
     // Step 2: PUT directly to R2 presigned URL — never proxy bytes through server
     setStage('uploading')
     try {
-      const putRes = await fetch(presignedUrl, {
-        method: 'PUT',
-        headers: {
-          ...uploadHeaders,
-          'Content-Length': String(selectedFile.size),
-        },
-        body: selectedFile,
+      await uploadFileToPresignedUrl({
+        fileId,
+        url: presignedUrl,
+        file: selectedFile,
+        headers: uploadHeaders,
       })
-      if (!putRes.ok) {
-        setError('Caricamento su storage fallito. Riprova.')
-        setStage('idle')
-        return
-      }
-    } catch {
-      setError('Errore di rete durante il caricamento del file.')
+    } catch (uploadError) {
+      setError(uploadError instanceof UploadPutError ? uploadError.message : 'Errore di rete durante il caricamento del file.')
       setStage('idle')
       return
     }
