@@ -33,7 +33,7 @@ vi.mock('@/lib/logger', () => ({
   },
 }))
 
-const { R2ServiceError, createPresignedPutUrl, headObject, readObjectBody } = await import('../lib/services/r2')
+const { R2ServiceError, REQUIRED_R2_ENV_VARS, getMissingR2EnvVars, createPresignedPutUrl, headObject, readObjectBody } = await import('../lib/services/r2')
 
 function setR2Env(overrides: Record<string, string | undefined> = {}) {
   vi.stubEnv('R2_ACCOUNT_ID', overrides.R2_ACCOUNT_ID ?? 'account-id')
@@ -52,6 +52,54 @@ beforeEach(() => {
     ContentType: 'text/csv',
     ETag: '"etag-1"',
     LastModified: new Date('2026-01-01T00:00:00.000Z'),
+  })
+})
+
+describe('R2 env helpers', () => {
+  it('REQUIRED_R2_ENV_VARS contains the four required variable names', () => {
+    expect(REQUIRED_R2_ENV_VARS).toEqual(
+      expect.arrayContaining(['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET_NAME']),
+    )
+    expect(REQUIRED_R2_ENV_VARS).toHaveLength(4)
+  })
+
+  it('getMissingR2EnvVars returns empty array when all vars are set', () => {
+    const env = {
+      R2_ACCOUNT_ID: 'account-id',
+      R2_ACCESS_KEY_ID: 'access-key-id',
+      R2_SECRET_ACCESS_KEY: 'secret-access-key',
+      R2_BUCKET_NAME: 'bucket-name',
+    }
+    expect(getMissingR2EnvVars(env)).toEqual([])
+  })
+
+  it('getMissingR2EnvVars returns missing var names for absent entries', () => {
+    const env = {
+      R2_ACCOUNT_ID: 'account-id',
+      R2_BUCKET_NAME: 'bucket-name',
+    }
+    const missing = getMissingR2EnvVars(env)
+    expect(missing).toEqual(expect.arrayContaining(['R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY']))
+    expect(missing).toHaveLength(2)
+  })
+
+  it('getMissingR2EnvVars treats blank/whitespace values as missing', () => {
+    const env = {
+      R2_ACCOUNT_ID: '  ',
+      R2_ACCESS_KEY_ID: '',
+      R2_SECRET_ACCESS_KEY: 'secret',
+      R2_BUCKET_NAME: 'bucket',
+    }
+    const missing = getMissingR2EnvVars(env)
+    expect(missing).toEqual(expect.arrayContaining(['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID']))
+    expect(missing).toHaveLength(2)
+  })
+
+  it('getMissingR2EnvVars never returns values, only variable names', () => {
+    const env = { R2_ACCOUNT_ID: 'super-secret-value' }
+    const missing = getMissingR2EnvVars(env)
+    const serialized = JSON.stringify(missing)
+    expect(serialized).not.toContain('super-secret-value')
   })
 })
 
