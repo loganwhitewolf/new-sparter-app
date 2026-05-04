@@ -101,17 +101,43 @@ const ZERO_AMOUNT = '0.00'
 
 export const DASHBOARD_TOTAL_EXPENSE_STATUSES = ['1', '2', '3'] as const
 
-function currentMonthRange(now = new Date()) {
-  return {
-    from: new Date(now.getFullYear(), now.getMonth(), 1),
-    to: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
+function previousDashboardPresetDateRange(preset: DashboardPreset, now = new Date()) {
+  switch (preset) {
+    case 'last-3-months':
+      return {
+        from: new Date(now.getFullYear(), now.getMonth() - 5, 1),
+        to: new Date(now.getFullYear(), now.getMonth() - 2, 0, 23, 59, 59, 999),
+      }
+    case 'last-6-months':
+      return {
+        from: new Date(now.getFullYear(), now.getMonth() - 11, 1),
+        to: new Date(now.getFullYear(), now.getMonth() - 5, 0, 23, 59, 59, 999),
+      }
+    case 'this-year':
+      return {
+        from: new Date(now.getFullYear() - 1, 0, 1),
+        to: new Date(now.getFullYear() - 1, now.getMonth() + 1, 0, 23, 59, 59, 999),
+      }
+    case 'last-year':
+      return {
+        from: new Date(now.getFullYear() - 2, 0, 1),
+        to: new Date(now.getFullYear() - 2, 11, 31, 23, 59, 59, 999),
+      }
+    case 'last-month':
+    default: {
+      const comparisonMonth = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+      return {
+        from: comparisonMonth,
+        to: new Date(comparisonMonth.getFullYear(), comparisonMonth.getMonth() + 1, 0, 23, 59, 59, 999),
+      }
+    }
   }
 }
 
-function previousMonthRange(now = new Date()) {
+export function getOverviewComparisonRanges(preset: DashboardPreset, now = new Date()) {
   return {
-    from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
-    to: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999),
+    current: dashboardPresetToDateRange(preset, now),
+    previous: previousDashboardPresetDateRange(preset, now),
   }
 }
 
@@ -313,11 +339,9 @@ export function buildMonthlyTrendData(input: {
   return Array.from(buckets.values())
 }
 
-export const getOverview = cache(async (): Promise<OverviewData> => {
+export const getOverview = cache(async (preset: DashboardPreset = 'last-month'): Promise<OverviewData> => {
   const { userId } = await verifySession()
-  const now = new Date()
-  const current = currentMonthRange(now)
-  const previous = previousMonthRange(now)
+  const { current, previous } = getOverviewComparisonRanges(preset)
 
   const [currentTotals, previousTotals, currentUncategorizedCount, previousUncategorizedCount] =
     await Promise.all([

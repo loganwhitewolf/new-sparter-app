@@ -43,9 +43,35 @@ const {
   buildBreakdownData,
   buildMonthlyTrendData,
   buildOverviewData,
+  getOverviewComparisonRanges,
 } = await import('../lib/dal/dashboard')
 
 describe('dashboard DAL amount mapping', () => {
+  it('uses the selected dashboard preset for KPI ranges and compares against the preceding range', () => {
+    const now = new Date(2026, 4, 15)
+
+    expect(getOverviewComparisonRanges('last-month', now)).toEqual({
+      current: {
+        from: new Date(2026, 3, 1),
+        to: new Date(2026, 3, 30, 23, 59, 59, 999),
+      },
+      previous: {
+        from: new Date(2026, 2, 1),
+        to: new Date(2026, 2, 31, 23, 59, 59, 999),
+      },
+    })
+    expect(getOverviewComparisonRanges('last-3-months', now)).toEqual({
+      current: {
+        from: new Date(2026, 2, 1),
+        to: new Date(2026, 4, 31, 23, 59, 59, 999),
+      },
+      previous: {
+        from: new Date(2025, 11, 1),
+        to: new Date(2026, 1, 28, 23, 59, 59, 999),
+      },
+    })
+  })
+
   it('includes manually and automatically categorized expenses in dashboard totals', () => {
     expect(DASHBOARD_TOTAL_EXPENSE_STATUSES).toEqual(['1', '2', '3'])
   })

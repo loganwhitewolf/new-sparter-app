@@ -33,7 +33,7 @@ export default async function DashboardPage({
       </div>
 
       <Suspense fallback={<OverviewSkeleton />}>
-        <OverviewSection />
+        <OverviewSection preset={filters.preset} />
       </Suspense>
 
       <Card className="rounded-lg">
@@ -68,8 +68,8 @@ export default async function DashboardPage({
   )
 }
 
-async function OverviewSection() {
-  const data = await getOverview()
+async function OverviewSection({ preset }: { preset: DashboardPreset }) {
+  const data = await getOverview(preset)
   return <KpiCards data={data} />
 }
 
