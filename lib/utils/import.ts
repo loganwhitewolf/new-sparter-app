@@ -163,7 +163,6 @@ export function parseBankDate(value: string | Date | null | undefined): Date | n
 
 export function computeTransactionHash(input: {
   userId: string
-  platformId: number
   occurredAt: Date
   amount: string | number
   description: string
@@ -171,7 +170,6 @@ export function computeTransactionHash(input: {
   const amount = parseItalianAmount(input.amount) ?? String(input.amount)
   const identity = [
     input.userId,
-    input.platformId,
     input.occurredAt.toISOString(),
     amount,
     normalizeDescription(input.description),
@@ -228,11 +226,10 @@ export function normalizeTransactionRow(
   }
   if (!amount) errors.push(`Row ${context.rowIndex}: invalid amount`)
 
-  const platformId = platform.platformId ?? platform.id
   const descriptionHash = computeDescriptionHash(description)
   const transactionHash =
-    platformId && occurredAt && amount && description
-      ? computeTransactionHash({ userId: context.userId, platformId, occurredAt, amount, description })
+    occurredAt && amount && description
+      ? computeTransactionHash({ userId: context.userId, occurredAt, amount, description })
       : null
 
   return {

@@ -35,17 +35,15 @@ describe('import utility fixture contracts', () => {
     expect(normalizeDescription('  Caffè   Torino\tCentro  ')).toBe('caffè torino centro')
   })
 
-  it('hashes normalized transaction identity from user, platform, date, amount, and description', () => {
+  it('hashes normalized transaction identity from user, date, amount, and description', () => {
     const first = computeTransactionHash({
       userId: 'user-1',
-      platformId: 4,
       occurredAt: parseBankDate('02-01-2026')!,
       amount: parseItalianAmount(' -12,340 ')!,
       description: ' PAGAMENTO   POS SUPERMERCATO ',
     })
     const second = computeTransactionHash({
       userId: 'user-1',
-      platformId: 4,
       occurredAt: parseBankDate('2026-01-02')!,
       amount: '-12.34',
       description: 'pagamento pos supermercato',

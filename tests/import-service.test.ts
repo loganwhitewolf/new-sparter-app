@@ -73,7 +73,7 @@ vi.mock('@/lib/db/schema', () => ({
     title: 'expense.title',
     descriptionHash: 'expense.descriptionHash',
     subCategoryId: 'expense.subCategoryId',
-    amount: 'expense.amount',
+    totalAmount: 'expense.totalAmount',
     transactionCount: 'expense.transactionCount',
     importedFromFileId: 'expense.importedFromFileId',
     firstTransactionAt: 'expense.firstTransactionAt',

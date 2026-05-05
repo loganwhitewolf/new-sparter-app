@@ -46,6 +46,15 @@
 - [ ] **ADV-03**: I pattern regex di sistema includono Deliveroo, JustEat, Glovo e Wolt mappati alla subcategoria `take-away`
 - [ ] **ADV-04**: La pipeline di auto-categorizzazione è gated per subscription: `free` = nessuna auto-categorizzazione; `basic` = Tier 1 (regex) + Tier 2 (history); `pro` = Tier 1 + Tier 2 + Tier 3 AI (riservato v2)
 
+### Transactions & Expense Refinement (M003)
+
+- [ ] **TRX-01**: L'utente può visualizzare la lista delle transazioni importate su `/transazioni` con filtri URL-based per data, piattaforma e status, e sorting per colonna
+- [ ] **TRX-02**: Il sistema deduplica le transazioni in modo platform-agnostic: stessa data+descrizione+importo = duplicato indipendentemente dalla piattaforma sorgente; l'import silenziosamente ignora il duplicato
+- [ ] **TRX-03**: L'utente può modificare il titolo di una singola transazione (`customTitle`) senza propagare la modifica all'expense aggregata collegata
+- [ ] **TRX-04**: L'utente può modificare il titolo di un'expense senza toccare la descrizione originale delle transazioni collegate
+- [ ] **TRX-05**: L'utente può ignorare un'expense (status `ignored`) dalla riga della lista expenses senza aprire menu secondari; le transazioni di quell'expense vengono escluse dai totali dashboard
+- [ ] **TRX-06**: L'utente può categorizzare un'expense direttamente dalla riga della lista expenses tramite una CTA inline, senza aprire il three-dot menu
+
 ### User Profile
 
 - [ ] **PROF-01**: L'utente può visualizzare e modificare le proprie informazioni personali: firstName, lastName, jobTitle, location, phone, timezone
@@ -114,17 +123,23 @@
 | IMP-03 | Phase 5 | Pending |
 | IMP-04 | Phase 5 | Pending |
 | IMP-05 | Phase 5 | Pending |
-| ADV-01 | Phase 6 | Pending |
+| ADV-01 | M003 (anticipato da Phase 6) | Pending |
 | ADV-02 | Phase 6 | Pending |
 | ADV-03 | Phase 6 | Pending |
-| ADV-04 | Phase 6 | Pending |
+| ADV-04 | M003 (fix pipeline free→basic) | Pending |
+| TRX-01 | M003 | Pending |
+| TRX-02 | M003 | Pending |
+| TRX-03 | M003 | Pending |
+| TRX-04 | M003 | Pending |
+| TRX-05 | M003 | Pending |
+| TRX-06 | M003 | Pending |
 | PROF-01 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 22 total
-- Mapped to phases: 22
+- v1 requirements: 28 total (22 original + 6 TRX from M003)
+- Mapped to phases/milestones: 28
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-22*
-*Last updated: 2026-04-24 after File Import requirements update*
+*Last updated: 2026-05-04 — M003 TRX-01..TRX-06 added; ADV-01, ADV-04 anticipati in M003*

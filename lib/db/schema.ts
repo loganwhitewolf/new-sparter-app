@@ -273,7 +273,7 @@ export const expense = pgTable(
     subCategoryId: integer("sub_category_id").references(() => subCategory.id, {
       onDelete: "set null",
     }),
-    amount: numeric("amount", { precision: 12, scale: 2 }).default("0.00").notNull(),
+    totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).default("0.00").notNull(),
     transactionCount: integer("transaction_count").default(0).notNull(),
     importedFromFileId: text("imported_from_file_id").references(() => file.id, {
       onDelete: "set null",
@@ -311,6 +311,7 @@ export const transaction = pgTable(
     expenseId: text("expense_id").references(() => expense.id, { onDelete: "set null" }),
     transactionHash: varchar("transaction_hash", { length: 64 }).notNull(),
     description: text("description").notNull(),
+    customTitle: varchar("custom_title", { length: 255 }),
     descriptionHash: varchar("description_hash", { length: 64 }).notNull(),
     amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
     currency: varchar("currency", { length: 3 }).default("EUR").notNull(),

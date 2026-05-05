@@ -175,7 +175,6 @@ function buildPreview(parsed: ParsedImportFile, best: ImportFormatCandidate | nu
     if (!transactionHash && normalized.occurredAt && normalized.amount && normalized.description) {
       transactionHash = computeTransactionHash({
         userId,
-        platformId: best.platformId,
         occurredAt: normalized.occurredAt,
         amount: normalized.amount,
         description: normalized.description,

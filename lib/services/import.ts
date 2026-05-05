@@ -358,7 +358,7 @@ export async function importFile(input: {
 
         // Upsert expense by (userId, descriptionHash) — check-then-update-or-insert
         const existing = await tx
-          .select({ id: expense.id, amount: expense.amount, transactionCount: expense.transactionCount, subCategoryId: expense.subCategoryId })
+          .select({ id: expense.id, totalAmount: expense.totalAmount, transactionCount: expense.transactionCount, subCategoryId: expense.subCategoryId })
           .from(expense)
           .where(and(eq(expense.userId, input.userId), eq(expense.descriptionHash, descHash)))
           .limit(1)
@@ -370,7 +370,7 @@ export async function importFile(input: {
           await tx
             .update(expense)
             .set({
-              amount: toDbDecimal(toDecimal(existing.amount).plus(toDecimal(acc.totalAmount))),
+              totalAmount: toDbDecimal(toDecimal(existing.totalAmount).plus(toDecimal(acc.totalAmount))),
               transactionCount: (existing.transactionCount ?? 0) + acc.txIds.length,
               lastTransactionAt: acc.lastOccurredAt,
               subCategoryId: catResult?.subCategoryId ?? existing.subCategoryId ?? null,
@@ -386,7 +386,7 @@ export async function importFile(input: {
             title: acc.description.slice(0, 120),
             descriptionHash: descHash,
             subCategoryId: catResult?.subCategoryId ?? null,
-            amount: acc.totalAmount,
+            totalAmount: acc.totalAmount,
             transactionCount: acc.txIds.length,
             importedFromFileId: input.fileId,
             firstTransactionAt: acc.firstOccurredAt,

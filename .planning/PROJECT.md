@@ -76,8 +76,12 @@ Migrazione da architettura Express + Sequelize a Next.js 16 App Router + Drizzle
 | Cloudflare R2 invece di storage locale | S3-compatible, scalabile, audit trail dei file importati | — Pending |
 | Piattaforme separate dalle versioni tracciato | Le banche cambiano export nel tempo; detection e parser devono evolvere senza duplicare la piattaforma bancaria | — Pending |
 | Expense come aggregazione semantica | N transazioni con stessa descrizione → 1 Expense; evita duplicati di categorizzazione | — Pending |
-| Regex custom utente in Fase 6 | Funzionalità avanzata, dipende dalla pipeline base già funzionante | — Pending |
+| Regex custom utente in Fase 6 | Funzionalità avanzata, dipende dalla pipeline base già funzionante | — Anticipato a M003 |
 | PendingAiExpense creata in v1 ma vuota | Schema pronto per v2, nessun impatto su v1 | — Pending |
+| transactionHash senza platformId (M003) | Stessa transazione cross-platform = stesso hash = dedup silenzioso; DB vuoto nessuna migrazione | — Active |
+| expense.amount → total_amount (M003) | Semantica: è la somma delle transazioni collegate, non importo di una singola | — Active |
+| customTitle su transaction (M003) | Titolo editabile per la singola transazione senza toccare expense.name aggregata | — Active |
+| Ignore expense via status='4' (M003) | Enum già presente, dashboard già esclude '4', zero migration schema | — Active |
 
 ## Evolution
 
@@ -97,4 +101,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-24 after File Import requirements update*
+*Last updated: 2026-05-04 — M003 architecture decisions added*
