@@ -167,6 +167,7 @@ export const subCategory = pgTable(
     slug: varchar("slug", { length: 100 }).notNull(),
     displayOrder: integer("display_order").default(0),
     isActive: boolean("is_active").default(true).notNull(),
+    excludeFromTotals: boolean("exclude_from_totals").default(false).notNull(),
   },
   (table) => [
     index("sub_category_categoryId_idx").on(table.categoryId),

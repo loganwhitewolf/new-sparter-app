@@ -19,7 +19,7 @@ export const verifySession = cache(async () => {
     return {
       userId: process.env.STAGING_USER_ID ?? 'staging-user',
       email: 'staging@example.local',
-      subscriptionPlan: 'free' as const,
+      subscriptionPlan: 'basic' as const,
       role: 'user' as const,
     }
   }

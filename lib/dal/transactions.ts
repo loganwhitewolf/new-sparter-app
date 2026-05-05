@@ -90,6 +90,7 @@ export async function insertTransactionBatch(
         rawRow: data.rawRow ?? null,
       })),
     )
+    .onConflictDoNothing()
     .returning()
   return inserted
 }

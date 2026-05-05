@@ -4,6 +4,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { existsSync } from 'node:fs'
+import { inArray } from 'drizzle-orm'
 import { category, subCategory, platform, importFormatVersion, categorizationPattern } from '../lib/db/schema'
 import { platforms as seedPlatforms, categorizationPatterns as seedCategorizationPatterns } from '../docs/init/seed'
 
@@ -240,6 +241,12 @@ async function seed() {
   // Insert subCategories AFTER categories (FK constraint — Pitfall 5)
   await db.insert(subCategory).values(subCategories).onConflictDoNothing()
   console.log(`  ${subCategories.length} sottocategorie inserite (o già presenti).`)
+
+  await db
+    .update(subCategory)
+    .set({ excludeFromTotals: true })
+    .where(inArray(subCategory.slug, ['ricariche-conti', 'addebito-carta-di-credito']))
+  console.log('  excludeFromTotals=true impostato per ricariche-conti e addebito-carta-di-credito.')
 
   console.log('Seeding import platforms...')
   await db

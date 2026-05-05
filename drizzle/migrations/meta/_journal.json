@@ -36,6 +36,13 @@
       "when": 1777978412105,
       "tag": "0004_expense_total_amount_transaction_custom_title",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777980560835,
+      "tag": "0005_subcategory_exclude_from_totals",
+      "breakpoints": true
     }
   ]
 }
