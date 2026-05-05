@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -28,9 +28,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { deleteExpense } from '@/lib/actions/expenses'
+import { deleteExpense, ignoreExpense } from '@/lib/actions/expenses'
 import { BulkActionBar } from './bulk-action-bar'
 import { BulkCategorizeDialog } from './bulk-categorize-dialog'
+import { ExpenseCategorizeDialog } from './expense-categorize-dialog'
 import { ExpenseFormDialog } from './expense-form-dialog'
 import type { ExpenseRow } from '@/lib/dal/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
@@ -45,6 +46,10 @@ export function ExpenseTable({ expenses, categories }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
+  const [categorizeDialogExpense, setCategorizeDialogExpense] = useState<{
+    id: string
+    title: string
+  } | null>(null)
 
   const allSelected = expenses.length > 0 && selectedIds.length === expenses.length
   const someSelected = selectedIds.length > 0 && selectedIds.length < expenses.length
@@ -115,6 +120,7 @@ export function ExpenseTable({ expenses, categories }: Props) {
             {expenses.map((exp) => {
               const isSelected = selectedIds.includes(exp.id)
               const isCategorized = exp.status === '2' || exp.status === '3'
+              const isIgnored = exp.status === '4'
               const categoryLabel =
                 exp.categoryName && exp.subCategoryName
                   ? `${exp.categoryName} · ${exp.subCategoryName}`
@@ -138,12 +144,26 @@ export function ExpenseTable({ expenses, categories }: Props) {
                     />
                   </TableCell>
                   <TableCell>
-                    <span
-                      className="font-mono text-sm tracking-tight truncate block max-w-[280px]"
-                      title={exp.title}
-                    >
-                      {exp.title}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="font-mono text-sm tracking-tight truncate block max-w-[240px]"
+                        title={exp.title}
+                      >
+                        {exp.title}
+                      </span>
+                      {!isCategorized && !isIgnored && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs shrink-0"
+                          onClick={() =>
+                            setCategorizeDialogExpense({ id: exp.id, title: exp.title })
+                          }
+                        >
+                          Categorizza
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-sm">{categoryLabel}</TableCell>
                   <TableCell className="text-center">
@@ -153,10 +173,12 @@ export function ExpenseTable({ expenses, categories }: Props) {
                         'border-0',
                         isCategorized
                           ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-amber-100 text-amber-700'
+                          : isIgnored
+                            ? 'bg-muted text-muted-foreground'
+                            : 'bg-amber-100 text-amber-700'
                       )}
                     >
-                      {isCategorized ? 'Categorizzata' : 'Da categorizzare'}
+                      {isCategorized ? 'Categorizzata' : isIgnored ? 'Ignorata' : 'Da categorizzare'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums text-sm">
@@ -188,6 +210,10 @@ export function ExpenseTable({ expenses, categories }: Props) {
                               Modifica
                             </DropdownMenuItem>
                           }
+                        />
+                        <IgnoreExpenseMenuItem
+                          expense={exp}
+                          onIgnored={() => setOpenDropdownId(null)}
                         />
                         <DeleteExpenseMenuItem
                           expense={exp}
@@ -222,7 +248,53 @@ export function ExpenseTable({ expenses, categories }: Props) {
           setBulkDialogOpen(false)
         }}
       />
+
+      <ExpenseCategorizeDialog
+        open={categorizeDialogExpense !== null}
+        onOpenChange={(o) => {
+          if (!o) setCategorizeDialogExpense(null)
+        }}
+        expense={categorizeDialogExpense ?? { id: '', title: '' }}
+        categories={categories}
+        onSuccess={() => setCategorizeDialogExpense(null)}
+      />
     </>
+  )
+}
+
+function IgnoreExpenseMenuItem({
+  expense,
+  onIgnored,
+}: {
+  expense: ExpenseRow
+  onIgnored: () => void
+}) {
+  const [isPending, startTransition] = useTransition()
+
+  function handleIgnore() {
+    startTransition(async () => {
+      const fd = new FormData()
+      fd.set('id', expense.id)
+      const result = await ignoreExpense({ error: null }, fd)
+      if (result.error) {
+        toast.error(result.error)
+      } else {
+        toast.success('Spesa ignorata.')
+        onIgnored()
+      }
+    })
+  }
+
+  return (
+    <DropdownMenuItem
+      onSelect={(e) => {
+        e.preventDefault()
+        handleIgnore()
+      }}
+      disabled={isPending}
+    >
+      {isPending ? 'Attendere…' : 'Ignora'}
+    </DropdownMenuItem>
   )
 }
 
