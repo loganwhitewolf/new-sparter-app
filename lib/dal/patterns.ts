@@ -3,6 +3,7 @@ import { and, asc, eq, isNull, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { categorizationPattern } from '@/lib/db/schema'
 import type { CreatePatternInput, UpdatePatternInput } from '@/lib/validations/pattern'
+import { normalizePatternInput } from '@/lib/validations/pattern'
 
 export type PatternRow = {
   id: number
@@ -56,14 +57,13 @@ export async function createPattern(
   input: CreatePatternInput & { userId: string },
   database: DbOrTx = db,
 ): Promise<PatternRow> {
-  // Validate regex before insert — a bad regex would silently break categorization
-  new RegExp(input.pattern, 'i')
+  const normalizedPattern = normalizePatternInput(input.pattern)
 
   const rows = await database
     .insert(categorizationPattern)
     .values({
       userId: input.userId,
-      pattern: input.pattern,
+      pattern: normalizedPattern,
       subCategoryId: input.subCategoryId,
       amountSign: input.amountSign,
       confidence: input.confidence.toFixed(2),
@@ -81,12 +81,10 @@ export async function updatePattern(
   input: UpdatePatternInput,
   database: DbOrTx = db,
 ): Promise<PatternRow | null> {
-  if (input.pattern) {
-    new RegExp(input.pattern, 'i')
-  }
+  const normalizedPattern = input.pattern === undefined ? undefined : normalizePatternInput(input.pattern)
 
   const updates: Partial<typeof categorizationPattern.$inferInsert> = { updatedAt: new Date() }
-  if (input.pattern !== undefined) updates.pattern = input.pattern
+  if (normalizedPattern !== undefined) updates.pattern = normalizedPattern
   if (input.subCategoryId !== undefined) updates.subCategoryId = input.subCategoryId
   if (input.amountSign !== undefined) updates.amountSign = input.amountSign
   if (input.confidence !== undefined) updates.confidence = input.confidence.toFixed(2)
