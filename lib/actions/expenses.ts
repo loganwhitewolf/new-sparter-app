@@ -5,6 +5,8 @@ import {
   CreateExpenseSchema,
   UpdateExpenseSchema,
   BulkCategorizeSchema,
+  SingleCategorizeSchema,
+  IgnoreExpenseSchema,
   ActionState,
 } from '@/lib/validations/expense'
 import {
@@ -151,5 +153,79 @@ export async function bulkCategorize(
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
   revalidatePath('/spese')
+  return { error: null }
+}
+
+export async function categorizeExpense(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const parsed = SingleCategorizeSchema.safeParse({
+    id: formData.get('id'),
+    subCategoryId: Number(formData.get('subCategoryId')),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+  // SECURITY: verifySession() first, then scope update to userId (IDOR prevention)
+  const { userId } = await verifySession()
+  try {
+    await db.transaction(async (tx) => {
+      const before = await tx
+        .select({ subCategoryId: expense.subCategoryId, status: expense.status })
+        .from(expense)
+        .where(and(eq(expense.id, parsed.data.id), eq(expense.userId, userId)))
+        .limit(1)
+
+      const [updated] = await tx
+        .update(expense)
+        .set({ subCategoryId: parsed.data.subCategoryId, status: '3', updatedAt: new Date() })
+        .where(and(eq(expense.id, parsed.data.id), eq(expense.userId, userId)))
+        .returning({ id: expense.id })
+
+      if (!updated) return
+
+      try {
+        await writeClassificationHistory(tx, {
+          userId,
+          expenseId: updated.id,
+          fromSubCategoryId: before[0]?.subCategoryId ?? null,
+          toSubCategoryId: parsed.data.subCategoryId,
+          fromStatus: before[0]?.status ?? null,
+          toStatus: '3',
+          source: 'manual',
+        })
+      } catch {
+        // history write failure is non-fatal
+      }
+    })
+  } catch {
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+  revalidatePath('/spese')
+  revalidatePath('/dashboard')
+  return { error: null }
+}
+
+export async function ignoreExpense(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const parsed = IgnoreExpenseSchema.safeParse({ id: formData.get('id') })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+  // SECURITY: verifySession() first, then scope update to userId (IDOR prevention)
+  const { userId } = await verifySession()
+  try {
+    await db
+      .update(expense)
+      .set({ status: '4', updatedAt: new Date() })
+      .where(and(eq(expense.id, parsed.data.id), eq(expense.userId, userId)))
+  } catch {
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+  revalidatePath('/spese')
+  revalidatePath('/dashboard')
   return { error: null }
 }
