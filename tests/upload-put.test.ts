@@ -11,7 +11,7 @@ function response(status = 200) {
 }
 
 function makeFetch(results: Array<Response | Error>) {
-  const fetchFn = vi.fn<Parameters<typeof fetch>, ReturnType<typeof fetch>>()
+  const fetchFn = vi.fn<typeof fetch>()
   for (const result of results) {
     if (result instanceof Error) {
       fetchFn.mockRejectedValueOnce(result)

@@ -65,6 +65,7 @@ describe('R2 env helpers', () => {
 
   it('getMissingR2EnvVars returns empty array when all vars are set', () => {
     const env = {
+      NODE_ENV: 'test' as const,
       R2_ACCOUNT_ID: 'account-id',
       R2_ACCESS_KEY_ID: 'access-key-id',
       R2_SECRET_ACCESS_KEY: 'secret-access-key',
@@ -75,6 +76,7 @@ describe('R2 env helpers', () => {
 
   it('getMissingR2EnvVars returns missing var names for absent entries', () => {
     const env = {
+      NODE_ENV: 'test' as const,
       R2_ACCOUNT_ID: 'account-id',
       R2_BUCKET_NAME: 'bucket-name',
     }
@@ -85,6 +87,7 @@ describe('R2 env helpers', () => {
 
   it('getMissingR2EnvVars treats blank/whitespace values as missing', () => {
     const env = {
+      NODE_ENV: 'test' as const,
       R2_ACCOUNT_ID: '  ',
       R2_ACCESS_KEY_ID: '',
       R2_SECRET_ACCESS_KEY: 'secret',
@@ -96,7 +99,7 @@ describe('R2 env helpers', () => {
   })
 
   it('getMissingR2EnvVars never returns values, only variable names', () => {
-    const env = { R2_ACCOUNT_ID: 'super-secret-value' }
+    const env = { NODE_ENV: 'test' as const, R2_ACCOUNT_ID: 'super-secret-value' }
     const missing = getMissingR2EnvVars(env)
     const serialized = JSON.stringify(missing)
     expect(serialized).not.toContain('super-secret-value')

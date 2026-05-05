@@ -82,7 +82,7 @@ test.describe('Import - IMP-01: Upload retry integration', () => {
       window.addEventListener('upload-put-diagnostic', (event) => {
         const detail = event instanceof CustomEvent ? event.detail : null
         const current = (window as Window & { __uploadPutDiagnostics?: unknown[] }).__uploadPutDiagnostics ?? []
-        ;(window as Window & { __uploadPutDiagnostics: unknown[] }).__uploadPutDiagnostics = [...current, detail]
+        ;(window as unknown as Window & { __uploadPutDiagnostics: unknown[] }).__uploadPutDiagnostics = [...current, detail]
       })
     })
 
