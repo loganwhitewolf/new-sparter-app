@@ -245,4 +245,16 @@ export async function insertTransactionBatch(
   return inserted
 }
 
+export async function updateTransactionCustomTitle(
+  database: DbOrTx,
+  id: string,
+  userId: string,
+  customTitle: string | null,
+): Promise<void> {
+  await database
+    .update(transaction)
+    .set({ customTitle, updatedAt: new Date() })
+    .where(and(eq(transaction.id, id), eq(transaction.userId, userId)))
+}
+
 export { db }

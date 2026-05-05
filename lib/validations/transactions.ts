@@ -1,5 +1,18 @@
 import { z } from "zod"
 
+export const UpdateTransactionCustomTitleSchema = z.object({
+  id: z.string().uuid(),
+  customTitle: z
+    .string()
+    .max(255)
+    .nullable()
+    .transform((v) => (v === "" ? null : v ?? null)),
+})
+
+export type UpdateTransactionCustomTitleInput = z.infer<
+  typeof UpdateTransactionCustomTitleSchema
+>
+
 export const transactionSortSchema = z.enum(["occurredAt", "amount"])
 export const transactionSortDirectionSchema = z.enum(["asc", "desc"])
 

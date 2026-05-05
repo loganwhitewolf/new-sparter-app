@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  UpdateTransactionCustomTitleSchema,
   getInclusiveToDate,
   parseTransactionFilters,
 } from "../transactions"
@@ -94,6 +95,59 @@ describe("parseTransactionFilters", () => {
       sort: "occurredAt",
       dir: "desc",
     })
+  })
+})
+
+describe("UpdateTransactionCustomTitleSchema", () => {
+  const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000"
+
+  it("passes a valid string title", () => {
+    const result = UpdateTransactionCustomTitleSchema.safeParse({
+      id: VALID_UUID,
+      customTitle: "My custom title",
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.customTitle).toBe("My custom title")
+    }
+  })
+
+  it("coerces empty string to null", () => {
+    const result = UpdateTransactionCustomTitleSchema.safeParse({
+      id: VALID_UUID,
+      customTitle: "",
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.customTitle).toBeNull()
+    }
+  })
+
+  it("passes null through as null", () => {
+    const result = UpdateTransactionCustomTitleSchema.safeParse({
+      id: VALID_UUID,
+      customTitle: null,
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.customTitle).toBeNull()
+    }
+  })
+
+  it("fails for string longer than 255 characters", () => {
+    const result = UpdateTransactionCustomTitleSchema.safeParse({
+      id: VALID_UUID,
+      customTitle: "a".repeat(256),
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it("fails for invalid UUID", () => {
+    const result = UpdateTransactionCustomTitleSchema.safeParse({
+      id: "not-a-uuid",
+      customTitle: "title",
+    })
+    expect(result.success).toBe(false)
   })
 })
 

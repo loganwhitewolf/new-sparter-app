@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   whereArgs: [] as unknown[],
   orderByArgs: [] as unknown[],
   limitArgs: [] as number[],
+  updateSetArgs: [] as unknown[],
+  updateWhereArgs: [] as unknown[],
 }))
 
 function makeQueryChain(finalValue: unknown[] = []) {
@@ -33,6 +35,20 @@ function makeQueryChain(finalValue: unknown[] = []) {
 vi.mock('server-only', () => ({}))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
 vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
+function makeUpdateChain() {
+  const chain = {
+    set: vi.fn((arg: unknown) => {
+      mocks.updateSetArgs.push(arg)
+      return chain
+    }),
+    where: vi.fn((arg: unknown) => {
+      mocks.updateWhereArgs.push(arg)
+      return Promise.resolve()
+    }),
+  }
+  return chain
+}
+
 vi.mock('@/lib/db', () => ({
   db: {
     select: (shape: unknown) => {
@@ -43,6 +59,7 @@ vi.mock('@/lib/db', () => ({
       mocks.selectedShapes.push(shape)
       return makeQueryChain([])
     },
+    update: vi.fn(() => makeUpdateChain()),
   },
 }))
 vi.mock('drizzle-orm', () => ({
@@ -103,6 +120,7 @@ const {
   getTransactionSortColumn,
   transactionListSelect,
   transactionPlatformSelect,
+  updateTransactionCustomTitle,
 } = await import('../lib/dal/transactions')
 
 describe('transaction DAL query helpers', () => {
@@ -112,6 +130,8 @@ describe('transaction DAL query helpers', () => {
     mocks.whereArgs.length = 0
     mocks.orderByArgs.length = 0
     mocks.limitArgs.length = 0
+    mocks.updateSetArgs.length = 0
+    mocks.updateWhereArgs.length = 0
     mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
   })
 
@@ -194,6 +214,34 @@ describe('transaction DAL query helpers', () => {
       args: expect.arrayContaining([
         { op: 'eq', left: 'transaction.userId', right: 'user-1' },
         { op: 'eq', left: 'file.userId', right: 'user-1' },
+      ]),
+    })
+  })
+
+  it('updateTransactionCustomTitle scopes update to userId (IDOR) and sets customTitle to null', async () => {
+    const { db } = await import('@/lib/db')
+    await updateTransactionCustomTitle(db, 'txn-id-1', 'user-1', null)
+
+    expect(mocks.updateSetArgs[0]).toMatchObject({ customTitle: null })
+    expect(mocks.updateWhereArgs[0]).toEqual({
+      op: 'and',
+      args: expect.arrayContaining([
+        { op: 'eq', left: 'transaction.id', right: 'txn-id-1' },
+        { op: 'eq', left: 'transaction.userId', right: 'user-1' },
+      ]),
+    })
+  })
+
+  it('updateTransactionCustomTitle sets customTitle to the provided string', async () => {
+    const { db } = await import('@/lib/db')
+    await updateTransactionCustomTitle(db, 'txn-id-2', 'user-1', 'My custom title')
+
+    expect(mocks.updateSetArgs[0]).toMatchObject({ customTitle: 'My custom title' })
+    expect(mocks.updateWhereArgs[0]).toEqual({
+      op: 'and',
+      args: expect.arrayContaining([
+        { op: 'eq', left: 'transaction.id', right: 'txn-id-2' },
+        { op: 'eq', left: 'transaction.userId', right: 'user-1' },
       ]),
     })
   })
