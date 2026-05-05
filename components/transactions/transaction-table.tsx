@@ -1,3 +1,4 @@
+import { TransactionTitleEdit } from '@/components/transactions/transaction-title-edit'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -128,30 +129,17 @@ export function TransactionTable({ transactions, filters }: Props) {
         </TableHeader>
         <TableBody>
           {transactions.map((transaction) => {
-            const title = transaction.customTitle ?? transaction.description
-            const hasCustomTitle = Boolean(transaction.customTitle)
             const expenseStatus = getExpenseStatusLabel(transaction.expenseStatus)
             const hasExpense = Boolean(transaction.expenseId)
 
             return (
-              <TableRow key={transaction.id} className="hover:bg-muted/50">
+              <TableRow key={transaction.id} className="group hover:bg-muted/50">
                 <TableCell className="max-w-[24rem]">
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <span
-                      className="truncate font-medium tracking-tight"
-                      title={title}
-                    >
-                      {title}
-                    </span>
-                    {hasCustomTitle ? (
-                      <span
-                        className="truncate text-xs text-muted-foreground"
-                        title={transaction.description}
-                      >
-                        Originale: {transaction.description}
-                      </span>
-                    ) : null}
-                  </div>
+                  <TransactionTitleEdit
+                    id={transaction.id}
+                    description={transaction.description}
+                    customTitle={transaction.customTitle}
+                  />
                 </TableCell>
                 <TableCell
                   className={cn(

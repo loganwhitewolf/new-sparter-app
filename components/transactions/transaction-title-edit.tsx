@@ -30,7 +30,7 @@ export function TransactionTitleEdit({ id, description, customTitle }: Props) {
       <div className="flex min-w-0 flex-col gap-1">
         <button
           type="button"
-          className="group/title flex min-w-0 items-center gap-1 text-left"
+          className="flex min-w-0 items-center gap-1 text-left"
           onClick={() => {
             setValue(customTitle ?? description)
             setIsEditing(true)
@@ -40,7 +40,7 @@ export function TransactionTitleEdit({ id, description, customTitle }: Props) {
           <span className="truncate font-medium tracking-tight" title={displayTitle}>
             {displayTitle}
           </span>
-          <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/title:opacity-100" />
+          <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
         </button>
         {customTitle ? (
           <span

@@ -253,7 +253,7 @@ export async function updateTransactionCustomTitle(
 ): Promise<void> {
   await database
     .update(transaction)
-    .set({ customTitle, updatedAt: new Date() })
+    .set({ customTitle })
     .where(and(eq(transaction.id, id), eq(transaction.userId, userId)))
 }
 
