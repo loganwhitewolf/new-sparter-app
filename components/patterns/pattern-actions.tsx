@@ -116,7 +116,9 @@ export function PatternActions({
           <DialogHeader>
             <DialogTitle>Modifica pattern</DialogTitle>
             <DialogDescription>
-              Aggiorna la regex e la sottocategoria associata.
+              Aggiorna la regex e la sottocategoria associata. Sono accettati sia
+              <span className="font-mono"> netflix</span> sia <span className="font-mono">/netflix/i</span>;
+              il pattern resta salvato in forma canonica.
             </DialogDescription>
           </DialogHeader>
 
@@ -136,7 +138,17 @@ export function PatternActions({
               <label className="text-sm font-medium" htmlFor={`pattern-regex-${id}`}>
                 Pattern regex
               </label>
-              <Input id={`pattern-regex-${id}`} name="pattern" defaultValue={pattern} required />
+              <Input
+                id={`pattern-regex-${id}`}
+                name="pattern"
+                defaultValue={pattern}
+                placeholder="es. netflix oppure /netflix/i"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                La forma <span className="font-mono">/pattern/i</span> viene normalizzata alla sola sorgente e
+                usata con match case-insensitive.
+              </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">

@@ -72,7 +72,9 @@ export function CreatePatternDialog({ categories }: Props) {
         <DialogHeader>
           <DialogTitle>Nuovo pattern personalizzato</DialogTitle>
           <DialogDescription>
-            Crea una regola regex da applicare prima dei pattern di sistema.
+            Crea una regola regex da applicare prima dei pattern di sistema. Puoi inserire
+            <span className="font-mono"> netflix</span> oppure <span className="font-mono">/netflix/i</span>:
+            verrà salvata la sorgente canonica.
           </DialogDescription>
         </DialogHeader>
 
@@ -94,11 +96,13 @@ export function CreatePatternDialog({ categories }: Props) {
             <Input
               id="pattern-regex"
               name="pattern"
-              placeholder="es. (?:\\bmercato locale\\b|\\bpanificio rossi\\b)"
+              placeholder="es. netflix oppure /netflix/i"
               required
             />
             <p className="text-xs text-muted-foreground">
-              La regex viene valutata senza distinzione tra maiuscole e minuscole.
+              Scrivi una sorgente regex come <span className="font-mono">netflix</span> oppure la forma
+              <span className="font-mono"> /netflix/i</span>; viene salvata senza delimitatori e valutata
+              senza distinzione tra maiuscole e minuscole.
             </p>
           </div>
 

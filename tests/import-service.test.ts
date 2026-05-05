@@ -22,6 +22,9 @@ const mocks = vi.hoisted(() => ({
   loadActivePatterns: vi.fn(),
   categorizePipeline: vi.fn(),
 
+  // services/import-parsers
+  parseImportFile: vi.fn(),
+
   // actions/patterns
   verifySession: vi.fn(),
   createPattern: vi.fn(),
@@ -195,26 +198,9 @@ vi.mock('@/lib/utils/decimal', async () => {
   return actual
 })
 
-// Mock import-parsers: return a real parsed result from GENERAL_CSV content
+// Mock import-parsers: default behavior is configured in each test setup
 vi.mock('@/lib/services/import-parsers', () => ({
-  parseImportFile: vi.fn().mockResolvedValue({
-    fileName: 'statement.csv',
-    byteLength: 256,
-    encoding: 'UTF-8',
-    delimiter: ';',
-    headers: ['"Data Movimento"', '"Descrizione"', '"Importo"'],
-    rows: [
-      { '"Data Movimento"': '2026-01-10', '"Descrizione"': 'Supermercato Esselunga', '"Importo"': '-45.50' },
-      { '"Data Movimento"': '2026-01-11', '"Descrizione"': 'Caffè Nero', '"Importo"': '-3.50' },
-    ],
-    rowCount: 2,
-    sampleRows: [
-      { '"Data Movimento"': '2026-01-10', '"Descrizione"': 'Supermercato Esselunga', '"Importo"': '-45.50' },
-      { '"Data Movimento"': '2026-01-11', '"Descrizione"': 'Caffè Nero', '"Importo"': '-3.50' },
-    ],
-    warnings: [],
-    errors: [],
-  }),
+  parseImportFile: mocks.parseImportFile,
 }))
 
 // Mock import-format-detector: return a plausible detection result
@@ -326,6 +312,24 @@ const GENERAL_CSV = Buffer.from(
   ].join('\n'),
   'utf8',
 )
+
+function makeParsedImport(rows = [
+  { '"Data Movimento"': '2026-01-10', '"Descrizione"': 'Supermercato Esselunga', '"Importo"': '-45.50' },
+  { '"Data Movimento"': '2026-01-11', '"Descrizione"': 'Caffè Nero', '"Importo"': '-3.50' },
+]) {
+  return {
+    fileName: 'statement.csv',
+    byteLength: 256,
+    encoding: 'UTF-8',
+    delimiter: ';',
+    headers: ['"Data Movimento"', '"Descrizione"', '"Importo"'],
+    rows,
+    rowCount: rows.length,
+    sampleRows: rows,
+    warnings: [],
+    errors: [],
+  }
+}
 
 async function makeReadableStream(buf: Buffer): Promise<AsyncIterable<Uint8Array>> {
   return (async function* () {
@@ -480,6 +484,46 @@ describe('categorizePipeline direct', () => {
     expect(result).toMatchObject({ subCategoryId: 5 })
   })
 
+  it('returns the user Netflix pattern result before a colliding system Netflix pattern', async () => {
+    const patterns: ActivePattern[] = [
+      {
+        id: 101,
+        userId: USER_ID,
+        pattern: 'netflix',
+        subCategoryId: 301,
+        amountSign: 'negative',
+        confidence: '0.97',
+        priority: 50,
+      },
+      {
+        id: 102,
+        userId: null,
+        pattern: 'netflix',
+        subCategoryId: 302,
+        amountSign: 'negative',
+        confidence: '0.90',
+        priority: 10,
+      },
+    ]
+
+    const result = await categorizePipelineActual(
+      dbProxy,
+      USER_ID,
+      'basic',
+      'NETFLIX PAYMENT',
+      '-12.99',
+      'dh-netflix-user-first',
+      patterns,
+    )
+
+    expect(result).toEqual({
+      subCategoryId: 301,
+      confidence: '0.97',
+      patternId: 101,
+      source: 'user_pattern',
+    })
+  })
+
   it('returns null for free plan regardless of matching patterns', async () => {
     const patterns: ActivePattern[] = [
       {
@@ -557,6 +601,7 @@ describe('importFile', () => {
     mocks.categorizePipeline.mockResolvedValue(null)
     mocks.insertTransactionBatch.mockResolvedValue([])
     mocks.writeClassificationHistory.mockResolvedValue(undefined)
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
     // Default: return a readable stream from GENERAL_CSV
     mocks.readObjectBody.mockResolvedValue(
       (async function* () { yield GENERAL_CSV })(),
@@ -569,7 +614,10 @@ describe('importFile', () => {
           from: vi.fn().mockReturnValue({
             where: vi.fn().mockReturnValue({
               limit: vi.fn().mockReturnValue({
-                then: vi.fn().mockResolvedValue([]),
+                then: vi.fn((onFulfilled?: (rows: unknown[]) => unknown) => {
+                const rows: unknown[] = []
+                return Promise.resolve(onFulfilled ? onFulfilled(rows) : rows)
+              }),
               }),
             }),
           }),
@@ -685,6 +733,62 @@ describe('importFile', () => {
       expect.any(String),  // amount
       expect.any(String),  // descriptionHash
       expect.any(Array),   // patterns
+    )
+  })
+
+  it('basic plan imports a canonical user Netflix pattern before the system collision and records classification history', async () => {
+    const userNetflixPattern: ActivePattern = {
+      id: 201,
+      userId: USER_ID,
+      pattern: 'netflix',
+      subCategoryId: 701,
+      amountSign: 'negative',
+      confidence: '0.97',
+      priority: 50,
+    }
+    const systemNetflixPattern: ActivePattern = {
+      id: 202,
+      userId: null,
+      pattern: 'netflix',
+      subCategoryId: 702,
+      amountSign: 'negative',
+      confidence: '0.90',
+      priority: 10,
+    }
+
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport([
+      { '"Data Movimento"': '2026-02-01', '"Descrizione"': 'NETFLIX PAYMENT', '"Importo"': '-12.99' },
+    ]))
+    mocks.loadActivePatterns.mockResolvedValue([userNetflixPattern, systemNetflixPattern])
+    mocks.categorizePipeline.mockImplementation(categorizePipelineActual)
+    mocks.insertTransactionBatch.mockImplementation(async (_tx: unknown, rows: Array<Record<string, unknown>>) => rows)
+
+    const result = await importFile({
+      userId: USER_ID,
+      fileId: FILE_ID,
+      subscriptionPlan: 'basic',
+    })
+
+    expect(result.importedCount).toBe(1)
+    expect(mocks.categorizePipeline).toHaveBeenCalledWith(
+      expect.anything(),
+      USER_ID,
+      'basic',
+      'NETFLIX PAYMENT',
+      '-12.99',
+      expect.any(String),
+      [userNetflixPattern, systemNetflixPattern],
+    )
+    expect(mocks.writeClassificationHistory).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        userId: USER_ID,
+        toSubCategoryId: 701,
+        toStatus: '3',
+        source: 'user_pattern',
+        patternId: 201,
+        confidence: '0.97',
+      }),
     )
   })
 

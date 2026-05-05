@@ -15,6 +15,22 @@ import { CreatePatternDialog } from '@/components/patterns/create-pattern-dialog
 
 export const metadata = { title: 'Pattern personalizzati' }
 
+function buildDestinationLabels(categories: Awaited<ReturnType<typeof getCategories>>) {
+  const labels = new Map<number, string>()
+
+  for (const category of categories) {
+    for (const subCategory of category.subCategories) {
+      labels.set(subCategory.id, `${category.name} → ${subCategory.name}`)
+    }
+  }
+
+  return labels
+}
+
+function getDestinationLabel(destinationLabels: Map<number, string>, subCategoryId: number) {
+  return destinationLabels.get(subCategoryId) ?? `Sottocategoria non trovata (#${subCategoryId})`
+}
+
 export default async function PatternPage() {
   const { userId, subscriptionPlan } = await verifySession()
   const isPaid = subscriptionPlan === 'basic' || subscriptionPlan === 'pro'
@@ -26,6 +42,7 @@ export default async function PatternPage() {
 
   // Only show user-owned patterns on this page (system patterns not editable)
   const userPatterns = allPatterns.filter((p) => p.userId !== null)
+  const destinationLabels = buildDestinationLabels(categories)
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -56,6 +73,7 @@ export default async function PatternPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Pattern (regex)</TableHead>
+              <TableHead>Destinazione</TableHead>
               <TableHead>Segno</TableHead>
               <TableHead>Confidenza</TableHead>
               <TableHead>Descrizione</TableHead>
@@ -66,6 +84,9 @@ export default async function PatternPage() {
             {userPatterns.map((p) => (
               <TableRow key={p.id}>
                 <TableCell className="font-mono text-xs">{p.pattern}</TableCell>
+                <TableCell className="text-sm">
+                  {getDestinationLabel(destinationLabels, p.subCategoryId)}
+                </TableCell>
                 <TableCell>
                   <Badge variant="outline">{p.amountSign}</Badge>
                 </TableCell>
