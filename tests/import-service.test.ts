@@ -283,6 +283,7 @@ vi.mock('@/lib/services/import-format-detector', () => ({
 
 // Import the modules under test AFTER mocks are registered
 const { applyTier1Regex } = await import('../lib/services/categorization')
+const { categorizePipeline: categorizePipelineActual } = await vi.importActual<typeof import('../lib/services/categorization')>('../lib/services/categorization')
 const { createPatternAction } = await import('../lib/actions/patterns')
 const { importFile, analyzeFile } = await import('../lib/services/import')
 
@@ -447,6 +448,66 @@ describe('applyTier1Regex', () => {
 })
 
 // ---------------------------------------------------------------------------
+// categorizePipeline direct unit tests (real implementation, mocked db)
+// ---------------------------------------------------------------------------
+describe('categorizePipeline direct', () => {
+  const dbProxy = {} as Parameters<Parameters<typeof import('../lib/db').db.transaction>[0]>[0]
+
+  it('returns non-null with subCategoryId for basic plan when a pattern matches', async () => {
+    const patterns: ActivePattern[] = [
+      {
+        id: 5,
+        userId: null,
+        pattern: 'netflix',
+        subCategoryId: 5,
+        amountSign: 'any',
+        confidence: '0.95',
+        priority: 10,
+      },
+    ]
+
+    const result = await categorizePipelineActual(
+      dbProxy,
+      USER_ID,
+      'basic',
+      'Netflix abbonamento mensile',
+      '-12.99',
+      'dh-netflix',
+      patterns,
+    )
+
+    expect(result).not.toBeNull()
+    expect(result).toMatchObject({ subCategoryId: 5 })
+  })
+
+  it('returns null for free plan regardless of matching patterns', async () => {
+    const patterns: ActivePattern[] = [
+      {
+        id: 5,
+        userId: null,
+        pattern: 'netflix',
+        subCategoryId: 5,
+        amountSign: 'any',
+        confidence: '0.95',
+        priority: 10,
+      },
+    ]
+
+    const result = await categorizePipelineActual(
+      dbProxy,
+      USER_ID,
+      'free',
+      'Netflix abbonamento mensile',
+      '-12.99',
+      'dh-netflix',
+      patterns,
+    )
+
+    expect(result).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
 // pattern server action tests
 // ---------------------------------------------------------------------------
 describe('createPatternAction', () => {
@@ -558,23 +619,21 @@ describe('importFile', () => {
   it('skips duplicate transactions and counts them', async () => {
     mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
 
-    // Pretend both transactions already exist in DB
+    // Pretend both transactions already exist in DB — return a Set containing ALL incoming hashes
     mocks.getDuplicateHashes.mockImplementation(async (_tx: unknown, _userId: string, hashes: string[]) => {
       return new Set(hashes)
     })
 
-    const result = await importFile({
+    await importFile({
       userId: USER_ID,
       fileId: FILE_ID,
       selectedFormatVersionId: 1,
     }).catch(() => null)
 
-    // Result may be null if format detection fails without real DB — that's OK for this unit test.
-    // The key contract is that getDuplicateHashes was called with the userId scope.
-    // In a real DB test, duplicateCount would equal rowCount.
-    if (result) {
-      expect(result.duplicateCount).toBeGreaterThanOrEqual(0)
-    }
+    // The pre-flight Set filter should have eliminated all rows before calling insertTransactionBatch.
+    // Verify that insertTransactionBatch was called with an empty array — the DB-level onConflictDoNothing
+    // is a safety net, but the primary dedup contract is this pre-flight filter.
+    expect(mocks.insertTransactionBatch).toHaveBeenCalledWith(expect.anything(), [])
   })
 
   it('free plan produces uncategorized expenses', async () => {
@@ -616,8 +675,17 @@ describe('importFile', () => {
       subscriptionPlan: 'basic',
     }).catch(() => null)
 
-    // categorizePipeline should be called once per unique descriptionHash
+    // categorizePipeline should be called once per unique descriptionHash with plan='basic'
     expect(mocks.categorizePipeline).toHaveBeenCalled()
+    expect(mocks.categorizePipeline).toHaveBeenCalledWith(
+      expect.anything(),   // tx/db
+      USER_ID,
+      'basic',
+      expect.any(String),  // description
+      expect.any(String),  // amount
+      expect.any(String),  // descriptionHash
+      expect.any(Array),   // patterns
+    )
   })
 
   it('cross-user file access is denied — getFileForUser enforces userId scope', async () => {
