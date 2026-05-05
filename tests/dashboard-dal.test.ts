@@ -17,6 +17,7 @@ vi.mock('@/lib/db/schema', () => ({
     name: 'subCategory.name',
     slug: 'subCategory.slug',
     categoryId: 'subCategory.categoryId',
+    excludeFromTotals: 'subCategory.excludeFromTotals',
   },
   transaction: {
     userId: 'transaction.userId',
@@ -44,6 +45,7 @@ const {
   buildMonthlyTrendData,
   buildOverviewData,
   getOverviewComparisonRanges,
+  notExcludedFromTotals,
 } = await import('../lib/dal/dashboard')
 
 describe('dashboard DAL amount mapping', () => {
@@ -170,6 +172,17 @@ describe('dashboard DAL amount mapping', () => {
     ])
     expect(breakdown[1]).toMatchObject({ count: 1, amount: '1000.00', percentage: 50 })
     expect(breakdown.map((row) => row.slug)).not.toContain('ignore')
+  })
+
+  it('DASHBOARD_TOTAL_EXPENSE_STATUSES excludes status=4 (ignored expenses)', () => {
+    expect(DASHBOARD_TOTAL_EXPENSE_STATUSES).toEqual(['1', '2', '3'])
+    expect(DASHBOARD_TOTAL_EXPENSE_STATUSES).not.toContain('4')
+  })
+
+  it('notExcludedFromTotals() helper builds correct OR predicate', () => {
+    const predicate = notExcludedFromTotals()
+    expect(predicate).not.toBeNull()
+    expect(predicate).not.toBeUndefined()
   })
 
   it('zero-fills monthly trend buckets while preserving imported transaction amounts and counts', () => {

@@ -157,6 +157,10 @@ function notIgnoredCategory() {
   return or(isNull(category.slug), ne(category.slug, 'ignore'))
 }
 
+export function notExcludedFromTotals() {
+  return or(isNull(subCategory.excludeFromTotals), eq(subCategory.excludeFromTotals, false))
+}
+
 function dateScopedTransactions(userId: string, from: Date, to: Date) {
   return and(
     eq(transactionTable.userId, userId),
@@ -186,7 +190,8 @@ async function getUncategorizedCount(userId: string, from: Date, to: Date): Prom
           dateScopedTransactions(userId, from, to),
           expenseStatusUncategorized(),
           isNull(expense.subCategoryId),
-          notIgnoredCategory()
+          notIgnoredCategory(),
+          notExcludedFromTotals()
         )
       )
 
@@ -207,7 +212,7 @@ async function getOverviewAmountTotals(userId: string, from: Date, to: Date): Pr
       .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
-      .where(and(dateScopedTransactions(userId, from, to), expenseStatusIncludedInDashboardTotals(), notIgnoredCategory()))
+      .where(and(dateScopedTransactions(userId, from, to), expenseStatusIncludedInDashboardTotals(), notIgnoredCategory(), notExcludedFromTotals()))
 
     return rows[0] ?? { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT }
   } catch {
@@ -389,6 +394,7 @@ export const getCategoriesBreakdown = cache(
             dateScopedTransactions(userId, from, to),
             expenseStatusIncludedInDashboardTotals(),
             ne(category.slug, 'ignore'),
+            notExcludedFromTotals(),
             typeFilter
           )
         )
