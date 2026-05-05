@@ -1,6 +1,6 @@
 'use client'
 import { useState, useTransition } from 'react'
-import { MoreHorizontal } from 'lucide-react'
+import { MoreHorizontal, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Table,
@@ -50,6 +50,14 @@ export function ExpenseTable({ expenses, categories }: Props) {
     id: string
     title: string
   } | null>(null)
+  const [renameExpense, setRenameExpense] = useState<{
+    id: string
+    title: string
+  } | null>(null)
+
+  const selectedRenameExpense = renameExpense
+    ? (expenses.find((expense) => expense.id === renameExpense.id) ?? null)
+    : null
 
   const allSelected = expenses.length > 0 && selectedIds.length === expenses.length
   const someSelected = selectedIds.length > 0 && selectedIds.length < expenses.length
@@ -130,7 +138,7 @@ export function ExpenseTable({ expenses, categories }: Props) {
                 <TableRow
                   key={exp.id}
                   className={cn(
-                    'h-11 hover:bg-muted/50 transition-colors',
+                    'group h-11 hover:bg-muted/50 transition-colors',
                     isSelected && 'bg-primary/5'
                   )}
                 >
@@ -151,6 +159,17 @@ export function ExpenseTable({ expenses, categories }: Props) {
                       >
                         {exp.title}
                       </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+                        onClick={() => setRenameExpense({ id: exp.id, title: exp.title })}
+                        aria-label="Rinomina spesa aggregata (non modifica le descrizioni delle singole transazioni)"
+                        title="Rinomina la spesa aggregata (non modifica le descrizioni delle singole transazioni)"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
                       {!isCategorized && !isIgnored && (
                         <Button
                           variant="outline"
@@ -258,6 +277,20 @@ export function ExpenseTable({ expenses, categories }: Props) {
         categories={categories}
         onSuccess={() => setCategorizeDialogExpense(null)}
       />
+
+      {selectedRenameExpense && (
+        <ExpenseFormDialog
+          categories={categories}
+          mode="edit"
+          expense={selectedRenameExpense}
+          open={renameExpense !== null}
+          onOpenChange={(o) => {
+            if (!o) setRenameExpense(null)
+          }}
+          description="Rinomina la spesa aggregata (non modifica le descrizioni delle singole transazioni)."
+          onSuccess={() => setRenameExpense(null)}
+        />
+      )}
     </>
   )
 }

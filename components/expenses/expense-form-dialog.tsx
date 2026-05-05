@@ -1,5 +1,5 @@
 'use client'
-import { useActionState, useEffect, useRef, useState } from 'react'
+import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 import { AlertCircle, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -32,18 +32,34 @@ type Props =
       categories: CategoryWithSubCategories[]
       expense?: never
       trigger?: never
+      open?: never
+      onOpenChange?: never
+      description?: never
       onSuccess?: never
     }
   | {
       mode: 'edit'
       categories: CategoryWithSubCategories[]
       expense: ExpenseRow
-      trigger: React.ReactNode
+      trigger?: React.ReactNode
+      open?: boolean
+      onOpenChange?: (open: boolean) => void
+      description?: React.ReactNode
       onSuccess?: () => void
     }
 
-export function ExpenseFormDialog({ mode, categories, expense, trigger, onSuccess }: Props) {
-  const [open, setOpen] = useState(false)
+export function ExpenseFormDialog({
+  mode,
+  categories,
+  expense,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+  description,
+  onSuccess,
+}: Props) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const open = controlledOpen ?? uncontrolledOpen
 
   const [categoryId, setCategoryId] = useState<string>('')
   const [subCategoryId, setSubCategoryId] = useState<string>('')
@@ -53,28 +69,58 @@ export function ExpenseFormDialog({ mode, categories, expense, trigger, onSucces
   const action = mode === 'create' ? createExpense : updateExpense
   const [state, formAction, isPending] = useActionState(action, { error: null })
   const submittedRef = useRef(false)
+  const previousOpenRef = useRef(false)
 
-  useEffect(() => {
-    if (submittedRef.current && state.error === null) {
-      setOpen(false)
-      toast.success(mode === 'create' ? 'Spesa creata con successo.' : 'Spesa aggiornata.')
-      submittedRef.current = false
-      onSuccess?.()
-    }
-  }, [state, mode, onSuccess])
-
-  function handleOpenChange(nextOpen: boolean) {
-    if (nextOpen && mode === 'edit' && expense.subCategoryId) {
+  const syncEditSelection = useCallback(() => {
+    if (mode === 'edit' && expense.subCategoryId) {
       const catId = String(
         categories.find((c) => c.subCategories.some((s) => s.id === expense.subCategoryId))?.id ?? ''
       )
       setCategoryId(catId)
       setSubCategoryId(String(expense.subCategoryId))
-    } else if (!nextOpen) {
-      setCategoryId('')
-      setSubCategoryId('')
     }
-    setOpen(nextOpen)
+  }, [categories, expense, mode])
+
+  const resetSelection = useCallback(() => {
+    setCategoryId('')
+    setSubCategoryId('')
+  }, [])
+
+  const setDialogOpen = useCallback(
+    (nextOpen: boolean) => {
+      if (controlledOpen === undefined) {
+        setUncontrolledOpen(nextOpen)
+      }
+      onOpenChange?.(nextOpen)
+    },
+    [controlledOpen, onOpenChange]
+  )
+
+  useEffect(() => {
+    if (submittedRef.current && state.error === null) {
+      setDialogOpen(false)
+      toast.success(mode === 'create' ? 'Spesa creata con successo.' : 'Spesa aggiornata.')
+      submittedRef.current = false
+      onSuccess?.()
+    }
+  }, [state, mode, onSuccess, setDialogOpen])
+
+  useEffect(() => {
+    if (open && !previousOpenRef.current) {
+      syncEditSelection()
+    } else if (!open && previousOpenRef.current) {
+      resetSelection()
+    }
+    previousOpenRef.current = open
+  }, [open, resetSelection, syncEditSelection])
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
+      syncEditSelection()
+    } else {
+      resetSelection()
+    }
+    setDialogOpen(nextOpen)
   }
 
   function handleCategoryChange(value: string) {
@@ -84,19 +130,24 @@ export function ExpenseFormDialog({ mode, categories, expense, trigger, onSucces
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuova spesa
-          </Button>
-        )}
-      </DialogTrigger>
+      {(trigger || mode === 'create') && (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button size="sm">
+              <Plus className="mr-2 h-4 w-4" />
+              Nuova spesa
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{mode === 'create' ? 'Nuova spesa' : 'Modifica spesa'}</DialogTitle>
-          <DialogDescription className="sr-only">
-            {mode === 'create' ? 'Inserisci i dettagli della nuova spesa.' : 'Modifica i dettagli della spesa.'}
+          <DialogDescription className={description ? undefined : 'sr-only'}>
+            {description ??
+              (mode === 'create'
+                ? 'Inserisci i dettagli della nuova spesa.'
+                : 'Modifica i dettagli della spesa.')}
           </DialogDescription>
         </DialogHeader>
 
