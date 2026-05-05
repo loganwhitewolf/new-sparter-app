@@ -52,7 +52,7 @@ const regexString = z.string().transform((val, ctx) => {
 
 export const CreatePatternSchema = z.object({
   pattern: regexString,
-  subCategoryId: z.number().int().positive({ error: 'Seleziona una sottocategoria.' }),
+  subCategoryId: z.number({ error: 'Seleziona una sottocategoria.' }).int().positive({ error: 'Seleziona una sottocategoria.' }),
   amountSign: z.enum(['positive', 'negative', 'any']),
   confidence: z.number().min(0).max(1),
   description: z.string().max(255).optional(),
