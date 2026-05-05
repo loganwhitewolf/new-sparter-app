@@ -18,6 +18,7 @@ import { db } from '@/lib/db'
 import { expense } from '@/lib/db/schema'
 import { and, eq, inArray } from 'drizzle-orm'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
+import { APP_ROUTES } from '../routes'
 
 export async function createExpense(
   _prev: ActionState,
@@ -37,7 +38,7 @@ export async function createExpense(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath('/spese')
+  revalidatePath(APP_ROUTES.expenses)
   return { error: null }
 }
 
@@ -60,7 +61,7 @@ export async function updateExpense(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath('/spese')
+  revalidatePath(APP_ROUTES.expenses)
   return { error: null }
 }
 
@@ -76,7 +77,7 @@ export async function deleteExpense(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath('/spese')
+  revalidatePath(APP_ROUTES.expenses)
   return { error: null }
 }
 
@@ -152,7 +153,7 @@ export async function bulkCategorize(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath('/spese')
+  revalidatePath(APP_ROUTES.expenses)
   return { error: null }
 }
 
@@ -202,7 +203,7 @@ export async function categorizeExpense(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath('/spese')
+  revalidatePath(APP_ROUTES.expenses)
   revalidatePath('/dashboard')
   return { error: null }
 }
@@ -225,7 +226,7 @@ export async function ignoreExpense(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath('/spese')
+  revalidatePath(APP_ROUTES.expenses)
   revalidatePath('/dashboard')
   return { error: null }
 }

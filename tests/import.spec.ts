@@ -195,13 +195,13 @@ test.describe('Import - IMP-02: Analyze preview page', () => {
     expect(response?.status()).toBe(404)
   })
 
-  test('IMP-02 confirm triggers redirect to /spese on success', async ({ page }) => {
+  test('IMP-02 confirm triggers redirect to /expenses on success', async ({ page }) => {
     test.fixme(true, 'Requires real uploaded+analyzed file in DB — run against staging')
 
     await page.setExtraHTTPHeaders({ 'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key' })
     await page.goto('/import/00000000-0000-0000-0000-000000000001/analyze')
     await page.getByRole('button', { name: /conferma importazione/i }).click()
-    await page.waitForURL('/spese')
-    expect(page.url()).toContain('/spese')
+    await page.waitForURL('/expenses')
+    expect(page.url()).toContain('/expenses')
   })
 })

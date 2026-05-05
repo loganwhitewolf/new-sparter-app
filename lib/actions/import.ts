@@ -4,6 +4,7 @@ import { verifySession } from '@/lib/dal/auth'
 import { AnalyzeImportSchema, ImportFileSchema } from '@/lib/validations/import'
 import { analyzeFile, importFile } from '@/lib/services/import'
 import type { ImportAnalysisResult, ImportFileResult } from '@/lib/services/import'
+import { APP_ROUTES } from '../routes'
 
 export type ImportActionState<T = null> = {
   error: string | null
@@ -73,7 +74,7 @@ export async function confirmImportAction(
     })
 
     revalidatePath('/import')
-    revalidatePath('/spese')
+    revalidatePath(APP_ROUTES.expenses)
 
     return { error: null, data: result }
   } catch (error) {

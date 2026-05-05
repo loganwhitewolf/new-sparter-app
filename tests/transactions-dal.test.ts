@@ -156,7 +156,7 @@ describe('transaction DAL query helpers', () => {
     })
   })
 
-  it('keeps the list bounded and exposes display metadata for the /transazioni table', () => {
+  it('keeps the list bounded and exposes display metadata for the /transactions table', () => {
     expect(TRANSACTION_LIST_LIMIT).toBe(200)
     expect(transactionListSelect).toMatchObject({
       id: 'transaction.id',

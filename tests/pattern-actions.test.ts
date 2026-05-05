@@ -95,7 +95,7 @@ describe('pattern Server Actions', () => {
         confidence: 0.95,
         description: 'Streaming subscriptions',
       })
-      expect(mocks.revalidatePath).toHaveBeenCalledWith('/impostazioni/pattern')
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/patterns')
     })
 
     it('denies free users before validation or mutation', async () => {
@@ -172,7 +172,7 @@ describe('pattern Server Actions', () => {
         confidence: 0.95,
         description: 'Streaming subscriptions',
       })
-      expect(mocks.revalidatePath).toHaveBeenCalledWith('/impostazioni/pattern')
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/patterns')
     })
 
     it('denies free users before mutation', async () => {
@@ -243,7 +243,7 @@ describe('pattern Server Actions', () => {
 
       expect(result).toEqual({ error: null })
       expect(mocks.deletePattern).toHaveBeenCalledWith(7, 'user-abc')
-      expect(mocks.revalidatePath).toHaveBeenCalledWith('/impostazioni/pattern')
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/patterns')
     })
 
     it('denies free users before mutation', async () => {

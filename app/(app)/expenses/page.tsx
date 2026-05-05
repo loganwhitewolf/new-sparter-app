@@ -5,7 +5,7 @@ import { ExpenseFilters } from '@/components/expenses/expense-filters'
 import { ExpenseTable } from '@/components/expenses/expense-table'
 import { ExpenseFormDialog } from '@/components/expenses/expense-form-dialog'
 
-export default async function SpesePage({
+export default async function ExpensesPage({
   searchParams,
 }: {
   searchParams: Promise<{ category?: string; status?: string; period?: string }>

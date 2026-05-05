@@ -7,6 +7,7 @@
     "build": "NEXT_FONT_GOOGLE_MOCKED_RESPONSES=$PWD/.next-font-google-mocks.cjs next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "check:language": "node scripts/check-code-language.mjs",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:generate": "drizzle-kit generate",
     "db:seed": "tsx drizzle/seed.ts",

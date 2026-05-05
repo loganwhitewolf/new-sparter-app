@@ -7,7 +7,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 const hasStagingBypass = Boolean(process.env.STAGING_KEY)
 
-async function openTransactions(page: Page, path = '/transazioni') {
+async function openTransactions(page: Page, path = '/transactions') {
   if (process.env.STAGING_KEY) {
     await page.setExtraHTTPHeaders({
       'x-staging-key': process.env.STAGING_KEY,
@@ -38,7 +38,7 @@ test.describe('Transactions - TX-01: Route smoke', () => {
   test('unauthenticated transactions route redirects to login when no staging bypass is configured', async ({ page }) => {
     test.skip(hasStagingBypass, 'Authenticated route smoke covers this when STAGING_KEY is configured')
 
-    const response = await page.goto('/transazioni')
+    const response = await page.goto('/transactions')
 
     expect(response?.url()).toContain('/login')
     await expect(page.getByRole('heading', { name: /accedi/i })).toBeVisible()
@@ -55,7 +55,7 @@ test.describe('Transactions - TX-01: Route smoke', () => {
   test('invalid query params render safe defaults instead of a server error', async ({ page }) => {
     test.skip(!hasStagingBypass, 'Requires STAGING_KEY auth bypass or PLAYWRIGHT_BASE_URL pointing to an authenticated staging session')
 
-    await openTransactions(page, '/transazioni?sort=rawRow&dir=sideways&from=bad')
+    await openTransactions(page, '/transactions?sort=rawRow&dir=sideways&from=bad')
 
     await expectTransactionsShell(page)
     await expect(page.getByLabel('Data da')).toHaveValue('')
@@ -73,7 +73,7 @@ test.describe('Transactions - TX-02: App shell navigation', () => {
 
     await page.getByRole('link', { name: 'Transazioni' }).click()
 
-    await expect(page).toHaveURL(/\/transazioni$/)
+    await expect(page).toHaveURL(/\/transactions$/)
     await expect(page.getByRole('heading', { name: 'Transazioni' })).toBeVisible()
   })
 
@@ -85,7 +85,7 @@ test.describe('Transactions - TX-02: App shell navigation', () => {
 
     await page.getByRole('link', { name: 'Transazioni' }).click()
 
-    await expect(page).toHaveURL(/\/transazioni$/)
+    await expect(page).toHaveURL(/\/transactions$/)
     await expect(page.getByRole('heading', { name: 'Transazioni' })).toBeVisible()
   })
 })
@@ -94,7 +94,7 @@ test.describe('Transactions - TX-03: Filter acceptance', () => {
   test('date, platform, and sort controls persist in the URL and refresh rows', async ({ page }) => {
     test.fixme(
       true,
-      'Requires seeded imported transactions and at least one platform — run with PLAYWRIGHT_BASE_URL pointing to staging. Acceptance flow: navigate /transazioni, apply Data da/Data a and Piattaforma filters, change Ordina transazioni, verify URL params change and visible rows update.',
+      'Requires seeded imported transactions and at least one platform — run with PLAYWRIGHT_BASE_URL pointing to staging. Acceptance flow: navigate /transactions, apply Data da/Data a and Piattaforma filters, change Ordina transazioni, verify URL params change and visible rows update.',
     )
 
     await openTransactions(page)

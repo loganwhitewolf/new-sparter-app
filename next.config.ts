@@ -1,7 +1,14 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
+import { LEGACY_LOCALIZED_ROUTES } from './lib/routes'
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  async redirects() {
+    return LEGACY_LOCALIZED_ROUTES.map((route) => ({
+      source: route.source,
+      destination: route.destination,
+      permanent: true,
+    }))
+  },
+}
 
-export default nextConfig;
+export default nextConfig

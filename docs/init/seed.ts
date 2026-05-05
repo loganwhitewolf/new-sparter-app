@@ -1,12 +1,12 @@
 /**
- * Seed data per il nuovo progetto Next.js + Drizzle.
- * Copia questo file in drizzle/seed.ts e adattalo alle definizioni dello schema Drizzle.
+ * Seed data for the Next.js + Drizzle project.
+ * Copy this file to drizzle/seed.ts and adapt it to the Drizzle schema definitions.
  *
- * Contiene:
- * - categories (26 categorie sistema)
- * - subCategories (~120 sottocategorie)
- * - platforms (6 piattaforme bancarie)
- * - categorizationPatterns (28 pattern regex sistema)
+ * Contains:
+ * - categories (26 system categories)
+ * - subCategories (about 120 subcategories)
+ * - platforms (6 banking platforms)
+ * - categorizationPatterns (system regex patterns)
  */
 
 // ---------------------------------------------------------------------------
@@ -25,7 +25,7 @@ export const categories = [
   { id: 9, name: "salute", slug: "salute", type: "out" as const },
   { id: 10, name: "ristorazione", slug: "ristorazione", type: "out" as const },
   { id: 11, name: "shopping", slug: "shopping", type: "out" as const },
-  { id: 12, name: "investimenti", slug: "investimenti", type: "out" as const }, // categoria OUT mantenuta anche senza modulo investimenti
+  { id: 12, name: "investimenti", slug: "investimenti", type: "out" as const }, // OUT category kept even without the investments module
   {
     id: 13,
     name: "bollette e utilità",
@@ -213,7 +213,7 @@ export const subCategories = [
     name: "attrezzatura sportiva",
     slug: "attrezzatura-sportiva",
   },
-  // Investimenti (12) — categoria mantenuta per classificazione spese
+  // Investments (12) — category kept for expense classification
   { categoryId: 12, name: "azioni", slug: "azioni" },
   { categoryId: 12, name: "obbligazioni", slug: "obbligazioni" },
   { categoryId: 12, name: "criptovalute", slug: "criptovalute" },

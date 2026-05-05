@@ -10,7 +10,7 @@ import {
 import { TransactionFilters } from '@/components/transactions/transaction-filters'
 import { TransactionTable } from '@/components/transactions/transaction-table'
 
-export default async function TransazioniPage({
+export default async function TransactionsPage({
   searchParams,
 }: {
   searchParams: Promise<TransactionSearchParams>

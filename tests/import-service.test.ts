@@ -399,9 +399,9 @@ describe('applyTier1Regex', () => {
   })
 
   it('respects amount sign constraint — rejects positive amounts for negative-only patterns', () => {
-    // caffè pattern requires negative amount
+    // The coffee pattern requires a negative amount
     const result = applyTier1Regex('Caffè Nero rimborso', '5.00', patterns)
-    // should skip caffè (positive), no other patterns match
+    // The positive amount should skip the coffee pattern, and no other patterns should match
     expect(result).toBeNull()
   })
 

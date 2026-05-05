@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/table'
 import { confirmImportAction } from '@/lib/actions/import'
 import type { ImportAnalysisResult } from '@/lib/services/import'
+import { APP_ROUTES } from '@/lib/routes'
 
 type FormatCandidate = {
   formatVersionId: number
@@ -73,7 +74,7 @@ export function ImportPreview({ result, candidates = [] }: Props) {
         return
       }
       setSuccess(true)
-      router.push('/spese')
+      router.push(APP_ROUTES.expenses)
     } catch {
       setError('Importazione fallita. Riprova.')
       submitLock.current = false

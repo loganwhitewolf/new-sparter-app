@@ -11,6 +11,7 @@ import {
   updatePattern,
   deletePattern,
 } from '@/lib/dal/patterns'
+import { APP_ROUTES } from '../routes'
 
 function requirePaidPlan(plan: string): ActionState | null {
   if (plan === 'free') {
@@ -48,7 +49,7 @@ export async function createPatternAction(
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
 
-  revalidatePath('/impostazioni/pattern')
+  revalidatePath(APP_ROUTES.patternSettings)
   return { error: null }
 }
 
@@ -82,7 +83,7 @@ export async function updatePatternAction(
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
 
-  revalidatePath('/impostazioni/pattern')
+  revalidatePath(APP_ROUTES.patternSettings)
   return { error: null }
 }
 
@@ -105,6 +106,6 @@ export async function deletePatternAction(
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
 
-  revalidatePath('/impostazioni/pattern')
+  revalidatePath(APP_ROUTES.patternSettings)
   return { error: null }
 }

@@ -6,17 +6,18 @@ import { LayoutDashboard, List, Receipt, Settings, Tag, Upload } from 'lucide-re
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+import { APP_ROUTES } from '@/lib/routes'
 
 const topNavItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/spese', label: 'Spese', icon: Receipt },
-  { href: '/transazioni', label: 'Transazioni', icon: List },
-  { href: '/import', label: 'Import', icon: Upload },
+  { href: APP_ROUTES.dashboard, label: 'Dashboard', icon: LayoutDashboard },
+  { href: APP_ROUTES.expenses, label: 'Spese', icon: Receipt },
+  { href: APP_ROUTES.transactions, label: 'Transazioni', icon: List },
+  { href: APP_ROUTES.import, label: 'Import', icon: Upload },
   { href: '/categories', label: 'Categorie', icon: Tag },
 ]
 
 const bottomNavItems = [
-  { href: '/settings', label: 'Impostazioni', icon: Settings },
+  { href: APP_ROUTES.settings, label: 'Impostazioni', icon: Settings },
 ]
 
 const uncategorizedCount = 0

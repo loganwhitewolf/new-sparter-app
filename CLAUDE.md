@@ -1,100 +1,126 @@
 # Sparter — Project Guide
 
-App di personal finance per il mercato italiano. Migrazione da Express+Sequelize a Next.js 15 App Router + Drizzle ORM.
+Personal finance app for the Italian market. Rebuilt from the previous Express + Sequelize application into Next.js 16 App Router + Drizzle ORM.
 
 ## Planning Artifacts
 
-- `.planning/PROJECT.md` — visione e requisiti
-- `.planning/ROADMAP.md` — 7 fasi con requisiti e criteri di successo
-- `.planning/REQUIREMENTS.md` — 21 requisiti v1 con REQ-IDs
-- `.planning/STATE.md` — stato corrente del progetto
-- `.planning/research/` — ricerca stack, features, architecture, pitfalls
+- `.gsd/PROJECT.md` — project vision and current state
+- `.gsd/REQUIREMENTS.md` — explicit capability contract and validation status
+- `.gsd/milestones/` — milestone roadmaps, slice plans, summaries, validations, and learnings
+- `docs/init/` — legacy bootstrap material from the original application; domain data may remain Italian when it represents product taxonomy or bank-import fixtures
 
 ## GSD Workflow
 
-Questo progetto usa GSD (Get Shit Done) per la pianificazione e l'esecuzione.
+This project uses GSD (Get Shit Done) for planning and execution.
 
-```
-/gsd-progress          # Verifica dove siamo e cosa fare dopo
-/gsd-plan-phase 1      # Pianifica la fase successiva
-/gsd-execute-phase 1   # Esegui i piani della fase
+```sh
+/gsd status              # Check current state and next work
+/gsd plan                # Plan the next unit of work
+/gsd auto                # Execute planned work through the GSD lifecycle
 ```
 
 ## Stack
 
-```
+```text
 Next.js 16 App Router
-Drizzle ORM + PostgreSQL (drizzle-kit per migrations)
+Drizzle ORM + PostgreSQL (drizzle-kit for migrations)
 Better Auth (auth provider)
-Cloudflare R2 (storage file CSV/Excel)
-Zod (validazione)
-Decimal.js (aritmetica monetaria — OBBLIGATORIO)
+Cloudflare R2 (CSV/Excel file storage)
+Zod (validation)
+Decimal.js (monetary arithmetic — REQUIRED)
 Tailwind CSS + shadcn/ui
 ```
 
-## Regole Assolute
+## Language Convention
 
-### Aritmetica monetaria
-MAI usare JS nativo (`+`, `-`, `*`, `/`) su amount. Sempre `Decimal.js`:
+Developer-facing code and project guidance must be written in English:
+
+- identifiers, route segments, filenames, comments, test names, logs, commit-facing docs, and agent/project rules
+- public route paths use English slugs (`/expenses`, `/transactions`, `/settings/patterns`)
+- legacy localized URLs may exist only as redirects in `lib/routes.ts` and `next.config.ts`
+
+Italian is allowed only for intentional product/domain surfaces:
+
+- user-facing UI copy for the Italian product
+- seeded taxonomy names/slugs and categorization regex patterns
+- bank import headers, sample rows, fixture values, and localized validation messages shown to users
+
+Run `yarn check:language` after changes that touch routes, comments, tests, docs, or developer-facing strings.
+
+## Non-Negotiable Rules
+
+### Monetary arithmetic
+
+Never use native JavaScript arithmetic (`+`, `-`, `*`, `/`) on monetary amounts. Always use `Decimal.js` helpers:
+
 ```ts
 import { toDecimal, toDbDecimal } from '@/lib/utils/decimal'
-const result = toDecimal(expense.amount).plus(toDecimal(other.amount))
-db.insert(...).values({ amount: toDbDecimal(result) })
+
+const result = toDecimal(expense.totalAmount).plus(toDecimal(other.totalAmount))
+await db.insert(...).values({ totalAmount: toDbDecimal(result) })
 ```
 
 ### Drizzle DECIMAL
-Drizzle restituisce `DECIMAL(10,2)` come **string**, non number. Passare direttamente a `new Decimal(stringValue)`.
 
-### Import atomicità
-Tutto `importFile()` deve essere wrappato in `db.transaction(async (tx) => { ... })`. Tutti gli helper accettano `DbOrTx`:
+Drizzle returns `DECIMAL(10,2)` as a string, not a number. Pass string values directly to `new Decimal(stringValue)` or the project decimal helpers.
+
+### Atomic imports
+
+The full `importFile()` workflow must run inside `db.transaction(async (tx) => { ... })`. Helpers that participate in import writes should accept `DbOrTx`:
+
 ```ts
 type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
 ```
 
-### Upload file
-Presigned PUT URL → browser carica direttamente su R2. MAI proxiare upload attraverso server actions o route handlers.
+### File uploads
+
+The browser uploads directly to R2 through a presigned PUT URL. Never proxy upload bytes through Server Actions or Route Handlers.
 
 ### Better Auth
-- Sostituisce NextAuth v5 — ricercare l'API corrente prima di pianificare la Fase 2
-- Drizzle adapter configurato con provider `pg`; gestione sessioni, route protection proxy, campi custom utente (`subscriptionPlan`, `role`)
-- Proxy: session check only, nessuna query DB diretta se edge runtime
+
+- Better Auth replaces NextAuth v5; read the current API before changing authentication work.
+- The Drizzle adapter uses provider `pg`; session management, route protection, and custom user fields (`subscriptionPlan`, `role`) are part of the auth boundary.
+- Proxy code should perform session checks only; do not run direct DB queries in edge runtime.
 
 ### Drizzle migrations
-MAI usare `drizzle-kit push` in produzione. Sempre `generate` + `migrate`.
+
+Never use `drizzle-kit push` in production. Always generate SQL migrations and run the migration flow.
 
 ## Directory Structure
 
-```
+```text
 app/
-├── (auth)/          # Route group — pagine pubbliche
-└── (app)/           # Route group — shell autenticata
+├── (auth)/          # Public route group
+└── (app)/           # Authenticated application shell
 
 lib/
-├── db/              # Drizzle client + schema + migrations
-├── dal/             # Data Access Layer (tutte le query)
+├── db/              # Drizzle client, schema, and migrations
+├── dal/             # Data Access Layer (all database queries)
 ├── services/        # Business logic
 ├── actions/         # "use server" thin wrappers
-└── validations/     # Zod schemas
+├── validations/     # Zod schemas
+└── routes.ts        # Canonical app route constants and legacy redirects
 
-drizzle/seed.ts      # Seed data (portato da docs/init/seed.ts)
-proxy.ts             # Route protection + staging bypass
-auth.ts              # Better Auth config
+drizzle/seed.ts      # Seed data adapted from docs/init/seed.ts
+proxy.ts             # Route protection and staging bypass
+auth.ts              # Better Auth configuration
 ```
 
 ## Seed Data
 
-Il file `docs/init/seed.ts` contiene:
-- 26 categorie (IN/OUT/system)
-- ~120 subcategorie
-- 6 piattaforme bancarie (General, Satispay, Intesa SP, Intesa SP CC, Revolut, Fineco)
-- 28 pattern regex di sistema
+`docs/init/seed.ts` and `drizzle/seed.ts` contain:
 
-Va portato in `drizzle/seed.ts` adattato allo schema Drizzle in Fase 1.
+- 26 categories (IN/OUT/system)
+- about 120 subcategories
+- 6 banking platforms (General, Satispay, Intesa SP, Intesa SP CC, Revolut, Fineco)
+- system regex categorization patterns
 
-## Feature Gates Subscription
+Domain values are intentionally Italian because the product taxonomy is Italian. Developer comments and operational logs around the seed flow must stay English.
 
-```
-free:  nessuna auto-categorizzazione
+## Subscription Feature Gates
+
+```text
+free:  no auto-categorization
 basic: Tier 1 (regex) + Tier 2 (history)
-pro:   Tier 1 + Tier 2 + Tier 3 AI (solo v2)
+pro:   Tier 1 + Tier 2 + Tier 3 AI (v2 only)
 ```

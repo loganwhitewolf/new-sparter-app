@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select'
 import type { TransactionPlatformOption } from '@/lib/dal/transactions'
 import type { ParsedTransactionFilters } from '@/lib/validations/transactions'
+import { APP_ROUTES } from '@/lib/routes'
 
 const DEFAULT_SORT = 'occurredAt'
 
@@ -36,7 +37,7 @@ export function TransactionFilters({ filters, platforms }: Props) {
   function replaceWith(params: URLSearchParams) {
     const query = params.toString()
     startTransition(() => {
-      router.replace(query ? `/transazioni?${query}` : '/transazioni', {
+      router.replace(query ? `${APP_ROUTES.transactions}?${query}` : APP_ROUTES.transactions, {
         scroll: false,
       })
     })

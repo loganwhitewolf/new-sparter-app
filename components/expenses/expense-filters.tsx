@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
+import { APP_ROUTES } from '@/lib/routes'
 
 type Props = { categories: CategoryWithSubCategories[] }
 
@@ -27,7 +28,8 @@ export function ExpenseFilters({ categories }: Props) {
     if (value) params.set(key, value)
     else params.delete(key)
     startTransition(() => {
-      router.replace('/spese?' + params.toString(), { scroll: false })
+      const query = params.toString()
+      router.replace(query ? `${APP_ROUTES.expenses}?${query}` : APP_ROUTES.expenses, { scroll: false })
     })
   }
 

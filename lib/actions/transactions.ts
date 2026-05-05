@@ -5,6 +5,7 @@ import { UpdateTransactionCustomTitleSchema } from '@/lib/validations/transactio
 import { updateTransactionCustomTitle as updateTransactionCustomTitleDAL } from '@/lib/dal/transactions'
 import { db } from '@/lib/db'
 import type { ActionState } from '@/lib/validations/expense'
+import { APP_ROUTES } from '../routes'
 
 export async function updateTransactionCustomTitle(
   _prev: ActionState,
@@ -28,6 +29,6 @@ export async function updateTransactionCustomTitle(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath('/transazioni')
+  revalidatePath(APP_ROUTES.transactions)
   return { error: null }
 }

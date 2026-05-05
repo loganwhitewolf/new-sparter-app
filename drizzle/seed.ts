@@ -17,7 +17,7 @@ for (const envFile of ['.env.local', '.env']) {
 
 const DATABASE_URL = process.env.DATABASE_URL
 if (!DATABASE_URL) {
-  console.error('DATABASE_URL non trovato. Controlla .env.local o .env')
+  console.error('DATABASE_URL not found. Check .env.local or .env')
   process.exit(1)
 }
 
@@ -25,7 +25,7 @@ const pool = new Pool({ connectionString: DATABASE_URL })
 const db = drizzle(pool)
 
 // ---------------------------------------------------------------------------
-// CATEGORIES — ported from docs/init/seed.ts (26 categorie di sistema)
+// CATEGORIES — ported from docs/init/seed.ts (26 system categories)
 // ---------------------------------------------------------------------------
 const categories = [
   // OUT
@@ -61,11 +61,11 @@ const categories = [
 ]
 
 // ---------------------------------------------------------------------------
-// SUBCATEGORIES — ported from docs/init/seed.ts (~120 sottocategorie)
+// SUBCATEGORIES — ported from docs/init/seed.ts (about 120 subcategories)
 // Insert AFTER categories to respect FK constraint (Pitfall 5)
 // ---------------------------------------------------------------------------
 const subCategories = [
-  // Risparmio (1)
+  // Savings (1)
   { categoryId: 1, name: 'conto risparmio', slug: 'conto-risparmio', displayOrder: 0, isActive: true },
   { categoryId: 1, name: 'fondo emergenze', slug: 'fondo-emergenze', displayOrder: 0, isActive: true },
   { categoryId: 1, name: 'fondo pensione', slug: 'fondo-pensione', displayOrder: 0, isActive: true },
@@ -73,7 +73,7 @@ const subCategories = [
   { categoryId: 1, name: 'risparmio per investimenti', slug: 'risparmio-per-investimenti', displayOrder: 0, isActive: true },
   { categoryId: 1, name: 'obiettivi a lungo termine', slug: 'obiettivi-a-lungo-termine', displayOrder: 0, isActive: true },
   { categoryId: 1, name: 'risparmio per salute', slug: 'risparmio-per-salute', displayOrder: 0, isActive: true },
-  // Abbonamenti (2)
+  // Subscriptions (2)
   { categoryId: 2, name: 'altri abbonamenti', slug: 'altri-abbonamenti', displayOrder: 0, isActive: true },
   { categoryId: 2, name: 'streaming video', slug: 'streaming-video', displayOrder: 0, isActive: true },
   { categoryId: 2, name: 'streaming musica', slug: 'streaming-musica', displayOrder: 0, isActive: true },
@@ -81,25 +81,25 @@ const subCategories = [
   { categoryId: 2, name: 'servizi telefonici e internet', slug: 'servizi-telefonici-e-internet', displayOrder: 0, isActive: true },
   { categoryId: 2, name: 'piattaforme didattiche', slug: 'piattaforme-didattiche', displayOrder: 0, isActive: true },
   { categoryId: 2, name: 'banca', slug: 'banca', displayOrder: 0, isActive: true },
-  // Assicurazioni (3)
+  // Insurance (3)
   { categoryId: 3, name: 'auto', slug: 'auto', displayOrder: 0, isActive: true },
   { categoryId: 3, name: 'casa', slug: 'casa', displayOrder: 0, isActive: true },
   { categoryId: 3, name: 'salute', slug: 'salute', displayOrder: 0, isActive: true },
   { categoryId: 3, name: 'viaggio', slug: 'viaggio', displayOrder: 0, isActive: true },
   { categoryId: 3, name: 'responsabilità civile', slug: 'responsabilita-civile', displayOrder: 0, isActive: true },
   { categoryId: 3, name: 'animali domestici', slug: 'animali-domestici', displayOrder: 0, isActive: true },
-  // Vacanze (4)
+  // Travel (4)
   { categoryId: 4, name: 'alloggio', slug: 'alloggio', displayOrder: 0, isActive: true },
   { categoryId: 4, name: 'trasporto', slug: 'trasporto', displayOrder: 0, isActive: true },
   { categoryId: 4, name: 'attività e intrattenimento', slug: 'attivita-e-intrattenimento', displayOrder: 0, isActive: true },
   { categoryId: 4, name: 'cibo e bevande', slug: 'cibo-e-bevande', displayOrder: 0, isActive: true },
   { categoryId: 4, name: 'assicurazione viaggio', slug: 'assicurazione-viaggio', displayOrder: 0, isActive: true },
-  // Regali (5)
+  // Gifts (5)
   { categoryId: 5, name: 'compleanni', slug: 'compleanni', displayOrder: 0, isActive: true },
   { categoryId: 5, name: 'festività', slug: 'festivita', displayOrder: 0, isActive: true },
   { categoryId: 5, name: 'anniversari', slug: 'anniversari', displayOrder: 0, isActive: true },
   { categoryId: 5, name: 'amici e conoscenti', slug: 'amici-e-conoscenti', displayOrder: 0, isActive: true },
-  // Trasporti (7)
+  // Transportation (7)
   { categoryId: 7, name: 'carburante', slug: 'carburante', displayOrder: 0, isActive: true },
   { categoryId: 7, name: 'elettricità per auto', slug: 'elettricita-per-auto', displayOrder: 0, isActive: true },
   { categoryId: 7, name: 'mezzi pubblici', slug: 'mezzi-pubblici', displayOrder: 0, isActive: true },
@@ -108,19 +108,19 @@ const subCategories = [
   { categoryId: 7, name: 'pedaggi autostradali', slug: 'pedaggi-autostradali', displayOrder: 0, isActive: true },
   { categoryId: 7, name: 'spese telepass', slug: 'spese-telepass', displayOrder: 0, isActive: true },
   { categoryId: 7, name: 'ztl e parcheggi', slug: 'ztl-e-parcheggi', displayOrder: 0, isActive: true },
-  // Spesa (8)
+  // Groceries (8)
   { categoryId: 8, name: 'supermercato', slug: 'supermercato', displayOrder: 0, isActive: true },
   { categoryId: 8, name: 'spesa online', slug: 'spesa-online', displayOrder: 0, isActive: true },
   { categoryId: 8, name: 'prodotti freschi', slug: 'prodotti-freschi', displayOrder: 0, isActive: true },
   { categoryId: 8, name: 'prodotti non alimentari', slug: 'prodotti-non-alimentari', displayOrder: 0, isActive: true },
   { categoryId: 8, name: 'spesa bio', slug: 'spesa-bio', displayOrder: 0, isActive: true },
-  // Salute (9)
+  // Health (9)
   { categoryId: 9, name: 'visite mediche', slug: 'visite-mediche', displayOrder: 0, isActive: true },
   { categoryId: 9, name: 'farmaci e medicinali', slug: 'farmaci-e-medicinali', displayOrder: 0, isActive: true },
   { categoryId: 9, name: 'trattamenti medici', slug: 'trattamenti-medici', displayOrder: 0, isActive: true },
   { categoryId: 9, name: 'farmaci generici', slug: 'farmaci-generici', displayOrder: 0, isActive: true },
   { categoryId: 9, name: 'parafarmaceutici', slug: 'parafarmaceutici', displayOrder: 0, isActive: true },
-  // Ristorazione (10)
+  // Dining (10)
   { categoryId: 10, name: 'cene fuori', slug: 'cene-fuori', displayOrder: 0, isActive: true },
   { categoryId: 10, name: 'pranzi', slug: 'pranzi', displayOrder: 0, isActive: true },
   { categoryId: 10, name: 'colazioni e snack', slug: 'colazioni-e-snack', displayOrder: 0, isActive: true },
@@ -133,48 +133,48 @@ const subCategories = [
   { categoryId: 11, name: 'scarpe', slug: 'scarpe', displayOrder: 0, isActive: true },
   { categoryId: 11, name: 'accessori', slug: 'accessori', displayOrder: 0, isActive: true },
   { categoryId: 11, name: 'attrezzatura sportiva', slug: 'attrezzatura-sportiva', displayOrder: 0, isActive: true },
-  // Investimenti (12)
+  // Investments (12)
   { categoryId: 12, name: 'azioni', slug: 'azioni', displayOrder: 0, isActive: true },
   { categoryId: 12, name: 'obbligazioni', slug: 'obbligazioni', displayOrder: 0, isActive: true },
   { categoryId: 12, name: 'criptovalute', slug: 'criptovalute', displayOrder: 0, isActive: true },
   { categoryId: 12, name: 'fondi comuni', slug: 'fondi-comuni', displayOrder: 0, isActive: true },
   { categoryId: 12, name: 'immobili', slug: 'immobili', displayOrder: 0, isActive: true },
-  // Bollette e utilità (13)
+  // Utilities (13)
   { categoryId: 13, name: 'energia elettrica', slug: 'energia-elettrica', displayOrder: 0, isActive: true },
   { categoryId: 13, name: 'gas', slug: 'gas', displayOrder: 0, isActive: true },
   { categoryId: 13, name: 'acqua', slug: 'acqua', displayOrder: 0, isActive: true },
   { categoryId: 13, name: 'rifiuti', slug: 'rifiuti', displayOrder: 0, isActive: true },
-  // Rate e finanziamenti (14)
+  // Loans and financing (14)
   { categoryId: 14, name: 'mutuo casa', slug: 'mutuo-casa', displayOrder: 0, isActive: true },
   { categoryId: 14, name: 'finanziamenti auto', slug: 'finanziamenti-auto', displayOrder: 0, isActive: true },
   { categoryId: 14, name: 'altri finanziamenti', slug: 'altri-finanziamenti', displayOrder: 0, isActive: true },
-  // Tasse, imposte e commissioni (15)
+  // Taxes and fees (15)
   { categoryId: 15, name: 'imposte', slug: 'imposte', displayOrder: 0, isActive: true },
   { categoryId: 15, name: 'imposte governative', slug: 'imposte-governative', displayOrder: 0, isActive: true },
   { categoryId: 15, name: 'bolli auto', slug: 'bolli-auto', displayOrder: 0, isActive: true },
   { categoryId: 15, name: 'commissioni bancarie', slug: 'commissioni-bancarie', displayOrder: 0, isActive: true },
-  // Famiglia (18)
+  // Family (18)
   { categoryId: 18, name: 'spese scolastiche', slug: 'spese-scolastiche', displayOrder: 0, isActive: true },
   { categoryId: 18, name: 'attività extra-scolastiche', slug: 'attivita-extra-scolastiche', displayOrder: 0, isActive: true },
   { categoryId: 18, name: 'baby-sitter', slug: 'baby-sitter', displayOrder: 0, isActive: true },
-  // Casa (19)
+  // Home (19)
   { categoryId: 19, name: 'manutenzione ordinaria', slug: 'manutenzione-ordinaria', displayOrder: 0, isActive: true },
   { categoryId: 19, name: 'ristrutturazione', slug: 'ristrutturazione', displayOrder: 0, isActive: true },
   { categoryId: 19, name: 'affitto', slug: 'affitto', displayOrder: 0, isActive: true },
   { categoryId: 19, name: 'badante', slug: 'badante', displayOrder: 0, isActive: true },
   { categoryId: 19, name: 'servizi di pulizia', slug: 'servizi-di-pulizia', displayOrder: 0, isActive: true },
-  // Formazione (21)
+  // Education (21)
   { categoryId: 21, name: 'corsi online', slug: 'corsi-online', displayOrder: 0, isActive: true },
   { categoryId: 21, name: 'università', slug: 'universita', displayOrder: 0, isActive: true },
   { categoryId: 21, name: 'corsi di specializzazione', slug: 'corsi-di-specializzazione', displayOrder: 0, isActive: true },
-  // Libri e media (22)
+  // Books and media (22)
   { categoryId: 22, name: 'libri cartacei', slug: 'libri-cartacei', displayOrder: 0, isActive: true },
   { categoryId: 22, name: 'e-book', slug: 'e-book', displayOrder: 0, isActive: true },
   { categoryId: 22, name: 'audiolibri', slug: 'audiolibri', displayOrder: 0, isActive: true },
-  // Tempo libero (23)
+  // Leisure (23)
   { categoryId: 23, name: 'cinema', slug: 'cinema', displayOrder: 0, isActive: true },
   { categoryId: 23, name: 'eventi', slug: 'eventi', displayOrder: 0, isActive: true },
-  // Income da lavoro (24)
+  // Work income (24)
   { categoryId: 24, name: 'stipendio base', slug: 'stipendio-base', displayOrder: 0, isActive: true },
   { categoryId: 24, name: 'bonus', slug: 'bonus', displayOrder: 0, isActive: true },
   { categoryId: 24, name: 'indennità', slug: 'indennita', displayOrder: 0, isActive: true },
@@ -183,11 +183,11 @@ const subCategories = [
   { categoryId: 24, name: 'consulenze', slug: 'consulenze', displayOrder: 0, isActive: true },
   { categoryId: 24, name: 'progetti occasionali', slug: 'progetti-occasionali', displayOrder: 0, isActive: true },
   { categoryId: 24, name: 'commissioni', slug: 'commissioni', displayOrder: 0, isActive: true },
-  // Income finanziari (25)
+  // Financial income (25)
   { categoryId: 25, name: 'dividendi azionari', slug: 'dividendi-azionari', displayOrder: 0, isActive: true },
   { categoryId: 25, name: 'dividendi fondi comuni', slug: 'dividendi-fondi-comuni', displayOrder: 0, isActive: true },
   { categoryId: 25, name: 'dividendi immobiliari', slug: 'dividendi-immobiliari', displayOrder: 0, isActive: true },
-  // Sconti, rimborsi e cashback (26)
+  // Discounts, refunds, and cashback (26)
   { categoryId: 26, name: 'rimborso spese lavorative', slug: 'rimborso-spese-lavorative', displayOrder: 0, isActive: true },
   { categoryId: 26, name: 'rimborso spese sanitarie', slug: 'rimborso-spese-sanitarie', displayOrder: 0, isActive: true },
   { categoryId: 26, name: 'rimborso spese viaggi', slug: 'rimborso-spese-viaggi', displayOrder: 0, isActive: true },
@@ -198,12 +198,12 @@ const subCategories = [
   { categoryId: 26, name: 'sconto abbonamento', slug: 'sconto-abbonamento', displayOrder: 0, isActive: true },
   { categoryId: 26, name: 'sconto promozionale', slug: 'sconto-promozionale', displayOrder: 0, isActive: true },
   { categoryId: 26, name: 'sconto canone', slug: 'sconto-canone', displayOrder: 0, isActive: true },
-  // Vendite e dismissioni (27)
+  // Sales and disposals (27)
   { categoryId: 27, name: 'vendita di beni usati', slug: 'vendita-di-beni-usati', displayOrder: 0, isActive: true },
   { categoryId: 27, name: 'commercio online', slug: 'commercio-online', displayOrder: 0, isActive: true },
   { categoryId: 27, name: 'immobili', slug: 'immobili-vendita', displayOrder: 0, isActive: true },
   { categoryId: 27, name: 'vendita investimenti', slug: 'vendita-investimenti', displayOrder: 0, isActive: true },
-  // Movimenti di liquidità (28)
+  // Liquidity movements (28)
   { categoryId: 28, name: 'bonifico in entrata', slug: 'bonifico-in-entrata', displayOrder: 0, isActive: true },
   { categoryId: 28, name: 'ricariche conti', slug: 'ricariche-conti', displayOrder: 0, isActive: true },
   // Ignore (32)
@@ -215,7 +215,7 @@ const subCategories = [
   { categoryId: 33, name: 'psicologia', slug: 'psicologia', displayOrder: 0, isActive: true },
   { categoryId: 33, name: 'massaggi', slug: 'massaggi', displayOrder: 0, isActive: true },
   { categoryId: 33, name: 'corsi fitness', slug: 'corsi-fitness', displayOrder: 0, isActive: true },
-  // Bonifici e rimborsi (34)
+  // Bank transfers and refunds (34)
   { categoryId: 34, name: 'bonifico in uscita', slug: 'bonifico-in-uscita', displayOrder: 0, isActive: true },
   { categoryId: 34, name: 'rimborsi', slug: 'rimborsi', displayOrder: 0, isActive: true },
 ]
@@ -235,25 +235,25 @@ function headerSignatureFor(platformSeed: (typeof seedPlatforms)[number]) {
 async function seed() {
   console.log('Seeding categories...')
   await db.insert(category).values(categories).onConflictDoNothing()
-  console.log(`  ${categories.length} categorie inserite (o già presenti).`)
+  console.log(`  ${categories.length} categories inserted (or already present).`)
 
   console.log('Seeding subcategories...')
   // Insert subCategories AFTER categories (FK constraint — Pitfall 5)
   await db.insert(subCategory).values(subCategories).onConflictDoNothing()
-  console.log(`  ${subCategories.length} sottocategorie inserite (o già presenti).`)
+  console.log(`  ${subCategories.length} sottocategories inserted (or already present).`)
 
   await db
     .update(subCategory)
     .set({ excludeFromTotals: true })
     .where(inArray(subCategory.slug, ['ricariche-conti', 'addebito-carta-di-credito']))
-  console.log('  excludeFromTotals=true impostato per ricariche-conti e addebito-carta-di-credito.')
+  console.log('  excludeFromTotals=true set for ricariche-conti and addebito-carta-di-credito.')
 
   console.log('Seeding import platforms...')
   await db
     .insert(platform)
     .values(seedPlatforms.map((platformSeed) => ({ ...platformSeed, isActive: true })))
     .onConflictDoNothing()
-  console.log(`  ${seedPlatforms.length} piattaforme inserite (o già presenti).`)
+  console.log(`  ${seedPlatforms.length} platforms inserted (or already present).`)
 
   console.log('Seeding import format versions...')
   await db
@@ -268,7 +268,7 @@ async function seed() {
       })),
     )
     .onConflictDoNothing()
-  console.log(`  ${seedPlatforms.length} versioni formato inserite (o già presenti).`)
+  console.log(`  ${seedPlatforms.length} format versions inserted (or already present).`)
 
   console.log('Seeding system categorization patterns...')
   const seededSubCategories = await db.select({ id: subCategory.id, slug: subCategory.slug }).from(subCategory)
@@ -302,9 +302,9 @@ async function seed() {
       })),
     )
     .onConflictDoNothing()
-  console.log(`  ${seedCategorizationPatterns.length} pattern sistema inseriti (o già presenti).`)
+  console.log(`  ${seedCategorizationPatterns.length} system patterns inserted (or already present).`)
 
-  console.log('Seed completato.')
+  console.log('Seed completed.')
 }
 
 seed().catch(console.error).finally(() => pool.end())
