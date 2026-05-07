@@ -19,6 +19,20 @@ test.describe('Import - IMP-01: Upload page structure', () => {
     await expect(page.getByRole('heading', { name: /importa file bancario/i })).toBeVisible()
     await expect(page.getByLabel(/file bancario/i)).toBeVisible()
     await expect(page.getByRole('button', { name: /carica file/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /storico importazioni/i })).toBeVisible()
+
+    const historyTable = page.getByRole('table', { name: /storico importazioni/i })
+    const emptyState = page.getByText(/nessuna importazione trovata/i)
+    const safeErrorState = page.getByText(/storico importazioni non disponibile/i)
+
+    await expect(historyTable.or(emptyState).or(safeErrorState)).toBeVisible()
+
+    if (await historyTable.isVisible()) {
+      await expect(page.getByRole('columnheader', { name: /file/i })).toBeVisible()
+      await expect(page.getByRole('columnheader', { name: /stato/i })).toBeVisible()
+      await expect(page.getByRole('columnheader', { name: /piattaforma/i })).toBeVisible()
+      await expect(page.getByRole('columnheader', { name: /righe/i })).toBeVisible()
+    }
   })
 
   test('IMP-01 upload button is disabled when no file is selected', async ({ page }) => {
