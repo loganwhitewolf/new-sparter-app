@@ -54,12 +54,12 @@ describe('dashboard DAL amount mapping', () => {
 
     expect(getOverviewComparisonRanges('last-month', now)).toEqual({
       current: {
-        from: new Date(2026, 3, 1),
-        to: new Date(2026, 3, 30, 23, 59, 59, 999),
+        from: new Date(2026, 4, 1),
+        to: new Date(2026, 4, 31, 23, 59, 59, 999),
       },
       previous: {
-        from: new Date(2026, 2, 1),
-        to: new Date(2026, 2, 31, 23, 59, 59, 999),
+        from: new Date(2026, 3, 1),
+        to: new Date(2026, 3, 30, 23, 59, 59, 999),
       },
     })
     expect(getOverviewComparisonRanges('last-3-months', now)).toEqual({

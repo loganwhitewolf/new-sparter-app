@@ -58,13 +58,11 @@ export function dashboardPresetToDateRange(
         to: new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999),
       }
     case 'last-month':
-    default: {
-      const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    default:
       return {
-        from: previousMonth,
-        to: endOfMonth(previousMonth.getFullYear(), previousMonth.getMonth()),
+        from: new Date(now.getFullYear(), now.getMonth(), 1),
+        to,
       }
-    }
   }
 }
 

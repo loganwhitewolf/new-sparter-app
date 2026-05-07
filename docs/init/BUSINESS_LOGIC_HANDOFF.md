@@ -184,7 +184,7 @@ Oppure `type: "split"` con `positiveAmount` e `negativeAmount` separati (es. Fin
 ## Dashboard KPI
 
 ### `getOverview`
-- Preset: `last-month` (default)
+- Preset: `last-month` (default, mese solare corrente)
 - Calcola per mese corrente e precedente: `totalIn`, `totalOut`, `balance`, `savingsRate`, `uncategorizedCount`
 - Restituisce delta (variazione %)
 - Esclude categoria `ignore` dai calcoli

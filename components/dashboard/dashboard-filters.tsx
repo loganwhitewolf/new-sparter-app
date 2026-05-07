@@ -24,7 +24,7 @@ const typeOptions: Array<{ value: DashboardType; label: string }> = [
 ]
 
 const presetOptions: Array<{ value: DashboardPreset; label: string }> = [
-  { value: 'last-month', label: 'Ultimo mese' },
+  { value: 'last-month', label: 'Mese corrente' },
   { value: 'last-3-months', label: 'Ultimi 3 mesi' },
   { value: 'last-6-months', label: 'Ultimi 6 mesi' },
   { value: 'this-year', label: "Quest'anno" },
