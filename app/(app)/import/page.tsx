@@ -1,8 +1,9 @@
+import { ImportFilters } from '@/components/import/import-filters'
 import { ImportTable } from '@/components/import/import-table'
 import { ImportUploader } from '@/components/import/import-uploader'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getImports, type ImportListRow } from '@/lib/dal/imports'
-import { MAX_IMPORT_FILE_SIZE_BYTES } from '@/lib/validations/import'
+import { getImports, IMPORT_LIST_LIMIT, type ImportListRow } from '@/lib/dal/imports'
+import { parseImportFilters, MAX_IMPORT_FILE_SIZE_BYTES, type ImportSearchParams } from '@/lib/validations/import'
 
 const MAX_MB = Math.round(MAX_IMPORT_FILE_SIZE_BYTES / (1024 * 1024))
 
@@ -15,12 +16,29 @@ function isNextNavigationError(error: unknown) {
   return digest.startsWith('NEXT_REDIRECT') || digest.startsWith('NEXT_HTTP_ERROR_FALLBACK')
 }
 
-export default async function ImportPage() {
+function getFilterKey(filters: ReturnType<typeof parseImportFilters>) {
+  return JSON.stringify({
+    q: filters.q ?? '',
+    importedFrom: filters.importedFrom ?? '',
+    importedTo: filters.importedTo ?? '',
+    referenceFrom: filters.referenceFrom ?? '',
+    referenceTo: filters.referenceTo ?? '',
+  })
+}
+
+export default async function ImportPage({
+  searchParams,
+}: {
+  searchParams: Promise<ImportSearchParams>
+}) {
+  const rawSearchParams = await searchParams
+  const filters = parseImportFilters(rawSearchParams)
+  const filterKey = getFilterKey(filters)
   let imports: ImportListRow[] = []
   let importHistoryLoadError = false
 
   try {
-    imports = await getImports()
+    imports = await getImports(filters, { limit: IMPORT_LIST_LIMIT })
   } catch (error) {
     if (isNextNavigationError(error)) {
       throw error
@@ -60,7 +78,14 @@ export default async function ImportPage() {
             Controlla stato, statistiche e messaggi sicuri degli ultimi file caricati.
           </p>
         </div>
-        <ImportTable imports={imports} loadError={importHistoryLoadError} />
+        <ImportFilters filters={filters} />
+        <ImportTable
+          key={filterKey}
+          imports={imports}
+          loadError={importHistoryLoadError}
+          filters={filters}
+          searchParams={rawSearchParams}
+        />
       </section>
     </div>
   )

@@ -189,6 +189,94 @@ test.describe('Import - IMP-01: Upload retry integration', () => {
   })
 })
 
+async function expectNoSecretDiagnostics(page: Page) {
+  const bodyText = await page.locator('body').innerText()
+  const html = await page.content()
+  const consoleMessages = await page.evaluate(() =>
+    (window as Window & { __uploadPutDiagnostics?: unknown[] }).__uploadPutDiagnostics ?? [],
+  )
+  const browserVisibleDiagnostics = `${bodyText}\n${html}\n${JSON.stringify(consoleMessages)}`
+
+  await expect(page.getByText(/objectKey|presigned|stack trace|secret-signature/i)).toHaveCount(0)
+  expect(browserVisibleDiagnostics).not.toContain('objectKey')
+  expect(browserVisibleDiagnostics).not.toContain('presigned')
+  expect(browserVisibleDiagnostics).not.toContain('secret-signature')
+  expect(browserVisibleDiagnostics).not.toContain('storage diagnostics')
+}
+
+test.describe('Import - IMP-03: Filter, rename, and pagination UI', () => {
+  test('IMP-03 keeps filter state in the URL and restores it after reload', async ({ page }) => {
+    await openImportPage(page)
+
+    await page.getByLabel(/cerca importazione/i).fill('statement')
+    await expect(page).toHaveURL(/(?:\?|&)q=statement(?:&|$)/)
+
+    await page.getByLabel(/importato da/i).fill('2024-01-01')
+    await expect(page).toHaveURL(/(?:\?|&)importedFrom=2024-01-01(?:&|$)/)
+
+    await page.getByLabel(/importato a/i).fill('2024-12-31')
+    await expect(page).toHaveURL(/(?:\?|&)importedTo=2024-12-31(?:&|$)/)
+
+    await page.getByLabel(/riferimento da/i).fill('2024-02-01')
+    await expect(page).toHaveURL(/(?:\?|&)referenceFrom=2024-02-01(?:&|$)/)
+
+    await page.getByLabel(/riferimento a/i).fill('2024-11-30')
+    await expect(page).toHaveURL(/(?:\?|&)referenceTo=2024-11-30(?:&|$)/)
+
+    await page.reload()
+
+    await expect(page.getByLabel(/cerca importazione/i)).toHaveValue('statement')
+    await expect(page.getByLabel(/importato da/i)).toHaveValue('2024-01-01')
+    await expect(page.getByLabel(/importato a/i)).toHaveValue('2024-12-31')
+    await expect(page.getByLabel(/riferimento da/i)).toHaveValue('2024-02-01')
+    await expect(page.getByLabel(/riferimento a/i)).toHaveValue('2024-11-30')
+    await expectNoSecretDiagnostics(page)
+  })
+
+  test('IMP-03 normalizes malformed URL dates and shows a safe reachable history state', async ({ page }) => {
+    await page.setExtraHTTPHeaders({
+      'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
+    })
+    await page.goto('/import?importedFrom=not-a-date&referenceTo=2024-99-99&q=missing-import-name')
+
+    await expect(page.getByLabel(/importato da/i)).toHaveValue('')
+    await expect(page.getByLabel(/riferimento a/i)).toHaveValue('')
+
+    const historyTable = page.getByRole('table', { name: /storico importazioni/i })
+    const filteredEmptyState = page.getByText(/nessuna importazione corrisponde ai filtri/i)
+    const safeErrorState = page.getByText(/storico importazioni non disponibile/i)
+
+    await expect(historyTable.or(filteredEmptyState).or(safeErrorState)).toBeVisible()
+    await expectNoSecretDiagnostics(page)
+  })
+
+  test('IMP-03 exposes keyboard rename actions and bounded load-more status when rows exist', async ({ page }) => {
+    await openImportPage(page)
+
+    const historyTable = page.getByRole('table', { name: /storico importazioni/i })
+    const emptyState = page.getByText(/nessuna importazione trovata|nessuna importazione corrisponde ai filtri/i)
+    const safeErrorState = page.getByText(/storico importazioni non disponibile/i)
+
+    await expect(historyTable.or(emptyState).or(safeErrorState)).toBeVisible()
+
+    if (await historyTable.isVisible()) {
+      const renameButton = page.getByRole('button', { name: /rinomina importazione/i }).first()
+      await renameButton.focus()
+      await expect(renameButton).toBeFocused()
+      await page.keyboard.press('Enter')
+      await expect(page.getByRole('dialog', { name: /rinomina importazione/i })).toBeVisible()
+      await expect(page.getByLabel(/nome importazione/i)).toBeVisible()
+      await page.keyboard.press('Escape')
+
+      const loadMoreButton = page.getByRole('button', { name: /carica altre 50 importazioni/i })
+      const allLoadedText = page.getByText(/tutte le importazioni disponibili sono caricate/i)
+      await expect(loadMoreButton.or(allLoadedText)).toBeVisible()
+    }
+
+    await expectNoSecretDiagnostics(page)
+  })
+})
+
 test.describe('Import - IMP-02: Analyze preview page', () => {
   test('IMP-02 /import/[fileId]/analyze renders preview structure when mocked', async ({ page }) => {
     test.fixme(true, 'Requires seeded DB + R2 file — run against staging with a real uploaded file')
