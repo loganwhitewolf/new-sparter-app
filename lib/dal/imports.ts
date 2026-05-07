@@ -1,11 +1,17 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, ilike, lte, or, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import { file, importFormatVersion, platform } from '@/lib/db/schema'
+import type { ParsedImportFilters } from '@/lib/validations/import'
 
 export const IMPORT_LIST_LIMIT = 50
+
+export type ImportPagination = {
+  limit?: number
+  offset?: number
+}
 
 export const importListSelect = {
   id: file.id,
@@ -53,20 +59,52 @@ export type ImportListRow = {
   errorMessage: string | null
 }
 
-export const getImportRows = cache(async (): Promise<ImportListRow[]> => {
-  const { userId } = await verifySession()
+export const getImportRows = cache(
+  async (
+    filters: ParsedImportFilters = {},
+    pagination: ImportPagination = {},
+  ): Promise<ImportListRow[]> => {
+    const { userId } = await verifySession()
+    const limit = pagination.limit ?? IMPORT_LIST_LIMIT
+    const offset = pagination.offset ?? 0
 
-  return db
-    .select(importListSelect)
-    .from(file)
-    .leftJoin(
-      importFormatVersion,
-      eq(file.importFormatVersionId, importFormatVersion.id),
-    )
-    .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
-    .where(and(eq(file.userId, userId)))
-    .orderBy(desc(importListOrderTimestamp), desc(file.createdAt))
-    .limit(IMPORT_LIST_LIMIT)
-})
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const conditions: any[] = [eq(file.userId, userId)]
+
+    if (filters.q) {
+      const pattern = `%${filters.q}%`
+      conditions.push(or(ilike(file.displayName, pattern), ilike(file.originalName, pattern)))
+    }
+
+    if (filters.importedFromDate) {
+      conditions.push(gte(file.importedAt, filters.importedFromDate))
+    }
+
+    if (filters.importedToDate) {
+      conditions.push(lte(file.importedAt, filters.importedToDate))
+    }
+
+    if (filters.referenceToDate) {
+      conditions.push(lte(file.referenceStartedAt, filters.referenceToDate))
+    }
+
+    if (filters.referenceFromDate) {
+      conditions.push(gte(file.referenceEndedAt, filters.referenceFromDate))
+    }
+
+    return db
+      .select(importListSelect)
+      .from(file)
+      .leftJoin(
+        importFormatVersion,
+        eq(file.importFormatVersionId, importFormatVersion.id),
+      )
+      .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
+      .where(and(...conditions))
+      .orderBy(desc(importListOrderTimestamp), desc(file.createdAt))
+      .limit(limit)
+      .offset(offset)
+  },
+)
 
 export const getImports = getImportRows

@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   whereArgs: [] as unknown[],
   orderByArgs: [] as unknown[][],
   limitArgs: [] as number[],
+  offsetArgs: [] as number[],
   queryResult: [] as unknown[],
 }))
 
@@ -31,6 +32,10 @@ function makeQueryChain() {
     }),
     limit: vi.fn((arg: number) => {
       mocks.limitArgs.push(arg)
+      return chain
+    }),
+    offset: vi.fn((arg: number) => {
+      mocks.offsetArgs.push(arg)
       return Promise.resolve(mocks.queryResult)
     }),
   }
@@ -53,6 +58,10 @@ vi.mock('drizzle-orm', () => ({
   and: (...args: unknown[]) => ({ op: 'and', args }),
   desc: (column: unknown) => ({ op: 'desc', column }),
   eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
+  gte: (left: unknown, right: unknown) => ({ op: 'gte', left, right }),
+  ilike: (left: unknown, right: unknown) => ({ op: 'ilike', left, right }),
+  lte: (left: unknown, right: unknown) => ({ op: 'lte', left, right }),
+  or: (...args: unknown[]) => ({ op: 'or', args }),
   sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({
     op: 'sql',
     strings: Array.from(strings),
@@ -110,6 +119,7 @@ describe('imports DAL read model', () => {
     mocks.whereArgs.length = 0
     mocks.orderByArgs.length = 0
     mocks.limitArgs.length = 0
+    mocks.offsetArgs.length = 0
     mocks.queryResult = []
     mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
   })
@@ -166,6 +176,7 @@ describe('imports DAL read model', () => {
       args: [{ op: 'eq', left: 'file.userId', right: 'user-1' }],
     })
     expect(mocks.limitArgs).toEqual([IMPORT_LIST_LIMIT])
+    expect(mocks.offsetArgs).toEqual([0])
   })
 
   it('orders newest imports first using imported, uploaded, then created timestamps', async () => {
@@ -253,5 +264,50 @@ describe('imports DAL read model', () => {
     expect(serialized).not.toContain('objectKey')
     expect(serialized).not.toContain('rawRow')
     expect(serialized).not.toContain('stack')
+  })
+
+  it('applies validated search, imported date filters, reference overlap filters, and explicit pagination', async () => {
+    await getImportRows(
+      {
+        q: 'January Import',
+        importedFromDate: new Date('2026-01-01T00:00:00.000Z'),
+        importedToDate: new Date('2026-01-31T23:59:59.999Z'),
+        referenceFromDate: new Date('2025-12-01T00:00:00.000Z'),
+        referenceToDate: new Date('2025-12-31T23:59:59.999Z'),
+      },
+      { limit: 25, offset: 75 },
+    )
+
+    expect(mocks.limitArgs).toEqual([25])
+    expect(mocks.offsetArgs).toEqual([75])
+    expect(mocks.whereArgs[0]).toEqual({
+      op: 'and',
+      args: expect.arrayContaining([
+        { op: 'eq', left: 'file.userId', right: 'user-1' },
+        {
+          op: 'or',
+          args: [
+            { op: 'ilike', left: 'file.displayName', right: '%January Import%' },
+            { op: 'ilike', left: 'file.originalName', right: '%January Import%' },
+          ],
+        },
+        { op: 'gte', left: 'file.importedAt', right: new Date('2026-01-01T00:00:00.000Z') },
+        { op: 'lte', left: 'file.importedAt', right: new Date('2026-01-31T23:59:59.999Z') },
+        { op: 'lte', left: 'file.referenceStartedAt', right: new Date('2025-12-31T23:59:59.999Z') },
+        { op: 'gte', left: 'file.referenceEndedAt', right: new Date('2025-12-01T00:00:00.000Z') },
+      ]),
+    })
+  })
+
+  it('keeps partial reference ranges bounded to overlap semantics', async () => {
+    await getImportRows({ referenceFromDate: new Date('2026-02-01T00:00:00.000Z') })
+
+    expect(mocks.whereArgs[0]).toEqual({
+      op: 'and',
+      args: expect.arrayContaining([
+        { op: 'eq', left: 'file.userId', right: 'user-1' },
+        { op: 'gte', left: 'file.referenceEndedAt', right: new Date('2026-02-01T00:00:00.000Z') },
+      ]),
+    })
   })
 })

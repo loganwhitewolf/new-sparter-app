@@ -66,3 +66,97 @@ export type InitiateUploadInput = z.infer<typeof InitiateUploadSchema>
 export type ConfirmUploadInput = z.infer<typeof ConfirmUploadSchema>
 export type AnalyzeImportInput = z.infer<typeof AnalyzeImportSchema>
 export type ImportFileInput = z.infer<typeof ImportFileSchema>
+
+export type ImportSearchParams = Record<string, string | string[] | undefined>
+
+export type ParsedImportFilters = {
+  q?: string
+  importedFrom?: string
+  importedTo?: string
+  importedFromDate?: Date
+  importedToDate?: Date
+  referenceFrom?: string
+  referenceTo?: string
+  referenceFromDate?: Date
+  referenceToDate?: Date
+}
+
+const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/
+const MAX_IMPORT_QUERY_LENGTH = 255
+
+function firstTrimmed(value: string | string[] | undefined): string | undefined {
+  const rawValue = Array.isArray(value) ? value[0] : value
+  const trimmed = rawValue?.trim()
+
+  return trimmed ? trimmed : undefined
+}
+
+function parseDateOnly(value: string | undefined): Date | undefined {
+  if (!value) {
+    return undefined
+  }
+
+  const match = DATE_ONLY_RE.exec(value)
+
+  if (!match) {
+    return undefined
+  }
+
+  const [, year, month, day] = match
+  const numericYear = Number(year)
+  const numericMonth = Number(month)
+  const numericDay = Number(day)
+  const parsed = new Date(
+    Date.UTC(numericYear, numericMonth - 1, numericDay, 0, 0, 0, 0),
+  )
+
+  if (
+    parsed.getUTCFullYear() !== numericYear ||
+    parsed.getUTCMonth() !== numericMonth - 1 ||
+    parsed.getUTCDate() !== numericDay
+  ) {
+    return undefined
+  }
+
+  return parsed
+}
+
+function getInclusiveDate(value: string | undefined): Date | undefined {
+  const startOfDay = parseDateOnly(value)
+
+  if (!startOfDay) {
+    return undefined
+  }
+
+  return new Date(
+    Date.UTC(
+      startOfDay.getUTCFullYear(),
+      startOfDay.getUTCMonth(),
+      startOfDay.getUTCDate(),
+      23,
+      59,
+      59,
+      999,
+    ),
+  )
+}
+
+export function parseImportFilters(input: ImportSearchParams): ParsedImportFilters {
+  const q = firstTrimmed(input.q)
+  const importedFrom = firstTrimmed(input.importedFrom)
+  const importedTo = firstTrimmed(input.importedTo)
+  const referenceFrom = firstTrimmed(input.referenceFrom)
+  const referenceTo = firstTrimmed(input.referenceTo)
+  const importedFromDate = parseDateOnly(importedFrom)
+  const importedToDate = getInclusiveDate(importedTo)
+  const referenceFromDate = parseDateOnly(referenceFrom)
+  const referenceToDate = getInclusiveDate(referenceTo)
+
+  return {
+    ...(q && q.length <= MAX_IMPORT_QUERY_LENGTH ? { q } : {}),
+    ...(importedFromDate ? { importedFrom, importedFromDate } : {}),
+    ...(importedToDate ? { importedTo, importedToDate } : {}),
+    ...(referenceFromDate ? { referenceFrom, referenceFromDate } : {}),
+    ...(referenceToDate ? { referenceTo, referenceToDate } : {}),
+  }
+}
