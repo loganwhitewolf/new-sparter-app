@@ -306,9 +306,7 @@ export const transaction = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    fileId: text("file_id")
-      .notNull()
-      .references(() => file.id, { onDelete: "cascade" }),
+    fileId: text("file_id").references(() => file.id, { onDelete: "cascade" }),
     expenseId: text("expense_id").references(() => expense.id, { onDelete: "set null" }),
     transactionHash: varchar("transaction_hash", { length: 64 }).notNull(),
     description: text("description").notNull(),

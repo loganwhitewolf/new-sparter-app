@@ -1,6 +1,6 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, asc, desc, eq, gte, inArray, lte } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, isNull, lte, or } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import {
@@ -25,7 +25,7 @@ export type TransactionPagination = {
 export type TransactionInsertData = {
   id: string
   userId: string
-  fileId: string
+  fileId: string | null
   expenseId: string | null
   transactionHash: string
   description: string
@@ -125,13 +125,10 @@ export const getTransactions = cache(
     const limit = pagination.limit ?? TRANSACTION_LIST_LIMIT
     const offset = pagination.offset ?? 0
 
-    // Always scope by both transaction.userId and the owning file userId. The
-    // second predicate preserves ownership even if a historical row points to an
-    // unexpected file record.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const conditions: any[] = [
       eq(transaction.userId, userId),
-      eq(importFile.userId, userId),
+      or(isNull(transaction.fileId), eq(importFile.userId, userId)),
     ]
 
     if (filters.fromDate) {
@@ -254,6 +251,64 @@ export async function insertTransactionBatch(
     .onConflictDoNothing()
     .returning()
   return inserted
+}
+
+export type ManualTransactionData = {
+  userId: string
+  description: string
+  amount: string
+  currency: string
+  occurredAt: Date
+  subCategoryId?: number
+}
+
+export async function insertManualTransaction(
+  data: ManualTransactionData,
+): Promise<{ transactionId: string; expenseId: string }> {
+  const { computeDescriptionHash, computeTransactionHash } = await import(
+    '@/lib/utils/import'
+  )
+
+  const descriptionHash = computeDescriptionHash(data.description)
+  const transactionId = crypto.randomUUID()
+  const expenseId = crypto.randomUUID()
+  const transactionHash = computeTransactionHash({
+    userId: data.userId,
+    occurredAt: data.occurredAt,
+    amount: data.amount,
+    description: data.description,
+  })
+
+  await db.transaction(async (tx) => {
+    await tx.insert(expense).values({
+      id: expenseId,
+      userId: data.userId,
+      title: data.description,
+      descriptionHash,
+      subCategoryId: data.subCategoryId ?? null,
+      totalAmount: data.amount,
+      transactionCount: 1,
+      firstTransactionAt: data.occurredAt,
+      lastTransactionAt: data.occurredAt,
+      status: data.subCategoryId ? '3' : '1',
+    })
+
+    await tx.insert(transaction).values({
+      id: transactionId,
+      userId: data.userId,
+      fileId: null,
+      expenseId,
+      transactionHash,
+      description: data.description,
+      descriptionHash,
+      amount: data.amount,
+      currency: data.currency,
+      occurredAt: data.occurredAt,
+      rowIndex: 0,
+    })
+  })
+
+  return { transactionId, expenseId }
 }
 
 export async function updateTransactionCustomTitle(

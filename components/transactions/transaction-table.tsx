@@ -228,17 +228,23 @@ export function TransactionTable({ transactions, filters, searchParams }: Props)
                   {formatDate(transaction.occurredAt)}
                 </TableCell>
                 <TableCell>
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <span className="truncate text-sm">
-                      {transaction.platformName ?? 'Piattaforma non disponibile'}
-                    </span>
-                    <span
-                      className="truncate text-xs text-muted-foreground"
-                      title={transaction.fileName ?? undefined}
-                    >
-                      {transaction.fileName ?? `Riga ${transaction.rowIndex + 1}`}
-                    </span>
-                  </div>
+                  {transaction.fileId ? (
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <span className="truncate text-sm">
+                        {transaction.platformName ?? 'Piattaforma non disponibile'}
+                      </span>
+                      <span
+                        className="truncate text-xs text-muted-foreground"
+                        title={transaction.fileName ?? undefined}
+                      >
+                        {transaction.fileName ?? `Riga ${transaction.rowIndex + 1}`}
+                      </span>
+                    </div>
+                  ) : (
+                    <Badge variant="outline" className="w-fit">
+                      Manuale
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   {hasExpense ? (

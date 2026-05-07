@@ -1,5 +1,27 @@
 import { z } from "zod"
 
+export const CreateTransactionSchema = z.object({
+  description: z
+    .string()
+    .min(2, { error: "La descrizione deve contenere almeno 2 caratteri." })
+    .max(255, { error: "La descrizione non può superare i 255 caratteri." }),
+  amount: z
+    .string()
+    .min(1, { error: "Importo obbligatorio." })
+    .refine(
+      (v) => {
+        const normalized = v.replace(",", ".")
+        return !Number.isNaN(Number(normalized)) && Number.isFinite(Number(normalized))
+      },
+      { message: "Importo non valido." },
+    ),
+  currency: z.string().length(3).default("EUR"),
+  occurredAt: z.string().min(1, { error: "Data obbligatoria." }),
+  subCategoryId: z.number().int().positive().optional(),
+})
+
+export type CreateTransactionInput = z.infer<typeof CreateTransactionSchema>
+
 export const UpdateTransactionCustomTitleSchema = z.object({
   id: z.string().uuid(),
   customTitle: z

@@ -74,7 +74,9 @@ vi.mock('drizzle-orm', () => ({
   eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
   gte: (left: unknown, right: unknown) => ({ op: 'gte', left, right }),
   inArray: (left: unknown, right: unknown) => ({ op: 'inArray', left, right }),
+  isNull: (column: unknown) => ({ op: 'isNull', column }),
   lte: (left: unknown, right: unknown) => ({ op: 'lte', left, right }),
+  or: (...args: unknown[]) => ({ op: 'or', args }),
 }))
 vi.mock('@/lib/db/schema', () => ({
   expense: {
@@ -203,7 +205,13 @@ describe('transaction DAL query helpers', () => {
       op: 'and',
       args: expect.arrayContaining([
         { op: 'eq', left: 'transaction.userId', right: 'user-1' },
-        { op: 'eq', left: 'file.userId', right: 'user-1' },
+        {
+          op: 'or',
+          args: [
+            { op: 'isNull', column: 'transaction.fileId' },
+            { op: 'eq', left: 'file.userId', right: 'user-1' },
+          ],
+        },
         { op: 'gte', left: 'transaction.occurredAt', right: new Date('2026-01-01T00:00:00.000Z') },
         { op: 'lte', left: 'transaction.occurredAt', right: new Date('2026-01-31T23:59:59.999Z') },
         { op: 'eq', left: 'platform.slug', right: 'fineco' },

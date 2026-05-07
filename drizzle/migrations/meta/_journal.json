@@ -43,6 +43,13 @@
       "when": 1777980560835,
       "tag": "0005_subcategory_exclude_from_totals",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778148714336,
+      "tag": "0006_transaction_nullable_file_id",
+      "breakpoints": true
     }
   ]
 }

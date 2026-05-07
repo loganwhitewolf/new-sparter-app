@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -12,6 +13,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -145,21 +147,26 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
 
   if (loadedExpenses.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <p className="text-base font-medium text-foreground">Nessuna spesa trovata</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Non hai ancora aggiunto spese. Clicca su &ldquo;Nuova spesa&rdquo; per iniziare.
-        </p>
-      </div>
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center px-6 py-14 text-center">
+          <p className="text-base font-medium text-foreground">Nessuna spesa trovata</p>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground">
+            Non hai ancora aggiunto spese. Clicca su &ldquo;Nuova spesa&rdquo; per iniziare.
+          </p>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
     <>
-      <div className="rounded-md border">
+      <div className="rounded-xl border bg-card shadow-sm">
         <Table>
+          <TableCaption className="sr-only">
+            Elenco spese con categoria, stato e data.
+          </TableCaption>
           <TableHeader>
-            <TableRow className="bg-secondary">
+            <TableRow className="bg-secondary/70">
               <TableHead className="w-10 text-center">
                 <input
                   type="checkbox"
@@ -201,7 +208,7 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
                 <TableRow
                   key={exp.id}
                   className={cn(
-                    'group h-11 hover:bg-muted/50 transition-colors',
+                    'group hover:bg-muted/50',
                     isSelected && 'bg-primary/5'
                   )}
                 >
@@ -312,29 +319,27 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
             })}
           </TableBody>
         </Table>
-      </div>
-
-      <div
-        ref={loadMoreRef}
-        className="flex min-h-14 items-center justify-center py-3"
-        aria-live="polite"
-      >
-        {isLoadingMore ? (
-          <p className="text-sm text-muted-foreground">Caricamento altre spese…</p>
-        ) : hasMore ? (
-          <Button type="button" variant="ghost" size="sm" onClick={loadNextPage}>
-            Carica altre 50 spese
-          </Button>
-        ) : loadedExpenses.length > 0 ? (
-          <p className="text-sm text-muted-foreground">Tutte le spese disponibili sono caricate.</p>
+        <div
+          ref={loadMoreRef}
+          className="flex min-h-14 items-center justify-center border-t px-4 py-3"
+          aria-live="polite"
+        >
+          {isLoadingMore ? (
+            <p className="text-sm text-muted-foreground">Caricamento altre spese…</p>
+          ) : hasMore ? (
+            <Button type="button" variant="ghost" size="sm" onClick={loadNextPage}>
+              Carica altre 50 spese
+            </Button>
+          ) : loadedExpenses.length > 0 ? (
+            <p className="text-sm text-muted-foreground">Tutte le spese disponibili sono caricate.</p>
+          ) : null}
+        </div>
+        {loadError ? (
+          <p className="border-t px-4 py-3 text-center text-sm text-destructive" role="alert">
+            {loadError}
+          </p>
         ) : null}
       </div>
-
-      {loadError ? (
-        <p className="text-center text-sm text-destructive" role="alert">
-          {loadError}
-        </p>
-      ) : null}
 
       <BulkActionBar
         selectedIds={selectedIds}

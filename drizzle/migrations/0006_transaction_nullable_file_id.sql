@@ -1,0 +1,1 @@
+ALTER TABLE "transaction" ALTER COLUMN "file_id" DROP NOT NULL;

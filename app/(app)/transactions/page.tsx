@@ -3,11 +3,13 @@ import {
   getTransactionPlatforms,
   getTransactions,
 } from '@/lib/dal/transactions'
+import { getCategories } from '@/lib/dal/categories'
 import {
   parseTransactionFilters,
   type TransactionSearchParams,
 } from '@/lib/validations/transactions'
 import { TransactionFilters } from '@/components/transactions/transaction-filters'
+import { TransactionFormDialog } from '@/components/transactions/transaction-form-dialog'
 import { TransactionTable } from '@/components/transactions/transaction-table'
 
 export default async function TransactionsPage({
@@ -17,9 +19,10 @@ export default async function TransactionsPage({
 }) {
   const params = await searchParams
   const filters = parseTransactionFilters(params)
-  const [transactions, platforms] = await Promise.all([
+  const [transactions, platforms, categories] = await Promise.all([
     getTransactions(filters),
     getTransactionPlatforms(),
+    getCategories(),
   ])
 
   return (
@@ -32,9 +35,7 @@ export default async function TransactionsPage({
             ordina la lista senza modificare i dati originali.
           </p>
         </div>
-        <p className="text-sm text-muted-foreground" aria-live="polite">
-          Caricamento progressivo in blocchi da 50 transazioni
-        </p>
+        <TransactionFormDialog categories={categories} />
       </div>
 
       <Suspense
