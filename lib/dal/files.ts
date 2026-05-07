@@ -13,6 +13,14 @@ export type CreateFileRecordInput = {
   objectKey: string
   mimeType: string
   sizeBytes: number
+  displayName?: string | null
+  rowCount?: number
+  importedCount?: number
+  duplicateCount?: number
+  positiveTotal?: string
+  negativeTotal?: string
+  referenceStartedAt?: Date | null
+  referenceEndedAt?: Date | null
 }
 
 export async function createFileRecord(input: CreateFileRecordInput, database: DbOrTx = db): Promise<FileRow> {
@@ -22,12 +30,18 @@ export async function createFileRecord(input: CreateFileRecordInput, database: D
       id: input.id ?? crypto.randomUUID(),
       userId: input.userId,
       originalName: input.originalName,
+      displayName: input.displayName ?? null,
       objectKey: input.objectKey,
       mimeType: input.mimeType,
       sizeBytes: input.sizeBytes,
       status: 'pending_upload',
-      rowCount: 0,
-      duplicateCount: 0,
+      rowCount: input.rowCount ?? 0,
+      importedCount: input.importedCount ?? 0,
+      duplicateCount: input.duplicateCount ?? 0,
+      positiveTotal: input.positiveTotal ?? '0.00',
+      negativeTotal: input.negativeTotal ?? '0.00',
+      referenceStartedAt: input.referenceStartedAt ?? null,
+      referenceEndedAt: input.referenceEndedAt ?? null,
       errorMessage: null,
     })
     .returning()
@@ -97,7 +111,12 @@ export async function updateFileAnalysisState(
     fileId: string
     status: Extract<FileStatus, 'analyzing' | 'analyzed' | 'failed'>
     rowCount?: number
+    importedCount?: number
     duplicateCount?: number
+    positiveTotal?: string
+    negativeTotal?: string
+    referenceStartedAt?: Date | null
+    referenceEndedAt?: Date | null
     importFormatVersionId?: number | null
     errorMessage?: string | null
     analyzedAt?: Date | null
@@ -109,7 +128,12 @@ export async function updateFileAnalysisState(
     .set({
       status: input.status,
       rowCount: input.rowCount,
+      importedCount: input.importedCount,
       duplicateCount: input.duplicateCount,
+      positiveTotal: input.positiveTotal,
+      negativeTotal: input.negativeTotal,
+      referenceStartedAt: input.referenceStartedAt,
+      referenceEndedAt: input.referenceEndedAt,
       importFormatVersionId: input.importFormatVersionId,
       errorMessage: input.errorMessage ?? null,
       analyzedAt: input.analyzedAt ?? (input.status === 'analyzed' ? new Date() : undefined),
@@ -127,7 +151,12 @@ export async function updateFileImportState(
     fileId: string
     status: Extract<FileStatus, 'importing' | 'imported' | 'failed'>
     rowCount?: number
+    importedCount?: number
     duplicateCount?: number
+    positiveTotal?: string
+    negativeTotal?: string
+    referenceStartedAt?: Date | null
+    referenceEndedAt?: Date | null
     importStartedAt?: Date | null
     importedAt?: Date | null
     errorMessage?: string | null
@@ -139,7 +168,12 @@ export async function updateFileImportState(
     .set({
       status: input.status,
       rowCount: input.rowCount,
+      importedCount: input.importedCount,
       duplicateCount: input.duplicateCount,
+      positiveTotal: input.positiveTotal,
+      negativeTotal: input.negativeTotal,
+      referenceStartedAt: input.referenceStartedAt,
+      referenceEndedAt: input.referenceEndedAt,
       importStartedAt: input.importStartedAt,
       importedAt: input.importedAt,
       errorMessage: input.errorMessage ?? null,

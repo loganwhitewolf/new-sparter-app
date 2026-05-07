@@ -18,7 +18,7 @@ import {
   insertTransactionBatch,
   type TransactionInsertData,
 } from '@/lib/dal/transactions'
-import { parseImportFile } from '@/lib/services/import-parsers'
+import { parseImportFile, type ParsedImportFile } from '@/lib/services/import-parsers'
 import { detectImportFormat } from '@/lib/services/import-format-detector'
 import { readObjectBody } from '@/lib/services/r2'
 import {
@@ -146,6 +146,133 @@ async function readR2Bytes(objectKey: string): Promise<Buffer> {
   return Buffer.concat(chunks)
 }
 
+const SAFE_ERROR_MAX_LENGTH = 500
+
+function safeImportErrorMessage(error: unknown, fallback: string): string {
+  const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : fallback
+  return raw
+    .replace(/https?:\/\/\S+/g, '[redacted-url]')
+    .replace(/\s+at\s+[^\n]+/g, '')
+    .slice(0, SAFE_ERROR_MAX_LENGTH)
+}
+
+type FullFileImportStats = {
+  rowCount: number
+  importedCount: number
+  duplicateCount: number
+  positiveTotal: string
+  negativeTotal: string
+  referenceStartedAt: Date | null
+  referenceEndedAt: Date | null
+}
+
+type NormalizedImportStats = FullFileImportStats & {
+  normalizedRows: ReturnType<typeof normalizeTransactionRow>[]
+  allHashes: string[]
+  repeatedInFileHashes: Set<string>
+  uniqueImportableHashes: Set<string>
+}
+
+function deriveFullFileImportStats(input: {
+  parsed: ParsedImportFile
+  format: { platformId: number; platform: Parameters<typeof normalizeTransactionRow>[1] }
+  userId: string
+  existingHashes?: Set<string>
+}): NormalizedImportStats {
+  const seenHashes = new Set<string>()
+  const repeatedInFileHashes = new Set<string>()
+  const uniqueImportableHashes = new Set<string>()
+  const normalizedRows: ReturnType<typeof normalizeTransactionRow>[] = []
+  const allHashes: string[] = []
+  let skippedOrDuplicateCount = 0
+  let importableCount = 0
+  let positiveTotal = toDecimal('0')
+  let negativeTotal = toDecimal('0')
+  let referenceStartedAt: Date | null = null
+  let referenceEndedAt: Date | null = null
+
+  for (const [index, row] of input.parsed.rows.entries()) {
+    const normalized = normalizeTransactionRow(
+      row,
+      { ...input.format.platform, platformId: input.format.platformId },
+      { userId: input.userId, rowIndex: index + 1 },
+    )
+    normalizedRows.push(normalized)
+
+    if (normalized.amount) {
+      const amount = toDecimal(normalized.amount)
+      if (amount.gt(0)) positiveTotal = positiveTotal.plus(amount)
+      if (amount.lt(0)) negativeTotal = negativeTotal.plus(amount)
+    }
+
+    if (normalized.occurredAt) {
+      if (!referenceStartedAt || normalized.occurredAt < referenceStartedAt) referenceStartedAt = normalized.occurredAt
+      if (!referenceEndedAt || normalized.occurredAt > referenceEndedAt) referenceEndedAt = normalized.occurredAt
+    }
+
+    if (!normalized.valid || !normalized.transactionHash || !normalized.amount || !normalized.occurredAt) {
+      skippedOrDuplicateCount += 1
+      continue
+    }
+
+    allHashes.push(normalized.transactionHash)
+
+    if (seenHashes.has(normalized.transactionHash)) {
+      repeatedInFileHashes.add(normalized.transactionHash)
+      skippedOrDuplicateCount += 1
+      continue
+    }
+    seenHashes.add(normalized.transactionHash)
+
+    if (input.existingHashes?.has(normalized.transactionHash)) {
+      skippedOrDuplicateCount += 1
+      continue
+    }
+
+    uniqueImportableHashes.add(normalized.transactionHash)
+    importableCount += 1
+  }
+
+  return {
+    normalizedRows,
+    allHashes,
+    repeatedInFileHashes,
+    uniqueImportableHashes,
+    rowCount: input.parsed.rowCount,
+    importedCount: importableCount,
+    duplicateCount: skippedOrDuplicateCount,
+    positiveTotal: toDbDecimal(positiveTotal),
+    negativeTotal: toDbDecimal(negativeTotal),
+    referenceStartedAt,
+    referenceEndedAt,
+  }
+}
+
+function applyExistingHashesToStats(stats: NormalizedImportStats, existingHashes: Set<string>): NormalizedImportStats {
+  let existingDuplicateCount = 0
+  for (const hash of stats.uniqueImportableHashes) {
+    if (existingHashes.has(hash)) existingDuplicateCount += 1
+  }
+
+  if (existingDuplicateCount === 0) return stats
+
+  return {
+    ...stats,
+    importedCount: Math.max(0, stats.importedCount - existingDuplicateCount),
+    duplicateCount: stats.duplicateCount + existingDuplicateCount,
+  }
+}
+
+const EMPTY_IMPORT_STATS: FullFileImportStats = {
+  rowCount: 0,
+  importedCount: 0,
+  duplicateCount: 0,
+  positiveTotal: '0.00',
+  negativeTotal: '0.00',
+  referenceStartedAt: null,
+  referenceEndedAt: null,
+}
+
 export async function analyzeFile(input: {
   userId: string
   fileId: string
@@ -164,44 +291,58 @@ export async function analyzeFile(input: {
   try {
     bytes = await readR2Bytes(fileRow.objectKey)
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Could not read uploaded file.'
+    const msg = safeImportErrorMessage(error, 'Could not read uploaded file.')
     await markFileFailed({ userId: input.userId, fileId: input.fileId, errorMessage: msg })
     throw new Error(msg)
   }
 
-  const parsed = await parseImportFile(bytes, { fileName: fileRow.originalName })
+  let parsed: ParsedImportFile
+  try {
+    parsed = await parseImportFile(bytes, { fileName: fileRow.originalName })
+  } catch (error) {
+    const msg = safeImportErrorMessage(error, 'Could not parse uploaded file.')
+    await markFileFailed({ userId: input.userId, fileId: input.fileId, errorMessage: msg })
+    throw new Error(msg)
+  }
 
   const formats = await loadFormatVersions(input.selectedFormatVersionId)
   const detected = detectImportFormat({ parsed, formats, userId: input.userId })
   const best = detected.bestCandidate
 
-  const previewHashes = detected.preview.sampleRows
-    .map((r) => r.transactionHash)
-    .filter((h): h is string => Boolean(h))
-
-  const existingHashes = await getDuplicateHashes(db, input.userId, previewHashes)
+  const provisionalStats = best
+    ? deriveFullFileImportStats({ parsed, format: best, userId: input.userId })
+    : { ...EMPTY_IMPORT_STATS, rowCount: parsed.rowCount, allHashes: [] as string[], normalizedRows: [], repeatedInFileHashes: new Set<string>(), uniqueImportableHashes: new Set<string>() }
+  const existingHashes = await getDuplicateHashes(db, input.userId, provisionalStats.allHashes)
+  const fullStats = best
+    ? applyExistingHashesToStats(provisionalStats, existingHashes)
+    : { ...EMPTY_IMPORT_STATS, rowCount: parsed.rowCount }
 
   const sampleRows = detected.preview.sampleRows.map((r) => ({
     rowIndex: r.rowIndex,
     description: r.description,
     amount: r.amount,
     occurredAt: r.occurredAt,
-    duplicate: Boolean(r.transactionHash && existingHashes.has(r.transactionHash)),
+    duplicate: Boolean(r.transactionHash && (existingHashes.has(r.transactionHash) || provisionalStats.repeatedInFileHashes.has(r.transactionHash))),
     valid: r.valid,
     errors: r.errors,
     warnings: r.warnings,
   }))
 
-  const duplicateCount = sampleRows.filter((r) => r.duplicate).length
+  const safeErrorMessage = detected.errors[0] ? safeImportErrorMessage(detected.errors[0], 'Analysis failed.') : null
 
   await updateFileAnalysisState({
     userId: input.userId,
     fileId: input.fileId,
     status: detected.errors.length > 0 ? 'failed' : 'analyzed',
-    rowCount: parsed.rowCount,
-    duplicateCount,
+    rowCount: fullStats.rowCount,
+    importedCount: 0,
+    duplicateCount: fullStats.duplicateCount,
+    positiveTotal: fullStats.positiveTotal,
+    negativeTotal: fullStats.negativeTotal,
+    referenceStartedAt: fullStats.referenceStartedAt,
+    referenceEndedAt: fullStats.referenceEndedAt,
     importFormatVersionId: best?.formatVersionId ?? null,
-    errorMessage: detected.errors[0] ?? null,
+    errorMessage: safeErrorMessage,
   })
 
   return {
@@ -209,7 +350,7 @@ export async function analyzeFile(input: {
     formatVersionId: best?.formatVersionId ?? null,
     platformName: best?.platform.name ?? null,
     rowCount: parsed.rowCount,
-    duplicateCount,
+    duplicateCount: fullStats.duplicateCount,
     warnings: detected.warnings,
     errors: detected.errors,
     sampleRows,
@@ -237,16 +378,35 @@ export async function importFile(input: {
   try {
     bytes = await readR2Bytes(fileRow.objectKey)
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Could not read uploaded file.'
+    const msg = safeImportErrorMessage(error, 'Could not read uploaded file.')
     await markFileFailed({ userId: input.userId, fileId: input.fileId, errorMessage: msg })
     throw new Error(msg)
   }
 
-  const parsed = await parseImportFile(bytes, { fileName: fileRow.originalName })
+  let parsed: ParsedImportFile
+  try {
+    parsed = await parseImportFile(bytes, { fileName: fileRow.originalName })
+  } catch (error) {
+    const msg = safeImportErrorMessage(error, 'Could not parse uploaded file.')
+    await markFileFailed({ userId: input.userId, fileId: input.fileId, errorMessage: msg })
+    throw new Error(msg)
+  }
 
   if (parsed.errors.length > 0) {
-    const msg = parsed.errors[0] ?? 'Parse error.'
-    await markFileFailed({ userId: input.userId, fileId: input.fileId, errorMessage: msg })
+    const msg = safeImportErrorMessage(parsed.errors[0] ?? 'Parse error.', 'Parse error.')
+    await updateFileImportState({
+      userId: input.userId,
+      fileId: input.fileId,
+      status: 'failed',
+      rowCount: parsed.rowCount,
+      importedCount: 0,
+      duplicateCount: parsed.rowCount,
+      positiveTotal: '0.00',
+      negativeTotal: '0.00',
+      referenceStartedAt: null,
+      referenceEndedAt: null,
+      errorMessage: msg,
+    })
     throw new Error(msg)
   }
 
@@ -256,8 +416,20 @@ export async function importFile(input: {
   const detected = detectImportFormat({ parsed, formats, userId: input.userId })
 
   if (!detected.bestCandidate) {
-    const msg = detected.errors[0] ?? 'No matching import format found.'
-    await markFileFailed({ userId: input.userId, fileId: input.fileId, errorMessage: msg })
+    const msg = safeImportErrorMessage(detected.errors[0] ?? 'No matching import format found.', 'No matching import format found.')
+    await updateFileImportState({
+      userId: input.userId,
+      fileId: input.fileId,
+      status: 'failed',
+      rowCount: parsed.rowCount,
+      importedCount: 0,
+      duplicateCount: parsed.rowCount,
+      positiveTotal: '0.00',
+      negativeTotal: '0.00',
+      referenceStartedAt: null,
+      referenceEndedAt: null,
+      errorMessage: msg,
+    })
     throw new Error(msg)
   }
 
@@ -268,25 +440,13 @@ export async function importFile(input: {
     const result = await db.transaction(async (tx) => {
       const patterns = await loadActivePatterns(tx, input.userId)
 
-      // Collect all transaction hashes for bulk duplicate check
-      const allNormalized = parsed.rows
-        .map((row, idx) =>
-          normalizeTransactionRow(
-            row,
-            { ...best.platform, platformId: best.platformId },
-            { userId: input.userId, rowIndex: idx + 1 },
-          ),
-        )
+      const provisionalStats = deriveFullFileImportStats({ parsed, format: best, userId: input.userId })
+      const existingHashes = await getDuplicateHashes(tx, input.userId, provisionalStats.allHashes)
+      const fullStats = applyExistingHashesToStats(provisionalStats, existingHashes)
 
-      const allHashes = allNormalized
-        .map((n) => n.transactionHash)
-        .filter((h): h is string => Boolean(h))
-
-      const existingHashes = await getDuplicateHashes(tx, input.userId, allHashes)
-
-      // Build transaction rows and per-descriptionHash aggregation in a single pass
+      // Build transaction rows and per-descriptionHash aggregation in a single pass over normalized rows
       const transactionRows: TransactionInsertData[] = []
-      let duplicateCount = 0
+      const acceptedHashes = new Set<string>()
 
       type ExpenseAccum = {
         description: string
@@ -298,15 +458,15 @@ export async function importFile(input: {
       }
       const expenseAccumMap = new Map<string, ExpenseAccum>()
 
-      for (const normalized of allNormalized) {
+      for (const normalized of fullStats.normalizedRows) {
         if (!normalized.valid || !normalized.transactionHash || !normalized.amount || !normalized.occurredAt) {
           continue
         }
 
-        if (existingHashes.has(normalized.transactionHash)) {
-          duplicateCount += 1
+        if (existingHashes.has(normalized.transactionHash) || acceptedHashes.has(normalized.transactionHash)) {
           continue
         }
+        acceptedHashes.add(normalized.transactionHash)
 
         const txId = crypto.randomUUID()
         const txData: TransactionInsertData = {
@@ -429,16 +589,21 @@ export async function importFile(input: {
         userId: input.userId,
         fileId: input.fileId,
         status: 'imported',
-        rowCount: parsed.rows.length,
-        duplicateCount,
+        rowCount: fullStats.rowCount,
+        importedCount: insertedTxs.length,
+        duplicateCount: fullStats.duplicateCount,
+        positiveTotal: fullStats.positiveTotal,
+        negativeTotal: fullStats.negativeTotal,
+        referenceStartedAt: fullStats.referenceStartedAt,
+        referenceEndedAt: fullStats.referenceEndedAt,
         importedAt: new Date(),
         errorMessage: null,
       })
 
       return {
         fileId: input.fileId,
-        rowCount: parsed.rows.length,
-        duplicateCount,
+        rowCount: fullStats.rowCount,
+        duplicateCount: fullStats.duplicateCount,
         importedCount: insertedTxs.length,
         warnings: detected.warnings,
         errors: [],
@@ -447,7 +612,7 @@ export async function importFile(input: {
 
     return result
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Import failed.'
+    const msg = safeImportErrorMessage(error, 'Import failed.')
     await markFileFailed({ userId: input.userId, fileId: input.fileId, errorMessage: msg })
     throw new Error(msg)
   }

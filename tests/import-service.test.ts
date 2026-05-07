@@ -274,6 +274,7 @@ const {
   categorizePipeline: categorizePipelineActual,
 } = await vi.importActual<typeof import('../lib/services/categorization')>('../lib/services/categorization')
 const { createPatternAction } = await import('../lib/actions/patterns')
+const { detectImportFormat } = await import('../lib/services/import-format-detector')
 const { importFile, analyzeFile } = await import('../lib/services/import')
 
 // ---------------------------------------------------------------------------
@@ -356,6 +357,16 @@ async function makeReadableStream(buf: Buffer): Promise<AsyncIterable<Uint8Array
   return (async function* () {
     yield buf
   })()
+}
+
+function latestFileAnalysisUpdate() {
+  const calls = mocks.updateFileAnalysisState.mock.calls
+  return calls[calls.length - 1]?.[0] as Record<string, unknown>
+}
+
+function latestFileImportUpdate() {
+  const calls = mocks.updateFileImportState.mock.calls
+  return calls[calls.length - 1]?.[0] as Record<string, unknown>
 }
 
 // ---------------------------------------------------------------------------
@@ -814,16 +825,82 @@ describe('importFile', () => {
       return new Set(hashes)
     })
 
-    await importFile({
+    const result = await importFile({
       userId: USER_ID,
       fileId: FILE_ID,
       selectedFormatVersionId: 1,
-    }).catch(() => null)
+    })
 
     // The pre-flight Set filter should have eliminated all rows before calling insertTransactionBatch.
     // Verify that insertTransactionBatch was called with an empty array — the DB-level onConflictDoNothing
     // is a safety net, but the primary dedup contract is this pre-flight filter.
+    expect(result).toMatchObject({ rowCount: 2, importedCount: 0, duplicateCount: 2 })
     expect(mocks.insertTransactionBatch).toHaveBeenCalledWith(expect.anything(), [])
+    expect(latestFileImportUpdate()).toMatchObject({
+      status: 'imported',
+      rowCount: 2,
+      importedCount: 0,
+      duplicateCount: 2,
+      positiveTotal: '0.00',
+      negativeTotal: '-49.00',
+    })
+  })
+
+  it('persists zeroed stats for an empty parsed file without crashing', async () => {
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport([]))
+
+    const result = await importFile({ userId: USER_ID, fileId: FILE_ID })
+
+    expect(result).toMatchObject({ rowCount: 0, importedCount: 0, duplicateCount: 0 })
+    expect(mocks.insertTransactionBatch).toHaveBeenCalledWith(expect.anything(), [])
+    expect(latestFileImportUpdate()).toMatchObject({
+      status: 'imported',
+      rowCount: 0,
+      importedCount: 0,
+      duplicateCount: 0,
+      positiveTotal: '0.00',
+      negativeTotal: '0.00',
+      referenceStartedAt: null,
+      referenceEndedAt: null,
+    })
+  })
+
+  it('persists imported full-file stats including in-file duplicate skips and date range', async () => {
+    const rows = [
+      { '"Data Movimento"': '2026-01-10', '"Descrizione"': 'Salary', '"Importo"': '100.00' },
+      { '"Data Movimento"': '2026-01-11', '"Descrizione"': 'Coffee', '"Importo"': '-3.50' },
+      { '"Data Movimento"': '2026-01-11', '"Descrizione"': 'Coffee', '"Importo"': '-3.50' },
+      { '"Data Movimento"': '', '"Descrizione"': 'Malformed', '"Importo"': '' },
+    ]
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport(rows))
+    mocks.insertTransactionBatch.mockImplementation(async (_tx: unknown, insertedRows: Array<Record<string, unknown>>) => insertedRows)
+
+    const result = await importFile({
+      userId: USER_ID,
+      fileId: FILE_ID,
+      selectedFormatVersionId: 1,
+    })
+
+    expect(result).toMatchObject({
+      rowCount: 4,
+      importedCount: 2,
+      duplicateCount: 2,
+    })
+    expect(mocks.insertTransactionBatch).toHaveBeenCalledWith(expect.anything(), expect.arrayContaining([
+      expect.objectContaining({ description: 'Salary', amount: '100.00' }),
+      expect.objectContaining({ description: 'Coffee', amount: '-3.50' }),
+    ]))
+    expect(latestFileImportUpdate()).toMatchObject({
+      status: 'imported',
+      rowCount: 4,
+      importedCount: 2,
+      duplicateCount: 2,
+      positiveTotal: '100.00',
+      negativeTotal: '-7.00',
+      referenceStartedAt: new Date('2026-01-10T00:00:00.000Z'),
+      referenceEndedAt: new Date('2026-01-11T00:00:00.000Z'),
+      errorMessage: null,
+    })
   })
 
   it('free plan still uses global system regex patterns when importing expenses', async () => {
@@ -982,6 +1059,69 @@ describe('analyzeFile', () => {
     mocks.updateFileAnalysisState.mockResolvedValue(makeFileRow({ status: 'analyzing' }))
     mocks.markFileFailed.mockResolvedValue(makeFileRow({ status: 'failed' }))
     mocks.getDuplicateHashes.mockResolvedValue(new Set<string>())
+  })
+
+  it('persists full-file analysis stats instead of sample-limited preview stats', async () => {
+    mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport([
+      { '"Data Movimento"': '2026-01-10', '"Descrizione"': 'Supermercato Esselunga', '"Importo"': '-45.50' },
+      { '"Data Movimento"': '2026-01-11', '"Descrizione"': 'Caffè Nero', '"Importo"': '-3.50' },
+      { '"Data Movimento"': '2026-01-12', '"Descrizione"': 'Stipendio', '"Importo"': '100.00' },
+    ]))
+
+    const result = await analyzeFile({ userId: USER_ID, fileId: FILE_ID })
+
+    expect(result.rowCount).toBe(3)
+    expect(result.sampleRows).toHaveLength(2)
+    expect(latestFileAnalysisUpdate()).toMatchObject({
+      status: 'analyzed',
+      rowCount: 3,
+      duplicateCount: 0,
+      importedCount: 0,
+      positiveTotal: '100.00',
+      negativeTotal: '-49.00',
+      referenceStartedAt: new Date('2026-01-10T00:00:00.000Z'),
+      referenceEndedAt: new Date('2026-01-12T00:00:00.000Z'),
+      errorMessage: null,
+    })
+  })
+
+  it('persists bounded failed analysis diagnostics with known row count for unknown formats', async () => {
+    mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport([
+      { '"Data Movimento"': '2026-01-10', '"Descrizione"': 'raw secret row', '"Importo"': '-45.50' },
+      { '"Data Movimento"': '2026-01-11', '"Descrizione"': 'other raw row', '"Importo"': '-3.50' },
+    ]))
+    vi.mocked(detectImportFormat).mockReturnValueOnce({
+      bestCandidate: null,
+      candidates: [],
+      preview: {
+        rowCount: 2,
+        sampleRows: [],
+        duplicateCount: 0,
+        warnings: [],
+      },
+      warnings: [],
+      errors: [`No supported import format found. ${'x'.repeat(700)} https://signed.example.test/raw-file`],
+    })
+
+    const result = await analyzeFile({ userId: USER_ID, fileId: FILE_ID })
+
+    expect(result.errors).toHaveLength(1)
+    expect(latestFileAnalysisUpdate()).toMatchObject({
+      status: 'failed',
+      rowCount: 2,
+      duplicateCount: 0,
+      importedCount: 0,
+      positiveTotal: '0.00',
+      negativeTotal: '0.00',
+      referenceStartedAt: null,
+      referenceEndedAt: null,
+    })
+    const errorMessage = String(latestFileAnalysisUpdate().errorMessage)
+    expect(errorMessage.length).toBeLessThanOrEqual(500)
+    expect(errorMessage).not.toContain('https://signed.example.test')
+    expect(errorMessage).not.toContain('raw secret row')
   })
 
   it('throws and marks file failed when R2 read returns empty body', async () => {
