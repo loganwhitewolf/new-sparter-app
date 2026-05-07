@@ -268,8 +268,10 @@ vi.mock('@/lib/services/import-format-detector', () => ({
 }))
 
 // Import the modules under test AFTER mocks are registered
-const { applyTier1Regex } = await import('../lib/services/categorization')
-const { categorizePipeline: categorizePipelineActual } = await vi.importActual<typeof import('../lib/services/categorization')>('../lib/services/categorization')
+const {
+  applyTier1Regex,
+  categorizePipeline: categorizePipelineActual,
+} = await vi.importActual<typeof import('../lib/services/categorization')>('../lib/services/categorization')
 const { createPatternAction } = await import('../lib/actions/patterns')
 const { importFile, analyzeFile } = await import('../lib/services/import')
 

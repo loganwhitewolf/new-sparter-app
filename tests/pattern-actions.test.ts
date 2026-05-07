@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
@@ -41,6 +41,10 @@ const freeSession = {
   ...paidSession,
   subscriptionPlan: 'free' as const,
 }
+
+afterEach(() => {
+  delete process.env.CATEGORIZATION_CUSTOM_PATTERNS_MIN_PLAN
+})
 
 function makeFormData(fields: Record<string, string | null>): FormData {
   const fd = new FormData()
@@ -98,7 +102,8 @@ describe('pattern Server Actions', () => {
       expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/patterns')
     })
 
-    it('denies free users before validation or mutation', async () => {
+    it('denies free users before validation or mutation when configured for Basic+', async () => {
+      process.env.CATEGORIZATION_CUSTOM_PATTERNS_MIN_PLAN = 'basic'
       mocks.verifySession.mockResolvedValueOnce(freeSession)
 
       const result = await createPatternAction({ error: null }, validCreateForm())
@@ -175,7 +180,8 @@ describe('pattern Server Actions', () => {
       expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/patterns')
     })
 
-    it('denies free users before mutation', async () => {
+    it('denies free users before mutation when configured for Basic+', async () => {
+      process.env.CATEGORIZATION_CUSTOM_PATTERNS_MIN_PLAN = 'basic'
       mocks.verifySession.mockResolvedValueOnce(freeSession)
 
       const result = await updatePatternAction({ error: null }, validUpdateForm())
@@ -246,7 +252,8 @@ describe('pattern Server Actions', () => {
       expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/patterns')
     })
 
-    it('denies free users before mutation', async () => {
+    it('denies free users before mutation when configured for Basic+', async () => {
+      process.env.CATEGORIZATION_CUSTOM_PATTERNS_MIN_PLAN = 'basic'
       mocks.verifySession.mockResolvedValueOnce(freeSession)
 
       const result = await deletePatternAction({ error: null }, makeFormData({ id: '7' }))
