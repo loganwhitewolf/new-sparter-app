@@ -137,11 +137,16 @@ export async function categorizePipeline(
   descriptionHash: string,
   patterns: ActivePattern[],
 ): Promise<CategorizationResult> {
-  if (plan === 'free') return null
+  const tier1Patterns = plan === 'free'
+    ? patterns.filter((pattern) => pattern.userId === null)
+    : patterns
 
-  // Tier 1: regex patterns (basic and pro)
-  const tier1 = applyTier1Regex(description, amount, patterns)
+  // Tier 1: global system regex patterns are available to every plan; user-owned
+  // regex patterns are paid-plan features and are filtered out above for free users.
+  const tier1 = applyTier1Regex(description, amount, tier1Patterns)
   if (tier1) return tier1
+
+  if (plan === 'free') return null
 
   // Tier 2: classification history (basic and pro)
   const tier2SubCategoryId = await applyTier2History(database, userId, descriptionHash)

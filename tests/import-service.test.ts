@@ -139,7 +139,7 @@ function makeQueryChain(finalValue: unknown[] = []) {
   const proxy: typeof chain = new Proxy(chain, {
     get: (_t, prop) => {
       if (prop === 'then') return resolve().then.bind(resolve())
-      if (typeof prop === 'string') return (..._args: unknown[]) => proxy
+      if (typeof prop === 'string') return () => proxy
       return undefined
     },
   })
@@ -524,11 +524,41 @@ describe('categorizePipeline direct', () => {
     })
   })
 
-  it('returns null for free plan regardless of matching patterns', async () => {
+  it('uses global system regex patterns for free plan imports', async () => {
     const patterns: ActivePattern[] = [
       {
         id: 5,
         userId: null,
+        pattern: 'netflix',
+        subCategoryId: 5,
+        amountSign: 'any',
+        confidence: '0.95',
+        priority: 10,
+      },
+    ]
+
+    const result = await categorizePipelineActual(
+      dbProxy,
+      USER_ID,
+      'free',
+      'Netflix abbonamento mensile',
+      '-12.99',
+      'dh-netflix',
+      patterns,
+    )
+
+    expect(result).toMatchObject({
+      subCategoryId: 5,
+      source: 'system_pattern',
+      patternId: 5,
+    })
+  })
+
+  it('does not use user-owned regex patterns for free plan imports', async () => {
+    const patterns: ActivePattern[] = [
+      {
+        id: 5,
+        userId: USER_ID,
         pattern: 'netflix',
         subCategoryId: 5,
         amountSign: 'any',
@@ -684,9 +714,14 @@ describe('importFile', () => {
     expect(mocks.insertTransactionBatch).toHaveBeenCalledWith(expect.anything(), [])
   })
 
-  it('free plan produces uncategorized expenses', async () => {
+  it('free plan still uses global system regex patterns when importing expenses', async () => {
     mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
-    mocks.categorizePipeline.mockResolvedValue(null)
+    mocks.categorizePipeline.mockResolvedValue({
+      subCategoryId: 10,
+      confidence: '0.90',
+      patternId: 1,
+      source: 'system_pattern' as const,
+    })
 
     const result = await importFile({
       userId: USER_ID,
@@ -694,12 +729,18 @@ describe('importFile', () => {
       subscriptionPlan: 'free',
     }).catch(() => null)
 
-    // categorizePipeline is called; for free plan it should return null
-    // We verify that insertTransactionBatch was called (import attempted)
-    // and categorizePipeline returned null (no categorization)
     if (result) {
       expect(result.fileId).toBe(FILE_ID)
     }
+    expect(mocks.categorizePipeline).toHaveBeenCalledWith(
+      expect.anything(),
+      USER_ID,
+      'free',
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      expect.any(Array),
+    )
   })
 
   it('basic plan with Tier 1 regex match inserts classification history row', async () => {
