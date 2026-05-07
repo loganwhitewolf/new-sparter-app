@@ -21,7 +21,7 @@ import { db } from '@/lib/db'
 import { expense } from '@/lib/db/schema'
 import { and, eq, inArray } from 'drizzle-orm'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
-import { APP_ROUTES } from '../routes'
+import { APP_ROUTES } from '@/lib/routes'
 
 type LoadMoreExpensesInput = {
   filters?: ExpenseFilters

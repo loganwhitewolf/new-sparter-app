@@ -338,7 +338,6 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
 
       <BulkActionBar
         selectedIds={selectedIds}
-        onClearSelection={() => setSelectedIds([])}
         onBulkCategorize={() => setBulkDialogOpen(true)}
       />
 

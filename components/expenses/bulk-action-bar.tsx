@@ -4,11 +4,10 @@ import { cn } from '@/lib/utils'
 
 type Props = {
   selectedIds: string[]
-  onClearSelection: () => void
   onBulkCategorize: () => void
 }
 
-export function BulkActionBar({ selectedIds, onClearSelection, onBulkCategorize }: Props) {
+export function BulkActionBar({ selectedIds, onBulkCategorize }: Props) {
   const count = selectedIds.length
 
   return (

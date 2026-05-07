@@ -13,7 +13,7 @@ import {
 } from '@/lib/dal/transactions'
 import { db } from '@/lib/db'
 import type { ActionState } from '@/lib/validations/expense'
-import { APP_ROUTES } from '../routes'
+import { APP_ROUTES } from '@/lib/routes'
 
 type LoadMoreTransactionsInput = {
   filters?: TransactionSearchParams

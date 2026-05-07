@@ -10,7 +10,7 @@ import Decimal from 'decimal.js'
 import {
   canUseHistoryCategorization,
   canUseRegexCategorization,
-} from '../config/categorization'
+} from '@/lib/config/categorization'
 
 export type ActivePattern = {
   id: number

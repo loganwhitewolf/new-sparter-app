@@ -1,5 +1,5 @@
-import { computeTransactionHash, normalizeTransactionRow, parseBankDate, parseItalianAmount, type ImportPlatformConfig } from '../utils/import'
-import type { ParsedImportFile, ParsedImportRow } from './import-parsers'
+import { computeTransactionHash, normalizeTransactionRow, parseBankDate, parseItalianAmount, type ImportPlatformConfig } from '@/lib/utils/import'
+import type { ParsedImportFile, ParsedImportRow } from '@/lib/services/import-parsers'
 
 export type ImportFormatCandidateInput = {
   id: number
