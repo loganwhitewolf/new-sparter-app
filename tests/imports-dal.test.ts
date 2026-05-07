@@ -10,6 +10,11 @@ const mocks = vi.hoisted(() => ({
   limitArgs: [] as number[],
   offsetArgs: [] as number[],
   queryResult: [] as unknown[],
+  updateTables: [] as unknown[],
+  setArgs: [] as unknown[],
+  updateWhereArgs: [] as unknown[],
+  returningArgs: [] as unknown[],
+  updateResult: [] as unknown[],
 }))
 
 function makeQueryChain() {
@@ -43,6 +48,25 @@ function makeQueryChain() {
   return chain
 }
 
+function makeUpdateChain() {
+  const chain = {
+    set: vi.fn((arg: unknown) => {
+      mocks.setArgs.push(arg)
+      return chain
+    }),
+    where: vi.fn((arg: unknown) => {
+      mocks.updateWhereArgs.push(arg)
+      return chain
+    }),
+    returning: vi.fn((arg?: unknown) => {
+      mocks.returningArgs.push(arg)
+      return Promise.resolve(mocks.updateResult)
+    }),
+  }
+
+  return chain
+}
+
 vi.mock('server-only', () => ({}))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
 vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
@@ -51,6 +75,10 @@ vi.mock('@/lib/db', () => ({
     select: (shape: unknown) => {
       mocks.selectedShapes.push(shape)
       return makeQueryChain()
+    },
+    update: (table: unknown) => {
+      mocks.updateTables.push(table)
+      return makeUpdateChain()
     },
   },
 }))
@@ -90,6 +118,7 @@ vi.mock('@/lib/db/schema', () => ({
     referenceEndedAt: 'file.referenceEndedAt',
     errorMessage: 'file.errorMessage',
     createdAt: 'file.createdAt',
+    updatedAt: 'file.updatedAt',
   },
   importFormatVersion: {
     id: 'importFormatVersion.id',
@@ -108,6 +137,7 @@ const {
   getImports,
   importListOrderTimestamp,
   importListSelect,
+  updateImportDisplayName,
 } = await import('../lib/dal/imports')
 
 describe('imports DAL read model', () => {
@@ -120,7 +150,12 @@ describe('imports DAL read model', () => {
     mocks.orderByArgs.length = 0
     mocks.limitArgs.length = 0
     mocks.offsetArgs.length = 0
+    mocks.updateTables.length = 0
+    mocks.setArgs.length = 0
+    mocks.updateWhereArgs.length = 0
+    mocks.returningArgs.length = 0
     mocks.queryResult = []
+    mocks.updateResult = []
     mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
   })
 
@@ -308,6 +343,66 @@ describe('imports DAL read model', () => {
         { op: 'eq', left: 'file.userId', right: 'user-1' },
         { op: 'gte', left: 'file.referenceEndedAt', right: new Date('2026-02-01T00:00:00.000Z') },
       ]),
+    })
+  })
+
+  it('updates an import display name through a file-id and user-id scoped write without exposing storage fields', async () => {
+    const updatedRow = {
+      id: 'file-1',
+      displayName: 'January import',
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    }
+    mocks.updateResult = [updatedRow]
+
+    await expect(
+      updateImportDisplayName(undefined, {
+        userId: 'user-1',
+        fileId: 'file-1',
+        displayName: '  January import  ',
+      }),
+    ).resolves.toBe(updatedRow)
+
+    expect(mocks.updateTables[0]).toMatchObject({ id: 'file.id', userId: 'file.userId' })
+    expect(mocks.setArgs[0]).toEqual({
+      displayName: 'January import',
+      updatedAt: expect.any(Date),
+    })
+    expect(mocks.updateWhereArgs[0]).toEqual({
+      op: 'and',
+      args: [
+        { op: 'eq', left: 'file.id', right: 'file-1' },
+        { op: 'eq', left: 'file.userId', right: 'user-1' },
+      ],
+    })
+    expect(mocks.returningArgs[0]).toEqual({
+      id: 'file.id',
+      displayName: 'file.displayName',
+      updatedAt: 'file.updatedAt',
+    })
+    expect(JSON.stringify(mocks.returningArgs[0])).not.toContain('objectKey')
+  })
+
+  it('normalizes blank rename values to null and returns null for non-owned file ids', async () => {
+    mocks.updateResult = []
+
+    await expect(
+      updateImportDisplayName(undefined, {
+        userId: 'user-1',
+        fileId: 'file-from-user-2',
+        displayName: '   ',
+      }),
+    ).resolves.toBeNull()
+
+    expect(mocks.setArgs[0]).toEqual({
+      displayName: null,
+      updatedAt: expect.any(Date),
+    })
+    expect(mocks.updateWhereArgs[0]).toEqual({
+      op: 'and',
+      args: [
+        { op: 'eq', left: 'file.id', right: 'file-from-user-2' },
+        { op: 'eq', left: 'file.userId', right: 'user-1' },
+      ],
     })
   })
 })

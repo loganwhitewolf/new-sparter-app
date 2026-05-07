@@ -1,7 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { and, desc, eq, gte, ilike, lte, or, sql } from 'drizzle-orm'
-import { db } from '@/lib/db'
+import { db, type DbOrTx } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import { file, importFormatVersion, platform } from '@/lib/db/schema'
 import type { ParsedImportFilters } from '@/lib/validations/import'
@@ -57,6 +57,39 @@ export type ImportListRow = {
   referenceStartedAt: Date | null
   referenceEndedAt: Date | null
   errorMessage: string | null
+}
+
+export type UpdateImportDisplayNameParams = {
+  userId: string
+  fileId: string
+  displayName: string | null
+}
+
+export type ImportDisplayNameRow = {
+  id: string
+  displayName: string | null
+  updatedAt: Date
+}
+
+export async function updateImportDisplayName(
+  database: DbOrTx = db,
+  input: UpdateImportDisplayNameParams,
+): Promise<ImportDisplayNameRow | null> {
+  const normalizedDisplayName = input.displayName?.trim() || null
+  const rows = await database
+    .update(file)
+    .set({
+      displayName: normalizedDisplayName,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(file.id, input.fileId), eq(file.userId, input.userId)))
+    .returning({
+      id: file.id,
+      displayName: file.displayName,
+      updatedAt: file.updatedAt,
+    })
+
+  return rows[0] ?? null
 }
 
 export const getImportRows = cache(

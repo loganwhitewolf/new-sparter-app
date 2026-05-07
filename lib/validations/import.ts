@@ -62,10 +62,20 @@ export const ImportFileSchema = z.object({
   overrideWarnings: z.boolean().default(false),
 })
 
+export const UpdateImportDisplayNameSchema = z.object({
+  fileId: FileIdSchema,
+  displayName: z
+    .string({ error: 'Import name is required.' })
+    .trim()
+    .max(255, { error: 'Import name is too long.' })
+    .nullable(),
+})
+
 export type InitiateUploadInput = z.infer<typeof InitiateUploadSchema>
 export type ConfirmUploadInput = z.infer<typeof ConfirmUploadSchema>
 export type AnalyzeImportInput = z.infer<typeof AnalyzeImportSchema>
 export type ImportFileInput = z.infer<typeof ImportFileSchema>
+export type UpdateImportDisplayNameInput = z.infer<typeof UpdateImportDisplayNameSchema>
 
 export type ImportSearchParams = Record<string, string | string[] | undefined>
 

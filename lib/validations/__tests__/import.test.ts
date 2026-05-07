@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseImportFilters } from '../import'
+import { UpdateImportDisplayNameSchema, parseImportFilters } from '../import'
 
 describe('parseImportFilters', () => {
   it('returns an empty filter object for empty Next searchParams', () => {
@@ -67,5 +67,45 @@ describe('parseImportFilters', () => {
 
   it('ignores oversized query strings instead of passing them to SQL', () => {
     expect(parseImportFilters({ q: 'x'.repeat(256) })).toEqual({})
+  })
+})
+
+describe('UpdateImportDisplayNameSchema', () => {
+  const validFileId = '11111111-1111-4111-8111-111111111111'
+
+  it('accepts a UUID file id and trims nullable display names', () => {
+    expect(
+      UpdateImportDisplayNameSchema.parse({
+        fileId: validFileId,
+        displayName: '  January import  ',
+      }),
+    ).toEqual({ fileId: validFileId, displayName: 'January import' })
+
+    expect(
+      UpdateImportDisplayNameSchema.parse({
+        fileId: validFileId,
+        displayName: null,
+      }),
+    ).toEqual({ fileId: validFileId, displayName: null })
+  })
+
+  it('rejects invalid UUIDs and oversized display names while allowing the 255 character limit', () => {
+    expect(() =>
+      UpdateImportDisplayNameSchema.parse({ fileId: 'not-a-uuid', displayName: 'Name' }),
+    ).toThrow()
+
+    expect(
+      UpdateImportDisplayNameSchema.parse({
+        fileId: validFileId,
+        displayName: 'x'.repeat(255),
+      }).displayName,
+    ).toHaveLength(255)
+
+    expect(() =>
+      UpdateImportDisplayNameSchema.parse({
+        fileId: validFileId,
+        displayName: 'x'.repeat(256),
+      }),
+    ).toThrow()
   })
 })
