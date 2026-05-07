@@ -7,6 +7,10 @@ import {
   expenseClassificationHistory,
 } from '@/lib/db/schema'
 import Decimal from 'decimal.js'
+import {
+  canUseHistoryCategorization,
+  canUseRegexCategorization,
+} from '../config/categorization'
 
 export type ActivePattern = {
   id: number
@@ -137,18 +141,18 @@ export async function categorizePipeline(
   descriptionHash: string,
   patterns: ActivePattern[],
 ): Promise<CategorizationResult> {
-  const tier1Patterns = plan === 'free'
-    ? patterns.filter((pattern) => pattern.userId === null)
-    : patterns
+  // Alpha default: regex categorization is available to every plan. The minimum
+  // plan is configurable through CATEGORIZATION_REGEX_MIN_PLAN for post-alpha
+  // pricing changes without touching the pipeline logic.
+  if (canUseRegexCategorization(plan)) {
+    const tier1 = applyTier1Regex(description, amount, patterns)
+    if (tier1) return tier1
+  }
 
-  // Tier 1: global system regex patterns are available to every plan; user-owned
-  // regex patterns are paid-plan features and are filtered out above for free users.
-  const tier1 = applyTier1Regex(description, amount, tier1Patterns)
-  if (tier1) return tier1
+  // Alpha default: history-based categorization is available to every plan. The
+  // minimum plan is configurable through CATEGORIZATION_HISTORY_MIN_PLAN.
+  if (!canUseHistoryCategorization(plan)) return null
 
-  if (plan === 'free') return null
-
-  // Tier 2: classification history (basic and pro)
   const tier2SubCategoryId = await applyTier2History(database, userId, descriptionHash)
   if (tier2SubCategoryId !== null) {
     return {

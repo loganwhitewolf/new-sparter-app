@@ -11,12 +11,28 @@ import {
   updatePattern,
   deletePattern,
 } from '@/lib/dal/patterns'
+import { canManageCustomPatterns } from '../config/categorization'
 import { APP_ROUTES } from '../routes'
 
-function requirePaidPlan(plan: string): ActionState | null {
-  if (plan === 'free') {
-    return { error: 'I pattern personalizzati richiedono un piano Basic o Pro.' }
+function customPatternsUnavailableMessage(): string {
+  const minPlan = process.env.CATEGORIZATION_CUSTOM_PATTERNS_MIN_PLAN?.trim().toLowerCase()
+
+  if (minPlan === 'basic') {
+    return 'I pattern personalizzati richiedono un piano Basic o Pro.'
   }
+
+  if (minPlan === 'pro') {
+    return 'I pattern personalizzati richiedono un piano Pro.'
+  }
+
+  return 'I pattern personalizzati non sono disponibili per il tuo piano.'
+}
+
+function requireCustomPatternsAccess(plan: 'free' | 'basic' | 'pro'): ActionState | null {
+  if (!canManageCustomPatterns(plan)) {
+    return { error: customPatternsUnavailableMessage() }
+  }
+
   return null
 }
 
@@ -26,8 +42,8 @@ export async function createPatternAction(
 ): Promise<ActionState> {
   const { userId, subscriptionPlan } = await verifySession()
 
-  const planError = requirePaidPlan(subscriptionPlan)
-  if (planError) return planError
+  const accessError = requireCustomPatternsAccess(subscriptionPlan)
+  if (accessError) return accessError
 
   const parsed = CreatePatternSchema.safeParse({
     pattern: formData.get('pattern'),
@@ -59,8 +75,8 @@ export async function updatePatternAction(
 ): Promise<ActionState> {
   const { userId, subscriptionPlan } = await verifySession()
 
-  const planError = requirePaidPlan(subscriptionPlan)
-  if (planError) return planError
+  const accessError = requireCustomPatternsAccess(subscriptionPlan)
+  if (accessError) return accessError
 
   const id = Number(formData.get('id'))
   if (!id || isNaN(id)) return { error: 'ID pattern mancante.' }
@@ -93,8 +109,8 @@ export async function deletePatternAction(
 ): Promise<ActionState> {
   const { userId, subscriptionPlan } = await verifySession()
 
-  const planError = requirePaidPlan(subscriptionPlan)
-  if (planError) return planError
+  const accessError = requireCustomPatternsAccess(subscriptionPlan)
+  if (accessError) return accessError
 
   const id = Number(formData.get('id'))
   if (!id || isNaN(id)) return { error: 'ID pattern mancante.' }

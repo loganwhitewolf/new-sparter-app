@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ActivePattern } from '../lib/services/categorization'
 
 // ---------------------------------------------------------------------------
@@ -280,6 +280,18 @@ const { importFile, analyzeFile } = await import('../lib/services/import')
 const USER_ID = 'user-test-1'
 const FILE_ID = '11111111-1111-4111-8111-111111111111'
 
+const CATEGORIZATION_ENV_KEYS = [
+  'CATEGORIZATION_REGEX_MIN_PLAN',
+  'CATEGORIZATION_HISTORY_MIN_PLAN',
+  'CATEGORIZATION_CUSTOM_PATTERNS_MIN_PLAN',
+] as const
+
+afterEach(() => {
+  for (const key of CATEGORIZATION_ENV_KEYS) {
+    delete process.env[key]
+  }
+})
+
 function makeFileRow(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: FILE_ID,
@@ -457,6 +469,26 @@ describe('applyTier1Regex', () => {
 describe('categorizePipeline direct', () => {
   const dbProxy = {} as Parameters<Parameters<typeof import('../lib/db').db.transaction>[0]>[0]
 
+  function makeHistoryDatabase(toSubCategoryId: number) {
+    return {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          innerJoin: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockReturnValue({
+                having: vi.fn().mockReturnValue({
+                  orderBy: vi.fn().mockReturnValue({
+                    limit: vi.fn().mockResolvedValue([{ toSubCategoryId, weight: 3 }]),
+                  }),
+                }),
+              }),
+            }),
+          }),
+        }),
+      }),
+    }
+  }
+
   it('returns non-null with subCategoryId for basic plan when a pattern matches', async () => {
     const patterns: ActivePattern[] = [
       {
@@ -554,7 +586,7 @@ describe('categorizePipeline direct', () => {
     })
   })
 
-  it('does not use user-owned regex patterns for free plan imports', async () => {
+  it('uses user-owned regex patterns for free plan imports by default during alpha', async () => {
     const patterns: ActivePattern[] = [
       {
         id: 5,
@@ -577,6 +609,56 @@ describe('categorizePipeline direct', () => {
       patterns,
     )
 
+    expect(result).toMatchObject({
+      subCategoryId: 5,
+      source: 'user_pattern',
+      patternId: 5,
+    })
+  })
+
+  it('uses history-based categorization for free plan imports by default during alpha', async () => {
+    const result = await categorizePipelineActual(
+      makeHistoryDatabase(77) as never,
+      USER_ID,
+      'free',
+      'Unknown merchant',
+      '-12.99',
+      'dh-history',
+      [],
+    )
+
+    expect(result).toEqual({
+      subCategoryId: 77,
+      confidence: '0.70',
+      patternId: null,
+      source: 'system_pattern',
+    })
+  })
+
+  it('can raise regex and history minimum plans through configuration', async () => {
+    process.env.CATEGORIZATION_REGEX_MIN_PLAN = 'basic'
+    process.env.CATEGORIZATION_HISTORY_MIN_PLAN = 'basic'
+
+    const result = await categorizePipelineActual(
+      dbProxy,
+      USER_ID,
+      'free',
+      'Netflix abbonamento mensile',
+      '-12.99',
+      'dh-netflix',
+      [
+        {
+          id: 5,
+          userId: USER_ID,
+          pattern: 'netflix',
+          subCategoryId: 5,
+          amountSign: 'any',
+          confidence: '0.95',
+          priority: 10,
+        },
+      ],
+    )
+
     expect(result).toBeNull()
   })
 })
@@ -596,7 +678,28 @@ describe('createPatternAction', () => {
     mocks.createPattern.mockResolvedValue({ id: 1 })
   })
 
-  it('returns an authorization error for free users', async () => {
+  it('allows free users to create custom regex patterns by default during alpha', async () => {
+    mocks.verifySession.mockResolvedValue({
+      userId: USER_ID,
+      email: 'user@example.test',
+      subscriptionPlan: 'free',
+      role: 'user',
+    })
+
+    const formData = new FormData()
+    formData.set('pattern', 'deliveroo')
+    formData.set('subCategoryId', '42')
+    formData.set('amountSign', 'negative')
+    formData.set('confidence', '0.95')
+
+    const result = await createPatternAction({ error: null }, formData)
+
+    expect(result.error).toBeNull()
+    expect(mocks.createPattern).toHaveBeenCalledWith(expect.objectContaining({ userId: USER_ID }))
+  })
+
+  it('can raise the custom-pattern minimum plan through configuration', async () => {
+    process.env.CATEGORIZATION_CUSTOM_PATTERNS_MIN_PLAN = 'basic'
     mocks.verifySession.mockResolvedValue({
       userId: USER_ID,
       email: 'user@example.test',
