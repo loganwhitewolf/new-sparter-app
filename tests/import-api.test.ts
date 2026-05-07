@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { FileRow } from '../lib/dal/files'
 
 vi.mock('server-only', () => ({}))
 
@@ -67,12 +68,13 @@ function jsonRequest(body: unknown) {
   })
 }
 
-function fileRow(overrides: Partial<Record<string, unknown>> = {}) {
+function fileRow(overrides: Partial<FileRow> = {}): FileRow {
   return {
     id: '11111111-1111-4111-8111-111111111111',
     userId: 'user-1',
     importFormatVersionId: null,
     originalName: 'fineco.csv',
+    displayName: null,
     objectKey: 'users/user-1/imports/11111111-1111-4111-8111-111111111111.csv',
     mimeType: 'text/csv',
     sizeBytes: 128,
@@ -82,7 +84,12 @@ function fileRow(overrides: Partial<Record<string, unknown>> = {}) {
     importStartedAt: null,
     importedAt: null,
     rowCount: 0,
+    importedCount: 0,
     duplicateCount: 0,
+    positiveTotal: '0.00',
+    negativeTotal: '0.00',
+    referenceStartedAt: null,
+    referenceEndedAt: null,
     errorMessage: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),

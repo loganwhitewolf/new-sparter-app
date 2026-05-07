@@ -238,6 +238,7 @@ export const file = pgTable(
       { onDelete: "set null" },
     ),
     originalName: varchar("original_name", { length: 255 }).notNull(),
+    displayName: varchar("display_name", { length: 255 }),
     objectKey: text("object_key").notNull().unique(),
     mimeType: varchar("mime_type", { length: 120 }),
     sizeBytes: integer("size_bytes").notNull(),
@@ -247,7 +248,12 @@ export const file = pgTable(
     importStartedAt: timestamp("import_started_at", { withTimezone: true }),
     importedAt: timestamp("imported_at", { withTimezone: true }),
     rowCount: integer("row_count").default(0).notNull(),
+    importedCount: integer("imported_count").default(0).notNull(),
     duplicateCount: integer("duplicate_count").default(0).notNull(),
+    positiveTotal: numeric("positive_total", { precision: 12, scale: 2 }).default("0.00").notNull(),
+    negativeTotal: numeric("negative_total", { precision: 12, scale: 2 }).default("0.00").notNull(),
+    referenceStartedAt: timestamp("reference_started_at", { withTimezone: true }),
+    referenceEndedAt: timestamp("reference_ended_at", { withTimezone: true }),
     errorMessage: text("error_message"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -258,6 +264,13 @@ export const file = pgTable(
   (table) => [
     index("file_userId_idx").on(table.userId),
     index("file_userId_status_idx").on(table.userId, table.status),
+    index("file_userId_uploadedAt_idx").on(table.userId, table.uploadedAt),
+    index("file_userId_importedAt_idx").on(table.userId, table.importedAt),
+    index("file_userId_reference_range_idx").on(
+      table.userId,
+      table.referenceStartedAt,
+      table.referenceEndedAt,
+    ),
     index("file_importFormatVersionId_idx").on(table.importFormatVersionId),
   ],
 );

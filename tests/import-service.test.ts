@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { FileRow } from '../lib/dal/files'
 import type { ActivePattern } from '../lib/services/categorization'
 
 // ---------------------------------------------------------------------------
@@ -294,12 +295,13 @@ afterEach(() => {
   }
 })
 
-function makeFileRow(overrides: Partial<Record<string, unknown>> = {}) {
+function makeFileRow(overrides: Partial<FileRow> = {}): FileRow {
   return {
     id: FILE_ID,
     userId: USER_ID,
     importFormatVersionId: 1,
     originalName: 'statement.csv',
+    displayName: null,
     objectKey: `users/${USER_ID}/imports/${FILE_ID}.csv`,
     mimeType: 'text/csv',
     sizeBytes: 256,
@@ -309,7 +311,12 @@ function makeFileRow(overrides: Partial<Record<string, unknown>> = {}) {
     importStartedAt: null,
     importedAt: null,
     rowCount: 0,
+    importedCount: 0,
     duplicateCount: 0,
+    positiveTotal: '0.00',
+    negativeTotal: '0.00',
+    referenceStartedAt: null,
+    referenceEndedAt: null,
     errorMessage: null,
     createdAt: new Date('2026-01-01'),
     updatedAt: new Date('2026-01-01'),
