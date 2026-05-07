@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   whereArgs: [] as unknown[],
   orderByArgs: [] as unknown[],
   limitArgs: [] as number[],
+  offsetArgs: [] as number[],
   updateSetArgs: [] as unknown[],
   updateWhereArgs: [] as unknown[],
 }))
@@ -25,6 +26,10 @@ function makeQueryChain(finalValue: unknown[] = []) {
     }),
     limit: vi.fn((arg: number) => {
       mocks.limitArgs.push(arg)
+      return chain
+    }),
+    offset: vi.fn((arg: number) => {
+      mocks.offsetArgs.push(arg)
       return Promise.resolve(finalValue)
     }),
   }
@@ -130,6 +135,7 @@ describe('transaction DAL query helpers', () => {
     mocks.whereArgs.length = 0
     mocks.orderByArgs.length = 0
     mocks.limitArgs.length = 0
+    mocks.offsetArgs.length = 0
     mocks.updateSetArgs.length = 0
     mocks.updateWhereArgs.length = 0
     mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
@@ -157,7 +163,7 @@ describe('transaction DAL query helpers', () => {
   })
 
   it('keeps the list bounded and exposes display metadata for the /transactions table', () => {
-    expect(TRANSACTION_LIST_LIMIT).toBe(200)
+    expect(TRANSACTION_LIST_LIMIT).toBe(50)
     expect(transactionListSelect).toMatchObject({
       id: 'transaction.id',
       description: 'transaction.description',
@@ -191,6 +197,7 @@ describe('transaction DAL query helpers', () => {
     expect(mocks.verifySession).toHaveBeenCalledTimes(1)
     expect(mocks.selectedShapes[0]).toBe(transactionListSelect)
     expect(mocks.limitArgs).toEqual([TRANSACTION_LIST_LIMIT])
+    expect(mocks.offsetArgs).toEqual([0])
     expect(mocks.orderByArgs[0]).toEqual({ op: 'asc', column: 'transaction.amount' })
     expect(mocks.whereArgs[0]).toEqual({
       op: 'and',
@@ -202,6 +209,13 @@ describe('transaction DAL query helpers', () => {
         { op: 'eq', left: 'platform.slug', right: 'fineco' },
       ]),
     })
+  })
+
+  it('applies explicit pagination offsets for infinite loading', async () => {
+    await getTransactions({ sort: 'occurredAt', dir: 'desc' }, { limit: 50, offset: 100 })
+
+    expect(mocks.limitArgs).toEqual([50])
+    expect(mocks.offsetArgs).toEqual([100])
   })
 
   it('verifies the session before reading platform options and scopes options to owned transactions', async () => {

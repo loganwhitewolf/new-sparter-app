@@ -33,9 +33,7 @@ export default async function TransactionsPage({
           </p>
         </div>
         <p className="text-sm text-muted-foreground" aria-live="polite">
-          {transactions.length === 1
-            ? '1 transazione visualizzata'
-            : `${transactions.length} transazioni visualizzate`}
+          Caricamento progressivo in blocchi da 50 transazioni
         </p>
       </div>
 
@@ -45,7 +43,12 @@ export default async function TransactionsPage({
         <TransactionFilters filters={filters} platforms={platforms} />
       </Suspense>
 
-      <TransactionTable transactions={transactions} filters={filters} />
+      <TransactionTable
+        key={JSON.stringify(params)}
+        transactions={transactions}
+        filters={filters}
+        searchParams={params}
+      />
     </div>
   )
 }

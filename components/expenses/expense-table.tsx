@@ -1,5 +1,5 @@
 'use client'
-import { useState, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { MoreHorizontal, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -28,21 +28,30 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { deleteExpense, ignoreExpense } from '@/lib/actions/expenses'
+import { deleteExpense, ignoreExpense, loadMoreExpenses } from '@/lib/actions/expenses'
 import { BulkActionBar } from './bulk-action-bar'
 import { BulkCategorizeDialog } from './bulk-categorize-dialog'
 import { ExpenseCategorizeDialog } from './expense-categorize-dialog'
 import { ExpenseFormDialog } from './expense-form-dialog'
-import type { ExpenseRow } from '@/lib/dal/expenses'
+import type { ExpenseFilters, ExpenseRow } from '@/lib/dal/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import { cn } from '@/lib/utils'
 
 type Props = {
   expenses: ExpenseRow[]
   categories: CategoryWithSubCategories[]
+  filters: ExpenseFilters
 }
 
-export function ExpenseTable({ expenses, categories }: Props) {
+const PAGE_SIZE = 50
+
+export function ExpenseTable({ expenses, categories, filters }: Props) {
+  const [loadedExpenses, setLoadedExpenses] = useState(expenses)
+  const [hasMore, setHasMore] = useState(expenses.length === PAGE_SIZE)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const isLoadingMoreRef = useRef(false)
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
@@ -56,14 +65,68 @@ export function ExpenseTable({ expenses, categories }: Props) {
   } | null>(null)
 
   const selectedRenameExpense = renameExpense
-    ? (expenses.find((expense) => expense.id === renameExpense.id) ?? null)
+    ? (loadedExpenses.find((expense) => expense.id === renameExpense.id) ?? null)
     : null
 
-  const allSelected = expenses.length > 0 && selectedIds.length === expenses.length
-  const someSelected = selectedIds.length > 0 && selectedIds.length < expenses.length
+  const allSelected = loadedExpenses.length > 0 && selectedIds.length === loadedExpenses.length
+  const someSelected = selectedIds.length > 0 && selectedIds.length < loadedExpenses.length
+
+  const loadNextPage = useCallback(async () => {
+    if (isLoadingMoreRef.current || !hasMore) {
+      return
+    }
+
+    isLoadingMoreRef.current = true
+    setIsLoadingMore(true)
+    setLoadError(null)
+
+    try {
+      const result = await loadMoreExpenses({
+        filters,
+        offset: loadedExpenses.length,
+      })
+
+      if (result.error) {
+        setLoadError(result.error)
+        toast.error(result.error)
+        return
+      }
+
+      setLoadedExpenses((current) => [...current, ...result.expenses])
+      setHasMore(result.hasMore)
+    } catch {
+      const error = 'Non è stato possibile caricare altre spese. Riprova.'
+      setLoadError(error)
+      toast.error(error)
+    } finally {
+      isLoadingMoreRef.current = false
+      setIsLoadingMore(false)
+    }
+  }, [filters, hasMore, loadedExpenses.length])
+
+  useEffect(() => {
+    const target = loadMoreRef.current
+
+    if (!target || !hasMore) {
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void loadNextPage()
+        }
+      },
+      { rootMargin: '320px 0px' },
+    )
+
+    observer.observe(target)
+
+    return () => observer.disconnect()
+  }, [hasMore, loadNextPage])
 
   function toggleAll() {
-    setSelectedIds(allSelected ? [] : expenses.map((e) => e.id))
+    setSelectedIds(allSelected ? [] : loadedExpenses.map((e) => e.id))
   }
 
   function toggleRow(id: string) {
@@ -80,7 +143,7 @@ export function ExpenseTable({ expenses, categories }: Props) {
     }).format(new Date(date))
   }
 
-  if (expenses.length === 0) {
+  if (loadedExpenses.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <p className="text-base font-medium text-foreground">Nessuna spesa trovata</p>
@@ -125,7 +188,7 @@ export function ExpenseTable({ expenses, categories }: Props) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {expenses.map((exp) => {
+            {loadedExpenses.map((exp) => {
               const isSelected = selectedIds.includes(exp.id)
               const isCategorized = exp.status === '2' || exp.status === '3'
               const isIgnored = exp.status === '4'
@@ -250,6 +313,28 @@ export function ExpenseTable({ expenses, categories }: Props) {
           </TableBody>
         </Table>
       </div>
+
+      <div
+        ref={loadMoreRef}
+        className="flex min-h-14 items-center justify-center py-3"
+        aria-live="polite"
+      >
+        {isLoadingMore ? (
+          <p className="text-sm text-muted-foreground">Caricamento altre spese…</p>
+        ) : hasMore ? (
+          <Button type="button" variant="ghost" size="sm" onClick={loadNextPage}>
+            Carica altre 50 spese
+          </Button>
+        ) : loadedExpenses.length > 0 ? (
+          <p className="text-sm text-muted-foreground">Tutte le spese disponibili sono caricate.</p>
+        ) : null}
+      </div>
+
+      {loadError ? (
+        <p className="text-center text-sm text-destructive" role="alert">
+          {loadError}
+        </p>
+      ) : null}
 
       <BulkActionBar
         selectedIds={selectedIds}

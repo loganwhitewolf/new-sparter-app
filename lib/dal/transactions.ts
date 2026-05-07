@@ -15,7 +15,12 @@ import type {
   TransactionSortDirection,
 } from '@/lib/validations/transactions'
 
-export const TRANSACTION_LIST_LIMIT = 200
+export const TRANSACTION_LIST_LIMIT = 50
+
+export type TransactionPagination = {
+  limit?: number
+  offset?: number
+}
 
 export type TransactionInsertData = {
   id: string
@@ -112,8 +117,13 @@ export function buildTransactionOrderBy({
 }
 
 export const getTransactions = cache(
-  async (filters: TransactionFilters = {}): Promise<TransactionListRow[]> => {
+  async (
+    filters: TransactionFilters = {},
+    pagination: TransactionPagination = {},
+  ): Promise<TransactionListRow[]> => {
     const { userId } = await verifySession()
+    const limit = pagination.limit ?? TRANSACTION_LIST_LIMIT
+    const offset = pagination.offset ?? 0
 
     // Always scope by both transaction.userId and the owning file userId. The
     // second predicate preserves ownership even if a historical row points to an
@@ -148,7 +158,8 @@ export const getTransactions = cache(
       .leftJoin(expense, eq(transaction.expenseId, expense.id))
       .where(and(...conditions))
       .orderBy(buildTransactionOrderBy(filters))
-      .limit(TRANSACTION_LIST_LIMIT)
+      .limit(limit)
+      .offset(offset)
   },
 )
 

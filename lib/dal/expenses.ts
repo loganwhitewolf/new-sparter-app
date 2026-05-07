@@ -8,10 +8,17 @@ import { periodToDateRange } from '@/lib/utils/date'
 
 export { periodToDateRange } from '@/lib/utils/date'
 
+export const EXPENSE_LIST_LIMIT = 50
+
 export type ExpenseFilters = {
   categorySlug?: string
   status?: 'uncategorized' | 'categorized'
   period?: 'this-month' | 'last-3-months' | 'last-6-months' | 'this-year' | 'last-year'
+}
+
+export type ExpensePagination = {
+  limit?: number
+  offset?: number
 }
 
 export type ExpenseRow = {
@@ -26,9 +33,14 @@ export type ExpenseRow = {
   categorySlug: string | null
 }
 
-export const getExpenses = cache(async (filters: ExpenseFilters = {}): Promise<ExpenseRow[]> => {
+export const getExpenses = cache(async (
+  filters: ExpenseFilters = {},
+  pagination: ExpensePagination = {},
+): Promise<ExpenseRow[]> => {
   const { userId } = await verifySession()
   const { from, to } = periodToDateRange(filters.period ?? 'this-month')
+  const limit = pagination.limit ?? EXPENSE_LIST_LIMIT
+  const offset = pagination.offset ?? 0
 
   // Build conditions array — all expense queries are always scoped to userId
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -65,7 +77,8 @@ export const getExpenses = cache(async (filters: ExpenseFilters = {}): Promise<E
     .leftJoin(category, eq(subCategory.categoryId, category.id))
     .where(and(...conditions))
     .orderBy(desc(expense.createdAt))
-    .limit(200)
+    .limit(limit)
+    .offset(offset)
 })
 
 export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | undefined> => {

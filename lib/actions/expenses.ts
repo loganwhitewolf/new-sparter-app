@@ -13,12 +13,61 @@ import {
   insertExpense,
   updateExpense as updateExpenseDAL,
   deleteExpense as deleteExpenseDAL,
+  getExpenses,
+  EXPENSE_LIST_LIMIT,
+  type ExpenseFilters,
 } from '@/lib/dal/expenses'
 import { db } from '@/lib/db'
 import { expense } from '@/lib/db/schema'
 import { and, eq, inArray } from 'drizzle-orm'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
 import { APP_ROUTES } from '../routes'
+
+type LoadMoreExpensesInput = {
+  filters?: ExpenseFilters
+  offset?: number
+}
+
+type LoadMoreExpensesResult = {
+  expenses: Awaited<ReturnType<typeof getExpenses>>
+  hasMore: boolean
+  error: string | null
+}
+
+function normalizeOffset(offset: number | undefined): number {
+  const normalizedOffset = offset ?? 0
+
+  if (!Number.isInteger(normalizedOffset) || normalizedOffset < 0) {
+    return 0
+  }
+
+  return normalizedOffset
+}
+
+export async function loadMoreExpenses({
+  filters = {},
+  offset,
+}: LoadMoreExpensesInput): Promise<LoadMoreExpensesResult> {
+  try {
+    const normalizedOffset = normalizeOffset(offset)
+    const expenses = await getExpenses(filters, {
+      limit: EXPENSE_LIST_LIMIT,
+      offset: normalizedOffset,
+    })
+
+    return {
+      expenses,
+      hasMore: expenses.length === EXPENSE_LIST_LIMIT,
+      error: null,
+    }
+  } catch {
+    return {
+      expenses: [],
+      hasMore: false,
+      error: 'Non è stato possibile caricare altre spese. Riprova.',
+    }
+  }
+}
 
 export async function createExpense(
   _prev: ActionState,

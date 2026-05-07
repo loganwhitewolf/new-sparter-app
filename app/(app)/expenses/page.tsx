@@ -44,7 +44,12 @@ export default async function ExpensesPage({
         <ExpenseFilters categories={categories} />
       </Suspense>
 
-      <ExpenseTable expenses={expenses} categories={categories} />
+      <ExpenseTable
+        key={`${filters.categorySlug ?? ''}:${filters.status ?? ''}:${filters.period ?? ''}`}
+        expenses={expenses}
+        categories={categories}
+        filters={filters}
+      />
     </div>
   )
 }
