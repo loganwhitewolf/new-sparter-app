@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { getAuthSessionOrNull } from '@/lib/auth-session'
 
 const PUBLIC_ROUTES = ['/login', '/register']
 const AUTH_ROUTES = ['/login', '/register']
@@ -18,9 +18,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Session check via Better Auth Drizzle adapter (Node.js runtime)
-  const session = await auth.api.getSession({
-    headers: request.headers,
-  })
+  const session = await getAuthSessionOrNull(request.headers)
 
   const isAuthenticated = !!session?.user
   const isPublicRoute = PUBLIC_ROUTES.includes(path)
