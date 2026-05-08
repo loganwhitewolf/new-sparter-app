@@ -1,12 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ImportListRow } from '../lib/dal/imports'
 
-const mocks = vi.hoisted(() => ({
-  verifySession: vi.fn(),
-  getImports: vi.fn(),
-  updateImportDisplayName: vi.fn(),
-  revalidatePath: vi.fn(),
-}))
+const mocks = vi.hoisted(() => {
+  class ImportDeleteError extends Error {
+    constructor(
+      public readonly code:
+        | 'invalid_file_id'
+        | 'import_not_found'
+        | 'import_not_deletable'
+        | 'delete_failed'
+        | 'preview_failed',
+      message: string,
+    ) {
+      super(message)
+      this.name = 'ImportDeleteError'
+    }
+  }
+
+  return {
+    verifySession: vi.fn(),
+    getImports: vi.fn(),
+    updateImportDisplayName: vi.fn(),
+    getImportDeletePreview: vi.fn(),
+    deleteImport: vi.fn(),
+    ImportDeleteError,
+    revalidatePath: vi.fn(),
+  }
+})
 
 vi.mock('server-only', () => ({}))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
@@ -22,6 +42,12 @@ vi.mock('@/lib/dal/imports', () => ({
   updateImportDisplayName: mocks.updateImportDisplayName,
 }))
 
+vi.mock('@/lib/services/import-deletion', () => ({
+  getImportDeletePreview: mocks.getImportDeletePreview,
+  deleteImport: mocks.deleteImport,
+  ImportDeleteError: mocks.ImportDeleteError,
+}))
+
 vi.mock('@/lib/validations/import', async () => {
   const actual = await vi.importActual<typeof import('../lib/validations/import')>(
     '../lib/validations/import',
@@ -29,7 +55,12 @@ vi.mock('@/lib/validations/import', async () => {
   return actual
 })
 
-const { loadMoreImports, updateImportDisplayNameAction } = await import('../lib/actions/import')
+const {
+  deleteImportAction,
+  loadMoreImports,
+  previewImportDeletionAction,
+  updateImportDisplayNameAction,
+} = await import('../lib/actions/import')
 
 const userSession = {
   userId: 'user-abc',
@@ -58,6 +89,28 @@ const importRow: ImportListRow = {
   referenceStartedAt: new Date('2025-12-01T00:00:00.000Z'),
   referenceEndedAt: new Date('2025-12-31T00:00:00.000Z'),
   errorMessage: null,
+}
+
+const deletePreview = {
+  fileId: '11111111-1111-4111-8111-111111111111',
+  displayName: 'January import',
+  transactionCount: 3,
+  affectedExpenseIds: ['expense-1', 'expense-2'],
+  recalculatedExpenseIds: ['expense-1'],
+  deletedExpenseIds: ['expense-2'],
+  preservedExpenseIds: [],
+  counts: {
+    transactions: 3,
+    affectedExpenses: 2,
+    recalculatedExpenses: 1,
+    deletedExpenses: 1,
+    preservedExpenses: 0,
+  },
+}
+
+const deleteResult = {
+  ...deletePreview,
+  deletedFileId: '11111111-1111-4111-8111-111111111111',
 }
 
 function makeFormData(fields: Record<string, string | null>): FormData {
@@ -90,6 +143,8 @@ describe('import Server Actions', () => {
       displayName: 'January import',
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
     })
+    mocks.getImportDeletePreview.mockResolvedValue(deletePreview)
+    mocks.deleteImport.mockResolvedValue(deleteResult)
   })
 
   describe('loadMoreImports', () => {
@@ -245,6 +300,121 @@ describe('import Server Actions', () => {
       expect(JSON.stringify(result)).not.toContain('objectKey')
       expect(JSON.stringify(result)).not.toContain('raw rows')
       expect(JSON.stringify(result)).not.toContain('stack trace')
+      expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('previewImportDeletionAction', () => {
+    it('validates the file id before auth or service work', async () => {
+      const result = await previewImportDeletionAction(makeFormData({ fileId: 'not-a-uuid' }))
+
+      expect(result.error).toBe('Importazione non valida.')
+      expect(mocks.verifySession).not.toHaveBeenCalled()
+      expect(mocks.getImportDeletePreview).not.toHaveBeenCalled()
+    })
+
+    it('uses only the session user id and returns safe preview counts', async () => {
+      const result = await previewImportDeletionAction(
+        makeFormData({ fileId: '11111111-1111-4111-8111-111111111111', userId: 'attacker-id' }),
+      )
+
+      expect(result).toEqual({ error: null, data: deletePreview })
+      expect(mocks.getImportDeletePreview).toHaveBeenCalledWith({
+        userId: 'user-abc',
+        fileId: '11111111-1111-4111-8111-111111111111',
+      })
+      expect(JSON.stringify(result)).not.toContain('attacker-id')
+      expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+
+    it('returns a safe session error without calling the service when authentication fails', async () => {
+      mocks.verifySession.mockRejectedValueOnce(new Error('NEXT_REDIRECT with stack and cookie secret'))
+
+      const result = await previewImportDeletionAction(makeFormData({ fileId: '11111111-1111-4111-8111-111111111111' }))
+
+      expect(result.error).toBe('Sessione scaduta. Accedi di nuovo per eliminare questa importazione.')
+      expect(JSON.stringify(result)).not.toContain('NEXT_REDIRECT')
+      expect(JSON.stringify(result)).not.toContain('cookie secret')
+      expect(mocks.getImportDeletePreview).not.toHaveBeenCalled()
+    })
+
+    it('maps not-found service errors to safe localized messages', async () => {
+      mocks.getImportDeletePreview.mockRejectedValueOnce(
+        new mocks.ImportDeleteError('import_not_found', 'objectKey=secret stack trace'),
+      )
+
+      const result = await previewImportDeletionAction(makeFormData({ fileId: '11111111-1111-4111-8111-111111111111' }))
+
+      expect(result.error).toBe('Importazione non trovata o accesso negato.')
+      expect(JSON.stringify(result)).not.toContain('objectKey')
+      expect(JSON.stringify(result)).not.toContain('stack trace')
+    })
+  })
+
+  describe('deleteImportAction', () => {
+    it('validates malformed ids before auth or service work', async () => {
+      const result = await deleteImportAction({ error: null }, makeFormData({ fileId: 'bad-id' }))
+
+      expect(result.error).toBe('Importazione non valida.')
+      expect(mocks.verifySession).not.toHaveBeenCalled()
+      expect(mocks.deleteImport).not.toHaveBeenCalled()
+      expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+
+    it('uses the session user id, returns the delete result, and revalidates affected routes', async () => {
+      const result = await deleteImportAction(
+        { error: null },
+        makeFormData({ fileId: '11111111-1111-4111-8111-111111111111', userId: 'attacker-id' }),
+      )
+
+      expect(result).toEqual({ error: null, data: deleteResult })
+      expect(mocks.deleteImport).toHaveBeenCalledWith({
+        userId: 'user-abc',
+        fileId: '11111111-1111-4111-8111-111111111111',
+      })
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/import')
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/expenses')
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/transactions')
+      expect(JSON.stringify(result)).not.toContain('attacker-id')
+    })
+
+    it('returns a safe session error without calling the service when authentication fails', async () => {
+      mocks.verifySession.mockRejectedValueOnce(new Error('NEXT_REDIRECT with stack and cookie secret'))
+
+      const result = await deleteImportAction({ error: null }, makeFormData({ fileId: '11111111-1111-4111-8111-111111111111' }))
+
+      expect(result.error).toBe('Sessione scaduta. Accedi di nuovo per eliminare questa importazione.')
+      expect(mocks.deleteImport).not.toHaveBeenCalled()
+      expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+
+    it('maps not-deletable retries and unsafe thrown diagnostics to safe localized messages', async () => {
+      mocks.deleteImport.mockRejectedValueOnce(
+        new mocks.ImportDeleteError('import_not_deletable', 'presigned https://storage.example?signature=secret objectKey stack'),
+      )
+
+      const notDeletable = await deleteImportAction(
+        { error: null },
+        makeFormData({ fileId: '11111111-1111-4111-8111-111111111111' }),
+      )
+
+      mocks.deleteImport.mockRejectedValueOnce(
+        new Error('FATAL SQL objectKey=users/user-abc/file.csv rawRow stack trace https://signed.example'),
+      )
+
+      const failed = await deleteImportAction(
+        { error: null },
+        makeFormData({ fileId: '11111111-1111-4111-8111-111111111111' }),
+      )
+
+      expect(notDeletable.error).toBe('Questa importazione non può essere eliminata o è già stata rimossa.')
+      expect(failed.error).toBe('Impossibile eliminare l’importazione. Riprova tra qualche secondo.')
+      for (const result of [notDeletable, failed]) {
+        expect(JSON.stringify(result)).not.toContain('objectKey')
+        expect(JSON.stringify(result)).not.toContain('rawRow')
+        expect(JSON.stringify(result)).not.toContain('stack')
+        expect(JSON.stringify(result)).not.toContain('https://')
+      }
       expect(mocks.revalidatePath).not.toHaveBeenCalled()
     })
   })

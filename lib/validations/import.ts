@@ -71,11 +71,16 @@ export const UpdateImportDisplayNameSchema = z.object({
     .nullable(),
 })
 
+export const DeleteImportSchema = z.object({
+  fileId: FileIdSchema,
+})
+
 export type InitiateUploadInput = z.infer<typeof InitiateUploadSchema>
 export type ConfirmUploadInput = z.infer<typeof ConfirmUploadSchema>
 export type AnalyzeImportInput = z.infer<typeof AnalyzeImportSchema>
 export type ImportFileInput = z.infer<typeof ImportFileSchema>
 export type UpdateImportDisplayNameInput = z.infer<typeof UpdateImportDisplayNameSchema>
+export type DeleteImportInput = z.infer<typeof DeleteImportSchema>
 
 export type ImportSearchParams = Record<string, string | string[] | undefined>
 

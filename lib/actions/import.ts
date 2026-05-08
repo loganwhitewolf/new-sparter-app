@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache'
 import { verifySession } from '@/lib/dal/auth'
 import {
   AnalyzeImportSchema,
+  DeleteImportSchema,
   ImportFileSchema,
   UpdateImportDisplayNameSchema,
   parseImportFilters,
@@ -10,6 +11,13 @@ import {
 } from '@/lib/validations/import'
 import { analyzeFile, importFile } from '@/lib/services/import'
 import type { ImportAnalysisResult, ImportFileResult } from '@/lib/services/import'
+import {
+  ImportDeleteError,
+  deleteImport as deleteImportService,
+  getImportDeletePreview,
+  type ImportDeletePreview,
+  type ImportDeleteResult,
+} from '@/lib/services/import-deletion'
 import {
   getImports,
   IMPORT_LIST_LIMIT,
@@ -42,6 +50,35 @@ function normalizeOffset(offset: number | undefined): number {
   }
 
   return normalizedOffset
+}
+
+function mapImportDeleteError(error: unknown, operation: 'preview' | 'delete') {
+  if (error instanceof ImportDeleteError) {
+    switch (error.code) {
+      case 'invalid_file_id':
+        return 'Importazione non valida.'
+      case 'import_not_found':
+        return 'Importazione non trovata o accesso negato.'
+      case 'import_not_deletable':
+        return operation === 'delete'
+          ? 'Questa importazione non può essere eliminata o è già stata rimossa.'
+          : 'Questa importazione non può essere eliminata in questo stato.'
+      case 'preview_failed':
+        return 'Impossibile calcolare l’impatto dell’eliminazione. Riprova tra qualche secondo.'
+      case 'delete_failed':
+        return 'Impossibile eliminare l’importazione. Riprova tra qualche secondo.'
+    }
+  }
+
+  return operation === 'preview'
+    ? 'Impossibile calcolare l’impatto dell’eliminazione. Riprova tra qualche secondo.'
+    : 'Impossibile eliminare l’importazione. Riprova tra qualche secondo.'
+}
+
+function revalidateImportDeletionSurfaces() {
+  revalidatePath(APP_ROUTES.import)
+  revalidatePath(APP_ROUTES.expenses)
+  revalidatePath(APP_ROUTES.transactions)
 }
 
 export async function loadMoreImports({
@@ -138,6 +175,80 @@ export async function confirmImportAction(
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Import failed. Please retry.'
     return { error: msg }
+  }
+}
+
+export async function previewImportDeletionAction(
+  formData: FormData,
+): Promise<ImportActionState<ImportDeletePreview>> {
+  const parsed = DeleteImportSchema.safeParse({
+    fileId: formData.get('fileId') ?? '',
+  })
+
+  if (!parsed.success) {
+    return { error: 'Importazione non valida.' }
+  }
+
+  let userId: string
+
+  try {
+    const session = await verifySession()
+    userId = session.userId
+  } catch {
+    return { error: 'Sessione scaduta. Accedi di nuovo per eliminare questa importazione.' }
+  }
+
+  try {
+    const preview = await getImportDeletePreview({
+      userId,
+      fileId: parsed.data.fileId,
+    })
+
+    return { error: null, data: preview }
+  } catch (error) {
+    return { error: mapImportDeleteError(error, 'preview') }
+  }
+}
+
+export async function deleteImportAction(
+  _prev: ImportActionState<ImportDeleteResult>,
+  formData: FormData,
+): Promise<ImportActionState<ImportDeleteResult>> {
+  const parsed = DeleteImportSchema.safeParse({
+    fileId: formData.get('fileId') ?? '',
+  })
+
+  if (!parsed.success) {
+    return { error: 'Importazione non valida.' }
+  }
+
+  let userId: string
+
+  try {
+    const session = await verifySession()
+    userId = session.userId
+  } catch {
+    return { error: 'Sessione scaduta. Accedi di nuovo per eliminare questa importazione.' }
+  }
+
+  try {
+    const result = await deleteImportService({
+      userId,
+      fileId: parsed.data.fileId,
+    })
+
+    try {
+      revalidateImportDeletionSurfaces()
+    } catch {
+      return {
+        error: 'Importazione eliminata, ma non è stato possibile aggiornare le viste. Ricarica la pagina.',
+        data: result,
+      }
+    }
+
+    return { error: null, data: result }
+  } catch (error) {
+    return { error: mapImportDeleteError(error, 'delete') }
   }
 }
 
