@@ -290,6 +290,31 @@ test.describe('Import - IMP-02: Analyze preview page', () => {
     await expect(page.getByRole('button', { name: /conferma importazione/i })).toBeVisible()
   })
 
+  test('IMP-02 unknown-format analysis offers private format recovery CTA', async ({ page }) => {
+    test.fixme(true, 'Requires seeded DB + R2 file with unknown headers — run against staging')
+
+    await page.setExtraHTTPHeaders({ 'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key' })
+    await page.goto('/import/00000000-0000-0000-0000-000000000002/analyze')
+
+    await expect(page.getByRole('heading', { name: /analisi file/i })).toBeVisible()
+    await expect(page.getByText(/formato non riconosciuto/i)).toBeVisible()
+    await expect(page.getByRole('link', { name: /configura formato privato/i })).toHaveAttribute(
+      'href',
+      /\/import\/00000000-0000-0000-0000-000000000002\/configure$/,
+    )
+  })
+
+  test('IMP-02 parse/read analysis errors do not offer private format recovery controls', async ({ page }) => {
+    test.fixme(true, 'Requires seeded DB + R2 read or parse failure — run against staging')
+
+    await page.setExtraHTTPHeaders({ 'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key' })
+    await page.goto('/import/00000000-0000-0000-0000-000000000003/analyze')
+
+    await expect(page.getByRole('heading', { name: /analisi file/i })).toBeVisible()
+    await expect(page.getByText(/errore di analisi/i)).toBeVisible()
+    await expect(page.getByRole('link', { name: /configura formato privato/i })).toHaveCount(0)
+  })
+
   test('IMP-02 unknown fileId returns 404 not-found response', async ({ page }) => {
     test.fixme(true, 'Requires real session — staging only; 404 redirects to login without auth')
     await page.setExtraHTTPHeaders({ 'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key' })
