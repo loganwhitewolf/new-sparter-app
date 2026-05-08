@@ -341,7 +341,7 @@ test.describe('Import - IMP-06: importId transaction filter', () => {
     await page.goto('/transactions?importId=00000000-0000-4000-8000-000000000099')
 
     // Page heading must be visible — confirms the RSC rendered without crashing
-    await expect(page.getByRole('heading', { name: /transazioni/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Transazioni' })).toBeVisible()
 
     // Table or empty state must be visible (zero results expected for unknown importId)
     const transactionTable = page.getByRole('table')
