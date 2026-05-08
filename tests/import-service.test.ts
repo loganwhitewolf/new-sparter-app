@@ -12,6 +12,9 @@ const mocks = vi.hoisted(() => ({
   updateFileAnalysisState: vi.fn(),
   updateFileImportState: vi.fn(),
 
+  // dal/import-formats
+  loadImportFormatsForDetection: vi.fn(),
+
   // dal/transactions
   getDuplicateHashes: vi.fn(),
   insertTransactionBatch: vi.fn(),
@@ -100,10 +103,17 @@ vi.mock('@/lib/db/schema', () => ({
     platformId: 'importFormatVersion.platformId',
     version: 'importFormatVersion.version',
     headerSignature: 'importFormatVersion.headerSignature',
+    ownerUserId: 'importFormatVersion.ownerUserId',
+    visibility: 'importFormatVersion.visibility',
+    reviewStatus: 'importFormatVersion.reviewStatus',
     isActive: 'importFormatVersion.isActive',
   },
   platform: {
     id: 'platform.id',
+    ownerUserId: 'platform.ownerUserId',
+    visibility: 'platform.visibility',
+    reviewStatus: 'platform.reviewStatus',
+    isActive: 'platform.isActive',
     name: 'platform.name',
     slug: 'platform.slug',
     delimiter: 'platform.delimiter',
@@ -170,6 +180,10 @@ vi.mock('@/lib/dal/transactions', () => ({
   insertTransactionBatch: mocks.insertTransactionBatch,
 }))
 
+vi.mock('@/lib/dal/import-formats', () => ({
+  loadImportFormatsForDetection: mocks.loadImportFormatsForDetection,
+}))
+
 vi.mock('@/lib/dal/classification-history', () => ({
   writeClassificationHistory: mocks.writeClassificationHistory,
 }))
@@ -204,9 +218,20 @@ vi.mock('@/lib/services/import-parsers', () => ({
   parseImportFile: mocks.parseImportFile,
 }))
 
-// Mock import-format-detector: return a plausible detection result
+// Mock import-format-detector: return a plausible detection result, or no candidate when the DAL returns no accessible formats
 vi.mock('@/lib/services/import-format-detector', () => ({
-  detectImportFormat: vi.fn().mockReturnValue({
+  detectImportFormat: vi.fn((input: { formats: unknown[] }) => input.formats.length === 0 ? {
+    bestCandidate: null,
+    candidates: [],
+    preview: {
+      rowCount: 2,
+      sampleRows: [],
+      duplicateCount: 0,
+      warnings: [],
+    },
+    warnings: [],
+    errors: ['No supported import format matched the uploaded file headers and sample rows.'],
+  } : {
     bestCandidate: {
       formatVersionId: 1,
       platformId: 1,
@@ -350,6 +375,31 @@ function makeParsedImport(rows = [
     sampleRows: rows,
     warnings: [],
     errors: [],
+  }
+}
+
+function makeFormatCandidate(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 1,
+    platformId: 1,
+    version: 1,
+    headerSignature: '"Data Movimento";"Descrizione";"Importo"',
+    isActive: true,
+    platform: {
+      id: 1,
+      name: 'General',
+      slug: 'general',
+      delimiter: ';',
+      country: 'IT',
+      timestampColumn: '"Data Movimento"',
+      descriptionColumn: '"Descrizione"',
+      amountType: 'single' as const,
+      amountColumn: '"Importo"',
+      positiveAmountColumn: null,
+      negativeAmountColumn: null,
+      multiplyBy: 1,
+    },
+    ...overrides,
   }
 }
 
@@ -755,6 +805,7 @@ describe('importFile', () => {
     mocks.insertTransactionBatch.mockResolvedValue([])
     mocks.writeClassificationHistory.mockResolvedValue(undefined)
     mocks.parseImportFile.mockResolvedValue(makeParsedImport())
+    mocks.loadImportFormatsForDetection.mockResolvedValue([makeFormatCandidate()])
     // Default: return a readable stream from GENERAL_CSV
     mocks.readObjectBody.mockResolvedValue(
       (async function* () { yield GENERAL_CSV })(),
@@ -799,6 +850,31 @@ describe('importFile', () => {
 
     // markFileFailed should NOT be called — no file row to update
     expect(mocks.markFileFailed).not.toHaveBeenCalled()
+  })
+
+  it('loads import formats through the ownership-aware DAL with the selected format id', async () => {
+    await importFile({ userId: USER_ID, fileId: FILE_ID, selectedFormatVersionId: 7 }).catch(() => null)
+
+    expect(mocks.loadImportFormatsForDetection).toHaveBeenCalledWith({
+      userId: USER_ID,
+      selectedFormatVersionId: 7,
+    })
+  })
+
+  it('fails closed when a selected private format is not accessible to the user', async () => {
+    mocks.loadImportFormatsForDetection.mockResolvedValueOnce([])
+
+    await expect(
+      importFile({ userId: USER_ID, fileId: FILE_ID, selectedFormatVersionId: 99 }),
+    ).rejects.toThrow('No supported import format matched the uploaded file headers and sample rows.')
+
+    expect(detectImportFormat).toHaveBeenCalledWith(
+      expect.objectContaining({ formats: [], userId: USER_ID }),
+    )
+    expect(latestFileImportUpdate()).toMatchObject({
+      status: 'failed',
+      errorMessage: expect.stringContaining('No supported import format matched'),
+    })
   })
 
   it('marks file failed and rethrows when R2 read fails', async () => {
@@ -1059,6 +1135,7 @@ describe('analyzeFile', () => {
     mocks.updateFileAnalysisState.mockResolvedValue(makeFileRow({ status: 'analyzing' }))
     mocks.markFileFailed.mockResolvedValue(makeFileRow({ status: 'failed' }))
     mocks.getDuplicateHashes.mockResolvedValue(new Set<string>())
+    mocks.loadImportFormatsForDetection.mockResolvedValue([makeFormatCandidate()])
   })
 
   it('persists full-file analysis stats instead of sample-limited preview stats', async () => {
@@ -1083,6 +1160,18 @@ describe('analyzeFile', () => {
       referenceStartedAt: new Date('2026-01-10T00:00:00.000Z'),
       referenceEndedAt: new Date('2026-01-12T00:00:00.000Z'),
       errorMessage: null,
+    })
+  })
+
+  it('loads analysis candidates through the ownership-aware DAL with user scope', async () => {
+    mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
+
+    await analyzeFile({ userId: USER_ID, fileId: FILE_ID, selectedFormatVersionId: 8 })
+
+    expect(mocks.loadImportFormatsForDetection).toHaveBeenCalledWith({
+      userId: USER_ID,
+      selectedFormatVersionId: 8,
     })
   })
 

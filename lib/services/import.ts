@@ -3,8 +3,6 @@ import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import {
   expense,
-  importFormatVersion,
-  platform,
   transaction as transactionTable,
 } from '@/lib/db/schema'
 import {
@@ -29,6 +27,7 @@ import {
 import { normalizeTransactionRow } from '@/lib/utils/import'
 import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
+import { loadImportFormatsForDetection } from '@/lib/dal/import-formats'
 
 export type ImportAnalysisResult = {
   fileId: string
@@ -57,83 +56,6 @@ export type ImportFileResult = {
   importedCount: number
   warnings: string[]
   errors: string[]
-}
-
-type PlatformConfig = {
-  id: number
-  name: string
-  slug: string
-  delimiter: string
-  country: string
-  timestampColumn: string
-  descriptionColumn: string
-  amountType: 'single' | 'separate'
-  amountColumn: string | null
-  positiveAmountColumn: string | null
-  negativeAmountColumn: string | null
-  multiplyBy: number
-}
-
-type FormatVersionWithPlatform = {
-  id: number
-  platformId: number
-  version: number
-  headerSignature: string
-  isActive: boolean
-  platform: PlatformConfig
-}
-
-async function loadFormatVersions(
-  selectedFormatVersionId?: number,
-): Promise<FormatVersionWithPlatform[]> {
-  const rows = await db
-    .select({
-      id: importFormatVersion.id,
-      platformId: importFormatVersion.platformId,
-      version: importFormatVersion.version,
-      headerSignature: importFormatVersion.headerSignature,
-      isActive: importFormatVersion.isActive,
-      platformName: platform.name,
-      platformSlug: platform.slug,
-      platformDelimiter: platform.delimiter,
-      platformCountry: platform.country,
-      platformTimestampColumn: platform.timestampColumn,
-      platformDescriptionColumn: platform.descriptionColumn,
-      platformAmountType: platform.amountType,
-      platformAmountColumn: platform.amountColumn,
-      platformPositiveAmountColumn: platform.positiveAmountColumn,
-      platformNegativeAmountColumn: platform.negativeAmountColumn,
-      platformMultiplyBy: platform.multiplyBy,
-    })
-    .from(importFormatVersion)
-    .innerJoin(platform, eq(importFormatVersion.platformId, platform.id))
-    .where(
-      selectedFormatVersionId
-        ? eq(importFormatVersion.id, selectedFormatVersionId)
-        : eq(importFormatVersion.isActive, true),
-    )
-
-  return rows.map((r) => ({
-    id: r.id,
-    platformId: r.platformId,
-    version: r.version,
-    headerSignature: r.headerSignature,
-    isActive: r.isActive,
-    platform: {
-      id: r.platformId,
-      name: r.platformName,
-      slug: r.platformSlug,
-      delimiter: r.platformDelimiter,
-      country: r.platformCountry,
-      timestampColumn: r.platformTimestampColumn,
-      descriptionColumn: r.platformDescriptionColumn,
-      amountType: r.platformAmountType,
-      amountColumn: r.platformAmountColumn,
-      positiveAmountColumn: r.platformPositiveAmountColumn,
-      negativeAmountColumn: r.platformNegativeAmountColumn,
-      multiplyBy: r.platformMultiplyBy,
-    },
-  }))
 }
 
 async function readR2Bytes(objectKey: string): Promise<Buffer> {
@@ -305,7 +227,10 @@ export async function analyzeFile(input: {
     throw new Error(msg)
   }
 
-  const formats = await loadFormatVersions(input.selectedFormatVersionId)
+  const formats = await loadImportFormatsForDetection({
+    userId: input.userId,
+    selectedFormatVersionId: input.selectedFormatVersionId,
+  })
   const detected = detectImportFormat({ parsed, formats, userId: input.userId })
   const best = detected.bestCandidate
 
@@ -410,9 +335,10 @@ export async function importFile(input: {
     throw new Error(msg)
   }
 
-  const formats = await loadFormatVersions(
-    input.selectedFormatVersionId ?? fileRow.importFormatVersionId ?? undefined,
-  )
+  const formats = await loadImportFormatsForDetection({
+    userId: input.userId,
+    selectedFormatVersionId: input.selectedFormatVersionId ?? fileRow.importFormatVersionId ?? undefined,
+  })
   const detected = detectImportFormat({ parsed, formats, userId: input.userId })
 
   if (!detected.bestCandidate) {

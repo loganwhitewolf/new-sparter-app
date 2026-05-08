@@ -179,6 +179,9 @@ export const platform = pgTable(
   "platform",
   {
     id: integer("id").primaryKey(),
+    ownerUserId: text("owner_user_id").references(() => user.id, { onDelete: "cascade" }),
+    visibility: varchar("visibility", { length: 24 }).default("global").notNull(),
+    reviewStatus: varchar("review_status", { length: 24 }).default("approved").notNull(),
     name: varchar("name", { length: 100 }).notNull(),
     slug: varchar("slug", { length: 100 }).notNull().unique(),
     country: varchar("country", { length: 2 }).notNull(),
@@ -200,7 +203,11 @@ export const platform = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index("platform_slug_idx").on(table.slug)],
+  (table) => [
+    index("platform_slug_idx").on(table.slug),
+    index("platform_ownerUserId_idx").on(table.ownerUserId),
+    index("platform_visibility_reviewStatus_idx").on(table.visibility, table.reviewStatus),
+  ],
 );
 
 export const importFormatVersion = pgTable(
@@ -210,6 +217,9 @@ export const importFormatVersion = pgTable(
     platformId: integer("platform_id")
       .notNull()
       .references(() => platform.id, { onDelete: "cascade" }),
+    ownerUserId: text("owner_user_id").references(() => user.id, { onDelete: "cascade" }),
+    visibility: varchar("visibility", { length: 24 }).default("global").notNull(),
+    reviewStatus: varchar("review_status", { length: 24 }).default("approved").notNull(),
     version: integer("version").default(1).notNull(),
     headerSignature: text("header_signature").notNull(),
     notes: text("notes"),
@@ -222,6 +232,11 @@ export const importFormatVersion = pgTable(
   },
   (table) => [
     index("import_format_version_platformId_idx").on(table.platformId),
+    index("import_format_version_ownerUserId_idx").on(table.ownerUserId),
+    index("import_format_version_visibility_reviewStatus_idx").on(
+      table.visibility,
+      table.reviewStatus,
+    ),
     unique("import_format_version_platform_version_unique").on(table.platformId, table.version),
   ],
 );
@@ -412,6 +427,8 @@ export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   expenses: many(expense),
   files: many(file),
+  platforms: many(platform),
+  importFormatVersions: many(importFormatVersion),
   transactions: many(transaction),
   categorizationPatterns: many(categorizationPattern),
   expenseClassificationHistory: many(expenseClassificationHistory),
@@ -444,11 +461,19 @@ export const subCategoryRelations = relations(subCategory, ({ one, many }) => ({
   categorizationPatterns: many(categorizationPattern),
 }));
 
-export const platformRelations = relations(platform, ({ many }) => ({
+export const platformRelations = relations(platform, ({ one, many }) => ({
+  owner: one(user, {
+    fields: [platform.ownerUserId],
+    references: [user.id],
+  }),
   importFormatVersions: many(importFormatVersion),
 }));
 
 export const importFormatVersionRelations = relations(importFormatVersion, ({ one, many }) => ({
+  owner: one(user, {
+    fields: [importFormatVersion.ownerUserId],
+    references: [user.id],
+  }),
   platform: one(platform, {
     fields: [importFormatVersion.platformId],
     references: [platform.id],
