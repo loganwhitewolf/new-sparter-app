@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertCircle, Pencil } from 'lucide-react'
+import { AlertCircle, Pencil, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ImportDeleteDialog } from '@/components/import/import-delete-dialog'
 import { ImportRenameDialog } from '@/components/import/import-rename-dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -108,6 +109,7 @@ export function ImportTable({ imports, filters, searchParams, loadError = false 
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [renameImport, setRenameImport] = useState<ImportListRow | null>(null)
+  const [deleteImport, setDeleteImport] = useState<ImportListRow | null>(null)
   const isLoadingMoreRef = useRef(false)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const filtered = hasActiveFilters(filters)
@@ -172,6 +174,11 @@ export function ImportTable({ imports, filters, searchParams, loadError = false 
     )
   }
 
+  function handleDeleteSuccess(fileId: string) {
+    setLoadedImports((current) => current.filter((row) => row.id !== fileId))
+    setDeleteImport(null)
+  }
+
   if (loadError) {
     return (
       <Card>
@@ -210,7 +217,7 @@ export function ImportTable({ imports, filters, searchParams, loadError = false 
       <div className="rounded-xl border bg-card shadow-sm">
         <Table>
           <TableCaption className="sr-only">
-            Storico importazioni con stato, piattaforma, date, statistiche, azioni di rinomina e messaggi di errore sicuri.
+            Storico importazioni con stato, piattaforma, date, statistiche, azioni di rinomina, eliminazione sicura e messaggi di errore sicuri.
           </TableCaption>
           <TableHeader>
             <TableRow className="bg-secondary/70">
@@ -238,7 +245,7 @@ export function ImportTable({ imports, filters, searchParams, loadError = false 
               <TableHead className="min-w-[16rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
                 Messaggio
               </TableHead>
-              <TableHead className="w-16">
+              <TableHead className="w-44">
                 <span className="sr-only">Azioni</span>
               </TableHead>
             </TableRow>
@@ -334,14 +341,29 @@ export function ImportTable({ imports, filters, searchParams, loadError = false 
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setRenameImport(row)}
-                    >
-                      Rinomina
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRenameImport(row)}
+                      >
+                        Rinomina
+                      </Button>
+                      {row.status === 'imported' ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => setDeleteImport(row)}
+                          aria-label={`Elimina importazione ${displayName}`}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          <span>Elimina</span>
+                        </Button>
+                      ) : null}
+                    </div>
                   </TableCell>
                 </TableRow>
               )
@@ -387,6 +409,20 @@ export function ImportTable({ imports, filters, searchParams, loadError = false 
             }
           }}
           onSuccess={handleRenameSuccess}
+        />
+      ) : null}
+
+      {deleteImport ? (
+        <ImportDeleteDialog
+          key={deleteImport.id}
+          importRow={deleteImport}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeleteImport(null)
+            }
+          }}
+          onDeleted={handleDeleteSuccess}
         />
       ) : null}
     </>
