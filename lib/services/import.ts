@@ -225,6 +225,9 @@ const EMPTY_IMPORT_STATS: FullFileImportStats = {
   referenceEndedAt: null,
 }
 
+const ANALYSIS_ALLOWED_STATUSES = new Set(['uploaded', 'failed', 'analyzed'])
+const IMPORT_ALLOWED_STATUSES = new Set(['analyzed'])
+
 export async function analyzeFile(input: {
   userId: string
   fileId: string
@@ -232,6 +235,10 @@ export async function analyzeFile(input: {
 }): Promise<ImportAnalysisResult> {
   const fileRow = await getFileForUser({ userId: input.userId, fileId: input.fileId })
   if (!fileRow) throw new Error('File not found or access denied.')
+
+  if (!ANALYSIS_ALLOWED_STATUSES.has(fileRow.status)) {
+    throw new Error('Analisi non consentita per questo file nel suo stato attuale.')
+  }
 
   await updateFileAnalysisState({
     userId: input.userId,
@@ -347,6 +354,10 @@ export async function importFile(input: {
 }): Promise<ImportFileResult> {
   const fileRow = await getFileForUser({ userId: input.userId, fileId: input.fileId })
   if (!fileRow) throw new Error('File not found or access denied.')
+
+  if (!IMPORT_ALLOWED_STATUSES.has(fileRow.status)) {
+    throw new Error('Importazione non consentita per questo file nel suo stato attuale.')
+  }
 
   await updateFileImportState({
     userId: input.userId,

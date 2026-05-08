@@ -1,10 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertCircle, Pencil, Trash2 } from 'lucide-react'
+import { AlertCircle, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { ImportDeleteDialog } from '@/components/import/import-delete-dialog'
 import { ImportRenameDialog } from '@/components/import/import-rename-dialog'
+import { ImportRowActions } from '@/components/import/import-row-actions'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -341,29 +342,11 @@ export function ImportTable({ imports, filters, searchParams, loadError = false 
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setRenameImport(row)}
-                      >
-                        Rinomina
-                      </Button>
-                      {row.status === 'imported' ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => setDeleteImport(row)}
-                          aria-label={`Elimina importazione ${displayName}`}
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
-                          <span>Elimina</span>
-                        </Button>
-                      ) : null}
-                    </div>
+                    <ImportRowActions
+                      row={row}
+                      displayName={displayName}
+                      onDelete={setDeleteImport}
+                    />
                   </TableCell>
                 </TableRow>
               )

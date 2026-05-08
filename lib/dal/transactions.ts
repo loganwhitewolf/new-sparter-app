@@ -41,6 +41,7 @@ export type TransactionFilters = {
   fromDate?: Date
   toDate?: Date
   platform?: string
+  importId?: string
   sort?: TransactionSort
   dir?: TransactionSortDirection
 }
@@ -141,6 +142,10 @@ export const getTransactions = cache(
 
     if (filters.platform) {
       conditions.push(eq(platform.slug, filters.platform))
+    }
+
+    if (filters.importId) {
+      conditions.push(eq(transaction.fileId, filters.importId))
     }
 
     return db

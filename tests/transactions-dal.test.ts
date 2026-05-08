@@ -267,4 +267,92 @@ describe('transaction DAL query helpers', () => {
       ]),
     })
   })
+
+  it('filters to a specific import when importId is provided', async () => {
+    const importId = '550e8400-e29b-41d4-a716-446655440000'
+    await getTransactions({ importId })
+
+    expect(mocks.whereArgs[0]).toEqual({
+      op: 'and',
+      args: expect.arrayContaining([
+        { op: 'eq', left: 'transaction.userId', right: 'user-1' },
+        {
+          op: 'or',
+          args: [
+            { op: 'isNull', column: 'transaction.fileId' },
+            { op: 'eq', left: 'file.userId', right: 'user-1' },
+          ],
+        },
+        { op: 'eq', left: 'transaction.fileId', right: importId },
+      ]),
+    })
+  })
+
+  it('enforces both ownership conditions when importId is set so a foreign-user importId returns no rows', async () => {
+    mocks.verifySession.mockResolvedValueOnce({ userId: 'user-2' })
+    const importId = '550e8400-e29b-41d4-a716-446655440000'
+    await getTransactions({ importId })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    // Both the user-scoped ownership predicate and the fileId equality must be present,
+    // so a file owned by user-1 is not accessible to user-2.
+    expect(where.args).toEqual(
+      expect.arrayContaining([
+        { op: 'eq', left: 'transaction.userId', right: 'user-2' },
+        {
+          op: 'or',
+          args: [
+            { op: 'isNull', column: 'transaction.fileId' },
+            { op: 'eq', left: 'file.userId', right: 'user-2' },
+          ],
+        },
+        { op: 'eq', left: 'transaction.fileId', right: importId },
+      ]),
+    )
+  })
+
+  it('does not add a fileId predicate when importId is absent', async () => {
+    await getTransactions({})
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    const hasFileIdPredicate = where.args.some(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as Record<string, unknown>).op === 'eq' &&
+        (arg as Record<string, unknown>).left === 'transaction.fileId',
+    )
+    expect(hasFileIdPredicate).toBe(false)
+  })
+
+  it('composes importId with date and platform filters without dropping existing predicates', async () => {
+    const importId = '550e8400-e29b-41d4-a716-446655440000'
+    await getTransactions({
+      importId,
+      fromDate: new Date('2026-01-01T00:00:00.000Z'),
+      toDate: new Date('2026-01-31T23:59:59.999Z'),
+      platform: 'fineco',
+      sort: 'amount',
+      dir: 'asc',
+    })
+
+    expect(mocks.whereArgs[0]).toEqual({
+      op: 'and',
+      args: expect.arrayContaining([
+        { op: 'eq', left: 'transaction.userId', right: 'user-1' },
+        {
+          op: 'or',
+          args: [
+            { op: 'isNull', column: 'transaction.fileId' },
+            { op: 'eq', left: 'file.userId', right: 'user-1' },
+          ],
+        },
+        { op: 'gte', left: 'transaction.occurredAt', right: new Date('2026-01-01T00:00:00.000Z') },
+        { op: 'lte', left: 'transaction.occurredAt', right: new Date('2026-01-31T23:59:59.999Z') },
+        { op: 'eq', left: 'platform.slug', right: 'fineco' },
+        { op: 'eq', left: 'transaction.fileId', right: importId },
+      ]),
+    })
+    expect(mocks.orderByArgs[0]).toEqual({ op: 'asc', column: 'transaction.amount' })
+  })
 })

@@ -798,12 +798,135 @@ describe('createPatternAction', () => {
 })
 
 // ---------------------------------------------------------------------------
+// analyzeFile lifecycle guard tests
+// ---------------------------------------------------------------------------
+describe('analyzeFile — lifecycle guards', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.markFileFailed.mockResolvedValue(undefined)
+    mocks.updateFileAnalysisState.mockResolvedValue(undefined)
+  })
+
+  it.each([
+    ['analyzing' as const],
+    ['importing' as const],
+    ['imported' as const],
+  ])('rejects analysis for status=%s without calling state mutation or R2 work', async (status) => {
+    mocks.getFileForUser.mockResolvedValue(makeFileRow({ status }))
+
+    await expect(
+      analyzeFile({ userId: USER_ID, fileId: FILE_ID }),
+    ).rejects.toThrow('Analisi non consentita per questo file nel suo stato attuale.')
+
+    expect(mocks.updateFileAnalysisState).not.toHaveBeenCalled()
+    expect(mocks.readObjectBody).not.toHaveBeenCalled()
+    expect(mocks.parseImportFile).not.toHaveBeenCalled()
+    expect(mocks.markFileFailed).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['uploaded' as const],
+    ['failed' as const],
+    ['analyzed' as const],
+  ])('allows analysis for status=%s and proceeds to state mutation', async (status) => {
+    mocks.getFileForUser.mockResolvedValue(makeFileRow({ status }))
+    mocks.readObjectBody.mockResolvedValue(
+      (async function* () { yield GENERAL_CSV })(),
+    )
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
+    mocks.loadImportFormatsForDetection.mockResolvedValue([makeFormatCandidate()])
+    mocks.getDuplicateHashes.mockResolvedValue(new Set<string>())
+    mocks.updateFileAnalysisState.mockResolvedValue(undefined)
+
+    await analyzeFile({ userId: USER_ID, fileId: FILE_ID })
+
+    expect(mocks.updateFileAnalysisState).toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// importFile lifecycle guard tests
+// ---------------------------------------------------------------------------
+describe('importFile — lifecycle guards', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.markFileFailed.mockResolvedValue(undefined)
+    mocks.updateFileImportState.mockResolvedValue(undefined)
+  })
+
+  it.each([
+    ['uploaded' as const],
+    ['analyzing' as const],
+    ['importing' as const],
+    ['imported' as const],
+    ['failed' as const],
+  ])('rejects import confirmation for status=%s without calling state mutation or R2 work', async (status) => {
+    mocks.getFileForUser.mockResolvedValue(makeFileRow({ status }))
+
+    await expect(
+      importFile({ userId: USER_ID, fileId: FILE_ID }),
+    ).rejects.toThrow('Importazione non consentita per questo file nel suo stato attuale.')
+
+    expect(mocks.updateFileImportState).not.toHaveBeenCalled()
+    expect(mocks.readObjectBody).not.toHaveBeenCalled()
+    expect(mocks.parseImportFile).not.toHaveBeenCalled()
+    expect(mocks.markFileFailed).not.toHaveBeenCalled()
+  })
+
+  it('allows import confirmation for status=analyzed and proceeds to state mutation', async () => {
+    mocks.getFileForUser.mockResolvedValue(makeFileRow({ status: 'analyzed' }))
+    mocks.readObjectBody.mockResolvedValue(
+      (async function* () { yield GENERAL_CSV })(),
+    )
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
+    mocks.loadImportFormatsForDetection.mockResolvedValue([makeFormatCandidate()])
+    mocks.getDuplicateHashes.mockResolvedValue(new Set<string>())
+    mocks.loadActivePatterns.mockResolvedValue([])
+    mocks.categorizePipeline.mockResolvedValue(null)
+    mocks.insertTransactionBatch.mockResolvedValue([])
+    mocks.writeClassificationHistory.mockResolvedValue(undefined)
+    mocks.updateFileImportState.mockResolvedValue(undefined)
+    mocks.dbTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                then: vi.fn((onFulfilled?: (rows: unknown[]) => unknown) => {
+                  const rows: unknown[] = []
+                  return Promise.resolve(onFulfilled ? onFulfilled(rows) : rows)
+                }),
+              }),
+            }),
+          }),
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      }
+      return callback(tx)
+    })
+
+    await importFile({ userId: USER_ID, fileId: FILE_ID })
+
+    expect(mocks.updateFileImportState).toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
 // importFile integration tests (mocked db, r2, dal)
 // ---------------------------------------------------------------------------
 describe('importFile', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.getFileForUser.mockResolvedValue(makeFileRow())
+    mocks.getFileForUser.mockResolvedValue(makeFileRow({ status: 'analyzed' }))
     mocks.updateFileImportState.mockResolvedValue(makeFileRow({ status: 'importing' }))
     mocks.markFileFailed.mockResolvedValue(makeFileRow({ status: 'failed' }))
     mocks.getDuplicateHashes.mockResolvedValue(new Set<string>())

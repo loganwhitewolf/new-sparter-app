@@ -7,8 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ImportPreview } from '@/components/import/import-preview'
 import { analyzeImportAction } from '@/lib/actions/import'
 import type { ImportAnalysisResult } from '@/lib/services/import'
-
-const UNKNOWN_FORMAT_ERROR = 'No supported import format matched'
+import { UNKNOWN_FORMAT_ERROR } from '@/lib/utils/import-status'
 
 function isUnknownFormatAnalysis(result: ImportAnalysisResult) {
   return result.formatVersionId === null && result.errors.some((error) => error.includes(UNKNOWN_FORMAT_ERROR))

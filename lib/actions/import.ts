@@ -223,6 +223,23 @@ export async function loadMoreImports({
   }
 }
 
+const SAFE_ANALYZE_LIFECYCLE_MSG = 'Analisi non consentita per questo file nel suo stato attuale.'
+const SAFE_IMPORT_LIFECYCLE_MSG = 'Importazione non consentita per questo file nel suo stato attuale.'
+
+function mapAnalyzeError(error: unknown): string {
+  if (error instanceof Error && error.message === SAFE_ANALYZE_LIFECYCLE_MSG) {
+    return SAFE_ANALYZE_LIFECYCLE_MSG
+  }
+  return 'Impossibile analizzare il file. Riprova tra qualche secondo.'
+}
+
+function mapConfirmError(error: unknown): string {
+  if (error instanceof Error && error.message === SAFE_IMPORT_LIFECYCLE_MSG) {
+    return SAFE_IMPORT_LIFECYCLE_MSG
+  }
+  return 'Impossibile importare il file. Riprova tra qualche secondo.'
+}
+
 export async function analyzeImportAction(
   formData: FormData,
 ): Promise<ImportActionState<ImportAnalysisResult>> {
@@ -246,13 +263,12 @@ export async function analyzeImportAction(
     })
 
     if (result.errors.length > 0) {
-      return { error: result.errors[0] ?? 'Analysis failed.', data: result }
+      return { error: result.errors[0] ?? 'Impossibile analizzare il file. Riprova tra qualche secondo.', data: result }
     }
 
     return { error: null, data: result }
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Analysis failed. Please retry.'
-    return { error: msg }
+    return { error: mapAnalyzeError(error) }
   }
 }
 
@@ -286,8 +302,7 @@ export async function confirmImportAction(
 
     return { error: null, data: result }
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Import failed. Please retry.'
-    return { error: msg }
+    return { error: mapConfirmError(error) }
   }
 }
 

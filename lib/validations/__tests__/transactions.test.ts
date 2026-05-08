@@ -96,6 +96,53 @@ describe("parseTransactionFilters", () => {
       dir: "desc",
     })
   })
+
+  it("accepts a valid UUID importId and includes it in parsed filters", () => {
+    const uuid = "550e8400-e29b-41d4-a716-446655440000"
+    const parsed = parseTransactionFilters({ importId: uuid })
+
+    expect(parsed.importId).toBe(uuid)
+  })
+
+  it("rejects non-UUID importId values and omits them from parsed filters", () => {
+    expect(parseTransactionFilters({ importId: "not-a-uuid" }).importId).toBeUndefined()
+    expect(parseTransactionFilters({ importId: "123" }).importId).toBeUndefined()
+    expect(parseTransactionFilters({ importId: "" }).importId).toBeUndefined()
+    expect(parseTransactionFilters({ importId: "   " }).importId).toBeUndefined()
+    expect(
+      parseTransactionFilters({ importId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" }).importId,
+    ).toBeUndefined()
+  })
+
+  it("uses the first array value for importId and rejects invalid first items", () => {
+    const uuid = "550e8400-e29b-41d4-a716-446655440000"
+
+    expect(
+      parseTransactionFilters({ importId: [uuid, "not-a-uuid"] }).importId,
+    ).toBe(uuid)
+    expect(
+      parseTransactionFilters({ importId: ["not-a-uuid", uuid] }).importId,
+    ).toBeUndefined()
+  })
+
+  it("composes importId with date, platform, and sort filters", () => {
+    const uuid = "550e8400-e29b-41d4-a716-446655440000"
+    const parsed = parseTransactionFilters({
+      importId: uuid,
+      from: "2025-01-01",
+      to: "2025-01-31",
+      platform: "revolut",
+      sort: "amount",
+      dir: "asc",
+    })
+
+    expect(parsed.importId).toBe(uuid)
+    expect(parsed.fromDate).toEqual(new Date("2025-01-01T00:00:00.000Z"))
+    expect(parsed.toDate).toEqual(new Date("2025-01-31T23:59:59.999Z"))
+    expect(parsed.platform).toBe("revolut")
+    expect(parsed.sort).toBe("amount")
+    expect(parsed.dir).toBe("asc")
+  })
 })
 
 describe("UpdateTransactionCustomTitleSchema", () => {

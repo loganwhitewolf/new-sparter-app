@@ -25,6 +25,8 @@ const mocks = vi.hoisted(() => {
     deleteImport: vi.fn(),
     ImportDeleteError,
     revalidatePath: vi.fn(),
+    analyzeFile: vi.fn(),
+    importFile: vi.fn(),
   }
 })
 
@@ -48,6 +50,11 @@ vi.mock('@/lib/services/import-deletion', () => ({
   ImportDeleteError: mocks.ImportDeleteError,
 }))
 
+vi.mock('@/lib/services/import', () => ({
+  analyzeFile: mocks.analyzeFile,
+  importFile: mocks.importFile,
+}))
+
 vi.mock('@/lib/validations/import', async () => {
   const actual = await vi.importActual<typeof import('../lib/validations/import')>(
     '../lib/validations/import',
@@ -56,6 +63,8 @@ vi.mock('@/lib/validations/import', async () => {
 })
 
 const {
+  analyzeImportAction,
+  confirmImportAction,
   deleteImportAction,
   loadMoreImports,
   previewImportDeletionAction,
@@ -348,6 +357,177 @@ describe('import Server Actions', () => {
       expect(result.error).toBe('Importazione non trovata o accesso negato.')
       expect(JSON.stringify(result)).not.toContain('objectKey')
       expect(JSON.stringify(result)).not.toContain('stack trace')
+    })
+  })
+
+  describe('analyzeImportAction', () => {
+    function validAnalyzeForm(overrides: Record<string, string | null> = {}) {
+      return makeFormData({
+        fileId: '11111111-1111-4111-8111-111111111111',
+        ...overrides,
+      })
+    }
+
+    const analysisResult = {
+      fileId: '11111111-1111-4111-8111-111111111111',
+      formatVersionId: 1,
+      platformName: 'General',
+      rowCount: 2,
+      duplicateCount: 0,
+      warnings: [],
+      errors: [],
+      sampleRows: [],
+    }
+
+    beforeEach(() => {
+      mocks.analyzeFile.mockResolvedValue(analysisResult)
+    })
+
+    it('returns an invalid import error for malformed file ids without calling analyzeFile', async () => {
+      const result = await analyzeImportAction(makeFormData({ fileId: 'not-a-uuid' }))
+
+      expect(result.error).toBe('Importazione non valida.')
+      expect(mocks.analyzeFile).not.toHaveBeenCalled()
+    })
+
+    it('returns success with analysis data when analyzeFile resolves without errors', async () => {
+      const result = await analyzeImportAction(validAnalyzeForm())
+
+      expect(result.error).toBeNull()
+      expect(result.data).toMatchObject({ fileId: '11111111-1111-4111-8111-111111111111' })
+    })
+
+    it('returns the analysis data and first error when analyzeFile resolves with detection errors', async () => {
+      mocks.analyzeFile.mockResolvedValueOnce({
+        ...analysisResult,
+        errors: ['No supported import format matched the uploaded file headers and sample rows.'],
+      })
+
+      const result = await analyzeImportAction(validAnalyzeForm())
+
+      expect(result.error).toBe('No supported import format matched the uploaded file headers and sample rows.')
+      expect(result.data).toBeDefined()
+    })
+
+    it('returns a safe Italian error and does not leak raw service diagnostics when analyzeFile throws', async () => {
+      mocks.analyzeFile.mockRejectedValueOnce(
+        new Error('objectKey=users/user-abc/imports/file.csv https://signed.example.test/obj?token=secret\n    at readR2Bytes (/app/lib/services/import.ts:10)'),
+      )
+
+      const result = await analyzeImportAction(validAnalyzeForm())
+
+      expect(result.error).toBe('Impossibile analizzare il file. Riprova tra qualche secondo.')
+      const serialized = JSON.stringify(result)
+      expect(serialized).not.toContain('objectKey')
+      expect(serialized).not.toContain('https://')
+      expect(serialized).not.toContain('readR2Bytes')
+      expect(serialized).not.toContain('import.ts')
+    })
+
+    it('returns the lifecycle guard Italian message verbatim when analysis is blocked by status', async () => {
+      mocks.analyzeFile.mockRejectedValueOnce(
+        new Error('Analisi non consentita per questo file nel suo stato attuale.'),
+      )
+
+      const result = await analyzeImportAction(validAnalyzeForm())
+
+      expect(result.error).toBe('Analisi non consentita per questo file nel suo stato attuale.')
+      const serialized = JSON.stringify(result)
+      expect(serialized).not.toContain('objectKey')
+      expect(serialized).not.toContain('https://')
+    })
+
+    it('passes selectedFormatVersionId when provided as a valid positive integer', async () => {
+      const form = makeFormData({
+        fileId: '11111111-1111-4111-8111-111111111111',
+        selectedFormatVersionId: '42',
+      })
+
+      await analyzeImportAction(form)
+
+      expect(mocks.analyzeFile).toHaveBeenCalledWith(expect.objectContaining({
+        selectedFormatVersionId: 42,
+      }))
+    })
+  })
+
+  describe('confirmImportAction', () => {
+    function validConfirmForm(overrides: Record<string, string | null> = {}) {
+      return makeFormData({
+        fileId: '11111111-1111-4111-8111-111111111111',
+        overrideWarnings: 'false',
+        ...overrides,
+      })
+    }
+
+    const importResult = {
+      fileId: '11111111-1111-4111-8111-111111111111',
+      rowCount: 2,
+      duplicateCount: 0,
+      importedCount: 2,
+      warnings: [],
+      errors: [],
+    }
+
+    beforeEach(() => {
+      mocks.importFile.mockResolvedValue(importResult)
+    })
+
+    it('returns an invalid import error for malformed file ids without calling importFile', async () => {
+      const result = await confirmImportAction(makeFormData({ fileId: 'not-a-uuid' }))
+
+      expect(result.error).toBe('Importazione non valida.')
+      expect(mocks.importFile).not.toHaveBeenCalled()
+    })
+
+    it('returns success with import data when importFile resolves', async () => {
+      const result = await confirmImportAction(validConfirmForm())
+
+      expect(result.error).toBeNull()
+      expect(result.data).toMatchObject({ fileId: '11111111-1111-4111-8111-111111111111', importedCount: 2 })
+    })
+
+    it('returns a safe Italian error and does not leak raw service diagnostics when importFile throws', async () => {
+      mocks.importFile.mockRejectedValueOnce(
+        new Error('objectKey=users/user-abc/imports/file.csv https://r2.example.test/bucket?X-Amz-Signature=secret\n    at importFile (/app/lib/services/import.ts:42) rawRow: {"Data":"2026-01-10"}'),
+      )
+
+      const result = await confirmImportAction(validConfirmForm())
+
+      expect(result.error).toBe('Impossibile importare il file. Riprova tra qualche secondo.')
+      const serialized = JSON.stringify(result)
+      expect(serialized).not.toContain('objectKey')
+      expect(serialized).not.toContain('https://')
+      expect(serialized).not.toContain('importFile')
+      expect(serialized).not.toContain('rawRow')
+    })
+
+    it('returns the lifecycle guard Italian message verbatim when import is blocked by status', async () => {
+      mocks.importFile.mockRejectedValueOnce(
+        new Error('Importazione non consentita per questo file nel suo stato attuale.'),
+      )
+
+      const result = await confirmImportAction(validConfirmForm())
+
+      expect(result.error).toBe('Importazione non consentita per questo file nel suo stato attuale.')
+      const serialized = JSON.stringify(result)
+      expect(serialized).not.toContain('objectKey')
+      expect(serialized).not.toContain('https://')
+    })
+
+    it('revalidates import and expenses paths on successful import', async () => {
+      await confirmImportAction(validConfirmForm())
+
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/import')
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/expenses')
+    })
+
+    it('does not revalidate paths when importFile throws', async () => {
+      mocks.importFile.mockRejectedValueOnce(new Error('Import failed.'))
+
+      await confirmImportAction(validConfirmForm())
+
+      expect(mocks.revalidatePath).not.toHaveBeenCalled()
     })
   })
 
