@@ -120,6 +120,18 @@ function formString(formData: FormData, key: string) {
   return typeof value === 'string' ? value : undefined
 }
 
+function optionalPositiveInteger(formData: FormData, key: string) {
+  const value = formData.get(key)
+  if (typeof value !== 'string' || value.trim() === '') return undefined
+
+  const numericValue = Number(value)
+  return Number.isInteger(numericValue) && numericValue > 0 ? numericValue : Number.NaN
+}
+
+function invalidImportError() {
+  return { error: 'Importazione non valida.' }
+}
+
 export async function loadImportFormatWizardContextAction(
   formData: FormData,
 ): Promise<ImportActionState<ImportFormatWizardContext>> {
@@ -216,14 +228,12 @@ export async function analyzeImportAction(
 ): Promise<ImportActionState<ImportAnalysisResult>> {
   const raw = {
     fileId: formData.get('fileId'),
-    selectedFormatVersionId: formData.get('selectedFormatVersionId')
-      ? Number(formData.get('selectedFormatVersionId'))
-      : undefined,
+    selectedFormatVersionId: optionalPositiveInteger(formData, 'selectedFormatVersionId'),
   }
 
   const parsed = AnalyzeImportSchema.safeParse(raw)
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Invalid input.' }
+    return invalidImportError()
   }
 
   const { userId } = await verifySession()
@@ -251,15 +261,13 @@ export async function confirmImportAction(
 ): Promise<ImportActionState<ImportFileResult>> {
   const raw = {
     fileId: formData.get('fileId'),
-    selectedFormatVersionId: formData.get('selectedFormatVersionId')
-      ? Number(formData.get('selectedFormatVersionId'))
-      : undefined,
+    selectedFormatVersionId: optionalPositiveInteger(formData, 'selectedFormatVersionId'),
     overrideWarnings: formData.get('overrideWarnings') === 'true',
   }
 
   const parsed = ImportFileSchema.safeParse(raw)
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Invalid input.' }
+    return invalidImportError()
   }
 
   const { userId, subscriptionPlan } = await verifySession()

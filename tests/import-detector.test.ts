@@ -88,6 +88,51 @@ describe('import detector fixture contracts', () => {
     expect(result.bestCandidate?.platform.slug).toBe('general')
   })
 
+  it('detects an inline user-private format without relying on seeded global formats', async () => {
+    const parsed = await parseImportFile(Buffer.from('Quando;Cosa;Valore\n2026-01-02;Nuovo negozio;-12,30\n', 'utf8'), {
+      fileName: 'private-format.csv',
+    })
+    const result = detectImportFormat({
+      parsed,
+      userId: 'user-private-1',
+      formats: [
+        {
+          id: 901,
+          platformId: 801,
+          version: 1,
+          headerSignature: 'Quando;Cosa;Valore',
+          isActive: true,
+          platform: {
+            id: 801,
+            name: 'Private Bank',
+            slug: 'private-bank-user-private-1',
+            delimiter: ';',
+            country: 'IT',
+            timestampColumn: 'Quando',
+            descriptionColumn: 'Cosa',
+            amountType: 'single',
+            amountColumn: 'Valore',
+            positiveAmountColumn: null,
+            negativeAmountColumn: null,
+            multiplyBy: 1,
+          },
+        },
+      ],
+    })
+
+    expect(result.bestCandidate).toMatchObject({
+      formatVersionId: 901,
+      platformId: 801,
+      platform: { slug: 'private-bank-user-private-1' },
+    })
+    expect(result.preview.sampleRows[0]).toMatchObject({
+      description: 'Nuovo negozio',
+      amount: '-12.30',
+      valid: true,
+    })
+    expect(result.errors).toEqual([])
+  })
+
   it('returns a structured non-secret error when no seeded format matches', async () => {
     const parsed = await parseImportFile(Buffer.from('Quando;Cosa;Valore\nfoo;bar;baz\n', 'utf8'), {
       fileName: 'unknown.csv',

@@ -36,6 +36,11 @@ const mocks = vi.hoisted(() => ({
   deletePattern: vi.fn(),
   writeClassificationHistory: vi.fn(),
 
+  // logger
+  loggerInfo: vi.fn(),
+  loggerWarn: vi.fn(),
+  loggerError: vi.fn(),
+
   // db
   dbTransaction: vi.fn(),
 }))
@@ -44,6 +49,13 @@ const mocks = vi.hoisted(() => ({
 vi.mock('server-only', () => ({}))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    info: mocks.loggerInfo,
+    warn: mocks.loggerWarn,
+    error: mocks.loggerError,
+  },
+}))
 vi.mock('@/lib/dal/patterns', () => ({
   createPattern: mocks.createPattern,
   updatePattern: mocks.updatePattern,
@@ -220,76 +232,71 @@ vi.mock('@/lib/services/import-parsers', () => ({
 
 // Mock import-format-detector: return a plausible detection result, or no candidate when the DAL returns no accessible formats
 vi.mock('@/lib/services/import-format-detector', () => ({
-  detectImportFormat: vi.fn((input: { formats: unknown[] }) => input.formats.length === 0 ? {
-    bestCandidate: null,
-    candidates: [],
-    preview: {
-      rowCount: 2,
-      sampleRows: [],
-      duplicateCount: 0,
-      warnings: [],
-    },
-    warnings: [],
-    errors: ['No supported import format matched the uploaded file headers and sample rows.'],
-  } : {
-    bestCandidate: {
-      formatVersionId: 1,
-      platformId: 1,
-      version: 1,
-      platform: {
-        id: 1,
-        name: 'General',
-        slug: 'general',
-        delimiter: ';',
-        country: 'IT',
-        timestampColumn: '"Data Movimento"',
-        descriptionColumn: '"Descrizione"',
-        amountType: 'single',
-        amountColumn: '"Importo"',
-        positiveAmountColumn: null,
-        negativeAmountColumn: null,
-        multiplyBy: 1,
+  detectImportFormat: vi.fn((input: { formats: Array<ReturnType<typeof makeFormatCandidate>> }) => {
+    const format = input.formats[0]
+
+    if (!format) {
+      return {
+        bestCandidate: null,
+        candidates: [],
+        preview: {
+          rowCount: 2,
+          sampleRows: [],
+          duplicateCount: 0,
+          warnings: [],
+        },
+        warnings: [],
+        errors: ['No supported import format matched the uploaded file headers and sample rows.'],
+      }
+    }
+
+    return {
+      bestCandidate: {
+        formatVersionId: format.id,
+        platformId: format.platformId,
+        version: format.version,
+        platform: format.platform,
+        confidence: 0.95,
+        matchedHeaders: ['"Data Movimento"', '"Descrizione"', '"Importo"'],
+        missingHeaders: [],
+        warnings: [],
+        sampleValidity: { rowsChecked: 2, validRows: 2, invalidRows: 0 },
       },
-      confidence: 0.95,
-      matchedHeaders: ['"Data Movimento"', '"Descrizione"', '"Importo"'],
-      missingHeaders: [],
+      candidates: [],
+      preview: {
+        rowCount: 2,
+        sampleRows: [
+          {
+            rowIndex: 1,
+            description: 'Supermercato Esselunga',
+            amount: '-45.50',
+            occurredAt: '2026-01-10T00:00:00.000Z',
+            transactionHash: 'hash-1',
+            duplicate: false,
+            valid: true,
+            errors: [],
+            warnings: [],
+            rawRow: {},
+          },
+          {
+            rowIndex: 2,
+            description: 'Caffè Nero',
+            amount: '-3.50',
+            occurredAt: '2026-01-11T00:00:00.000Z',
+            transactionHash: 'hash-2',
+            duplicate: false,
+            valid: true,
+            errors: [],
+            warnings: [],
+            rawRow: {},
+          },
+        ],
+        duplicateCount: 0,
+        warnings: [],
+      },
       warnings: [],
-      sampleValidity: { rowsChecked: 2, validRows: 2, invalidRows: 0 },
-    },
-    candidates: [],
-    preview: {
-      rowCount: 2,
-      sampleRows: [
-        {
-          rowIndex: 1,
-          description: 'Supermercato Esselunga',
-          amount: '-45.50',
-          occurredAt: '2026-01-10T00:00:00.000Z',
-          transactionHash: 'hash-1',
-          duplicate: false,
-          valid: true,
-          errors: [],
-          warnings: [],
-          rawRow: {},
-        },
-        {
-          rowIndex: 2,
-          description: 'Caffè Nero',
-          amount: '-3.50',
-          occurredAt: '2026-01-11T00:00:00.000Z',
-          transactionHash: 'hash-2',
-          duplicate: false,
-          valid: true,
-          errors: [],
-          warnings: [],
-          rawRow: {},
-        },
-      ],
-      duplicateCount: 0,
-      warnings: [],
-    },
-    warnings: [],
-    errors: [],
+      errors: [],
+    }
   }),
 }))
 
@@ -1173,6 +1180,99 @@ describe('analyzeFile', () => {
       userId: USER_ID,
       selectedFormatVersionId: 8,
     })
+  })
+
+  it('persists the selected private format id and clears stale unknown-format errors after successful retry analysis', async () => {
+    const privateFormat = makeFormatCandidate({
+      id: 77,
+      platformId: 77,
+      platform: {
+        ...makeFormatCandidate().platform,
+        id: 77,
+        name: 'Private Bank',
+        slug: 'private-bank-user-test',
+      },
+    })
+    mocks.getFileForUser.mockResolvedValue(makeFileRow({
+      importFormatVersionId: 77,
+      status: 'uploaded',
+      errorMessage: 'Formato non riconosciuto.',
+    }))
+    mocks.loadImportFormatsForDetection.mockResolvedValue([privateFormat])
+    mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
+
+    const result = await analyzeFile({ userId: USER_ID, fileId: FILE_ID, selectedFormatVersionId: 77 })
+
+    expect(result).toMatchObject({
+      formatVersionId: 77,
+      platformName: 'Private Bank',
+      errors: [],
+    })
+    expect(latestFileAnalysisUpdate()).toMatchObject({
+      status: 'analyzed',
+      importFormatVersionId: 77,
+      errorMessage: null,
+    })
+    expect(mocks.loggerInfo).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'import_format_wizard.retry_analyzed',
+      userId: USER_ID,
+      fileId: FILE_ID,
+      formatVersionId: 77,
+    }))
+  })
+
+  it('fails selected private retry closed and logs sanitized metadata when the format is inaccessible', async () => {
+    mocks.getFileForUser.mockResolvedValue(makeFileRow({
+      importFormatVersionId: 77,
+      status: 'uploaded',
+      errorMessage: 'Formato non riconosciuto.',
+    }))
+    mocks.loadImportFormatsForDetection.mockResolvedValue([])
+    mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
+
+    const result = await analyzeFile({ userId: USER_ID, fileId: FILE_ID, selectedFormatVersionId: 999 })
+
+    expect(result.errors).toContain('No supported import format matched the uploaded file headers and sample rows.')
+    expect(latestFileAnalysisUpdate()).toMatchObject({
+      status: 'failed',
+      errorMessage: expect.stringContaining('No supported import format matched'),
+    })
+    expect(mocks.loggerWarn).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'import_format_wizard.retry_failed',
+      code: 'selected_format_inaccessible',
+      userId: USER_ID,
+      fileId: FILE_ID,
+      formatVersionId: 999,
+    }))
+    const serializedLogs = JSON.stringify([
+      mocks.loggerInfo.mock.calls,
+      mocks.loggerWarn.mock.calls,
+      mocks.loggerError.mock.calls,
+    ])
+    expect(serializedLogs).not.toContain('users/user-test-1/imports')
+    expect(serializedLogs).not.toContain('Supermercato Esselunga')
+  })
+
+  it('redacts parser diagnostics when selected-format retry parsing fails', async () => {
+    mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
+    mocks.parseImportFile.mockRejectedValue(new Error(
+      'Parser crashed for raw row Supermercato Esselunga at https://storage.example.test/private.csv\n    at parse (/app/secret.ts:10)',
+    ))
+
+    await expect(
+      analyzeFile({ userId: USER_ID, fileId: FILE_ID, selectedFormatVersionId: 77 }),
+    ).rejects.toThrow('Could not parse uploaded file.')
+
+    expect(mocks.markFileFailed).toHaveBeenCalledWith(expect.objectContaining({
+      userId: USER_ID,
+      fileId: FILE_ID,
+      errorMessage: 'Could not parse uploaded file.',
+    }))
+    expect(JSON.stringify(mocks.markFileFailed.mock.calls)).not.toContain('Supermercato Esselunga')
+    expect(JSON.stringify(mocks.markFileFailed.mock.calls)).not.toContain('https://storage.example.test')
+    expect(JSON.stringify(mocks.markFileFailed.mock.calls)).not.toContain('/app/secret.ts')
   })
 
   it('persists bounded failed analysis diagnostics with known row count for unknown formats', async () => {

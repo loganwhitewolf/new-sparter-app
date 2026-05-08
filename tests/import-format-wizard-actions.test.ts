@@ -65,6 +65,8 @@ vi.mock('@/lib/db', () => ({
 }))
 
 const {
+  analyzeImportAction,
+  confirmImportAction,
   createPrivateImportFormatAction,
   loadImportFormatWizardContextAction,
 } = await import('../lib/actions/import')
@@ -284,6 +286,25 @@ describe('import format wizard Server Actions', () => {
     expect(serializedLogs).not.toContain('https://storage.example')
     expect(serializedLogs).not.toContain('secret line')
     expect(serializedLogs).not.toContain(fileRow.objectKey)
+  })
+
+  it('maps malformed selected format ids to localized action errors before auth', async () => {
+    const analyzeResult = await analyzeImportAction(
+      formData({
+        fileId: '11111111-1111-4111-8111-111111111111',
+        selectedFormatVersionId: 'not-a-number',
+      }),
+    )
+    const confirmResult = await confirmImportAction(
+      formData({
+        fileId: '11111111-1111-4111-8111-111111111111',
+        selectedFormatVersionId: 'not-a-number',
+      }),
+    )
+
+    expect(analyzeResult).toEqual({ error: 'Importazione non valida.' })
+    expect(confirmResult).toEqual({ error: 'Importazione non valida.' })
+    expect(mocks.verifySession).not.toHaveBeenCalled()
   })
 
   it('maps unauthorized sessions to a localized action error', async () => {

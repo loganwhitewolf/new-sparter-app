@@ -159,6 +159,7 @@ export async function updateFileImportState(
     referenceEndedAt?: Date | null
     importStartedAt?: Date | null
     importedAt?: Date | null
+    importFormatVersionId?: number | null
     errorMessage?: string | null
   },
   database: DbOrTx = db,
@@ -176,6 +177,7 @@ export async function updateFileImportState(
       referenceEndedAt: input.referenceEndedAt,
       importStartedAt: input.importStartedAt,
       importedAt: input.importedAt,
+      importFormatVersionId: input.importFormatVersionId,
       errorMessage: input.errorMessage ?? null,
       updatedAt: new Date(),
     })

@@ -28,6 +28,7 @@ import { normalizeTransactionRow } from '@/lib/utils/import'
 import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
 import { loadImportFormatsForDetection } from '@/lib/dal/import-formats'
+import { logger } from '@/lib/logger'
 
 export type ImportAnalysisResult = {
   fileId: string
@@ -70,8 +71,37 @@ async function readR2Bytes(objectKey: string): Promise<Buffer> {
 
 const SAFE_ERROR_MAX_LENGTH = 500
 
-function safeImportErrorMessage(error: unknown, fallback: string): string {
-  const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : fallback
+type ImportRetryLogCode =
+  | 'selected_format_inaccessible'
+  | 'no_matching_format'
+  | 'analysis_failed'
+  | 'import_failed'
+
+function logImportRetry(
+  level: 'info' | 'warn' | 'error',
+  event: string,
+  fields: {
+    userId: string
+    fileId: string
+    formatVersionId?: number
+    code?: ImportRetryLogCode
+  },
+) {
+  logger[level]({ event, ...fields })
+}
+
+function safeImportErrorMessage(
+  error: unknown,
+  fallback: string,
+  options: { exposeMessage?: boolean } = { exposeMessage: true },
+): string {
+  const raw = options.exposeMessage === false
+    ? fallback
+    : error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : fallback
   return raw
     .replace(/https?:\/\/\S+/g, '[redacted-url]')
     .replace(/\s+at\s+[^\n]+/g, '')
@@ -222,15 +252,24 @@ export async function analyzeFile(input: {
   try {
     parsed = await parseImportFile(bytes, { fileName: fileRow.originalName })
   } catch (error) {
-    const msg = safeImportErrorMessage(error, 'Could not parse uploaded file.')
+    const msg = safeImportErrorMessage(error, 'Could not parse uploaded file.', { exposeMessage: false })
     await markFileFailed({ userId: input.userId, fileId: input.fileId, errorMessage: msg })
     throw new Error(msg)
   }
 
+  const selectedFormatVersionId = input.selectedFormatVersionId ?? fileRow.importFormatVersionId ?? undefined
   const formats = await loadImportFormatsForDetection({
     userId: input.userId,
-    selectedFormatVersionId: input.selectedFormatVersionId,
+    selectedFormatVersionId,
   })
+  if (selectedFormatVersionId !== undefined && formats.length === 0) {
+    logImportRetry('warn', 'import_format_wizard.retry_failed', {
+      userId: input.userId,
+      fileId: input.fileId,
+      formatVersionId: selectedFormatVersionId,
+      code: 'selected_format_inaccessible',
+    })
+  }
   const detected = detectImportFormat({ parsed, formats, userId: input.userId })
   const best = detected.bestCandidate
 
@@ -269,6 +308,23 @@ export async function analyzeFile(input: {
     importFormatVersionId: best?.formatVersionId ?? null,
     errorMessage: safeErrorMessage,
   })
+
+  if (selectedFormatVersionId !== undefined) {
+    if (best) {
+      logImportRetry('info', 'import_format_wizard.retry_analyzed', {
+        userId: input.userId,
+        fileId: input.fileId,
+        formatVersionId: best.formatVersionId,
+      })
+    } else if (formats.length > 0) {
+      logImportRetry('warn', 'import_format_wizard.retry_failed', {
+        userId: input.userId,
+        fileId: input.fileId,
+        formatVersionId: selectedFormatVersionId,
+        code: 'no_matching_format',
+      })
+    }
+  }
 
   return {
     fileId: input.fileId,
@@ -312,7 +368,7 @@ export async function importFile(input: {
   try {
     parsed = await parseImportFile(bytes, { fileName: fileRow.originalName })
   } catch (error) {
-    const msg = safeImportErrorMessage(error, 'Could not parse uploaded file.')
+    const msg = safeImportErrorMessage(error, 'Could not parse uploaded file.', { exposeMessage: false })
     await markFileFailed({ userId: input.userId, fileId: input.fileId, errorMessage: msg })
     throw new Error(msg)
   }
@@ -335,10 +391,19 @@ export async function importFile(input: {
     throw new Error(msg)
   }
 
+  const selectedFormatVersionId = input.selectedFormatVersionId ?? fileRow.importFormatVersionId ?? undefined
   const formats = await loadImportFormatsForDetection({
     userId: input.userId,
-    selectedFormatVersionId: input.selectedFormatVersionId ?? fileRow.importFormatVersionId ?? undefined,
+    selectedFormatVersionId,
   })
+  if (selectedFormatVersionId !== undefined && formats.length === 0) {
+    logImportRetry('warn', 'import_format_wizard.retry_failed', {
+      userId: input.userId,
+      fileId: input.fileId,
+      formatVersionId: selectedFormatVersionId,
+      code: 'selected_format_inaccessible',
+    })
+  }
   const detected = detectImportFormat({ parsed, formats, userId: input.userId })
 
   if (!detected.bestCandidate) {
@@ -356,6 +421,14 @@ export async function importFile(input: {
       referenceEndedAt: null,
       errorMessage: msg,
     })
+    if (selectedFormatVersionId !== undefined && formats.length > 0) {
+      logImportRetry('warn', 'import_format_wizard.retry_failed', {
+        userId: input.userId,
+        fileId: input.fileId,
+        formatVersionId: selectedFormatVersionId,
+        code: 'no_matching_format',
+      })
+    }
     throw new Error(msg)
   }
 
@@ -522,9 +595,18 @@ export async function importFile(input: {
         negativeTotal: fullStats.negativeTotal,
         referenceStartedAt: fullStats.referenceStartedAt,
         referenceEndedAt: fullStats.referenceEndedAt,
+        importFormatVersionId: best.formatVersionId,
         importedAt: new Date(),
         errorMessage: null,
       })
+
+      if (selectedFormatVersionId !== undefined) {
+        logImportRetry('info', 'import_format_wizard.retry_imported', {
+          userId: input.userId,
+          fileId: input.fileId,
+          formatVersionId: best.formatVersionId,
+        })
+      }
 
       return {
         fileId: input.fileId,
@@ -540,6 +622,14 @@ export async function importFile(input: {
   } catch (error) {
     const msg = safeImportErrorMessage(error, 'Import failed.')
     await markFileFailed({ userId: input.userId, fileId: input.fileId, errorMessage: msg })
+    if (selectedFormatVersionId !== undefined) {
+      logImportRetry('error', 'import_format_wizard.retry_failed', {
+        userId: input.userId,
+        fileId: input.fileId,
+        formatVersionId: selectedFormatVersionId,
+        code: 'import_failed',
+      })
+    }
     throw new Error(msg)
   }
 }
