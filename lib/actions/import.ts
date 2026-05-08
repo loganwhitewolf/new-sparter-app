@@ -3,14 +3,23 @@ import { revalidatePath } from 'next/cache'
 import { verifySession } from '@/lib/dal/auth'
 import {
   AnalyzeImportSchema,
+  CreatePrivateImportFormatSchema,
   DeleteImportSchema,
   ImportFileSchema,
+  LoadImportFormatWizardContextSchema,
   UpdateImportDisplayNameSchema,
   parseImportFilters,
   type ImportSearchParams,
 } from '@/lib/validations/import'
 import { analyzeFile, importFile } from '@/lib/services/import'
 import type { ImportAnalysisResult, ImportFileResult } from '@/lib/services/import'
+import {
+  ImportFormatWizardError,
+  createPrivateImportFormat,
+  loadImportFormatWizardContext,
+  type CreatePrivateImportFormatResult,
+  type ImportFormatWizardContext,
+} from '@/lib/services/import-format-wizard'
 import {
   ImportDeleteError,
   deleteImport as deleteImportService,
@@ -79,6 +88,102 @@ function revalidateImportDeletionSurfaces() {
   revalidatePath(APP_ROUTES.import)
   revalidatePath(APP_ROUTES.expenses)
   revalidatePath(APP_ROUTES.transactions)
+}
+
+function mapImportFormatWizardError(error: unknown) {
+  if (error instanceof ImportFormatWizardError) {
+    switch (error.code) {
+      case 'invalid_input':
+        return 'Controlla i campi del formato e riprova.'
+      case 'file_not_found':
+        return 'Importazione non trovata o accesso negato.'
+      case 'file_read_failed':
+        return 'Impossibile leggere il file caricato. Riprova.'
+      case 'file_parse_failed':
+        return 'Impossibile leggere le intestazioni del file. Riprova.'
+      case 'column_not_found':
+        return 'Una o più colonne selezionate non esistono nel file caricato.'
+      case 'db_write_failed':
+        return 'Impossibile salvare il formato. Riprova.'
+    }
+  }
+
+  return 'Si è verificato un errore. Riprova tra qualche secondo.'
+}
+
+function revalidateImportWizardSurfaces() {
+  revalidatePath(APP_ROUTES.import)
+}
+
+function formString(formData: FormData, key: string) {
+  const value = formData.get(key)
+  return typeof value === 'string' ? value : undefined
+}
+
+export async function loadImportFormatWizardContextAction(
+  formData: FormData,
+): Promise<ImportActionState<ImportFormatWizardContext>> {
+  const parsed = LoadImportFormatWizardContextSchema.safeParse({
+    fileId: formData.get('fileId') ?? '',
+  })
+
+  if (!parsed.success) {
+    return { error: 'Importazione non valida.' }
+  }
+
+  let userId: string
+
+  try {
+    const session = await verifySession()
+    userId = session.userId
+  } catch {
+    return { error: 'Sessione scaduta. Accedi di nuovo per configurare il formato.' }
+  }
+
+  try {
+    const context = await loadImportFormatWizardContext({ userId, fileId: parsed.data.fileId })
+    return { error: null, data: context }
+  } catch (error) {
+    return { error: mapImportFormatWizardError(error) }
+  }
+}
+
+export async function createPrivateImportFormatAction(
+  _prev: ImportActionState<CreatePrivateImportFormatResult>,
+  formData: FormData,
+): Promise<ImportActionState<CreatePrivateImportFormatResult>> {
+  const parsed = CreatePrivateImportFormatSchema.safeParse({
+    fileId: formData.get('fileId') ?? '',
+    platformName: formData.get('platformName') ?? '',
+    delimiter: formString(formData, 'delimiter'),
+    timestampColumn: formData.get('timestampColumn') ?? '',
+    descriptionColumn: formData.get('descriptionColumn') ?? '',
+    amountMode: formString(formData, 'amountMode'),
+    amountColumn: formString(formData, 'amountColumn'),
+    positiveAmountColumn: formString(formData, 'positiveAmountColumn'),
+    negativeAmountColumn: formString(formData, 'negativeAmountColumn'),
+  })
+
+  if (!parsed.success) {
+    return { error: 'Controlla i campi del formato e riprova.' }
+  }
+
+  let userId: string
+
+  try {
+    const session = await verifySession()
+    userId = session.userId
+  } catch {
+    return { error: 'Sessione scaduta. Accedi di nuovo per configurare il formato.' }
+  }
+
+  try {
+    const result = await createPrivateImportFormat({ ...parsed.data, userId })
+    revalidateImportWizardSurfaces()
+    return { error: null, data: result }
+  } catch (error) {
+    return { error: mapImportFormatWizardError(error) }
+  }
 }
 
 export async function loadMoreImports({

@@ -62,6 +62,92 @@ export const ImportFileSchema = z.object({
   overrideWarnings: z.boolean().default(false),
 })
 
+export const ImportFormatWizardDelimiterSchema = z.enum([',', ';', '\t', '|'], {
+  error: 'Unsupported delimiter.',
+})
+
+const ImportFormatWizardColumnSchema = z
+  .string({ error: 'Column is required.' })
+  .trim()
+  .min(1, { error: 'Column is required.' })
+  .max(120, { error: 'Column is too long.' })
+
+const OptionalImportFormatWizardColumnSchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  ImportFormatWizardColumnSchema.optional(),
+)
+
+export const LoadImportFormatWizardContextSchema = z.object({
+  fileId: FileIdSchema,
+})
+
+export const CreatePrivateImportFormatSchema = z
+  .object({
+    fileId: FileIdSchema,
+    platformName: z
+      .string({ error: 'Platform name is required.' })
+      .trim()
+      .min(1, { error: 'Platform name is required.' })
+      .max(100, { error: 'Platform name is too long.' }),
+    delimiter: ImportFormatWizardDelimiterSchema,
+    timestampColumn: ImportFormatWizardColumnSchema,
+    descriptionColumn: ImportFormatWizardColumnSchema,
+    amountMode: z.enum(['single', 'separate'], { error: 'Amount mode is required.' }),
+    amountColumn: OptionalImportFormatWizardColumnSchema,
+    positiveAmountColumn: OptionalImportFormatWizardColumnSchema,
+    negativeAmountColumn: OptionalImportFormatWizardColumnSchema,
+  })
+  .superRefine((value, ctx) => {
+    if (value.amountMode === 'single' && !value.amountColumn) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['amountColumn'],
+        message: 'Amount column is required for single amount mode.',
+      })
+    }
+
+    if (value.amountMode === 'single' && (value.positiveAmountColumn || value.negativeAmountColumn)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['amountMode'],
+        message: 'Separate amount columns are not allowed in single amount mode.',
+      })
+    }
+
+    if (value.amountMode === 'separate' && (!value.positiveAmountColumn || !value.negativeAmountColumn)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['positiveAmountColumn'],
+        message: 'Positive and negative amount columns are required for separate amount mode.',
+      })
+    }
+
+    if (value.amountMode === 'separate' && value.amountColumn) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['amountColumn'],
+        message: 'Single amount column is not allowed in separate amount mode.',
+      })
+    }
+  })
+
+export function getPrivateImportFormatColumnValidationError(
+  input: CreatePrivateImportFormatInput,
+  headers: readonly string[],
+): string | null {
+  const headerSet = new Set(headers)
+  const requiredColumns = [
+    input.timestampColumn,
+    input.descriptionColumn,
+    ...(input.amountMode === 'single'
+      ? [input.amountColumn]
+      : [input.positiveAmountColumn, input.negativeAmountColumn]),
+  ].filter((column): column is string => typeof column === 'string' && column.length > 0)
+
+  const missingColumn = requiredColumns.find((column) => !headerSet.has(column))
+  return missingColumn ? `Selected column does not exist in uploaded file: ${missingColumn}` : null
+}
+
 export const UpdateImportDisplayNameSchema = z.object({
   fileId: FileIdSchema,
   displayName: z
@@ -79,6 +165,8 @@ export type InitiateUploadInput = z.infer<typeof InitiateUploadSchema>
 export type ConfirmUploadInput = z.infer<typeof ConfirmUploadSchema>
 export type AnalyzeImportInput = z.infer<typeof AnalyzeImportSchema>
 export type ImportFileInput = z.infer<typeof ImportFileSchema>
+export type LoadImportFormatWizardContextInput = z.infer<typeof LoadImportFormatWizardContextSchema>
+export type CreatePrivateImportFormatInput = z.infer<typeof CreatePrivateImportFormatSchema>
 export type UpdateImportDisplayNameInput = z.infer<typeof UpdateImportDisplayNameSchema>
 export type DeleteImportInput = z.infer<typeof DeleteImportSchema>
 

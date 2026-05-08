@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { UpdateImportDisplayNameSchema, parseImportFilters } from '../import'
+import {
+  CreatePrivateImportFormatSchema,
+  UpdateImportDisplayNameSchema,
+  getPrivateImportFormatColumnValidationError,
+  parseImportFilters,
+} from '../import'
 
 describe('parseImportFilters', () => {
   it('returns an empty filter object for empty Next searchParams', () => {
@@ -67,6 +72,75 @@ describe('parseImportFilters', () => {
 
   it('ignores oversized query strings instead of passing them to SQL', () => {
     expect(parseImportFilters({ q: 'x'.repeat(256) })).toEqual({})
+  })
+})
+
+describe('CreatePrivateImportFormatSchema', () => {
+  const validFileId = '11111111-1111-4111-8111-111111111111'
+
+  it('trims wizard fields and accepts a single amount-column configuration', () => {
+    expect(
+      CreatePrivateImportFormatSchema.parse({
+        fileId: validFileId,
+        platformName: '  My Bank  ',
+        delimiter: ';',
+        timestampColumn: '  Data  ',
+        descriptionColumn: 'Descrizione',
+        amountMode: 'single',
+        amountColumn: ' Importo ',
+      }),
+    ).toEqual({
+      fileId: validFileId,
+      platformName: 'My Bank',
+      delimiter: ';',
+      timestampColumn: 'Data',
+      descriptionColumn: 'Descrizione',
+      amountMode: 'single',
+      amountColumn: 'Importo',
+    })
+  })
+
+  it('rejects malformed wizard inputs and inconsistent amount modes', () => {
+    expect(() =>
+      CreatePrivateImportFormatSchema.parse({
+        fileId: validFileId,
+        platformName: '',
+        delimiter: ':',
+        timestampColumn: '',
+        descriptionColumn: 'Descrizione',
+        amountMode: 'single',
+      }),
+    ).toThrow()
+
+    expect(() =>
+      CreatePrivateImportFormatSchema.parse({
+        fileId: validFileId,
+        platformName: 'My Bank',
+        delimiter: ',',
+        timestampColumn: 'Data',
+        descriptionColumn: 'Descrizione',
+        amountMode: 'separate',
+        amountColumn: 'Importo',
+      }),
+    ).toThrow()
+  })
+
+  it('validates selected columns against parsed file headers', () => {
+    const parsed = CreatePrivateImportFormatSchema.parse({
+      fileId: validFileId,
+      platformName: 'My Bank',
+      delimiter: ',',
+      timestampColumn: 'Data',
+      descriptionColumn: 'Descrizione',
+      amountMode: 'separate',
+      positiveAmountColumn: 'Entrate',
+      negativeAmountColumn: 'Uscite',
+    })
+
+    expect(getPrivateImportFormatColumnValidationError(parsed, ['Data', 'Descrizione', 'Entrate', 'Uscite'])).toBeNull()
+    expect(getPrivateImportFormatColumnValidationError(parsed, ['Data', 'Descrizione', 'Entrate'])).toBe(
+      'Selected column does not exist in uploaded file: Uscite',
+    )
   })
 })
 
