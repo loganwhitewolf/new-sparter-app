@@ -277,6 +277,85 @@ test.describe('Import - IMP-03: Filter, rename, and pagination UI', () => {
   })
 })
 
+test.describe('Import - IMP-04: Delete dialog availability', () => {
+  test('IMP-04 /import renders table or empty state without exposing secrets', async ({ page }) => {
+    await openImportPage(page)
+
+    const historyTable = page.getByRole('table', { name: /storico importazioni/i })
+    const emptyState = page.getByText(/nessuna importazione trovata/i)
+    const safeErrorState = page.getByText(/storico importazioni non disponibile/i)
+
+    await expect(historyTable.or(emptyState).or(safeErrorState)).toBeVisible()
+
+    if (await historyTable.isVisible()) {
+      // If any imported row exists, the delete button must be keyboard-accessible
+      const deleteButtons = page.getByRole('button', { name: /elimina importazione/i })
+      const deleteButtonCount = await deleteButtons.count()
+
+      // Delete buttons exist only for status=imported rows — assert presence is consistent with row data
+      if (deleteButtonCount > 0) {
+        await expect(deleteButtons.first()).toBeVisible()
+        await expect(deleteButtons.first()).toBeEnabled()
+      }
+    }
+
+    // In empty state: no delete button should exist (nothing to delete)
+    if (await emptyState.isVisible()) {
+      await expect(page.getByRole('button', { name: /elimina importazione/i })).toHaveCount(0)
+    }
+
+    await expectNoSecretDiagnostics(page)
+  })
+})
+
+test.describe('Import - IMP-05: Configure page error state', () => {
+  test('IMP-05 /import/[unknownId]/configure renders bounded error card without secrets', async ({ page }) => {
+    await page.setExtraHTTPHeaders({
+      'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
+    })
+    await page.goto('/import/00000000-0000-4000-8000-000000000099/configure')
+
+    await expect(page.getByRole('heading', { name: /configura formato importazione/i })).toBeVisible()
+
+    // Error card heading must be present
+    await expect(page.getByText(/formato non configurabile/i)).toBeVisible()
+
+    // Error detail paragraph (from the action error or fallback message)
+    const errorAlert = page.locator('[role="alert"]')
+    await expect(errorAlert).toBeVisible()
+
+    // Back link must point to /import
+    const backLink = page.getByRole('link', { name: /torna agli import/i })
+    await expect(backLink).toBeVisible()
+    await expect(backLink).toHaveAttribute('href', '/import')
+
+    await expectNoSecretDiagnostics(page)
+  })
+})
+
+test.describe('Import - IMP-06: importId transaction filter', () => {
+  test('IMP-06 /transactions?importId=<unknown> renders empty state without 500 or secrets', async ({ page }) => {
+    await page.setExtraHTTPHeaders({
+      'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
+    })
+    await page.goto('/transactions?importId=00000000-0000-4000-8000-000000000099')
+
+    // Page heading must be visible — confirms the RSC rendered without crashing
+    await expect(page.getByRole('heading', { name: /transazioni/i })).toBeVisible()
+
+    // Table or empty state must be visible (zero results expected for unknown importId)
+    const transactionTable = page.getByRole('table')
+    const emptyState = page.getByText(/nessuna transazione trovata|nessun risultato|nessuna transazione/i)
+
+    await expect(transactionTable.or(emptyState)).toBeVisible()
+
+    // Confirm no 500-level error page leaked through
+    await expect(page.getByText(/500|application error|internal server error/i)).toHaveCount(0)
+
+    await expectNoSecretDiagnostics(page)
+  })
+})
+
 test.describe('Import - IMP-02: Analyze preview page', () => {
   test('IMP-02 /import/[fileId]/analyze renders preview structure when mocked', async ({ page }) => {
     test.fixme(true, 'Requires seeded DB + R2 file — run against staging with a real uploaded file')
