@@ -1,11 +1,8 @@
 import { ImportFilters } from '@/components/import/import-filters'
 import { ImportTable } from '@/components/import/import-table'
-import { ImportUploader } from '@/components/import/import-uploader'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ImportUploadDialog } from '@/components/import/import-upload-dialog'
 import { getImports, IMPORT_LIST_LIMIT, type ImportListRow } from '@/lib/dal/imports'
-import { parseImportFilters, MAX_IMPORT_FILE_SIZE_BYTES, type ImportSearchParams } from '@/lib/validations/import'
-
-const MAX_MB = Math.round(MAX_IMPORT_FILE_SIZE_BYTES / (1024 * 1024))
+import { parseImportFilters, type ImportSearchParams } from '@/lib/validations/import'
 
 function isNextNavigationError(error: unknown) {
   if (!(error instanceof Error)) {
@@ -49,35 +46,17 @@ export default async function ImportPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold">Importa file bancario</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Carica un estratto conto per aggiungere le tue transazioni
-        </p>
-      </div>
-
-      <Card className="max-w-xl">
-        <CardHeader>
-          <CardTitle>Carica file</CardTitle>
-          <CardDescription>
-            Formati supportati: <strong>.csv</strong>, <strong>.xlsx</strong> — dimensione massima{' '}
-            <strong>{MAX_MB} MB</strong>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ImportUploader />
-        </CardContent>
-      </Card>
-
-      <section className="flex flex-col gap-3" aria-labelledby="import-history-heading">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 id="import-history-heading" className="text-lg font-semibold">
-            Storico importazioni
-          </h2>
+          <h1 className="text-xl font-semibold">Importazioni</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Controlla stato, statistiche e messaggi sicuri degli ultimi file caricati.
+            Storico dei file bancari caricati
           </p>
         </div>
+        <ImportUploadDialog />
+      </div>
+
+      <section className="flex flex-col gap-3">
         <ImportFilters filters={filters} />
         <ImportTable
           key={filterKey}
