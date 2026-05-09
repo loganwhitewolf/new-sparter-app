@@ -1,13 +1,11 @@
 import 'server-only'
 import { cache } from 'react'
+import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { db } from '@/lib/db'
+import { user as userTable } from '@/lib/db/schema'
 import { getAuthSessionOrNull } from '@/lib/auth-session'
-
-type SessionUserWithAccessFields = {
-  subscriptionPlan?: 'free' | 'basic' | 'pro'
-  role?: 'user' | 'admin'
-}
 
 export const verifySession = cache(async () => {
   const requestHeaders = await headers()
@@ -28,12 +26,23 @@ export const verifySession = cache(async () => {
   if (!session?.user) {
     redirect('/login')
   }
-  const user = session.user as typeof session.user & SessionUserWithAccessFields
+
+  const userId = session.user.id
+  const email = session.user.email
+
+  const [row] = await db
+    .select({
+      subscriptionPlan: userTable.subscriptionPlan,
+      role: userTable.role,
+    })
+    .from(userTable)
+    .where(eq(userTable.id, userId))
+    .limit(1)
 
   return {
-    userId: user.id,
-    email: user.email,
-    subscriptionPlan: user.subscriptionPlan ?? 'free',
-    role: user.role ?? 'user',
+    userId,
+    email,
+    subscriptionPlan: row?.subscriptionPlan ?? 'free',
+    role: row?.role ?? 'user',
   }
 })
