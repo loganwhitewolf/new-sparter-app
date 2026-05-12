@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { verifySession } from '@/lib/dal/auth'
-import { buildUserImportObjectKey, createFileRecord, markFileFailed } from '@/lib/dal/files'
+import { buildUserImportObjectKey, createFileRecord, findFileByContentHash, markFileFailed } from '@/lib/dal/files'
 import { logger, withLogContext } from '@/lib/logger'
 import { createPresignedPutUrl } from '@/lib/services/r2'
 import { InitiateUploadSchema } from '@/lib/validations/import'
@@ -79,6 +79,24 @@ export async function POST(request: Request) {
       contentType: parsed.data.type,
     })
 
+    if (parsed.data.contentHash) {
+      const existing = await findFileByContentHash({
+        userId: session.userId,
+        contentHash: parsed.data.contentHash,
+      })
+      if (existing) {
+        logger.info({
+          event: 'upload_initiate_duplicate',
+          userId: session.userId,
+          contentHash: parsed.data.contentHash,
+          existingFileId: existing.id,
+        })
+        return errorResponse(409, 'duplicate_file', 'Hai già caricato questo file.', {
+          existingFileId: existing.id,
+        })
+      }
+    }
+
     let createdFile: Awaited<ReturnType<typeof createFileRecord>> | null = null
     try {
       const fileId = crypto.randomUUID()
@@ -95,6 +113,7 @@ export async function POST(request: Request) {
         objectKey,
         mimeType: parsed.data.type,
         sizeBytes: parsed.data.size,
+        contentHash: parsed.data.contentHash ?? null,
       })
 
       const signed = await createPresignedPutUrl({

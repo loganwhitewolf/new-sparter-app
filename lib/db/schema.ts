@@ -254,6 +254,7 @@ export const file = pgTable(
     ),
     originalName: varchar("original_name", { length: 255 }).notNull(),
     displayName: varchar("display_name", { length: 255 }),
+    contentHash: varchar("content_hash", { length: 64 }),
     objectKey: text("object_key").notNull().unique(),
     mimeType: varchar("mime_type", { length: 120 }),
     sizeBytes: integer("size_bytes").notNull(),
@@ -287,6 +288,7 @@ export const file = pgTable(
       table.referenceEndedAt,
     ),
     index("file_importFormatVersionId_idx").on(table.importFormatVersionId),
+    index("file_userId_contentHash_idx").on(table.userId, table.contentHash),
   ],
 );
 

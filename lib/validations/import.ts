@@ -18,6 +18,8 @@ function extensionOf(name: string) {
 
 export const FileIdSchema = z.string().uuid({ error: 'Invalid file id.' })
 
+const HEX_64_RE = /^[0-9a-f]{64}$/
+
 export const InitiateUploadSchema = z.object({
   name: z
     .string({ error: 'File name is required.' })
@@ -38,6 +40,10 @@ export const InitiateUploadSchema = z.object({
     .refine((type) => IMPORT_CONTENT_TYPES.includes(type as (typeof IMPORT_CONTENT_TYPES)[number]), {
       error: 'Unsupported import content type.',
     }),
+  contentHash: z
+    .string()
+    .regex(HEX_64_RE, { error: 'Content hash must be a 64-character lowercase hex string.' })
+    .optional(),
 })
 
 export const ConfirmUploadSchema = z.object({

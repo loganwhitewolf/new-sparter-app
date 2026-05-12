@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNotNull } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { file } from '@/lib/db/schema'
 
@@ -13,6 +13,7 @@ export type CreateFileRecordInput = {
   objectKey: string
   mimeType: string
   sizeBytes: number
+  contentHash?: string | null
   displayName?: string | null
   rowCount?: number
   importedCount?: number
@@ -31,6 +32,7 @@ export async function createFileRecord(input: CreateFileRecordInput, database: D
       userId: input.userId,
       originalName: input.originalName,
       displayName: input.displayName ?? null,
+      contentHash: input.contentHash ?? null,
       objectKey: input.objectKey,
       mimeType: input.mimeType,
       sizeBytes: input.sizeBytes,
@@ -59,6 +61,25 @@ export async function getFileForUser(
     .select()
     .from(file)
     .where(and(eq(file.id, input.fileId), eq(file.userId, input.userId)))
+    .limit(1)
+
+  return rows[0] ?? null
+}
+
+export async function findFileByContentHash(
+  input: { userId: string; contentHash: string },
+  database: DbOrTx = db,
+): Promise<FileRow | null> {
+  const rows = await database
+    .select()
+    .from(file)
+    .where(
+      and(
+        eq(file.userId, input.userId),
+        isNotNull(file.contentHash),
+        eq(file.contentHash, input.contentHash),
+      ),
+    )
     .limit(1)
 
   return rows[0] ?? null

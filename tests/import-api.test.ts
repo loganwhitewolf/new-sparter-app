@@ -6,6 +6,7 @@ vi.mock('server-only', () => ({}))
 const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   createFileRecord: vi.fn(),
+  findFileByContentHash: vi.fn(),
   getFileForUser: vi.fn(),
   markFileFailed: vi.fn(),
   markFileUploaded: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock('@/lib/dal/files', () => ({
     return `users/${encodeURIComponent(input.userId)}/imports/${input.fileId}${extension}`
   },
   createFileRecord: mocks.createFileRecord,
+  findFileByContentHash: mocks.findFileByContentHash,
   getFileForUser: mocks.getFileForUser,
   markFileFailed: mocks.markFileFailed,
   markFileUploaded: mocks.markFileUploaded,
@@ -75,6 +77,7 @@ function fileRow(overrides: Partial<FileRow> = {}): FileRow {
     importFormatVersionId: null,
     originalName: 'fineco.csv',
     displayName: null,
+    contentHash: null,
     objectKey: 'users/user-1/imports/11111111-1111-4111-8111-111111111111.csv',
     mimeType: 'text/csv',
     sizeBytes: 128,
@@ -101,6 +104,7 @@ describe('file import upload API contracts', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.verifySession.mockResolvedValue(userSession)
+    mocks.findFileByContentHash.mockResolvedValue(null)
     mocks.createFileRecord.mockImplementation(async (input: { id: string; originalName: string; objectKey: string; mimeType: string; sizeBytes: number }) =>
       fileRow({
         id: input.id,
@@ -138,6 +142,45 @@ describe('file import upload API contracts', () => {
       event: 'upload_initiate_malformed',
       issueCount: expect.any(Number),
     }))
+  })
+
+  it('rejects duplicate uploads with 409 and existing file id when contentHash matches', async () => {
+    const existingId = '22222222-2222-4222-8222-222222222222'
+    mocks.findFileByContentHash.mockResolvedValueOnce(fileRow({ id: existingId, status: 'imported' }))
+    const hash = 'a'.repeat(64)
+
+    const response = await initiateUpload(jsonRequest({ name: 'fineco.csv', size: 128, type: 'text/csv', contentHash: hash }))
+    const body = await response.json()
+
+    expect(response.status).toBe(409)
+    expect(body.error.code).toBe('duplicate_file')
+    expect(body.error.details.existingFileId).toBe(existingId)
+    expect(mocks.createFileRecord).not.toHaveBeenCalled()
+    expect(mocks.createPresignedPutUrl).not.toHaveBeenCalled()
+    expect(mocks.findFileByContentHash).toHaveBeenCalledWith({ userId: 'user-1', contentHash: hash })
+    expect(mocks.loggerInfo).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'upload_initiate_duplicate',
+      userId: 'user-1',
+      contentHash: hash,
+      existingFileId: existingId,
+    }))
+  })
+
+  it('skips duplicate check and proceeds normally when no contentHash is provided', async () => {
+    const response = await initiateUpload(jsonRequest({ name: 'fineco.csv', size: 128, type: 'text/csv' }))
+
+    expect(response.status).toBe(200)
+    expect(mocks.findFileByContentHash).not.toHaveBeenCalled()
+    expect(mocks.createFileRecord).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects invalid contentHash values at schema validation level', async () => {
+    const response = await initiateUpload(jsonRequest({ name: 'fineco.csv', size: 128, type: 'text/csv', contentHash: 'not-valid-hex' }))
+    const body = await response.json()
+
+    expect(response.status).toBe(422)
+    expect(body.error.code).toBe('invalid_upload_request')
+    expect(mocks.findFileByContentHash).not.toHaveBeenCalled()
   })
 
   it('returns unauthorized initiate responses without anonymous file rows', async () => {

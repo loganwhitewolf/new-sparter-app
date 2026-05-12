@@ -14,7 +14,15 @@ import {
 const ACCEPTED_EXTENSIONS = ['.csv', '.xlsx']
 const ACCEPTED_TYPES = IMPORT_CONTENT_TYPES as readonly string[]
 
-type UploadStage = 'idle' | 'initiating' | 'uploading' | 'confirming' | 'done'
+type UploadStage = 'idle' | 'hashing' | 'initiating' | 'uploading' | 'confirming' | 'done'
+
+async function sha256Hex(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
 
 function validateFile(file: File): string | null {
   const ext = file.name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0] ?? ''
@@ -36,6 +44,7 @@ function validateFile(file: File): string | null {
 
 function stageLabel(stage: UploadStage): string {
   switch (stage) {
+    case 'hashing': return 'Controllo duplicati…'
     case 'initiating': return 'Preparazione upload…'
     case 'uploading': return 'Caricamento file…'
     case 'confirming': return 'Verifica…'
@@ -80,7 +89,18 @@ export function ImportUploader() {
 
     setError(null)
 
-    // Step 1: Initiate — get presigned URL + fileId
+    // Step 1: Hash the file locally to detect duplicates before upload
+    setStage('hashing')
+    let contentHash: string
+    try {
+      contentHash = await sha256Hex(selectedFile)
+    } catch {
+      setError('Impossibile verificare il file. Riprova.')
+      setStage('idle')
+      return
+    }
+
+    // Step 2: Initiate — get presigned URL + fileId (server checks for duplicate hash)
     setStage('initiating')
     let fileId: string
     let presignedUrl: string
@@ -93,10 +113,16 @@ export function ImportUploader() {
           name: selectedFile.name,
           size: selectedFile.size,
           type: selectedFile.type || 'text/csv',
+          contentHash,
         }),
       })
       if (!initiateRes.ok) {
         const body = await initiateRes.json().catch(() => ({}))
+        if (initiateRes.status === 409) {
+          setError('Hai già importato questo file. Controlla la lista delle importazioni.')
+          setStage('idle')
+          return
+        }
         const msg = body?.error?.message ?? 'Impossibile avviare il caricamento. Riprova.'
         setError(msg)
         setStage('idle')
@@ -112,7 +138,7 @@ export function ImportUploader() {
       return
     }
 
-    // Step 2: PUT directly to R2 presigned URL — never proxy bytes through server
+    // Step 3: PUT directly to R2 presigned URL — never proxy bytes through server
     setStage('uploading')
     try {
       await uploadFileToPresignedUrl({
@@ -127,7 +153,7 @@ export function ImportUploader() {
       return
     }
 
-    // Step 3: Confirm — tell server the file is in R2
+    // Step 4: Confirm — tell server the file is in R2
     setStage('confirming')
     try {
       const confirmRes = await fetch('/api/files/confirm', {
@@ -148,7 +174,7 @@ export function ImportUploader() {
       return
     }
 
-    // Step 4: Redirect to analyze page
+    // Step 5: Redirect to analyze page
     setStage('done')
     router.push(`/import/${fileId}/analyze`)
   }

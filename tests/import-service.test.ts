@@ -335,6 +335,7 @@ function makeFileRow(overrides: Partial<FileRow> = {}): FileRow {
     importFormatVersionId: 1,
     originalName: 'statement.csv',
     displayName: null,
+    contentHash: null,
     objectKey: `users/${USER_ID}/imports/${FILE_ID}.csv`,
     mimeType: 'text/csv',
     sizeBytes: 256,
