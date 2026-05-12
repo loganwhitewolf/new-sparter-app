@@ -17,6 +17,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Server Actions carry the `next-action` header. Redirecting them based on
+  // session state breaks the action response format — the client expects RSC
+  // content-type, not a 307 redirect. Let all Server Action requests pass
+  // through unconditionally; the action itself handles auth or redirect.
+  if (request.headers.has('next-action')) {
+    return NextResponse.next()
+  }
+
   // Session check via Better Auth Drizzle adapter (Node.js runtime)
   const session = await getAuthSessionOrNull(request.headers)
 

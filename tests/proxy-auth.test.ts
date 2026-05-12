@@ -11,8 +11,8 @@ vi.mock('@/lib/auth-session', () => ({
 
 const { proxy } = await import('../proxy')
 
-function request(path: string) {
-  return new NextRequest(`https://app.example.test${path}`)
+function request(path: string, headers?: Record<string, string>) {
+  return new NextRequest(`https://app.example.test${path}`, { headers })
 }
 
 beforeEach(() => {
@@ -36,6 +36,19 @@ describe('proxy auth handling', () => {
 
     const response = await proxy(request('/login'))
 
+    expect(response.status).toBe(200)
+    expect(response.headers.get('location')).toBeNull()
+  })
+
+  it('passes Server Action requests through without session check or redirect', async () => {
+    // Server Actions on auth routes (e.g. /register) would otherwise receive a
+    // 307 redirect once Better Auth sets the session cookie during autoSignIn —
+    // breaking the RSC response format the client expects.
+    const response = await proxy(
+      request('/register', { 'next-action': 'abc123' })
+    )
+
+    expect(mocks.getAuthSessionOrNull).not.toHaveBeenCalled()
     expect(response.status).toBe(200)
     expect(response.headers.get('location')).toBeNull()
   })
