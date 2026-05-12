@@ -48,4 +48,24 @@ test.describe('Layout - DS-03: (app) route group', () => {
     const bottomNav = page.locator('[data-bottom-nav]')
     await expect(bottomNav).not.toBeVisible()
   })
+
+  test('desktop sidebar has no visible /categories navigation link', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.setExtraHTTPHeaders({ 'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key' })
+    await page.goto('/dashboard')
+
+    const sidebar = page.locator('[data-sidebar]')
+    await expect(sidebar).toBeVisible()
+    await expect(sidebar.locator('a[href="/categories"]')).toHaveCount(0)
+  })
+
+  test('mobile bottom nav has no visible /categories navigation link', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await page.setExtraHTTPHeaders({ 'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key' })
+    await page.goto('/dashboard')
+
+    const bottomNav = page.locator('[data-bottom-nav]')
+    await expect(bottomNav).toBeVisible()
+    await expect(bottomNav.locator('a[href="/categories"]')).toHaveCount(0)
+  })
 })
