@@ -5,6 +5,7 @@ export const APP_ROUTES = {
   transactions: '/transactions',
   settings: '/settings',
   patternSettings: '/settings/patterns',
+  categorySettings: '/settings/categories',
 } as const
 
 export const LEGACY_LOCALIZED_ROUTES = [

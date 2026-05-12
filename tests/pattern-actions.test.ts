@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const EXPECTED_CATEGORY_REVALIDATION_ROUTES = [
+  '/dashboard',
+  '/expenses',
+  '/settings/categories',
+  '/settings/patterns',
+  '/transactions',
+]
+
 const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   createPattern: vi.fn(),
@@ -77,6 +85,14 @@ function validUpdateForm(overrides: Record<string, string | null> = {}) {
   })
 }
 
+function expectExactCategoryRevalidationRoutes() {
+  const uniqueSortedPaths = [
+    ...new Set(mocks.revalidatePath.mock.calls.map(([path]) => path)),
+  ].sort()
+
+  expect(uniqueSortedPaths).toEqual([...EXPECTED_CATEGORY_REVALIDATION_ROUTES].sort())
+}
+
 describe('pattern Server Actions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -99,7 +115,7 @@ describe('pattern Server Actions', () => {
         confidence: 0.95,
         description: 'Streaming subscriptions',
       })
-      expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/patterns')
+      expectExactCategoryRevalidationRoutes()
     })
 
     it('denies free users before validation or mutation when configured for Basic+', async () => {
@@ -177,7 +193,7 @@ describe('pattern Server Actions', () => {
         confidence: 0.95,
         description: 'Streaming subscriptions',
       })
-      expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/patterns')
+      expectExactCategoryRevalidationRoutes()
     })
 
     it('denies free users before mutation when configured for Basic+', async () => {
@@ -249,7 +265,7 @@ describe('pattern Server Actions', () => {
 
       expect(result).toEqual({ error: null })
       expect(mocks.deletePattern).toHaveBeenCalledWith(7, 'user-abc')
-      expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/patterns')
+      expectExactCategoryRevalidationRoutes()
     })
 
     it('denies free users before mutation when configured for Basic+', async () => {

@@ -1,5 +1,4 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import { verifySession } from "@/lib/dal/auth";
 import {
   CreatePatternSchema,
@@ -16,7 +15,7 @@ import {
   getCategorizationAccessConfig,
   type PlanGate,
 } from "@/lib/config/categorization";
-import { APP_ROUTES } from "@/lib/routes";
+import { revalidateCategorizationSurfaces } from "@/lib/actions/revalidation";
 
 function customPatternsUnavailableMessage(currentPlan: PlanGate): string {
   const minPlan = getCategorizationAccessConfig().customPatternsMinPlan;
@@ -79,7 +78,7 @@ export async function createPatternAction(
     return { error: "Si è verificato un errore. Riprova tra qualche secondo." };
   }
 
-  revalidatePath(APP_ROUTES.patternSettings);
+  revalidateCategorizationSurfaces();
   return { error: null };
 }
 
@@ -117,7 +116,7 @@ export async function updatePatternAction(
     return { error: "Si è verificato un errore. Riprova tra qualche secondo." };
   }
 
-  revalidatePath(APP_ROUTES.patternSettings);
+  revalidateCategorizationSurfaces();
   return { error: null };
 }
 
@@ -140,6 +139,6 @@ export async function deletePatternAction(
     return { error: "Si è verificato un errore. Riprova tra qualche secondo." };
   }
 
-  revalidatePath(APP_ROUTES.patternSettings);
+  revalidateCategorizationSurfaces();
   return { error: null };
 }

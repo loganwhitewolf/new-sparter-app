@@ -2,8 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, List, Receipt, Settings, Tag, Upload } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { LayoutDashboard, List, Receipt, Settings, Upload } from 'lucide-react'
 import { ClientMountIcon } from '@/components/ui/client-mount-icon'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
@@ -14,14 +13,11 @@ const topNavItems = [
   { href: APP_ROUTES.transactions, label: 'Transazioni', icon: List },
   { href: APP_ROUTES.expenses, label: 'Spese', icon: Receipt },
   { href: APP_ROUTES.import, label: 'Import', icon: Upload },
-  { href: '/categories', label: 'Categorie', icon: Tag },
 ]
 
 const bottomNavItems = [
   { href: APP_ROUTES.settings, label: 'Impostazioni', icon: Settings },
 ]
-
-const uncategorizedCount = 0
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -45,11 +41,6 @@ export function Sidebar() {
               >
                 <ClientMountIcon icon={Icon} className="h-4 w-4 shrink-0" />
                 <span className="flex-1">{label}</span>
-                {label === 'Categorie' && uncategorizedCount > 0 ? (
-                  <Badge className="ml-auto font-mono text-xs">
-                    {uncategorizedCount}
-                  </Badge>
-                ) : null}
               </Link>
             </li>
           )

@@ -1,5 +1,4 @@
 'use server'
-import { revalidatePath } from 'next/cache'
 import { verifySession } from '@/lib/dal/auth'
 import {
   CreateExpenseSchema,
@@ -23,7 +22,7 @@ import { db } from '@/lib/db'
 import { expense } from '@/lib/db/schema'
 import { and, eq, inArray } from 'drizzle-orm'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
-import { APP_ROUTES } from '@/lib/routes'
+import { revalidateCategorizationSurfaces } from '@/lib/actions/revalidation'
 
 type LoadMoreExpensesInput = {
   filters?: ExpenseFilters
@@ -89,7 +88,7 @@ export async function createExpense(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath(APP_ROUTES.expenses)
+  revalidateCategorizationSurfaces()
   return { error: null }
 }
 
@@ -112,7 +111,7 @@ export async function updateExpense(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath(APP_ROUTES.expenses)
+  revalidateCategorizationSurfaces()
   return { error: null }
 }
 
@@ -128,7 +127,7 @@ export async function deleteExpense(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath(APP_ROUTES.expenses)
+  revalidateCategorizationSurfaces()
   return { error: null }
 }
 
@@ -152,9 +151,7 @@ export async function bulkDeleteExpenses(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath(APP_ROUTES.expenses)
-  revalidatePath(APP_ROUTES.transactions)
-  revalidatePath('/dashboard')
+  revalidateCategorizationSurfaces()
   return { error: null }
 }
 
@@ -230,7 +227,7 @@ export async function bulkCategorize(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath(APP_ROUTES.expenses)
+  revalidateCategorizationSurfaces()
   return { error: null }
 }
 
@@ -280,8 +277,7 @@ export async function categorizeExpense(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath(APP_ROUTES.expenses)
-  revalidatePath('/dashboard')
+  revalidateCategorizationSurfaces()
   return { error: null }
 }
 
@@ -303,7 +299,6 @@ export async function ignoreExpense(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath(APP_ROUTES.expenses)
-  revalidatePath('/dashboard')
+  revalidateCategorizationSurfaces()
   return { error: null }
 }

@@ -1,6 +1,5 @@
 'use server'
 import Decimal from 'decimal.js'
-import { revalidatePath } from 'next/cache'
 import { verifySession } from '@/lib/dal/auth'
 import {
   BulkDeleteTransactionsSchema,
@@ -20,7 +19,7 @@ import { deleteTransactionsAndReconcileExpenses } from '@/lib/services/transacti
 import { db } from '@/lib/db'
 import { toDbDecimal } from '@/lib/utils/decimal'
 import type { ActionState } from '@/lib/validations/expense'
-import { APP_ROUTES } from '@/lib/routes'
+import { revalidateCategorizationSurfaces } from '@/lib/actions/revalidation'
 
 type LoadMoreTransactionsInput = {
   filters?: TransactionSearchParams
@@ -67,8 +66,7 @@ export async function createTransaction(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath(APP_ROUTES.transactions)
-  revalidatePath(APP_ROUTES.expenses)
+  revalidateCategorizationSurfaces()
   return { error: null }
 }
 
@@ -129,7 +127,7 @@ export async function updateTransactionCustomTitle(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath(APP_ROUTES.transactions)
+  revalidateCategorizationSurfaces()
   return { error: null }
 }
 
@@ -155,9 +153,7 @@ export async function deleteTransaction(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath(APP_ROUTES.transactions)
-  revalidatePath(APP_ROUTES.expenses)
-  revalidatePath('/dashboard')
+  revalidateCategorizationSurfaces()
   return { error: null }
 }
 
@@ -184,8 +180,6 @@ export async function bulkDeleteTransactions(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-  revalidatePath(APP_ROUTES.transactions)
-  revalidatePath(APP_ROUTES.expenses)
-  revalidatePath('/dashboard')
+  revalidateCategorizationSurfaces()
   return { error: null }
 }
