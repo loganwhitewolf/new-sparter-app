@@ -23,7 +23,14 @@ const recoverableAuthSessionErrorCodes = new Set([
 export function isRecoverableAuthSessionError(error: unknown) {
   const authError = error as AuthApiErrorLike
   const isApiError = authError.name === 'APIError'
-  const isUnauthorized = authError.status === 'UNAUTHORIZED' || authError.status === 401 || authError.statusCode === 401
+  const statusCode = authError.statusCode
+  const isAuthFailure =
+    authError.status === 'UNAUTHORIZED' ||
+    authError.status === 401 ||
+    statusCode === 401 ||
+    // Treat FAILED_TO_GET_SESSION on 500 as recoverable: the DB may be
+    // transiently unavailable at startup; redirect to login rather than crash.
+    (statusCode === 500 && authError.status === 'INTERNAL_SERVER_ERROR')
   const errorCode = typeof authError.body?.code === 'string' ? authError.body.code : undefined
   const errorMessage =
     typeof authError.body?.message === 'string'
@@ -34,7 +41,7 @@ export function isRecoverableAuthSessionError(error: unknown) {
 
   return (
     isApiError &&
-    isUnauthorized &&
+    isAuthFailure &&
     (recoverableAuthSessionErrorCodes.has(errorCode ?? '') || errorMessage === 'Failed to get session')
   )
 }

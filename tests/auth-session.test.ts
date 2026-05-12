@@ -55,7 +55,7 @@ describe('auth session helper', () => {
     expect(isRecoverableAuthSessionError(expiredTokenError)).toBe(true)
   })
 
-  it('does not hide non-auth backend failures', async () => {
+  it('treats a transient DB failure (500 FAILED_TO_GET_SESSION) as recoverable so the app starts cleanly', async () => {
     const databaseError = apiError({
       status: 'INTERNAL_SERVER_ERROR',
       statusCode: 500,
@@ -64,7 +64,20 @@ describe('auth session helper', () => {
     })
     mocks.getSession.mockRejectedValue(databaseError)
 
-    await expect(getAuthSessionOrNull(new Headers())).rejects.toBe(databaseError)
-    expect(isRecoverableAuthSessionError(databaseError)).toBe(false)
+    await expect(getAuthSessionOrNull(new Headers())).resolves.toBeNull()
+    expect(isRecoverableAuthSessionError(databaseError)).toBe(true)
+  })
+
+  it('does not hide unexpected backend failures (non-session 500 errors)', async () => {
+    const unexpectedError = apiError({
+      status: 'INTERNAL_SERVER_ERROR',
+      statusCode: 500,
+      code: 'FAILED_TO_CREATE_SESSION',
+      message: 'Failed to create session',
+    })
+    mocks.getSession.mockRejectedValue(unexpectedError)
+
+    await expect(getAuthSessionOrNull(new Headers())).rejects.toBe(unexpectedError)
+    expect(isRecoverableAuthSessionError(unexpectedError)).toBe(false)
   })
 })
