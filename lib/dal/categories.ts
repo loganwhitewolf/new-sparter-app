@@ -1,9 +1,9 @@
 import 'server-only'
 import { cache } from 'react'
-import { db } from '@/lib/db'
+import { db, type DbOrTx } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
-import { category, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
-import { and, asc, eq, isNull, or } from 'drizzle-orm'
+import { category, expense, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
+import { and, asc, eq, isNull, or, sql } from 'drizzle-orm'
 
 export type CategoryWithSubCategories = {
   id: number
@@ -22,6 +22,43 @@ export type CategoryWithSubCategories = {
     hasOverride: boolean
     customName: string | null
   }>
+}
+
+export type CategoryMutationErrorCode =
+  | 'not_found'
+  | 'system_row'
+  | 'duplicate'
+  | 'linked_expenses'
+
+export class CategoryMutationError extends Error {
+  constructor(
+    public readonly code: CategoryMutationErrorCode,
+    message: string,
+    public readonly count?: number,
+  ) {
+    super(message)
+    this.name = 'CategoryMutationError'
+  }
+}
+
+function isUniqueConflict(error: unknown) {
+  return Boolean(
+    error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code?: unknown }).code === '23505',
+  )
+}
+
+async function mapDuplicate<T>(operation: Promise<T>): Promise<T> {
+  try {
+    return await operation
+  } catch (error) {
+    if (isUniqueConflict(error)) {
+      throw new CategoryMutationError('duplicate', 'Duplicate category name')
+    }
+    throw error
+  }
 }
 
 const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithSubCategories[]> => {
@@ -67,7 +104,6 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
       asc(subCategory.id),
     )
 
-  // Group flat rows into nested structure without additional per-category queries.
   const map = new Map<number, CategoryWithSubCategories>()
   for (const row of rows) {
     if (!map.has(row.categoryId)) {
@@ -102,4 +138,205 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
 export async function getCategories(): Promise<CategoryWithSubCategories[]> {
   const session = await verifySession()
   return getCategoriesForUser(session.userId)
+}
+
+export async function createUserCategory(
+  input: { userId: string, name: string, slug: string, type: 'in' | 'out' },
+  database: DbOrTx = db,
+) {
+  const rows = await mapDuplicate(
+    database
+      .insert(category)
+      .values({
+        userId: input.userId,
+        name: input.name,
+        slug: input.slug,
+        type: input.type,
+        isActive: true,
+      })
+      .returning(),
+  )
+
+  return rows[0] ?? null
+}
+
+export async function renameUserCategory(
+  id: number,
+  userId: string,
+  input: { name: string, slug: string },
+  database: DbOrTx = db,
+) {
+  const rows = await mapDuplicate(
+    database
+      .update(category)
+      .set({ name: input.name, slug: input.slug })
+      .where(
+        and(
+          eq(category.id, id),
+          eq(category.userId, userId),
+          eq(category.isActive, true),
+        ),
+      )
+      .returning(),
+  )
+
+  return rows[0] ?? null
+}
+
+export async function deleteUserCategory(
+  id: number,
+  userId: string,
+  database: DbOrTx = db,
+): Promise<boolean> {
+  const rows = await database
+    .update(category)
+    .set({ isActive: false })
+    .where(
+      and(
+        eq(category.id, id),
+        eq(category.userId, userId),
+        eq(category.isActive, true),
+      ),
+    )
+    .returning({ id: category.id })
+
+  return rows.length > 0
+}
+
+export async function createUserSubcategory(
+  input: { userId: string, categoryId: number, name: string, slug: string },
+  database: DbOrTx = db,
+) {
+  const categoryRows = await database
+    .select({ id: category.id })
+    .from(category)
+    .where(
+      and(
+        eq(category.id, input.categoryId),
+        eq(category.isActive, true),
+        or(isNull(category.userId), eq(category.userId, input.userId)),
+      ),
+    )
+
+  if (!categoryRows[0]) {
+    throw new CategoryMutationError('not_found', 'Category not found')
+  }
+
+  const rows = await mapDuplicate(
+    database
+      .insert(subCategory)
+      .values({
+        userId: input.userId,
+        categoryId: input.categoryId,
+        name: input.name,
+        slug: input.slug,
+        isActive: true,
+      })
+      .returning(),
+  )
+
+  return rows[0] ?? null
+}
+
+export async function renameUserSubcategory(
+  id: number,
+  userId: string,
+  input: { name: string, slug: string },
+  database: DbOrTx = db,
+) {
+  const rows = await mapDuplicate(
+    database
+      .update(subCategory)
+      .set({ name: input.name, slug: input.slug })
+      .where(
+        and(
+          eq(subCategory.id, id),
+          eq(subCategory.userId, userId),
+          eq(subCategory.isActive, true),
+        ),
+      )
+      .returning(),
+  )
+
+  return rows[0] ?? null
+}
+
+export async function upsertSystemSubcategoryOverride(
+  userId: string,
+  subCategoryId: number,
+  customName: string,
+  database: DbOrTx = db,
+) {
+  const rows = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(
+      and(
+        eq(subCategory.id, subCategoryId),
+        isNull(subCategory.userId),
+        eq(subCategory.isActive, true),
+      ),
+    )
+
+  if (!rows[0]) {
+    throw new CategoryMutationError('not_found', 'System subcategory not found')
+  }
+
+  const overrideRows = await database
+    .insert(userSubcategoryOverride)
+    .values({ userId, subCategoryId, customName })
+    .onConflictDoUpdate({
+      target: [userSubcategoryOverride.userId, userSubcategoryOverride.subCategoryId],
+      set: { customName, updatedAt: new Date() },
+    })
+    .returning()
+
+  return overrideRows[0] ?? null
+}
+
+export async function countLinkedExpensesForSubcategory(
+  userId: string,
+  subCategoryId: number,
+  database: DbOrTx = db,
+): Promise<number> {
+  const rows = await database
+    .select({ count: sql<number>`count(*)::int` })
+    .from(expense)
+    .where(
+      and(
+        eq(expense.userId, userId),
+        eq(expense.subCategoryId, subCategoryId),
+      ),
+    )
+
+  return Number(rows[0]?.count ?? 0)
+}
+
+export async function deleteUserSubcategory(
+  id: number,
+  userId: string,
+  database: DbOrTx = db,
+): Promise<boolean> {
+  const linkedExpenses = await countLinkedExpensesForSubcategory(userId, id, database)
+  if (linkedExpenses > 0) {
+    throw new CategoryMutationError(
+      'linked_expenses',
+      `Subcategory has ${linkedExpenses} linked expenses`,
+      linkedExpenses,
+    )
+  }
+
+  const rows = await database
+    .update(subCategory)
+    .set({ isActive: false })
+    .where(
+      and(
+        eq(subCategory.id, id),
+        eq(subCategory.userId, userId),
+        eq(subCategory.isActive, true),
+      ),
+    )
+    .returning({ id: subCategory.id })
+
+  return rows.length > 0
 }

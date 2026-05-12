@@ -8,6 +8,15 @@ const mocks = vi.hoisted(() => ({
   whereArgs: [] as unknown[],
   orderByArgs: [] as unknown[][],
   queryResult: [] as CategoryRowFixture[],
+  selectResults: [] as unknown[][],
+  insertArgs: [] as unknown[],
+  insertValues: [] as unknown[],
+  onConflictArgs: [] as unknown[],
+  updateArgs: [] as unknown[],
+  updateSets: [] as unknown[],
+  returningArgs: [] as unknown[],
+  returningResult: [] as unknown[],
+  countResult: [] as unknown[],
 }))
 
 type CategoryRowFixture = {
@@ -21,6 +30,10 @@ type CategoryRowFixture = {
   subCategorySlug: string | null
   subCategoryUserId: string | null
   overrideCustomName: string | null
+}
+
+function nextSelectResult() {
+  return mocks.selectResults.length > 0 ? mocks.selectResults.shift() : mocks.queryResult
 }
 
 function makeQueryChain() {
@@ -41,8 +54,45 @@ function makeQueryChain() {
       mocks.orderByArgs.push(args)
       return Promise.resolve(mocks.queryResult)
     }),
+    then: vi.fn((resolve: (value: unknown[] | undefined) => unknown) => Promise.resolve(resolve(nextSelectResult()))),
   }
 
+  return chain
+}
+
+function makeInsertChain() {
+  const chain = {
+    values: vi.fn((value: unknown) => {
+      mocks.insertValues.push(value)
+      return chain
+    }),
+    onConflictDoUpdate: vi.fn((arg: unknown) => {
+      mocks.onConflictArgs.push(arg)
+      return chain
+    }),
+    returning: vi.fn((arg?: unknown) => {
+      mocks.returningArgs.push(arg)
+      return Promise.resolve(mocks.returningResult)
+    }),
+  }
+  return chain
+}
+
+function makeUpdateChain() {
+  const chain = {
+    set: vi.fn((value: unknown) => {
+      mocks.updateSets.push(value)
+      return chain
+    }),
+    where: vi.fn((arg: unknown) => {
+      mocks.whereArgs.push(arg)
+      return chain
+    }),
+    returning: vi.fn((arg?: unknown) => {
+      mocks.returningArgs.push(arg)
+      return Promise.resolve(mocks.returningResult)
+    }),
+  }
   return chain
 }
 
@@ -95,6 +145,14 @@ vi.mock('@/lib/db', () => ({
       mocks.selectedShapes.push(shape)
       return makeQueryChain()
     },
+    insert: (table: unknown) => {
+      mocks.insertArgs.push(table)
+      return makeInsertChain()
+    },
+    update: (table: unknown) => {
+      mocks.updateArgs.push(table)
+      return makeUpdateChain()
+    },
   },
 }))
 vi.mock('drizzle-orm', () => ({
@@ -103,6 +161,7 @@ vi.mock('drizzle-orm', () => ({
   eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
   isNull: (column: unknown) => ({ op: 'isNull', column }),
   or: (...args: unknown[]) => ({ op: 'or', args }),
+  sql: () => 'sql.count',
 }))
 vi.mock('@/lib/db/schema', () => ({
   category: {
@@ -124,13 +183,29 @@ vi.mock('@/lib/db/schema', () => ({
     isActive: 'subCategory.isActive',
   },
   userSubcategoryOverride: {
+    id: 'userSubcategoryOverride.id',
     customName: 'userSubcategoryOverride.customName',
     subCategoryId: 'userSubcategoryOverride.subCategoryId',
     userId: 'userSubcategoryOverride.userId',
+    updatedAt: 'userSubcategoryOverride.updatedAt',
+  },
+  expense: {
+    id: 'expense.id',
+    userId: 'expense.userId',
+    subCategoryId: 'expense.subCategoryId',
   },
 }))
 
-const { getCategories } = await import('@/lib/dal/categories')
+const {
+  countLinkedExpensesForSubcategory,
+  createUserCategory,
+  createUserSubcategory,
+  deleteUserCategory,
+  deleteUserSubcategory,
+  getCategories,
+  renameUserCategory,
+  upsertSystemSubcategoryOverride,
+} = await import('@/lib/dal/categories')
 
 describe('categories DAL merged tree', () => {
   beforeEach(() => {
@@ -140,6 +215,14 @@ describe('categories DAL merged tree', () => {
     mocks.leftJoinArgs.length = 0
     mocks.whereArgs.length = 0
     mocks.orderByArgs.length = 0
+    mocks.selectResults.length = 0
+    mocks.insertArgs.length = 0
+    mocks.insertValues.length = 0
+    mocks.onConflictArgs.length = 0
+    mocks.updateArgs.length = 0
+    mocks.updateSets.length = 0
+    mocks.returningArgs.length = 0
+    mocks.returningResult = []
     mocks.queryResult = []
     mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
   })
@@ -301,5 +384,125 @@ describe('categories DAL merged tree', () => {
     expectContainsPredicate(mocks.leftJoinArgs[0]?.condition, { op: 'eq', left: 'subCategory.userId', right: 'user-1' })
     expectContainsPredicate(mocks.leftJoinArgs[1]?.condition, { op: 'eq', left: 'userSubcategoryOverride.userId', right: 'user-1' })
     expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.userId', right: 'user-1' })
+  })
+})
+
+describe('categories DAL mutations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.selectedShapes.length = 0
+    mocks.fromArgs.length = 0
+    mocks.leftJoinArgs.length = 0
+    mocks.whereArgs.length = 0
+    mocks.orderByArgs.length = 0
+    mocks.selectResults.length = 0
+    mocks.insertArgs.length = 0
+    mocks.insertValues.length = 0
+    mocks.onConflictArgs.length = 0
+    mocks.updateArgs.length = 0
+    mocks.updateSets.length = 0
+    mocks.returningArgs.length = 0
+    mocks.returningResult = [{ id: 1 }]
+    mocks.queryResult = []
+  })
+
+  it('creates user-owned categories with owner metadata', async () => {
+    await createUserCategory({ userId: 'user-1', name: 'Casa', slug: 'casa', type: 'out' })
+
+    expect(mocks.insertArgs[0]).toMatchObject({ id: 'category.id' })
+    expect(mocks.insertValues[0]).toEqual({
+      userId: 'user-1',
+      name: 'Casa',
+      slug: 'casa',
+      type: 'out',
+      isActive: true,
+    })
+  })
+
+  it('includes userId and active predicates when renaming a user-owned category', async () => {
+    await renameUserCategory(7, 'user-1', { name: 'Casa nuova', slug: 'casa-nuova' })
+
+    expect(mocks.updateArgs[0]).toMatchObject({ id: 'category.id' })
+    expect(mocks.updateSets[0]).toEqual({ name: 'Casa nuova', slug: 'casa-nuova' })
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.id', right: 7 })
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.userId', right: 'user-1' })
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.isActive', right: true })
+  })
+
+  it('cannot delete system categories through the user delete helper', async () => {
+    mocks.returningResult = []
+
+    await expect(deleteUserCategory(7, 'user-1')).resolves.toBe(false)
+
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.id', right: 7 })
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.userId', right: 'user-1' })
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.isActive', right: true })
+  })
+
+  it('creates subcategories only under categories visible to the user', async () => {
+    mocks.selectResults.push([{ id: 2 }])
+
+    await createUserSubcategory({ userId: 'user-1', categoryId: 2, name: 'Affitto', slug: 'affitto' })
+
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.id', right: 2 })
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.isActive', right: true })
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.userId', right: 'user-1' })
+    expect(mocks.insertValues[0]).toMatchObject({
+      userId: 'user-1',
+      categoryId: 2,
+      name: 'Affitto',
+      slug: 'affitto',
+      isActive: true,
+    })
+  })
+
+  it('upserts system subcategory overrides by userId and subCategoryId', async () => {
+    mocks.selectResults.push([{ id: 10 }])
+
+    await upsertSystemSubcategoryOverride('user-1', 10, 'Affitto casa')
+
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'subCategory.id', right: 10 })
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'isNull', column: 'subCategory.userId' })
+    expect(mocks.insertValues[0]).toEqual({
+      userId: 'user-1',
+      subCategoryId: 10,
+      customName: 'Affitto casa',
+    })
+    expect(mocks.onConflictArgs[0]).toMatchObject({
+      target: ['userSubcategoryOverride.userId', 'userSubcategoryOverride.subCategoryId'],
+      set: { customName: 'Affitto casa', updatedAt: expect.any(Date) },
+    })
+  })
+
+  it('counts linked expenses scoped to the current user', async () => {
+    mocks.selectResults.push([{ count: 3 }])
+
+    await expect(countLinkedExpensesForSubcategory('user-1', 10)).resolves.toBe(3)
+
+    expect(mocks.fromArgs[0]).toMatchObject({ id: 'expense.id' })
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'expense.userId', right: 'user-1' })
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'expense.subCategoryId', right: 10 })
+  })
+
+  it('blocks user subcategory deletes when current-user expenses are linked', async () => {
+    mocks.selectResults.push([{ count: 1 }])
+
+    await expect(deleteUserSubcategory(10, 'user-1')).rejects.toMatchObject({
+      code: 'linked_expenses',
+      count: 1,
+    })
+
+    expect(mocks.updateArgs).toEqual([])
+  })
+
+  it('cannot delete system subcategories through the user delete helper', async () => {
+    mocks.selectResults.push([{ count: 0 }])
+    mocks.returningResult = []
+
+    await expect(deleteUserSubcategory(10, 'user-1')).resolves.toBe(false)
+
+    expectContainsPredicate(mocks.whereArgs[1], { op: 'eq', left: 'subCategory.id', right: 10 })
+    expectContainsPredicate(mocks.whereArgs[1], { op: 'eq', left: 'subCategory.userId', right: 'user-1' })
+    expectContainsPredicate(mocks.whereArgs[1], { op: 'eq', left: 'subCategory.isActive', right: true })
   })
 })
