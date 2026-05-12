@@ -31,6 +31,17 @@ export const UpdateTransactionCustomTitleSchema = z.object({
     .transform((v) => (v === "" ? null : v ?? null)),
 })
 
+export const DeleteTransactionSchema = z.object({
+  id: z.string().uuid({ error: "Transazione non valida." }),
+})
+
+export const BulkDeleteTransactionsSchema = z.object({
+  ids: z
+    .array(z.string().uuid())
+    .min(1, { error: "Seleziona almeno una transazione per continuare." })
+    .max(500, { error: "Puoi eliminare al massimo 500 transazioni alla volta." }),
+})
+
 export type UpdateTransactionCustomTitleInput = z.infer<
   typeof UpdateTransactionCustomTitleSchema
 >

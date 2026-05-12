@@ -5,6 +5,7 @@ import {
   CreateExpenseSchema,
   UpdateExpenseSchema,
   BulkCategorizeSchema,
+  BulkDeleteExpensesSchema,
   SingleCategorizeSchema,
   IgnoreExpenseSchema,
   ActionState,
@@ -13,6 +14,7 @@ import {
   insertExpense,
   updateExpense as updateExpenseDAL,
   deleteExpense as deleteExpenseDAL,
+  deleteExpenses as deleteExpensesDAL,
   getExpenses,
   EXPENSE_LIST_LIMIT,
   type ExpenseFilters,
@@ -127,6 +129,32 @@ export async function deleteExpense(
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
   revalidatePath(APP_ROUTES.expenses)
+  return { error: null }
+}
+
+export async function bulkDeleteExpenses(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  let ids: unknown
+  try {
+    ids = JSON.parse((formData.get('ids') as string) ?? '[]')
+  } catch {
+    return { error: 'Selezione non valida.' }
+  }
+  const parsed = BulkDeleteExpensesSchema.safeParse({ ids })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Selezione non valida.' }
+  }
+  const { userId } = await verifySession()
+  try {
+    await deleteExpensesDAL(parsed.data.ids, userId)
+  } catch {
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+  revalidatePath(APP_ROUTES.expenses)
+  revalidatePath(APP_ROUTES.transactions)
+  revalidatePath('/dashboard')
   return { error: null }
 }
 

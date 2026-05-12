@@ -4,6 +4,7 @@ import { AlertCircle, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { ClientMountIcon } from '@/components/ui/client-mount-icon'
 import {
   Dialog,
   DialogClose,
@@ -64,7 +65,7 @@ export function CreatePatternDialog({ categories }: Props) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm">
-          <Plus className="mr-2 h-4 w-4" />
+          <ClientMountIcon icon={Plus} ariaHidden className="mr-2 h-4 w-4" />
           Nuovo pattern
         </Button>
       </DialogTrigger>

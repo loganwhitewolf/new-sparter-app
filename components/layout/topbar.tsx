@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { LogOut, User } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -13,7 +14,20 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { authClient } from '@/lib/auth-client'
 import { signOutAction } from '@/lib/actions/auth'
-import { ThemeToggle } from '@/components/theme-toggle'
+
+function ThemeTogglePlaceholder() {
+  return (
+    <span
+      className="inline-flex size-8 shrink-0 items-center justify-center rounded-md"
+      aria-hidden
+    />
+  )
+}
+
+const ThemeToggle = dynamic(
+  () => import('@/components/theme-toggle').then((m) => ({ default: m.ThemeToggle })),
+  { ssr: false, loading: ThemeTogglePlaceholder },
+)
 
 export function Topbar() {
   const { data: session } = authClient.useSession()

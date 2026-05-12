@@ -1,11 +1,30 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { MoreHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
+import { BulkDeleteTransactionsDialog } from '@/components/transactions/bulk-delete-transactions-dialog'
+import { TransactionBulkActionBar } from '@/components/transactions/transaction-bulk-action-bar'
 import { TransactionTitleEdit } from '@/components/transactions/transaction-title-edit'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -15,7 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { loadMoreTransactions } from '@/lib/actions/transactions'
+import { deleteTransaction, loadMoreTransactions } from '@/lib/actions/transactions'
 import type { TransactionListRow } from '@/lib/dal/transactions'
 import type {
   ParsedTransactionFilters,
@@ -90,6 +109,11 @@ function getSortDirection(
   return filters.dir === 'asc' ? 'ascending' : 'descending'
 }
 
+function transactionRowLabel(transaction: TransactionListRow) {
+  const raw = transaction.customTitle?.trim() || transaction.description
+  return raw.length > 80 ? `${raw.slice(0, 77)}…` : raw
+}
+
 export function TransactionTable({ transactions, filters, searchParams }: Props) {
   const [loadedTransactions, setLoadedTransactions] = useState(transactions)
   const [hasMore, setHasMore] = useState(transactions.length === PAGE_SIZE)
@@ -97,6 +121,14 @@ export function TransactionTable({ transactions, filters, searchParams }: Props)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const isLoadingMoreRef = useRef(false)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
+
+  const allSelected =
+    loadedTransactions.length > 0 && selectedIds.length === loadedTransactions.length
+  const someSelected =
+    selectedIds.length > 0 && selectedIds.length < loadedTransactions.length
 
   const loadNextPage = useCallback(async () => {
     if (isLoadingMoreRef.current || !hasMore) {
@@ -152,6 +184,22 @@ export function TransactionTable({ transactions, filters, searchParams }: Props)
     return () => observer.disconnect()
   }, [hasMore, loadNextPage])
 
+  function toggleAll() {
+    setSelectedIds(allSelected ? [] : loadedTransactions.map((t) => t.id))
+  }
+
+  function toggleRow(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+
+  function removeTransactionsFromList(ids: string[]) {
+    const idSet = new Set(ids)
+    setLoadedTransactions((prev) => prev.filter((t) => !idSet.has(t.id)))
+    setSelectedIds((prev) => prev.filter((id) => !idSet.has(id)))
+  }
+
   if (loadedTransactions.length === 0) {
     return (
       <Card>
@@ -169,6 +217,7 @@ export function TransactionTable({ transactions, filters, searchParams }: Props)
   }
 
   return (
+    <>
     <div className="rounded-xl border bg-card shadow-sm">
       <Table>
         <TableCaption className="sr-only">
@@ -177,6 +226,18 @@ export function TransactionTable({ transactions, filters, searchParams }: Props)
         </TableCaption>
         <TableHeader>
           <TableRow className="bg-secondary/70">
+            <TableHead className="w-10 text-center">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelected
+                }}
+                onChange={toggleAll}
+                className="h-4 w-4 cursor-pointer"
+                aria-label="Seleziona tutte le transazioni"
+              />
+            </TableHead>
             <TableHead className="min-w-[18rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
               Transazione
             </TableHead>
@@ -198,15 +259,33 @@ export function TransactionTable({ transactions, filters, searchParams }: Props)
             <TableHead className="min-w-[13rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
               Spesa collegata
             </TableHead>
+            <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {loadedTransactions.map((transaction) => {
             const expenseStatus = getExpenseStatusLabel(transaction.expenseStatus)
             const hasExpense = Boolean(transaction.expenseId)
+            const isSelected = selectedIds.includes(transaction.id)
+            const rowLabel = transactionRowLabel(transaction)
 
             return (
-              <TableRow key={transaction.id} className="group hover:bg-muted/50">
+              <TableRow
+                key={transaction.id}
+                className={cn(
+                  'group hover:bg-muted/50',
+                  isSelected && 'bg-primary/5',
+                )}
+              >
+                <TableCell className="w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleRow(transaction.id)}
+                    className="h-4 w-4 cursor-pointer"
+                    aria-label={`Seleziona ${rowLabel}`}
+                  />
+                </TableCell>
                 <TableCell className="max-w-[24rem]">
                   <TransactionTitleEdit
                     id={transaction.id}
@@ -273,6 +352,33 @@ export function TransactionTable({ transactions, filters, searchParams }: Props)
                     </span>
                   )}
                 </TableCell>
+                <TableCell className="w-10 text-center">
+                  <DropdownMenu
+                    open={openDropdownId === transaction.id}
+                    onOpenChange={(o) => setOpenDropdownId(o ? transaction.id : null)}
+                  >
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        aria-label={`Azioni per ${rowLabel}`}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DeleteTransactionMenuItem
+                        transactionId={transaction.id}
+                        label={rowLabel}
+                        onDeleted={() => {
+                          removeTransactionsFromList([transaction.id])
+                          setOpenDropdownId(null)
+                        }}
+                      />
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
               </TableRow>
             )
           })}
@@ -301,5 +407,84 @@ export function TransactionTable({ transactions, filters, searchParams }: Props)
         </p>
       ) : null}
     </div>
+
+    <TransactionBulkActionBar
+      selectedIds={selectedIds}
+      onBulkDelete={() => setBulkDeleteOpen(true)}
+    />
+
+    <BulkDeleteTransactionsDialog
+      open={bulkDeleteOpen}
+      onOpenChange={setBulkDeleteOpen}
+      selectedIds={selectedIds}
+      onSuccess={() => {
+        removeTransactionsFromList(selectedIds)
+        setBulkDeleteOpen(false)
+      }}
+    />
+    </>
+  )
+}
+
+function DeleteTransactionMenuItem({
+  transactionId,
+  label,
+  onDeleted,
+}: {
+  transactionId: string
+  label: string
+  onDeleted: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [pending, setPending] = useState(false)
+
+  async function handleDelete() {
+    setPending(true)
+    const fd = new FormData()
+    fd.set('id', transactionId)
+    const result = await deleteTransaction({ error: null }, fd)
+    setPending(false)
+    if (result.error) {
+      toast.error(result.error)
+    } else {
+      toast.success('Transazione eliminata.')
+      onDeleted()
+      setOpen(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <DropdownMenuItem
+          onSelect={(e) => e.preventDefault()}
+          className="text-destructive focus:text-destructive"
+        >
+          Elimina
+        </DropdownMenuItem>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Elimina transazione</DialogTitle>
+          <DialogDescription className="sr-only">
+            Conferma l&apos;eliminazione della transazione selezionata.
+          </DialogDescription>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Sei sicuro di voler eliminare questa transazione
+          {label ? ` (“${label}”)` : ''}? Le spese collegate verranno aggiornate di conseguenza.
+        </p>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="ghost">
+              Annulla
+            </Button>
+          </DialogClose>
+          <Button type="button" variant="destructive" onClick={handleDelete} disabled={pending}>
+            Elimina
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

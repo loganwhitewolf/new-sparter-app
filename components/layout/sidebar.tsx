@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, List, Receipt, Settings, Tag, Upload } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { ClientMountIcon } from '@/components/ui/client-mount-icon'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { APP_ROUTES } from '@/lib/routes'
@@ -42,7 +43,7 @@ export function Sidebar() {
                     : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                 )}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <ClientMountIcon icon={Icon} className="h-4 w-4 shrink-0" />
                 <span className="flex-1">{label}</span>
                 {label === 'Categorie' && uncategorizedCount > 0 ? (
                   <Badge className="ml-auto font-mono text-xs">
@@ -72,7 +73,7 @@ export function Sidebar() {
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                   )}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
+                  <ClientMountIcon icon={Icon} className="h-4 w-4 shrink-0" />
                   <span>{label}</span>
                 </Link>
               </li>

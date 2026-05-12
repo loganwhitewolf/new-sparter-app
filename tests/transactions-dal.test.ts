@@ -67,6 +67,10 @@ vi.mock('@/lib/db', () => ({
     update: vi.fn(() => makeUpdateChain()),
   },
 }))
+function mockSql(strings: TemplateStringsArray, ...values: unknown[]) {
+  return { op: 'sql', strings, values }
+}
+
 vi.mock('drizzle-orm', () => ({
   and: (...args: unknown[]) => ({ op: 'and', args }),
   asc: (column: unknown) => ({ op: 'asc', column }),
@@ -77,6 +81,9 @@ vi.mock('drizzle-orm', () => ({
   isNull: (column: unknown) => ({ op: 'isNull', column }),
   lte: (left: unknown, right: unknown) => ({ op: 'lte', left, right }),
   or: (...args: unknown[]) => ({ op: 'or', args }),
+  sql: Object.assign(mockSql, {
+    // Drizzle allows sql`...` as tagged template only; generic sql<T> is compile-time.
+  }),
 }))
 vi.mock('@/lib/db/schema', () => ({
   expense: {
@@ -87,6 +94,7 @@ vi.mock('@/lib/db/schema', () => ({
   },
   file: {
     id: 'file.id',
+    displayName: 'file.displayName',
     importFormatVersionId: 'file.importFormatVersionId',
     importedAt: 'file.importedAt',
     originalName: 'file.originalName',
@@ -176,10 +184,10 @@ describe('transaction DAL query helpers', () => {
       expenseTitle: 'expense.title',
       expenseStatus: 'expense.status',
       fileId: 'file.id',
-      fileName: 'file.originalName',
       platformName: 'platform.name',
       platformSlug: 'platform.slug',
     })
+    expect(transactionListSelect.fileName).toMatchObject({ op: 'sql' })
     expect(transactionPlatformSelect).toEqual({
       id: 'platform.id',
       name: 'platform.name',

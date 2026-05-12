@@ -4,6 +4,7 @@ import { Search, X } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTransition } from 'react'
 import { Button } from '@/components/ui/button'
+import { ClientMountIcon } from '@/components/ui/client-mount-icon'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { APP_ROUTES } from '@/lib/routes'
@@ -57,9 +58,10 @@ export function ImportFilters({ filters }: Props) {
             Cerca importazione
           </label>
           <div className="relative">
-            <Search
+            <ClientMountIcon
+              icon={Search}
+              ariaHidden
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden="true"
             />
             <Input
               id="import-search"
@@ -132,7 +134,7 @@ export function ImportFilters({ filters }: Props) {
           onClick={clearFilters}
           disabled={isPending || !hasFilters}
         >
-          <X className="h-4 w-4" aria-hidden="true" />
+          <ClientMountIcon icon={X} ariaHidden className="h-4 w-4" />
           <span>Reset filtri</span>
         </Button>
       </CardContent>

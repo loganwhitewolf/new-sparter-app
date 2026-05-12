@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, List, Receipt, Tag, Upload } from 'lucide-react'
+import { ClientMountIcon } from '@/components/ui/client-mount-icon'
 import { cn } from '@/lib/utils'
 import { APP_ROUTES } from '@/lib/routes'
 
@@ -41,7 +42,7 @@ export function BottomNav({ className }: BottomNavProps) {
               isActive ? 'text-primary' : 'text-muted-foreground'
             )}
           >
-            <Icon className="h-5 w-5" />
+            <ClientMountIcon icon={Icon} className="h-5 w-5" />
             <span>{label}</span>
           </Link>
         )

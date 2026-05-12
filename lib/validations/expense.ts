@@ -18,6 +18,13 @@ export const BulkCategorizeSchema = z.object({
   subCategoryId: z.number().int().positive({ error: 'Seleziona una categoria prima di confermare.' }),
 })
 
+export const BulkDeleteExpensesSchema = z.object({
+  ids: z
+    .array(z.string().uuid())
+    .min(1, { error: 'Seleziona almeno una spesa per continuare.' })
+    .max(500, { error: 'Puoi eliminare al massimo 500 spese alla volta.' }),
+})
+
 export const SingleCategorizeSchema = z.object({
   id: z.string().min(1, { error: 'ID spesa mancante.' }),
   subCategoryId: z.number().int().positive({ error: 'Seleziona una categoria prima di confermare.' }),
@@ -30,6 +37,7 @@ export const IgnoreExpenseSchema = z.object({
 export type CreateExpenseInput = z.infer<typeof CreateExpenseSchema>
 export type UpdateExpenseInput = z.infer<typeof UpdateExpenseSchema>
 export type BulkCategorizeInput = z.infer<typeof BulkCategorizeSchema>
+export type BulkDeleteExpensesInput = z.infer<typeof BulkDeleteExpensesSchema>
 export type SingleCategorizeInput = z.infer<typeof SingleCategorizeSchema>
 export type IgnoreExpenseInput = z.infer<typeof IgnoreExpenseSchema>
 export type ActionState = { error: string | null }

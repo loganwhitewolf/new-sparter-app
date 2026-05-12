@@ -2,34 +2,39 @@
 
 import { Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { useSyncExternalStore } from 'react'
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
-  const mounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  )
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    queueMicrotask(() => setMounted(true))
+  }, [])
 
-  if (!mounted) {
-    return <Button variant="ghost" size="icon" className="h-8 w-8" disabled aria-label="Tema" />
-  }
+  const isDark = resolvedTheme === 'dark'
 
   return (
     <Button
+      type="button"
       variant="ghost"
       size="icon"
       className="h-8 w-8"
-      onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-      aria-label={resolvedTheme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
+      disabled={!mounted}
+      onClick={
+        mounted ? () => setTheme(isDark ? 'light' : 'dark') : undefined
+      }
+      aria-label={
+        !mounted ? 'Tema' : isDark ? 'Passa al tema chiaro' : 'Passa al tema scuro'
+      }
     >
-      {resolvedTheme === 'dark' ? (
-        <Sun className="h-4 w-4" />
-      ) : (
-        <Moon className="h-4 w-4" />
-      )}
+      {mounted ? (
+        isDark ? (
+          <Sun className="h-4 w-4" />
+        ) : (
+          <Moon className="h-4 w-4" />
+        )
+      ) : null}
     </Button>
   )
 }

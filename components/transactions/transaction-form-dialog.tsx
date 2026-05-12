@@ -1,9 +1,10 @@
 'use client'
-import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { AlertCircle, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { ClientMountIcon } from '@/components/ui/client-mount-icon'
 import {
   Dialog,
   DialogClose,
@@ -66,7 +67,7 @@ export function TransactionFormDialog({ categories }: Props) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm">
-          <Plus className="mr-2 h-4 w-4" />
+          <ClientMountIcon icon={Plus} className="mr-2 h-4 w-4" />
           Nuova transazione
         </Button>
       </DialogTrigger>

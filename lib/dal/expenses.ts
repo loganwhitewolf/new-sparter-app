@@ -2,7 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { db } from '@/lib/db'
 import { expense, subCategory, category } from '@/lib/db/schema'
-import { eq, and, gte, lte, or, desc } from 'drizzle-orm'
+import { eq, and, gte, inArray, lte, or, desc } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { periodToDateRange } from '@/lib/utils/date'
 
@@ -142,4 +142,13 @@ export async function deleteExpense(id: string, userId: string): Promise<void> {
   await db
     .delete(expense)
     .where(and(eq(expense.id, id), eq(expense.userId, userId)))
+}
+
+export async function deleteExpenses(ids: string[], userId: string): Promise<void> {
+  const unique = [...new Set(ids)]
+  if (unique.length === 0) return
+
+  await db
+    .delete(expense)
+    .where(and(eq(expense.userId, userId), inArray(expense.id, unique)))
 }

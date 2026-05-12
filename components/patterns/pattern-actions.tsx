@@ -4,6 +4,7 @@ import { AlertCircle, Loader2, Pencil, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { ClientMountIcon } from '@/components/ui/client-mount-icon'
 import {
   Dialog,
   DialogClose,
@@ -109,7 +110,7 @@ export function PatternActions({
       <Dialog open={editOpen} onOpenChange={handleEditOpenChange}>
         <DialogTrigger asChild>
           <Button type="button" variant="ghost" size="icon-sm" aria-label="Modifica pattern">
-            <Pencil className="h-4 w-4" />
+            <ClientMountIcon icon={Pencil} ariaHidden className="h-4 w-4" />
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-lg">
@@ -249,7 +250,7 @@ export function PatternActions({
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogTrigger asChild>
           <Button type="button" variant="ghost" size="icon-sm" aria-label="Elimina pattern">
-            <Trash2 className="h-4 w-4" />
+            <ClientMountIcon icon={Trash2} ariaHidden className="h-4 w-4" />
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-sm">

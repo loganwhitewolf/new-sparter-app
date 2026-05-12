@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { db, type DbOrTx } from "@/lib/db";
 import {
   expense,
@@ -68,8 +68,9 @@ type RemainingExpenseAggregate = {
   expenseId: string | null;
   totalAmount: string | null;
   transactionCount: number | string | bigint;
-  firstTransactionAt: Date | null;
-  lastTransactionAt: Date | null;
+  /** Driver may return strings for aggregate timestamps. */
+  firstTransactionAt: Date | string | null;
+  lastTransactionAt: Date | string | null;
 };
 
 type ImpactPlan = ImportDeletePreview & {
@@ -90,6 +91,20 @@ function numericCount(value: number | string | bigint | null | undefined) {
   if (typeof value === "bigint") return Number(value);
   if (typeof value === "string") return Number.parseInt(value, 10) || 0;
   return value ?? 0;
+}
+
+function timestampForExpenseColumn(
+  value: Date | string | null | undefined,
+): Date | null {
+  if (value == null) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  if (typeof value === "string") {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  return null;
 }
 
 function logImportDeletion(
@@ -229,7 +244,10 @@ async function loadRemainingAggregates(
       and(
         eq(transactionTable.userId, input.userId),
         inArray(transactionTable.expenseId, input.affectedExpenseIds),
-        ne(transactionTable.fileId, input.fileId),
+        or(
+          isNull(transactionTable.fileId),
+          ne(transactionTable.fileId, input.fileId),
+        ),
       ),
     )
     .groupBy(transactionTable.expenseId) as Promise<
@@ -399,8 +417,12 @@ async function updateRecalculatedExpenses(
           toDecimal(aggregate.totalAmount ?? ZERO_AMOUNT),
         ),
         transactionCount: numericCount(aggregate.transactionCount),
-        firstTransactionAt: aggregate.firstTransactionAt,
-        lastTransactionAt: aggregate.lastTransactionAt,
+        firstTransactionAt: timestampForExpenseColumn(
+          aggregate.firstTransactionAt,
+        ),
+        lastTransactionAt: timestampForExpenseColumn(
+          aggregate.lastTransactionAt,
+        ),
         importedFromFileId: null,
         updatedAt: new Date(),
       })

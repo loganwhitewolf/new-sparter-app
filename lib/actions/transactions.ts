@@ -3,7 +3,9 @@ import Decimal from 'decimal.js'
 import { revalidatePath } from 'next/cache'
 import { verifySession } from '@/lib/dal/auth'
 import {
+  BulkDeleteTransactionsSchema,
   CreateTransactionSchema,
+  DeleteTransactionSchema,
   parseTransactionFilters,
   UpdateTransactionCustomTitleSchema,
   type TransactionSearchParams,
@@ -14,6 +16,7 @@ import {
   getTransactions,
   TRANSACTION_LIST_LIMIT,
 } from '@/lib/dal/transactions'
+import { deleteTransactionsAndReconcileExpenses } from '@/lib/services/transaction-deletion'
 import { db } from '@/lib/db'
 import { toDbDecimal } from '@/lib/utils/decimal'
 import type { ActionState } from '@/lib/validations/expense'
@@ -127,5 +130,62 @@ export async function updateTransactionCustomTitle(
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
   revalidatePath(APP_ROUTES.transactions)
+  return { error: null }
+}
+
+export async function deleteTransaction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = DeleteTransactionSchema.safeParse({
+    id: formData.get('id'),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Transazione non valida.' }
+  }
+  const { userId } = await verifySession()
+  try {
+    const result = await deleteTransactionsAndReconcileExpenses({
+      userId,
+      transactionIds: [parsed.data.id],
+    })
+    if (result.deletedTransactionIds.length === 0) {
+      return { error: 'Transazione non trovata o già eliminata.' }
+    }
+  } catch {
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+  revalidatePath(APP_ROUTES.transactions)
+  revalidatePath(APP_ROUTES.expenses)
+  revalidatePath('/dashboard')
+  return { error: null }
+}
+
+export async function bulkDeleteTransactions(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  let ids: unknown
+  try {
+    ids = JSON.parse((formData.get('ids') as string) ?? '[]')
+  } catch {
+    return { error: 'Selezione non valida.' }
+  }
+  const parsed = BulkDeleteTransactionsSchema.safeParse({ ids })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Selezione non valida.' }
+  }
+  const { userId } = await verifySession()
+  try {
+    await deleteTransactionsAndReconcileExpenses({
+      userId,
+      transactionIds: parsed.data.ids,
+    })
+  } catch {
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+  revalidatePath(APP_ROUTES.transactions)
+  revalidatePath(APP_ROUTES.expenses)
+  revalidatePath('/dashboard')
   return { error: null }
 }

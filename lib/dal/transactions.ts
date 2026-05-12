@@ -1,6 +1,6 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, asc, desc, eq, gte, inArray, isNull, lte, or } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import {
@@ -58,7 +58,8 @@ export const transactionListSelect = {
   expenseTitle: expense.title,
   expenseStatus: expense.status,
   fileId: importFile.id,
-  fileName: importFile.originalName,
+  /** Prefer user-facing display name; fall back to upload file name. */
+  fileName: sql<string | null>`coalesce(nullif(trim(coalesce(${importFile.displayName}, '')), ''), ${importFile.originalName})`,
   importedAt: importFile.importedAt,
   platformId: platform.id,
   platformName: platform.name,

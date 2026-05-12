@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ClientMountIcon } from '@/components/ui/client-mount-icon'
 import {
   Dialog,
   DialogContent,
@@ -23,7 +24,7 @@ export function ImportUploadDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
-          <Upload className="h-4 w-4" aria-hidden="true" />
+          <ClientMountIcon icon={Upload} ariaHidden className="h-4 w-4" />
           Importa file
         </Button>
       </DialogTrigger>

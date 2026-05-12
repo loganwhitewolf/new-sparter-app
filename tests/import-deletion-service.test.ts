@@ -7,6 +7,8 @@ type Condition =
   | EqCondition
   | NeCondition
   | InArrayCondition
+  | { op: "isNull"; column: string }
+  | { op: "or"; conditions: Condition[] }
   | { op: "and"; conditions: Condition[] };
 
 type FileRow = {
@@ -122,6 +124,8 @@ vi.mock("drizzle-orm", () => ({
     column,
     values,
   }),
+  isNull: (column: string): Condition => ({ op: "isNull", column }),
+  or: (...conditions: Condition[]): Condition => ({ op: "or", conditions }),
   and: (...conditions: Condition[]): Condition => ({ op: "and", conditions }),
   sql: () => ({ kind: "sql" }),
 }));
@@ -159,6 +163,12 @@ function matchesCondition(
 
   if (condition.op === "and")
     return condition.conditions.every((child) => matchesCondition(row, child));
+  if (condition.op === "or")
+    return condition.conditions.some((child) => matchesCondition(row, child));
+  if (condition.op === "isNull") {
+    const nullKey = columnName(condition.column);
+    return row[nullKey] == null;
+  }
 
   const key = columnName(condition.column);
   if (condition.op === "eq") return row[key] === condition.value;

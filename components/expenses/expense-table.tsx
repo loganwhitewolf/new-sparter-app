@@ -33,6 +33,7 @@ import {
 import { deleteExpense, ignoreExpense, loadMoreExpenses } from '@/lib/actions/expenses'
 import { BulkActionBar } from './bulk-action-bar'
 import { BulkCategorizeDialog } from './bulk-categorize-dialog'
+import { BulkDeleteExpensesDialog } from './bulk-delete-expenses-dialog'
 import { ExpenseCategorizeDialog } from './expense-categorize-dialog'
 import { ExpenseFormDialog } from './expense-form-dialog'
 import type { ExpenseFilters, ExpenseRow } from '@/lib/dal/expenses'
@@ -56,6 +57,7 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const [categorizeDialogExpense, setCategorizeDialogExpense] = useState<{
     id: string
@@ -344,6 +346,19 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
       <BulkActionBar
         selectedIds={selectedIds}
         onBulkCategorize={() => setBulkDialogOpen(true)}
+        onBulkDelete={() => setBulkDeleteOpen(true)}
+      />
+
+      <BulkDeleteExpensesDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        selectedIds={selectedIds}
+        onSuccess={() => {
+          const idSet = new Set(selectedIds)
+          setLoadedExpenses((prev) => prev.filter((e) => !idSet.has(e.id)))
+          setSelectedIds([])
+          setBulkDeleteOpen(false)
+        }}
       />
 
       <BulkCategorizeDialog
