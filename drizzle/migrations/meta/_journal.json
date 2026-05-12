@@ -71,6 +71,13 @@
       "when": 1778152000000,
       "tag": "0009_file_content_hash",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1778595063232,
+      "tag": "0010_peaceful_nightshade",
+      "breakpoints": true
     }
   ]
 }

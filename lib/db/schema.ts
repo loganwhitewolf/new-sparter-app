@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   pgTable,
   varchar,
@@ -10,6 +10,7 @@ import {
   integer,
   serial,
   unique,
+  uniqueIndex,
   numeric,
   jsonb,
 } from "drizzle-orm/pg-core";
@@ -144,15 +145,23 @@ export const category = pgTable(
   "category",
   {
     id: serial("id").primaryKey(),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 100 }).notNull(),
-    slug: varchar("slug", { length: 100 }).notNull().unique(),
+    slug: varchar("slug", { length: 100 }).notNull(),
     type: categoryTypeEnum("type").notNull(),
     displayOrder: integer("display_order").default(0),
     isActive: boolean("is_active").default(true).notNull(),
   },
   (table) => [
+    index("category_userId_idx").on(table.userId),
     index("category_slug_idx").on(table.slug),
     index("category_type_idx").on(table.type),
+    uniqueIndex("category_system_slug_unique")
+      .on(table.slug)
+      .where(sql`${table.userId} IS NULL`),
+    uniqueIndex("category_user_slug_unique")
+      .on(table.userId, table.slug)
+      .where(sql`${table.userId} IS NOT NULL`),
   ],
 );
 
@@ -160,6 +169,7 @@ export const subCategory = pgTable(
   "sub_category",
   {
     id: serial("id").primaryKey(),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
     categoryId: integer("category_id")
       .notNull()
       .references(() => category.id, { onDelete: "cascade" }),
@@ -170,8 +180,41 @@ export const subCategory = pgTable(
     excludeFromTotals: boolean("exclude_from_totals").default(false).notNull(),
   },
   (table) => [
+    index("sub_category_userId_idx").on(table.userId),
     index("sub_category_categoryId_idx").on(table.categoryId),
-    unique("sub_category_category_slug_unique").on(table.categoryId, table.slug),
+    uniqueIndex("sub_category_system_category_slug_unique")
+      .on(table.categoryId, table.slug)
+      .where(sql`${table.userId} IS NULL`),
+    uniqueIndex("sub_category_user_category_slug_unique")
+      .on(table.userId, table.categoryId, table.slug)
+      .where(sql`${table.userId} IS NOT NULL`),
+  ],
+);
+
+export const userSubcategoryOverride = pgTable(
+  "user_subcategory_override",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    subCategoryId: integer("sub_category_id")
+      .notNull()
+      .references(() => subCategory.id, { onDelete: "cascade" }),
+    customName: varchar("custom_name", { length: 100 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("user_subcategory_override_userId_idx").on(table.userId),
+    index("user_subcategory_override_subCategoryId_idx").on(table.subCategoryId),
+    unique("user_subcategory_override_user_subcategory_unique").on(
+      table.userId,
+      table.subCategoryId,
+    ),
   ],
 );
 
@@ -427,6 +470,9 @@ export const expenseClassificationHistory = pgTable(
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  categories: many(category),
+  subCategories: many(subCategory),
+  subcategoryOverrides: many(userSubcategoryOverride),
   expenses: many(expense),
   files: many(file),
   platforms: many(platform),
@@ -450,18 +496,41 @@ export const accountRelations = relations(account, ({ one }) => ({
   }),
 }));
 
-export const categoryRelations = relations(category, ({ many }) => ({
+export const categoryRelations = relations(category, ({ one, many }) => ({
+  owner: one(user, {
+    fields: [category.userId],
+    references: [user.id],
+  }),
   subCategories: many(subCategory),
 }));
 
 export const subCategoryRelations = relations(subCategory, ({ one, many }) => ({
+  owner: one(user, {
+    fields: [subCategory.userId],
+    references: [user.id],
+  }),
   category: one(category, {
     fields: [subCategory.categoryId],
     references: [category.id],
   }),
+  overrides: many(userSubcategoryOverride),
   expenses: many(expense),
   categorizationPatterns: many(categorizationPattern),
 }));
+
+export const userSubcategoryOverrideRelations = relations(
+  userSubcategoryOverride,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [userSubcategoryOverride.userId],
+      references: [user.id],
+    }),
+    subCategory: one(subCategory, {
+      fields: [userSubcategoryOverride.subCategoryId],
+      references: [subCategory.id],
+    }),
+  }),
+);
 
 export const platformRelations = relations(platform, ({ one, many }) => ({
   owner: one(user, {
