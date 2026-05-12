@@ -64,6 +64,13 @@
       "when": 1778151000000,
       "tag": "0008_private_import_formats",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778152000000,
+      "tag": "0009_file_content_hash",
+      "breakpoints": true
     }
   ]
 }
