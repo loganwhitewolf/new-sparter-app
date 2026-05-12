@@ -23,6 +23,7 @@ import { expense } from '@/lib/db/schema'
 import { and, eq, inArray } from 'drizzle-orm'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
 import { revalidateCategorizationSurfaces } from '@/lib/actions/revalidation'
+import { isSubCategoryVisibleToUser } from '@/lib/dal/categories'
 
 type LoadMoreExpensesInput = {
   filters?: ExpenseFilters
@@ -168,6 +169,10 @@ export async function bulkCategorize(
   }
   // SECURITY: verifySession() first, then scope update to userId (T-3-02)
   const { userId } = await verifySession()
+  const subCategoryVisible = await isSubCategoryVisibleToUser(parsed.data.subCategoryId, userId)
+  if (!subCategoryVisible) {
+    return { error: 'Sottocategoria non valida.' }
+  }
   try {
     await db.transaction(async (tx) => {
       const beforeRows = await tx
@@ -244,6 +249,10 @@ export async function categorizeExpense(
   }
   // SECURITY: verifySession() first, then scope update to userId (IDOR prevention)
   const { userId } = await verifySession()
+  const subCategoryVisible = await isSubCategoryVisibleToUser(parsed.data.subCategoryId, userId)
+  if (!subCategoryVisible) {
+    return { error: 'Sottocategoria non valida.' }
+  }
   try {
     await db.transaction(async (tx) => {
       const before = await tx

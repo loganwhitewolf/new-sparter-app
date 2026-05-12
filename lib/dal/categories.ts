@@ -312,6 +312,29 @@ export async function countLinkedExpensesForSubcategory(
   return Number(rows[0]?.count ?? 0)
 }
 
+export async function isSubCategoryVisibleToUser(
+  subCategoryId: number,
+  userId: string,
+  database: DbOrTx = db,
+): Promise<boolean> {
+  const rows = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .leftJoin(category, eq(category.id, subCategory.categoryId))
+    .where(
+      and(
+        eq(subCategory.id, subCategoryId),
+        eq(subCategory.isActive, true),
+        or(isNull(subCategory.userId), eq(subCategory.userId, userId)),
+        eq(category.isActive, true),
+        or(isNull(category.userId), eq(category.userId, userId)),
+      ),
+    )
+    .limit(1)
+
+  return rows.length > 0
+}
+
 export async function deleteUserSubcategory(
   id: number,
   userId: string,
