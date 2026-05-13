@@ -4,7 +4,6 @@ const EXPECTED_CATEGORY_REVALIDATION_ROUTES = [
   '/dashboard',
   '/expenses',
   '/settings/categories',
-  '/settings/patterns',
   '/transactions',
 ]
 
@@ -37,6 +36,10 @@ vi.mock('drizzle-orm', () => ({
   and: mocks.and,
   eq: mocks.eq,
   inArray: mocks.inArray,
+  or: vi.fn(() => ({ kind: 'or' })),
+  isNull: vi.fn(() => ({ kind: 'isNull' })),
+  asc: vi.fn(() => ({ kind: 'asc' })),
+  sql: vi.fn(() => ({ kind: 'sql' })),
 }))
 
 vi.mock('@/lib/dal/auth', () => ({
@@ -80,12 +83,31 @@ vi.mock('@/lib/db/schema', () => ({
     subCategoryId: 'expense.subCategoryId',
     status: 'expense.status',
   },
+  subCategory: {
+    id: 'subCategory.id',
+    userId: 'subCategory.userId',
+    categoryId: 'subCategory.categoryId',
+    isActive: 'subCategory.isActive',
+  },
+  category: {
+    id: 'category.id',
+    userId: 'category.userId',
+    isActive: 'category.isActive',
+  },
 }))
+
+const dbSelectChain = {
+  from: () => dbSelectChain,
+  leftJoin: () => dbSelectChain,
+  where: () => dbSelectChain,
+  limit: () => Promise.resolve([{ id: 42 }]),
+}
 
 vi.mock('@/lib/db', () => ({
   db: {
     transaction: mocks.dbTransaction,
     update: mocks.dbUpdate,
+    select: () => dbSelectChain,
   },
 }))
 

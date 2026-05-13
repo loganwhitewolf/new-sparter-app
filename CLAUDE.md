@@ -36,7 +36,7 @@ Tailwind CSS + shadcn/ui
 Developer-facing code and project guidance must be written in English:
 
 - identifiers, route segments, filenames, comments, test names, logs, commit-facing docs, and agent/project rules
-- public route paths use English slugs (`/expenses`, `/transactions`, `/settings/patterns`)
+- public route paths use English slugs (`/expenses`, `/transactions`, `/settings/categories`)
 - legacy localized URLs may exist only as redirects in `lib/routes.ts` and `next.config.ts`
 
 Italian is allowed only for intentional product/domain surfaces:

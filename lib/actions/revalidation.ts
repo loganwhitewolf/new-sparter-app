@@ -7,6 +7,5 @@ export function revalidateCategorizationSurfaces() {
   revalidatePath(APP_ROUTES.expenses)
   revalidatePath(APP_ROUTES.transactions)
   revalidatePath(APP_ROUTES.dashboard)
-  revalidatePath(APP_ROUTES.patternSettings)
   revalidatePath(APP_ROUTES.categorySettings)
 }

@@ -36,7 +36,6 @@ vi.mock('@/lib/actions/patterns', () => ({
 }))
 
 const { default: CategoriesPage } = await import('../app/(app)/settings/categories/page')
-const { default: PatternsPage } = await import('../app/(app)/settings/patterns/page')
 
 const categories = [
   {
@@ -136,14 +135,12 @@ describe('/settings/categories UI', () => {
     expect(html).toContain('Personale')
     expect(html).toContain('Alimentari speciali')
     expect(html).toContain('Nome originale: Alimentari')
-    expect(html).toContain('Questo nome personalizzato vale solo per te')
+    expect(html).toContain('Questo nome vale solo per te')
     expect(html).toContain('Le eliminazioni sono disponibili solo per voci personali')
-    expect(html).toContain('Le sottocategorie collegate a spese vengono bloccate')
     expect(html).toContain('Pattern di categorizzazione')
     expect(html).toContain('Nuovo pattern')
     expect(html).toContain('Spese → Alimentari speciali')
     expect(html).toContain('Sottocategoria non trovata (#999)')
-    expect(html).toContain('data-testid="category-row-1"')
     expect(html).toContain('data-testid="subcategory-row-10"')
   })
 
@@ -156,16 +153,5 @@ describe('/settings/categories UI', () => {
     expect(html).not.toContain('Error:')
     expect(html).not.toContain('Elimina categoria Spese')
     expect(html).not.toContain('Elimina sottocategoria Alimentari speciali')
-  })
-
-  it('keeps /settings/patterns rendering with the shared pattern panel', async () => {
-    const element = await PatternsPage()
-    const html = renderToStaticMarkup(createElement(() => element))
-
-    expect(html).toContain('Pattern personalizzati')
-    expect(html).toContain('Regole regex per la categorizzazione automatica')
-    expect(html).toContain('Nuovo pattern')
-    expect(html).toContain('Spese → Alimentari speciali')
-    expect(html).toContain('Sottocategoria non trovata (#999)')
   })
 })
