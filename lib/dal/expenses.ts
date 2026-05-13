@@ -2,7 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { db } from '@/lib/db'
 import { expense, subCategory, category } from '@/lib/db/schema'
-import { eq, and, gte, inArray, lte, or, desc } from 'drizzle-orm'
+import { eq, and, gte, ilike, inArray, lte, or, desc } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { periodToDateRange } from '@/lib/utils/date'
 
@@ -14,6 +14,7 @@ export type ExpenseFilters = {
   categorySlug?: string
   status?: 'uncategorized' | 'categorized'
   period?: 'this-month' | 'last-3-months' | 'last-6-months' | 'this-year' | 'last-year'
+  name?: string
 }
 
 export type ExpensePagination = {
@@ -58,6 +59,9 @@ export const getExpenses = cache(async (
   }
   if (filters.categorySlug) {
     conditions.push(eq(category.slug, filters.categorySlug))
+  }
+  if (filters.name) {
+    conditions.push(ilike(expense.title, `%${filters.name}%`))
   }
 
   return db

@@ -1,8 +1,8 @@
 'use client'
 
-import { ArrowDown, ArrowUp } from 'lucide-react'
+import { ArrowDown, ArrowUp, Search } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useTransition } from 'react'
+import { useRef, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -33,6 +33,7 @@ export function TransactionFilters({ filters, platforms }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function replaceWith(params: URLSearchParams) {
     const query = params.toString()
@@ -63,9 +64,35 @@ export function TransactionFilters({ filters, platforms }: Props) {
     updateParam('dir', filters.dir === 'asc' ? null : 'asc')
   }
 
+  function handleNameChange(value: string) {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      updateParam('name', value.trim() || null)
+    }, 300)
+  }
+
   return (
     <Card>
-      <CardContent className="grid gap-4 p-4 md:grid-cols-[repeat(2,minmax(0,1fr))_minmax(12rem,1fr)_minmax(12rem,1fr)_auto] md:items-end">
+      <CardContent className="grid gap-4 p-4 md:grid-cols-[1fr_repeat(2,minmax(0,1fr))_minmax(12rem,1fr)_minmax(12rem,1fr)_auto] md:items-end">
+        {/* Ricerca per nome/descrizione */}
+        <div className="grid gap-2">
+          <label className="text-xs font-medium text-muted-foreground" htmlFor="transaction-name">
+            Cerca
+          </label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              id="transaction-name"
+              type="search"
+              placeholder="Nome o descrizione…"
+              defaultValue={filters.name ?? ''}
+              onChange={(e) => handleNameChange(e.currentTarget.value)}
+              disabled={isPending}
+              className="pl-9"
+            />
+          </div>
+        </div>
+
         <div className="grid gap-2">
           <label className="text-xs font-medium text-muted-foreground" htmlFor="transaction-from">
             Data da

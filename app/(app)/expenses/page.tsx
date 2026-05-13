@@ -8,9 +8,10 @@ import { ExpenseFormDialog } from '@/components/expenses/expense-form-dialog'
 export default async function ExpensesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; status?: string; period?: string }>
+  searchParams: Promise<{ category?: string; status?: string; period?: string; name?: string }>
 }) {
   const params = await searchParams
+  const rawName = params.name?.trim()
   const filters = {
     categorySlug: params.category,
     status: params.status as 'uncategorized' | 'categorized' | undefined,
@@ -21,6 +22,7 @@ export default async function ExpensesPage({
       | 'this-year'
       | 'last-year'
       | undefined,
+    name: rawName && rawName.length <= 200 ? rawName : undefined,
   }
 
   const [expenses, categories] = await Promise.all([
@@ -45,7 +47,7 @@ export default async function ExpensesPage({
       </Suspense>
 
       <ExpenseTable
-        key={`${filters.categorySlug ?? ''}:${filters.status ?? ''}:${filters.period ?? ''}`}
+        key={`${filters.categorySlug ?? ''}:${filters.status ?? ''}:${filters.period ?? ''}:${filters.name ?? ''}`}
         expenses={expenses}
         categories={categories}
         filters={filters}

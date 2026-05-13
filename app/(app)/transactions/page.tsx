@@ -49,6 +49,7 @@ export default async function TransactionsPage({
         transactions={transactions}
         filters={filters}
         searchParams={params}
+        categories={categories}
       />
     </div>
   )

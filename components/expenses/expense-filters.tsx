@@ -1,7 +1,9 @@
 'use client'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useTransition } from 'react'
+import { useTransition, useRef } from 'react'
+import { Search } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -18,10 +20,12 @@ export function ExpenseFilters({ categories }: Props) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const currentCategory = searchParams.get('category') ?? ''
   const currentStatus = searchParams.get('status') ?? ''
   const currentPeriod = searchParams.get('period') ?? 'this-month'
+  const currentName = searchParams.get('name') ?? ''
 
   function updateFilter(key: string, value: string | null) {
     const params = new URLSearchParams(searchParams.toString())
@@ -33,9 +37,29 @@ export function ExpenseFilters({ categories }: Props) {
     })
   }
 
+  function handleNameChange(value: string) {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      updateFilter('name', value.trim() || null)
+    }, 300)
+  }
+
   return (
     <Card>
       <CardContent className="flex flex-wrap gap-3 p-4">
+        {/* Ricerca per nome */}
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            type="search"
+            placeholder="Cerca per nome…"
+            defaultValue={currentName}
+            onChange={(e) => handleNameChange(e.currentTarget.value)}
+            disabled={isPending}
+            className="pl-9"
+          />
+        </div>
+
         {/* Categoria filter */}
         <Select
           value={currentCategory}

@@ -1,11 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { MoreHorizontal } from 'lucide-react'
+import { ExternalLink, MoreHorizontal, Tag } from 'lucide-react'
 import { toast } from 'sonner'
 import { BulkDeleteTransactionsDialog } from '@/components/transactions/bulk-delete-transactions-dialog'
 import { TransactionBulkActionBar } from '@/components/transactions/transaction-bulk-action-bar'
 import { TransactionTitleEdit } from '@/components/transactions/transaction-title-edit'
+import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -23,6 +24,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -36,6 +38,7 @@ import {
 } from '@/components/ui/table'
 import { deleteTransaction, loadMoreTransactions } from '@/lib/actions/transactions'
 import type { TransactionListRow } from '@/lib/dal/transactions'
+import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type {
   ParsedTransactionFilters,
   TransactionSearchParams,
@@ -46,6 +49,7 @@ type Props = {
   transactions: TransactionListRow[]
   filters: Pick<ParsedTransactionFilters, 'sort' | 'dir'>
   searchParams: TransactionSearchParams
+  categories: CategoryWithSubCategories[]
 }
 
 const PAGE_SIZE = 50
@@ -114,7 +118,7 @@ function transactionRowLabel(transaction: TransactionListRow) {
   return raw.length > 80 ? `${raw.slice(0, 77)}…` : raw
 }
 
-export function TransactionTable({ transactions, filters, searchParams }: Props) {
+export function TransactionTable({ transactions, filters, searchParams, categories }: Props) {
   const [loadedTransactions, setLoadedTransactions] = useState(transactions)
   const [hasMore, setHasMore] = useState(transactions.length === PAGE_SIZE)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -124,6 +128,7 @@ export function TransactionTable({ transactions, filters, searchParams }: Props)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
+  const [categorizeTarget, setCategorizeTarget] = useState<{ id: string; title: string } | null>(null)
 
   const allSelected =
     loadedTransactions.length > 0 && selectedIds.length === loadedTransactions.length
@@ -203,6 +208,12 @@ export function TransactionTable({ transactions, filters, searchParams }: Props)
   function updateTransactionTitle(id: string, newTitle: string) {
     setLoadedTransactions((prev) =>
       prev.map((t) => (t.id === id ? { ...t, customTitle: newTitle || null } : t))
+    )
+  }
+
+  function markExpenseCategorized(transactionId: string) {
+    setLoadedTransactions((prev) =>
+      prev.map((t) => (t.id === transactionId ? { ...t, expenseStatus: '2' as const } : t))
     )
   }
 
@@ -375,6 +386,34 @@ export function TransactionTable({ transactions, filters, searchParams }: Props)
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <a
+                          href={`https://www.google.com/search?q=${encodeURIComponent(transaction.customTitle?.trim() || transaction.description)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Cerca su Google
+                        </a>
+                      </DropdownMenuItem>
+                      {transaction.expenseId && transaction.expenseStatus === '1' && (
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault()
+                            setCategorizeTarget({
+                              id: transaction.expenseId!,
+                              title: transaction.expenseTitle ?? rowLabel,
+                            })
+                            setOpenDropdownId(null)
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <Tag className="h-4 w-4" />
+                          Categorizza spesa
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
                       <DeleteTransactionMenuItem
                         transactionId={transaction.id}
                         label={rowLabel}
@@ -429,6 +468,20 @@ export function TransactionTable({ transactions, filters, searchParams }: Props)
         setBulkDeleteOpen(false)
       }}
     />
+
+    {categorizeTarget && (
+      <ExpenseCategorizeDialog
+        open={Boolean(categorizeTarget)}
+        onOpenChange={(open) => { if (!open) setCategorizeTarget(null) }}
+        expense={categorizeTarget}
+        categories={categories}
+        onSuccess={() => {
+          const txId = loadedTransactions.find((t) => t.expenseId === categorizeTarget.id)?.id
+          if (txId) markExpenseCategorized(txId)
+          setCategorizeTarget(null)
+        }}
+      />
+    )}
     </>
   )
 }
