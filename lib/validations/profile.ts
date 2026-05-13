@@ -7,6 +7,7 @@ export const PROFILE_FIELD_LIMITS = {
   location: 120,
   phone: 40,
   timezone: 64,
+  passion: 255,
 } as const
 
 const FALLBACK_TIMEZONES = new Set(['Europe/Rome', 'UTC', 'Europe/London', 'America/New_York'])
@@ -71,6 +72,10 @@ export const ProfileSchema = z.object({
   ).refine((value) => value === null || isSupportedTimezone(value), {
     error: 'Seleziona un fuso orario valido.',
   }),
+  passion: nullableTrimmedString(
+    PROFILE_FIELD_LIMITS.passion,
+    'La passione non può superare i 255 caratteri.',
+  ),
 })
 
 export type ProfileInput = z.input<typeof ProfileSchema>

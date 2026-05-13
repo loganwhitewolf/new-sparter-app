@@ -12,6 +12,7 @@ export type UserProfile = {
   location: string | null
   phone: string | null
   timezone: string | null
+  passion: string | null
   // Read-only account metadata
   email: string | null
   subscriptionPlan: 'free' | 'basic' | 'pro' | null
@@ -26,6 +27,7 @@ const EMPTY_PROFILE: UserProfile = {
   location: null,
   phone: null,
   timezone: null,
+  passion: null,
   email: null,
   subscriptionPlan: null,
   role: null,
@@ -41,6 +43,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
       location: user.location,
       phone: user.phone,
       timezone: user.timezone,
+      passion: user.passion,
       email: user.email,
       subscriptionPlan: user.subscriptionPlan,
       role: user.role,
@@ -66,6 +69,7 @@ export async function updateUserProfile(
       location: input.location,
       phone: input.phone,
       timezone: input.timezone,
+      passion: input.passion,
       updatedAt: new Date(),
     })
     .where(eq(user.id, userId))
@@ -76,6 +80,7 @@ export async function updateUserProfile(
       location: user.location,
       phone: user.phone,
       timezone: user.timezone,
+      passion: user.passion,
       email: user.email,
       subscriptionPlan: user.subscriptionPlan,
       role: user.role,

@@ -61,6 +61,7 @@ export const user = pgTable("user", {
   location: varchar("location", { length: 120 }),
   phone: varchar("phone", { length: 40 }),
   timezone: varchar("timezone", { length: 64 }),
+  passion: varchar("passion", { length: 255 }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

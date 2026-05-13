@@ -127,6 +127,20 @@ export function ProfileForm({ profile }: Props) {
               placeholder="Europe/Rome"
             />
           </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="passion" className="text-sm font-medium">
+              Passione
+            </label>
+            <Input
+              id="passion"
+              name="passion"
+              type="text"
+              defaultValue={profile.passion ?? ''}
+              maxLength={255}
+              placeholder="Es. fotografia, cucina, running…"
+            />
+          </div>
         </CardContent>
         <CardFooter className="border-t pt-4">
           <Button type="submit" disabled={isPending} aria-disabled={isPending}>

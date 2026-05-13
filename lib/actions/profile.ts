@@ -17,6 +17,7 @@ export async function updateProfileAction(
     location: formData.get('location'),
     phone: formData.get('phone'),
     timezone: formData.get('timezone'),
+    passion: formData.get('passion'),
   })
 
   if (!parsed.success) {

@@ -8,6 +8,7 @@ const validProfile = {
   location: 'Roma',
   phone: '+39 06 1234-5678',
   timezone: 'Europe/Rome',
+  passion: 'fotografia',
 }
 
 describe('ProfileSchema', () => {
@@ -19,6 +20,7 @@ describe('ProfileSchema', () => {
       location: '\t',
       phone: ' +39 06 1234 ',
       timezone: ' Europe/Rome ',
+      passion: '  running  ',
     })
 
     expect(result.success).toBe(true)
@@ -30,6 +32,7 @@ describe('ProfileSchema', () => {
         location: null,
         phone: '+39 06 1234',
         timezone: 'Europe/Rome',
+        passion: 'running',
       })
     }
   })
@@ -42,6 +45,7 @@ describe('ProfileSchema', () => {
       location: 'D'.repeat(120),
       phone: '+'.padEnd(40, '1'),
       timezone: 'Europe/Rome',
+      passion: 'P'.repeat(255),
     })
 
     expect(result.success).toBe(true)
@@ -56,6 +60,7 @@ describe('ProfileSchema', () => {
       location: 'D'.repeat(121),
       phone: '1'.repeat(41),
       timezone: 'E'.repeat(65),
+      passion: 'P'.repeat(256),
     })
 
     expect(result.success).toBe(false)
@@ -67,6 +72,7 @@ describe('ProfileSchema', () => {
       expect(messages).toMatch(/località.*120 caratteri/i)
       expect(messages).toMatch(/telefono.*40 caratteri/i)
       expect(messages).toMatch(/fuso orario.*64 caratteri/i)
+      expect(messages).toMatch(/passione.*255 caratteri/i)
     }
   })
 
@@ -102,11 +108,13 @@ describe('ProfileSchema', () => {
         ...validProfile,
         firstName: ' Andrea ',
         lastName: '',
+        passion: ' corsa ',
       }),
     ).toEqual({
       ...validProfile,
       firstName: 'Andrea',
       lastName: null,
+      passion: 'corsa',
     })
   })
 })
