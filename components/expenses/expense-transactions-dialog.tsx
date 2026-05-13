@@ -70,15 +70,15 @@ export function ExpenseTransactionsDialog({ open, onOpenChange, expense }: Props
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader className="pr-8">
+      <DialogContent className="max-w-lg flex flex-col max-h-[85vh]">
+        <DialogHeader className="pr-8 shrink-0">
           <DialogTitle className="break-words">{expense.title}</DialogTitle>
           <DialogDescription>
             Transazioni collegate a questa spesa
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-2 space-y-4">
+        <div className="flex flex-col gap-4 min-h-0 overflow-hidden">
           {isPending ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -90,28 +90,26 @@ export function ExpenseTransactionsDialog({ open, onOpenChange, expense }: Props
               Nessuna transazione collegata.
             </p>
           ) : (
-            <div className="rounded-md border overflow-hidden">
+            <div className="rounded-md border overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-secondary/70">
-                    <TableHead className="text-xs uppercase tracking-wide text-muted-foreground font-normal">
-                      Descrizione
+                    <TableHead className="w-10 text-xs uppercase tracking-wide text-muted-foreground font-normal">
+                      #
                     </TableHead>
-                    <TableHead className="w-28 text-right text-xs uppercase tracking-wide text-muted-foreground font-normal">
+                    <TableHead className="text-right text-xs uppercase tracking-wide text-muted-foreground font-normal">
                       Importo
                     </TableHead>
-                    <TableHead className="w-28 text-right text-xs uppercase tracking-wide text-muted-foreground font-normal">
+                    <TableHead className="text-right text-xs uppercase tracking-wide text-muted-foreground font-normal">
                       Data
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((tx) => (
+                  {transactions.map((tx, index) => (
                     <TableRow key={tx.id}>
-                      <TableCell className="text-sm">
-                        <span className="line-clamp-2 break-words">
-                          {tx.customTitle ?? tx.description}
-                        </span>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {index + 1}
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums text-sm whitespace-nowrap">
                         {formatAmount(tx.amount, tx.currency)}
@@ -129,7 +127,7 @@ export function ExpenseTransactionsDialog({ open, onOpenChange, expense }: Props
           <Button
             variant="outline"
             size="sm"
-            className="w-full gap-2 h-auto py-2 text-left whitespace-normal break-words"
+            className="w-full gap-2 h-auto py-2 text-left whitespace-normal break-words shrink-0"
             onClick={handleSearchOnline}
           >
             <ExternalLink className="h-4 w-4 shrink-0" />
