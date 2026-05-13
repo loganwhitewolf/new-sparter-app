@@ -68,7 +68,7 @@ export function ExpenseCategorizeDialog({
 
           <p className="text-sm text-muted-foreground">
             Assegna una categoria a{' '}
-            <strong className="font-medium text-foreground truncate">{expense.title}</strong>.
+            <strong className="font-medium text-foreground break-words">{expense.title}</strong>.
           </p>
 
           <CategoryCombobox
