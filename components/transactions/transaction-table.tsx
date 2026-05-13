@@ -352,17 +352,32 @@ export function TransactionTable({ transactions, filters, searchParams, categori
                       >
                         {transaction.expenseTitle ?? 'Spesa senza titolo'}
                       </span>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'w-fit border-0',
-                          expenseStatus === 'Categorizzata'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-amber-100 text-amber-700',
-                        )}
-                      >
-                        {expenseStatus}
-                      </Badge>
+                      {expenseStatus === 'Da categorizzare' ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCategorizeTarget({
+                              id: transaction.expenseId!,
+                              title: transaction.expenseTitle ?? rowLabel,
+                            })
+                          }
+                          className="w-fit"
+                        >
+                          <Badge
+                            variant="outline"
+                            className="border-0 bg-amber-100 text-amber-700 cursor-pointer hover:bg-amber-200 transition-colors"
+                          >
+                            {expenseStatus}
+                          </Badge>
+                        </button>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="w-fit border-0 bg-emerald-100 text-emerald-700"
+                        >
+                          {expenseStatus}
+                        </Badge>
+                      )}
                     </div>
                   ) : (
                     <span className="text-sm text-muted-foreground">
