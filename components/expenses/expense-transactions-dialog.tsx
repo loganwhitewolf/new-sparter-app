@@ -127,11 +127,11 @@ export function ExpenseTransactionsDialog({ open, onOpenChange, expense }: Props
           <Button
             variant="outline"
             size="sm"
-            className="w-full gap-2 h-auto py-2 text-left whitespace-normal break-words shrink-0"
+            className="w-full gap-2 shrink-0"
             onClick={handleSearchOnline}
           >
             <ExternalLink className="h-4 w-4 shrink-0" />
-            Cerca &ldquo;{expense.title}&rdquo; online
+            Cerca su internet
           </Button>
         </div>
       </DialogContent>
