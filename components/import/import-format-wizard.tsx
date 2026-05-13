@@ -7,6 +7,14 @@ import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   createPrivateImportFormatAction,
   type ImportActionState,
@@ -67,7 +75,7 @@ export function validateWizardFields(values: WizardFieldValues, headers: readonl
   if (!isAmountMode(values.amountMode)) {
     errors.push('Seleziona una modalità importo valida.')
   } else if (values.amountMode === 'single') {
-    if (!values.amountColumn) errors.push('Seleziona la colonna dell’importo.')
+    if (!values.amountColumn) errors.push("Seleziona la colonna dell'importo.")
     requiredColumns.push(values.amountColumn)
   } else {
     if (!values.positiveAmountColumn || !values.negativeAmountColumn) {
@@ -120,6 +128,15 @@ export function ImportFormatWizard({
   const [state, formAction, isPending] = useActionState(createAction, emptyState())
   const [amountMode, setAmountMode] = useState<AmountMode>('single')
   const [clientErrors, setClientErrors] = useState<string[]>([])
+
+  // Controlled values for shadcn Select (needed to populate hidden inputs)
+  const [delimiter, setDelimiter] = useState(context.detectedDelimiter ?? ';')
+  const [timestampColumn, setTimestampColumn] = useState('')
+  const [descriptionColumn, setDescriptionColumn] = useState('')
+  const [amountColumn, setAmountColumn] = useState('')
+  const [positiveAmountColumn, setPositiveAmountColumn] = useState('')
+  const [negativeAmountColumn, setNegativeAmountColumn] = useState('')
+
   const headerOptions = useMemo(() => getVisibleHeaderOptions(context.headers), [context.headers])
   const hasHeaders = headerOptions.length > 0
   const truncatedHeaders = context.headers.length > headerOptions.length
@@ -143,11 +160,13 @@ export function ImportFormatWizard({
     }
   }
 
+  const headerSelectOptions = headerOptions.map((header) => ({ value: header, label: header }))
+
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <Card className="overflow-hidden border-amber-200 bg-gradient-to-br from-amber-50 via-background to-background shadow-sm">
-        <CardHeader className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
+      <Card className="overflow-hidden border-amber-200/60 bg-gradient-to-br from-amber-50/60 via-background to-background shadow-sm dark:border-amber-900/40 dark:from-amber-950/20">
+        <CardHeader className="space-y-2 pb-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-500">
             Recupero formato
           </p>
           <CardTitle className="text-2xl">Configura un formato privato</CardTitle>
@@ -162,13 +181,22 @@ export function ImportFormatWizard({
             <Alert variant="destructive" role="alert">
               <AlertCircle className="h-4 w-4" aria-hidden="true" />
               <AlertDescription>
-                Non sono disponibili intestazioni sicure per questo file. Torna agli import e
+                Non sono disponibili intestazioni sicure per questo file. Torna alle importazioni e
                 carica di nuovo il documento.
               </AlertDescription>
             </Alert>
           ) : (
             <form action={formAction} onSubmit={handleSubmit} className="space-y-6" noValidate>
               <input type="hidden" name="fileId" value={context.fileId} />
+
+              {/* Hidden inputs for shadcn Select values */}
+              <input type="hidden" name="delimiter" value={delimiter} />
+              <input type="hidden" name="timestampColumn" value={timestampColumn} />
+              <input type="hidden" name="descriptionColumn" value={descriptionColumn} />
+              <input type="hidden" name="amountColumn" value={amountColumn} />
+              <input type="hidden" name="positiveAmountColumn" value={positiveAmountColumn} />
+              <input type="hidden" name="negativeAmountColumn" value={negativeAmountColumn} />
+              <input type="hidden" name="amountMode" value={amountMode} />
 
               {(clientErrors.length > 0 || state.error) && (
                 <Alert variant="destructive" role="alert" aria-live="assertive">
@@ -191,24 +219,23 @@ export function ImportFormatWizard({
                 <Alert role="status" aria-live="polite">
                   <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                   <AlertDescription>
-                    Formato salvato. Riprovo l’analisi dello stesso file…
+                    Formato salvato. Riprovo l'analisi dello stesso file…
                   </AlertDescription>
                 </Alert>
               )}
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2 md:col-span-2">
+              <div className="grid gap-5 md:grid-cols-2">
+                <div className="space-y-1.5 md:col-span-2">
                   <label htmlFor="platformName" className="text-sm font-medium">
                     Nome piattaforma
                   </label>
-                  <input
+                  <Input
                     id="platformName"
                     name="platformName"
                     type="text"
                     required
                     maxLength={100}
                     placeholder="Es. Banca personale"
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   />
                   <p className="text-xs text-muted-foreground">
                     Questo nome resta privato e ti aiuta a riconoscere il formato in futuro.
@@ -218,53 +245,62 @@ export function ImportFormatWizard({
                 <SelectField
                   id="delimiter"
                   label="Separatore"
-                  name="delimiter"
-                  defaultValue={context.detectedDelimiter ?? ';'}
+                  value={delimiter}
+                  onValueChange={setDelimiter}
                   options={DEFAULT_DELIMITERS}
+                  placeholder="Seleziona…"
                 />
                 <SelectField
                   id="timestampColumn"
                   label="Colonna data"
-                  name="timestampColumn"
-                  options={headerOptions.map((header) => ({ value: header, label: header }))}
+                  value={timestampColumn}
+                  onValueChange={setTimestampColumn}
+                  options={headerSelectOptions}
+                  placeholder="Seleziona colonna…"
                 />
                 <SelectField
                   id="descriptionColumn"
                   label="Colonna descrizione"
-                  name="descriptionColumn"
-                  options={headerOptions.map((header) => ({ value: header, label: header }))}
+                  value={descriptionColumn}
+                  onValueChange={setDescriptionColumn}
+                  options={headerSelectOptions}
+                  placeholder="Seleziona colonna…"
                 />
               </div>
 
-              <fieldset className="space-y-3 rounded-xl border bg-background/70 p-4">
-                <legend className="px-1 text-sm font-semibold">Modalità importo</legend>
+              <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
+                <p className="text-sm font-semibold">Modalità importo</p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm transition-colors focus-within:ring-[3px] focus-within:ring-ring/50 has-checked:border-primary has-checked:bg-primary/5">
+                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border bg-background p-3 text-sm transition-colors focus-within:ring-[3px] focus-within:ring-ring/50 has-checked:border-primary has-checked:bg-primary/5">
                     <input
                       type="radio"
-                      name="amountMode"
+                      name="_amountModeDisplay"
                       value="single"
                       checked={amountMode === 'single'}
                       onChange={() => setAmountMode('single')}
-                      className="mt-1"
+                      className="mt-0.5 accent-primary"
                     />
                     <span>
                       <span className="block font-medium">Una colonna importo</span>
-                      <span className="text-muted-foreground">Valori positivi e negativi nella stessa colonna.</span>
+                      <span className="text-muted-foreground">
+                        Valori positivi e negativi nella stessa colonna.
+                      </span>
                     </span>
                   </label>
-                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm transition-colors focus-within:ring-[3px] focus-within:ring-ring/50 has-checked:border-primary has-checked:bg-primary/5">
+                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border bg-background p-3 text-sm transition-colors focus-within:ring-[3px] focus-within:ring-ring/50 has-checked:border-primary has-checked:bg-primary/5">
                     <input
                       type="radio"
-                      name="amountMode"
+                      name="_amountModeDisplay"
                       value="separate"
                       checked={amountMode === 'separate'}
                       onChange={() => setAmountMode('separate')}
-                      className="mt-1"
+                      className="mt-0.5 accent-primary"
                     />
                     <span>
                       <span className="block font-medium">Entrate e uscite separate</span>
-                      <span className="text-muted-foreground">Due colonne distinte per accrediti e addebiti.</span>
+                      <span className="text-muted-foreground">
+                        Due colonne distinte per accrediti e addebiti.
+                      </span>
                     </span>
                   </label>
                 </div>
@@ -273,26 +309,32 @@ export function ImportFormatWizard({
                   <SelectField
                     id="amountColumn"
                     label="Colonna importo"
-                    name="amountColumn"
-                    options={headerOptions.map((header) => ({ value: header, label: header }))}
+                    value={amountColumn}
+                    onValueChange={setAmountColumn}
+                    options={headerSelectOptions}
+                    placeholder="Seleziona colonna…"
                   />
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2">
                     <SelectField
                       id="positiveAmountColumn"
                       label="Colonna entrate"
-                      name="positiveAmountColumn"
-                      options={headerOptions.map((header) => ({ value: header, label: header }))}
+                      value={positiveAmountColumn}
+                      onValueChange={setPositiveAmountColumn}
+                      options={headerSelectOptions}
+                      placeholder="Seleziona colonna…"
                     />
                     <SelectField
                       id="negativeAmountColumn"
                       label="Colonna uscite"
-                      name="negativeAmountColumn"
-                      options={headerOptions.map((header) => ({ value: header, label: header }))}
+                      value={negativeAmountColumn}
+                      onValueChange={setNegativeAmountColumn}
+                      options={headerSelectOptions}
+                      placeholder="Seleziona colonna…"
                     />
                   </div>
                 )}
-              </fieldset>
+              </div>
 
               {truncatedHeaders && (
                 <Alert>
@@ -305,12 +347,18 @@ export function ImportFormatWizard({
               )}
 
               <div className="flex flex-wrap items-center gap-3">
-                <Button type="submit" disabled={isPending || Boolean(createdFormatVersionId)} aria-busy={isPending}>
-                  {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+                <Button
+                  type="submit"
+                  disabled={isPending || Boolean(createdFormatVersionId)}
+                  aria-busy={isPending}
+                >
+                  {isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  )}
                   Salva formato e riprova analisi
                 </Button>
                 <Button asChild variant="ghost">
-                  <Link href={APP_ROUTES.import}>Torna agli import</Link>
+                  <Link href={APP_ROUTES.import}>Torna alle importazioni</Link>
                 </Button>
               </div>
             </form>
@@ -320,16 +368,20 @@ export function ImportFormatWizard({
 
       <aside className="space-y-4" aria-label="Intestazioni rilevate">
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="text-base">Intestazioni sicure</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Sono mostrati solo i nomi delle colonne e un massimo di {context.sampleRows.length} righe campione già troncate.
+              Sono mostrati solo i nomi delle colonne e un massimo di {context.sampleRows.length}{' '}
+              righe campione già troncate.
             </p>
             <div className="flex flex-wrap gap-2">
               {headerOptions.map((header) => (
-                <span key={header} className="rounded-full border bg-background px-2.5 py-1 text-xs font-medium">
+                <span
+                  key={header}
+                  className="rounded-full border bg-background px-2.5 py-1 text-xs font-medium"
+                >
                   {header}
                 </span>
               ))}
@@ -344,35 +396,35 @@ export function ImportFormatWizard({
 function SelectField({
   id,
   label,
-  name,
+  value,
+  onValueChange,
   options,
-  defaultValue,
+  placeholder,
 }: {
   id: string
   label: string
-  name: string
+  value: string
+  onValueChange: (value: string) => void
   options: readonly { value: string; label: string }[]
-  defaultValue?: string
+  placeholder: string
 }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <label htmlFor={id} className="text-sm font-medium">
         {label}
       </label>
-      <select
-        id={id}
-        name={name}
-        required
-        defaultValue={defaultValue ?? ''}
-        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-      >
-        <option value="">Seleziona…</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <Select value={value} onValueChange={onValueChange}>
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   )
 }
