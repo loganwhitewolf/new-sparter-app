@@ -122,10 +122,29 @@ function parseCsv(text: string, delimiter: string, options: Required<Pick<ParseI
   return { headers, rows, warnings, rowCount: rows.length, sampleRows: rows.slice(0, options.sampleSize) }
 }
 
+const XLSX_MIN_HEADER_CELLS = 2
+
+function findXlsxHeaderRowIndex(sheet: (string | number | boolean | typeof Date | null)[][]): number {
+  for (let i = 0; i < sheet.length; i++) {
+    const row = sheet[i]
+    if (!row) continue
+    const nonEmpty = row.filter((cell) => cell !== null && cell !== undefined && String(cell).trim() !== '')
+    if (nonEmpty.length >= XLSX_MIN_HEADER_CELLS) return i
+  }
+  return 0
+}
+
 async function parseXlsx(bytes: Buffer, options: Required<Pick<ParseImportFileOptions, 'maxRows' | 'sampleSize' | 'warningLimit'>>) {
   const warnings: string[] = []
   const sheet = await readSheet(bytes)
-  const [headerRow, ...dataRows] = sheet
+
+  const headerRowIndex = findXlsxHeaderRowIndex(sheet)
+  if (headerRowIndex > 0) {
+    boundedPush(warnings, `Skipped ${headerRowIndex} leading row(s) before the header row in the spreadsheet.`, options.warningLimit)
+  }
+
+  const headerRow = sheet[headerRowIndex]
+  const dataRows = sheet.slice(headerRowIndex + 1)
   const headers = (headerRow ?? []).map((cell) => normalizeCell(cell))
   const rows = dataRows.slice(0, options.maxRows).map((row) => {
     const record: ParsedImportRow = {}
