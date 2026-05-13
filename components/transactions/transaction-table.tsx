@@ -235,8 +235,8 @@ export function TransactionTable({ transactions, filters, searchParams, categori
 
   return (
     <>
-    <div className="rounded-xl border bg-card shadow-sm">
-      <Table>
+    <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      <Table className="table-fixed w-full">
         <TableCaption className="sr-only">
           Elenco transazioni importate con importo, data, sorgente ed eventuale
           spesa collegata.
@@ -255,25 +255,25 @@ export function TransactionTable({ transactions, filters, searchParams, categori
                 aria-label="Seleziona tutte le transazioni"
               />
             </TableHead>
-            <TableHead className="min-w-[18rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
+            <TableHead className="text-xs font-normal uppercase tracking-wide text-muted-foreground">
               Transazione
             </TableHead>
             <TableHead
-              className="w-36 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground"
+              className="w-32 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground"
               aria-sort={getSortDirection(filters, 'amount')}
             >
               Importo
             </TableHead>
             <TableHead
-              className="w-36 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground"
+              className="w-28 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground"
               aria-sort={getSortDirection(filters, 'occurredAt')}
             >
               Data
             </TableHead>
-            <TableHead className="min-w-[13rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
+            <TableHead className="w-40 text-xs font-normal uppercase tracking-wide text-muted-foreground">
               Sorgente
             </TableHead>
-            <TableHead className="min-w-[13rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
+            <TableHead className="w-48 text-xs font-normal uppercase tracking-wide text-muted-foreground">
               Spesa collegata
             </TableHead>
             <TableHead className="w-10" />
@@ -303,7 +303,7 @@ export function TransactionTable({ transactions, filters, searchParams, categori
                     aria-label={`Seleziona ${rowLabel}`}
                   />
                 </TableCell>
-                <TableCell className="max-w-[24rem]">
+                <TableCell className="overflow-hidden">
                   <TransactionTitleEdit
                     id={transaction.id}
                     description={transaction.description}
