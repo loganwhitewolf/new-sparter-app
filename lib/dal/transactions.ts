@@ -1,6 +1,6 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import {
@@ -42,6 +42,7 @@ export type TransactionFilters = {
   toDate?: Date
   platform?: string
   importId?: string
+  name?: string
   sort?: TransactionSort
   dir?: TransactionSortDirection
 }
@@ -147,6 +148,16 @@ export const getTransactions = cache(
 
     if (filters.importId) {
       conditions.push(eq(transaction.fileId, filters.importId))
+    }
+
+    if (filters.name) {
+      const pattern = `%${filters.name}%`
+      conditions.push(
+        or(
+          ilike(transaction.description, pattern),
+          ilike(transaction.customTitle, pattern),
+        ),
+      )
     }
 
     return db
@@ -328,5 +339,40 @@ export async function updateTransactionCustomTitle(
     .set({ customTitle })
     .where(and(eq(transaction.id, id), eq(transaction.userId, userId)))
 }
+
+export type ExpenseTransactionRow = {
+  id: string
+  description: string
+  customTitle: string | null
+  amount: string
+  currency: string
+  occurredAt: Date
+}
+
+export const getTransactionsByExpenseId = cache(
+  async (expenseId: string): Promise<ExpenseTransactionRow[]> => {
+    const { userId } = await verifySession()
+
+    return db
+      .select({
+        id: transaction.id,
+        description: transaction.description,
+        customTitle: transaction.customTitle,
+        amount: transaction.amount,
+        currency: transaction.currency,
+        occurredAt: transaction.occurredAt,
+      })
+      .from(transaction)
+      .innerJoin(expense, eq(transaction.expenseId, expense.id))
+      .where(
+        and(
+          eq(transaction.expenseId, expenseId),
+          eq(transaction.userId, userId),
+          eq(expense.userId, userId),
+        ),
+      )
+      .orderBy(desc(transaction.occurredAt))
+  },
+)
 
 export { db }

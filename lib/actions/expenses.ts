@@ -18,6 +18,10 @@ import {
   EXPENSE_LIST_LIMIT,
   type ExpenseFilters,
 } from '@/lib/dal/expenses'
+import {
+  getTransactionsByExpenseId,
+  type ExpenseTransactionRow,
+} from '@/lib/dal/transactions'
 import { db } from '@/lib/db'
 import { expense } from '@/lib/db/schema'
 import { and, eq, inArray } from 'drizzle-orm'
@@ -288,6 +292,21 @@ export async function categorizeExpense(
   }
   revalidateCategorizationSurfaces()
   return { error: null }
+}
+
+export async function fetchExpenseTransactions(
+  expenseId: string,
+): Promise<{ transactions: ExpenseTransactionRow[]; error: string | null }> {
+  if (!expenseId) return { transactions: [], error: 'ID spesa mancante.' }
+  try {
+    const transactions = await getTransactionsByExpenseId(expenseId)
+    return { transactions, error: null }
+  } catch {
+    return {
+      transactions: [],
+      error: 'Non è stato possibile caricare le transazioni. Riprova.',
+    }
+  }
 }
 
 export async function ignoreExpense(

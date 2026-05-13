@@ -36,6 +36,7 @@ import { BulkCategorizeDialog } from './bulk-categorize-dialog'
 import { BulkDeleteExpensesDialog } from './bulk-delete-expenses-dialog'
 import { ExpenseCategorizeDialog } from './expense-categorize-dialog'
 import { ExpenseFormDialog } from './expense-form-dialog'
+import { ExpenseTransactionsDialog } from './expense-transactions-dialog'
 import type { ExpenseFilters, ExpenseRow } from '@/lib/dal/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import { cn } from '@/lib/utils'
@@ -64,6 +65,10 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
     title: string
   } | null>(null)
   const [renameExpense, setRenameExpense] = useState<{
+    id: string
+    title: string
+  } | null>(null)
+  const [transactionsDialogExpense, setTransactionsDialogExpense] = useState<{
     id: string
     title: string
   } | null>(null)
@@ -291,6 +296,14 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setTransactionsDialogExpense({ id: exp.id, title: exp.title })
+                            setOpenDropdownId(null)
+                          }}
+                        >
+                          Vedi transazioni
+                        </DropdownMenuItem>
                         <ExpenseFormDialog
                           categories={categories}
                           mode="edit"
@@ -387,6 +400,14 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
         expense={categorizeDialogExpense ?? { id: '', title: '' }}
         categories={categories}
         onSuccess={() => setCategorizeDialogExpense(null)}
+      />
+
+      <ExpenseTransactionsDialog
+        open={transactionsDialogExpense !== null}
+        onOpenChange={(o) => {
+          if (!o) setTransactionsDialogExpense(null)
+        }}
+        expense={transactionsDialogExpense ?? { id: '', title: '' }}
       />
 
       {selectedRenameExpense && (
