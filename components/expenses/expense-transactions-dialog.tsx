@@ -125,7 +125,6 @@ export function ExpenseTransactionsDialog({ open, onOpenChange, expense }: Props
           )}
 
           <Button
-            variant="outline"
             size="sm"
             className="w-full gap-2 shrink-0"
             onClick={handleSearchOnline}
