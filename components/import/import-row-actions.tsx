@@ -10,6 +10,7 @@ type Props = {
   row: ImportListRow
   displayName: string
   onDelete: (row: ImportListRow) => void
+  onDeleteStale: (row: ImportListRow) => void
 }
 
 /**
@@ -28,7 +29,7 @@ type Props = {
  * Delete is available only for imported rows.
  * Rename is always rendered by the parent table (not here).
  */
-export function ImportRowActions({ row, displayName, onDelete }: Props) {
+export function ImportRowActions({ row, displayName, onDelete, onDeleteStale }: Props) {
   if (row.status === 'analyzing') {
     return (
       <div
@@ -55,7 +56,7 @@ export function ImportRowActions({ row, displayName, onDelete }: Props) {
 
   if (row.status === 'uploaded') {
     return (
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
         <Button
           asChild
           size="sm"
@@ -66,13 +67,23 @@ export function ImportRowActions({ row, displayName, onDelete }: Props) {
             Analizza
           </Link>
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+          onClick={() => onDeleteStale(row)}
+          aria-label={`Elimina importazione ${displayName}`}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
+        </Button>
       </div>
     )
   }
 
   if (row.status === 'analyzed') {
     return (
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
         <Button
           asChild
           size="sm"
@@ -82,6 +93,16 @@ export function ImportRowActions({ row, displayName, onDelete }: Props) {
           <Link href={`/import/${encodeURIComponent(row.id)}/analyze`}>
             Rivedi e importa
           </Link>
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+          onClick={() => onDeleteStale(row)}
+          aria-label={`Elimina importazione ${displayName}`}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
     )
@@ -144,12 +165,35 @@ export function ImportRowActions({ row, displayName, onDelete }: Props) {
             Riprova analisi
           </Link>
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+          onClick={() => onDeleteStale(row)}
+          aria-label={`Elimina importazione ${displayName}`}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
+        </Button>
       </div>
     )
   }
 
-  // pending_upload: no primary action available yet
-  return null
+  // pending_upload: show only delete to allow cleanup of stuck uploads
+  return (
+    <div className="flex justify-end">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+        onClick={() => onDeleteStale(row)}
+        aria-label={`Elimina importazione ${displayName}`}
+      >
+        <Trash2 className="h-4 w-4" aria-hidden="true" />
+      </Button>
+    </div>
+  )
 }
 
 /** Returns true when the row is in an active processing state (no user actions). */

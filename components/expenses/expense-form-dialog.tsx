@@ -46,7 +46,7 @@ type Props =
       open?: boolean
       onOpenChange?: (open: boolean) => void
       description?: React.ReactNode
-      onSuccess?: () => void
+      onSuccess?: (updatedTitle: string) => void
     }
 
 export function ExpenseFormDialog({
@@ -71,6 +71,7 @@ export function ExpenseFormDialog({
   const [state, formAction, isPending] = useActionState(action, { error: null })
   const submittedRef = useRef(false)
   const previousOpenRef = useRef(false)
+  const pendingTitleRef = useRef('')
 
   const syncEditSelection = useCallback(() => {
     if (mode === 'edit' && expense.subCategoryId) {
@@ -102,7 +103,7 @@ export function ExpenseFormDialog({
       setDialogOpen(false)
       toast.success(mode === 'create' ? 'Spesa creata con successo.' : 'Spesa aggiornata.')
       submittedRef.current = false
-      onSuccess?.()
+      onSuccess?.(pendingTitleRef.current)
     }
   }, [state, mode, onSuccess, setDialogOpen])
 
@@ -155,6 +156,7 @@ export function ExpenseFormDialog({
         <form
           action={(fd) => {
             submittedRef.current = true
+            pendingTitleRef.current = (fd.get('title') as string) ?? ''
             formAction(fd)
           }}
           className="flex flex-col gap-4"

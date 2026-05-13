@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { ImportDeleteDialog } from '@/components/import/import-delete-dialog'
 import { ImportRenameDialog } from '@/components/import/import-rename-dialog'
 import { ImportRowActions } from '@/components/import/import-row-actions'
+import { ImportStaleDeleteDialog } from '@/components/import/import-stale-delete-dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -111,6 +112,7 @@ export function ImportTable({ imports, filters, searchParams, loadError = false 
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [renameImport, setRenameImport] = useState<ImportListRow | null>(null)
   const [deleteImport, setDeleteImport] = useState<ImportListRow | null>(null)
+  const [staleDeleteImport, setStaleDeleteImport] = useState<ImportListRow | null>(null)
   const isLoadingMoreRef = useRef(false)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const filtered = hasActiveFilters(filters)
@@ -346,6 +348,7 @@ export function ImportTable({ imports, filters, searchParams, loadError = false 
                       row={row}
                       displayName={displayName}
                       onDelete={setDeleteImport}
+                      onDeleteStale={setStaleDeleteImport}
                     />
                   </TableCell>
                 </TableRow>
@@ -403,6 +406,20 @@ export function ImportTable({ imports, filters, searchParams, loadError = false 
           onOpenChange={(open) => {
             if (!open) {
               setDeleteImport(null)
+            }
+          }}
+          onDeleted={handleDeleteSuccess}
+        />
+      ) : null}
+
+      {staleDeleteImport ? (
+        <ImportStaleDeleteDialog
+          key={staleDeleteImport.id}
+          importRow={staleDeleteImport}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) {
+              setStaleDeleteImport(null)
             }
           }}
           onDeleted={handleDeleteSuccess}

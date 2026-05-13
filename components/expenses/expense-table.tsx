@@ -295,7 +295,14 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
                           categories={categories}
                           mode="edit"
                           expense={exp}
-                          onSuccess={() => setOpenDropdownId(null)}
+                          onSuccess={(updatedTitle) => {
+                            setLoadedExpenses((prev) =>
+                              prev.map((e) =>
+                                e.id === exp.id ? { ...e, title: updatedTitle } : e
+                              )
+                            )
+                            setOpenDropdownId(null)
+                          }}
                           trigger={
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                               Modifica
@@ -392,7 +399,14 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
             if (!o) setRenameExpense(null)
           }}
           description="Rinomina la spesa aggregata (non modifica le descrizioni delle singole transazioni)."
-          onSuccess={() => setRenameExpense(null)}
+          onSuccess={(updatedTitle) => {
+            setLoadedExpenses((prev) =>
+              prev.map((e) =>
+                e.id === renameExpense?.id ? { ...e, title: updatedTitle } : e
+              )
+            )
+            setRenameExpense(null)
+          }}
         />
       )}
     </>

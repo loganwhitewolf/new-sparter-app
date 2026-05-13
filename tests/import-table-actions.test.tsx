@@ -48,20 +48,21 @@ function makeRow(
 
 const DISPLAY_NAME = 'Gennaio 2026'
 const onDelete = vi.fn()
+const onDeleteStale = vi.fn()
 
 function render(row: ReturnType<typeof makeRow>, displayName = DISPLAY_NAME) {
   return renderToStaticMarkup(
-    createElement(ImportRowActions, { row, displayName, onDelete }),
+    createElement(ImportRowActions, { row, displayName, onDelete, onDeleteStale }),
   )
 }
 
 describe('ImportRowActions — state matrix', () => {
-  it('uploaded: shows Analizza link to the analyze route', () => {
+  it('uploaded: shows Analizza link to the analyze route and a stale-delete button', () => {
     const html = render(makeRow({ status: 'uploaded' }))
 
     expect(html).toContain('Analizza')
     expect(html).toContain(`/import/${FILE_ID}/analyze`)
-    expect(html).not.toContain('Elimina')
+    expect(html).toContain(`aria-label="Elimina importazione ${DISPLAY_NAME}"`)
     expect(html).not.toContain('Configura formato')
     expect(html).not.toContain('Riprova analisi')
     expect(html).not.toContain('Vedi transazioni')
@@ -73,12 +74,12 @@ describe('ImportRowActions — state matrix', () => {
     expect(html).toContain(`aria-label="Analizza importazione ${DISPLAY_NAME}"`)
   })
 
-  it('analyzed: shows Rivedi e importa link to the analyze route', () => {
+  it('analyzed: shows Rivedi e importa link to the analyze route and a stale-delete button', () => {
     const html = render(makeRow({ status: 'analyzed' }))
 
     expect(html).toContain('Rivedi e importa')
     expect(html).toContain(`/import/${FILE_ID}/analyze`)
-    expect(html).not.toContain('Elimina')
+    expect(html).toContain(`aria-label="Elimina importazione ${DISPLAY_NAME}"`)
     expect(html).not.toContain('Analizza')
     expect(html).not.toContain('Vedi transazioni')
   })
@@ -146,7 +147,7 @@ describe('ImportRowActions — state matrix', () => {
     expect(html).toContain(`aria-label="Vedi transazioni importate da ${DISPLAY_NAME}"`)
   })
 
-  it('failed (unknown-format): shows Configura formato link and Riprova analisi', () => {
+  it('failed (unknown-format): shows Configura formato link, Riprova analisi, and a stale-delete button', () => {
     const html = render(
       makeRow({
         status: 'failed',
@@ -158,7 +159,7 @@ describe('ImportRowActions — state matrix', () => {
     expect(html).toContain(`/import/${FILE_ID}/configure`)
     expect(html).toContain('Riprova analisi')
     expect(html).toContain(`/import/${FILE_ID}/analyze`)
-    expect(html).not.toContain('Elimina')
+    expect(html).toContain(`aria-label="Elimina importazione ${DISPLAY_NAME}"`)
     expect(html).not.toContain('Vedi transazioni')
   })
 
@@ -173,7 +174,7 @@ describe('ImportRowActions — state matrix', () => {
     expect(html).toContain(`aria-label="Configura formato privato per ${DISPLAY_NAME}"`)
   })
 
-  it('failed (non-unknown): shows Riprova analisi only, no Configura formato', () => {
+  it('failed (non-unknown): shows Riprova analisi and stale-delete button, no Configura formato', () => {
     const html = render(
       makeRow({
         status: 'failed',
@@ -182,9 +183,9 @@ describe('ImportRowActions — state matrix', () => {
     )
 
     expect(html).toContain('Riprova analisi')
+    expect(html).toContain(`aria-label="Elimina importazione ${DISPLAY_NAME}"`)
     expect(html).not.toContain('Configura formato')
     expect(html).not.toContain('configure')
-    expect(html).not.toContain('Elimina')
     expect(html).not.toContain('Vedi transazioni')
   })
 
@@ -206,10 +207,13 @@ describe('ImportRowActions — state matrix', () => {
     expect(html).not.toContain('Configura formato')
   })
 
-  it('pending_upload: renders nothing (no primary CTA)', () => {
+  it('pending_upload: shows only a stale-delete button to clean up stuck uploads', () => {
     const html = render(makeRow({ status: 'pending_upload' }))
 
-    expect(html).toBe('')
+    expect(html).toContain(`aria-label="Elimina importazione ${DISPLAY_NAME}"`)
+    expect(html).not.toContain('Analizza')
+    expect(html).not.toContain('Rivedi')
+    expect(html).not.toContain('Vedi transazioni')
   })
 
   it('does not render raw storage diagnostics or sensitive data in any state', () => {

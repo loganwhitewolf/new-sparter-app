@@ -7,9 +7,10 @@ type Props = {
   id: string
   description: string
   customTitle: string | null
+  onSuccess?: (newTitle: string) => void
 }
 
-export function TransactionTitleEdit({ id, description, customTitle }: Props) {
+export function TransactionTitleEdit({ id, description, customTitle, onSuccess }: Props) {
   const displayTitle = customTitle ?? description
   const [isEditing, setIsEditing] = useState(false)
   const [value, setValue] = useState(displayTitle)
@@ -17,13 +18,15 @@ export function TransactionTitleEdit({ id, description, customTitle }: Props) {
     error: null,
   })
   const submittedRef = useRef(false)
+  const pendingValueRef = useRef('')
 
   useEffect(() => {
     if (submittedRef.current && state.error === null) {
       submittedRef.current = false
       setIsEditing(false)
+      onSuccess?.(pendingValueRef.current)
     }
-  }, [state])
+  }, [state, onSuccess])
 
   if (!isEditing) {
     return (
@@ -59,6 +62,7 @@ export function TransactionTitleEdit({ id, description, customTitle }: Props) {
       <form
         action={(fd) => {
           submittedRef.current = true
+          pendingValueRef.current = value
           formAction(fd)
         }}
         className="flex min-w-0 flex-col gap-1.5"

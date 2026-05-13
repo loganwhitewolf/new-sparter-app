@@ -200,6 +200,12 @@ export function TransactionTable({ transactions, filters, searchParams }: Props)
     setSelectedIds((prev) => prev.filter((id) => !idSet.has(id)))
   }
 
+  function updateTransactionTitle(id: string, newTitle: string) {
+    setLoadedTransactions((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, customTitle: newTitle || null } : t))
+    )
+  }
+
   if (loadedTransactions.length === 0) {
     return (
       <Card>
@@ -291,6 +297,7 @@ export function TransactionTable({ transactions, filters, searchParams }: Props)
                     id={transaction.id}
                     description={transaction.description}
                     customTitle={transaction.customTitle}
+                    onSuccess={(newTitle) => updateTransactionTitle(transaction.id, newTitle)}
                   />
                 </TableCell>
                 <TableCell
