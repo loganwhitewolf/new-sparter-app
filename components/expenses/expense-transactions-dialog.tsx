@@ -71,8 +71,8 @@ export function ExpenseTransactionsDialog({ open, onOpenChange, expense }: Props
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="break-words pr-6">{expense.title}</DialogTitle>
+        <DialogHeader className="pr-8">
+          <DialogTitle className="break-words">{expense.title}</DialogTitle>
           <DialogDescription>
             Transazioni collegate a questa spesa
           </DialogDescription>
@@ -129,10 +129,10 @@ export function ExpenseTransactionsDialog({ open, onOpenChange, expense }: Props
           <Button
             variant="outline"
             size="sm"
-            className="w-full gap-2"
+            className="w-full gap-2 h-auto py-2 text-left whitespace-normal break-words"
             onClick={handleSearchOnline}
           >
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="h-4 w-4 shrink-0" />
             Cerca &ldquo;{expense.title}&rdquo; online
           </Button>
         </div>
