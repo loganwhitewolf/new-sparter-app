@@ -13,15 +13,18 @@ export type DashboardPreset = z.infer<typeof DashboardPresetSchema>
 export type DashboardType = z.infer<typeof DashboardTypeSchema>
 export type DashboardFilters = z.infer<typeof DashboardFiltersSchema>
 
-export function parseDashboardFilters(input: {
-  preset?: string | string[]
-  type?: string | string[]
-}): DashboardFilters {
+export function parseDashboardFilters(
+  input: {
+    preset?: string | string[]
+    type?: string | string[]
+  },
+  options?: { defaultPreset?: DashboardPreset }
+): DashboardFilters {
   const rawPreset = Array.isArray(input.preset) ? input.preset[0] : input.preset
   const rawType = Array.isArray(input.type) ? input.type[0] : input.type
 
   return DashboardFiltersSchema.parse({
-    preset: rawPreset ?? 'last-month',
+    preset: rawPreset ?? options?.defaultPreset ?? 'last-month',
     type: rawType ?? 'out',
   })
 }

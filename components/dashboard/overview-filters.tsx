@@ -9,19 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { DashboardPreset, DashboardType } from '@/lib/validations/dashboard'
+import type { DashboardPreset } from '@/lib/validations/dashboard'
 
 type Props = {
   preset: DashboardPreset
-  type: DashboardType
 }
-
-const typeOptions: Array<{ value: DashboardType; label: string }> = [
-  { value: 'out', label: 'Uscite' },
-  { value: 'in', label: 'Entrate' },
-  { value: 'all', label: 'Tutti' },
-]
 
 const presetOptions: Array<{ value: DashboardPreset; label: string }> = [
   { value: 'last-month', label: 'Mese corrente' },
@@ -31,27 +23,19 @@ const presetOptions: Array<{ value: DashboardPreset; label: string }> = [
   { value: 'last-year', label: 'Anno scorso' },
 ]
 
-export function DashboardFilters({ preset, type }: Props) {
+export function OverviewFilters({ preset }: Props) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
 
-  function updateFilters(next: Partial<Props>) {
+  function updatePreset(next: DashboardPreset) {
     const params = new URLSearchParams(searchParams.toString())
-    const nextType = next.type ?? type
-    const nextPreset = next.preset ?? preset
 
-    if (nextType === 'out') {
-      params.delete('type')
-    } else {
-      params.set('type', nextType)
-    }
-
-    if (nextPreset === 'last-month') {
+    if (next === 'last-month') {
       params.delete('preset')
     } else {
-      params.set('preset', nextPreset)
+      params.set('preset', next)
     }
 
     const search = params.toString()
@@ -61,28 +45,10 @@ export function DashboardFilters({ preset, type }: Props) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 pb-4">
-      <Tabs
-        value={type}
-        onValueChange={(value) => updateFilters({ type: value as DashboardType })}
-      >
-        <TabsList aria-label="Tipo movimento">
-          {typeOptions.map((option) => (
-            <TabsTrigger
-              key={option.value}
-              value={option.value}
-              disabled={isPending}
-              className="min-w-20"
-            >
-              {option.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
+    <div className="flex items-center pb-4">
       <Select
         value={preset}
-        onValueChange={(value) => updateFilters({ preset: value as DashboardPreset })}
+        onValueChange={(value) => updatePreset(value as DashboardPreset)}
         disabled={isPending}
       >
         <SelectTrigger aria-label="Periodo dashboard" className="w-[170px]">

@@ -1,11 +1,48 @@
-export default function DashboardOverviewPage() {
+import { Suspense } from 'react'
+import { getOverview, getAggregatedTransactionsData } from '@/lib/dal/dashboard'
+import { parseDashboardFilters } from '@/lib/validations/dashboard'
+import { KpiCards } from '@/components/dashboard/kpi-cards'
+import { MonthlyTrendChart } from '@/components/dashboard/monthly-trend-chart'
+import { OverviewFilters } from '@/components/dashboard/overview-filters'
+import { OverviewSkeleton } from '@/components/dashboard/overview-skeleton'
+import { TrendSkeleton } from '@/components/dashboard/trend-skeleton'
+
+type Props = {
+  searchParams: Promise<{ preset?: string; type?: string }>
+}
+
+async function OverviewContent({ preset }: { preset: string | undefined }) {
+  const filters = parseDashboardFilters({ preset })
+  const data = await getOverview(filters.preset)
+  return <KpiCards data={data} />
+}
+
+async function TrendContent({ preset }: { preset: string | undefined }) {
+  const filters = parseDashboardFilters({ preset })
+  const data = await getAggregatedTransactionsData(filters.preset)
+  return <MonthlyTrendChart data={data} />
+}
+
+export default async function DashboardOverviewPage({ searchParams }: Props) {
+  const params = await searchParams
+  const filters = parseDashboardFilters(params)
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">Panoramica delle tue finanze</p>
       </div>
-      <p className="text-muted-foreground text-sm">Caricamento in corso...</p>
+
+      <OverviewFilters preset={filters.preset} />
+
+      <Suspense fallback={<OverviewSkeleton />}>
+        <OverviewContent preset={params.preset} />
+      </Suspense>
+
+      <Suspense fallback={<TrendSkeleton />}>
+        <TrendContent preset={params.preset} />
+      </Suspense>
     </div>
   )
 }
