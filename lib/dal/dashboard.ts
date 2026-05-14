@@ -3,6 +3,7 @@ import { cache } from 'react'
 import {
   and,
   countDistinct,
+  desc,
   eq,
   gte,
   inArray,
@@ -59,6 +60,23 @@ export type BreakdownCategory = {
   subCategories: BreakdownSubCategory[]
 }
 
+export type CategorySparklinePoint = {
+  month: string
+  label: string
+  amount: string
+}
+
+export type CategoryRankingItem = {
+  id: number
+  name: string
+  slug: string
+  type: 'in' | 'out'
+  count: number
+  amount: string
+  percentage: number
+  sparkline: CategorySparklinePoint[]
+}
+
 export type MonthlyTrendPoint = {
   month: string
   label: string
@@ -85,6 +103,16 @@ type BreakdownAggregateRow = {
   subCategoryId: number | null
   subCategoryName: string | null
   subCategorySlug: string | null
+  count: number | string | null
+  amount: string | null
+}
+
+type CategoryRankingAggregateRow = {
+  categoryId: number | null
+  categoryName: string | null
+  categorySlug: string | null
+  categoryType: 'in' | 'out' | 'system' | null
+  month: string | null
   count: number | string | null
   amount: string | null
 }
@@ -312,6 +340,92 @@ export function buildBreakdownData(rows: BreakdownAggregateRow[]): BreakdownCate
   }))
 }
 
+export function buildCategoryRankingData(input: {
+  from: Date
+  to: Date
+  rows: CategoryRankingAggregateRow[]
+}): CategoryRankingItem[] {
+  const monthKeys = monthsBetween(input.from, input.to)
+  const monthKeySet = new Set(monthKeys)
+  const emptySparkline = () =>
+    new Map<string, CategorySparklinePoint>(
+      monthKeys.map((month) => [
+        month,
+        {
+          month,
+          label: monthLabel(month),
+          amount: ZERO_AMOUNT,
+        },
+      ])
+    )
+
+  const categoriesById = new Map<number, Omit<CategoryRankingItem, 'percentage'>>()
+
+  for (const row of input.rows) {
+    if (
+      row.categoryId === null ||
+      row.categoryName === null ||
+      row.categorySlug === null ||
+      row.categorySlug === 'ignore' ||
+      row.categoryType === null ||
+      row.categoryType === 'system' ||
+      row.month === null ||
+      !monthKeySet.has(row.month)
+    ) {
+      continue
+    }
+
+    const existing = categoriesById.get(row.categoryId)
+    const amount = normalizeAmount(row.amount)
+    const countValue = normalizeCount(row.count)
+
+    if (existing) {
+      existing.count += countValue
+      existing.amount = toDecimal(existing.amount).plus(amount).toFixed(2)
+      const bucket = existing.sparkline.find((point) => point.month === row.month)
+
+      if (bucket) {
+        bucket.amount = toDecimal(bucket.amount).plus(amount).toFixed(2)
+      }
+    } else {
+      const sparklineBuckets = emptySparkline()
+      const bucket = sparklineBuckets.get(row.month)
+
+      if (bucket) {
+        bucket.amount = amount
+      }
+
+      categoriesById.set(row.categoryId, {
+        id: row.categoryId,
+        name: row.categoryName,
+        slug: row.categorySlug,
+        type: row.categoryType,
+        count: countValue,
+        amount,
+        sparkline: Array.from(sparklineBuckets.values()),
+      })
+    }
+  }
+
+  return computeBreakdownPercentages(Array.from(categoriesById.values()))
+    .sort((left, right) => {
+      const amountComparison = toDecimal(right.amount).comparedTo(toDecimal(left.amount))
+
+      if (amountComparison !== 0) {
+        return amountComparison
+      }
+
+      const nameComparison = left.name.localeCompare(right.name)
+
+      if (nameComparison !== 0) {
+        return nameComparison
+      }
+
+      return left.id - right.id
+    })
+}
+
+
 export function buildMonthlyTrendData(input: {
   from: Date
   to: Date
@@ -407,6 +521,51 @@ export const getCategoriesBreakdown = cache(
     return buildBreakdownData(rows)
   }
 )
+
+export const getCategoryRanking = cache(
+  async (filters: DashboardFilters): Promise<CategoryRankingItem[]> => {
+    const { userId } = await verifySession()
+    const { from, to } = dashboardPresetToDateRange(filters.preset)
+    const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
+    const typeFilter = filters.type === 'all' ? undefined : eq(category.type, filters.type)
+
+    let rows: CategoryRankingAggregateRow[] = []
+
+    try {
+      rows = await db
+        .select({
+          categoryId: category.id,
+          categoryName: category.name,
+          categorySlug: category.slug,
+          categoryType: category.type,
+          month: monthSql,
+          count: countDistinct(expense.id),
+          amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+        })
+        .from(transactionTable)
+        .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+        .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+        .innerJoin(category, eq(subCategory.categoryId, category.id))
+        .where(
+          and(
+            dateScopedTransactions(userId, from, to),
+            expenseStatusIncludedInDashboardTotals(),
+            ne(category.slug, 'ignore'),
+            ne(category.type, 'system'),
+            notExcludedFromTotals(),
+            typeFilter
+          )
+        )
+        .groupBy(category.id, monthSql)
+        .orderBy(desc(sql`coalesce(abs(sum(${transactionTable.amount})), 0)`), category.id, monthSql)
+    } catch {
+      rows = []
+    }
+
+    return buildCategoryRankingData({ from, to, rows })
+  }
+)
+
 
 export const getAggregatedTransactionsData = cache(
   async (preset: DashboardPreset): Promise<MonthlyTrendPoint[]> => {

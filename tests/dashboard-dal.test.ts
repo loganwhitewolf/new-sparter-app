@@ -42,6 +42,7 @@ vi.mock('@/lib/utils/decimal', async () => {
 const {
   DASHBOARD_TOTAL_EXPENSE_STATUSES,
   buildBreakdownData,
+  buildCategoryRankingData,
   buildMonthlyTrendData,
   buildOverviewData,
   getOverviewComparisonRanges,
@@ -172,6 +173,158 @@ describe('dashboard DAL amount mapping', () => {
     ])
     expect(breakdown[1]).toMatchObject({ count: 1, amount: '1000.00', percentage: 50 })
     expect(breakdown.map((row) => row.slug)).not.toContain('ignore')
+  })
+
+  it('builds ranked category totals with Decimal-normalized amounts and zero-filled sparklines', () => {
+    const ranking = buildCategoryRankingData({
+      from: new Date(2026, 0, 1),
+      to: new Date(2026, 2, 31, 23, 59, 59, 999),
+      rows: [
+        {
+          categoryId: 2,
+          categoryName: 'Cibo',
+          categorySlug: 'cibo',
+          categoryType: 'out',
+          month: '2026-01',
+          count: '2',
+          amount: '100.105',
+        },
+        {
+          categoryId: 1,
+          categoryName: 'Casa',
+          categorySlug: 'casa',
+          categoryType: 'out',
+          month: '2026-01',
+          count: 1,
+          amount: '100.115',
+        },
+        {
+          categoryId: 1,
+          categoryName: 'Casa',
+          categorySlug: 'casa',
+          categoryType: 'out',
+          month: '2026-03',
+          count: 3,
+          amount: '50',
+        },
+      ],
+    })
+
+    expect(ranking.map((row) => row.slug)).toEqual(['casa', 'cibo'])
+    expect(ranking[0]).toMatchObject({
+      id: 1,
+      name: 'Casa',
+      type: 'out',
+      count: 4,
+      amount: '150.12',
+      percentage: 60,
+    })
+    expect(ranking[0]?.sparkline).toEqual([
+      { month: '2026-01', label: 'gen', amount: '100.12' },
+      { month: '2026-02', label: 'feb', amount: '0.00' },
+      { month: '2026-03', label: 'mar', amount: '50.00' },
+    ])
+    expect(ranking[1]).toMatchObject({ count: 2, amount: '100.11', percentage: 40 })
+    expect(ranking[1]?.sparkline[1]).toMatchObject({ month: '2026-02', amount: '0.00' })
+  })
+
+  it('skips null, ignored, system, and out-of-range category ranking rows', () => {
+    const ranking = buildCategoryRankingData({
+      from: new Date(2026, 0, 1),
+      to: new Date(2026, 1, 28, 23, 59, 59, 999),
+      rows: [
+        {
+          categoryId: null,
+          categoryName: 'Missing',
+          categorySlug: 'missing',
+          categoryType: 'out',
+          month: '2026-01',
+          count: 1,
+          amount: '1',
+        },
+        {
+          categoryId: 98,
+          categoryName: 'Ignora',
+          categorySlug: 'ignore',
+          categoryType: 'out',
+          month: '2026-01',
+          count: 1,
+          amount: '999',
+        },
+        {
+          categoryId: 99,
+          categoryName: 'Sistema',
+          categorySlug: 'system',
+          categoryType: 'system',
+          month: '2026-01',
+          count: 1,
+          amount: '999',
+        },
+        {
+          categoryId: 1,
+          categoryName: 'Casa',
+          categorySlug: 'casa',
+          categoryType: 'out',
+          month: '2025-12',
+          count: 7,
+          amount: '700',
+        },
+        {
+          categoryId: 1,
+          categoryName: 'Casa',
+          categorySlug: 'casa',
+          categoryType: 'out',
+          month: '2026-02',
+          count: null,
+          amount: null,
+        },
+      ],
+    })
+
+    expect(ranking).toHaveLength(1)
+    expect(ranking[0]).toMatchObject({ slug: 'casa', count: 0, amount: '0.00', percentage: 0 })
+    expect(ranking[0]?.sparkline).toEqual([
+      { month: '2026-01', label: 'gen', amount: '0.00' },
+      { month: '2026-02', label: 'feb', amount: '0.00' },
+    ])
+  })
+
+  it('returns an empty ranking for empty rows and orders equal totals deterministically', () => {
+    expect(
+      buildCategoryRankingData({
+        from: new Date(2026, 0, 1),
+        to: new Date(2026, 0, 31, 23, 59, 59, 999),
+        rows: [],
+      })
+    ).toEqual([])
+
+    const ranking = buildCategoryRankingData({
+      from: new Date(2026, 0, 1),
+      to: new Date(2026, 0, 31, 23, 59, 59, 999),
+      rows: [
+        {
+          categoryId: 2,
+          categoryName: 'Zeta',
+          categorySlug: 'zeta',
+          categoryType: 'in',
+          month: '2026-01',
+          count: 1,
+          amount: '50',
+        },
+        {
+          categoryId: 1,
+          categoryName: 'Alfa',
+          categorySlug: 'alfa',
+          categoryType: 'in',
+          month: '2026-01',
+          count: 1,
+          amount: '50',
+        },
+      ],
+    })
+
+    expect(ranking.map((row) => row.slug)).toEqual(['alfa', 'zeta'])
+    expect(ranking.map((row) => row.percentage)).toEqual([50, 50])
   })
 
   it('DASHBOARD_TOTAL_EXPENSE_STATUSES excludes status=4 (ignored expenses)', () => {
