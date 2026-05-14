@@ -15,9 +15,11 @@ import type { DashboardPreset, DashboardType } from '@/lib/validations/dashboard
 type Props = {
   preset: DashboardPreset
   type: DashboardType
+  defaultPreset?: DashboardPreset
+  typeOptions?: Array<{ value: DashboardType; label: string }>
 }
 
-const typeOptions: Array<{ value: DashboardType; label: string }> = [
+const defaultTypeOptions: Array<{ value: DashboardType; label: string }> = [
   { value: 'out', label: 'Uscite' },
   { value: 'in', label: 'Entrate' },
   { value: 'all', label: 'Tutti' },
@@ -31,7 +33,12 @@ const presetOptions: Array<{ value: DashboardPreset; label: string }> = [
   { value: 'last-year', label: 'Anno scorso' },
 ]
 
-export function DashboardFilters({ preset, type }: Props) {
+export function DashboardFilters({
+  preset,
+  type,
+  defaultPreset = 'last-month',
+  typeOptions = defaultTypeOptions,
+}: Props) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -48,7 +55,7 @@ export function DashboardFilters({ preset, type }: Props) {
       params.set('type', nextType)
     }
 
-    if (nextPreset === 'last-month') {
+    if (nextPreset === defaultPreset) {
       params.delete('preset')
     } else {
       params.set('preset', nextPreset)

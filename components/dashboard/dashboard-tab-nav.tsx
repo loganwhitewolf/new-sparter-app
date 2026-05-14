@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { APP_ROUTES } from '@/lib/routes'
 
@@ -10,8 +10,29 @@ const tabs = [
   { href: APP_ROUTES.dashboardCategories, label: 'Categorie' },
 ]
 
+export function buildDashboardTabHref(
+  href: string,
+  searchParams: Pick<URLSearchParams, 'get'>
+) {
+  const params = new URLSearchParams()
+  const preset = searchParams.get('preset')
+  const type = searchParams.get('type')
+
+  if (preset) {
+    params.set('preset', preset)
+  }
+
+  if (type) {
+    params.set('type', type)
+  }
+
+  const search = params.toString()
+  return href + (search ? `?${search}` : '')
+}
+
 export function DashboardTabNav() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
 
   return (
     <nav className="flex border-b">
@@ -21,7 +42,7 @@ export function DashboardTabNav() {
         return (
           <Link
             key={href}
-            href={href}
+            href={buildDashboardTabHref(href, searchParams)}
             className={cn(
               'px-4 py-2 text-sm font-medium transition-colors',
               isActive

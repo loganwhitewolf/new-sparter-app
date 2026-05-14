@@ -31,15 +31,20 @@ test.describe('Dashboard - DASH-01: Overview KPI', () => {
 })
 
 test.describe('Dashboard - DASH-02: Category breakdown', () => {
-  test('DASH-02 filter updates URL with type and preset', async ({ page }) => {
-    await openDashboard(page)
+  test('DASH-02 tab links preserve preset and type URL filters', async ({ page }) => {
+    await page.setExtraHTTPHeaders({
+      'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
+    })
+    await page.goto('/dashboard/overview?preset=last-3-months&type=in&page=2')
 
-    await page.getByRole('tab', { name: 'Entrate' }).click()
-    await page.getByRole('combobox', { name: 'Periodo dashboard' }).click()
-    await page.getByRole('option', { name: 'Ultimi 3 mesi' }).click()
-
-    await expect(page).toHaveURL(/type=in/)
-    await expect(page).toHaveURL(/preset=last-3-months/)
+    await expect(page.getByRole('link', { name: 'Categorie' })).toHaveAttribute(
+      'href',
+      '/dashboard/categories?preset=last-3-months&type=in'
+    )
+    await expect(page.getByRole('link', { name: 'Overview' })).toHaveAttribute(
+      'href',
+      '/dashboard/overview?preset=last-3-months&type=in'
+    )
   })
 
   test('DASH-02 drill-down expands a category row', async ({ page }) => {
