@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { buildDashboardTabHref } from '@/components/dashboard/dashboard-tab-nav'
 import {
+  buildDashboardCategoriesHref,
   buildDashboardCategoryDetailHref,
   dashboardCategoryDetail,
 } from '@/lib/routes'
@@ -95,6 +96,45 @@ describe('buildDashboardTabHref', () => {
     expect(buildDashboardTabHref('/dashboard/categories', new URLSearchParams('page=2'))).toBe(
       '/dashboard/categories'
     )
+  })
+})
+
+describe('dashboard category list routes', () => {
+  test('builds the categories list path without query params by default', () => {
+    expect(buildDashboardCategoriesHref()).toBe('/dashboard/categories')
+  })
+
+  test('omits default category filters from list hrefs', () => {
+    expect(
+      buildDashboardCategoriesHref({
+        preset: 'this-year',
+        type: 'out',
+      })
+    ).toBe('/dashboard/categories')
+  })
+
+  test('preserves non-default preset and income type for list hrefs', () => {
+    expect(
+      buildDashboardCategoriesHref({
+        preset: 'last-3-months',
+        type: 'in',
+      })
+    ).toBe('/dashboard/categories?preset=last-3-months&type=in')
+  })
+
+  test('canonicalizes inbound period alias to preset and never emits period', () => {
+    const filters = parseDashboardFilters(
+      { period: 'last-6-months', type: 'in' },
+      { defaultPreset: 'this-year' }
+    )
+
+    expect(
+      buildDashboardCategoriesHref({
+        preset: filters.preset,
+        type: filters.type === 'in' ? 'in' : 'out',
+        defaultPreset: 'this-year',
+      })
+    ).toBe('/dashboard/categories?preset=last-6-months&type=in')
   })
 })
 
