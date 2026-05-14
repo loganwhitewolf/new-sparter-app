@@ -2,7 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { db } from '@/lib/db'
 import { expense, subCategory, category } from '@/lib/db/schema'
-import { eq, and, gte, ilike, inArray, lte, or, desc } from 'drizzle-orm'
+import { eq, and, gte, ilike, inArray, lte, or, asc, desc } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { periodToDateRange } from '@/lib/utils/date'
 
@@ -10,11 +10,16 @@ export { periodToDateRange } from '@/lib/utils/date'
 
 export const EXPENSE_LIST_LIMIT = 50
 
+export type ExpenseSort = 'createdAt' | 'totalAmount'
+export type ExpenseSortDirection = 'asc' | 'desc'
+
 export type ExpenseFilters = {
   categorySlug?: string
   status?: 'uncategorized' | 'categorized'
   period?: 'this-month' | 'last-3-months' | 'last-6-months' | 'this-year' | 'last-year'
   name?: string
+  sort?: ExpenseSort
+  dir?: ExpenseSortDirection
 }
 
 export type ExpensePagination = {
@@ -28,10 +33,30 @@ export type ExpenseRow = {
   status: '1' | '2' | '3' | '4'
   notes: string | null
   createdAt: Date
+  totalAmount: string
   subCategoryId: number | null
   subCategoryName: string | null
   categoryName: string | null
   categorySlug: string | null
+}
+
+export function getExpenseSortColumn(sort: ExpenseSort) {
+  switch (sort) {
+    case 'totalAmount':
+      return expense.totalAmount
+    case 'createdAt':
+    default:
+      return expense.createdAt
+  }
+}
+
+export function buildExpenseOrderBy({
+  sort = 'createdAt',
+  dir = 'desc',
+}: Pick<ExpenseFilters, 'sort' | 'dir'> = {}) {
+  const column = getExpenseSortColumn(sort)
+
+  return dir === 'asc' ? asc(column) : desc(column)
 }
 
 export const getExpenses = cache(async (
@@ -71,6 +96,7 @@ export const getExpenses = cache(async (
       status: expense.status,
       notes: expense.notes,
       createdAt: expense.createdAt,
+      totalAmount: expense.totalAmount,
       subCategoryId: expense.subCategoryId,
       subCategoryName: subCategory.name,
       categoryName: category.name,
@@ -80,7 +106,7 @@ export const getExpenses = cache(async (
     .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
     .leftJoin(category, eq(subCategory.categoryId, category.id))
     .where(and(...conditions))
-    .orderBy(desc(expense.createdAt))
+    .orderBy(buildExpenseOrderBy(filters))
     .limit(limit)
     .offset(offset)
 })
@@ -94,6 +120,7 @@ export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | und
       status: expense.status,
       notes: expense.notes,
       createdAt: expense.createdAt,
+      totalAmount: expense.totalAmount,
       subCategoryId: expense.subCategoryId,
       subCategoryName: subCategory.name,
       categoryName: category.name,
@@ -137,6 +164,20 @@ export async function updateExpense(data: {
       subCategoryId: data.subCategoryId ?? null,
       status: data.subCategoryId ? '3' : '1',
       notes: data.notes ?? null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(expense.id, data.id), eq(expense.userId, data.userId)))
+}
+
+export async function updateExpenseTitle(data: {
+  id: string
+  userId: string
+  title: string
+}): Promise<void> {
+  await db
+    .update(expense)
+    .set({
+      title: data.title,
       updatedAt: new Date(),
     })
     .where(and(eq(expense.id, data.id), eq(expense.userId, data.userId)))

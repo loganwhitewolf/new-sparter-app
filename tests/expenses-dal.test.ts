@@ -53,6 +53,7 @@ vi.mock('@/lib/db', () => ({
 }))
 vi.mock('drizzle-orm', () => ({
   and: (...args: unknown[]) => ({ op: 'and', args }),
+  asc: (column: unknown) => ({ op: 'asc', column }),
   desc: (column: unknown) => ({ op: 'desc', column }),
   eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
   gte: (left: unknown, right: unknown) => ({ op: 'gte', left, right }),
@@ -71,6 +72,7 @@ vi.mock('@/lib/db/schema', () => ({
     status: 'expense.status',
     notes: 'expense.notes',
     createdAt: 'expense.createdAt',
+    totalAmount: 'expense.totalAmount',
     updatedAt: 'expense.updatedAt',
     userId: 'expense.userId',
     subCategoryId: 'expense.subCategoryId',
@@ -123,5 +125,11 @@ describe('expense DAL list pagination', () => {
         },
       ]),
     })
+  })
+
+  it('orders expenses by total amount when requested', async () => {
+    await getExpenses({ sort: 'totalAmount', dir: 'asc' })
+
+    expect(mocks.orderByArgs[0]).toEqual({ op: 'asc', column: 'expense.totalAmount' })
   })
 })

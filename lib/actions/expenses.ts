@@ -3,6 +3,7 @@ import { verifySession } from '@/lib/dal/auth'
 import {
   CreateExpenseSchema,
   UpdateExpenseSchema,
+  UpdateExpenseTitleSchema,
   BulkCategorizeSchema,
   BulkDeleteExpensesSchema,
   SingleCategorizeSchema,
@@ -12,6 +13,7 @@ import {
 import {
   insertExpense,
   updateExpense as updateExpenseDAL,
+  updateExpenseTitle as updateExpenseTitleDAL,
   deleteExpense as deleteExpenseDAL,
   deleteExpenses as deleteExpensesDAL,
   getExpenses,
@@ -113,6 +115,27 @@ export async function updateExpense(
   const { userId } = await verifySession()
   try {
     await updateExpenseDAL({ ...parsed.data, userId })
+  } catch {
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+  revalidateCategorizationSurfaces()
+  return { error: null }
+}
+
+export async function updateExpenseTitle(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const parsed = UpdateExpenseTitleSchema.safeParse({
+    id: formData.get('id'),
+    title: formData.get('title'),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+  const { userId } = await verifySession()
+  try {
+    await updateExpenseTitleDAL({ ...parsed.data, userId })
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }

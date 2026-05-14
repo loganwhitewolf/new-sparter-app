@@ -34,9 +34,6 @@ export function ExpenseTransactionsDialog({ open, onOpenChange, expense }: Props
   useEffect(() => {
     if (!open || !expense.id) return
 
-    setTransactions([])
-    setError(null)
-
     startTransition(async () => {
       const result = await fetchExpenseTransactions(expense.id)
       if (result.error) {

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   dbTransaction: vi.fn(),
   writeClassificationHistory: vi.fn(),
   revalidateCategorizationSurfaces: vi.fn(),
+  dbUpdate: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
@@ -16,12 +17,16 @@ vi.mock('@/lib/dal/categories', () => ({
 vi.mock('@/lib/dal/classification-history', () => ({
   writeClassificationHistory: mocks.writeClassificationHistory,
 }))
+vi.mock('@/lib/dal/transactions', () => ({
+  getTransactionsByExpenseId: vi.fn(),
+}))
 vi.mock('@/lib/actions/revalidation', () => ({
   revalidateCategorizationSurfaces: mocks.revalidateCategorizationSurfaces,
 }))
 vi.mock('@/lib/db', () => ({
   db: {
     transaction: mocks.dbTransaction,
+    update: mocks.dbUpdate,
   },
 }))
 vi.mock('@/lib/db/schema', () => ({
@@ -30,6 +35,7 @@ vi.mock('@/lib/db/schema', () => ({
     userId: 'expense.userId',
     subCategoryId: 'expense.subCategoryId',
     status: 'expense.status',
+    title: 'expense.title',
     updatedAt: 'expense.updatedAt',
   },
 }))
@@ -39,7 +45,7 @@ vi.mock('drizzle-orm', () => ({
   inArray: (col: unknown, vals: unknown) => ({ op: 'inArray', col, vals }),
 }))
 
-const { categorizeExpense, bulkCategorize } = await import('@/lib/actions/expenses')
+const { categorizeExpense, bulkCategorize, updateExpenseTitle } = await import('@/lib/actions/expenses')
 
 function makeFormData(fields: Record<string, string>) {
   const fd = new FormData()
@@ -48,6 +54,43 @@ function makeFormData(fields: Record<string, string>) {
   }
   return fd
 }
+
+describe('updateExpenseTitle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+    mocks.revalidateCategorizationSurfaces.mockReturnValue(undefined)
+    mocks.dbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    })
+  })
+
+  it('updates only the aggregate expense title for the current user', async () => {
+    const result = await updateExpenseTitle(
+      { error: null },
+      makeFormData({ id: 'expense-1', title: '  Nuovo nome  ' }),
+    )
+
+    expect(result).toEqual({ error: null })
+    expect(mocks.verifySession).toHaveBeenCalledTimes(1)
+    expect(mocks.dbUpdate).toHaveBeenCalledTimes(1)
+    expect(mocks.revalidateCategorizationSurfaces).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects too-short titles without mutating data', async () => {
+    const result = await updateExpenseTitle(
+      { error: null },
+      makeFormData({ id: 'expense-1', title: 'x' }),
+    )
+
+    expect(result).toEqual({ error: 'Il titolo deve contenere almeno 2 caratteri.' })
+    expect(mocks.verifySession).not.toHaveBeenCalled()
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+    expect(mocks.revalidateCategorizationSurfaces).not.toHaveBeenCalled()
+  })
+})
 
 describe('categorizeExpense — subcategory visibility guard', () => {
   beforeEach(() => {

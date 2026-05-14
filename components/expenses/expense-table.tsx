@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
-import { MoreHorizontal, Pencil } from 'lucide-react'
+import { MoreHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Table,
@@ -36,6 +36,7 @@ import { BulkCategorizeDialog } from './bulk-categorize-dialog'
 import { BulkDeleteExpensesDialog } from './bulk-delete-expenses-dialog'
 import { ExpenseCategorizeDialog } from './expense-categorize-dialog'
 import { ExpenseFormDialog } from './expense-form-dialog'
+import { ExpenseTitleEdit } from './expense-title-edit'
 import { ExpenseTransactionsDialog } from './expense-transactions-dialog'
 import type { ExpenseFilters, ExpenseRow } from '@/lib/dal/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
@@ -64,18 +65,10 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
     id: string
     title: string
   } | null>(null)
-  const [renameExpense, setRenameExpense] = useState<{
-    id: string
-    title: string
-  } | null>(null)
   const [transactionsDialogExpense, setTransactionsDialogExpense] = useState<{
     id: string
     title: string
   } | null>(null)
-
-  const selectedRenameExpense = renameExpense
-    ? (loadedExpenses.find((expense) => expense.id === renameExpense.id) ?? null)
-    : null
 
   const allSelected = loadedExpenses.length > 0 && selectedIds.length === loadedExpenses.length
   const someSelected = selectedIds.length > 0 && selectedIds.length < loadedExpenses.length
@@ -152,6 +145,13 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
     }).format(new Date(date))
   }
 
+  function formatAmount(amount: string): string {
+    return new Intl.NumberFormat('it-IT', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(Number(amount))
+  }
+
   if (loadedExpenses.length === 0) {
     return (
       <Card>
@@ -170,7 +170,7 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
       <div className="rounded-xl border bg-card shadow-sm">
         <Table>
           <TableCaption className="sr-only">
-            Elenco spese con categoria, stato e data.
+            Elenco spese con categoria, stato, totale e data.
           </TableCaption>
           <TableHeader>
             <TableRow className="bg-secondary/70">
@@ -194,6 +194,9 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
               </TableHead>
               <TableHead className="w-36 text-center text-xs uppercase tracking-wide text-muted-foreground font-normal">
                 Stato
+              </TableHead>
+              <TableHead className="w-32 text-right text-xs uppercase tracking-wide text-muted-foreground font-normal">
+                Totale
               </TableHead>
               <TableHead className="w-24 text-right text-xs uppercase tracking-wide text-muted-foreground font-normal">
                 Data
@@ -228,54 +231,49 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
                       aria-label={`Seleziona ${exp.title}`}
                     />
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="font-mono text-sm tracking-tight truncate block max-w-[240px]"
-                        title={exp.title}
-                      >
-                        {exp.title}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
-                        onClick={() => setRenameExpense({ id: exp.id, title: exp.title })}
-                        aria-label="Rinomina spesa aggregata (non modifica le descrizioni delle singole transazioni)"
-                        title="Rinomina la spesa aggregata (non modifica le descrizioni delle singole transazioni)"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      {!isCategorized && !isIgnored && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-xs shrink-0"
-                          onClick={() =>
-                            setCategorizeDialogExpense({ id: exp.id, title: exp.title })
-                          }
-                        >
-                          Categorizza
-                        </Button>
-                      )}
-                    </div>
+                  <TableCell className="min-w-[20rem]">
+                    <ExpenseTitleEdit
+                      id={exp.id}
+                      title={exp.title}
+                      onSuccess={(updatedTitle) => {
+                        setLoadedExpenses((prev) =>
+                          prev.map((e) =>
+                            e.id === exp.id ? { ...e, title: updatedTitle } : e
+                          )
+                        )
+                      }}
+                    />
                   </TableCell>
                   <TableCell className="text-sm">{categoryLabel}</TableCell>
                   <TableCell className="text-center">
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        'border-0',
-                        isCategorized
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : isIgnored
-                            ? 'bg-muted text-muted-foreground'
-                            : 'bg-amber-100 text-amber-700'
-                      )}
-                    >
-                      {isCategorized ? 'Categorizzata' : isIgnored ? 'Ignorata' : 'Da categorizzare'}
-                    </Badge>
+                    {!isCategorized && !isIgnored ? (
+                      <button
+                        type="button"
+                        className="inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border-0 bg-amber-100 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-amber-700 transition-[color,box-shadow] hover:bg-amber-200 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                        onClick={() =>
+                          setCategorizeDialogExpense({ id: exp.id, title: exp.title })
+                        }
+                        aria-label={`Categorizza ${exp.title}`}
+                        title="Categorizza questa spesa"
+                      >
+                        Da categorizzare
+                      </button>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'border-0',
+                          isCategorized
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {isCategorized ? 'Categorizzata' : 'Ignorata'}
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums text-sm">
+                    {formatAmount(exp.totalAmount)}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums text-sm">
                     {formatDate(exp.createdAt)}
@@ -409,27 +407,6 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
         }}
         expense={transactionsDialogExpense ?? { id: '', title: '' }}
       />
-
-      {selectedRenameExpense && (
-        <ExpenseFormDialog
-          categories={categories}
-          mode="edit"
-          expense={selectedRenameExpense}
-          open={renameExpense !== null}
-          onOpenChange={(o) => {
-            if (!o) setRenameExpense(null)
-          }}
-          description="Rinomina la spesa aggregata (non modifica le descrizioni delle singole transazioni)."
-          onSuccess={(updatedTitle) => {
-            setLoadedExpenses((prev) =>
-              prev.map((e) =>
-                e.id === renameExpense?.id ? { ...e, title: updatedTitle } : e
-              )
-            )
-            setRenameExpense(null)
-          }}
-        />
-      )}
     </>
   )
 }

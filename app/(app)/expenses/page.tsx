@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { getExpenses } from '@/lib/dal/expenses'
+import { getExpenses, type ExpenseFilters as ExpenseListFilters } from '@/lib/dal/expenses'
 import { getCategories } from '@/lib/dal/categories'
 import { ExpenseFilters } from '@/components/expenses/expense-filters'
 import { ExpenseTable } from '@/components/expenses/expense-table'
@@ -8,11 +8,18 @@ import { ExpenseFormDialog } from '@/components/expenses/expense-form-dialog'
 export default async function ExpensesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; status?: string; period?: string; name?: string }>
+  searchParams: Promise<{
+    category?: string
+    status?: string
+    period?: string
+    name?: string
+    sort?: string
+    dir?: string
+  }>
 }) {
   const params = await searchParams
   const rawName = params.name?.trim()
-  const filters = {
+  const filters: ExpenseListFilters = {
     categorySlug: params.category,
     status: params.status as 'uncategorized' | 'categorized' | undefined,
     period: params.period as
@@ -23,6 +30,8 @@ export default async function ExpensesPage({
       | 'last-year'
       | undefined,
     name: rawName && rawName.length <= 200 ? rawName : undefined,
+    sort: params.sort === 'totalAmount' ? 'totalAmount' : undefined,
+    dir: params.dir === 'asc' ? 'asc' : undefined,
   }
 
   const [expenses, categories] = await Promise.all([
@@ -47,7 +56,7 @@ export default async function ExpensesPage({
       </Suspense>
 
       <ExpenseTable
-        key={`${filters.categorySlug ?? ''}:${filters.status ?? ''}:${filters.period ?? ''}:${filters.name ?? ''}`}
+        key={`${filters.categorySlug ?? ''}:${filters.status ?? ''}:${filters.period ?? ''}:${filters.name ?? ''}:${filters.sort ?? ''}:${filters.dir ?? ''}`}
         expenses={expenses}
         categories={categories}
         filters={filters}
