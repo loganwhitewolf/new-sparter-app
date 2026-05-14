@@ -231,7 +231,7 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
                       aria-label={`Seleziona ${exp.title}`}
                     />
                   </TableCell>
-                  <TableCell className="min-w-[20rem]">
+                  <TableCell className="max-w-0 w-full">
                     <ExpenseTitleEdit
                       id={exp.id}
                       title={exp.title}
