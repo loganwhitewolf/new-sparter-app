@@ -47,6 +47,19 @@ test.describe('Dashboard - DASH-02: Category breakdown', () => {
     )
   })
 
+  test('DASH-02 categories route exposes OUT/IN filters and accepts legacy period aliases', async ({ page }) => {
+    await page.setExtraHTTPHeaders({
+      'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
+    })
+    await page.goto('/dashboard/categories?period=last-3-months&type=bogus')
+
+    await expect(page.getByRole('heading', { name: 'Categorie' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Uscite' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Entrate' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Tutti' })).toHaveCount(0)
+    await expect(page.getByRole('tab', { name: 'Uscite' })).toHaveAttribute('data-state', 'active')
+  })
+
   test('DASH-02 drill-down expands a category row', async ({ page }) => {
     test.fixme(true, 'Requires seeded categorized expenses')
     await openDashboard(page)
