@@ -5,7 +5,14 @@ vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T
 vi.mock('@/lib/dal/auth', () => ({ verifySession: vi.fn() }))
 vi.mock('@/lib/db', () => ({ db: {} }))
 vi.mock('@/lib/db/schema', () => ({
-  category: { id: 'category.id', name: 'category.name', slug: 'category.slug', type: 'category.type' },
+  category: {
+    id: 'category.id',
+    userId: 'category.userId',
+    name: 'category.name',
+    slug: 'category.slug',
+    type: 'category.type',
+    isActive: 'category.isActive',
+  },
   expense: {
     id: 'expense.id',
     userId: 'expense.userId',
@@ -14,15 +21,20 @@ vi.mock('@/lib/db/schema', () => ({
   },
   subCategory: {
     id: 'subCategory.id',
+    userId: 'subCategory.userId',
     name: 'subCategory.name',
     slug: 'subCategory.slug',
     categoryId: 'subCategory.categoryId',
+    isActive: 'subCategory.isActive',
     excludeFromTotals: 'subCategory.excludeFromTotals',
   },
   transaction: {
+    id: 'transaction.id',
     userId: 'transaction.userId',
     expenseId: 'transaction.expenseId',
     amount: 'transaction.amount',
+    description: 'transaction.description',
+    customTitle: 'transaction.customTitle',
     occurredAt: 'transaction.occurredAt',
   },
 }))
@@ -42,6 +54,7 @@ vi.mock('@/lib/utils/decimal', async () => {
 const {
   DASHBOARD_TOTAL_EXPENSE_STATUSES,
   buildBreakdownData,
+  buildCategoryDetailData,
   buildCategoryRankingData,
   buildMonthlyTrendData,
   buildOverviewData,
@@ -364,5 +377,157 @@ describe('dashboard DAL amount mapping', () => {
     expect(trend[0]).toMatchObject({ totalIn: '2500.00', totalOut: '123.46', totalNc: 2, totalIgn: 1 })
     expect(trend[1]).toMatchObject({ totalIn: '0.00', totalOut: '0.00', totalNc: 0, totalIgn: 0 })
     expect(trend[2]).toMatchObject({ totalIn: '0.00', totalOut: '10.00', totalNc: 0, totalIgn: 0 })
+  })
+
+  it('builds category detail data with zero-filled trends, summary stats, breakdown percentages, and normalized top transactions', () => {
+    const detail = buildCategoryDetailData({
+      category: { id: 1, name: 'Casa', slug: 'casa', type: 'out' },
+      from: new Date(2026, 0, 1),
+      to: new Date(2026, 2, 31, 23, 59, 59, 999),
+      trendRows: [
+        { categoryId: 1, categorySlug: 'casa', categoryType: 'out', month: '2026-01', count: '2', amount: '100.105' },
+        { categoryId: 1, categorySlug: 'casa', categoryType: 'out', month: '2026-03', count: 1, amount: '50' },
+      ],
+      subcategoryRows: [
+        {
+          categoryId: 1,
+          categorySlug: 'casa',
+          categoryType: 'out',
+          subCategoryId: 11,
+          subCategoryName: 'Affitto',
+          subCategorySlug: 'affitto',
+          count: 1,
+          amount: '90',
+        },
+        {
+          categoryId: 1,
+          categorySlug: 'casa',
+          categoryType: 'out',
+          subCategoryId: 12,
+          subCategoryName: 'Bollette',
+          subCategorySlug: 'bollette',
+          count: '2',
+          amount: '60.005',
+        },
+      ],
+      topTransactionRows: [
+        {
+          id: 'tx-2',
+          categoryId: 1,
+          categorySlug: 'casa',
+          categoryType: 'out',
+          description: 'Rent fallback',
+          customTitle: 'Rent custom',
+          amount: '-90',
+          occurredAt: new Date(2026, 0, 5),
+        },
+        {
+          id: 'tx-1',
+          categoryId: 1,
+          categorySlug: 'casa',
+          categoryType: 'out',
+          description: 'Power bill',
+          customTitle: null,
+          amount: '-60.005',
+          occurredAt: new Date(2026, 1, 10),
+        },
+      ],
+    })
+
+    expect(detail.category).toEqual({ id: 1, name: 'Casa', slug: 'casa', type: 'out' })
+    expect(detail.summary).toEqual({ total: '150.01', count: 3, average: '50.00' })
+    expect(detail.trend).toEqual([
+      { month: '2026-01', label: 'gen', amount: '100.11', count: 2 },
+      { month: '2026-02', label: 'feb', amount: '0.00', count: 0 },
+      { month: '2026-03', label: 'mar', amount: '50.00', count: 1 },
+    ])
+    expect(detail.subcategories).toEqual([
+      expect.objectContaining({ id: 11, name: 'Affitto', slug: 'affitto', amount: '90.00', count: 1, percentage: 60 }),
+      expect.objectContaining({ id: 12, name: 'Bollette', slug: 'bollette', amount: '60.01', count: 2, percentage: 40 }),
+    ])
+    expect(detail.topTransactions).toEqual([
+      { id: 'tx-2', title: 'Rent custom', description: 'Rent fallback', date: '2026-01-05', amount: '90.00' },
+      { id: 'tx-1', title: 'Power bill', description: 'Power bill', date: '2026-02-10', amount: '60.01' },
+    ])
+  })
+
+  it('returns empty category detail data for missing metadata and skips malformed, system, ignored, mismatched, and out-of-range rows deterministically', () => {
+    expect(
+      buildCategoryDetailData({
+        category: null,
+        from: new Date(2026, 0, 1),
+        to: new Date(2026, 1, 28, 23, 59, 59, 999),
+        trendRows: [{ categoryId: 1, categorySlug: 'casa', categoryType: 'out', month: '2026-01', count: 1, amount: '100' }],
+        subcategoryRows: [],
+        topTransactionRows: [],
+      })
+    ).toEqual({
+      category: null,
+      summary: { total: '0.00', count: 0, average: '0.00' },
+      trend: [
+        { month: '2026-01', label: 'gen', amount: '0.00', count: 0 },
+        { month: '2026-02', label: 'feb', amount: '0.00', count: 0 },
+      ],
+      subcategories: [],
+      topTransactions: [],
+    })
+
+    const detail = buildCategoryDetailData({
+      category: { id: 1, name: 'Casa', slug: 'casa', type: 'out' },
+      from: new Date(2026, 0, 1),
+      to: new Date(2026, 1, 28, 23, 59, 59, 999),
+      trendRows: [
+        { categoryId: null, categorySlug: 'casa', categoryType: 'out', month: '2026-01', count: 1, amount: '999' },
+        { categoryId: 1, categorySlug: 'ignore', categoryType: 'out', month: '2026-01', count: 1, amount: '999' },
+        { categoryId: 1, categorySlug: 'casa', categoryType: 'system', month: '2026-01', count: 1, amount: '999' },
+        { categoryId: 2, categorySlug: 'cibo', categoryType: 'out', month: '2026-01', count: 1, amount: '999' },
+        { categoryId: 1, categorySlug: 'casa', categoryType: 'in', month: '2026-01', count: 1, amount: '999' },
+        { categoryId: 1, categorySlug: 'casa', categoryType: 'out', month: '2025-12', count: 1, amount: '999' },
+        { categoryId: 1, categorySlug: 'casa', categoryType: 'out', month: '2026-01', count: null, amount: null },
+      ],
+      subcategoryRows: [
+        {
+          categoryId: 1,
+          categorySlug: 'casa',
+          categoryType: 'out',
+          subCategoryId: null,
+          subCategoryName: 'Missing',
+          subCategorySlug: 'missing',
+          count: 1,
+          amount: '999',
+        },
+        {
+          categoryId: 1,
+          categorySlug: 'casa',
+          categoryType: 'out',
+          subCategoryId: 11,
+          subCategoryName: 'A',
+          subCategorySlug: 'a',
+          count: 1,
+          amount: '25',
+        },
+        {
+          categoryId: 1,
+          categorySlug: 'casa',
+          categoryType: 'out',
+          subCategoryId: 12,
+          subCategoryName: 'B',
+          subCategorySlug: 'b',
+          count: 1,
+          amount: '25',
+        },
+      ],
+      topTransactionRows: [
+        { id: null, categoryId: 1, categorySlug: 'casa', categoryType: 'out', description: 'Missing', customTitle: null, amount: '999', occurredAt: new Date(2026, 0, 1) },
+        { id: 'tx-b', categoryId: 1, categorySlug: 'casa', categoryType: 'out', description: 'B', customTitle: null, amount: '-25', occurredAt: new Date(2026, 0, 2) },
+        { id: 'tx-a', categoryId: 1, categorySlug: 'casa', categoryType: 'out', description: 'A', customTitle: null, amount: '-25', occurredAt: new Date(2026, 0, 2) },
+      ],
+    })
+
+    expect(detail.summary).toEqual({ total: '50.00', count: 2, average: '25.00' })
+    expect(detail.trend[0]).toMatchObject({ amount: '0.00', count: 0 })
+    expect(detail.subcategories.map((row) => row.slug)).toEqual(['a', 'b'])
+    expect(detail.subcategories.map((row) => row.percentage)).toEqual([50, 50])
+    expect(detail.topTransactions.map((row) => row.id)).toEqual(['tx-a', 'tx-b'])
   })
 })

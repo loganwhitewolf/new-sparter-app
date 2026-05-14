@@ -77,6 +77,49 @@ export type CategoryRankingItem = {
   sparkline: CategorySparklinePoint[]
 }
 
+export type CategoryDetailTrendPoint = {
+  month: string
+  label: string
+  amount: string
+  count: number
+}
+
+export type CategoryDetailTopTransaction = {
+  id: string
+  title: string
+  description: string
+  date: string
+  amount: string
+}
+
+export type CategoryDetailSubcategory = {
+  id: number
+  name: string
+  slug: string
+  count: number
+  amount: string
+  percentage: number
+}
+
+export type CategoryDetailCategory = {
+  id: number
+  name: string
+  slug: string
+  type: 'in' | 'out'
+}
+
+export type CategoryDetailData = {
+  category: CategoryDetailCategory | null
+  summary: {
+    total: string
+    count: number
+    average: string
+  }
+  trend: CategoryDetailTrendPoint[]
+  subcategories: CategoryDetailSubcategory[]
+  topTransactions: CategoryDetailTopTransaction[]
+}
+
 export type MonthlyTrendPoint = {
   month: string
   label: string
@@ -123,6 +166,37 @@ type TrendAggregateRow = {
   totalOut: string | null
   totalNc: number | string | null
   totalIgn: number | string | null
+}
+
+type CategoryDetailTrendRow = {
+  categoryId: number | null
+  categorySlug: string | null
+  categoryType: 'in' | 'out' | 'system' | null
+  month: string | null
+  count: number | string | null
+  amount: string | null
+}
+
+type CategoryDetailSubcategoryRow = {
+  categoryId: number | null
+  categorySlug: string | null
+  categoryType: 'in' | 'out' | 'system' | null
+  subCategoryId: number | null
+  subCategoryName: string | null
+  subCategorySlug: string | null
+  count: number | string | null
+  amount: string | null
+}
+
+type CategoryDetailTopTransactionRow = {
+  id: string | null
+  categoryId: number | null
+  categorySlug: string | null
+  categoryType: 'in' | 'out' | 'system' | null
+  description: string | null
+  customTitle: string | null
+  amount: string | null
+  occurredAt: Date | string | null
 }
 
 const ZERO_AMOUNT = '0.00'
@@ -179,6 +253,54 @@ function normalizeCount(value: number | string | null | undefined): number {
 
 function balanceFrom(totalIn: string, totalOut: string): string {
   return toDecimal(totalIn).minus(toDecimal(totalOut)).toFixed(2)
+}
+
+function formatDateKey(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function emptyCategoryDetailData(
+  categoryData: CategoryDetailCategory | null,
+  from: Date,
+  to: Date
+): CategoryDetailData {
+  return {
+    category: categoryData,
+    summary: {
+      total: ZERO_AMOUNT,
+      count: 0,
+      average: ZERO_AMOUNT,
+    },
+    trend: monthsBetween(from, to).map((month) => ({
+      month,
+      label: monthLabel(month),
+      amount: ZERO_AMOUNT,
+      count: 0,
+    })),
+    subcategories: [],
+    topTransactions: [],
+  }
+}
+
+function rowMatchesCategory(
+  categoryData: CategoryDetailCategory,
+  row: { categoryId: number | null; categorySlug: string | null; categoryType: 'in' | 'out' | 'system' | null }
+): boolean {
+  return (
+    row.categoryId === categoryData.id &&
+    row.categorySlug === categoryData.slug &&
+    row.categorySlug !== 'ignore' &&
+    row.categoryType === categoryData.type
+  )
 }
 
 function notIgnoredCategory() {
@@ -458,6 +580,150 @@ export function buildMonthlyTrendData(input: {
   return Array.from(buckets.values())
 }
 
+export function buildCategoryDetailData(input: {
+  category: CategoryDetailCategory | null
+  from: Date
+  to: Date
+  trendRows: CategoryDetailTrendRow[]
+  subcategoryRows: CategoryDetailSubcategoryRow[]
+  topTransactionRows: CategoryDetailTopTransactionRow[]
+}): CategoryDetailData {
+  const categoryData = input.category
+  const detail = emptyCategoryDetailData(categoryData, input.from, input.to)
+
+  if (categoryData === null) {
+    return detail
+  }
+
+  const monthKeys = monthsBetween(input.from, input.to)
+  const trendBuckets = new Map<string, CategoryDetailTrendPoint>(
+    monthKeys.map((month) => [
+      month,
+      {
+        month,
+        label: monthLabel(month),
+        amount: ZERO_AMOUNT,
+        count: 0,
+      },
+    ])
+  )
+
+  for (const row of input.trendRows) {
+    if (row.month === null || !trendBuckets.has(row.month) || !rowMatchesCategory(categoryData, row)) {
+      continue
+    }
+
+    const bucket = trendBuckets.get(row.month)
+
+    if (bucket) {
+      bucket.amount = toDecimal(bucket.amount).plus(normalizeAmount(row.amount)).toFixed(2)
+      bucket.count += normalizeCount(row.count)
+    }
+  }
+
+  const subcategories = computeBreakdownPercentages(
+    input.subcategoryRows
+      .flatMap((row): Array<Omit<CategoryDetailSubcategory, 'percentage'>> => {
+        if (
+          !rowMatchesCategory(categoryData, row) ||
+          row.subCategoryId === null ||
+          row.subCategoryName === null ||
+          row.subCategorySlug === null
+        ) {
+          return []
+        }
+
+        return [
+          {
+            id: row.subCategoryId,
+            name: row.subCategoryName,
+            slug: row.subCategorySlug,
+            count: normalizeCount(row.count),
+            amount: normalizeAmount(row.amount),
+          },
+        ]
+      })
+      .sort((left, right) => {
+        const amountComparison = toDecimal(right.amount).comparedTo(toDecimal(left.amount))
+
+        if (amountComparison !== 0) {
+          return amountComparison
+        }
+
+        const nameComparison = left.name.localeCompare(right.name)
+
+        if (nameComparison !== 0) {
+          return nameComparison
+        }
+
+        return left.id - right.id
+      })
+  )
+
+  const total = subcategories
+    .reduce((sum, row) => sum.plus(toDecimal(row.amount).abs()), toDecimal(0))
+    .toFixed(2)
+  const count = subcategories.reduce((sum, row) => sum + row.count, 0)
+  const average = count > 0 ? toDecimal(total).div(count).toFixed(2) : ZERO_AMOUNT
+
+  const topTransactions = input.topTransactionRows
+    .flatMap((row): CategoryDetailTopTransaction[] => {
+      if (!rowMatchesCategory(categoryData, row) || row.id === null || row.description === null || row.occurredAt === null) {
+        return []
+      }
+
+      const date = formatDateKey(row.occurredAt)
+
+      if (date === '') {
+        return []
+      }
+
+      return [
+        {
+          id: row.id,
+          title: row.customTitle ?? row.description,
+          description: row.description,
+          date,
+          amount: normalizeAmount(toDecimal(row.amount ?? 0).abs().toString()),
+        },
+      ]
+    })
+    .sort((left, right) => {
+      const amountComparison = toDecimal(right.amount).comparedTo(toDecimal(left.amount))
+
+      if (amountComparison !== 0) {
+        return amountComparison
+      }
+
+      const dateComparison = right.date.localeCompare(left.date)
+
+      if (dateComparison !== 0) {
+        return dateComparison
+      }
+
+      const titleComparison = left.title.localeCompare(right.title)
+
+      if (titleComparison !== 0) {
+        return titleComparison
+      }
+
+      return left.id.localeCompare(right.id)
+    })
+    .slice(0, 5)
+
+  return {
+    category: categoryData,
+    summary: {
+      total,
+      count,
+      average,
+    },
+    trend: Array.from(trendBuckets.values()),
+    subcategories,
+    topTransactions,
+  }
+}
+
 export const getOverview = cache(async (preset: DashboardPreset = 'last-month'): Promise<OverviewData> => {
   const { userId } = await verifySession()
   const { current, previous } = getOverviewComparisonRanges(preset)
@@ -563,6 +829,170 @@ export const getCategoryRanking = cache(
     }
 
     return buildCategoryRankingData({ from, to, rows })
+  }
+)
+
+
+export const getCategoryDetail = cache(
+  async (categoryId: number, filters: DashboardFilters): Promise<CategoryDetailData> => {
+    const { userId } = await verifySession()
+    const { from, to } = dashboardPresetToDateRange(filters.preset)
+    const selectedType = filters.type === 'in' ? 'in' : 'out'
+    const emptyData = () => emptyCategoryDetailData(null, from, to)
+
+    let categoryData: CategoryDetailCategory | null = null
+
+    try {
+      const categoryRows = await db
+        .select({
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+          type: category.type,
+        })
+        .from(category)
+        .where(
+          and(
+            eq(category.id, categoryId),
+            eq(category.type, selectedType),
+            ne(category.type, 'system'),
+            ne(category.slug, 'ignore'),
+            eq(category.isActive, true),
+            or(isNull(category.userId), eq(category.userId, userId))
+          )
+        )
+        .limit(1)
+
+      const row = categoryRows[0]
+
+      if (row && row.type !== 'system') {
+        categoryData = {
+          id: row.id,
+          name: row.name,
+          slug: row.slug,
+          type: row.type,
+        }
+      }
+    } catch {
+      return emptyData()
+    }
+
+    if (categoryData === null) {
+      return emptyData()
+    }
+
+    const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
+    const activeScopedCategory = and(
+      eq(category.id, categoryId),
+      eq(category.type, selectedType),
+      ne(category.slug, 'ignore'),
+      ne(category.type, 'system'),
+      eq(category.isActive, true),
+      or(isNull(category.userId), eq(category.userId, userId))
+    )
+    const activeScopedSubCategory = and(
+      eq(subCategory.isActive, true),
+      or(isNull(subCategory.userId), eq(subCategory.userId, userId))
+    )
+
+    try {
+      const [trendRows, subcategoryRows, topTransactionRows] = await Promise.all([
+        db
+          .select({
+            categoryId: category.id,
+            categorySlug: category.slug,
+            categoryType: category.type,
+            month: monthSql,
+            count: countDistinct(expense.id),
+            amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+          })
+          .from(transactionTable)
+          .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+          .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+          .innerJoin(category, eq(subCategory.categoryId, category.id))
+          .where(
+            and(
+              dateScopedTransactions(userId, from, to),
+              expenseStatusIncludedInDashboardTotals(),
+              activeScopedCategory,
+              activeScopedSubCategory,
+              notExcludedFromTotals()
+            )
+          )
+          .groupBy(category.id, monthSql)
+          .orderBy(monthSql),
+        db
+          .select({
+            categoryId: category.id,
+            categorySlug: category.slug,
+            categoryType: category.type,
+            subCategoryId: subCategory.id,
+            subCategoryName: subCategory.name,
+            subCategorySlug: subCategory.slug,
+            count: countDistinct(expense.id),
+            amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+          })
+          .from(transactionTable)
+          .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+          .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+          .innerJoin(category, eq(subCategory.categoryId, category.id))
+          .where(
+            and(
+              dateScopedTransactions(userId, from, to),
+              expenseStatusIncludedInDashboardTotals(),
+              activeScopedCategory,
+              activeScopedSubCategory,
+              notExcludedFromTotals()
+            )
+          )
+          .groupBy(category.id, subCategory.id)
+          .orderBy(desc(sql`coalesce(abs(sum(${transactionTable.amount})), 0)`), subCategory.name, subCategory.id),
+        db
+          .select({
+            id: transactionTable.id,
+            categoryId: category.id,
+            categorySlug: category.slug,
+            categoryType: category.type,
+            description: transactionTable.description,
+            customTitle: transactionTable.customTitle,
+            amount: transactionTable.amount,
+            occurredAt: transactionTable.occurredAt,
+          })
+          .from(transactionTable)
+          .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+          .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+          .innerJoin(category, eq(subCategory.categoryId, category.id))
+          .where(
+            and(
+              dateScopedTransactions(userId, from, to),
+              expenseStatusIncludedInDashboardTotals(),
+              activeScopedCategory,
+              activeScopedSubCategory,
+              notExcludedFromTotals()
+            )
+          )
+          .orderBy(desc(sql`abs(${transactionTable.amount})`), desc(transactionTable.occurredAt), transactionTable.id)
+          .limit(5),
+      ])
+
+      return buildCategoryDetailData({
+        category: categoryData,
+        from,
+        to,
+        trendRows,
+        subcategoryRows,
+        topTransactionRows,
+      })
+    } catch {
+      return buildCategoryDetailData({
+        category: categoryData,
+        from,
+        to,
+        trendRows: [],
+        subcategoryRows: [],
+        topTransactionRows: [],
+      })
+    }
   }
 )
 
