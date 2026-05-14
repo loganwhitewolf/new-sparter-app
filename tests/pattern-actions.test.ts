@@ -1,4 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const EXPECTED_CATEGORY_REVALIDATION_ROUTES = [
+  '/dashboard',
+  '/expenses',
+  '/settings/categories',
+  '/transactions',
+]
 
 const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
