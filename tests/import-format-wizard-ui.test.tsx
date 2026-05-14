@@ -66,7 +66,7 @@ describe('ImportFormatWizard UI', () => {
     expect(html).toContain('Colonna descrizione')
     expect(html).toContain('Modalità importo')
     expect(html).toContain('Salva formato e riprova analisi')
-    expect(html).toContain('Torna agli import')
+    expect(html).toContain('Torna alle importazioni')
     expect(html).toContain('conto-personale.csv')
     expect(html).toContain('Data')
     expect(html).toContain('Descrizione')
@@ -132,7 +132,7 @@ describe('ConfigureImportFormatPage', () => {
 
     expect(html).toContain('Formato non configurabile')
     expect(html).toContain('Impossibile leggere le intestazioni del file. Riprova.')
-    expect(html).toContain('Torna agli import')
+    expect(html).toContain('Torna alle importazioni')
     expect(html).not.toContain('objectKey')
     expect(html).not.toContain('presigned')
   })

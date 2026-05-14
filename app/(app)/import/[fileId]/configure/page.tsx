@@ -38,7 +38,7 @@ export default async function ConfigureImportFormatPage({
               </AlertDescription>
             </Alert>
             <Button asChild variant="outline">
-              <Link href={APP_ROUTES.import}>Torna agli import</Link>
+              <Link href={APP_ROUTES.import}>Torna alle importazioni</Link>
             </Button>
           </CardContent>
         </Card>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertCircle, Pencil } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { ImportDeleteDialog } from '@/components/import/import-delete-dialog'
 import { ImportRenameDialog } from '@/components/import/import-rename-dialog'
@@ -224,31 +224,25 @@ export function ImportTable({ imports, filters, searchParams, loadError = false 
           </TableCaption>
           <TableHeader>
             <TableRow className="bg-secondary/70">
-              <TableHead className="min-w-[18rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
+              <TableHead className="min-w-[16rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
                 File
               </TableHead>
-              <TableHead className="w-36 text-xs font-normal uppercase tracking-wide text-muted-foreground">
+              <TableHead className="w-28 text-xs font-normal uppercase tracking-wide text-muted-foreground">
                 Stato
               </TableHead>
-              <TableHead className="min-w-[10rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
+              <TableHead className="min-w-[9rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
                 Piattaforma
               </TableHead>
-              <TableHead className="min-w-[12rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
-                Date
+              <TableHead className="w-32 text-xs font-normal uppercase tracking-wide text-muted-foreground">
+                Importato il
               </TableHead>
-              <TableHead className="w-28 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground">
+              <TableHead className="w-24 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground">
                 Righe
               </TableHead>
-              <TableHead className="w-36 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground">
-                Totali
-              </TableHead>
-              <TableHead className="min-w-[12rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
+              <TableHead className="min-w-[11rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
                 Periodo
               </TableHead>
-              <TableHead className="min-w-[16rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
-                Messaggio
-              </TableHead>
-              <TableHead className="w-44">
+              <TableHead className="w-40">
                 <span className="sr-only">Azioni</span>
               </TableHead>
             </TableRow>
@@ -256,36 +250,22 @@ export function ImportTable({ imports, filters, searchParams, loadError = false 
           <TableBody>
             {loadedImports.map((row) => {
               const displayName = getImportDisplayName(row)
-              const hasFailureMessage = row.status === 'failed' && row.errorMessage
 
               return (
                 <TableRow key={row.id} className="group hover:bg-muted/50">
-                  <TableCell className="max-w-[24rem]">
-                    <div className="flex min-w-0 items-start gap-2">
-                      <div className="flex min-w-0 flex-col gap-1">
-                        <span className="truncate font-medium" title={displayName}>
-                          {displayName}
+                  <TableCell className="max-w-[20rem]">
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <span className="truncate font-medium" title={displayName}>
+                        {displayName}
+                      </span>
+                      {row.displayName ? (
+                        <span
+                          className="truncate text-xs text-muted-foreground"
+                          title={row.originalName}
+                        >
+                          {row.originalName}
                         </span>
-                        {row.displayName ? (
-                          <span
-                            className="truncate text-xs text-muted-foreground"
-                            title={row.originalName}
-                          >
-                            {row.originalName}
-                          </span>
-                        ) : null}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0 opacity-100 transition-opacity focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                        onClick={() => setRenameImport(row)}
-                        aria-label={`Rinomina importazione ${displayName}`}
-                        title="Rinomina importazione"
-                      >
-                        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                      </Button>
+                      ) : null}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -296,57 +276,28 @@ export function ImportTable({ imports, filters, searchParams, loadError = false 
                       {statusLabels[row.status]}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <span className="text-sm">
-                      {row.platformName ?? 'Piattaforma non disponibile'}
-                    </span>
+                  <TableCell className="text-sm">
+                    {row.platformName ?? '—'}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1 text-sm">
-                      <span>Caricato: {formatDate(row.uploadedAt)}</span>
-                      <span className="text-muted-foreground">
-                        Importato: {formatDate(row.importedAt)}
-                      </span>
-                    </div>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatDate(row.importedAt ?? row.uploadedAt)}
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm tabular-nums">
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-0.5">
                       <span>{row.rowCount}</span>
-                      <span className="text-muted-foreground">
-                        {row.importedCount} importate
+                      <span className="text-xs text-muted-foreground">
+                        {row.importedCount} imp.
                       </span>
-                      <span className="text-muted-foreground">
-                        {row.duplicateCount} duplicate
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-sm tabular-nums">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-emerald-700">
-                        {formatCurrency(row.negativeTotal)}
-                      </span>
-                      <span>{formatCurrency(row.positiveTotal)}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-sm">
                     {formatDateRange(row.referenceStartedAt, row.referenceEndedAt)}
                   </TableCell>
-                  <TableCell className="max-w-[18rem]">
-                    {hasFailureMessage ? (
-                      <p
-                        className="line-clamp-2 whitespace-normal text-sm text-destructive"
-                        title={row.errorMessage ?? undefined}
-                      >
-                        {row.errorMessage}
-                      </p>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
                   <TableCell className="text-right">
                     <ImportRowActions
                       row={row}
                       displayName={displayName}
+                      onRename={setRenameImport}
                       onDelete={setDeleteImport}
                       onDeleteStale={setStaleDeleteImport}
                     />

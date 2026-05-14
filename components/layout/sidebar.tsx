@@ -12,7 +12,7 @@ const topNavItems = [
   { href: APP_ROUTES.dashboard, label: 'Dashboard', icon: LayoutDashboard },
   { href: APP_ROUTES.transactions, label: 'Transazioni', icon: List },
   { href: APP_ROUTES.expenses, label: 'Spese', icon: Receipt },
-  { href: APP_ROUTES.import, label: 'Import', icon: Upload },
+  { href: APP_ROUTES.import, label: 'Importazioni', icon: Upload },
 ]
 
 const bottomNavItems = [

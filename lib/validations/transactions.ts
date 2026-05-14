@@ -66,6 +66,7 @@ export type ParsedTransactionFilters = {
   toDate?: Date
   platform?: string
   importId?: string
+  name?: string
   sort: TransactionSort
   dir: TransactionSortDirection
 }
@@ -141,18 +142,21 @@ export function parseTransactionFilters(
   const to = firstTrimmed(input.to)
   const platform = firstTrimmed(input.platform)
   const rawImportId = firstTrimmed(input.importId)
+  const rawName = firstTrimmed(input.name)
   const sort = transactionSortSchema.safeParse(firstTrimmed(input.sort))
   const dir = transactionSortDirectionSchema.safeParse(firstTrimmed(input.dir))
   const fromDate = parseDateOnly(from)
   const toDate = to ? getInclusiveToDate(to) : undefined
   const importId =
     rawImportId && UUID_RE.test(rawImportId) ? rawImportId : undefined
+  const name = rawName && rawName.length <= 200 ? rawName : undefined
 
   return {
     ...(fromDate ? { from, fromDate } : {}),
     ...(toDate ? { to, toDate } : {}),
     ...(platform && PLATFORM_SLUG_RE.test(platform) ? { platform } : {}),
     ...(importId ? { importId } : {}),
+    ...(name ? { name } : {}),
     sort: sort.success ? sort.data : DEFAULT_SORT,
     dir: dir.success ? dir.data : DEFAULT_DIR,
   }

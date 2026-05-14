@@ -47,41 +47,40 @@ function makeRow(
 }
 
 const DISPLAY_NAME = 'Gennaio 2026'
+const onRename = vi.fn()
 const onDelete = vi.fn()
 const onDeleteStale = vi.fn()
 
 function render(row: ReturnType<typeof makeRow>, displayName = DISPLAY_NAME) {
   return renderToStaticMarkup(
-    createElement(ImportRowActions, { row, displayName, onDelete, onDeleteStale }),
+    createElement(ImportRowActions, { row, displayName, onRename, onDelete, onDeleteStale }),
   )
 }
 
 describe('ImportRowActions — state matrix', () => {
-  it('uploaded: shows Analizza link to the analyze route and a stale-delete button', () => {
+  it('uploaded: shows Analizza link to the analyze route and overflow menu trigger', () => {
     const html = render(makeRow({ status: 'uploaded' }))
 
     expect(html).toContain('Analizza')
     expect(html).toContain(`/import/${FILE_ID}/analyze`)
-    expect(html).toContain(`aria-label="Elimina importazione ${DISPLAY_NAME}"`)
+    expect(html).toContain(`aria-label="Altre azioni per ${DISPLAY_NAME}"`)
     expect(html).not.toContain('Configura formato')
     expect(html).not.toContain('Riprova analisi')
-    expect(html).not.toContain('Vedi transazioni')
   })
 
   it('uploaded: Analizza link has accessible aria-label', () => {
     const html = render(makeRow({ status: 'uploaded' }))
 
-    expect(html).toContain(`aria-label="Analizza importazione ${DISPLAY_NAME}"`)
+    expect(html).toContain(`aria-label="Analizza ${DISPLAY_NAME}"`)
   })
 
-  it('analyzed: shows Rivedi e importa link to the analyze route and a stale-delete button', () => {
+  it('analyzed: shows Rivedi e importa link to the analyze route and overflow menu trigger', () => {
     const html = render(makeRow({ status: 'analyzed' }))
 
     expect(html).toContain('Rivedi e importa')
     expect(html).toContain(`/import/${FILE_ID}/analyze`)
-    expect(html).toContain(`aria-label="Elimina importazione ${DISPLAY_NAME}"`)
+    expect(html).toContain(`aria-label="Altre azioni per ${DISPLAY_NAME}"`)
     expect(html).not.toContain('Analizza')
-    expect(html).not.toContain('Vedi transazioni')
   })
 
   it('analyzed: Rivedi e importa link has accessible aria-label', () => {
@@ -93,7 +92,7 @@ describe('ImportRowActions — state matrix', () => {
   it('importing: renders disabled pending copy, no active CTAs', () => {
     const html = render(makeRow({ status: 'importing' }))
 
-    expect(html).toContain('Importazione in corso')
+    expect(html).toContain('Importazione')
     expect(html).not.toContain('href=')
     expect(html).not.toContain('Elimina')
     expect(html).not.toContain('Rivedi e importa')
@@ -110,11 +109,10 @@ describe('ImportRowActions — state matrix', () => {
   it('analyzing: renders disabled pending copy, no active CTAs', () => {
     const html = render(makeRow({ status: 'analyzing' }))
 
-    expect(html).toContain('Analisi in corso')
+    expect(html).toContain('Analisi')
     expect(html).not.toContain('href=')
     expect(html).not.toContain('Elimina')
     expect(html).not.toContain('Rivedi e importa')
-    expect(html).not.toContain('Analizza')
     expect(html).not.toContain('Vedi transazioni')
   })
 
@@ -124,7 +122,7 @@ describe('ImportRowActions — state matrix', () => {
     expect(html).toContain('aria-label="Analisi in corso, nessuna azione disponibile"')
   })
 
-  it('imported: shows Vedi transazioni link scoped to exact importId', () => {
+  it('imported: shows Vedi transazioni link scoped to exact importId in dropdown', () => {
     const html = render(makeRow({ status: 'imported' }))
 
     expect(html).toContain('Vedi transazioni')
@@ -134,17 +132,16 @@ describe('ImportRowActions — state matrix', () => {
     expect(html).not.toContain('Riprova analisi')
   })
 
-  it('imported: shows Elimina button for imported rows', () => {
+  it('imported: shows Elimina item in dropdown menu', () => {
     const html = render(makeRow({ status: 'imported' }))
 
     expect(html).toContain('Elimina')
-    expect(html).toContain(`aria-label="Elimina importazione ${DISPLAY_NAME}"`)
   })
 
-  it('imported: Vedi transazioni has accessible aria-label', () => {
+  it('imported: overflow menu trigger has accessible aria-label', () => {
     const html = render(makeRow({ status: 'imported' }))
 
-    expect(html).toContain(`aria-label="Vedi transazioni importate da ${DISPLAY_NAME}"`)
+    expect(html).toContain(`aria-label="Altre azioni per ${DISPLAY_NAME}"`)
   })
 
   it('failed (unknown-format): shows Configura formato link, Riprova analisi, and a stale-delete button', () => {
