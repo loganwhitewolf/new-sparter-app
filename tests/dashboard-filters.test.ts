@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'vitest'
 import { buildDashboardTabHref } from '@/components/dashboard/dashboard-tab-nav'
+import {
+  buildDashboardCategoryDetailHref,
+  dashboardCategoryDetail,
+} from '@/lib/routes'
 import { parseDashboardFilters } from '@/lib/validations/dashboard'
 
 describe('parseDashboardFilters', () => {
@@ -91,5 +95,29 @@ describe('buildDashboardTabHref', () => {
     expect(buildDashboardTabHref('/dashboard/categories', new URLSearchParams('page=2'))).toBe(
       '/dashboard/categories'
     )
+  })
+})
+
+describe('dashboard category detail routes', () => {
+  test('builds the detail path from the category id', () => {
+    expect(dashboardCategoryDetail(42)).toBe('/dashboard/categories/42')
+  })
+
+  test('omits default category filters from detail hrefs', () => {
+    expect(
+      buildDashboardCategoryDetailHref(42, {
+        preset: 'this-year',
+        type: 'out',
+      })
+    ).toBe('/dashboard/categories/42')
+  })
+
+  test('preserves non-default preset and income type for detail hrefs', () => {
+    expect(
+      buildDashboardCategoryDetailHref(42, {
+        preset: 'last-3-months',
+        type: 'in',
+      })
+    ).toBe('/dashboard/categories/42?preset=last-3-months&type=in')
   })
 })
