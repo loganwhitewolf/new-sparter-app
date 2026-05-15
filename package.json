@@ -9,6 +9,7 @@
     "lint": "eslint",
     "check:language": "node scripts/check-code-language.mjs",
     "db:migrate": "tsx scripts/migrate.ts",
+    "db:migrate:production": "tsx scripts/migrate.ts --production",
     "db:generate": "drizzle-kit generate",
     "db:seed": "tsx drizzle/seed.ts",
     "db:up": "docker compose up -d postgres",
