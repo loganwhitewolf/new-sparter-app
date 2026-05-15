@@ -3,7 +3,11 @@ import type { PoolConfig } from 'pg'
 export const DEFAULT_DATABASE_POOL_MAX = 2
 export const MAX_DATABASE_POOL_MAX = 5
 
-export type DatabasePoolEnv = Pick<NodeJS.ProcessEnv, 'DATABASE_URL' | 'DATABASE_SSL' | 'DATABASE_POOL_MAX'>
+export type DatabasePoolEnv = {
+  DATABASE_URL?: string
+  DATABASE_SSL?: string
+  DATABASE_POOL_MAX?: string
+}
 
 export type DatabasePoolConfig = Pick<PoolConfig, 'connectionString' | 'max' | 'ssl'>
 
@@ -24,7 +28,7 @@ function parsePoolMax(value: string | undefined): number {
   return Math.min(parsed, MAX_DATABASE_POOL_MAX)
 }
 
-export function getDatabasePoolConfig(env: DatabasePoolEnv = process.env): DatabasePoolConfig {
+export function getDatabasePoolConfig(env: DatabasePoolEnv = process.env as DatabasePoolEnv): DatabasePoolConfig {
   return {
     connectionString: env.DATABASE_URL,
     max: parsePoolMax(env.DATABASE_POOL_MAX),
