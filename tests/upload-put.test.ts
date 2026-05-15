@@ -51,12 +51,10 @@ describe('uploadFileToPresignedUrl', () => {
     expect(fetchFn).toHaveBeenCalledTimes(1)
     expect(fetchFn).toHaveBeenCalledWith('https://r2.example.test/signed-put-secret', expect.objectContaining({
       method: 'PUT',
-      headers: expect.objectContaining({
-        'Content-Type': 'text/csv',
-        'Content-Length': String(csvFile().size),
-      }),
+      headers: { 'Content-Type': 'text/csv' },
       body: expect.any(File),
     }))
+    expect(fetchFn.mock.calls[0]?.[1]?.headers).not.toHaveProperty('Content-Length')
     expect(diagnostics).toHaveBeenCalledWith(expect.objectContaining({
       event: 'upload_put_attempt',
       fileId: 'file-1',

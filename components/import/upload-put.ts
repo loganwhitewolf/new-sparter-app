@@ -108,10 +108,7 @@ export async function uploadFileToPresignedUrl({
     try {
       const response = await fetchFn(url, {
         method: 'PUT',
-        headers: {
-          ...headers,
-          'Content-Length': String(file.size),
-        },
+        headers,
         body: file,
       })
 

@@ -251,7 +251,7 @@ describe('file import upload API contracts', () => {
       method: 'PUT',
       url: 'https://r2.example.test/signed-put',
       expiresIn: 600,
-      headers: {},
+      headers: { 'Content-Type': 'text/csv' },
     })
     expect(mocks.verifySession).toHaveBeenCalledTimes(1)
     expect(mocks.loggerInfo).toHaveBeenCalledWith(expect.objectContaining({

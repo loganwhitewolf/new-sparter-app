@@ -129,18 +129,22 @@ test.describe('Import - IMP-01: Upload retry integration', () => {
     await page.route('https://r2-upload.test/imports/statement.csv**', async (route) => {
       const request = route.request()
       if (request.method() === 'OPTIONS') {
+        expect(request.headers()['access-control-request-headers'] ?? '').not.toContain('content-length')
         await route.fulfill({
           status: 204,
           headers: {
             'access-control-allow-origin': '*',
             'access-control-allow-methods': 'PUT, OPTIONS',
-            'access-control-allow-headers': 'content-type, content-length',
+            'access-control-allow-headers': 'content-type',
           },
         })
         return
       }
 
       expect(request.method()).toBe('PUT')
+      const headers = request.headers()
+      expect(headers['content-type']).toBe('text/csv')
+      expect(headers['content-length']).toBeUndefined()
       putRequestOrder.push(putRequestOrder.length + 1)
       await route.fulfill({
         status: putRequestOrder.length < 3 ? 503 : 200,

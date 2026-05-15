@@ -107,6 +107,25 @@ describe('R2 env helpers', () => {
 })
 
 describe('R2 service diagnostics', () => {
+  it('presigns PUT with content type and bounded content length metadata', async () => {
+    await expect(createPresignedPutUrl({
+      objectKey: 'users/user-1/imports/file.csv',
+      contentType: 'text/csv',
+      contentLength: 128,
+    })).resolves.toEqual({ url: 'https://r2.example.test/object.csv?signature=secret', expiresIn: 600 })
+
+    expect(mocks.getSignedUrl).toHaveBeenCalledTimes(1)
+    const command = mocks.getSignedUrl.mock.calls[0]?.[1] as { input?: Record<string, unknown> }
+    expect(command.input).toEqual(expect.objectContaining({
+      Bucket: 'bucket-name',
+      Key: 'users/user-1/imports/file.csv',
+      ContentType: 'text/csv',
+      ContentLength: 128,
+    }))
+    expect(JSON.stringify(mocks.loggerError.mock.calls)).not.toContain('access-key-id')
+    expect(JSON.stringify(mocks.loggerError.mock.calls)).not.toContain('secret-access-key')
+  })
+
   it('logs missing configuration names without secret values before failing presign', async () => {
     vi.stubEnv('R2_ACCESS_KEY_ID', '')
     vi.stubEnv('R2_SECRET_ACCESS_KEY', '')
