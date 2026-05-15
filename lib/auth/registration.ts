@@ -9,7 +9,7 @@ export const REGISTRATION_DISABLED_MESSAGE = 'Le registrazioni sono temporaneame
 const DISABLED_VALUES = new Set(['false', '0', 'no', 'off'])
 const ENABLED_VALUES = new Set(['true', '1', 'yes', 'on'])
 
-export function isRegistrationEnabled(env: RegistrationEnv = process.env): boolean {
+export function isRegistrationEnabled(env: RegistrationEnv = process.env as RegistrationEnv): boolean {
   const rawValue = env.REGISTRATION_ENABLED
 
   if (rawValue == null) {

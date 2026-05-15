@@ -24,9 +24,29 @@ Configure these in Vercel for the production environment. After any change, rede
 | `CATEGORIZATION_REGEX_MIN_PLAN` | No | Optional | Alpha gate override; defaults remain intentionally open during alpha. |
 | `CATEGORIZATION_HISTORY_MIN_PLAN` | No | Optional | Alpha gate override; defaults remain intentionally open during alpha. |
 | `CATEGORIZATION_CUSTOM_PATTERNS_MIN_PLAN` | No | Optional | Alpha gate override; defaults remain intentionally open during alpha. |
-| `REGISTRATION_ENABLED` | No | Planned | Planned guardrail for M007/S04. Documented now for deployment planning; signup blocking is not implemented in this slice. |
+| `REGISTRATION_ENABLED` | No | Optional | Implemented server-side registration toggle. Registration is enabled by default when unset, blank, or malformed. Set to `false`, `0`, `no`, or `off` to block new signup through both server actions and direct `/api/auth/sign-up/email` calls while existing-user login remains delegated to Better Auth. Redeploy after changing this value in Vercel. |
 
 Do not create client-prefixed versions of database, R2, Better Stack, or auth secret variables. Only variables intentionally named with `NEXT_PUBLIC_` are exposed to browser code.
+
+## Registration toggle smoke and recovery
+
+`REGISTRATION_ENABLED` is an implemented server-side production guardrail for controlling public signup without affecting existing users. Leave it unset, blank, or set to a true-like value (`true`, `1`, `yes`, `on`) to keep signup open. Set it to an explicit false-like value (`false`, `0`, `no`, `off`) to disable new registration.
+
+When registration is disabled:
+
+- New signup through the app server action returns the disabled-registration message instead of calling Better Auth signup.
+- Direct `POST /api/auth/sign-up/email` calls are rejected server-side with HTTP `403` and the sanitized error code `registration_disabled`.
+- Existing-user login through `POST /api/auth/sign-in/email` and normal sign-in UI flow remains available and delegated to Better Auth.
+- This is not only a UI hiding mechanism; the server action and direct Better Auth route are both guarded.
+
+After adding or changing `REGISTRATION_ENABLED` in Vercel, redeploy before retesting. If Vercel still appears to use stale registration behavior, trigger a new production deployment first, then rerun the signup and login smoke checks. If signup was disabled accidentally, re-enable or remove the variable, redeploy, and verify signup opens again.
+
+Minimal no-secret smoke checklist after redeploy:
+
+1. With `REGISTRATION_ENABLED=false`, attempt a new signup from the UI and confirm the disabled-registration message appears.
+2. With `REGISTRATION_ENABLED=false`, call `POST /api/auth/sign-up/email` with disposable test credentials and confirm HTTP `403` with error code `registration_disabled`; do not log or paste credentials, request bodies, cookies, or tokens.
+3. With `REGISTRATION_ENABLED=false`, sign in with an existing test user and confirm the login flow still reaches the authenticated app.
+4. Re-enable registration only when intended, redeploy, and verify a new signup can proceed.
 
 ## Cloudflare R2 production setup
 
@@ -153,7 +173,7 @@ Vercel production functions do not automatically pick up edited environment vari
 Use commands and endpoints that report status without printing credential values.
 
 ```bash
-# Verify the deployment document exists and the env example lists planned names.
+# Verify the deployment document exists and the env example lists implemented names.
 test -f docs/deploy/vercel-supabase-r2.md
 grep -q "DATABASE_POOL_MAX" .env.example
 grep -q "REGISTRATION_ENABLED" .env.example
