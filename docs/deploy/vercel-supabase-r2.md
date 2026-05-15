@@ -28,6 +28,64 @@ Configure these in Vercel for the production environment. After any change, rede
 
 Do not create client-prefixed versions of database, R2, Better Stack, or auth secret variables. Only variables intentionally named with `NEXT_PUBLIC_` are exposed to browser code.
 
+## Cloudflare R2 production setup
+
+Use this sequence when preparing the production import upload path for Vercel:
+
+1. In Cloudflare R2, create the production bucket that will store uploaded import files.
+2. Create scoped R2 API token/access keys for that bucket. The keys must allow the app to sign uploads, check uploaded objects, and read objects for import analysis; do not reuse personal or account-wide credentials when a scoped key is available.
+3. Add the server-side R2 variables in the Vercel production environment: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, and optionally `R2_PRESIGNED_UPLOAD_TTL_SECONDS`.
+4. Redeploy the Vercel production app after adding or changing the variables. Existing serverless functions can keep stale environment values until a new deployment is active.
+5. Open `/api/health` on the deployed app and confirm `components.r2.ok` is `true` before running an import smoke.
+6. Run a tiny CSV import smoke through the real browser flow: sign in, upload a small CSV file, wait for the direct R2 `PUT`, confirm the app transitions to `/import/<fileId>/analyze`, then review the analysis page.
+
+R2 credentials and the bucket name remain server-side only in this app. Do not create browser-exposed R2 variables. The browser receives only a short-lived presigned `PUT` URL and the upload headers returned by the server.
+
+## Cloudflare R2 CORS policy
+
+Configure CORS on the R2 bucket before testing browser uploads. The production rule must allow the deployed HTTPS origin, the `PUT` method, and the safe upload header contract used by the code: `Content-Type`.
+
+Minimal production policy shape:
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://your-production-origin.example"],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["Content-Type"],
+    "ExposeHeaders": [],
+    "MaxAgeSeconds": 3000
+  }
+]
+```
+
+Replace the origin with the real production HTTPS origin configured for the app. Keep local development origins in a separate non-production allowance only when needed, for example `http://localhost:3000`; do not broaden the production rule to every origin for convenience.
+
+If the browser upload fails after presign succeeds, first compare the R2 CORS origin, method, and allowed headers against the actual browser request. The app emits browser `upload_put_attempt`, `upload_put_retrying`, and `upload_put_failed` diagnostics with attempt count, max attempts, HTTP status when available, retryable flag, and generic error names/messages. Those diagnostics must not include presigned URLs, object keys, credential values, file contents, raw SDK requests, or stacks.
+
+## R2 health expectations
+
+Use `/api/health` as the first no-secret inspection surface after deployment:
+
+- With all required R2 variables present and valid, `components.r2.ok` should be `true`.
+- With missing R2 configuration, health reports only the missing variable names, not credential values.
+- If Vercel variables were just added or changed and health still reports missing or stale values, trigger a new production deployment before retesting.
+
+Server-side R2 failures are logged with sanitized operation, code, status, and missing environment variable names when relevant. Do not add ad hoc logging of credentials, bucket values, object contents, raw SDK objects, or stack traces while debugging.
+
+## Small-file R2 import smoke
+
+After `/api/health` is healthy, verify the end-to-end path with a deliberately tiny file:
+
+1. Prepare a small CSV fixture with only a few rows and no sensitive real bank data.
+2. Sign in to the production deployment with an account allowed by the current signup guardrail.
+3. Start an import from the UI and choose the small CSV file.
+4. Confirm the upload completes and the route changes to `/import/<fileId>/analyze`.
+5. If the upload fails, inspect the browser upload diagnostic events and the health response before changing secrets or CORS.
+6. Remove failed or obsolete demo imports later if they are no longer useful for verification.
+
+Each smoke creates one small R2 object and one database file row. Keep demo files small, watch Cloudflare R2 Free storage/operation usage and Supabase Free row usage, and rely on the S04 registration guardrail to avoid public signup amplification of quota usage.
+
 ## Local production migration runbook
 
 Production migrations are an explicit local operator action. Vercel runtime environment variables do not run migrations automatically, and editing Vercel env values only affects deployed functions after a redeploy.
@@ -83,7 +141,7 @@ A failed run prints `migration_failed` with a stable `error.code`, optional safe
 - Production migrations use their own low pool max. Keep `PRODUCTION_DATABASE_POOL_MAX` at `1` for Supabase Free, do not run parallel production migrations, and wait for one migration command to finish before starting another.
 - Do not use `drizzle-kit push` for production; use `yarn db:migrate:production` with reviewed migration files.
 - Never paste secrets into docs, committed files, screenshots, tickets, chat, or logs.
-- Cloudflare R2 is used through server-side signing and browser direct upload. R2 CORS/dashboard validation belongs to later deployment slices, not this baseline contract.
+- Cloudflare R2 is used through server-side signing and browser direct upload. Keep the CORS policy aligned with the documented `Content-Type` upload header contract.
 - Production secrets should be runtime-only whenever possible. The Vercel build should not need database, R2, Better Auth secret, or Better Stack token values.
 
 ## Redeploy after environment changes

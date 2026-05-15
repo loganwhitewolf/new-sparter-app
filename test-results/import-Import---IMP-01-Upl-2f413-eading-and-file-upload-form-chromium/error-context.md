@@ -12,99 +12,14 @@
 # Error details
 
 ```
-Error: expect(locator).toBeVisible() failed
-
-Locator: getByRole('heading', { name: /importa file bancario/i })
-Expected: visible
-Timeout: 5000ms
-Error: element(s) not found
-
-Call log:
-  - Expect "toBeVisible" with timeout 5000ms
-  - waiting for getByRole('heading', { name: /importa file bancario/i })
-
+Test timeout of 30000ms exceeded.
 ```
 
-# Page snapshot
+```
+Error: page.goto: net::ERR_ABORTED; maybe frame was detached?
+Call log:
+  - navigating to "http://127.0.0.1:3000/import", waiting until "load"
 
-```yaml
-- generic [active] [ref=e1]:
-  - generic [ref=e2]:
-    - complementary [ref=e3]:
-      - navigation [ref=e4]:
-        - list [ref=e5]:
-          - listitem [ref=e6]:
-            - link "Dashboard" [ref=e7] [cursor=pointer]:
-              - /url: /dashboard
-              - img [ref=e8]
-              - generic [ref=e13]: Dashboard
-          - listitem [ref=e14]:
-            - link "Transazioni" [ref=e15] [cursor=pointer]:
-              - /url: /transactions
-              - img [ref=e16]
-              - generic [ref=e17]: Transazioni
-          - listitem [ref=e18]:
-            - link "Spese" [ref=e19] [cursor=pointer]:
-              - /url: /expenses
-              - img [ref=e20]
-              - generic [ref=e23]: Spese
-          - listitem [ref=e24]:
-            - link "Importazioni" [ref=e25] [cursor=pointer]:
-              - /url: /import
-              - img [ref=e26]
-              - generic [ref=e29]: Importazioni
-        - list [ref=e31]:
-          - listitem [ref=e32]:
-            - link "Impostazioni" [ref=e33] [cursor=pointer]:
-              - /url: /settings
-              - img [ref=e34]
-              - generic [ref=e37]: Impostazioni
-    - generic [ref=e38]:
-      - banner [ref=e39]:
-        - generic [ref=e41]: Sparter
-        - generic [ref=e42]:
-          - button "Passa al tema scuro" [ref=e43]:
-            - img
-          - button "Menu utente" [ref=e44]:
-            - generic [ref=e46]: U
-      - main [ref=e47]:
-        - generic [ref=e48]:
-          - generic [ref=e49]:
-            - generic [ref=e50]:
-              - heading "Importazioni" [level=1] [ref=e51]
-              - paragraph [ref=e52]: Storico dei file bancari caricati
-            - button "Importa file" [ref=e53]:
-              - img
-              - text: Importa file
-          - generic [ref=e54]:
-            - generic [ref=e56]:
-              - generic [ref=e57]:
-                - generic [ref=e58]: Cerca importazione
-                - generic [ref=e59]:
-                  - img
-                  - searchbox "Cerca importazione" [ref=e60]
-              - generic [ref=e61]:
-                - generic [ref=e62]: Importato da
-                - textbox "Importato da" [ref=e63]
-              - generic [ref=e64]:
-                - generic [ref=e65]: Importato a
-                - textbox "Importato a" [ref=e66]
-              - generic [ref=e67]:
-                - generic [ref=e68]: Riferimento da
-                - textbox "Riferimento da" [ref=e69]
-              - generic [ref=e70]:
-                - generic [ref=e71]: Riferimento a
-                - textbox "Riferimento a" [ref=e72]
-              - button "Reset filtri" [disabled]:
-                - img
-                - generic: Reset filtri
-            - generic [ref=e74]:
-              - paragraph [ref=e75]: Nessuna importazione trovata
-              - paragraph [ref=e76]: Carica un estratto conto per vedere qui stato, statistiche e intervallo di riferimento delle prossime importazioni.
-  - region "Notifications alt+T"
-  - button "Open Next.js Dev Tools" [ref=e82] [cursor=pointer]:
-    - img [ref=e83]
-  - alert [ref=e86]
 ```
 
 # Test source
@@ -121,15 +36,15 @@ Call log:
   9   |   await page.setExtraHTTPHeaders({
   10  |     'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
   11  |   })
-  12  |   await page.goto('/import')
+> 12  |   await page.goto('/import')
+      |              ^ Error: page.goto: net::ERR_ABORTED; maybe frame was detached?
   13  | }
   14  | 
   15  | test.describe('Import - IMP-01: Upload page structure', () => {
   16  |   test('IMP-01 /import renders page heading and file upload form', async ({ page }) => {
   17  |     await openImportPage(page)
   18  | 
-> 19  |     await expect(page.getByRole('heading', { name: /importa file bancario/i })).toBeVisible()
-      |                                                                                 ^ Error: expect(locator).toBeVisible() failed
+  19  |     await expect(page.getByRole('heading', { name: /importa file bancario/i })).toBeVisible()
   20  |     await expect(page.getByLabel(/file bancario/i)).toBeVisible()
   21  |     await expect(page.getByRole('button', { name: /carica file/i })).toBeVisible()
   22  |     await expect(page.getByRole('heading', { name: /storico importazioni/i })).toBeVisible()
@@ -223,11 +138,4 @@ Call log:
   110 |         contentType: 'application/json',
   111 |         body: JSON.stringify({
   112 |           file: {
-  113 |             id: fileId,
-  114 |             originalName: body.name,
-  115 |             status: 'pending',
-  116 |             sizeBytes: body.size,
-  117 |             mimeType: body.type,
-  118 |           },
-  119 |           upload: {
 ```
