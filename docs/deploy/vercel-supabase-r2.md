@@ -20,7 +20,34 @@ Use this ordered smoke when preparing the first production deploy or when revali
 12. **Run a small R2 import smoke.** Sign in, upload a deliberately tiny CSV with fake rows, wait for the browser direct `PUT` to finish, and confirm navigation to `/import/<fileId>/analyze` or the expected analysis checkpoint. Record route checkpoint and safe upload diagnostic event names/statuses only; never record presigned URLs, object keys, file contents, or row data.
 13. **Clean up smoke artifacts.** Delete disposable smoke users/imports/objects when they are no longer useful, and keep demo files small to stay within Vercel Hobby, Supabase Free, and Cloudflare R2 Free limits.
 
-Optional executable checks are expected to live in the smoke harness/spec files planned for the next tasks in this slice (T03/T04). Those checks should consume secrets only from the local or CI secret store and should emit the same safe evidence fields documented here.
+Optional executable checks live in `scripts/production-smoke.mjs` and `tests/production-smoke.spec.ts`. They consume secrets only from the local or CI secret store and emit or assert the same safe evidence fields documented here. Live browser evidence is optional for routine automation because it requires disposable production credentials, but it is required for final production acceptance before declaring the deploy ready.
+
+### Optional browser production smoke
+
+The Playwright browser smoke is safe by default. This command skips all live phases unless the explicit production smoke flag, deployed base URL, and disposable account inputs are present:
+
+```bash
+PLAYWRIGHT_PRODUCTION_SMOKE=0 yarn playwright test tests/production-smoke.spec.ts
+```
+
+Use the following variable names from a secure local or CI secret store when intentionally running against the deployed app. Record only phase/checkpoint names, HTTP status, sanitized error codes, and artifact paths; never record the variable values.
+
+| Variable | Required for | Secret? | Notes |
+|---|---|---:|---|
+| `PLAYWRIGHT_PRODUCTION_SMOKE` | All live browser phases | No | Set to `1` to opt in. Any other value skips safely. |
+| `PLAYWRIGHT_BASE_URL` | All live browser phases | No | Deployed production HTTPS origin. Do not include path, query, credentials, or fragment. |
+| `PLAYWRIGHT_SMOKE_EMAIL` | Signup/login/import phases | Yes | Disposable smoke account email. Use an account created only for smoke verification. |
+| `PLAYWRIGHT_SMOKE_PASSWORD` | Signup/login/import phases | Yes | Disposable smoke account password. Never print or paste it into evidence. |
+| `PLAYWRIGHT_SMOKE_EXPECT_REGISTRATION_DISABLED` | Disabled-registration phase | No | Set to `1` only after redeploying with `REGISTRATION_ENABLED=false`; verifies direct signup `403`/`registration_disabled` and existing-user login. |
+| `PLAYWRIGHT_SMOKE_RUN_IMPORT` | R2 browser import phase | No | Set to `1` to upload a generated tiny fake CSV through the browser and require the `/import/<fileId>/analyze` checkpoint. |
+
+Recommended phase sequence:
+
+1. With registration enabled, set `PLAYWRIGHT_PRODUCTION_SMOKE=1`, `PLAYWRIGHT_BASE_URL`, `PLAYWRIGHT_SMOKE_EMAIL`, and `PLAYWRIGHT_SMOKE_PASSWORD`, then run `yarn playwright test tests/production-smoke.spec.ts --grep "enabled registration"`.
+2. After redeploying with `REGISTRATION_ENABLED=false`, add `PLAYWRIGHT_SMOKE_EXPECT_REGISTRATION_DISABLED=1` and run `yarn playwright test tests/production-smoke.spec.ts --grep "disabled registration"`.
+3. When R2 health is good and the smoke account can log in, add `PLAYWRIGHT_SMOKE_RUN_IMPORT=1` and run `yarn playwright test tests/production-smoke.spec.ts --grep "R2 browser import"`.
+
+Each browser smoke run uses one disposable user and, when import is enabled, one tiny generated CSV upload. Clean up obsolete smoke users/import rows/R2 objects to avoid free-tier quota clutter. The spec fails if collected browser upload diagnostics include presigned URLs, object key fields, cookies, credentials, file contents, or stack-like diagnostics.
 
 ### Safe evidence template
 
