@@ -28,23 +28,61 @@ Configure these in Vercel for the production environment. After any change, rede
 
 Do not create client-prefixed versions of database, R2, Better Stack, or auth secret variables. Only variables intentionally named with `NEXT_PUBLIC_` are exposed to browser code.
 
-## Local production migration variables reserved for S02
+## Local production migration runbook
 
-Production migrations are intentionally deferred to S02. Until that slice implements the migration command, do not run production migrations through the local development `DATABASE_URL` by accident.
+Production migrations are an explicit local operator action. Vercel runtime environment variables do not run migrations automatically, and editing Vercel env values only affects deployed functions after a redeploy.
 
-The intended S02 contract is:
+### Prerequisites
 
-- use a dedicated production migration target variable such as `PRODUCTION_DATABASE_URL` instead of reusing the local development `DATABASE_URL`;
-- pair it with an explicit SSL setting such as `PRODUCTION_DATABASE_SSL=true` when Supabase requires SSL;
-- make the production migration command refuse to run unless the production target and an explicit confirmation flag are present;
-- keep migration variables local to the operator shell or secure CI environment, not in committed files.
+- Generate and review migration files before touching production with `yarn db:generate`.
+- Confirm the target database is the intended Supabase production project.
+- Use a dedicated migration connection in `PRODUCTION_DATABASE_URL`; do not reuse the development `DATABASE_URL` by accident.
+- Keep `/api/health` as the no-secret readiness surface after deploy. It reports app/runtime health; it is not a migration executor.
 
-Runtime env configuration and production migration configuration are deliberately separate because the deployed app may use a Supabase pooler URL while migrations may require a direct or session-capable database connection.
+### Local-only migration environment
+
+Set these names in the operator shell or another secure local secret store before running the command. The repository must list names only, never real values.
+
+| Variable | Required? | Notes |
+|---|---:|---|
+| `PRODUCTION_DATABASE_URL` | Yes | Production migration database URL. This may differ from runtime `DATABASE_URL`, especially when the deployed app uses a Supabase pooler URL but migrations require a direct or session-capable connection. |
+| `PRODUCTION_DATABASE_SSL` | Yes for Supabase | Set to `true` when Supabase requires SSL. |
+| `PRODUCTION_DATABASE_POOL_MAX` | Optional | Defaults to `1` and is capped low for Supabase Free. Keep it at `1` unless there is a documented reason to change it. |
+| `PRODUCTION_MIGRATION_CONFIRM` | Yes | Must be exactly `apply-to-production`; otherwise the command refuses to open a database connection. |
+
+### Command
+
+```bash
+yarn db:migrate:production
+```
+
+Do not use `drizzle-kit push` for production. Production changes must go through reviewed migration files and the guarded migration command above.
+
+### Expected safe output
+
+The CLI emits JSON status lines with sanitized fields only. A successful run prints events similar to:
+
+```json
+{"event":"migration_started","targetClass":"production","migrationsFolder":"./drizzle/migrations","sslEnabled":true,"poolMax":1}
+{"event":"migration_succeeded","targetClass":"production","migrationsFolder":"./drizzle/migrations","sslEnabled":true,"poolMax":1}
+```
+
+A failed run prints `migration_failed` with a stable `error.code`, optional safe `className`, and a generic message. It must not print connection strings, passwords, usernames, URL hostnames, raw stacks, or raw driver/Drizzle error dumps.
+
+### Failure cases and diagnosis
+
+- Missing `PRODUCTION_DATABASE_URL`, missing `PRODUCTION_MIGRATION_CONFIRM`, or an incorrect confirmation value fails validation before opening a database connection.
+- Live database errors fail through sanitized migration status. Use the safe `error.code` plus Supabase logs/dashboard context to investigate without pasting secrets into docs, issues, chats, or logs.
+- Stale Vercel environment variables require a redeploy for runtime behavior, but they do not affect this local migration command.
+- After deployment, verify runtime readiness with `/api/health`; do not create an API route or Vercel function to run migrations.
 
 ## Free-tier constraints and assumptions
 
 - Vercel serverless functions may create multiple warm instances. Keep `DATABASE_POOL_MAX` low; the app default is `2` and the parser caps configured values at `5`.
 - Supabase Free has limited connection capacity and can pause or throttle under free-tier limits. Prefer the Supabase pooler for runtime traffic when compatible.
+- Production migrations use their own low pool max. Keep `PRODUCTION_DATABASE_POOL_MAX` at `1` for Supabase Free, do not run parallel production migrations, and wait for one migration command to finish before starting another.
+- Do not use `drizzle-kit push` for production; use `yarn db:migrate:production` with reviewed migration files.
+- Never paste secrets into docs, committed files, screenshots, tickets, chat, or logs.
 - Cloudflare R2 is used through server-side signing and browser direct upload. R2 CORS/dashboard validation belongs to later deployment slices, not this baseline contract.
 - Production secrets should be runtime-only whenever possible. The Vercel build should not need database, R2, Better Auth secret, or Better Stack token values.
 
