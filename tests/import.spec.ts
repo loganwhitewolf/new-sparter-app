@@ -12,14 +12,20 @@ async function openImportPage(page: Page) {
   await page.goto('/import')
 }
 
+async function openUploadDialog(page: Page) {
+  await page.getByRole('button', { name: /^importa file$/i }).click()
+  await expect(page.getByRole('dialog', { name: /importa file bancario/i })).toBeVisible()
+}
+
 test.describe('Import - IMP-01: Upload page structure', () => {
   test('IMP-01 /import renders page heading and file upload form', async ({ page }) => {
     await openImportPage(page)
 
-    await expect(page.getByRole('heading', { name: /importa file bancario/i })).toBeVisible()
-    await expect(page.getByLabel(/file bancario/i)).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^importazioni$/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^importa file$/i })).toBeVisible()
+    await openUploadDialog(page)
+    await expect(page.locator('#import-file-input')).toBeVisible()
     await expect(page.getByRole('button', { name: /carica file/i })).toBeVisible()
-    await expect(page.getByRole('heading', { name: /storico importazioni/i })).toBeVisible()
 
     const historyTable = page.getByRole('table', { name: /storico importazioni/i })
     const emptyState = page.getByText(/nessuna importazione trovata/i)
@@ -37,6 +43,7 @@ test.describe('Import - IMP-01: Upload page structure', () => {
 
   test('IMP-01 upload button is disabled when no file is selected', async ({ page }) => {
     await openImportPage(page)
+    await openUploadDialog(page)
 
     const uploadBtn = page.getByRole('button', { name: /carica file/i })
     await expect(uploadBtn).toBeDisabled()
@@ -44,8 +51,9 @@ test.describe('Import - IMP-01: Upload page structure', () => {
 
   test('IMP-01 unsupported file type shows inline validation error', async ({ page }) => {
     await openImportPage(page)
+    await openUploadDialog(page)
 
-    const fileInput = page.getByLabel(/file bancario/i)
+    const fileInput = page.locator('#import-file-input')
     await fileInput.setInputFiles({
       name: 'statement.pdf',
       mimeType: 'application/pdf',
@@ -58,6 +66,7 @@ test.describe('Import - IMP-01: Upload page structure', () => {
 
   test('IMP-01 upload form is keyboard-accessible: file input + button are reachable via Tab', async ({ page }) => {
     await openImportPage(page)
+    await openUploadDialog(page)
 
     // Click the file input label to focus the region, then verify the input is focusable
     const fileInput = page.locator('#import-file-input')
@@ -70,8 +79,9 @@ test.describe('Import - IMP-01: Upload page structure', () => {
 test.describe('Import - IMP-01: Accepted file validation', () => {
   test('IMP-01 valid CSV file clears error and enables upload button', async ({ page }) => {
     await openImportPage(page)
+    await openUploadDialog(page)
 
-    const fileInput = page.getByLabel(/file bancario/i)
+    const fileInput = page.locator('#import-file-input')
     await fileInput.setInputFiles({
       name: 'statement.csv',
       mimeType: 'text/csv',
@@ -164,8 +174,9 @@ test.describe('Import - IMP-01: Upload retry integration', () => {
     })
 
     await openImportPage(page)
+    await openUploadDialog(page)
 
-    await page.getByLabel(/file bancario/i).setInputFiles({
+    await page.locator('#import-file-input').setInputFiles({
       name: 'statement.csv',
       mimeType: 'text/csv',
       buffer: Buffer.from('date,description,amount\n2024-01-01,Test,100.00'),
@@ -329,7 +340,7 @@ test.describe('Import - IMP-05: Configure page error state', () => {
     await expect(errorAlert).toBeVisible()
 
     // Back link must point to /import
-    const backLink = page.getByRole('link', { name: /torna agli import/i })
+    const backLink = page.getByRole('link', { name: /torna alle importazioni/i })
     await expect(backLink).toBeVisible()
     await expect(backLink).toHaveAttribute('href', '/import')
 
