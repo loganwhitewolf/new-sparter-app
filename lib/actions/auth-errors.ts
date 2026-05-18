@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger'
+
 const GENERIC_SIGN_UP_ERROR = 'Si è verificato un errore. Riprova.'
 
 const DB_UNAVAILABLE_PATTERNS = [
@@ -45,6 +47,40 @@ function collectErrorText(error: unknown): string {
 function matchesAny(text: string, patterns: string[]): boolean {
   const normalized = text.toLowerCase()
   return patterns.some((pattern) => normalized.includes(pattern.toLowerCase()))
+}
+
+function readAuthApiFields(error: unknown) {
+  if (typeof error !== 'object' || error === null) {
+    return {}
+  }
+
+  const record = error as Record<string, unknown>
+  const body = typeof record.body === 'object' && record.body !== null ? (record.body as Record<string, unknown>) : null
+
+  return {
+    status: typeof record.status === 'string' || typeof record.status === 'number' ? record.status : undefined,
+    statusCode: typeof record.statusCode === 'number' ? record.statusCode : undefined,
+    apiCode: typeof body?.code === 'string' ? body.code : undefined,
+    apiMessage: typeof body?.message === 'string' ? body.message : undefined,
+  }
+}
+
+/** Dev-only sanitized auth diagnostics (terminal / pino-pretty). Set AUTH_DEBUG=1 to enable elsewhere. */
+export function logSanitizedAuthError(operation: string, error: unknown): void {
+  if (process.env.NODE_ENV !== 'development' && process.env.AUTH_DEBUG !== '1') {
+    return
+  }
+
+  const text = collectErrorText(error)
+  const apiFields = readAuthApiFields(error)
+
+  logger.warn({
+    event: 'auth_debug_error',
+    operation,
+    errorName: error instanceof Error ? error.name : undefined,
+    errorMessage: text.slice(0, 500),
+    ...apiFields,
+  })
 }
 
 export function getSafeSignUpErrorMessage(error: unknown): string {

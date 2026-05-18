@@ -1,5 +1,43 @@
-import { describe, expect, it } from 'vitest'
-import { getSafeSignUpErrorMessage } from '../lib/actions/auth-errors'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { getSafeSignUpErrorMessage, logSanitizedAuthError } from '../lib/actions/auth-errors'
+import { logger } from '../lib/logger'
+
+vi.mock('../lib/logger', () => ({
+  logger: {
+    warn: vi.fn(),
+  },
+}))
+
+describe('logSanitizedAuthError', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.mocked(logger.warn).mockClear()
+  })
+
+  it('logs sanitized fields in development', () => {
+    vi.stubEnv('NODE_ENV', 'development')
+
+    logSanitizedAuthError('sign_up', Object.assign(new Error('self-signed certificate in certificate chain'), { code: 'SELF_SIGNED_CERT_IN_CHAIN' }))
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'auth_debug_error',
+        operation: 'sign_up',
+        errorName: 'Error',
+        errorMessage: expect.stringContaining('self-signed certificate'),
+      }),
+    )
+  })
+
+  it('does not log outside development unless AUTH_DEBUG is enabled', () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('AUTH_DEBUG', undefined)
+
+    logSanitizedAuthError('sign_up', new Error('hidden'))
+
+    expect(logger.warn).not.toHaveBeenCalled()
+  })
+})
 
 describe('getSafeSignUpErrorMessage', () => {
   it('keeps unknown registration errors generic to avoid account enumeration', () => {

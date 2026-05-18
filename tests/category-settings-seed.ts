@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { and, eq, isNull, like, or, sql } from 'drizzle-orm'
+import { getDatabasePoolConfig } from '@/lib/db/config'
 import {
   categorizationPattern,
   category,
@@ -32,11 +33,7 @@ export type CategorySettingsSeed = {
 type SeedDatabase = ReturnType<typeof makeDatabase>
 
 function makeDatabase() {
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    max: 1,
-    ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: true } : undefined,
-  })
+  const pool = new Pool({ ...getDatabasePoolConfig(), max: 1 })
 
   return {
     pool,

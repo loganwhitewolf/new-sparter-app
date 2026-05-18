@@ -37,11 +37,24 @@ describe('getDatabasePoolConfig', () => {
     expect(configFor({ DATABASE_POOL_MAX: '999' }).max).toBe(MAX_DATABASE_POOL_MAX)
   })
 
-  it('preserves DATABASE_SSL=true strict TLS semantics and disables SSL otherwise', () => {
-    expect(configFor({ DATABASE_SSL: 'true' }).ssl).toEqual({ rejectUnauthorized: true })
-    expect(configFor({ DATABASE_SSL: 'false' }).ssl).toBeUndefined()
-    expect(configFor({ DATABASE_SSL: 'TRUE' }).ssl).toBeUndefined()
-    expect(configFor().ssl).toBeUndefined()
+  it('enables Supabase-compatible TLS via connection-string params when DATABASE_SSL=true', () => {
+    const config = configFor({
+      DATABASE_URL: 'postgresql://user:pass@pooler.example.com:6543/postgres',
+      DATABASE_SSL: 'true',
+    })
+
+    expect(config.ssl).toBeUndefined()
+    expect(config.connectionString).toBe(
+      'postgresql://user:pass@pooler.example.com:6543/postgres?uselibpqcompat=true&sslmode=require',
+    )
+    expect(configFor({ DATABASE_SSL: 'false' }).connectionString).toBeUndefined()
+    expect(configFor({ DATABASE_SSL: 'TRUE' }).connectionString).toBeUndefined()
+    expect(
+      configFor({
+        DATABASE_URL: 'postgresql://user:pass@pooler.example.com:6543/postgres?sslmode=require',
+        DATABASE_SSL: 'true',
+      }).connectionString,
+    ).toBe('postgresql://user:pass@pooler.example.com:6543/postgres?sslmode=require')
   })
 
   it('passes DATABASE_URL through only to the Pool config without deriving secret-bearing fields', () => {
