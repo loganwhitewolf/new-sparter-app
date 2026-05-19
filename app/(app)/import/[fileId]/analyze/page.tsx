@@ -70,12 +70,6 @@ export default async function AnalyzePage({
   }
 
   const isUnknownFormat = Boolean(result.data && isUnknownFormatAnalysis(result.data))
-  const previewResult = isUnknownFormat
-    ? {
-        ...result.data,
-        errors: [],
-      }
-    : result.data
 
   return (
     <div className="flex flex-col gap-6">
@@ -123,12 +117,7 @@ export default async function AnalyzePage({
         </Card>
       )}
 
-      <ImportPreview
-        result={previewResult}
-        confirmDisabledReason={
-          isUnknownFormat ? 'Configura un formato privato prima di confermare l’importazione.' : undefined
-        }
-      />
+      {!isUnknownFormat && <ImportPreview result={result.data} />}
     </div>
   )
 }
