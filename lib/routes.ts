@@ -1,4 +1,4 @@
-import type { DashboardPreset } from '@/lib/validations/dashboard'
+import type { DashboardPreset, DashboardSort } from '@/lib/validations/dashboard'
 
 export const APP_ROUTES = {
   dashboard: '/dashboard',
@@ -14,12 +14,15 @@ export const APP_ROUTES = {
 type DashboardCategoryFilters = {
   preset?: DashboardPreset
   type?: 'in' | 'out'
+  sort?: DashboardSort
   defaultPreset?: DashboardPreset
+  defaultSort?: DashboardSort
 }
 
 export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters = {}) {
   const params = new URLSearchParams()
   const defaultPreset = filters.defaultPreset ?? 'this-year'
+  const defaultSort: DashboardSort = filters.defaultSort ?? 'amount'
 
   if (filters.preset && filters.preset !== defaultPreset) {
     params.set('preset', filters.preset)
@@ -27,6 +30,10 @@ export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters =
 
   if (filters.type === 'in') {
     params.set('type', filters.type)
+  }
+
+  if (filters.sort && filters.sort !== defaultSort) {
+    params.set('sort', filters.sort)
   }
 
   const search = params.toString()
@@ -43,6 +50,7 @@ export function buildDashboardCategoryDetailHref(
 ) {
   const params = new URLSearchParams()
   const defaultPreset = filters.defaultPreset ?? 'this-year'
+  const defaultSort: DashboardSort = filters.defaultSort ?? 'amount'
 
   if (filters.preset && filters.preset !== defaultPreset) {
     params.set('preset', filters.preset)
@@ -50,6 +58,10 @@ export function buildDashboardCategoryDetailHref(
 
   if (filters.type === 'in') {
     params.set('type', filters.type)
+  }
+
+  if (filters.sort && filters.sort !== defaultSort) {
+    params.set('sort', filters.sort)
   }
 
   const search = params.toString()
