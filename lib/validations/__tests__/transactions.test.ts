@@ -19,6 +19,8 @@ describe("parseTransactionFilters", () => {
       from: " 2025-01-02 ",
       to: "2025-01-31",
       platform: " revolut-bank ",
+      category: " food-and-drinks ",
+      subCategory: "42",
       sort: "amount",
       dir: "asc",
     })
@@ -27,6 +29,8 @@ describe("parseTransactionFilters", () => {
       from: "2025-01-02",
       to: "2025-01-31",
       platform: "revolut-bank",
+      categorySlug: "food-and-drinks",
+      subCategoryId: 42,
       sort: "amount",
       dir: "asc",
       fromDate: new Date("2025-01-02T00:00:00.000Z"),
@@ -39,6 +43,8 @@ describe("parseTransactionFilters", () => {
       from: ["not-a-date", "2025-01-02"],
       to: ["2025-02-03", "not-a-date"],
       platform: [" bad slug ", "valid-slug"],
+      category: [" bad slug ", "valid-slug"],
+      subCategory: ["0", "42"],
       sort: ["unknown", "amount"],
       dir: ["sideways", "asc"],
     })
@@ -49,6 +55,22 @@ describe("parseTransactionFilters", () => {
       dir: "desc",
       toDate: new Date("2025-02-03T23:59:59.999Z"),
     })
+  })
+
+
+  it("ignores invalid category and subcategory filters", () => {
+    expect(
+      parseTransactionFilters({
+        category: "Bad Slug!",
+        subCategory: "not-a-number",
+      }),
+    ).toEqual({
+      sort: "occurredAt",
+      dir: "desc",
+    })
+
+    expect(parseTransactionFilters({ subCategory: "-1" }).subCategoryId).toBeUndefined()
+    expect(parseTransactionFilters({ subCategory: "1.5" }).subCategoryId).toBeUndefined()
   })
 
   it("falls back safely for unknown sort and direction values", () => {

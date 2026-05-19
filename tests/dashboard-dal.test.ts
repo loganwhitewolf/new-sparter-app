@@ -28,6 +28,11 @@ vi.mock('@/lib/db/schema', () => ({
     isActive: 'subCategory.isActive',
     excludeFromTotals: 'subCategory.excludeFromTotals',
   },
+  userSubcategoryOverride: {
+    customName: 'userSubcategoryOverride.customName',
+    subCategoryId: 'userSubcategoryOverride.subCategoryId',
+    userId: 'userSubcategoryOverride.userId',
+  },
   transaction: {
     id: 'transaction.id',
     userId: 'transaction.userId',

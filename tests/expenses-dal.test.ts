@@ -51,6 +51,10 @@ vi.mock('@/lib/db', () => ({
     },
   },
 }))
+function mockSql(strings: TemplateStringsArray, ...values: unknown[]) {
+  return { op: 'sql', strings, values }
+}
+
 vi.mock('drizzle-orm', () => ({
   and: (...args: unknown[]) => ({ op: 'and', args }),
   asc: (column: unknown) => ({ op: 'asc', column }),
@@ -59,6 +63,7 @@ vi.mock('drizzle-orm', () => ({
   gte: (left: unknown, right: unknown) => ({ op: 'gte', left, right }),
   lte: (left: unknown, right: unknown) => ({ op: 'lte', left, right }),
   or: (...args: unknown[]) => ({ op: 'or', args }),
+  sql: Object.assign(mockSql, {}),
 }))
 vi.mock('@/lib/db/schema', () => ({
   category: {
@@ -81,6 +86,11 @@ vi.mock('@/lib/db/schema', () => ({
     id: 'subCategory.id',
     name: 'subCategory.name',
     categoryId: 'subCategory.categoryId',
+  },
+  userSubcategoryOverride: {
+    customName: 'userSubcategoryOverride.customName',
+    subCategoryId: 'userSubcategoryOverride.subCategoryId',
+    userId: 'userSubcategoryOverride.userId',
   },
 }))
 
@@ -105,6 +115,7 @@ describe('expense DAL list pagination', () => {
     expect(mocks.limitArgs).toEqual([EXPENSE_LIST_LIMIT])
     expect(mocks.offsetArgs).toEqual([0])
     expect(mocks.orderByArgs[0]).toEqual({ op: 'desc', column: 'expense.createdAt' })
+    expect((mocks.selectedShapes[0] as { subCategoryName: unknown }).subCategoryName).toMatchObject({ op: 'sql' })
   })
 
   it('applies explicit pagination offsets without changing user scoping', async () => {

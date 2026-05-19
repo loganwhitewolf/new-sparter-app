@@ -67,6 +67,8 @@ export type ParsedTransactionFilters = {
   platform?: string
   importId?: string
   name?: string
+  categorySlug?: string
+  subCategoryId?: number
   sort: TransactionSort
   dir: TransactionSortDirection
 }
@@ -75,6 +77,7 @@ const DEFAULT_SORT: TransactionSort = "occurredAt"
 const DEFAULT_DIR: TransactionSortDirection = "desc"
 const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/
 const PLATFORM_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const CATEGORY_SLUG_RE = PLATFORM_SLUG_RE
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -143,6 +146,8 @@ export function parseTransactionFilters(
   const platform = firstTrimmed(input.platform)
   const rawImportId = firstTrimmed(input.importId)
   const rawName = firstTrimmed(input.name)
+  const rawCategory = firstTrimmed(input.category)
+  const rawSubCategory = firstTrimmed(input.subCategory)
   const sort = transactionSortSchema.safeParse(firstTrimmed(input.sort))
   const dir = transactionSortDirectionSchema.safeParse(firstTrimmed(input.dir))
   const fromDate = parseDateOnly(from)
@@ -150,6 +155,11 @@ export function parseTransactionFilters(
   const importId =
     rawImportId && UUID_RE.test(rawImportId) ? rawImportId : undefined
   const name = rawName && rawName.length <= 200 ? rawName : undefined
+  const categorySlug = rawCategory && CATEGORY_SLUG_RE.test(rawCategory) ? rawCategory : undefined
+  const parsedSubCategoryId = rawSubCategory ? Number(rawSubCategory) : NaN
+  const subCategoryId = Number.isInteger(parsedSubCategoryId) && parsedSubCategoryId > 0
+    ? parsedSubCategoryId
+    : undefined
 
   return {
     ...(fromDate ? { from, fromDate } : {}),
@@ -157,6 +167,8 @@ export function parseTransactionFilters(
     ...(platform && PLATFORM_SLUG_RE.test(platform) ? { platform } : {}),
     ...(importId ? { importId } : {}),
     ...(name ? { name } : {}),
+    ...(categorySlug ? { categorySlug } : {}),
+    ...(subCategoryId ? { subCategoryId } : {}),
     sort: sort.success ? sort.data : DEFAULT_SORT,
     dir: dir.success ? dir.data : DEFAULT_DIR,
   }
