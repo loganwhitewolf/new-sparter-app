@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { dashboardPresetToDateRange } from '@/lib/utils/date'
 
 vi.mock('server-only', () => ({}))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
@@ -73,12 +74,12 @@ describe('dashboard DAL amount mapping', () => {
 
     expect(getOverviewComparisonRanges('last-month', now)).toEqual({
       current: {
-        from: new Date(2026, 4, 1),
-        to: new Date(2026, 4, 31, 23, 59, 59, 999),
-      },
-      previous: {
         from: new Date(2026, 3, 1),
         to: new Date(2026, 3, 30, 23, 59, 59, 999),
+      },
+      previous: {
+        from: new Date(2026, 2, 1),
+        to: new Date(2026, 2, 31, 23, 59, 59, 999),
       },
     })
     expect(getOverviewComparisonRanges('last-3-months', now)).toEqual({
@@ -90,6 +91,13 @@ describe('dashboard DAL amount mapping', () => {
         from: new Date(2025, 11, 1),
         to: new Date(2026, 1, 28, 23, 59, 59, 999),
       },
+    })
+  })
+
+  it('returns previous December when last-month is queried in January', () => {
+    expect(dashboardPresetToDateRange('last-month', new Date(2026, 0, 15))).toEqual({
+      from: new Date(2025, 11, 1),
+      to: new Date(2025, 11, 31, 23, 59, 59, 999),
     })
   })
 

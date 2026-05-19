@@ -60,8 +60,8 @@ export function dashboardPresetToDateRange(
     case 'last-month':
     default:
       return {
-        from: new Date(now.getFullYear(), now.getMonth(), 1),
-        to,
+        from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+        to: endOfMonth(now.getFullYear(), now.getMonth() - 1),
       }
   }
 }

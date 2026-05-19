@@ -227,7 +227,7 @@ function previousDashboardPresetDateRange(preset: DashboardPreset, now = new Dat
       }
     case 'last-month':
     default: {
-      const comparisonMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const comparisonMonth = new Date(now.getFullYear(), now.getMonth() - 2, 1)
       return {
         from: comparisonMonth,
         to: new Date(comparisonMonth.getFullYear(), comparisonMonth.getMonth() + 1, 0, 23, 59, 59, 999),
