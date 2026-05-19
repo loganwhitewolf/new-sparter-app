@@ -542,17 +542,17 @@ export function DeviationBadge({ deviation, type }: Props) {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `getCategoryDeviation` be always called with the fixed `last-month` preset, or accept a preset param?**
    - What we know: D-02 says Reference Period = last completed calendar month, always. It is not the user-selected `preset`.
    - What's unclear: Should the deviation view be visible when the user selects a different preset (e.g. `this-year`)?
-   - Recommendation: Always use the fixed `last-month` reference for deviation, regardless of the preset filter. Show deviation column in all views. The preset filter controls which period the main ranking amounts show, but deviation is always vs. the fixed reference.
+   - RESOLVED: Always use the fixed `last-month` reference for deviation, regardless of the preset filter. Show deviation column in all views. The preset filter controls which period the main ranking amounts show, but deviation is always vs. the fixed reference. Implemented in Plan 02 (`getCategoryDeviations` has no preset param) and Plan 04 (deviation fetched unconditionally).
 
 2. **How should the categories page handle a category present in ranking but absent from the deviation result?**
    - What we know: If a category had zero spend in both reference and baseline, `computeDeviation` returns `null` and the item is excluded from deviation data.
    - What's unclear: Should the deviation column show "—" or be hidden for that category?
-   - Recommendation: Show "—" (not an error). The category still appears in the ranking list because it may have spend in the user-selected period even if it has no deviation data.
+   - RESOLVED: Show nothing (no badge rendered) for categories where deviation is null. The category still appears in the ranking list because it may have spend in the user-selected period even if it has no deviation data. Implemented in Plan 04 Task 2 (`if (!entry) return null`).
 
 ---
 
