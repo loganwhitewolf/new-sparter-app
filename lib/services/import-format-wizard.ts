@@ -78,6 +78,7 @@ function logWizard(
     formatVersionId?: number
     platformId?: number
     code?: ImportFormatWizardErrorCode
+    err?: unknown
   },
 ) {
   logger[level]({ event, ...fields })
@@ -314,6 +315,7 @@ export async function createPrivateImportFormat(input: CreatePrivateImportFormat
         userId: input.userId,
         fileId: parsedInput.data.fileId,
         code: error.code,
+        err: error,
       })
       throw error
     }
@@ -322,6 +324,7 @@ export async function createPrivateImportFormat(input: CreatePrivateImportFormat
       userId: input.userId,
       fileId: parsedInput.data.fileId,
       code: 'db_write_failed',
+      err: error,
     })
     throw new ImportFormatWizardError('db_write_failed', 'Impossibile salvare il formato. Riprova.')
   }

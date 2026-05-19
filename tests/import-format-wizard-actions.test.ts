@@ -291,6 +291,22 @@ describe('import format wizard Server Actions', () => {
     expect(serializedLogs).not.toContain(fileRow.objectKey)
   })
 
+  it('returns a safe save-format error while logging the underlying database error', async () => {
+    const dbError = new Error('duplicate key value violates unique constraint "platform_slug_unique"')
+    mocks.dbTransaction.mockRejectedValueOnce(dbError)
+
+    const result = await createPrivateImportFormatAction({ error: null }, validCreateForm())
+
+    expect(result).toEqual({ error: 'Impossibile salvare il formato. Riprova.' })
+    expect(mocks.loggerError).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'import_format_wizard.retry_failed',
+      userId: 'user-abc',
+      fileId: '11111111-1111-4111-8111-111111111111',
+      code: 'db_write_failed',
+      err: dbError,
+    }))
+  })
+
   it('maps malformed selected format ids to localized action errors before auth', async () => {
     const analyzeResult = await analyzeImportAction(
       formData({
