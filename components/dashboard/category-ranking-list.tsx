@@ -2,16 +2,54 @@
 
 import Link from 'next/link'
 import { CategorySparkline } from '@/components/dashboard/category-sparkline'
+import { DeviationBadge } from '@/components/dashboard/deviation-badge'
 import { buildDashboardCategoryDetailHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
-import type { CategoryRankingItem } from '@/lib/dal/dashboard'
-import type { DashboardPreset } from '@/lib/validations/dashboard'
+import { toDecimal } from '@/lib/utils/decimal'
+import type { CategoryRankingItem, DeviationData } from '@/lib/dal/dashboard'
+import type { DashboardPreset, DashboardSort } from '@/lib/validations/dashboard'
+import type { DeviationResult } from '@/lib/utils/dashboard'
 
 type Props = {
   data: CategoryRankingItem[]
   preset: DashboardPreset
   type: 'in' | 'out'
   defaultPreset?: DashboardPreset
+  sort?: DashboardSort
+  deviations?: Map<number, DeviationData>
+}
+
+function deviationSortKey(item: CategoryRankingItem, deviations?: Map<number, DeviationData>): number {
+  if (!deviations) return 3
+  const entry = deviations.get(item.id)
+  if (entry === undefined || entry.deviation === null) return entry?.isNew ? 1 : 2
+  return 0
+}
+
+function compareItems(
+  a: CategoryRankingItem,
+  b: CategoryRankingItem,
+  sort: DashboardSort,
+  deviations?: Map<number, DeviationData>
+): number {
+  if (sort !== 'deviation' || !deviations) return 0
+  const ka = deviationSortKey(a, deviations)
+  const kb = deviationSortKey(b, deviations)
+  if (ka !== kb) return ka - kb
+  if (ka === 0) {
+    const da = Math.abs(deviations.get(a.id)!.deviation as number)
+    const db = Math.abs(deviations.get(b.id)!.deviation as number)
+    if (da !== db) return db - da
+  }
+  return toDecimal(b.amount).comparedTo(toDecimal(a.amount))
+}
+
+function getDeviationValue(id: number, deviations?: Map<number, DeviationData>): DeviationResult {
+  if (!deviations) return null
+  const entry = deviations.get(id)
+  if (!entry) return null
+  if (entry.isNew) return 'new'
+  return entry.deviation
 }
 
 const amountFormatter = new Intl.NumberFormat('it-IT', {
@@ -33,8 +71,14 @@ export function CategoryRankingList({
   preset,
   type,
   defaultPreset = 'this-year',
+  sort = 'amount',
+  deviations,
 }: Props) {
-  if (data.length === 0) {
+  const sortedData = sort === 'deviation' && deviations
+    ? [...data].sort((a, b) => compareItems(a, b, sort, deviations))
+    : data
+
+  if (sortedData.length === 0) {
     return (
       <div className="flex min-h-[260px] items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 text-center">
         <div className="max-w-sm space-y-2">
@@ -49,7 +93,7 @@ export function CategoryRankingList({
 
   return (
     <ol className="grid gap-3" aria-label="Classifica categorie">
-      {data.map((category, index) => {
+      {sortedData.map((category, index) => {
         const href = buildDashboardCategoryDetailHref(category.id, {
           preset,
           type,
@@ -103,6 +147,12 @@ export function CategoryRankingList({
                   </p>
                   <p className="text-xs text-muted-foreground">Totale</p>
                 </div>
+                {deviations ? (
+                  <DeviationBadge
+                    deviation={getDeviationValue(category.id, deviations)}
+                    categoryType={type}
+                  />
+                ) : null}
                 <CategorySparkline
                   points={category.sparkline}
                   type={type}

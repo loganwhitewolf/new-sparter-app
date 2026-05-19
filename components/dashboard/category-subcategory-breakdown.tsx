@@ -1,9 +1,12 @@
 import { cn } from '@/lib/utils'
-import type { CategoryDetailSubcategory } from '@/lib/dal/dashboard'
+import { DeviationBadge } from '@/components/dashboard/deviation-badge'
+import type { CategoryDetailSubcategory, DeviationData } from '@/lib/dal/dashboard'
+import type { DeviationResult } from '@/lib/utils/dashboard'
 
 type Props = {
   subcategories: CategoryDetailSubcategory[]
   type?: 'in' | 'out'
+  deviations?: Map<number, DeviationData>
 }
 
 const currencyFormatter = new Intl.NumberFormat('it-IT', {
@@ -24,7 +27,7 @@ function movementLabel(count: number): string {
   return count === 1 ? '1 movimento' : `${count} movimenti`
 }
 
-export function CategorySubcategoryBreakdown({ subcategories, type = 'out' }: Props) {
+export function CategorySubcategoryBreakdown({ subcategories, type = 'out', deviations }: Props) {
   if (subcategories.length === 0) {
     return (
       <div className="flex min-h-[220px] items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 text-center">
@@ -58,9 +61,22 @@ export function CategorySubcategoryBreakdown({ subcategories, type = 'out' }: Pr
                     {movementLabel(count)} · {percentage}% del totale categoria
                   </p>
                 </div>
-                <p className="shrink-0 font-mono text-sm font-semibold tabular-nums">
-                  {formatAmount(subcategory.amount)}
-                </p>
+                <div className="flex shrink-0 items-center gap-3">
+                  {deviations ? (
+                    <DeviationBadge
+                      deviation={(() => {
+                        const entry = deviations.get(subcategory.id)
+                        if (!entry) return null as DeviationResult
+                        if (entry.isNew) return 'new' as DeviationResult
+                        return entry.deviation as DeviationResult
+                      })()}
+                      categoryType={type}
+                    />
+                  ) : null}
+                  <p className="font-mono text-sm font-semibold tabular-nums">
+                    {formatAmount(subcategory.amount)}
+                  </p>
+                </div>
               </div>
 
               <div

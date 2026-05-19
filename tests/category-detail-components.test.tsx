@@ -121,6 +121,27 @@ describe('category detail presentation components', () => {
     expect(subcategoryHtml).toContain('Nessuna sottocategoria nel periodo')
   })
 
+  test('renders DeviationBadge per subcategory when deviations map is provided', () => {
+    const deviations = new Map([
+      [1, { deviation: 30, isNew: false, belowNoiseThreshold: false }],
+      [2, { deviation: null, isNew: false, belowNoiseThreshold: true }],
+    ])
+    const html = renderToStaticMarkup(
+      <CategorySubcategoryBreakdown subcategories={subcategories} type="out" deviations={deviations} />
+    )
+    expect(html).toContain('+30%')
+    const idxSecond = html.indexOf('Mercato')
+    expect(html.slice(idxSecond)).not.toMatch(/[+\-]\d+%/)
+  })
+
+  test("renders 'Nuovo' for subcategories with isNew=true", () => {
+    const deviations = new Map([[1, { deviation: null, isNew: true, belowNoiseThreshold: false }]])
+    const html = renderToStaticMarkup(
+      <CategorySubcategoryBreakdown subcategories={[subcategories[0]]} type="out" deviations={deviations} />
+    )
+    expect(html).toContain('Nuovo')
+  })
+
   test('renders subcategory percentages and clamps malformed display values', () => {
     const html = renderToStaticMarkup(
       <CategorySubcategoryBreakdown
