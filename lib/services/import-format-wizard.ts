@@ -78,6 +78,7 @@ function logWizard(
     formatVersionId?: number
     platformId?: number
     code?: ImportFormatWizardErrorCode
+    err?: unknown
   },
 ) {
   logger[level]({ event, ...fields })
@@ -120,6 +121,16 @@ function privatePlatformSlug(input: { platformName: string; userId: string; file
 
 function headerSignature(headers: readonly string[], delimiter: string) {
   return headers.join(delimiter)
+}
+
+async function syncPlatformIdSequence(database: DbOrTx) {
+  await database.execute(sql`
+    SELECT setval(
+      'platform_id_seq',
+      COALESCE((SELECT MAX(${platform.id}) FROM ${platform}), 0) + 1,
+      false
+    )
+  `)
 }
 
 function assertParsedHeaders(parsed: ParsedImportFile, input: { userId: string; fileId: string }) {
@@ -203,10 +214,12 @@ async function createPrivateRows(
 ): Promise<CreatePrivateImportFormatResult> {
   const slug = privatePlatformSlug(input)
   const header = headerSignature(input.headers, input.delimiter)
+
+  await syncPlatformIdSequence(database)
+
   const createdPlatforms = await database
     .insert(platform)
     .values({
-      id: sql`nextval('platform_id_seq')`,
       ownerUserId: input.userId,
       visibility: PRIVATE_VISIBILITY,
       reviewStatus: DRAFT_REVIEW_STATUS,
@@ -314,6 +327,7 @@ export async function createPrivateImportFormat(input: CreatePrivateImportFormat
         userId: input.userId,
         fileId: parsedInput.data.fileId,
         code: error.code,
+        err: error,
       })
       throw error
     }
@@ -322,6 +336,7 @@ export async function createPrivateImportFormat(input: CreatePrivateImportFormat
       userId: input.userId,
       fileId: parsedInput.data.fileId,
       code: 'db_write_failed',
+      err: error,
     })
     throw new ImportFormatWizardError('db_write_failed', 'Impossibile salvare il formato. Riprova.')
   }

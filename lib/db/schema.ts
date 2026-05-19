@@ -222,7 +222,7 @@ export const userSubcategoryOverride = pgTable(
 export const platform = pgTable(
   "platform",
   {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     ownerUserId: text("owner_user_id").references(() => user.id, { onDelete: "cascade" }),
     visibility: varchar("visibility", { length: 24 }).default("global").notNull(),
     reviewStatus: varchar("review_status", { length: 24 }).default("approved").notNull(),
