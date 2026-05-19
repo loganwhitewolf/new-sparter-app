@@ -1,13 +1,86 @@
-import { createElement } from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it, vi } from 'vitest'
+import { createElement, type ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
+
+// Radix portals omit menu content from SSR; render a flat stub for static markup assertions.
+vi.mock("@/components/ui/dropdown-menu", async () => {
+  const React = await import("react");
+
+  const DropdownMenu = ({ children }: { children?: ReactNode }) =>
+    React.createElement("div", { "data-slot": "dropdown-menu" }, children);
+
+  const DropdownMenuTrigger = ({
+    children,
+    asChild,
+  }: {
+    children?: ReactNode;
+    asChild?: boolean;
+  }) =>
+    asChild
+      ? children
+      : React.createElement("button", { type: "button" }, children);
+
+  const DropdownMenuContent = ({
+    children,
+    className,
+  }: {
+    children?: ReactNode;
+    className?: string;
+  }) =>
+    React.createElement(
+      "motion.div",
+      { "data-slot": "dropdown-menu-content", className },
+      children,
+    );
+
+  const DropdownMenuItem = ({
+    children,
+    asChild,
+    onClick,
+    className,
+  }: {
+    children?: ReactNode;
+    asChild?: boolean;
+    onClick?: () => void;
+    className?: string;
+  }) =>
+    asChild
+      ? children
+      : React.createElement(
+          "button",
+          { type: "button", onClick, className },
+          children,
+        );
+
+  const DropdownMenuSeparator = () =>
+    React.createElement("hr", { "data-slot": "dropdown-menu-separator" });
+
+  return {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuGroup: DropdownMenu,
+    DropdownMenuPortal: ({ children }: { children?: ReactNode }) => children,
+    DropdownMenuSub: DropdownMenu,
+    DropdownMenuSubTrigger: DropdownMenuTrigger,
+    DropdownMenuSubContent: DropdownMenuContent,
+    DropdownMenuRadioGroup: DropdownMenu,
+    DropdownMenuRadioItem: DropdownMenuItem,
+    DropdownMenuCheckboxItem: DropdownMenuItem,
+    DropdownMenuLabel: DropdownMenuItem,
+    DropdownMenuShortcut: ({ children }: { children?: ReactNode }) => children,
+  };
+});
 
 // next/link renders fine in node; no mock required.
 // 'use client' directive is ignored in vitest / renderToStaticMarkup.
 
-const { ImportRowActions } = await import('../components/import/import-row-actions')
+const { ImportRowActions } =
+  await import("../components/import/import-row-actions");
 
-const FILE_ID = 'aabbccdd-0000-4000-8000-aabbccddeeff'
+const FILE_ID = "aabbccdd-0000-4000-8000-aabbccddeeff";
 
 /**
  * Minimal ImportListRow fixture with only the fields ImportRowActions reads.
@@ -15,18 +88,25 @@ const FILE_ID = 'aabbccdd-0000-4000-8000-aabbccddeeff'
  */
 function makeRow(
   overrides: Partial<{
-    id: string
-    status: 'pending_upload' | 'uploaded' | 'analyzing' | 'analyzed' | 'importing' | 'imported' | 'failed'
-    errorMessage: string | null
-    displayName: string | null
-    originalName: string
+    id: string;
+    status:
+      | "pending_upload"
+      | "uploaded"
+      | "analyzing"
+      | "analyzed"
+      | "importing"
+      | "imported"
+      | "failed";
+    errorMessage: string | null;
+    displayName: string | null;
+    originalName: string;
   }>,
 ) {
   return {
     id: FILE_ID,
     displayName: null,
-    originalName: 'estratto.csv',
-    status: 'uploaded' as const,
+    originalName: "estratto.csv",
+    status: "uploaded" as const,
     platformId: null,
     platformName: null,
     platformSlug: null,
@@ -37,241 +117,267 @@ function makeRow(
     rowCount: 0,
     importedCount: 0,
     duplicateCount: 0,
-    positiveTotal: '0.00',
-    negativeTotal: '0.00',
+    positiveTotal: "0.00",
+    negativeTotal: "0.00",
     referenceStartedAt: null,
     referenceEndedAt: null,
     errorMessage: null,
     ...overrides,
-  }
+  };
 }
 
-const DISPLAY_NAME = 'Gennaio 2026'
-const onRename = vi.fn()
-const onDelete = vi.fn()
-const onDeleteStale = vi.fn()
+const DISPLAY_NAME = "Gennaio 2026";
+const onRename = vi.fn();
+const onDelete = vi.fn();
+const onDeleteStale = vi.fn();
 
 function render(row: ReturnType<typeof makeRow>, displayName = DISPLAY_NAME) {
   return renderToStaticMarkup(
-    createElement(ImportRowActions, { row, displayName, onRename, onDelete, onDeleteStale }),
-  )
+    createElement(ImportRowActions, {
+      row,
+      displayName,
+      onRename,
+      onDelete,
+      onDeleteStale,
+    }),
+  );
 }
 
-describe('ImportRowActions — state matrix', () => {
-  it('uploaded: shows Analizza link to the analyze route and overflow menu trigger', () => {
-    const html = render(makeRow({ status: 'uploaded' }))
+describe("ImportRowActions — state matrix", () => {
+  it("uploaded: shows Analizza link to the analyze route and overflow menu trigger", () => {
+    const html = render(makeRow({ status: "uploaded" }));
 
-    expect(html).toContain('Analizza')
-    expect(html).toContain(`/import/${FILE_ID}/analyze`)
-    expect(html).toContain(`aria-label="Altre azioni per ${DISPLAY_NAME}"`)
-    expect(html).not.toContain('Configura formato')
-    expect(html).not.toContain('Riprova analisi')
-  })
+    expect(html).toContain("Analizza");
+    expect(html).toContain(`/import/${FILE_ID}/analyze`);
+    expect(html).toContain(`aria-label="Altre azioni per ${DISPLAY_NAME}"`);
+    expect(html).not.toContain("Configura formato");
+    expect(html).not.toContain("Riprova analisi");
+  });
 
-  it('uploaded: Analizza link has accessible aria-label', () => {
-    const html = render(makeRow({ status: 'uploaded' }))
+  it("uploaded: Analizza link has accessible aria-label", () => {
+    const html = render(makeRow({ status: "uploaded" }));
 
-    expect(html).toContain(`aria-label="Analizza ${DISPLAY_NAME}"`)
-  })
+    expect(html).toContain(`aria-label="Analizza ${DISPLAY_NAME}"`);
+  });
 
-  it('analyzed: shows Rivedi e importa link to the analyze route and overflow menu trigger', () => {
-    const html = render(makeRow({ status: 'analyzed' }))
+  it("analyzed: shows Rivedi e importa link to the analyze route and overflow menu trigger", () => {
+    const html = render(makeRow({ status: "analyzed" }));
 
-    expect(html).toContain('Rivedi e importa')
-    expect(html).toContain(`/import/${FILE_ID}/analyze`)
-    expect(html).toContain(`aria-label="Altre azioni per ${DISPLAY_NAME}"`)
-    expect(html).not.toContain('Analizza')
-  })
+    expect(html).toContain("Rivedi e importa");
+    expect(html).toContain(`/import/${FILE_ID}/analyze`);
+    expect(html).toContain(`aria-label="Altre azioni per ${DISPLAY_NAME}"`);
+    expect(html).not.toContain("Analizza");
+  });
 
-  it('analyzed: Rivedi e importa link has accessible aria-label', () => {
-    const html = render(makeRow({ status: 'analyzed' }))
+  it("analyzed: Rivedi e importa link has accessible aria-label", () => {
+    const html = render(makeRow({ status: "analyzed" }));
 
-    expect(html).toContain(`aria-label="Rivedi e importa ${DISPLAY_NAME}"`)
-  })
+    expect(html).toContain(`aria-label="Rivedi e importa ${DISPLAY_NAME}"`);
+  });
 
-  it('importing: renders disabled pending copy, no active CTAs', () => {
-    const html = render(makeRow({ status: 'importing' }))
+  it("importing: renders disabled pending copy, no active CTAs", () => {
+    const html = render(makeRow({ status: "importing" }));
 
-    expect(html).toContain('Importazione')
-    expect(html).not.toContain('href=')
-    expect(html).not.toContain('Elimina')
-    expect(html).not.toContain('Rivedi e importa')
-    expect(html).not.toContain('Analizza')
-    expect(html).not.toContain('Vedi transazioni')
-  })
+    expect(html).toContain("Importazione");
+    expect(html).not.toContain("href=");
+    expect(html).not.toContain("Elimina");
+    expect(html).not.toContain("Rivedi e importa");
+    expect(html).not.toContain("Analizza");
+    expect(html).not.toContain("Vedi transazioni");
+  });
 
-  it('importing: pending copy has accessible aria-label', () => {
-    const html = render(makeRow({ status: 'importing' }))
+  it("importing: pending copy has accessible aria-label", () => {
+    const html = render(makeRow({ status: "importing" }));
 
-    expect(html).toContain('aria-label="Importazione in corso, nessuna azione disponibile"')
-  })
+    expect(html).toContain(
+      'aria-label="Importazione in corso, nessuna azione disponibile"',
+    );
+  });
 
-  it('analyzing: renders disabled pending copy, no active CTAs', () => {
-    const html = render(makeRow({ status: 'analyzing' }))
+  it("analyzing: renders disabled pending copy, no active CTAs", () => {
+    const html = render(makeRow({ status: "analyzing" }));
 
-    expect(html).toContain('Analisi')
-    expect(html).not.toContain('href=')
-    expect(html).not.toContain('Elimina')
-    expect(html).not.toContain('Rivedi e importa')
-    expect(html).not.toContain('Vedi transazioni')
-  })
+    expect(html).toContain("Analisi");
+    expect(html).not.toContain("href=");
+    expect(html).not.toContain("Elimina");
+    expect(html).not.toContain("Rivedi e importa");
+    expect(html).not.toContain("Vedi transazioni");
+  });
 
-  it('analyzing: pending copy has accessible aria-label', () => {
-    const html = render(makeRow({ status: 'analyzing' }))
+  it("analyzing: pending copy has accessible aria-label", () => {
+    const html = render(makeRow({ status: "analyzing" }));
 
-    expect(html).toContain('aria-label="Analisi in corso, nessuna azione disponibile"')
-  })
+    expect(html).toContain(
+      'aria-label="Analisi in corso, nessuna azione disponibile"',
+    );
+  });
 
-  it('imported: shows Vedi transazioni link scoped to exact importId in dropdown', () => {
-    const html = render(makeRow({ status: 'imported' }))
+  it("imported: shows Vedi transazioni link scoped to exact importId in dropdown", () => {
+    const html = render(makeRow({ status: "imported" }));
 
-    expect(html).toContain('Vedi transazioni')
-    expect(html).toContain(`/transactions?importId=${FILE_ID}`)
-    expect(html).not.toContain('Analizza')
-    expect(html).not.toContain('Configura formato')
-    expect(html).not.toContain('Riprova analisi')
-  })
+    expect(html).toContain("Vedi transazioni");
+    expect(html).toContain(`/transactions?importId=${FILE_ID}`);
+    expect(html).not.toContain("Analizza");
+    expect(html).not.toContain("Configura formato");
+    expect(html).not.toContain("Riprova analisi");
+  });
 
-  it('imported: shows Elimina item in dropdown menu', () => {
-    const html = render(makeRow({ status: 'imported' }))
+  it("imported: shows Elimina item in dropdown menu", () => {
+    const html = render(makeRow({ status: "imported" }));
 
-    expect(html).toContain('Elimina')
-  })
+    expect(html).toContain("Elimina");
+  });
 
-  it('imported: overflow menu trigger has accessible aria-label', () => {
-    const html = render(makeRow({ status: 'imported' }))
+  it("imported: overflow menu trigger has accessible aria-label", () => {
+    const html = render(makeRow({ status: "imported" }));
 
-    expect(html).toContain(`aria-label="Altre azioni per ${DISPLAY_NAME}"`)
-  })
+    expect(html).toContain(`aria-label="Altre azioni per ${DISPLAY_NAME}"`);
+  });
 
-  it('failed (unknown-format): shows Configura formato link, Riprova analisi, and a stale-delete button', () => {
+  it("failed (unknown-format): shows Configura formato link, Riprova analisi, and delete in overflow menu", () => {
     const html = render(
       makeRow({
-        status: 'failed',
-        errorMessage: 'No supported import format matched the uploaded file headers and sample rows.',
+        status: "failed",
+        errorMessage:
+          "No supported import format matched the uploaded file headers and sample rows.",
       }),
-    )
+    );
 
-    expect(html).toContain('Configura formato')
-    expect(html).toContain(`/import/${FILE_ID}/configure`)
-    expect(html).toContain('Riprova analisi')
-    expect(html).toContain(`/import/${FILE_ID}/analyze`)
-    expect(html).toContain(`aria-label="Elimina importazione ${DISPLAY_NAME}"`)
-    expect(html).not.toContain('Vedi transazioni')
-  })
+    expect(html).toContain("Configura formato");
+    expect(html).toContain(`/import/${FILE_ID}/configure`);
+    expect(html).toContain("Riprova analisi");
+    expect(html).toContain(`/import/${FILE_ID}/analyze`);
+    expect(html).toContain("Elimina");
+    expect(html).not.toContain("Vedi transazioni");
+  });
 
-  it('failed (unknown-format): Configura formato has accessible aria-label', () => {
+  it("failed (unknown-format): Configura formato has accessible aria-label", () => {
     const html = render(
       makeRow({
-        status: 'failed',
-        errorMessage: 'No supported import format matched the uploaded file headers and sample rows.',
+        status: "failed",
+        errorMessage:
+          "No supported import format matched the uploaded file headers and sample rows.",
       }),
-    )
+    );
 
-    expect(html).toContain(`aria-label="Configura formato privato per ${DISPLAY_NAME}"`)
-  })
+    expect(html).toContain(
+      `aria-label="Configura formato per ${DISPLAY_NAME}"`,
+    );
+  });
 
-  it('failed (non-unknown): shows Riprova analisi and stale-delete button, no Configura formato', () => {
+  it("failed (non-unknown): shows Riprova analisi and delete in overflow menu, no Configura formato", () => {
     const html = render(
       makeRow({
-        status: 'failed',
-        errorMessage: 'Could not read uploaded file.',
+        status: "failed",
+        errorMessage: "Could not read uploaded file.",
       }),
-    )
+    );
 
-    expect(html).toContain('Riprova analisi')
-    expect(html).toContain(`aria-label="Elimina importazione ${DISPLAY_NAME}"`)
-    expect(html).not.toContain('Configura formato')
-    expect(html).not.toContain('configure')
-    expect(html).not.toContain('Vedi transazioni')
-  })
+    expect(html).toContain("Riprova analisi");
+    expect(html).toContain("Elimina");
+    expect(html).not.toContain("Configura formato");
+    expect(html).not.toContain("configure");
+    expect(html).not.toContain("Vedi transazioni");
+  });
 
-  it('failed (non-unknown): Riprova analisi has accessible aria-label', () => {
+  it("failed (non-unknown): Riprova analisi has accessible aria-label", () => {
     const html = render(
       makeRow({
-        status: 'failed',
-        errorMessage: 'Could not parse uploaded file.',
+        status: "failed",
+        errorMessage: "Could not parse uploaded file.",
       }),
-    )
+    );
 
-    expect(html).toContain(`aria-label="Riprova analisi di ${DISPLAY_NAME}"`)
-  })
+    expect(html).toContain(`aria-label="Riprova analisi di ${DISPLAY_NAME}"`);
+  });
 
-  it('failed with null errorMessage: shows Riprova analisi only (no configure)', () => {
-    const html = render(makeRow({ status: 'failed', errorMessage: null }))
+  it("failed with null errorMessage: shows Riprova analisi only (no configure)", () => {
+    const html = render(makeRow({ status: "failed", errorMessage: null }));
 
-    expect(html).toContain('Riprova analisi')
-    expect(html).not.toContain('Configura formato')
-  })
+    expect(html).toContain("Riprova analisi");
+    expect(html).not.toContain("Configura formato");
+  });
 
-  it('pending_upload: shows only a stale-delete button to clean up stuck uploads', () => {
-    const html = render(makeRow({ status: 'pending_upload' }))
+  it("pending_upload: shows overflow menu with delete to clean up stuck uploads", () => {
+    const html = render(makeRow({ status: "pending_upload" }));
 
-    expect(html).toContain(`aria-label="Elimina importazione ${DISPLAY_NAME}"`)
-    expect(html).not.toContain('Analizza')
-    expect(html).not.toContain('Rivedi')
-    expect(html).not.toContain('Vedi transazioni')
-  })
+    expect(html).toContain(`aria-label="Altre azioni per ${DISPLAY_NAME}"`);
+    expect(html).toContain("Elimina");
+    expect(html).not.toContain("Analizza");
+    expect(html).not.toContain("Rivedi");
+    expect(html).not.toContain("Vedi transazioni");
+  });
 
-  it('does not render raw storage diagnostics or sensitive data in any state', () => {
-    const states: Array<ReturnType<typeof makeRow>> = [
-      makeRow({ status: 'failed', errorMessage: 'No supported import format matched the uploaded file headers and sample rows.' }),
-      makeRow({ status: 'failed', errorMessage: 'https://r2.example.com/private?X-Amz-Signature=abc123' }),
-      makeRow({ status: 'imported' }),
-      makeRow({ status: 'analyzing' }),
-    ]
-
-    for (const row of states) {
-      const html = render(row)
-      expect(html).not.toContain('X-Amz-Signature')
-      expect(html).not.toContain('objectKey')
-      expect(html).not.toContain('stack')
+  it("does not render raw storage diagnostics in non-failed states", () => {
+    for (const row of [
+      makeRow({ status: "imported" }),
+      makeRow({ status: "analyzing" }),
+    ]) {
+      const html = render(row);
+      expect(html).not.toContain("X-Amz-Signature");
+      expect(html).not.toContain("objectKey");
+      expect(html).not.toContain("stack");
     }
-  })
+  });
 
-  it('URLs encode the fileId correctly when fileId contains characters needing encoding', () => {
+  it("failed state shows sanitized user-facing error copy inside overflow menu", () => {
+    const html = render(
+      makeRow({
+        status: "failed",
+        errorMessage:
+          "No supported import format matched the uploaded file headers and sample rows.",
+      }),
+    );
+
+    expect(html).toContain("Errore");
+    expect(html).toContain("No supported import format matched");
+    expect(html).not.toContain("X-Amz-Signature");
+  });
+
+  it("URLs encode the fileId correctly when fileId contains characters needing encoding", () => {
     // UUIDs are already safe, but verify encodeURIComponent is applied.
-    const safeId = 'aabbccdd-1111-4111-8111-111111111111'
+    const safeId = "aabbccdd-1111-4111-8111-111111111111";
 
     // imported: check transactions link
-    const importedHtml = render(makeRow({ id: safeId, status: 'imported' }))
-    expect(importedHtml).toContain(`/transactions?importId=${safeId}`)
+    const importedHtml = render(makeRow({ id: safeId, status: "imported" }));
+    expect(importedHtml).toContain(`/transactions?importId=${safeId}`);
 
     // uploaded: check analyze link
-    const uploadedHtml = render(makeRow({ id: safeId, status: 'uploaded' }))
-    expect(uploadedHtml).toContain(`/import/${safeId}/analyze`)
+    const uploadedHtml = render(makeRow({ id: safeId, status: "uploaded" }));
+    expect(uploadedHtml).toContain(`/import/${safeId}/analyze`);
 
     // failed unknown-format: check configure link
     const failedHtml = render(
       makeRow({
         id: safeId,
-        status: 'failed',
-        errorMessage: 'No supported import format matched the uploaded file headers and sample rows.',
+        status: "failed",
+        errorMessage:
+          "No supported import format matched the uploaded file headers and sample rows.",
       }),
-    )
-    expect(failedHtml).toContain(`/import/${safeId}/configure`)
-  })
-})
+    );
+    expect(failedHtml).toContain(`/import/${safeId}/configure`);
+  });
+});
 
-describe('ImportRowActions — in-progress states do not expose duplicate-operation CTAs', () => {
-  it('analyzing row: no analyze, import, delete, or configure links', () => {
-    const html = render(makeRow({ status: 'analyzing' }))
+describe("ImportRowActions — in-progress states do not expose duplicate-operation CTAs", () => {
+  it("analyzing row: no analyze, import, delete, or configure links", () => {
+    const html = render(makeRow({ status: "analyzing" }));
 
-    expect(html).not.toContain('/analyze')
-    expect(html).not.toContain('/configure')
-    expect(html).not.toContain('Elimina')
-    expect(html).not.toContain('Importa')
-    expect(html).not.toContain('Analizza')
-  })
+    expect(html).not.toContain("/analyze");
+    expect(html).not.toContain("/configure");
+    expect(html).not.toContain("Elimina");
+    expect(html).not.toContain("Importa");
+    expect(html).not.toContain("Analizza");
+  });
 
-  it('importing row: no analyze, import, delete, or configure links', () => {
-    const html = render(makeRow({ status: 'importing' }))
+  it("importing row: no analyze, import, delete, or configure links", () => {
+    const html = render(makeRow({ status: "importing" }));
 
-    expect(html).not.toContain('/analyze')
-    expect(html).not.toContain('/configure')
-    expect(html).not.toContain('Elimina')
+    expect(html).not.toContain("/analyze");
+    expect(html).not.toContain("/configure");
+    expect(html).not.toContain("Elimina");
     // "Importa" alone could match "Importazione in corso" — check no active href/button for import
-    expect(html).not.toContain('Rivedi e importa')
-    expect(html).not.toContain('Analizza')
-  })
-})
+    expect(html).not.toContain("Rivedi e importa");
+    expect(html).not.toContain("Analizza");
+  });
+});

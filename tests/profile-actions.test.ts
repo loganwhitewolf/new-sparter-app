@@ -112,6 +112,7 @@ describe('updateProfileAction', () => {
       lastName: 'Rossi',
       jobTitle: null,
       location: null,
+      passion: null,
       phone: null,
       timezone: null,
     })
@@ -178,6 +179,7 @@ describe('updateProfileAction', () => {
       lastName: null,
       jobTitle: null,
       location: null,
+      passion: null,
       phone: null,
       timezone: null,
     })
@@ -192,6 +194,7 @@ describe('updateProfileAction', () => {
       lastName: null,
       jobTitle: null,
       location: null,
+      passion: null,
       phone: null,
       timezone: null,
     })
