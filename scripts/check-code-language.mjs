@@ -87,7 +87,7 @@ function isSourceFile(filePath) {
 }
 
 function isDomainFixture(filePath) {
-  return filePath === 'drizzle/seed.ts' || filePath.startsWith('docs/init/')
+  return filePath === 'scripts/seed.ts' || filePath === 'scripts/seed-data.ts' || filePath.startsWith('docs/init/')
 }
 
 function lineHasComment(line) {

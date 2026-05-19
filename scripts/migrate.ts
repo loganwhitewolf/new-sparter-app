@@ -1,52 +1,43 @@
-// Run locally with: yarn db:migrate
-// Run production migrations explicitly with: yarn db:migrate:production
-import { execSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { enhanceDatabaseUrlForSsl } from "../lib/db/config";
+// Run with: yarn db:migrate (reads PRODUCTION_* from .env)
+import { execSync } from 'node:child_process'
 import {
-  getMigrationConfig,
+  connectionStringWithSsl,
+  getOperatorDatabaseConfig,
+  loadOperatorEnv,
   sanitizeMigrationError,
-  type MigrationDiagnostics,
+  type OperatorDatabaseDiagnostics,
   type SafeMigrationError,
-} from "./migration-config";
+} from './db-config'
 
-// Load local env before validation (no server-only guard in scripts).
-for (const envFile of [".env.local", ".env"]) {
-  if (existsSync(envFile)) {
-    process.loadEnvFile?.(envFile);
-  }
-}
+loadOperatorEnv()
 
-const MIGRATION_FAILURE_EXIT_CODE = 2;
-const VALIDATION_FAILURE_EXIT_CODE = 1;
+const MIGRATION_FAILURE_EXIT_CODE = 2
+const VALIDATION_FAILURE_EXIT_CODE = 1
 
-function selectedMode(): "local" | "production" {
-  return process.argv.includes("--production") ? "production" : "local";
-}
-
-function safeStatusFields(diagnostics: MigrationDiagnostics) {
+function safeStatusFields(diagnostics: OperatorDatabaseDiagnostics) {
   return {
     targetClass: diagnostics.targetClass,
     migrationsFolder: diagnostics.migrationsFolder,
     sslEnabled: diagnostics.sslEnabled,
     poolMax: diagnostics.poolMax,
-  };
+    host: diagnostics.host,
+  }
 }
 
 function logMigrationEvent(
-  event: "migration_started" | "migration_succeeded",
-  diagnostics: MigrationDiagnostics,
+  event: 'migration_started' | 'migration_succeeded',
+  diagnostics: OperatorDatabaseDiagnostics,
 ) {
-  console.log(JSON.stringify({ event, ...safeStatusFields(diagnostics) }));
+  console.log(JSON.stringify({ event, ...safeStatusFields(diagnostics) }))
 }
 
 function logMigrationFailure(
-  diagnostics: MigrationDiagnostics,
+  diagnostics: OperatorDatabaseDiagnostics,
   error: SafeMigrationError,
 ) {
   console.error(
     JSON.stringify({
-      event: "migration_failed",
+      event: 'migration_failed',
       ...safeStatusFields(diagnostics),
       error: {
         code: error.code,
@@ -54,67 +45,52 @@ function logMigrationFailure(
         message: error.message,
       },
     }),
-  );
+  )
 }
 
 async function main() {
-  const configResult = getMigrationConfig({ mode: selectedMode() });
+  const configResult = getOperatorDatabaseConfig()
 
   if (!configResult.ok) {
     console.error(
       JSON.stringify({
-        event: "migration_failed",
-        targetClass: selectedMode(),
+        event: 'migration_failed',
+        targetClass: 'production',
         error: configResult.error,
       }),
-    );
-    process.exitCode = VALIDATION_FAILURE_EXIT_CODE;
-    return;
+    )
+    process.exitCode = VALIDATION_FAILURE_EXIT_CODE
+    return
   }
 
-  const { config, diagnostics } = configResult;
-
-  if (!config.connectionString) {
-    logMigrationFailure(diagnostics, {
-      code: "missing_local_database_url",
-      message: "DATABASE_URL is required for local migrations.",
-    });
-    process.exitCode = VALIDATION_FAILURE_EXIT_CODE;
-    return;
-  }
+  const { config, diagnostics } = configResult
 
   try {
-    logMigrationEvent("migration_started", diagnostics);
-
-    // drizzle-kit reads DATABASE_URL from drizzle.config.ts; mirror runtime TLS URL params.
-    const sslEnabled = config.ssl?.rejectUnauthorized === true;
-    const connectionStringWithSsl = sslEnabled
-      ? enhanceDatabaseUrlForSsl(config.connectionString)
-      : config.connectionString;
+    logMigrationEvent('migration_started', diagnostics)
 
     const env = {
       ...process.env,
-      DATABASE_URL: connectionStringWithSsl,
-    };
+      DATABASE_URL: connectionStringWithSsl(config),
+    }
 
-    const result = execSync("npx drizzle-kit migrate 2>&1", {
+    const result = execSync('npx drizzle-kit migrate 2>&1', {
       env,
-      encoding: "utf8",
-    });
-    if (process.env.MIGRATION_DEBUG === "1") {
-      process.stdout.write(result);
+      encoding: 'utf8',
+    })
+    if (process.env.MIGRATION_DEBUG === '1') {
+      process.stdout.write(result)
     }
 
-    logMigrationEvent("migration_succeeded", diagnostics);
+    logMigrationEvent('migration_succeeded', diagnostics)
   } catch (error) {
-    if (process.env.MIGRATION_DEBUG === "1") {
-      const execError = error as { stdout?: string | Buffer; stderr?: string | Buffer; message?: string };
-      const output = (execError?.stdout?.toString() ?? "") + (execError?.stderr?.toString() ?? "");
-      console.error("RAW_ERROR:", JSON.stringify({ msg: execError?.message, output }));
+    if (process.env.MIGRATION_DEBUG === '1') {
+      const execError = error as { stdout?: string | Buffer; stderr?: string | Buffer; message?: string }
+      const output = (execError?.stdout?.toString() ?? '') + (execError?.stderr?.toString() ?? '')
+      console.error('RAW_ERROR:', JSON.stringify({ msg: execError?.message, output }))
     }
-    logMigrationFailure(diagnostics, sanitizeMigrationError(error));
-    process.exitCode = MIGRATION_FAILURE_EXIT_CODE;
+    logMigrationFailure(diagnostics, sanitizeMigrationError(error))
+    process.exitCode = MIGRATION_FAILURE_EXIT_CODE
   }
 }
 
-void main();
+void main()
