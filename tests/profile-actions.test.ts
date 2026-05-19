@@ -8,7 +8,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('server-only', () => ({}))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
-vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }))
+vi.mock('next/cache', () => ({
+  refresh: vi.fn(),
+  revalidatePath: mocks.revalidatePath,
+}))
 vi.mock('next/headers', () => ({ headers: vi.fn().mockResolvedValue(new Headers()) }))
 
 vi.mock('@/lib/dal/auth', () => ({

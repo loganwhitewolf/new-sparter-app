@@ -5,6 +5,27 @@ import { ExpenseFilters } from '@/components/expenses/expense-filters'
 import { ExpenseTable } from '@/components/expenses/expense-table'
 import { ExpenseFormDialog } from '@/components/expenses/expense-form-dialog'
 
+function buildExpenseTableKey(filters: ExpenseListFilters, expenses: Awaited<ReturnType<typeof getExpenses>>) {
+  const filterKey = [
+    filters.categorySlug ?? '',
+    filters.status ?? '',
+    filters.period ?? '',
+    filters.name ?? '',
+    filters.sort ?? '',
+    filters.dir ?? '',
+  ].join(':')
+  const dataKey = expenses
+    .map((expense) => [
+      expense.id,
+      expense.status,
+      expense.subCategoryId ?? '',
+      expense.categorySlug ?? '',
+    ].join(':'))
+    .join('|')
+
+  return `${filterKey}:${dataKey}`
+}
+
 export default async function ExpensesPage({
   searchParams,
 }: {
@@ -56,7 +77,7 @@ export default async function ExpensesPage({
       </Suspense>
 
       <ExpenseTable
-        key={`${filters.categorySlug ?? ''}:${filters.status ?? ''}:${filters.period ?? ''}:${filters.name ?? ''}:${filters.sort ?? ''}:${filters.dir ?? ''}`}
+        key={buildExpenseTableKey(filters, expenses)}
         expenses={expenses}
         categories={categories}
         filters={filters}

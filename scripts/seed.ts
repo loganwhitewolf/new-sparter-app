@@ -66,7 +66,7 @@ function headerSignatureFor(platformSeed: (typeof seedPlatforms)[number]) {
 async function seed() {
   console.log(JSON.stringify({ event: 'seed_started', targetClass: 'production' }))
   console.log('Seeding categories...')
-  await db.insert(category).values(categories).onConflictDoNothing()
+  await db.insert(category).values(categories as Array<typeof category.$inferInsert>).onConflictDoNothing()
   console.log(`  ${categories.length} categories inserted (or already present).`)
 
   console.log('Seeding subcategories...')

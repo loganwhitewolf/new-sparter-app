@@ -19,7 +19,10 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('server-only', () => ({}))
-vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }))
+vi.mock('next/cache', () => ({
+  refresh: vi.fn(),
+  revalidatePath: mocks.revalidatePath,
+}))
 vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
 vi.mock('@/lib/dal/files', () => ({ getFileForUser: mocks.getFileForUser }))
 vi.mock('@/lib/services/r2', () => ({ readObjectBody: mocks.readObjectBody }))
