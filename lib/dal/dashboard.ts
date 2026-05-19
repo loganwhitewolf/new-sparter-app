@@ -17,8 +17,10 @@ import { verifySession } from '@/lib/dal/auth'
 import { db } from '@/lib/db'
 import { category, expense, subCategory, transaction as transactionTable, userSubcategoryOverride } from '@/lib/db/schema'
 import type { DashboardFilters, DashboardPreset } from '@/lib/validations/dashboard'
+import type { DateRange } from '@/lib/utils/date'
 import { dashboardPresetToDateRange, monthLabel, monthsBetween } from '@/lib/utils/date'
 import {
+  buildDeviationMap,
   computeBreakdownPercentages,
   computeDeltaPercent,
   computeSavingsRate,
@@ -127,6 +129,22 @@ export type MonthlyTrendPoint = {
   totalOut: string
   totalNc: number
   totalIgn: number
+}
+
+export type DeviationData = {
+  deviation: number | null
+  isNew: boolean
+  belowNoiseThreshold: boolean
+}
+
+export type DeviationDateRanges = {
+  reference: DateRange
+  baseline: DateRange
+}
+
+export type CategoryDeviationsInput = {
+  type: 'in' | 'out' | 'all'
+  categoryId?: number
 }
 
 type BreakdownCategoryDraft = Omit<BreakdownCategory, 'percentage' | 'subCategories'> & {
@@ -241,6 +259,48 @@ export function getOverviewComparisonRanges(preset: DashboardPreset, now = new D
     current: dashboardPresetToDateRange(preset, now),
     previous: previousDashboardPresetDateRange(preset, now),
   }
+}
+
+const DEVIATION_NOISE_THRESHOLD = '15.00'
+
+export function getDeviationDateRanges(now: Date = new Date()): DeviationDateRanges {
+  const year = now.getFullYear()
+  const month = now.getMonth()
+  return {
+    reference: {
+      from: new Date(year, month - 1, 1),
+      to: new Date(year, month, 0, 23, 59, 59, 999),
+    },
+    baseline: {
+      from: new Date(year, month - 4, 1),
+      to: new Date(year, month - 1, 0, 23, 59, 59, 999),
+    },
+  }
+}
+
+export function buildDeviationDataset(input: {
+  referenceRows: Array<{ id: number; amount: string }>
+  baselineRows: Array<{ id: number; month: string; amount: string }>
+  noiseThreshold?: string
+}): Map<number, DeviationData> {
+  const threshold = toDecimal(input.noiseThreshold ?? DEVIATION_NOISE_THRESHOLD)
+
+  const numericMap = buildDeviationMap({
+    referenceRows: input.referenceRows,
+    baselineRows: input.baselineRows,
+    noiseThreshold: input.noiseThreshold ?? DEVIATION_NOISE_THRESHOLD,
+  })
+
+  const result = new Map<number, DeviationData>()
+  for (const ref of input.referenceRows) {
+    const refAmount = toDecimal(ref.amount).abs()
+    const belowNoiseThreshold = refAmount.lt(threshold)
+    const numericValue = numericMap.get(ref.id)
+    const isNew = numericValue === 'new'
+    const deviation = typeof numericValue === 'number' ? numericValue : null
+    result.set(ref.id, { deviation, isNew, belowNoiseThreshold })
+  }
+  return result
 }
 
 function normalizeAmount(value: string | number | null | undefined): string {
@@ -846,6 +906,84 @@ export const getCategoryRanking = cache(
   }
 )
 
+export const getCategoryDeviations = cache(
+  async (input: CategoryDeviationsInput): Promise<Map<number, DeviationData>> => {
+    const { userId } = await verifySession()
+    const { reference, baseline } = getDeviationDateRanges()
+    const typeFilter = input.type === 'all' ? undefined : eq(category.type, input.type)
+    const groupColumn = input.categoryId !== undefined ? subCategory.id : category.id
+    const categoryScope =
+      input.categoryId !== undefined ? eq(category.id, input.categoryId) : undefined
+
+    let referenceRows: Array<{ id: number; amount: string }> = []
+    let baselineRows: Array<{ id: number; month: string; amount: string }> = []
+
+    try {
+      const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
+
+      const [refResult, baseResult] = await Promise.all([
+        db
+          .select({
+            id: groupColumn,
+            amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+          })
+          .from(transactionTable)
+          .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+          .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+          .innerJoin(category, eq(subCategory.categoryId, category.id))
+          .where(
+            and(
+              dateScopedTransactions(userId, reference.from, reference.to),
+              expenseStatusIncludedInDashboardTotals(),
+              ne(category.slug, 'ignore'),
+              ne(category.type, 'system'),
+              notExcludedFromTotals(),
+              typeFilter,
+              categoryScope
+            )
+          )
+          .groupBy(groupColumn),
+        db
+          .select({
+            id: groupColumn,
+            month: monthSql,
+            amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+          })
+          .from(transactionTable)
+          .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+          .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+          .innerJoin(category, eq(subCategory.categoryId, category.id))
+          .where(
+            and(
+              dateScopedTransactions(userId, baseline.from, baseline.to),
+              expenseStatusIncludedInDashboardTotals(),
+              ne(category.slug, 'ignore'),
+              ne(category.type, 'system'),
+              notExcludedFromTotals(),
+              typeFilter,
+              categoryScope
+            )
+          )
+          .groupBy(groupColumn, monthSql),
+      ])
+
+      referenceRows = refResult.map((row) => ({
+        id: Number(row.id),
+        amount: String(row.amount),
+      }))
+      baselineRows = baseResult.map((row) => ({
+        id: Number(row.id),
+        month: String(row.month),
+        amount: String(row.amount),
+      }))
+    } catch {
+      referenceRows = []
+      baselineRows = []
+    }
+
+    return buildDeviationDataset({ referenceRows, baselineRows })
+  }
+)
 
 export const getCategoryDetail = cache(
   async (categoryId: number, filters: DashboardFilters): Promise<CategoryDetailData> => {
