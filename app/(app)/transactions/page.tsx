@@ -22,6 +22,8 @@ function buildTransactionTableKey(
       transaction.customTitle ?? '',
       transaction.expenseId ?? '',
       transaction.expenseStatus ?? '',
+      transaction.expenseCategoryName ?? '',
+      transaction.expenseSubCategoryName ?? '',
     ].join(':'))
     .join('|')
 
@@ -57,7 +59,7 @@ export default async function TransactionsPage({
       <Suspense
         fallback={<div className="h-24 rounded-xl bg-muted animate-pulse" />}
       >
-        <TransactionFilters filters={filters} platforms={platforms} />
+        <TransactionFilters filters={filters} platforms={platforms} categories={categories} />
       </Suspense>
 
       <TransactionTable

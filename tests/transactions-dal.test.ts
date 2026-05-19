@@ -86,6 +86,11 @@ vi.mock('drizzle-orm', () => ({
   }),
 }))
 vi.mock('@/lib/db/schema', () => ({
+  category: {
+    id: 'category.id',
+    name: 'category.name',
+    slug: 'category.slug',
+  },
   expense: {
     id: 'expense.id',
     status: 'expense.status',
@@ -108,6 +113,16 @@ vi.mock('@/lib/db/schema', () => ({
     id: 'platform.id',
     name: 'platform.name',
     slug: 'platform.slug',
+  },
+  subCategory: {
+    id: 'subCategory.id',
+    name: 'subCategory.name',
+    categoryId: 'subCategory.categoryId',
+  },
+  userSubcategoryOverride: {
+    customName: 'userSubcategoryOverride.customName',
+    subCategoryId: 'userSubcategoryOverride.subCategoryId',
+    userId: 'userSubcategoryOverride.userId',
   },
   transaction: {
     id: 'transaction.id',
@@ -183,10 +198,12 @@ describe('transaction DAL query helpers', () => {
       occurredAt: 'transaction.occurredAt',
       expenseTitle: 'expense.title',
       expenseStatus: 'expense.status',
+      expenseCategoryName: 'category.name',
       fileId: 'file.id',
       platformName: 'platform.name',
       platformSlug: 'platform.slug',
     })
+    expect(transactionListSelect.expenseSubCategoryName).toMatchObject({ op: 'sql' })
     expect(transactionListSelect.fileName).toMatchObject({ op: 'sql' })
     expect(transactionPlatformSelect).toEqual({
       id: 'platform.id',
@@ -200,6 +217,8 @@ describe('transaction DAL query helpers', () => {
       fromDate: new Date('2026-01-01T00:00:00.000Z'),
       toDate: new Date('2026-01-31T23:59:59.999Z'),
       platform: 'fineco',
+      categorySlug: 'food',
+      subCategoryId: 42,
       sort: 'amount',
       dir: 'asc',
     })
@@ -223,6 +242,8 @@ describe('transaction DAL query helpers', () => {
         { op: 'gte', left: 'transaction.occurredAt', right: new Date('2026-01-01T00:00:00.000Z') },
         { op: 'lte', left: 'transaction.occurredAt', right: new Date('2026-01-31T23:59:59.999Z') },
         { op: 'eq', left: 'platform.slug', right: 'fineco' },
+        { op: 'eq', left: 'category.slug', right: 'food' },
+        { op: 'eq', left: 'subCategory.id', right: 42 },
       ]),
     })
   })
@@ -340,6 +361,8 @@ describe('transaction DAL query helpers', () => {
       fromDate: new Date('2026-01-01T00:00:00.000Z'),
       toDate: new Date('2026-01-31T23:59:59.999Z'),
       platform: 'fineco',
+      categorySlug: 'food',
+      subCategoryId: 42,
       sort: 'amount',
       dir: 'asc',
     })
@@ -358,6 +381,8 @@ describe('transaction DAL query helpers', () => {
         { op: 'gte', left: 'transaction.occurredAt', right: new Date('2026-01-01T00:00:00.000Z') },
         { op: 'lte', left: 'transaction.occurredAt', right: new Date('2026-01-31T23:59:59.999Z') },
         { op: 'eq', left: 'platform.slug', right: 'fineco' },
+        { op: 'eq', left: 'category.slug', right: 'food' },
+        { op: 'eq', left: 'subCategory.id', right: 42 },
         { op: 'eq', left: 'transaction.fileId', right: importId },
       ]),
     })

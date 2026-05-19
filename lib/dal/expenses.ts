@@ -1,8 +1,8 @@
 import 'server-only'
 import { cache } from 'react'
 import { db } from '@/lib/db'
-import { expense, subCategory, category } from '@/lib/db/schema'
-import { eq, and, gte, ilike, inArray, lte, or, asc, desc } from 'drizzle-orm'
+import { category, expense, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
+import { eq, and, gte, ilike, inArray, lte, or, asc, desc, sql } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { periodToDateRange } from '@/lib/utils/date'
 
@@ -98,13 +98,20 @@ export const getExpenses = cache(async (
       createdAt: expense.createdAt,
       totalAmount: expense.totalAmount,
       subCategoryId: expense.subCategoryId,
-      subCategoryName: subCategory.name,
+      subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
       categoryName: category.name,
       categorySlug: category.slug,
     })
     .from(expense)
     .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
     .leftJoin(category, eq(subCategory.categoryId, category.id))
+    .leftJoin(
+      userSubcategoryOverride,
+      and(
+        eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+        eq(userSubcategoryOverride.userId, userId),
+      ),
+    )
     .where(and(...conditions))
     .orderBy(buildExpenseOrderBy(filters))
     .limit(limit)
@@ -122,13 +129,20 @@ export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | und
       createdAt: expense.createdAt,
       totalAmount: expense.totalAmount,
       subCategoryId: expense.subCategoryId,
-      subCategoryName: subCategory.name,
+      subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
       categoryName: category.name,
       categorySlug: category.slug,
     })
     .from(expense)
     .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
     .leftJoin(category, eq(subCategory.categoryId, category.id))
+    .leftJoin(
+      userSubcategoryOverride,
+      and(
+        eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+        eq(userSubcategoryOverride.userId, userId),
+      ),
+    )
     .where(and(eq(expense.id, id), eq(expense.userId, userId)))
     .limit(1)
   return rows[0]
