@@ -1,66 +1,189 @@
 import { describe, expect, it } from 'vitest'
 import {
-  DEFAULT_DATABASE_POOL_MAX,
-  MAX_DATABASE_POOL_MAX,
-  getDatabasePoolConfig,
-  type DatabasePoolEnv,
-} from '@/lib/db/config'
+  DEFAULT_OPERATOR_POOL_MAX,
+  MAX_OPERATOR_POOL_MAX,
+  PRODUCTION_MIGRATION_CONFIRM_VALUE,
+  connectionStringWithSsl,
+  getOperatorDatabaseConfig,
+  isDirectSupabaseHost,
+  operatorConnectionFailureHint,
+  pgPoolConfigFromOperatorConfig,
+  sanitizeMigrationError,
+  type OperatorDatabaseConfigResult,
+  type OperatorDatabaseEnv,
+} from '@/scripts/db-config'
 
-function configFor(env: DatabasePoolEnv = {}) {
-  return getDatabasePoolConfig(env)
+function operatorConfigFor(env: OperatorDatabaseEnv = {}) {
+  return getOperatorDatabaseConfig({ env })
 }
 
-describe('getDatabasePoolConfig', () => {
-  it('uses a low serverless-safe default pool max when DATABASE_POOL_MAX is unset', () => {
-    expect(configFor().max).toBe(DEFAULT_DATABASE_POOL_MAX)
-  })
+function expectSuccess(result: OperatorDatabaseConfigResult): Extract<OperatorDatabaseConfigResult, { ok: true }> {
+  expect(result).toMatchObject({ ok: true })
+  if (!result.ok) {
+    throw new Error(`Expected successful operator database config, received ${result.error.code}`)
+  }
 
-  it('uses a valid integer DATABASE_POOL_MAX value', () => {
-    expect(configFor({ DATABASE_POOL_MAX: '3' }).max).toBe(3)
-  })
+  return result
+}
 
-  it('falls back to the default for malformed DATABASE_POOL_MAX values', () => {
-    expect(configFor({ DATABASE_POOL_MAX: 'abc' }).max).toBe(DEFAULT_DATABASE_POOL_MAX)
-    expect(configFor({ DATABASE_POOL_MAX: '1.5' }).max).toBe(DEFAULT_DATABASE_POOL_MAX)
-    expect(configFor({ DATABASE_POOL_MAX: '' }).max).toBe(DEFAULT_DATABASE_POOL_MAX)
-    expect(configFor({ DATABASE_POOL_MAX: '   ' }).max).toBe(DEFAULT_DATABASE_POOL_MAX)
-  })
+function confirmedOperatorEnv(env: OperatorDatabaseEnv = {}): OperatorDatabaseEnv {
+  return {
+    PRODUCTION_DATABASE_URL: 'postgres://production-user:production-password@production.example.com:5432/app',
+    PRODUCTION_MIGRATION_CONFIRM: PRODUCTION_MIGRATION_CONFIRM_VALUE,
+    ...env,
+  }
+}
 
-  it('falls back to the default for zero or negative DATABASE_POOL_MAX values', () => {
-    expect(configFor({ DATABASE_POOL_MAX: '0' }).max).toBe(DEFAULT_DATABASE_POOL_MAX)
-    expect(configFor({ DATABASE_POOL_MAX: '-1' }).max).toBe(DEFAULT_DATABASE_POOL_MAX)
-  })
-
-  it('clamps too-large DATABASE_POOL_MAX values to the conservative upper bound', () => {
-    expect(configFor({ DATABASE_POOL_MAX: String(MAX_DATABASE_POOL_MAX) }).max).toBe(MAX_DATABASE_POOL_MAX)
-    expect(configFor({ DATABASE_POOL_MAX: String(MAX_DATABASE_POOL_MAX + 1) }).max).toBe(MAX_DATABASE_POOL_MAX)
-    expect(configFor({ DATABASE_POOL_MAX: '999' }).max).toBe(MAX_DATABASE_POOL_MAX)
-  })
-
-  it('enables Supabase-compatible TLS via connection-string params when DATABASE_SSL=true', () => {
-    const config = configFor({
-      DATABASE_URL: 'postgresql://user:pass@pooler.example.com:6543/postgres',
-      DATABASE_SSL: 'true',
+describe('getOperatorDatabaseConfig guardrails', () => {
+  it('rejects missing or blank PRODUCTION_DATABASE_URL before returning config', () => {
+    expect(operatorConfigFor({ PRODUCTION_MIGRATION_CONFIRM: PRODUCTION_MIGRATION_CONFIRM_VALUE })).toEqual({
+      ok: false,
+      error: {
+        code: 'missing_production_database_url',
+        message: 'PRODUCTION_DATABASE_URL is required in .env for operator database commands.',
+      },
     })
 
-    expect(config.ssl).toBeUndefined()
-    expect(config.connectionString).toBe(
-      'postgresql://user:pass@pooler.example.com:6543/postgres?uselibpqcompat=true&sslmode=require',
-    )
-    expect(configFor({ DATABASE_SSL: 'false' }).connectionString).toBeUndefined()
-    expect(configFor({ DATABASE_SSL: 'TRUE' }).connectionString).toBeUndefined()
     expect(
-      configFor({
-        DATABASE_URL: 'postgresql://user:pass@pooler.example.com:6543/postgres?sslmode=require',
-        DATABASE_SSL: 'true',
-      }).connectionString,
-    ).toBe('postgresql://user:pass@pooler.example.com:6543/postgres?sslmode=require')
+      operatorConfigFor({
+        PRODUCTION_DATABASE_URL: '   ',
+        PRODUCTION_MIGRATION_CONFIRM: PRODUCTION_MIGRATION_CONFIRM_VALUE,
+      }),
+    ).toEqual({
+      ok: false,
+      error: {
+        code: 'missing_production_database_url',
+        message: 'PRODUCTION_DATABASE_URL is required in .env for operator database commands.',
+      },
+    })
   })
 
-  it('passes DATABASE_URL through only to the Pool config without deriving secret-bearing fields', () => {
-    const config = configFor({ DATABASE_URL: 'database-url-sentinel' })
+  it('rejects missing or wrong production confirmation values', () => {
+    expect(operatorConfigFor({ PRODUCTION_DATABASE_URL: 'postgres://production.example.com/app' })).toEqual({
+      ok: false,
+      error: {
+        code: 'missing_production_migration_confirm',
+        message: `Set PRODUCTION_MIGRATION_CONFIRM=${PRODUCTION_MIGRATION_CONFIRM_VALUE} in .env to run operator database commands.`,
+      },
+    })
 
-    expect(config.connectionString).toBe('database-url-sentinel')
-    expect(Object.keys(config).sort()).toEqual(['connectionString', 'max', 'ssl'])
+    expect(
+      operatorConfigFor({
+        PRODUCTION_DATABASE_URL: 'postgres://production.example.com/app',
+        PRODUCTION_MIGRATION_CONFIRM: 'yes',
+      }),
+    ).toEqual({
+      ok: false,
+      error: {
+        code: 'invalid_production_migration_confirm',
+        message: `Set PRODUCTION_MIGRATION_CONFIRM=${PRODUCTION_MIGRATION_CONFIRM_VALUE} in .env to run operator database commands.`,
+      },
+    })
+  })
+
+  it('defaults, falls back, and caps PRODUCTION_DATABASE_POOL_MAX', () => {
+    expect(expectSuccess(operatorConfigFor(confirmedOperatorEnv())).config.max).toBe(DEFAULT_OPERATOR_POOL_MAX)
+
+    for (const malformedValue of ['', '   ', 'abc', '0', '-1']) {
+      const result = expectSuccess(
+        operatorConfigFor(confirmedOperatorEnv({ PRODUCTION_DATABASE_POOL_MAX: malformedValue })),
+      )
+
+      expect(result.config.max).toBe(DEFAULT_OPERATOR_POOL_MAX)
+    }
+
+    expect(
+      expectSuccess(
+        operatorConfigFor(confirmedOperatorEnv({ PRODUCTION_DATABASE_POOL_MAX: String(MAX_OPERATOR_POOL_MAX) })),
+      ).config.max,
+    ).toBe(MAX_OPERATOR_POOL_MAX)
+    expect(
+      expectSuccess(operatorConfigFor(confirmedOperatorEnv({ PRODUCTION_DATABASE_POOL_MAX: '999' }))).config.max,
+    ).toBe(MAX_OPERATOR_POOL_MAX)
+  })
+
+  it('enables strict TLS only when PRODUCTION_DATABASE_SSL is exactly true', () => {
+    expect(expectSuccess(operatorConfigFor(confirmedOperatorEnv({ PRODUCTION_DATABASE_SSL: 'true' }))).config.ssl).toEqual({
+      rejectUnauthorized: true,
+    })
+    expect(expectSuccess(operatorConfigFor(confirmedOperatorEnv({ PRODUCTION_DATABASE_SSL: 'false' }))).config.ssl).toBeUndefined()
+    expect(expectSuccess(operatorConfigFor(confirmedOperatorEnv())).config.ssl).toBeUndefined()
+  })
+
+  it('returns diagnostics with host for CLI status output', () => {
+    const result = expectSuccess(
+      operatorConfigFor(
+        confirmedOperatorEnv({
+          PRODUCTION_DATABASE_SSL: 'true',
+          PRODUCTION_DATABASE_URL: 'postgres://user:pass@aws-1-eu-central-1.pooler.supabase.com:6543/postgres',
+        }),
+      ),
+    )
+
+    expect(result.diagnostics).toEqual({
+      targetClass: 'production',
+      migrationsFolder: './drizzle/migrations',
+      poolMax: DEFAULT_OPERATOR_POOL_MAX,
+      sslEnabled: true,
+      host: 'aws-1-eu-central-1.pooler.supabase.com',
+    })
+  })
+})
+
+describe('pgPoolConfigFromOperatorConfig', () => {
+  it('appends ssl query params when production ssl is enabled', () => {
+    const { config } = expectSuccess(
+      operatorConfigFor(
+        confirmedOperatorEnv({
+          PRODUCTION_DATABASE_SSL: 'true',
+          PRODUCTION_DATABASE_URL: 'postgres://user:pass@aws-1-eu-central-1.pooler.supabase.com:6543/postgres',
+        }),
+      ),
+    )
+
+    expect(pgPoolConfigFromOperatorConfig(config).connectionString).toContain('sslmode=require')
+    expect(connectionStringWithSsl(config)).toContain('sslmode=require')
+  })
+})
+
+describe('operatorConnectionFailureHint', () => {
+  it('warns for direct Supabase hosts', () => {
+    expect(operatorConnectionFailureHint('db.rceujonrgergjljpegly.supabase.co')).toContain('PRODUCTION_DATABASE_URL')
+    expect(operatorConnectionFailureHint('aws-1-eu-central-1.pooler.supabase.com')).toBeUndefined()
+    expect(isDirectSupabaseHost('db.rceujonrgergjljpegly.supabase.co')).toBe(true)
+  })
+})
+
+describe('sanitizeMigrationError', () => {
+  it('redacts secret-bearing unknown error strings and exposes only safe classes and codes', () => {
+    const result = sanitizeMigrationError(
+      new Error(
+        'password=super-secret postgres://user:secret@db.example.com:5432/app failed at /private/path\n    at raw stack frame',
+      ),
+    )
+
+    expect(result).toEqual({
+      code: 'migration_unknown_error',
+      className: 'Error',
+      message: 'Migration failed. See sanitized diagnostics for the stable failure code.',
+    })
+    expect(JSON.stringify(result)).not.toContain('super-secret')
+    expect(JSON.stringify(result)).not.toContain('secret@db.example.com')
+  })
+
+  it('keeps safe driver-style error codes while omitting raw error objects', () => {
+    const result = sanitizeMigrationError({
+      code: '28P01',
+      message: 'password authentication failed for user app with password hunter2',
+      stack: 'raw stack',
+      connectionString: 'postgres://user:hunter2@db.example.com/app',
+    })
+
+    expect(result).toEqual({
+      code: '28P01',
+      className: 'Object',
+      message: 'Migration failed. See sanitized diagnostics for the stable failure code.',
+    })
+    expect(JSON.stringify(result)).not.toContain('hunter2')
   })
 })

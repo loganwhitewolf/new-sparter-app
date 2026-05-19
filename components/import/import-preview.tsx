@@ -34,9 +34,10 @@ type FormatCandidate = {
 type Props = {
   result: ImportAnalysisResult
   candidates?: FormatCandidate[]
+  confirmDisabledReason?: string
 }
 
-export function ImportPreview({ result, candidates = [] }: Props) {
+export function ImportPreview({ result, candidates = [], confirmDisabledReason }: Props) {
   const router = useRouter()
   const [selectedFormatVersionId, setSelectedFormatVersionId] = useState<string>(
     result.formatVersionId ? String(result.formatVersionId) : '',
@@ -191,7 +192,7 @@ export function ImportPreview({ result, candidates = [] }: Props) {
       )}
 
       {/* Confirm button — hidden when analysis has fatal errors */}
-      {!hasErrors && (
+      {!hasErrors && !confirmDisabledReason && (
         <div className="flex flex-col gap-3">
           {error && (
             <Alert variant="destructive" role="alert">

@@ -1,9 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { AlertCircle } from 'lucide-react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ImportPreview } from '@/components/import/import-preview'
 import { analyzeImportAction } from '@/lib/actions/import'
 import type { ImportAnalysisResult } from '@/lib/services/import'
@@ -71,12 +70,6 @@ export default async function AnalyzePage({
   }
 
   const isUnknownFormat = Boolean(result.data && isUnknownFormatAnalysis(result.data))
-  const previewResult = isUnknownFormat
-    ? {
-        ...result.data,
-        errors: ['Formato non riconosciuto. Configura un formato privato per riprovare l’analisi.'],
-      }
-    : result.data
 
   return (
     <div className="flex flex-col gap-6">
@@ -88,28 +81,43 @@ export default async function AnalyzePage({
       </div>
 
       {isUnknownFormat && (
-        <Card className="max-w-2xl border-amber-200 bg-amber-50/60">
-          <CardHeader>
-            <CardTitle>Formato non riconosciuto</CardTitle>
+        <Card className="max-w-2xl overflow-hidden border-border bg-card shadow-sm">
+          <CardHeader className="space-y-3 pb-3">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20 dark:text-amber-400">
+                <AlertCircle className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                  Formato file
+                </p>
+                <CardTitle className="text-lg">Formato non riconosciuto</CardTitle>
+                <CardDescription>
+                  Il file è leggibile, ma non corrisponde ancora ai formati disponibili.
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Alert>
-              <AlertCircle className="h-4 w-4" aria-hidden="true" />
-              <AlertDescription>
-                Il file è leggibile, ma non corrisponde ai formati disponibili. Puoi creare un
-                formato privato usando le intestazioni del file e riprovare subito l&apos;analisi.
-              </AlertDescription>
-            </Alert>
-            <Button asChild>
-              <Link href={`/import/${encodeURIComponent(fileId)}/configure`}>
-                Configura formato privato
-              </Link>
-            </Button>
+            <div className="rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+              Crea un formato privato usando le intestazioni del file: salveremo la configurazione
+              solo per il tuo account e riproveremo subito l&apos;analisi dello stesso documento.
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild>
+                <Link href={`/import/${encodeURIComponent(fileId)}/configure`}>
+                  Configura formato privato
+                </Link>
+              </Button>
+              <Button asChild variant="ghost">
+                <Link href="/import">Torna alle importazioni</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      <ImportPreview result={previewResult} />
+      {!isUnknownFormat && <ImportPreview result={result.data} />}
     </div>
   )
 }

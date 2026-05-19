@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { detectImportFormat } from '../lib/services/import-format-detector'
 import { parseImportFile } from '../lib/services/import-parsers'
-import { platforms as seedPlatforms } from '../docs/init/seed'
+import { platforms as seedPlatforms } from '../scripts/seed-data'
 
 const fixturePath = (name: string) => join(process.cwd(), 'tests', 'fixtures', 'import', name)
 
