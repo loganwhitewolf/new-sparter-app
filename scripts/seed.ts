@@ -2,7 +2,7 @@
 // Uses onConflictDoNothing() — safe to run multiple times (idempotent).
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import { inArray } from 'drizzle-orm'
+import { inArray, sql } from 'drizzle-orm'
 import { category, subCategory, platform, importFormatVersion, categorizationPattern } from '../lib/db/schema'
 import {
   getOperatorDatabaseConfig,
@@ -84,6 +84,7 @@ async function seed() {
     .insert(platform)
     .values(seedPlatforms.map((platformSeed) => ({ ...platformSeed, isActive: true })))
     .onConflictDoNothing()
+  await db.execute(sql`select setval('platform_id_seq', coalesce((select max(${platform.id}) from ${platform}), 0) + 1, false)`)
   console.log(`  ${seedPlatforms.length} platforms inserted (or already present).`)
 
   console.log('Seeding import format versions...')

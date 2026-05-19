@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   dbTransaction: vi.fn(),
   txInsert: vi.fn(),
   txUpdate: vi.fn(),
+  txExecute: vi.fn(),
   insertedPlatforms: [] as Record<string, unknown>[],
   insertedVersions: [] as Record<string, unknown>[],
   updatedFiles: [] as Record<string, unknown>[],
@@ -37,6 +38,7 @@ vi.mock('@/lib/logger', () => ({
 
 function makeTx() {
   return {
+    execute: mocks.txExecute,
     insert: () => ({
       values: (value: Record<string, unknown>) => {
         if ('headerSignature' in value) {
@@ -151,6 +153,7 @@ describe('import format wizard Server Actions', () => {
     mocks.getFileForUser.mockResolvedValue(fileRow)
     mocks.readObjectBody.mockResolvedValue(Readable.from([Buffer.from('Data,Descrizione,Importo\n2026-01-01,Coffee,-2.50')]))
     mocks.parseImportFile.mockResolvedValue(parsedFile)
+    mocks.txExecute.mockResolvedValue([])
     mocks.dbTransaction.mockImplementation((callback) => callback(makeTx()))
   })
 
@@ -195,6 +198,8 @@ describe('import format wizard Server Actions', () => {
       formatVersionId: 501,
       headerSignature: 'Data,Descrizione,Importo',
     })
+    expect(mocks.txExecute).toHaveBeenCalledTimes(1)
+    expect(mocks.insertedPlatforms[0]).not.toHaveProperty('id')
     expect(mocks.insertedPlatforms[0]).toMatchObject({
       ownerUserId: 'user-abc',
       visibility: 'private',
