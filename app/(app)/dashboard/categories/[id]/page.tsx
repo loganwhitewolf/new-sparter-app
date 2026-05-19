@@ -7,7 +7,7 @@ import { CategoryDetailTrendChart } from '@/components/dashboard/category-detail
 import { CategorySubcategoryBreakdown } from '@/components/dashboard/category-subcategory-breakdown'
 import { CategoryTopTransactions } from '@/components/dashboard/category-top-transactions'
 import { DashboardFilters } from '@/components/dashboard/dashboard-filters'
-import { getCategoryDetail } from '@/lib/dal/dashboard'
+import { getCategoryDeviations, getCategoryDetail } from '@/lib/dal/dashboard'
 import { buildDashboardCategoriesHref } from '@/lib/routes'
 import {
   parseDashboardFilters,
@@ -76,7 +76,10 @@ async function CategoryDetailContent({
     return <CategoryDetailEmptyState />
   }
 
-  const data = await getCategoryDetail(categoryId, filters)
+  const [data, deviations] = await Promise.all([
+    getCategoryDetail(categoryId, filters),
+    getCategoryDeviations({ type: filters.type, categoryId }),
+  ])
 
   if (data.category === null) {
     return <CategoryDetailEmptyState />
@@ -124,7 +127,11 @@ async function CategoryDetailContent({
               Distribuzione interna della categoria nel periodo.
             </p>
           </div>
-          <CategorySubcategoryBreakdown subcategories={data.subcategories} type={filters.type} />
+          <CategorySubcategoryBreakdown
+            subcategories={data.subcategories}
+            type={filters.type}
+            deviations={deviations}
+          />
         </section>
       </div>
     </div>
