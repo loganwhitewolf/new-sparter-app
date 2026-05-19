@@ -8,6 +8,8 @@
     "start": "next start",
     "production:smoke": "node scripts/production-smoke.mjs",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
     "check:language": "node scripts/check-code-language.mjs",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:generate": "drizzle-kit generate",

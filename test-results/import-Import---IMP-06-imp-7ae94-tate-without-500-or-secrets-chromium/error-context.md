@@ -6,108 +6,139 @@
 
 # Test info
 
-- Name: import.spec.ts >> Import - IMP-05: Configure page error state >> IMP-05 /import/[unknownId]/configure renders bounded error card without secrets
-- Location: tests/import.spec.ts:327:7
+- Name: import.spec.ts >> Import - IMP-06: importId transaction filter >> IMP-06 /transactions?importId=<unknown> renders empty state without 500 or secrets
+- Location: tests/import.spec.ts:352:7
 
 # Error details
 
 ```
 Error: expect(locator).toBeVisible() failed
 
-Locator: locator('[role="alert"]')
+Locator: getByRole('heading', { name: 'Transazioni' })
 Expected: visible
-Error: strict mode violation: locator('[role="alert"]') resolved to 2 elements:
-    1) <div role="alert" data-slot="alert" class="relative w-full rounded-lg border px-4 py-3 text-sm grid has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] grid-cols-[0_1fr] has-[>svg]:gap-x-3 gap-y-0.5 items-start [&>svg]:translate-y-0.5 text-destructive bg-card [&>svg]:text-destructive *:data-[slot=alert-description]:text-destructive/80">…</div> aka getByRole('alert').filter({ hasText: 'Importazione non trovata o' })
-    2) <div role="alert" aria-live="assertive" id="__next-route-announcer__"></div> aka locator('[id="__next-route-announcer__"]')
+Timeout: 5000ms
+Error: element(s) not found
 
 Call log:
   - Expect "toBeVisible" with timeout 5000ms
-  - waiting for locator('[role="alert"]')
+  - waiting for getByRole('heading', { name: 'Transazioni' })
 
 ```
 
 # Page snapshot
 
 ```yaml
-- generic [active] [ref=e1]:
-  - generic [ref=e2]:
-    - complementary [ref=e3]:
-      - navigation [ref=e4]:
-        - list [ref=e5]:
-          - listitem [ref=e6]:
-            - link "Dashboard" [ref=e7] [cursor=pointer]:
-              - /url: /dashboard
-              - img [ref=e8]
-              - generic [ref=e13]: Dashboard
-          - listitem [ref=e14]:
-            - link "Transazioni" [ref=e15] [cursor=pointer]:
-              - /url: /transactions
-              - img [ref=e16]
-              - generic [ref=e17]: Transazioni
-          - listitem [ref=e18]:
-            - link "Spese" [ref=e19] [cursor=pointer]:
-              - /url: /expenses
-              - img [ref=e20]
-              - generic [ref=e23]: Spese
-          - listitem [ref=e24]:
-            - link "Importazioni" [ref=e25] [cursor=pointer]:
-              - /url: /import
-              - img [ref=e26]
-              - generic [ref=e29]: Importazioni
-        - list [ref=e31]:
-          - listitem [ref=e32]:
-            - link "Impostazioni" [ref=e33] [cursor=pointer]:
-              - /url: /settings
-              - img [ref=e34]
-              - generic [ref=e37]: Impostazioni
-    - generic [ref=e38]:
-      - banner [ref=e39]:
-        - generic [ref=e41]: Sparter
-        - generic [ref=e42]:
-          - button "Tema" [disabled]
-          - button "Menu utente" [ref=e43]:
-            - generic [ref=e45]: U
-      - main [ref=e46]:
-        - generic [ref=e47]:
-          - generic [ref=e48]:
-            - heading "Configura formato importazione" [level=1] [ref=e49]
-            - paragraph [ref=e50]: Non è stato possibile preparare la configurazione del formato.
-          - generic [ref=e51]:
-            - generic [ref=e53]: Formato non configurabile
-            - generic [ref=e54]:
-              - alert [ref=e55]:
-                - img [ref=e56]
-                - generic [ref=e58]: Importazione non trovata o accesso negato.
-              - link "Torna alle importazioni" [ref=e59] [cursor=pointer]:
-                - /url: /import
-  - region "Notifications alt+T"
-  - button "Open Next.js Dev Tools" [ref=e65] [cursor=pointer]:
-    - img [ref=e66]
-  - alert [ref=e69]
+- generic [ref=e1]:
+  - generic [active]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - navigation [ref=e7]:
+            - button "previous" [disabled] [ref=e8]:
+              - img "previous" [ref=e9]
+            - generic [ref=e11]:
+              - generic [ref=e12]: 1/
+              - text: "2"
+            - button "next" [ref=e13] [cursor=pointer]:
+              - img "next" [ref=e14]
+          - img
+        - generic [ref=e16]:
+          - link "Next.js 16.2.4 (stale) Turbopack" [ref=e17] [cursor=pointer]:
+            - /url: https://nextjs.org/docs/messages/version-staleness
+            - img [ref=e18]
+            - generic "There is a newer version (16.2.6) available, upgrade recommended!" [ref=e20]: Next.js 16.2.4 (stale)
+            - generic [ref=e21]: Turbopack
+          - img
+      - generic [ref=e22]:
+        - dialog "Console Error" [ref=e23]:
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - generic [ref=e28]:
+                - generic [ref=e30]: Console Error
+                - generic [ref=e31]:
+                  - button "Copy Error Info" [ref=e32] [cursor=pointer]:
+                    - img [ref=e33]
+                  - button "No related documentation found" [disabled] [ref=e35]:
+                    - img [ref=e36]
+                  - button "Attach Node.js inspector" [ref=e38] [cursor=pointer]:
+                    - img [ref=e39]
+              - generic [ref=e48]:
+                - text: Encountered a script tag while rendering React component. Scripts inside React components are never executed when rendering on the client. Consider using template tag instead (
+                - link "https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template" [ref=e49] [cursor=pointer]:
+                  - /url: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template
+                - text: ).
+            - generic [ref=e50]:
+              - generic [ref=e51]:
+                - paragraph [ref=e53]:
+                  - img [ref=e55]
+                  - generic [ref=e58]: components/theme-provider.tsx (7:10) @ ThemeProvider
+                  - button "Open in editor" [ref=e59] [cursor=pointer]:
+                    - img [ref=e61]
+                - generic [ref=e64]:
+                  - generic [ref=e65]: 5 |
+                  - generic [ref=e66]: "6 | export function ThemeProvider({ children, ...props }: ComponentProps<typeof NextThemesProvider>) {"
+                  - generic [ref=e67]: "> 7 | return <NextThemesProvider {...props}>{children}</NextThemesProvider>"
+                  - generic [ref=e68]: "| ^"
+                  - generic [ref=e69]: "8 | }"
+                  - generic [ref=e70]: 9 |
+              - generic [ref=e71]:
+                - generic [ref=e72]:
+                  - paragraph [ref=e73]:
+                    - text: Call Stack
+                    - generic [ref=e74]: "18"
+                  - button "Show 15 ignore-listed frame(s)" [ref=e75] [cursor=pointer]:
+                    - text: Show 15 ignore-listed frame(s)
+                    - img [ref=e76]
+                - generic [ref=e78]:
+                  - generic [ref=e79]: script
+                  - text: <anonymous>
+                - generic [ref=e80]:
+                  - generic [ref=e81]:
+                    - text: ThemeProvider
+                    - button "Open ThemeProvider in editor" [ref=e82] [cursor=pointer]:
+                      - img [ref=e83]
+                  - text: components/theme-provider.tsx (7:10)
+                - generic [ref=e85]:
+                  - generic [ref=e86]:
+                    - text: RootLayout
+                    - button "Open RootLayout in editor" [ref=e87] [cursor=pointer]:
+                      - img [ref=e88]
+                  - text: app/layout.tsx (20:9)
+          - generic [ref=e90]: "1"
+          - generic [ref=e91]: "2"
+        - contentinfo [ref=e92]:
+          - region "Error feedback" [ref=e93]:
+            - paragraph [ref=e94]:
+              - link "Was this helpful?" [ref=e95] [cursor=pointer]:
+                - /url: https://nextjs.org/telemetry#error-feedback
+            - button "Mark as helpful" [ref=e96] [cursor=pointer]:
+              - img [ref=e97]
+            - button "Mark as not helpful" [ref=e100] [cursor=pointer]:
+              - img [ref=e101]
+    - generic [ref=e107] [cursor=pointer]:
+      - button "Open Next.js Dev Tools" [ref=e108]:
+        - img [ref=e109]
+      - generic [ref=e112]:
+        - button "Open issues overlay" [ref=e113]:
+          - generic [ref=e114]:
+            - generic [ref=e115]: "1"
+            - generic [ref=e116]: "2"
+          - generic [ref=e117]:
+            - text: Issue
+            - generic [ref=e118]: s
+        - button "Collapse issues badge" [ref=e119]:
+          - img [ref=e120]
+  - generic [ref=e123]:
+    - img [ref=e124]
+    - heading "This page couldn’t load" [level=1] [ref=e126]
+    - paragraph [ref=e127]: A server error occurred. Reload to try again.
+    - button "Reload" [ref=e130] [cursor=pointer]
+  - paragraph [ref=e131]: ERROR 3936760258
 ```
 
 # Test source
 
 ```ts
-  240 | 
-  241 |     await page.reload()
-  242 | 
-  243 |     await expect(page.getByLabel(/cerca importazione/i)).toHaveValue('statement')
-  244 |     await expect(page.getByLabel(/importato da/i)).toHaveValue('2024-01-01')
-  245 |     await expect(page.getByLabel(/importato a/i)).toHaveValue('2024-12-31')
-  246 |     await expect(page.getByLabel(/riferimento da/i)).toHaveValue('2024-02-01')
-  247 |     await expect(page.getByLabel(/riferimento a/i)).toHaveValue('2024-11-30')
-  248 |     await expectNoSecretDiagnostics(page)
-  249 |   })
-  250 | 
-  251 |   test('IMP-03 normalizes malformed URL dates and shows a safe reachable history state', async ({ page }) => {
-  252 |     await page.setExtraHTTPHeaders({
-  253 |       'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
-  254 |     })
-  255 |     await page.goto('/import?importedFrom=not-a-date&referenceTo=2024-99-99&q=missing-import-name')
-  256 | 
-  257 |     await expect(page.getByLabel(/importato da/i)).toHaveValue('')
-  258 |     await expect(page.getByLabel(/riferimento a/i)).toHaveValue('')
   259 | 
   260 |     const historyTable = page.getByRole('table', { name: /storico importazioni/i })
   261 |     const filteredEmptyState = page.getByText(/nessuna importazione corrisponde ai filtri/i)
@@ -189,8 +220,7 @@ Call log:
   337 | 
   338 |     // Error detail paragraph (from the action error or fallback message)
   339 |     const errorAlert = page.locator('[role="alert"]')
-> 340 |     await expect(errorAlert).toBeVisible()
-      |                              ^ Error: expect(locator).toBeVisible() failed
+  340 |     await expect(errorAlert).toBeVisible()
   341 | 
   342 |     // Back link must point to /import
   343 |     const backLink = page.getByRole('link', { name: /torna alle importazioni/i })
@@ -209,7 +239,8 @@ Call log:
   356 |     await page.goto('/transactions?importId=00000000-0000-4000-8000-000000000099')
   357 | 
   358 |     // Page heading must be visible — confirms the RSC rendered without crashing
-  359 |     await expect(page.getByRole('heading', { name: 'Transazioni' })).toBeVisible()
+> 359 |     await expect(page.getByRole('heading', { name: 'Transazioni' })).toBeVisible()
+      |                                                                      ^ Error: expect(locator).toBeVisible() failed
   360 | 
   361 |     // Table or empty state must be visible (zero results expected for unknown importId)
   362 |     const transactionTable = page.getByRole('table')
