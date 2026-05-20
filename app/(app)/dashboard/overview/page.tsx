@@ -8,18 +8,20 @@ import { OverviewFilters } from '@/components/dashboard/overview-filters'
 import { OverviewSkeleton } from '@/components/dashboard/overview-skeleton'
 import { TrendSkeleton } from '@/components/dashboard/trend-skeleton'
 
+const OVERVIEW_DEFAULT_PRESET = 'last-3-months' as const
+
 type Props = {
   searchParams: Promise<{ preset?: string; type?: string }>
 }
 
 async function OverviewContent({ preset }: { preset: string | undefined }) {
-  const filters = parseDashboardFilters({ preset })
+  const filters = parseDashboardFilters({ preset }, { defaultPreset: OVERVIEW_DEFAULT_PRESET })
   const data = await getOverview(filters.preset)
   return <KpiCards data={data} />
 }
 
 async function TrendContent({ preset }: { preset: string | undefined }) {
-  const filters = parseDashboardFilters({ preset })
+  const filters = parseDashboardFilters({ preset }, { defaultPreset: OVERVIEW_DEFAULT_PRESET })
   const data = await getAggregatedTransactionsData(filters.preset)
   return (
     <div className="flex flex-col gap-6">
@@ -41,7 +43,7 @@ async function TrendContent({ preset }: { preset: string | undefined }) {
 
 export default async function DashboardOverviewPage({ searchParams }: Props) {
   const params = await searchParams
-  const filters = parseDashboardFilters(params)
+  const filters = parseDashboardFilters(params, { defaultPreset: OVERVIEW_DEFAULT_PRESET })
 
   return (
     <div className="flex flex-col gap-6">

@@ -15,7 +15,7 @@ import {
   type DashboardFilters as ParsedDashboardFilters,
 } from '@/lib/validations/dashboard'
 
-const CATEGORY_DETAIL_DEFAULT_PRESET = 'this-year' as const
+const CATEGORY_DETAIL_DEFAULT_PRESET = 'last-3-months' as const
 const categoryTypeOptions = [
   { value: 'out' as const, label: 'Uscite' },
   { value: 'in' as const, label: 'Entrate' },

@@ -12,7 +12,7 @@ import {
   type DashboardSort,
 } from '@/lib/validations/dashboard'
 
-const CATEGORIES_DEFAULT_PRESET = 'this-year' as const
+const CATEGORIES_DEFAULT_PRESET = 'last-3-months' as const
 const CATEGORIES_DEFAULT_SORT: DashboardSort = 'deviation'
 const categoryTypeOptions = [
   { value: 'out' as const, label: 'Uscite' },
