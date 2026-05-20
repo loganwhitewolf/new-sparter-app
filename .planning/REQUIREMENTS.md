@@ -50,25 +50,25 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| OAUTH-01 | — | Pending |
-| OAUTH-02 | — | Pending |
-| OAUTH-03 | — | Pending |
-| OAUTH-04 | — | Pending |
-| OAUTH-05 | — | Pending |
-| LINK-01 | — | Pending |
-| LINK-02 | — | Pending |
-| LINK-03 | — | Pending |
-| LINK-04 | — | Pending |
-| REG-01 | — | Pending |
-| ENV-01 | — | Pending |
-| ENV-02 | — | Pending |
-| ENV-03 | — | Pending |
+| OAUTH-01 | Phase 31 | Pending |
+| OAUTH-02 | Phase 31 | Pending |
+| OAUTH-03 | Phase 31 | Pending |
+| OAUTH-04 | Phase 31 | Pending |
+| OAUTH-05 | Phase 31 | Pending |
+| LINK-01 | Phase 32 | Pending |
+| LINK-02 | Phase 32 | Pending |
+| LINK-03 | Phase 32 | Pending |
+| LINK-04 | Phase 32 | Pending |
+| REG-01 | Phase 30 | Pending |
+| ENV-01 | Phase 30 | Pending |
+| ENV-02 | Phase 30 | Pending |
+| ENV-03 | Phase 30 | Pending |
 
 **Coverage:**
 - v1 requirements: 13 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 13 ⚠
+- Mapped to phases: 13
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-20*
-*Last updated: 2026-05-20 after initial definition*
+*Last updated: 2026-05-20 — traceability filled after roadmap creation*
