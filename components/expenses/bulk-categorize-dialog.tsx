@@ -75,7 +75,7 @@ export function BulkCategorizeDialog({
             value={subCategoryId}
             onChange={setSubCategoryId}
             placeholder="Cerca sottocategoria…"
-            allowedCategoryTypes={['out', 'system']}
+            allowedCategoryTypes={['in', 'out', 'system']}
           />
 
           {state.error && (

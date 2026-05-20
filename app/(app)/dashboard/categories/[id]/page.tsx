@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { CategoryDetailEmptyState } from '@/components/dashboard/category-detail-empty-state'
 import { CategoryDetailSkeleton } from '@/components/dashboard/category-detail-skeleton'
@@ -15,6 +16,10 @@ import {
 } from '@/lib/validations/dashboard'
 
 const CATEGORY_DETAIL_DEFAULT_PRESET = 'this-year' as const
+const categoryTypeOptions = [
+  { value: 'out' as const, label: 'Uscite' },
+  { value: 'in' as const, label: 'Entrate' },
+]
 
 type CategoryDetailFilters = ParsedDashboardFilters & {
   preset: typeof CATEGORY_DETAIL_DEFAULT_PRESET | ParsedDashboardFilters['preset']
@@ -64,9 +69,11 @@ function parseCategoryDetailFilters(
 async function CategoryDetailContent({
   categoryId,
   filters,
+  categoriesHref,
 }: {
   categoryId: number | null
   filters: CategoryDetailFilters
+  categoriesHref: string
 }) {
   if (categoryId === null) {
     return <CategoryDetailEmptyState />
@@ -78,7 +85,7 @@ async function CategoryDetailContent({
   ])
 
   if (data.category === null) {
-    return <CategoryDetailEmptyState />
+    redirect(categoriesHref)
   }
 
   return (
@@ -163,12 +170,12 @@ export default async function DashboardCategoryDetailPage({ params, searchParams
           preset={filters.preset}
           type={filters.type}
           defaultPreset={CATEGORY_DETAIL_DEFAULT_PRESET}
-          typeOptions={[]}
+          typeOptions={categoryTypeOptions}
         />
       </Suspense>
 
       <Suspense fallback={<CategoryDetailSkeleton />}>
-        <CategoryDetailContent categoryId={categoryId} filters={filters} />
+        <CategoryDetailContent categoryId={categoryId} filters={filters} categoriesHref={backHref} />
       </Suspense>
     </div>
   )
