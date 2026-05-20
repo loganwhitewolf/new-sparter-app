@@ -2,20 +2,27 @@
 
 ## What This Is
 
-Sparter is a personal finance app for the Italian market. It already supports authentication, transaction and expense management, import history, CSV/Excel import flows backed by Cloudflare R2, user-managed categories, dashboard insights, structured logging, and a health endpoint. The current work moves the existing app from local/demo development into a zero-euro personal/demo production deployment on Vercel.
+Sparter is a personal finance app for the Italian market. It supports authentication, transaction and expense management, import history, CSV/Excel import flows backed by Cloudflare R2, user-managed categories, actionable dashboard insights with deviation analysis, structured logging, and a health endpoint. The app is deployed on Vercel (operator action) or runnable locally with a Supabase/R2 stack.
 
 ## Core Value
 
-The one thing that must work even if everything else is cut: the user can safely run Sparter online for personal use and demos, with real database persistence, real file-upload storage, and a repeatable migration/deploy/check procedure that does not expose secrets.
+The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy with real database persistence and repeatable migration/deploy procedures.
 
 ## Project Shape
 
 - **Complexity:** complex
-- **Why:** The app already spans Next.js server runtime, Better Auth, Drizzle/Postgres, Cloudflare R2, production environment variables, migrations, and external free-tier platform limits; deploy readiness depends on real integration rather than isolated code changes.
+- **Why:** The app spans Next.js server runtime, Better Auth, Drizzle/Postgres, Cloudflare R2, production environment variables, migrations, categorization tiers, dashboard deviation analytics, and external free-tier platform limits.
 
 ## Current State
 
-Milestones M001-M006 are complete. The app has working auth, import management, categorization, category settings, dashboard overview/categories, R2 upload services, Drizzle migrations, and operational health diagnostics. The project is not yet production-deployed with Vercel + Supabase + R2 under a documented zero-cost operating model.
+All milestones M001–M008 complete as of 2026-05-20. The app has:
+- Working auth, import management, categorization (Tier 1 regex, Tier 2 history, Tier 3 AI gated)
+- Category settings with user-owned and system categories/subcategories
+- Dashboard overview with deviation badges on category pages, EntrateUsciteChart, BilancioBarsChart
+- R2 upload services, Drizzle migrations, operational health diagnostics
+- Zero-cost deploy runbook at `docs/deploy/vercel-supabase-r2.md`
+
+Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
 ## Architecture / Key Patterns
 
@@ -26,10 +33,36 @@ Milestones M001-M006 are complete. The app has working auth, import management, 
 - Pino structured logging with optional Better Stack transport and AsyncLocalStorage request/user context propagation.
 - `/api/health` is the operational diagnostic surface for DB and R2 readiness and always returns structured JSON.
 - Developer-facing code, comments, route names, tests, and docs are English; Italian is allowed only for intentional product/domain surfaces.
+- Decimal.js for all monetary arithmetic — never native `+`, `-`, `*`, `/` on amounts.
+- Dashboard deviation: `computeDeviation` + `buildDeviationMap` in `lib/utils/dashboard.ts`; `getCategoryDeviations` DAL in `lib/dal/dashboard.ts`; Reference Period = last completed calendar month, Baseline = 3 months prior, noise threshold = €15.
 
 ## Capability Contract
 
-See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement status, and coverage mapping.
+### Validated (M001–M008)
+
+- ✓ Pino structured logging, AsyncLocalStorage context, optional Better Stack — M002
+- ✓ Full import lifecycle (pending → uploaded → analyzing → analyzed → importing → imported → failed) — M004
+- ✓ Import statistics, deduplication, platform detection, recovery wizard — M004
+- ✓ User-managed platforms, custom regex patterns, paid-tier gating — M005
+- ✓ Category and subcategory management, categorization UX — M005
+- ✓ Dashboard overview, category ranking, drill-down reporting — M006
+- ✓ Production migration CLI, registration guardrail, health/smoke diagnostics — M007
+- ✓ Dashboard deviation badges, EntrateUsciteChart, BilancioBarsChart, sort toggle — v1.8/M008
+
+### Active (carry to next milestone)
+
+- [ ] R029 — Categorization revalidation for all entrypoints (partial, M005 covered existing ones)
+- [ ] R038 — Vercel Hobby/free deploy (operator-pending)
+- [ ] R039 — Supabase Free Postgres production database (operator-pending)
+- [ ] R041 — Cloudflare R2 production storage (operator-pending)
+
+### Out of Scope
+
+- Mobile app — web-first; PWA acceptable later
+- Video/audio features — not relevant for finance
+- Multi-user / team accounts — single-user personal finance for v1.x
+- Staging environment — free-tier cost constraint
+- Offline mode — real-time data is core value
 
 ## Milestone Sequence
 
@@ -39,4 +72,23 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M004: Import Management — Delivered import lifecycle management, unknown-format recovery, and safe deletion flows.
 - [x] M005: Category Management & UX Polish — Delivered user category management and categorization UX improvements.
 - [x] M006: Dashboard Insight Suite — Delivered dashboard overview, category insights, and drill-down reporting.
-- [ ] M007: Zero-cost Production Deploy — Deploy the app to Vercel with Supabase Postgres, Cloudflare R2, manual Drizzle migrations, signup guardrails, and an operational runbook for a zero-euro personal/demo production.
+- [x] M007: Zero-cost Production Deploy — Deploy runbook, Vercel env contract, R2/Supabase config, registration guardrail, smoke suite. Operator deploy pending.
+- [x] v1.8 / M008: Dashboard Intelligence — Deviation view, chart clarity, sort toggle. Shipped 2026-05-20.
+
+## Key Decisions
+
+| Decision | Outcome | Status |
+|----------|---------|--------|
+| Decimal.js for all monetary arithmetic | No native JS arithmetic on amounts throughout | ✓ Good |
+| `drizzle-kit push` never in production | SQL migration files via `drizzle-kit generate` + `scripts/migrate.ts` | ✓ Good |
+| Presigned PUT for R2 uploads | No file bytes proxied through server actions | ✓ Good |
+| Better Auth + Drizzle pg adapter | Session checks only in edge proxy | ✓ Good |
+| Import deduplication by descriptionHash | Handles overlapping bank exports | ✓ Good |
+| Categorization tier gating (free/basic/pro) | Regex (T1) + history (T2) + AI (T3) | ✓ Good |
+| Dashboard deviation: fixed Reference Period | Hardcoded last-month regardless of caller preset (D-02) | ✓ Good |
+| Noise threshold €15 for deviation display | Micro-spend categories excluded from deviation | ✓ Good |
+| MonthlyTrendChart deleted, two focused charts | Cleaner signal per chart (D-10/D-11/D-12) | ✓ Good |
+| Sort default = deviation on categories page | Most actionable sort first; URL omits when default (D-07) | ✓ Good |
+
+---
+*Last updated: 2026-05-20 after v1.8 / M008 milestone*

@@ -1,65 +1,56 @@
 # Roadmap
 
-## M001: M001: Migration
+## Milestones
 
-- [x] **Phase 01: design-system** — Design System
-- [x] **Phase 02: authentication** — Authentication
-- [x] **Phase 03: expense-management** — Expense Management
-- [x] **Phase 04: dashboard-kpi** — Dashboard Kpi
-- [x] **Phase 05: s05** — S05
-- [x] **Phase 06: s06** — S06
-- [x] **Phase 07: s07** — S07
+- ✅ **M001–M006** — Foundation → Dashboard Insight Suite (Phases 1–23, shipped ~2026-05)
+- ✅ **M007: Zero-cost Production Deploy** — Phases 24–28 (shipped 2026-05-19)
+- ✅ **v1.8 / M008: Dashboard Intelligence** — Phase 29 (shipped 2026-05-20)
 
-## M002: Observability
+## Phases
 
-- [x] **Phase 08: s01** — S01
-- [x] **Phase 09: s02** — S02
-- [x] **Phase 10: s03** — S03
+<details>
+<summary>✅ M001–M006 (Phases 1–23) — SHIPPED</summary>
 
-## M003: Transactions, Deduplication & Inline Categorization
+- [x] Phase 01: design-system
+- [x] Phase 02: authentication
+- [x] Phase 03: expense-management
+- [x] Phase 04: dashboard-kpi
+- [x] Phase 05–07: M001 remaining slices
+- [x] Phase 08–10: M002 Observability
+- [x] Phase 11–16: M004 Import Management
+- [x] Phase 17–20: M005 Category Management & UX Polish
+- [x] Phase 21–23: M006 Dashboard Insight Suite
 
+</details>
 
-## M004: Import Management
+<details>
+<summary>✅ M007: Zero-cost Production Deploy (Phases 24–28) — SHIPPED 2026-05-19</summary>
 
-- [x] **Phase 11: s01** — S01
-- [x] **Phase 12: s02** — S02
-- [x] **Phase 13: s03** — S03
-- [x] **Phase 14: s04** — S04
-- [x] **Phase 15: s05** — S05
-- [x] **Phase 16: s06** — S06
+- [x] Phase 24: s01 — env contract + DB pool config
+- [x] Phase 25: s02 — production migration CLI
+- [x] Phase 26: s03 — R2 upload + CORS
+- [x] Phase 27: s04 — registration guardrail
+- [x] Phase 28: s05 — runbook + smoke suite
 
-## M005: Category Management & UX Polish
+</details>
 
-- [x] **Phase 17: s01** — S01
-- [x] **Phase 18: s02** — S02
-- [x] **Phase 19: s03** — S03
-- [x] **Phase 20: s04** — S04
+<details>
+<summary>✅ v1.8 / M008: Dashboard Intelligence (Phase 29) — SHIPPED 2026-05-20</summary>
 
-## M006: Dashboard Insight Suite
+- [x] Phase 29: dashboard-intelligence — Deviation view + chart clarity *(complete 2026-05-20)*
+  - [x] 29-01: D-01 fix, deviation utilities, test scaffolds
+  - [x] 29-02: getCategoryDeviations DAL + DeviationBadge
+  - [x] 29-03: EntrateUsciteChart + BilancioBarsChart (MonthlyTrendChart deleted)
+  - [x] 29-04: Wire deviation into category pages + sort toggle
 
-- [x] **Phase 21: s01** — S01
-- [x] **Phase 22: s02** — S02
-- [x] **Phase 23: s03** — S03
+</details>
 
-## ✅ M007: Zero-cost Production Deploy — SHIPPED 2026-05-19
+## Progress
 
-- [x] **Phase 24: s01** — S01 (env contract + DB pool config)
-- [x] **Phase 25: s02** — S02 (production migration CLI)
-- [x] **Phase 26: s03** — S03 (R2 upload + CORS)
-- [x] **Phase 27: s04** — S04 (registration guardrail)
-- [x] **Phase 28: s05** — S05 (runbook + smoke suite)
+| Phase | Milestone | Plans | Status | Completed |
+|-------|-----------|-------|--------|-----------|
+| 1–23 | M001–M006 | 87/87 | Complete | 2026-05 |
+| 24–28 | M007 | 20/20 | Complete | 2026-05-19 |
+| 29 | v1.8/M008 | 4/4 | Complete | 2026-05-20 |
 
-## M008: Dashboard Intelligence
-
-- [x] **Phase 29: dashboard-intelligence** — Deviation view + chart clarity *(complete 2026-05-20)*
-
-  **Goal:** Make the dashboard actionable at a glance: deviation view (vs 3-month baseline of the last completed calendar month) on category pages, plus the MonthlyTrendChart split into clearer Entrate/Uscite bars and a per-month colored Bilancio bar chart.
-
-  **Plans:** 4 plans
-
-  Plans:
-  - [x] 29-01-PLAN.md — Wave 0: D-01 last-month bug fix, deviation utilities (computeDeviation, buildDeviationMap), failing test scaffolds for downstream waves
-  - [x] 29-02-PLAN.md — Wave 1: getCategoryDeviations DAL + DeviationBadge component (depends on 29-01)
-  - [x] 29-03-PLAN.md — Wave 1: Split MonthlyTrendChart into EntrateUsciteChart + BilancioBarsChart and wire into overview page (depends on 29-01, parallel with 29-02)
-  - [x] 29-04-PLAN.md — Wave 2: Wire deviation into /dashboard/categories and /dashboard/categories/[id], add sort toggle (depends on 29-01, 29-02; contains manual checkpoint)
-</content>
+**Total: 29 phases · 111 plans · All complete**
