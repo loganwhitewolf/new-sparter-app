@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "graphify": {
+    "enabled": true
+  },
+  "workflow": {
+    "ui_safety_gate": false
+  }
+}
