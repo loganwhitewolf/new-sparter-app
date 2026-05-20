@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { CategoryDetailEmptyState } from '@/components/dashboard/category-detail-empty-state'
 import { CategoryDetailSkeleton } from '@/components/dashboard/category-detail-skeleton'
@@ -7,14 +8,14 @@ import { CategoryDetailTrendChart } from '@/components/dashboard/category-detail
 import { CategorySubcategoryBreakdown } from '@/components/dashboard/category-subcategory-breakdown'
 import { CategoryTopTransactions } from '@/components/dashboard/category-top-transactions'
 import { DashboardFilters } from '@/components/dashboard/dashboard-filters'
-import { getCategoryDetail } from '@/lib/dal/dashboard'
+import { getCategoryDeviations, getCategoryDetail } from '@/lib/dal/dashboard'
 import { buildDashboardCategoriesHref } from '@/lib/routes'
 import {
   parseDashboardFilters,
   type DashboardFilters as ParsedDashboardFilters,
 } from '@/lib/validations/dashboard'
 
-const CATEGORY_DETAIL_DEFAULT_PRESET = 'this-year' as const
+const CATEGORY_DETAIL_DEFAULT_PRESET = 'last-3-months' as const
 const categoryTypeOptions = [
   { value: 'out' as const, label: 'Uscite' },
   { value: 'in' as const, label: 'Entrate' },
@@ -68,18 +69,23 @@ function parseCategoryDetailFilters(
 async function CategoryDetailContent({
   categoryId,
   filters,
+  categoriesHref,
 }: {
   categoryId: number | null
   filters: CategoryDetailFilters
+  categoriesHref: string
 }) {
   if (categoryId === null) {
     return <CategoryDetailEmptyState />
   }
 
-  const data = await getCategoryDetail(categoryId, filters)
+  const [data, deviations] = await Promise.all([
+    getCategoryDetail(categoryId, filters),
+    getCategoryDeviations({ type: filters.type, categoryId }),
+  ])
 
   if (data.category === null) {
-    return <CategoryDetailEmptyState />
+    redirect(categoriesHref)
   }
 
   return (
@@ -124,7 +130,11 @@ async function CategoryDetailContent({
               Distribuzione interna della categoria nel periodo.
             </p>
           </div>
-          <CategorySubcategoryBreakdown subcategories={data.subcategories} type={filters.type} />
+          <CategorySubcategoryBreakdown
+            subcategories={data.subcategories}
+            type={filters.type}
+            deviations={deviations}
+          />
         </section>
       </div>
     </div>
@@ -165,7 +175,7 @@ export default async function DashboardCategoryDetailPage({ params, searchParams
       </Suspense>
 
       <Suspense fallback={<CategoryDetailSkeleton />}>
-        <CategoryDetailContent categoryId={categoryId} filters={filters} />
+        <CategoryDetailContent categoryId={categoryId} filters={filters} categoriesHref={backHref} />
       </Suspense>
     </div>
   )
