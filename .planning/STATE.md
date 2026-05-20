@@ -4,7 +4,7 @@ milestone: M008
 milestone_name: dashboard-intelligence
 status: completed
 last_updated: "2026-05-20T11:30:00.000Z"
-last_activity: 2026-05-20 — Phase 29 complete (M008 shipped)
+last_activity: 2026-05-20 — Phase 29 shipped — PR #5
 progress:
   total_phases: 29
   completed_phases: 29
