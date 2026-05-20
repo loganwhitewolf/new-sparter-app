@@ -12,7 +12,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Popover as PopoverPrimitive } from 'radix-ui'
 import { cn } from '@/lib/utils'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 
@@ -153,8 +153,8 @@ export function CategoryCombobox({
   )
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
+      <PopoverPrimitive.Trigger asChild>
         <Button
           variant="outline"
           role="combobox"
@@ -165,8 +165,13 @@ export function CategoryCombobox({
           {buttonLabel}
           <ChevronsUpDownIcon className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      </PopoverPrimitive.Trigger>
+      {/* No Portal — renders inside the Dialog DOM tree so Dialog's scroll-lock doesn't intercept wheel events on the list */}
+      <PopoverPrimitive.Content
+        align="start"
+        sideOffset={4}
+        className="z-50 w-[--radix-popover-trigger-width] rounded-md border bg-popover p-0 text-popover-foreground shadow-md outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+      >
         <Command
           filter={(itemValue, search) => {
             const opt = options.find((o) => o.value === itemValue)
@@ -212,7 +217,7 @@ export function CategoryCombobox({
             ))}
           </CommandList>
         </Command>
-      </PopoverContent>
-    </Popover>
+      </PopoverPrimitive.Content>
+    </PopoverPrimitive.Root>
   )
 }
