@@ -51,15 +51,15 @@
 
 ## M008: Dashboard Intelligence
 
-- [ ] **Phase 29: dashboard-intelligence** — Deviation view + chart clarity
+- [x] **Phase 29: dashboard-intelligence** — Deviation view + chart clarity *(complete 2026-05-20)*
 
   **Goal:** Make the dashboard actionable at a glance: deviation view (vs 3-month baseline of the last completed calendar month) on category pages, plus the MonthlyTrendChart split into clearer Entrate/Uscite bars and a per-month colored Bilancio bar chart.
 
   **Plans:** 4 plans
 
   Plans:
-  - [ ] 29-01-PLAN.md — Wave 0: D-01 last-month bug fix, deviation utilities (computeDeviation, buildDeviationMap), failing test scaffolds for downstream waves
-  - [ ] 29-02-PLAN.md — Wave 1: getCategoryDeviations DAL + DeviationBadge component (depends on 29-01)
-  - [ ] 29-03-PLAN.md — Wave 1: Split MonthlyTrendChart into EntrateUsciteChart + BilancioBarsChart and wire into overview page (depends on 29-01, parallel with 29-02)
-  - [ ] 29-04-PLAN.md — Wave 2: Wire deviation into /dashboard/categories and /dashboard/categories/[id], add sort toggle (depends on 29-01, 29-02; contains manual checkpoint)
+  - [x] 29-01-PLAN.md — Wave 0: D-01 last-month bug fix, deviation utilities (computeDeviation, buildDeviationMap), failing test scaffolds for downstream waves
+  - [x] 29-02-PLAN.md — Wave 1: getCategoryDeviations DAL + DeviationBadge component (depends on 29-01)
+  - [x] 29-03-PLAN.md — Wave 1: Split MonthlyTrendChart into EntrateUsciteChart + BilancioBarsChart and wire into overview page (depends on 29-01, parallel with 29-02)
+  - [x] 29-04-PLAN.md — Wave 2: Wire deviation into /dashboard/categories and /dashboard/categories/[id], add sort toggle (depends on 29-01, 29-02; contains manual checkpoint)
 </content>

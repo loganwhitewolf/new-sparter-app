@@ -1,33 +1,32 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
+milestone: M008
+milestone_name: dashboard-intelligence
 status: completed
-stopped_at: context exhaustion at 81% (2026-05-19)
-last_updated: "2026-05-19T20:03:07.883Z"
-last_activity: 2026-05-19 — M007 milestone closed
+last_updated: "2026-05-20T11:30:00.000Z"
+last_activity: 2026-05-20 — Phase 29 complete (M008 shipped)
 progress:
   total_phases: 29
-  completed_phases: 28
-  total_plans: 112
-  completed_plans: 111
-  percent: 97
+  completed_phases: 29
+  total_plans: 116
+  completed_plans: 116
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .gsd/PROJECT.md (updated 2026-05-19 after M007 milestone)
+See: .planning/PROJECT.md
 
-**Core value:** The user can safely run Sparter online for personal use and demos, with real database persistence, real file-upload storage, and a repeatable migration/deploy/check procedure that does not expose secrets.
-**Current focus:** All milestones complete — next step is live production deploy (operator action) or planning next milestone.
+**Core value:** The user can safely run Sparter online for personal use and demos, with real database persistence, real file-upload storage, and a repeatable migration/deploy/check procedure that does not expose secrets. Dashboard now shows deviation badges and split charts for actionable at-a-glance insight.
+**Current focus:** M008 complete — Phase 29 (dashboard-intelligence) shipped 2026-05-20.
 
 ## Current Position
 
-Phase: 28 of 28 (complete)
-Status: All phases complete — M007 milestone shipped 2026-05-19
-Last activity: 2026-05-19 — M007 milestone closed
+Phase: 29 of 29 (complete)
+Status: All phases complete — M008 milestone shipped 2026-05-20
+Last activity: 2026-05-20 — Phase 29 dashboard-intelligence complete
 
 Progress: [██████████] 100%
 
@@ -35,9 +34,9 @@ Progress: [██████████] 100%
 
 ### Decisions
 
-All milestones M001-M007 complete. See .gsd/PROJECT.md for full decision log and milestone sequence.
+All milestones M001-M008 complete. M008 added deviation view + chart clarity to dashboard.
 
-### Known Gaps (M007 close)
+### Known Gaps
 
 R038, R039, R041 are PARTIAL — live Vercel/Supabase/R2 deploy is operator-pending. Code, config, and runbook are complete. See `docs/deploy/vercel-supabase-r2.md` for the repeatable deploy procedure.
 
@@ -47,8 +46,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-19T20:03:07.879Z
-Stopped at: context exhaustion at 81% (2026-05-19)
+Last session: 2026-05-20T11:30:00.000Z
+Stopped at: Phase 29 complete
 Resume file: None
-
-**Planned Phase:** 29 (dashboard-intelligence) — 4 plans — 2026-05-19T18:05:01.610Z
