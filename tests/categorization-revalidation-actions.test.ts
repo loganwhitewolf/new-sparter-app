@@ -10,6 +10,7 @@ const EXPECTED_CATEGORY_REVALIDATION_ROUTES = [
 const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   revalidatePath: vi.fn(),
+  refresh: vi.fn(),
   insertExpense: vi.fn(),
   updateExpense: vi.fn(),
   deleteExpense: vi.fn(),
@@ -31,7 +32,10 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('server-only', () => ({}))
-vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }))
+vi.mock('next/cache', () => ({
+  refresh: mocks.refresh,
+  revalidatePath: mocks.revalidatePath,
+}))
 vi.mock('drizzle-orm', () => ({
   and: mocks.and,
   eq: mocks.eq,
@@ -141,10 +145,12 @@ function uniqueSortedRevalidatedPaths(): string[] {
 
 function expectExactCategoryRevalidationRoutes() {
   expect(uniqueSortedRevalidatedPaths()).toEqual([...EXPECTED_CATEGORY_REVALIDATION_ROUTES].sort())
+  expect(mocks.refresh).toHaveBeenCalledTimes(1)
 }
 
 function expectNoRevalidation() {
   expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  expect(mocks.refresh).not.toHaveBeenCalled()
 }
 
 function makeTx() {

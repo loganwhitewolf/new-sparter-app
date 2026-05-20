@@ -8,6 +8,8 @@ const shouldStartLocalServer = !process.env.PLAYWRIGHT_BASE_URL
 
 export default defineConfig({
   testDir: './tests',
+  // Vitest lives in the same folder as *.test.ts(x); Playwright only runs E2E specs.
+  testMatch: '**/*.spec.ts',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

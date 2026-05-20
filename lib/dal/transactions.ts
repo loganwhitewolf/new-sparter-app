@@ -4,11 +4,14 @@ import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, or, sql } from 'd
 import { db, type DbOrTx } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import {
+  category,
   expense,
   file as importFile,
   importFormatVersion,
   platform,
+  subCategory,
   transaction,
+  userSubcategoryOverride,
 } from '@/lib/db/schema'
 import type {
   TransactionSort,
@@ -43,6 +46,8 @@ export type TransactionFilters = {
   platform?: string
   importId?: string
   name?: string
+  categorySlug?: string
+  subCategoryId?: number
   sort?: TransactionSort
   dir?: TransactionSortDirection
 }
@@ -58,6 +63,8 @@ export const transactionListSelect = {
   expenseId: expense.id,
   expenseTitle: expense.title,
   expenseStatus: expense.status,
+  expenseCategoryName: category.name,
+  expenseSubCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
   fileId: importFile.id,
   /** Prefer user-facing display name; fall back to upload file name. */
   fileName: sql<string | null>`coalesce(nullif(trim(coalesce(${importFile.displayName}, '')), ''), ${importFile.originalName})`,
@@ -84,6 +91,8 @@ export type TransactionListRow = {
   expenseId: string | null
   expenseTitle: string | null
   expenseStatus: (typeof expense.$inferSelect)['status'] | null
+  expenseCategoryName: string | null
+  expenseSubCategoryName: string | null
   fileId: string | null
   fileName: string | null
   importedAt: Date | null
@@ -160,6 +169,14 @@ export const getTransactions = cache(
       )
     }
 
+    if (filters.categorySlug) {
+      conditions.push(eq(category.slug, filters.categorySlug))
+    }
+
+    if (filters.subCategoryId) {
+      conditions.push(eq(subCategory.id, filters.subCategoryId))
+    }
+
     return db
       .select(transactionListSelect)
       .from(transaction)
@@ -170,6 +187,15 @@ export const getTransactions = cache(
       )
       .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
       .leftJoin(expense, eq(transaction.expenseId, expense.id))
+      .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+      .leftJoin(category, eq(subCategory.categoryId, category.id))
+      .leftJoin(
+        userSubcategoryOverride,
+        and(
+          eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+          eq(userSubcategoryOverride.userId, userId),
+        ),
+      )
       .where(and(...conditions))
       .orderBy(buildTransactionOrderBy(filters))
       .limit(limit)

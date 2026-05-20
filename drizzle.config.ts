@@ -1,6 +1,6 @@
 // Usage: npx drizzle-kit generate. Do not use push in production.
 // For local dev: postgres://postgres:sparter@localhost:5432/sparter
-// For production migrations: yarn db:migrate:production
+// Operator commands: yarn db:migrate / yarn db:seed (PRODUCTION_* in .env via scripts/db-config.ts)
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({

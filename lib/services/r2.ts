@@ -169,6 +169,8 @@ function getR2Client(operation: R2Operation, objectKey: string) {
   cachedClient = new S3Client({
     region: 'auto',
     endpoint: config.endpoint,
+    // Avoid CRC32 query params on presigned PUT URLs — they require extra R2 CORS allowed headers.
+    requestChecksumCalculation: 'WHEN_REQUIRED',
     credentials: {
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,

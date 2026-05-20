@@ -9,7 +9,7 @@ Use this ordered smoke when preparing the first production deploy or when revali
 1. **Review variable names before adding values.** Compare Vercel and local operator secret stores against `.env.example` and the tables in this document. Record only missing or present variable names, not values.
 2. **Configure Vercel runtime variables.** Add the production `DATABASE_URL`, `DATABASE_SSL`, `DATABASE_POOL_MAX`, Better Auth origin/secret variables, R2 variables, optional Better Stack variables, and `REGISTRATION_ENABLED` in Vercel Production. Do not create client-prefixed database, R2, Better Stack, or auth secret variables.
 3. **Configure Supabase and R2 free-tier resources.** Confirm the intended Supabase production project, low database pool sizes, the production R2 bucket, scoped R2 keys, and a CORS policy that allows only the production HTTPS origin, `PUT`, and `Content-Type`. The helper `node scripts/set-r2-cors.mjs` can apply the R2 CORS rule when `R2_CORS_ALLOWED_ORIGIN` is set to the deployed origin and Cloudflare credentials are supplied through the operator environment.
-4. **Run the local production migration.** From a trusted operator machine, set the local-only production migration variables in a secure shell/session and run `yarn db:migrate:production`. Record the command, timestamp, exit code, and sanitized `migration_started`, `migration_succeeded`, or `migration_failed.error.code` values only.
+4. **Run the local production migration.** From a trusted operator machine, set the `PRODUCTION_*` variables in `.env` and run `yarn db:migrate`. Record the command, timestamp, exit code, and sanitized `migration_started`, `migration_succeeded`, or `migration_failed.error.code` values only.
 5. **Deploy or redeploy Vercel production.** Trigger a production deployment after any Vercel environment change. Record the deployment URL origin and deployment status, not build logs containing environment details.
 6. **Check runtime health.** Open or `curl` `https://<production-origin>/api/health`. Record HTTP status, top-level `status`, `components.db.ok`, `components.db.code` when present, `components.r2.ok`, and `components.r2.missing` variable names when present.
 7. **Smoke enabled signup and login.** With `REGISTRATION_ENABLED` unset or true-like and after redeploy, create or use a disposable smoke account through the UI, then confirm the authenticated app loads. Record UI checkpoints and screenshot artifact paths only; do not record passwords, cookies, tokens, or request bodies.
@@ -54,7 +54,7 @@ Each browser smoke run uses one disposable user and, when import is enabled, one
 | Phase | Safe command or action | Timestamp (UTC) | Exit code | URL origin | HTTP status | Safe code/status fields | Artifact path |
 |---|---|---:|---:|---|---:|---|---|
 | variable review | Compare configured variable names with `.env.example` |  |  |  |  | missing/present variable names only |  |
-| migration | `yarn db:migrate:production` |  |  |  |  | `migration_succeeded` or `migration_failed.error.code` |  |
+| migration | `yarn db:migrate` |  |  |  |  | `migration_succeeded` or `migration_failed.error.code` |  |
 | deploy | Vercel production redeploy |  |  | `https://<production-origin>` |  | deployment status only |  |
 | health | `GET /api/health` |  |  | `https://<production-origin>` |  | `status`, `components.db.ok/code`, `components.r2.ok/missing` |  |
 | enabled signup/login | UI smoke |  |  | `https://<production-origin>` |  | checkpoint names only | screenshot/log path |
@@ -194,7 +194,7 @@ Production migrations are an explicit local operator action. Vercel runtime envi
 
 ### Local-only migration environment
 
-Set these names in the operator shell or another secure local secret store before running the command. The repository must list names only, never real values.
+Set these names in `.env` before running `yarn db:migrate` or `yarn db:seed`. Operator scripts load `.env` only (not `.env.local`). The repository must list names only, never real values.
 
 | Variable | Required? | Notes |
 |---|---:|---|
@@ -206,7 +206,7 @@ Set these names in the operator shell or another secure local secret store befor
 ### Command
 
 ```bash
-yarn db:migrate:production
+yarn db:migrate
 ```
 
 Do not use `drizzle-kit push` for production. Production changes must go through reviewed migration files and the guarded migration command above.
@@ -234,7 +234,7 @@ A failed run prints `migration_failed` with a stable `error.code`, optional safe
 - Vercel serverless functions may create multiple warm instances. Keep `DATABASE_POOL_MAX` low; the app default is `2` and the parser caps configured values at `5`.
 - Supabase Free has limited connection capacity and can pause or throttle under free-tier limits. Prefer the Supabase pooler for runtime traffic when compatible.
 - Production migrations use their own low pool max. Keep `PRODUCTION_DATABASE_POOL_MAX` at `1` for Supabase Free, do not run parallel production migrations, and wait for one migration command to finish before starting another.
-- Do not use `drizzle-kit push` for production; use `yarn db:migrate:production` with reviewed migration files.
+- Do not use `drizzle-kit push` for production; use `yarn db:migrate` with reviewed migration files.
 - Never paste secrets into docs, committed files, screenshots, tickets, chat, or logs.
 - Cloudflare R2 is used through server-side signing and browser direct upload. Keep the CORS policy aligned with the documented `Content-Type` upload header contract.
 - Production secrets should be runtime-only whenever possible. The Vercel build should not need database, R2, Better Auth secret, or Better Stack token values.

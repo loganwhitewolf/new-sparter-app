@@ -47,7 +47,10 @@ const mocks = vi.hoisted(() => ({
 
 // Mock server-only to avoid Next.js server boundary errors in tests
 vi.mock('server-only', () => ({}))
-vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+vi.mock('next/cache', () => ({
+  refresh: vi.fn(),
+  revalidatePath: vi.fn(),
+}))
 vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
 vi.mock('@/lib/logger', () => ({
   logger: {

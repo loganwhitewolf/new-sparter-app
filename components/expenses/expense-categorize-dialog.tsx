@@ -22,7 +22,7 @@ type Props = {
   onOpenChange: (open: boolean) => void
   expense: { id: string; title: string }
   categories: CategoryWithSubCategories[]
-  onSuccess: () => void
+  onSuccess: (subCategoryId?: string) => void
 }
 
 export function ExpenseCategorizeDialog({
@@ -41,10 +41,10 @@ export function ExpenseCategorizeDialog({
       toast.success('Spesa categorizzata.')
       setSubCategoryId('')
       submittedRef.current = false
-      onSuccess()
+      onSuccess(subCategoryId)
       onOpenChange(false)
     }
-  }, [state, onSuccess, onOpenChange])
+  }, [state, subCategoryId, onSuccess, onOpenChange])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

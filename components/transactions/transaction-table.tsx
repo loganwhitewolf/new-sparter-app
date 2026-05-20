@@ -91,15 +91,17 @@ function formatDate(date: Date) {
   return dateFormatter.format(new Date(date))
 }
 
-function getExpenseStatusLabel(status: TransactionListRow['expenseStatus']) {
-  switch (status) {
-    case '2':
-    case '3':
-      return 'Categorizzata'
-    case '1':
-    default:
-      return 'Da categorizzare'
-  }
+function isExpenseCategorized(status: TransactionListRow['expenseStatus']) {
+  return status === '2' || status === '3'
+}
+
+function getLinkedExpenseCategoryLabel(transaction: TransactionListRow) {
+  const parts = [
+    transaction.expenseCategoryName?.trim(),
+    transaction.expenseSubCategoryName?.trim(),
+  ].filter(Boolean)
+
+  return parts.length > 0 ? parts.join(' → ') : 'Categorizzata'
 }
 
 function getSortDirection(
@@ -211,9 +213,26 @@ export function TransactionTable({ transactions, filters, searchParams, categori
     )
   }
 
-  function markExpenseCategorized(transactionId: string) {
+  function markExpenseCategorized(transactionId: string, subCategoryId?: string) {
+    const selectedSubCategory = subCategoryId
+      ? categories
+          .flatMap((category) =>
+            category.subCategories.map((subCategory) => ({ category, subCategory })),
+          )
+          .find(({ subCategory }) => String(subCategory.id) === subCategoryId)
+      : undefined
+
     setLoadedTransactions((prev) =>
-      prev.map((t) => (t.id === transactionId ? { ...t, expenseStatus: '2' as const } : t))
+      prev.map((t) =>
+        t.id === transactionId
+          ? {
+              ...t,
+              expenseStatus: '2' as const,
+              expenseCategoryName: selectedSubCategory?.category.name ?? t.expenseCategoryName,
+              expenseSubCategoryName: selectedSubCategory?.subCategory.name ?? t.expenseSubCategoryName,
+            }
+          : t,
+      ),
     )
   }
 
@@ -281,7 +300,7 @@ export function TransactionTable({ transactions, filters, searchParams, categori
         </TableHeader>
         <TableBody>
           {loadedTransactions.map((transaction) => {
-            const expenseStatus = getExpenseStatusLabel(transaction.expenseStatus)
+            const isCategorized = isExpenseCategorized(transaction.expenseStatus)
             const hasExpense = Boolean(transaction.expenseId)
             const isSelected = selectedIds.includes(transaction.id)
             const rowLabel = transactionRowLabel(transaction)
@@ -345,40 +364,32 @@ export function TransactionTable({ transactions, filters, searchParams, categori
                 </TableCell>
                 <TableCell>
                   {hasExpense ? (
-                    <div className="flex min-w-0 flex-col gap-1">
+                    isCategorized ? (
                       <span
-                        className="truncate text-sm"
-                        title={transaction.expenseTitle ?? undefined}
+                        className="block truncate text-sm"
+                        title={getLinkedExpenseCategoryLabel(transaction)}
                       >
-                        {transaction.expenseTitle ?? 'Spesa senza titolo'}
+                        {getLinkedExpenseCategoryLabel(transaction)}
                       </span>
-                      {expenseStatus === 'Da categorizzare' ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCategorizeTarget({
-                              id: transaction.expenseId!,
-                              title: transaction.expenseTitle ?? rowLabel,
-                            })
-                          }
-                          className="w-fit"
-                        >
-                          <Badge
-                            variant="outline"
-                            className="border-0 bg-amber-100 text-amber-700 cursor-pointer hover:bg-amber-200 transition-colors"
-                          >
-                            {expenseStatus}
-                          </Badge>
-                        </button>
-                      ) : (
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCategorizeTarget({
+                            id: transaction.expenseId!,
+                            title: transaction.expenseTitle ?? rowLabel,
+                          })
+                        }
+                        className="w-fit"
+                      >
                         <Badge
                           variant="outline"
-                          className="w-fit border-0 bg-emerald-100 text-emerald-700"
+                          className="border-0 bg-amber-100 text-amber-700 cursor-pointer hover:bg-amber-200 transition-colors"
                         >
-                          {expenseStatus}
+                          Da categorizzare
                         </Badge>
-                      )}
-                    </div>
+                      </button>
+                    )
                   ) : (
                     <span className="text-sm text-muted-foreground">
                       Nessuna spesa collegata
@@ -490,9 +501,9 @@ export function TransactionTable({ transactions, filters, searchParams, categori
         onOpenChange={(open) => { if (!open) setCategorizeTarget(null) }}
         expense={categorizeTarget}
         categories={categories}
-        onSuccess={() => {
+        onSuccess={(subCategoryId) => {
           const txId = loadedTransactions.find((t) => t.expenseId === categorizeTarget.id)?.id
-          if (txId) markExpenseCategorized(txId)
+          if (txId) markExpenseCategorized(txId, subCategoryId)
           setCategorizeTarget(null)
         }}
       />

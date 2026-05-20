@@ -3,7 +3,7 @@ import { auth } from '@/auth'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { LoginSchema, RegisterSchema } from '@/lib/validations/auth'
-import { getSafeSignUpErrorMessage } from '@/lib/actions/auth-errors'
+import { getSafeSignUpErrorMessage, logSanitizedAuthError } from '@/lib/actions/auth-errors'
 import { isRegistrationEnabled, REGISTRATION_DISABLED_MESSAGE } from '@/lib/auth/registration'
 
 export type { AuthActionState } from '@/lib/validations/auth'
@@ -45,6 +45,7 @@ export async function signUpAction(
     password: formData.get('password'),
   })
   if (!parsed.success) {
+    logSanitizedAuthError('sign_up_validation_failed', parsed.error)
     // D-06: generic message — no field-level error details
     return { error: 'Si è verificato un errore. Riprova.' }
   }
@@ -58,6 +59,7 @@ export async function signUpAction(
       headers: await headers(),
     })
   } catch (error) {
+    logSanitizedAuthError('sign_up', error)
     // D-06: keep credential/account errors generic, but surface safe local DB setup failures.
     return { error: getSafeSignUpErrorMessage(error) }
   }

@@ -13,13 +13,17 @@ const mocks = vi.hoisted(() => ({
   dbTransaction: vi.fn(),
   txInsert: vi.fn(),
   txUpdate: vi.fn(),
+  txExecute: vi.fn(),
   insertedPlatforms: [] as Record<string, unknown>[],
   insertedVersions: [] as Record<string, unknown>[],
   updatedFiles: [] as Record<string, unknown>[],
 }))
 
 vi.mock('server-only', () => ({}))
-vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }))
+vi.mock('next/cache', () => ({
+  refresh: vi.fn(),
+  revalidatePath: mocks.revalidatePath,
+}))
 vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
 vi.mock('@/lib/dal/files', () => ({ getFileForUser: mocks.getFileForUser }))
 vi.mock('@/lib/services/r2', () => ({ readObjectBody: mocks.readObjectBody }))
@@ -34,6 +38,7 @@ vi.mock('@/lib/logger', () => ({
 
 function makeTx() {
   return {
+    execute: mocks.txExecute,
     insert: () => ({
       values: (value: Record<string, unknown>) => {
         if ('headerSignature' in value) {
@@ -148,6 +153,7 @@ describe('import format wizard Server Actions', () => {
     mocks.getFileForUser.mockResolvedValue(fileRow)
     mocks.readObjectBody.mockResolvedValue(Readable.from([Buffer.from('Data,Descrizione,Importo\n2026-01-01,Coffee,-2.50')]))
     mocks.parseImportFile.mockResolvedValue(parsedFile)
+    mocks.txExecute.mockResolvedValue([])
     mocks.dbTransaction.mockImplementation((callback) => callback(makeTx()))
   })
 
@@ -192,6 +198,8 @@ describe('import format wizard Server Actions', () => {
       formatVersionId: 501,
       headerSignature: 'Data,Descrizione,Importo',
     })
+    expect(mocks.txExecute).toHaveBeenCalledTimes(1)
+    expect(mocks.insertedPlatforms[0]).not.toHaveProperty('id')
     expect(mocks.insertedPlatforms[0]).toMatchObject({
       ownerUserId: 'user-abc',
       visibility: 'private',
@@ -286,6 +294,22 @@ describe('import format wizard Server Actions', () => {
     expect(serializedLogs).not.toContain('https://storage.example')
     expect(serializedLogs).not.toContain('secret line')
     expect(serializedLogs).not.toContain(fileRow.objectKey)
+  })
+
+  it('returns a safe save-format error while logging the underlying database error', async () => {
+    const dbError = new Error('duplicate key value violates unique constraint "platform_slug_unique"')
+    mocks.dbTransaction.mockRejectedValueOnce(dbError)
+
+    const result = await createPrivateImportFormatAction({ error: null }, validCreateForm())
+
+    expect(result).toEqual({ error: 'Impossibile salvare il formato. Riprova.' })
+    expect(mocks.loggerError).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'import_format_wizard.retry_failed',
+      userId: 'user-abc',
+      fileId: '11111111-1111-4111-8111-111111111111',
+      code: 'db_write_failed',
+      err: dbError,
+    }))
   })
 
   it('maps malformed selected format ids to localized action errors before auth', async () => {

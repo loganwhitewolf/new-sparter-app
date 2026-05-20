@@ -20,7 +20,10 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('server-only', () => ({}))
-vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }))
+vi.mock('next/cache', () => ({
+  refresh: vi.fn(),
+  revalidatePath: mocks.revalidatePath,
+}))
 vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
 vi.mock('@/lib/dal/categories', async () => {
   const actual = await vi.importActual<typeof import('../lib/dal/categories')>('../lib/dal/categories')

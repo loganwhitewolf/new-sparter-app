@@ -15,7 +15,7 @@ import {
 } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { db } from '@/lib/db'
-import { category, expense, subCategory, transaction as transactionTable } from '@/lib/db/schema'
+import { category, expense, subCategory, transaction as transactionTable, userSubcategoryOverride } from '@/lib/db/schema'
 import type { DashboardFilters, DashboardPreset } from '@/lib/validations/dashboard'
 import { dashboardPresetToDateRange, monthLabel, monthsBetween } from '@/lib/utils/date'
 import {
@@ -760,7 +760,7 @@ export const getCategoriesBreakdown = cache(
           categorySlug: category.slug,
           categoryType: category.type,
           subCategoryId: subCategory.id,
-          subCategoryName: subCategory.name,
+          subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
           subCategorySlug: subCategory.slug,
           count: countDistinct(expense.id),
           amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
@@ -769,6 +769,13 @@ export const getCategoriesBreakdown = cache(
         .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
         .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
         .innerJoin(category, eq(subCategory.categoryId, category.id))
+        .leftJoin(
+          userSubcategoryOverride,
+          and(
+            eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+            eq(userSubcategoryOverride.userId, userId),
+          ),
+        )
         .where(
           and(
             dateScopedTransactions(userId, from, to),
@@ -778,7 +785,7 @@ export const getCategoriesBreakdown = cache(
             typeFilter
           )
         )
-        .groupBy(category.id, subCategory.id)
+        .groupBy(category.id, subCategory.id, userSubcategoryOverride.customName)
         .orderBy(category.id, subCategory.id)
     } catch {
       rows = []
@@ -812,6 +819,13 @@ export const getCategoryRanking = cache(
         .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
         .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
         .innerJoin(category, eq(subCategory.categoryId, category.id))
+        .leftJoin(
+          userSubcategoryOverride,
+          and(
+            eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+            eq(userSubcategoryOverride.userId, userId),
+          ),
+        )
         .where(
           and(
             dateScopedTransactions(userId, from, to),
@@ -910,6 +924,13 @@ export const getCategoryDetail = cache(
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
+          .leftJoin(
+            userSubcategoryOverride,
+            and(
+              eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+              eq(userSubcategoryOverride.userId, userId),
+            ),
+          )
           .where(
             and(
               dateScopedTransactions(userId, from, to),
@@ -927,7 +948,7 @@ export const getCategoryDetail = cache(
             categorySlug: category.slug,
             categoryType: category.type,
             subCategoryId: subCategory.id,
-            subCategoryName: subCategory.name,
+            subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
             subCategorySlug: subCategory.slug,
             count: countDistinct(expense.id),
             amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
@@ -936,6 +957,13 @@ export const getCategoryDetail = cache(
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
+          .leftJoin(
+            userSubcategoryOverride,
+            and(
+              eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+              eq(userSubcategoryOverride.userId, userId),
+            ),
+          )
           .where(
             and(
               dateScopedTransactions(userId, from, to),
@@ -945,8 +973,8 @@ export const getCategoryDetail = cache(
               notExcludedFromTotals()
             )
           )
-          .groupBy(category.id, subCategory.id)
-          .orderBy(desc(sql`coalesce(abs(sum(${transactionTable.amount})), 0)`), subCategory.name, subCategory.id),
+          .groupBy(category.id, subCategory.id, userSubcategoryOverride.customName)
+          .orderBy(desc(sql`coalesce(abs(sum(${transactionTable.amount})), 0)`), sql`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`, subCategory.id),
         db
           .select({
             id: transactionTable.id,

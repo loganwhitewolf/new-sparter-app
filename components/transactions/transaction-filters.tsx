@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { TransactionPlatformOption } from '@/lib/dal/transactions'
 import type { ParsedTransactionFilters } from '@/lib/validations/transactions'
 import { APP_ROUTES } from '@/lib/routes'
@@ -27,9 +28,10 @@ const SORT_OPTIONS = [
 type Props = {
   filters: ParsedTransactionFilters
   platforms: TransactionPlatformOption[]
+  categories: CategoryWithSubCategories[]
 }
 
-export function TransactionFilters({ filters, platforms }: Props) {
+export function TransactionFilters({ filters, platforms, categories }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
@@ -60,6 +62,20 @@ export function TransactionFilters({ filters, platforms }: Props) {
     updateParam('sort', value === DEFAULT_SORT ? null : value)
   }
 
+  function updateCategory(value: string) {
+    const params = new URLSearchParams(searchParams.toString())
+
+    if (value === 'all') {
+      params.delete('category')
+      params.delete('subCategory')
+    } else {
+      params.set('category', value)
+      params.delete('subCategory')
+    }
+
+    replaceWith(params)
+  }
+
   function toggleDirection() {
     updateParam('dir', filters.dir === 'asc' ? null : 'asc')
   }
@@ -71,9 +87,16 @@ export function TransactionFilters({ filters, platforms }: Props) {
     }, 300)
   }
 
+  const selectedCategory = filters.categorySlug
+    ? categories.find((category) => category.slug === filters.categorySlug)
+    : undefined
+  const subcategoryOptions = selectedCategory
+    ? selectedCategory.subCategories
+    : categories.flatMap((category) => category.subCategories)
+
   return (
     <Card>
-      <CardContent className="grid gap-4 p-4 md:grid-cols-[1fr_repeat(2,minmax(0,1fr))_minmax(12rem,1fr)_minmax(12rem,1fr)_auto] md:items-end">
+      <CardContent className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-[1.4fr_repeat(6,minmax(0,1fr))_auto] xl:items-end">
         {/* Ricerca per nome/descrizione */}
         <div className="grid gap-2">
           <label className="text-xs font-medium text-muted-foreground" htmlFor="transaction-name">
@@ -140,6 +163,54 @@ export function TransactionFilters({ filters, platforms }: Props) {
               {platforms.map((platform) => (
                 <SelectItem key={platform.id} value={platform.slug}>
                   {platform.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-2">
+          <label className="text-xs font-medium text-muted-foreground" htmlFor="transaction-category">
+            Categoria
+          </label>
+          <Select
+            value={filters.categorySlug ?? 'all'}
+            onValueChange={updateCategory}
+            disabled={isPending}
+          >
+            <SelectTrigger id="transaction-category" className="w-full">
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tutte le categorie</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.slug}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-2">
+          <label className="text-xs font-medium text-muted-foreground" htmlFor="transaction-subcategory">
+            Sottocategoria
+          </label>
+          <Select
+            value={filters.subCategoryId ? String(filters.subCategoryId) : 'all'}
+            onValueChange={(value) =>
+              updateParam('subCategory', value === 'all' ? null : value)
+            }
+            disabled={isPending || subcategoryOptions.length === 0}
+          >
+            <SelectTrigger id="transaction-subcategory" className="w-full">
+              <SelectValue placeholder="Sottocategoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tutte le sottocategorie</SelectItem>
+              {subcategoryOptions.map((subCategory) => (
+                <SelectItem key={subCategory.id} value={String(subCategory.id)}>
+                  {subCategory.name}
                 </SelectItem>
               ))}
             </SelectContent>

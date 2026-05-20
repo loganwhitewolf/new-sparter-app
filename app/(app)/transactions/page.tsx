@@ -12,6 +12,24 @@ import { TransactionFilters } from '@/components/transactions/transaction-filter
 import { TransactionFormDialog } from '@/components/transactions/transaction-form-dialog'
 import { TransactionTable } from '@/components/transactions/transaction-table'
 
+function buildTransactionTableKey(
+  params: TransactionSearchParams,
+  transactions: Awaited<ReturnType<typeof getTransactions>>,
+) {
+  const dataKey = transactions
+    .map((transaction) => [
+      transaction.id,
+      transaction.customTitle ?? '',
+      transaction.expenseId ?? '',
+      transaction.expenseStatus ?? '',
+      transaction.expenseCategoryName ?? '',
+      transaction.expenseSubCategoryName ?? '',
+    ].join(':'))
+    .join('|')
+
+  return `${JSON.stringify(params)}:${dataKey}`
+}
+
 export default async function TransactionsPage({
   searchParams,
 }: {
@@ -41,11 +59,11 @@ export default async function TransactionsPage({
       <Suspense
         fallback={<div className="h-24 rounded-xl bg-muted animate-pulse" />}
       >
-        <TransactionFilters filters={filters} platforms={platforms} />
+        <TransactionFilters filters={filters} platforms={platforms} categories={categories} />
       </Suspense>
 
       <TransactionTable
-        key={JSON.stringify(params)}
+        key={buildTransactionTableKey(params, transactions)}
         transactions={transactions}
         filters={filters}
         searchParams={params}

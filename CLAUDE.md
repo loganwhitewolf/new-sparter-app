@@ -7,7 +7,8 @@ Personal finance app for the Italian market. Rebuilt from the previous Express +
 - `.gsd/PROJECT.md` — project vision and current state
 - `.gsd/REQUIREMENTS.md` — explicit capability contract and validation status
 - `.gsd/milestones/` — milestone roadmaps, slice plans, summaries, validations, and learnings
-- `docs/init/` — legacy bootstrap material from the original application; domain data may remain Italian when it represents product taxonomy or bank-import fixtures
+- `docs/init/` — legacy bootstrap material from the original application (e.g. business logic handoff)
+- `scripts/seed-data.ts` — canonical seed dataset (categories, platforms, regex patterns)
 
 ## GSD Workflow
 
@@ -101,14 +102,16 @@ lib/
 ├── validations/     # Zod schemas
 └── routes.ts        # Canonical app route constants and legacy redirects
 
-drizzle/seed.ts      # Seed data adapted from docs/init/seed.ts
+scripts/seed.ts      # Operator seed runner (PRODUCTION_* via scripts/db-config.ts)
+scripts/seed-data.ts # System taxonomy rows for seed
+drizzle/migrations/  # Generated SQL migrations only
 proxy.ts             # Route protection and staging bypass
 auth.ts              # Better Auth configuration
 ```
 
 ## Seed Data
 
-`docs/init/seed.ts` and `drizzle/seed.ts` contain:
+`scripts/seed-data.ts` (canonical) and `scripts/seed.ts` contain:
 
 - 26 categories (IN/OUT/system)
 - about 120 subcategories

@@ -16,7 +16,10 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('server-only', () => ({}))
-vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }))
+vi.mock('next/cache', () => ({
+  refresh: vi.fn(),
+  revalidatePath: mocks.revalidatePath,
+}))
 
 vi.mock('@/lib/dal/auth', () => ({
   verifySession: mocks.verifySession,
@@ -114,7 +117,7 @@ describe('pattern Server Actions', () => {
         confidence: 0.95,
         description: 'Streaming subscriptions',
       })
-      expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/patterns')
+      expectExactCategoryRevalidationRoutes()
     })
 
     it('denies free users before validation or mutation when configured for Basic+', async () => {
@@ -192,7 +195,7 @@ describe('pattern Server Actions', () => {
         confidence: 0.95,
         description: 'Streaming subscriptions',
       })
-      expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/patterns')
+      expectExactCategoryRevalidationRoutes()
     })
 
     it('denies free users before mutation when configured for Basic+', async () => {
@@ -259,12 +262,12 @@ describe('pattern Server Actions', () => {
   })
 
   describe('deletePatternAction', () => {
-    it('deletes using the session userId and revalidates settings on success', async () => {
+    it('deletes using the session userId and revalidates categorization surfaces on success', async () => {
       const result = await deletePatternAction({ error: null }, makeFormData({ id: '7', userId: 'attacker-id' }))
 
       expect(result).toEqual({ error: null })
       expect(mocks.deletePattern).toHaveBeenCalledWith(7, 'user-abc')
-      expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/patterns')
+      expectExactCategoryRevalidationRoutes()
     })
 
     it('denies free users before mutation when configured for Basic+', async () => {

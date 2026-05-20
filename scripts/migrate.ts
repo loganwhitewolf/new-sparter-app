@@ -1,39 +1,40 @@
-// Run locally with: yarn db:migrate
-// Run production migrations explicitly with: yarn db:migrate:production
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { migrate } from 'drizzle-orm/node-postgres/migrator'
-import { existsSync } from 'node:fs'
-import { Pool } from 'pg'
-import { getMigrationConfig, sanitizeMigrationError, type MigrationDiagnostics, type SafeMigrationError } from './migration-config'
+// Run with: yarn db:migrate (reads PRODUCTION_* from .env)
+import { execSync } from 'node:child_process'
+import {
+  connectionStringWithSsl,
+  getOperatorDatabaseConfig,
+  loadOperatorEnv,
+  sanitizeMigrationError,
+  type OperatorDatabaseDiagnostics,
+  type SafeMigrationError,
+} from './db-config'
 
-// Load local env before validation (no server-only guard in scripts).
-for (const envFile of ['.env.local', '.env']) {
-  if (existsSync(envFile)) {
-    process.loadEnvFile?.(envFile)
-  }
-}
+loadOperatorEnv()
 
 const MIGRATION_FAILURE_EXIT_CODE = 2
 const VALIDATION_FAILURE_EXIT_CODE = 1
 
-function selectedMode(): 'local' | 'production' {
-  return process.argv.includes('--production') ? 'production' : 'local'
-}
-
-function safeStatusFields(diagnostics: MigrationDiagnostics) {
+function safeStatusFields(diagnostics: OperatorDatabaseDiagnostics) {
   return {
     targetClass: diagnostics.targetClass,
     migrationsFolder: diagnostics.migrationsFolder,
     sslEnabled: diagnostics.sslEnabled,
     poolMax: diagnostics.poolMax,
+    host: diagnostics.host,
   }
 }
 
-function logMigrationEvent(event: 'migration_started' | 'migration_succeeded', diagnostics: MigrationDiagnostics) {
+function logMigrationEvent(
+  event: 'migration_started' | 'migration_succeeded',
+  diagnostics: OperatorDatabaseDiagnostics,
+) {
   console.log(JSON.stringify({ event, ...safeStatusFields(diagnostics) }))
 }
 
-function logMigrationFailure(diagnostics: MigrationDiagnostics, error: SafeMigrationError) {
+function logMigrationFailure(
+  diagnostics: OperatorDatabaseDiagnostics,
+  error: SafeMigrationError,
+) {
   console.error(
     JSON.stringify({
       event: 'migration_failed',
@@ -48,13 +49,13 @@ function logMigrationFailure(diagnostics: MigrationDiagnostics, error: SafeMigra
 }
 
 async function main() {
-  const configResult = getMigrationConfig({ mode: selectedMode() })
+  const configResult = getOperatorDatabaseConfig()
 
   if (!configResult.ok) {
     console.error(
       JSON.stringify({
         event: 'migration_failed',
-        targetClass: selectedMode(),
+        targetClass: 'production',
         error: configResult.error,
       }),
     )
@@ -64,37 +65,31 @@ async function main() {
 
   const { config, diagnostics } = configResult
 
-  if (!config.connectionString) {
-    logMigrationFailure(diagnostics, {
-      code: 'missing_local_database_url',
-      message: 'DATABASE_URL is required for local migrations.',
-    })
-    process.exitCode = VALIDATION_FAILURE_EXIT_CODE
-    return
-  }
-
-  let pool: Pool | undefined
-
   try {
     logMigrationEvent('migration_started', diagnostics)
 
-    pool = new Pool({
-      connectionString: config.connectionString,
-      max: config.max,
-      ssl: config.ssl,
-    })
+    const env = {
+      ...process.env,
+      DATABASE_URL: connectionStringWithSsl(config),
+    }
 
-    const db = drizzle(pool)
-    await migrate(db, { migrationsFolder: config.migrationsFolder })
+    const result = execSync('npx drizzle-kit migrate 2>&1', {
+      env,
+      encoding: 'utf8',
+    })
+    if (process.env.MIGRATION_DEBUG === '1') {
+      process.stdout.write(result)
+    }
 
     logMigrationEvent('migration_succeeded', diagnostics)
   } catch (error) {
+    if (process.env.MIGRATION_DEBUG === '1') {
+      const execError = error as { stdout?: string | Buffer; stderr?: string | Buffer; message?: string }
+      const output = (execError?.stdout?.toString() ?? '') + (execError?.stderr?.toString() ?? '')
+      console.error('RAW_ERROR:', JSON.stringify({ msg: execError?.message, output }))
+    }
     logMigrationFailure(diagnostics, sanitizeMigrationError(error))
     process.exitCode = MIGRATION_FAILURE_EXIT_CODE
-  } finally {
-    if (pool) {
-      await pool.end()
-    }
   }
 }
 

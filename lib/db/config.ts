@@ -11,6 +11,20 @@ export type DatabasePoolEnv = {
 
 export type DatabasePoolConfig = Pick<PoolConfig, 'connectionString' | 'max' | 'ssl'>
 
+/** Supabase pooler TLS uses a CA not in the Node trust store; use URL params instead of strict verify. */
+export function enhanceDatabaseUrlForSsl(connectionString: string | undefined): string | undefined {
+  if (!connectionString) {
+    return connectionString
+  }
+
+  if (connectionString.includes('sslmode=') || connectionString.includes('ssl=')) {
+    return connectionString
+  }
+
+  const separator = connectionString.includes('?') ? '&' : '?'
+  return `${connectionString}${separator}uselibpqcompat=true&sslmode=require`
+}
+
 function parsePoolMax(value: string | undefined): number {
   if (value === undefined || value.trim() === '') {
     return DEFAULT_DATABASE_POOL_MAX
@@ -29,9 +43,11 @@ function parsePoolMax(value: string | undefined): number {
 }
 
 export function getDatabasePoolConfig(env: DatabasePoolEnv = process.env as DatabasePoolEnv): DatabasePoolConfig {
+  const sslEnabled = env.DATABASE_SSL === 'true'
+
   return {
-    connectionString: env.DATABASE_URL,
+    connectionString: sslEnabled ? enhanceDatabaseUrlForSsl(env.DATABASE_URL) : env.DATABASE_URL,
     max: parsePoolMax(env.DATABASE_POOL_MAX),
-    ssl: env.DATABASE_SSL === 'true' ? { rejectUnauthorized: true } : undefined,
+    ssl: undefined,
   }
 }
