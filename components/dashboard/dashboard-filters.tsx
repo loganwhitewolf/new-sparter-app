@@ -69,23 +69,25 @@ export function DashboardFilters({
 
   return (
     <div className="flex flex-wrap items-center gap-2 pb-4">
-      <Tabs
-        value={type}
-        onValueChange={(value) => updateFilters({ type: value as DashboardType })}
-      >
-        <TabsList aria-label="Tipo movimento">
-          {typeOptions.map((option) => (
-            <TabsTrigger
-              key={option.value}
-              value={option.value}
-              disabled={isPending}
-              className="min-w-20"
-            >
-              {option.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      {typeOptions.length > 0 && (
+        <Tabs
+          value={type}
+          onValueChange={(value) => updateFilters({ type: value as DashboardType })}
+        >
+          <TabsList aria-label="Tipo movimento">
+            {typeOptions.map((option) => (
+              <TabsTrigger
+                key={option.value}
+                value={option.value}
+                disabled={isPending}
+                className="min-w-20"
+              >
+                {option.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      )}
 
       <Select
         value={preset}
