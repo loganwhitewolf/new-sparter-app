@@ -54,9 +54,9 @@ export function CategoryTopTransactions({ transactions }: Props) {
         const description = transaction.description.trim()
 
         return (
-          <li key={transaction.id} className="rounded-xl border bg-card p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex min-w-0 items-start gap-3">
+          <li key={transaction.id} className="overflow-hidden rounded-xl border bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex min-w-0 flex-1 items-start gap-3">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold tabular-nums text-muted-foreground">
                   {index + 1}
                 </span>
@@ -69,13 +69,13 @@ export function CategoryTopTransactions({ transactions }: Props) {
                       {description}
                     </p>
                   ) : null}
-                  <time className="mt-1 block text-xs text-muted-foreground" dateTime={transaction.date}>
+                  <time className="mt-1 block truncate text-xs text-muted-foreground" dateTime={transaction.date}>
                     {formatDate(transaction.date)}
                   </time>
                 </div>
               </div>
 
-              <p className="shrink-0 font-mono text-sm font-semibold tabular-nums text-total-out">
+              <p className="w-20 shrink-0 text-right font-mono text-sm font-semibold tabular-nums text-total-out">
                 {formatAmount(transaction.amount)}
               </p>
             </div>

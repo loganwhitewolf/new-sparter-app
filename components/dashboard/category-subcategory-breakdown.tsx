@@ -50,30 +50,32 @@ export function CategorySubcategoryBreakdown({ subcategories, type = 'out', devi
         const count = Number.isFinite(subcategory.count) ? Math.max(0, subcategory.count) : 0
 
         return (
-          <li key={subcategory.id} className="rounded-xl border bg-card p-4 shadow-sm">
+          <li key={subcategory.id} className="overflow-hidden rounded-xl border bg-card p-4 shadow-sm">
             <div className="space-y-3">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-foreground" title={subcategory.name}>
                     {subcategory.name}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 truncate text-xs text-muted-foreground">
                     {movementLabel(count)} · {percentage}% del totale categoria
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  {deviations ? (
-                    <DeviationBadge
-                      deviation={(() => {
-                        const entry = deviations.get(subcategory.id)
-                        if (!entry) return null as DeviationResult
-                        if (entry.isNew) return 'new' as DeviationResult
-                        return entry.deviation as DeviationResult
-                      })()}
-                      categoryType={type}
-                    />
-                  ) : null}
-                  <p className="font-mono text-sm font-semibold tabular-nums">
+                <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex w-12 justify-end">
+                    {deviations ? (
+                      <DeviationBadge
+                        deviation={(() => {
+                          const entry = deviations.get(subcategory.id)
+                          if (!entry) return null as DeviationResult
+                          if (entry.isNew) return 'new' as DeviationResult
+                          return entry.deviation as DeviationResult
+                        })()}
+                        categoryType={type}
+                      />
+                    ) : null}
+                  </div>
+                  <p className="w-20 text-right font-mono text-sm font-semibold tabular-nums">
                     {formatAmount(subcategory.amount)}
                   </p>
                 </div>
