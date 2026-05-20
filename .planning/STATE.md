@@ -1,34 +1,35 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.8
-milestone_name: dashboard-intelligence
-status: milestone_complete
-last_updated: "2026-05-20T15:00:00.000Z"
-last_activity: 2026-05-20 — v1.8 milestone archived
+milestone: v1.9
+milestone_name: Social Auth
+status: planning
+last_updated: "2026-05-20T13:00:00.000Z"
+last_activity: 2026-05-20 — Milestone v1.9 started
 progress:
-  total_phases: 29
-  completed_phases: 29
-  total_plans: 116
-  completed_plans: 116
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-20 after v1.8 milestone)
+See: .planning/PROJECT.md
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** v1.8 archived — planning next milestone.
+**Current focus:** v1.9 Social Auth — Google and GitHub OAuth with account linking.
 
 ## Current Position
 
-Phase: 29 of 29 (complete)
-Status: v1.8 / M008 milestone archived 2026-05-20
-Last activity: 2026-05-20 — v1.8 milestone complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-20 — Milestone v1.9 started
 
-Progress: [██████████] 100%
+Progress: [          ] 0%
 
 ## Accumulated Context
 
@@ -47,6 +48,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-20T15:00:00.000Z
-Stopped at: v1.8 milestone archived
+Last session: 2026-05-20T13:00:00.000Z
+Stopped at: —
 Resume file: None

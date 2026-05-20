@@ -13,6 +13,17 @@ The user can safely import real bank transactions, see where their money goes ca
 - **Complexity:** complex
 - **Why:** The app spans Next.js server runtime, Better Auth, Drizzle/Postgres, Cloudflare R2, production environment variables, migrations, categorization tiers, dashboard deviation analytics, and external free-tier platform limits.
 
+## Current Milestone: v1.9 Social Auth
+
+**Goal:** Permettere agli utenti di registrarsi e accedere con Google e GitHub, con possibilità di collegare i provider social a un account email/password esistente.
+
+**Target features:**
+- Login e registrazione via Google OAuth
+- Login e registrazione via GitHub OAuth
+- Account linking: collegare/scollegare provider social da un account esistente (settings)
+- Guardrail di registrazione rimosso — qualsiasi account Google/GitHub può registrarsi liberamente
+- UI aggiornata: bottoni social su login/register, sezione "Account collegati" nelle impostazioni
+
 ## Current State
 
 All milestones M001–M008 complete as of 2026-05-20. The app has:
@@ -90,5 +101,22 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 | MonthlyTrendChart deleted, two focused charts | Cleaner signal per chart (D-10/D-11/D-12) | ✓ Good |
 | Sort default = deviation on categories page | Most actionable sort first; URL omits when default (D-07) | ✓ Good |
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-05-20 after v1.8 / M008 milestone*
+*Last updated: 2026-05-20 — milestone v1.9 Social Auth started*
