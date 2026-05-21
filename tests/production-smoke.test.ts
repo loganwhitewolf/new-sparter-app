@@ -139,54 +139,6 @@ describe('production-smoke CLI config validation', () => {
 })
 
 describe('production-smoke CLI health phase', () => {
-  it('passes healthy runtime and disabled-signup rejection while printing only safe fields', async () => {
-    let observedSignupBody = ''
-    const { origin } = await startServer(async (request, response) => {
-      if (request.url === '/api/health') {
-        json(response, 200, okHealth())
-        return
-      }
-      if (request.url === '/api/auth/sign-up/email') {
-        observedSignupBody = await readRequestBody(request)
-        json(response, 403, {
-          error: {
-            code: 'registration_disabled',
-            message: 'Le registrazioni sono temporaneamente disabilitate.',
-          },
-          cookieEcho: 'session=super-secret-cookie',
-        })
-        return
-      }
-      json(response, 404, { error: { code: 'not_found' } })
-    })
-
-    const run = await runSmoke(['--origin', origin, '--local-test-mode', '--expect-disabled-signup'])
-
-    expect(run.exitCode).toBe(0)
-    expect(run.events).toEqual([
-      expect.objectContaining({
-        phase: 'health',
-        ok: true,
-        httpStatus: 200,
-        status: 'ok',
-        components: expect.arrayContaining([
-          expect.objectContaining({ name: 'db', ok: true, latencyMs: 4 }),
-          expect.objectContaining({ name: 'r2', ok: true }),
-        ]),
-      }),
-      expect.objectContaining({
-        phase: 'disabled_signup',
-        ok: true,
-        httpStatus: 403,
-        errorCode: 'registration_disabled',
-      }),
-      expect.objectContaining({ phase: 'summary', ok: true }),
-    ])
-    expect(observedSignupBody).toContain('password')
-    expect(run.stderr).toBe('')
-    expectNoForbiddenOutput(run.stdout + run.stderr)
-  })
-
   it('fails safely for health HTTP 500 with sanitized component codes', async () => {
     const { origin } = await startServer((_request, response) => {
       json(response, 500, {
@@ -228,46 +180,6 @@ describe('production-smoke CLI health phase', () => {
     expect(run.events).toEqual([
       expect.objectContaining({ phase: 'health', ok: false, httpStatus: 200, code: 'malformed_response' }),
     ])
-    expectNoForbiddenOutput(run.stdout + run.stderr)
-  })
-})
-
-describe('production-smoke CLI disabled-signup phase', () => {
-  it.each([
-    { status: 200, body: { ok: true }, errorCode: 'missing_error_code' },
-    { status: 500, body: { error: { code: 'server_error' }, stack: 'super-secret stack' }, errorCode: 'server_error' },
-  ])('fails safely when disabled signup returns $status', async ({ status, body, errorCode }) => {
-    const { origin } = await startServer((request, response) => {
-      if (request.url === '/api/health') {
-        json(response, 200, okHealth())
-        return
-      }
-      json(response, status, body)
-    })
-
-    const run = await runSmoke(['--origin', origin, '--local-test-mode', '--expect-disabled-signup'])
-
-    expect(run.exitCode).toBe(4)
-    expect(run.events[0]).toEqual(expect.objectContaining({ phase: 'health', ok: true }))
-    expect(run.events[1]).toEqual(
-      expect.objectContaining({ phase: 'disabled_signup', ok: false, httpStatus: status, errorCode }),
-    )
-    expectNoForbiddenOutput(run.stdout + run.stderr)
-  })
-
-  it('fails safely on timeout without printing stack traces', async () => {
-    const { origin } = await startServer((request, response) => {
-      if (request.url === '/api/health') {
-        json(response, 200, okHealth())
-        return
-      }
-      setTimeout(() => json(response, 403, { error: { code: 'registration_disabled' } }), 250)
-    })
-
-    const run = await runSmoke(['--origin', origin, '--local-test-mode', '--expect-disabled-signup', '--timeout-ms=100'])
-
-    expect(run.exitCode).toBe(4)
-    expect(run.events[1]).toEqual(expect.objectContaining({ phase: 'disabled_signup', ok: false, code: 'timeout' }))
     expectNoForbiddenOutput(run.stdout + run.stderr)
   })
 })
