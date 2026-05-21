@@ -3,7 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Social Auth
 status: planning
-last_updated: "2026-05-20T13:00:00.000Z"
+stopped_at: Phase 30 context gathered
+last_updated: "2026-05-21T07:33:04.217Z"
 last_activity: 2026-05-20 — Roadmap created (Phases 30–32)
 progress:
   total_phases: 3
@@ -38,6 +39,7 @@ Progress: [          ] 0%
 All milestones M001–M008 complete. Full decision log in PROJECT.md.
 
 v1.9 phase structure:
+
 - Phase 30: OAuth provider config + env wiring + guardrail removal (foundation, no UI)
 - Phase 31: Social login/register buttons on auth pages (OAUTH-01..05)
 - Phase 32: Account linking UI in settings (LINK-01..04)
@@ -53,6 +55,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-20T13:00:00.000Z
-Stopped at: Roadmap created, Phase 30 ready to plan
-Resume file: None
+Last session: --stopped-at
+Stopped at: Phase 30 context gathered
+Resume file: --resume-file
