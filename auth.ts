@@ -11,6 +11,24 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     autoSignIn: true,
   },
+  socialProviders: {
+    ...(process.env.GOOGLE_CLIENT_ID
+      ? {
+          google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+          },
+        }
+      : {}),
+    ...(process.env.GITHUB_CLIENT_ID
+      ? {
+          github: {
+            clientId: process.env.GITHUB_CLIENT_ID,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+          },
+        }
+      : {}),
+  },
   database: drizzleAdapter(db, {
     provider: 'pg',
   }),
