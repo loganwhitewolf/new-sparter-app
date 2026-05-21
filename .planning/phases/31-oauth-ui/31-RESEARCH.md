@@ -416,12 +416,13 @@ export default async function RegisterPage({ searchParams }: Props) {
 | A1 | Google SVG path data in Code Examples / Icon pattern section | Code Examples | Icon renders incorrectly or violates Google brand guidelines — visual issue only, easily corrected |
 | A2 | D-07 intent is that register-page OAuth errors also redirect to `/login?error=...` (not `/register?error=...`) | Common Pitfalls #2 | If register should redirect to `/register?error=...`, the `errorCallbackURL` value in `SocialProviderButtons` needs to be configurable per page |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **OAuth error URL for register page**
    - What we know: D-07 says "redirect to /login?error=..." but the register page also reads `searchParams.error`
    - What's unclear: Should the register page use `errorCallbackURL: '/register?error=OAuthCallbackError'` so errors appear on the page the user was on?
    - Recommendation: Use per-page error URLs (`/login?error=...` from login, `/register?error=...` from register). Both pages implement the same display pattern. Planner should confirm.
+   - **RESOLVED:** Plan 03 Task 2 usa per-page error URLs — `/login?error=OAuthCallbackError` dal login, `/register?error=OAuthCallbackError` dal register. Entrambe le pagine leggono il proprio `searchParams.error`. (Risolve assumption A2.)
 
 ## Environment Availability
 
