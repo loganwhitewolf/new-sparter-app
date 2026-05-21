@@ -7,18 +7,15 @@ This runbook defines the zero-cost production environment contract for deploying
 Use this ordered smoke when preparing the first production deploy or when revalidating production after environment, migration, auth, or R2 changes. Capture only the safe evidence fields in the template below; never paste secret values, cookies, presigned URLs, request bodies, file contents, object keys, raw provider responses, raw SDK errors, or stack traces into evidence.
 
 1. **Review variable names before adding values.** Compare Vercel and local operator secret stores against `.env.example` and the tables in this document. Record only missing or present variable names, not values.
-2. **Configure Vercel runtime variables.** Add the production `DATABASE_URL`, `DATABASE_SSL`, `DATABASE_POOL_MAX`, Better Auth origin/secret variables, R2 variables, optional Better Stack variables, and `REGISTRATION_ENABLED` in Vercel Production. Do not create client-prefixed database, R2, Better Stack, or auth secret variables.
+2. **Configure Vercel runtime variables.** Add the production `DATABASE_URL`, `DATABASE_SSL`, `DATABASE_POOL_MAX`, Better Auth origin/secret variables, R2 variables, and optional Better Stack variables in Vercel Production. Do not create client-prefixed database, R2, Better Stack, or auth secret variables.
 3. **Configure Supabase and R2 free-tier resources.** Confirm the intended Supabase production project, low database pool sizes, the production R2 bucket, scoped R2 keys, and a CORS policy that allows only the production HTTPS origin, `PUT`, and `Content-Type`. The helper `node scripts/set-r2-cors.mjs` can apply the R2 CORS rule when `R2_CORS_ALLOWED_ORIGIN` is set to the deployed origin and Cloudflare credentials are supplied through the operator environment.
 4. **Run the local production migration.** From a trusted operator machine, set the `PRODUCTION_*` variables in `.env` and run `yarn db:migrate`. Record the command, timestamp, exit code, and sanitized `migration_started`, `migration_succeeded`, or `migration_failed.error.code` values only.
 5. **Deploy or redeploy Vercel production.** Trigger a production deployment after any Vercel environment change. Record the deployment URL origin and deployment status, not build logs containing environment details.
 6. **Check runtime health.** Open or `curl` `https://<production-origin>/api/health`. Record HTTP status, top-level `status`, `components.db.ok`, `components.db.code` when present, `components.r2.ok`, and `components.r2.missing` variable names when present.
-7. **Smoke enabled signup and login.** With `REGISTRATION_ENABLED` unset or true-like and after redeploy, create or use a disposable smoke account through the UI, then confirm the authenticated app loads. Record UI checkpoints and screenshot artifact paths only; do not record passwords, cookies, tokens, or request bodies.
-8. **Disable registration and redeploy.** Set `REGISTRATION_ENABLED` to a false-like value, trigger a new production deployment, and rerun the registration smoke. This validates the runtime picked up the changed guardrail.
-9. **Check direct disabled-signup rejection.** Call `POST /api/auth/sign-up/email` with disposable credentials and confirm HTTP `403` plus `error.code` `registration_disabled`. Record only method/path, HTTP status, and `error.code`; do not retain the request body or credentials.
-10. **Confirm preserved login.** While registration is disabled, sign in with an existing smoke account and confirm the authenticated app still loads. If already signed in, refresh the app and confirm the session remains valid without recording cookies.
-11. **Re-enable registration if desired.** Remove `REGISTRATION_ENABLED` or set it true-like, redeploy, and repeat the enabled signup check only when public signup should be open.
-12. **Run a small R2 import smoke.** Sign in, upload a deliberately tiny CSV with fake rows, wait for the browser direct `PUT` to finish, and confirm navigation to `/import/<fileId>/analyze` or the expected analysis checkpoint. Record route checkpoint and safe upload diagnostic event names/statuses only; never record presigned URLs, object keys, file contents, or row data.
-13. **Clean up smoke artifacts.** Delete disposable smoke users/imports/objects when they are no longer useful, and keep demo files small to stay within Vercel Hobby, Supabase Free, and Cloudflare R2 Free limits.
+7. **Smoke enabled signup and login.** After redeploy, create or use a disposable smoke account through the UI, then confirm the authenticated app loads. Record UI checkpoints and screenshot artifact paths only; do not record passwords, cookies, tokens, or request bodies.
+8. **Confirm preserved login.** Sign in with an existing smoke account and confirm the authenticated app still loads. If already signed in, refresh the app and confirm the session remains valid without recording cookies.
+9. **Run a small R2 import smoke.** Sign in, upload a deliberately tiny CSV with fake rows, wait for the browser direct `PUT` to finish, and confirm navigation to `/import/<fileId>/analyze` or the expected analysis checkpoint. Record route checkpoint and safe upload diagnostic event names/statuses only; never record presigned URLs, object keys, file contents, or row data.
+10. **Clean up smoke artifacts.** Delete disposable smoke users/imports/objects when they are no longer useful, and keep demo files small to stay within Vercel Hobby, Supabase Free, and Cloudflare R2 Free limits.
 
 Optional executable checks live in `scripts/production-smoke.mjs` and `tests/production-smoke.spec.ts`. They consume secrets only from the local or CI secret store and emit or assert the same safe evidence fields documented here. Live browser evidence is optional for routine automation because it requires disposable production credentials, but it is required for final production acceptance before declaring the deploy ready.
 
@@ -38,14 +35,12 @@ Use the following variable names from a secure local or CI secret store when int
 | `PLAYWRIGHT_BASE_URL` | All live browser phases | No | Deployed production HTTPS origin. Do not include path, query, credentials, or fragment. |
 | `PLAYWRIGHT_SMOKE_EMAIL` | Signup/login/import phases | Yes | Disposable smoke account email. Use an account created only for smoke verification. |
 | `PLAYWRIGHT_SMOKE_PASSWORD` | Signup/login/import phases | Yes | Disposable smoke account password. Never print or paste it into evidence. |
-| `PLAYWRIGHT_SMOKE_EXPECT_REGISTRATION_DISABLED` | Disabled-registration phase | No | Set to `1` only after redeploying with `REGISTRATION_ENABLED=false`; verifies direct signup `403`/`registration_disabled` and existing-user login. |
 | `PLAYWRIGHT_SMOKE_RUN_IMPORT` | R2 browser import phase | No | Set to `1` to upload a generated tiny fake CSV through the browser and require the `/import/<fileId>/analyze` checkpoint. |
 
 Recommended phase sequence:
 
 1. With registration enabled, set `PLAYWRIGHT_PRODUCTION_SMOKE=1`, `PLAYWRIGHT_BASE_URL`, `PLAYWRIGHT_SMOKE_EMAIL`, and `PLAYWRIGHT_SMOKE_PASSWORD`, then run `yarn playwright test tests/production-smoke.spec.ts --grep "enabled registration"`.
-2. After redeploying with `REGISTRATION_ENABLED=false`, add `PLAYWRIGHT_SMOKE_EXPECT_REGISTRATION_DISABLED=1` and run `yarn playwright test tests/production-smoke.spec.ts --grep "disabled registration"`.
-3. When R2 health is good and the smoke account can log in, add `PLAYWRIGHT_SMOKE_RUN_IMPORT=1` and run `yarn playwright test tests/production-smoke.spec.ts --grep "R2 browser import"`.
+2. When R2 health is good and the smoke account can log in, add `PLAYWRIGHT_SMOKE_RUN_IMPORT=1` and run `yarn playwright test tests/production-smoke.spec.ts --grep "R2 browser import"`.
 
 Each browser smoke run uses one disposable user and, when import is enabled, one tiny generated CSV upload. Clean up obsolete smoke users/import rows/R2 objects to avoid free-tier quota clutter. The spec fails if collected browser upload diagnostics include presigned URLs, object key fields, cookies, credentials, file contents, or stack-like diagnostics.
 
@@ -58,8 +53,6 @@ Each browser smoke run uses one disposable user and, when import is enabled, one
 | deploy | Vercel production redeploy |  |  | `https://<production-origin>` |  | deployment status only |  |
 | health | `GET /api/health` |  |  | `https://<production-origin>` |  | `status`, `components.db.ok/code`, `components.r2.ok/missing` |  |
 | enabled signup/login | UI smoke |  |  | `https://<production-origin>` |  | checkpoint names only | screenshot/log path |
-| disabled direct signup | `POST /api/auth/sign-up/email` |  |  | `https://<production-origin>` | `403` | `error.code=registration_disabled` | redacted response path |
-| preserved login | UI smoke |  |  | `https://<production-origin>` |  | checkpoint names only | screenshot/log path |
 | R2 import | UI upload smoke |  |  | `https://<production-origin>` |  | upload diagnostic event names/statuses; analyze route checkpoint | screenshot/log path |
 | cleanup | Remove disposable smoke artifacts |  |  |  |  | deleted artifact counts only |  |
 
@@ -71,11 +64,10 @@ The evidence table must not include database URLs, auth secrets, R2 keys, bearer
 2. **Migration reaches the database and fails.** Use the sanitized `migration_failed.error.code` and optional safe `className` to inspect Supabase logs or migration files. Keep `PRODUCTION_DATABASE_POOL_MAX` low, verify the target project, and avoid parallel migration attempts.
 3. **Health is degraded for `db`.** If `/api/health` reports `components.db.code=database_configuration_missing`, add the missing runtime database variable and redeploy. If it reports `database_timeout` or `database_unreachable`, check Supabase availability, SSL, pooler/direct URL choice, and free-tier connection pressure without logging the connection string.
 4. **Health is degraded for `r2`.** If `components.r2.ok` is false, add the listed missing R2 variable names in Vercel and redeploy. Health reports names only; it is safe to paste the names but not values.
-5. **Registration behavior does not match `REGISTRATION_ENABLED`.** First confirm a production redeploy happened after the env change. Then verify both surfaces: UI signup messaging and direct `POST /api/auth/sign-up/email` returning HTTP `403` with `registration_disabled` when disabled.
-6. **Login or preserved session fails.** Verify `BETTER_AUTH_URL` and `NEXT_PUBLIC_BETTER_AUTH_URL` use the same production HTTPS origin, then inspect browser origin/cookie behavior. Record only origin, status, and checkpoint names; never capture cookies or auth tokens.
-7. **R2 browser upload fails before or during `PUT`.** Isolate the presign phase from browser CORS/PUT. If presign or health fails, inspect server-side R2 env names. If presign succeeds but the browser `PUT` fails, compare the R2 CORS origin, method `PUT`, and allowed header `Content-Type` against the actual production origin and use sanitized `upload_put_attempt`, `upload_put_retrying`, or `upload_put_failed` diagnostics.
-8. **Import reaches upload but analysis fails.** Keep the fixture tiny and fake, confirm navigation/checkpoint around `/import/<fileId>/analyze`, and inspect sanitized app logs or bounded UI error states. Do not paste file contents, object keys, raw parser output, or stack traces.
-9. **Quota or cold-start symptoms appear.** Treat slow or intermittent checks as free-tier signals first: wait for cold starts, keep database pool sizes low, keep smoke files tiny, and clean up disposable imports/users/objects before escalating.
+5. **Login or preserved session fails.** Verify `BETTER_AUTH_URL` and `NEXT_PUBLIC_BETTER_AUTH_URL` use the same production HTTPS origin, then inspect browser origin/cookie behavior. Record only origin, status, and checkpoint names; never capture cookies or auth tokens.
+6. **R2 browser upload fails before or during `PUT`.** Isolate the presign phase from browser CORS/PUT. If presign or health fails, inspect server-side R2 env names. If presign succeeds but the browser `PUT` fails, compare the R2 CORS origin, method `PUT`, and allowed header `Content-Type` against the actual production origin and use sanitized `upload_put_attempt`, `upload_put_retrying`, or `upload_put_failed` diagnostics.
+7. **Import reaches upload but analysis fails.** Keep the fixture tiny and fake, confirm navigation/checkpoint around `/import/<fileId>/analyze`, and inspect sanitized app logs or bounded UI error states. Do not paste file contents, object keys, raw parser output, or stack traces.
+8. **Quota or cold-start symptoms appear.** Treat slow or intermittent checks as free-tier signals first: wait for cold starts, keep database pool sizes low, keep smoke files tiny, and clean up disposable imports/users/objects before escalating.
 
 ## Vercel runtime environment variables
 
@@ -89,6 +81,10 @@ Configure these in Vercel for the production environment. After any change, rede
 | `BETTER_AUTH_URL` | No | Yes | Server-side production HTTPS origin used by Better Auth. |
 | `NEXT_PUBLIC_BETTER_AUTH_URL` | Yes | Yes | Intentionally public browser-side auth origin. This is the only auth-related variable that should be client-prefixed. |
 | `BETTER_AUTH_SECRET` | No | Yes | Long random server-side secret. Never expose in browser variables, docs, screenshots, or logs. |
+| `GOOGLE_CLIENT_ID` | No | Optional | Google OAuth client ID. When set (together with `GOOGLE_CLIENT_SECRET`), activates the Google social login provider. Register at https://console.cloud.google.com/apis/credentials. Callback URL: `{BETTER_AUTH_URL}/api/auth/callback/google`. |
+| `GOOGLE_CLIENT_SECRET` | No | Optional (paired with ID) | Google OAuth client secret. Must be set together with `GOOGLE_CLIENT_ID`. |
+| `GITHUB_CLIENT_ID` | No | Optional | GitHub OAuth client ID. When set (together with `GITHUB_CLIENT_SECRET`), activates the GitHub social login provider. Register at https://github.com/settings/applications/new. Callback URL: `{BETTER_AUTH_URL}/api/auth/callback/github`. |
+| `GITHUB_CLIENT_SECRET` | No | Optional (paired with ID) | GitHub OAuth client secret. Must be set together with `GITHUB_CLIENT_ID`. |
 | `R2_ACCOUNT_ID` | No | Yes | Cloudflare account identifier used server-side to build the R2 S3-compatible endpoint. |
 | `R2_ACCESS_KEY_ID` | No | Yes | Cloudflare R2 access key ID for server-side signing and object checks. |
 | `R2_SECRET_ACCESS_KEY` | No | Yes | Cloudflare R2 secret access key. Always secret server-side. |
@@ -99,29 +95,10 @@ Configure these in Vercel for the production environment. After any change, rede
 | `CATEGORIZATION_REGEX_MIN_PLAN` | No | Optional | Alpha gate override; defaults remain intentionally open during alpha. |
 | `CATEGORIZATION_HISTORY_MIN_PLAN` | No | Optional | Alpha gate override; defaults remain intentionally open during alpha. |
 | `CATEGORIZATION_CUSTOM_PATTERNS_MIN_PLAN` | No | Optional | Alpha gate override; defaults remain intentionally open during alpha. |
-| `REGISTRATION_ENABLED` | No | Optional | Implemented server-side registration toggle. Registration is enabled by default when unset, blank, or malformed. Set to `false`, `0`, `no`, or `off` to block new signup through both server actions and direct `/api/auth/sign-up/email` calls while existing-user login remains delegated to Better Auth. Redeploy after changing this value in Vercel. |
 
 Do not create client-prefixed versions of database, R2, Better Stack, or auth secret variables. Only variables intentionally named with `NEXT_PUBLIC_` are exposed to browser code.
 
-## Registration toggle smoke and recovery
-
-`REGISTRATION_ENABLED` is an implemented server-side production guardrail for controlling public signup without affecting existing users. Leave it unset, blank, or set to a true-like value (`true`, `1`, `yes`, `on`) to keep signup open. Set it to an explicit false-like value (`false`, `0`, `no`, `off`) to disable new registration.
-
-When registration is disabled:
-
-- New signup through the app server action returns the disabled-registration message instead of calling Better Auth signup.
-- Direct `POST /api/auth/sign-up/email` calls are rejected server-side with HTTP `403` and the sanitized error code `registration_disabled`.
-- Existing-user login through `POST /api/auth/sign-in/email` and normal sign-in UI flow remains available and delegated to Better Auth.
-- This is not only a UI hiding mechanism; the server action and direct Better Auth route are both guarded.
-
-After adding or changing `REGISTRATION_ENABLED` in Vercel, redeploy before retesting. If Vercel still appears to use stale registration behavior, trigger a new production deployment first, then rerun the signup and login smoke checks. If signup was disabled accidentally, re-enable or remove the variable, redeploy, and verify signup opens again.
-
-Minimal no-secret smoke checklist after redeploy:
-
-1. With `REGISTRATION_ENABLED=false`, attempt a new signup from the UI and confirm the disabled-registration message appears.
-2. With `REGISTRATION_ENABLED=false`, call `POST /api/auth/sign-up/email` with disposable test credentials and confirm HTTP `403` with error code `registration_disabled`; do not log or paste credentials, request bodies, cookies, or tokens.
-3. With `REGISTRATION_ENABLED=false`, sign in with an existing test user and confirm the login flow still reaches the authenticated app.
-4. Re-enable registration only when intended, redeploy, and verify a new signup can proceed.
+OAuth callback URLs follow the pattern `{BETTER_AUTH_URL}/api/auth/callback/{provider-id}`. For Google: `.../callback/google`. For GitHub: `.../callback/github`. `BETTER_AUTH_URL` must be set to the correct production HTTPS origin for OAuth redirects to work.
 
 ## Cloudflare R2 production setup
 
@@ -179,7 +156,7 @@ After `/api/health` is healthy, verify the end-to-end path with a deliberately t
 5. If the upload fails, inspect the browser upload diagnostic events and the health response before changing secrets or CORS.
 6. Remove failed or obsolete demo imports later if they are no longer useful for verification.
 
-Each smoke creates one small R2 object and one database file row. Keep demo files small, watch Cloudflare R2 Free storage/operation usage and Supabase Free row usage, and rely on the S04 registration guardrail to avoid public signup amplification of quota usage.
+Each smoke creates one small R2 object and one database file row. Keep demo files small, watch Cloudflare R2 Free storage/operation usage and Supabase Free row usage.
 
 ## Local production migration runbook
 
@@ -251,7 +228,6 @@ Use commands and endpoints that report status without printing credential values
 # Verify the deployment document exists and the env example lists implemented names.
 test -f docs/deploy/vercel-supabase-r2.md
 grep -q "DATABASE_POOL_MAX" .env.example
-grep -q "REGISTRATION_ENABLED" .env.example
 
 # Verify developer-facing language in routes, comments, tests, and docs.
 yarn check:language
