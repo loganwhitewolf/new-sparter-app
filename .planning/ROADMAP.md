@@ -63,7 +63,10 @@
   2. Adding GITHUB_CLIENT_ID/GITHUB_CLIENT_SECRET to env activates the GitHub provider in Better Auth with no code change
   3. A user without a pre-approved email can complete OAuth registration without hitting an ALLOWED_EMAIL error
   4. The deploy runbook documents both OAuth env variable pairs and required callback URL format
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 30-01-PLAN.md — Registration guardrail removal (REG-01): delete `lib/auth/registration.ts`, 3 dedicated tests; strip guard from `lib/actions/auth.ts` and `app/api/auth/[...all]/route.ts`; clean up production smoke tests
+- [ ] 30-02-PLAN.md — OAuth provider activation (ENV-01, ENV-02): add env-conditional `socialProviders` block to `auth.ts` for Google + GitHub
+- [ ] 30-03-PLAN.md — Docs + env contract (ENV-03): purge `REGISTRATION_ENABLED` from `.env.example` and `docs/deploy/vercel-supabase-r2.md`; document 4 OAuth env vars and callback URL pattern
 
 ### Phase 31: oauth-ui
 **Goal**: Users can sign in or register with Google and GitHub directly from the login and register pages, with provider buttons hidden when credentials are absent
@@ -97,7 +100,7 @@
 | 1–23 | M001–M006 | 87/87 | Complete | 2026-05 |
 | 24–28 | M007 | 20/20 | Complete | 2026-05-19 |
 | 29 | v1.8/M008 | 4/4 | Complete | 2026-05-20 |
-| 30 | v1.9 | 0/? | Not started | — |
+| 30 | v1.9 | 0/3 | Planned | — |
 | 31 | v1.9 | 0/? | Not started | — |
 | 32 | v1.9 | 0/? | Not started | — |
 
