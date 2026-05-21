@@ -66,3 +66,36 @@ test.describe('Auth - AUTH-03: Route protection', () => {
     // STAGING_KEY must NOT be set in production environment
   })
 })
+
+test.describe('Auth - OAUTH-01..04: Social providers', () => {
+  test('OAUTH-01: existing Google user signs in and lands on /dashboard', async () => {
+    test.fixme()
+    // OAUTH-01: With GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET set in env,
+    // clicking "Continua con Google" redirects to accounts.google.com, then
+    // back to /api/auth/callback/google, setting an HttpOnly session cookie
+    // and landing on /dashboard. Requires real Google OAuth credentials —
+    // manual run only, kept as fixme stub for traceability.
+  })
+
+  test('OAUTH-02: new Google user signing in for the first time auto-creates an account', async () => {
+    test.fixme()
+    // OAUTH-02: First-time Google login (email not yet in users table) must
+    // auto-create the user via better-auth handleOAuthUserInfo. Verify in DB
+    // a new row exists in `user` with the Google-provided email after the
+    // callback completes. Manual run only — requires real Google account.
+  })
+
+  test('OAUTH-03: existing GitHub user signs in and lands on /dashboard', async () => {
+    test.fixme()
+    // OAUTH-03: With GITHUB_CLIENT_ID + GITHUB_CLIENT_SECRET set in env,
+    // clicking "Continua con GitHub" completes the OAuth round-trip and
+    // ends on /dashboard with an HttpOnly session cookie. Manual only.
+  })
+
+  test('OAUTH-04: new GitHub user signing in for the first time auto-creates an account', async () => {
+    test.fixme()
+    // OAUTH-04: First-time GitHub login auto-creates the user. Verify a
+    // new row in `user` exists after the callback. Manual only — requires
+    // real GitHub account never previously linked.
+  })
+})
