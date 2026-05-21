@@ -30,7 +30,8 @@
 **: App reads GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable Google provider
 - [x] **ENV-02
 **: App reads GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to enable GitHub provider
-- [ ] **ENV-03**: Deploy runbook documents required OAuth env variables and callback URL configuration
+- [x] **ENV-03
+**: Deploy runbook documents required OAuth env variables and callback URL configuration
 
 ## v2 Requirements
 
