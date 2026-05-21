@@ -48,8 +48,8 @@
 
 ## v1.9 Social Auth
 
-- [ ] **Phase 30: oauth-config** — OAuth provider setup, env wiring, and registration guardrail removal
-- [ ] **Phase 31: oauth-ui** — Social login/register buttons on auth pages
+- [x] **Phase 30: oauth-config** — OAuth provider setup, env wiring, and registration guardrail removal *(complete 2026-05-21)*
+- [x] **Phase 31: oauth-ui** — Social login/register buttons on auth pages *(complete 2026-05-21)*
 - [ ] **Phase 32: account-linking** — Link/unlink providers from settings
 
 ## Phase Details
@@ -79,9 +79,9 @@
   4. A brand-new user who authenticates via Google or GitHub gets an account created automatically (first-time registration path)
   5. Register page mirrors the same provider buttons under the same env conditions
 **Plans**: 3 plans
-- [ ] 31-01-PLAN.md — Wave 0 test scaffolding: tests/oauth-ui.test.tsx (Vitest unit specs for SocialProviderButtons + getOAuthErrorMessage) and Playwright test.fixme() stubs for OAUTH-01..04
-- [ ] 31-02-PLAN.md — SocialProviderButtons shared client component + getOAuthErrorMessage Italian mapping (D-03, D-04, D-06, D-08, D-09)
-- [ ] 31-03-PLAN.md — Convert login/register pages to async server components reading process.env, extract LoginForm/RegisterForm, wire social section + Oppure divider with per-page error URLs (D-01, D-02, D-05, D-07)
+- [x] 31-01-PLAN.md — Wave 0 test scaffolding: tests/oauth-ui.test.tsx (Vitest unit specs for SocialProviderButtons + getOAuthErrorMessage) and Playwright test.fixme() stubs for OAUTH-01..04
+- [x] 31-02-PLAN.md — SocialProviderButtons shared client component + getOAuthErrorMessage Italian mapping (D-03, D-04, D-06, D-08, D-09)
+- [x] 31-03-PLAN.md — Convert login/register pages to async server components reading process.env, extract LoginForm/RegisterForm, wire social section + Oppure divider with per-page error URLs (D-01, D-02, D-05, D-07)
 **UI hint**: yes
 
 ### Phase 32: account-linking
@@ -103,8 +103,8 @@
 | 1–23 | M001–M006 | 87/87 | Complete | 2026-05 |
 | 24–28 | M007 | 20/20 | Complete | 2026-05-19 |
 | 29 | v1.8/M008 | 4/4 | Complete | 2026-05-20 |
-| 30 | v1.9 | 0/3 | Planned | — |
-| 31 | v1.9 | 0/3 | Planned | — |
+| 30 | v1.9 | 3/3 | Complete | 2026-05-21 |
+| 31 | v1.9 | 3/3 | Complete | 2026-05-21 |
 | 32 | v1.9 | 0/? | Not started | — |
 
-**Total: 32 phases · 111 plans complete · 3 phases pending (v1.9)**
+**Total: 32 phases · 117 plans complete · 1 phase pending (v1.9)**

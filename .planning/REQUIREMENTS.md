@@ -7,11 +7,11 @@
 
 ### OAuth Login / Register
 
-- [ ] **OAUTH-01**: User can sign in with an existing Google account
-- [ ] **OAUTH-02**: User can create a new account using Google OAuth
-- [ ] **OAUTH-03**: User can sign in with an existing GitHub account
-- [ ] **OAUTH-04**: User can create a new account using GitHub OAuth
-- [ ] **OAUTH-05**: Social provider buttons are hidden when provider credentials are not configured in env
+- [x] **OAUTH-01**: User can sign in with an existing Google account
+- [x] **OAUTH-02**: User can create a new account using Google OAuth
+- [x] **OAUTH-03**: User can sign in with an existing GitHub account
+- [x] **OAUTH-04**: User can create a new account using GitHub OAuth
+- [x] **OAUTH-05**: Social provider buttons are hidden when provider credentials are not configured in env
 
 ### Account Linking
 
@@ -22,7 +22,7 @@
 
 ### Registration
 
-- [ ] **REG-01**: Registration guardrail (ALLOWED_EMAIL check) is removed — any user can register via social or email/password
+- [x] **REG-01**: Registration guardrail (ALLOWED_EMAIL check) is removed — any user can register via social or email/password
 
 ### Environment / Config
 
@@ -53,19 +53,19 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| OAUTH-01 | Phase 31 | Pending |
-| OAUTH-02 | Phase 31 | Pending |
-| OAUTH-03 | Phase 31 | Pending |
-| OAUTH-04 | Phase 31 | Pending |
-| OAUTH-05 | Phase 31 | Pending |
+| OAUTH-01 | Phase 31 | Complete 2026-05-21 |
+| OAUTH-02 | Phase 31 | Complete 2026-05-21 |
+| OAUTH-03 | Phase 31 | Complete 2026-05-21 |
+| OAUTH-04 | Phase 31 | Complete 2026-05-21 |
+| OAUTH-05 | Phase 31 | Complete 2026-05-21 |
 | LINK-01 | Phase 32 | Pending |
 | LINK-02 | Phase 32 | Pending |
 | LINK-03 | Phase 32 | Pending |
 | LINK-04 | Phase 32 | Pending |
-| REG-01 | Phase 30 | Pending |
-| ENV-01 | Phase 30 | Pending |
-| ENV-02 | Phase 30 | Pending |
-| ENV-03 | Phase 30 | Pending |
+| REG-01 | Phase 30 | Complete 2026-05-21 |
+| ENV-01 | Phase 30 | Complete 2026-05-21 |
+| ENV-02 | Phase 30 | Complete 2026-05-21 |
+| ENV-03 | Phase 30 | Complete 2026-05-21 |
 
 **Coverage:**
 - v1 requirements: 13 total
@@ -74,4 +74,4 @@
 
 ---
 *Requirements defined: 2026-05-20*
-*Last updated: 2026-05-20 — traceability filled after roadmap creation*
+*Last updated: 2026-05-21 — OAUTH-01..05, REG-01, ENV-01..03 complete after Phase 30+31 execution*

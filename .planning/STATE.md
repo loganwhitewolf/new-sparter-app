@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Social Auth
-status: verifying
-stopped_at: Phase 31 context gathered
-last_updated: "2026-05-21T14:07:55.709Z"
-last_activity: 2026-05-21 — Phase 30 verified
+status: executing
+stopped_at: Phase 31 complete
+last_updated: "2026-05-21T16:40:00.000Z"
+last_activity: 2026-05-21 — Phase 31 verified and complete
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 3
-  percent: 50
+  completed_phases: 2
+  total_plans: 9
+  completed_plans: 6
+  percent: 67
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Phase: 30 (complete ✓)
-Plan: 30-03 (last)
-Status: Verified — all must_haves PASS — ready for Phase 31
-Last activity: 2026-05-21 — Phase 30 verified
+Phase: 31 (complete ✓)
+Plan: 31-03 (last)
+Status: Verified — all must_haves PASS — ready for Phase 32
+Last activity: 2026-05-21 — Phase 31 verified
 
-Progress: [███░░░░░░░] 33%
+Progress: [██████░░░░] 67%
 
 ## Accumulated Context
 
@@ -62,4 +62,4 @@ Last session: --stopped-at
 Stopped at: Phase 31 context gathered
 Resume file: --resume-file
 
-**Planned Phase:** 31 (oauth-ui) — 3 plans — 2026-05-21T14:07:55.702Z
+**Next Phase:** 32 (account-linking) — account linking UI in settings
