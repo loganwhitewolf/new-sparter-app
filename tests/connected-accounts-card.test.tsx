@@ -98,7 +98,5 @@ describe('ConnectedAccountsCard unlink guard (LINK-03)', () => {
   // providers appear unlinked. To assert the guard, we use
   // @testing-library/react render + waitFor to flush the effect when the mock
   // returns a populated account list. Use the async pattern below.
-  it('exists so Plan 02 implements canUnlink — placeholder for testing-library suite', () => {
-    expect(true).toBe(true) // Plan 02 may extend with @testing-library/react if richer behavior tests are needed.
-  })
+  it.todo('canUnlink guard — implement with @testing-library/react when jsdom is added to devDependencies')
 })

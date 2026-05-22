@@ -1,16 +1,18 @@
 import { expect, test, type Page } from '@playwright/test'
 
+function requireStagingKey(): string {
+  const key = process.env.STAGING_KEY
+  if (!key) throw new Error('STAGING_KEY env var is required for E2E tests')
+  return key
+}
+
 async function openSettings(page: Page) {
-  await page.setExtraHTTPHeaders({
-    'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
-  })
+  await page.setExtraHTTPHeaders({ 'x-staging-key': requireStagingKey() })
   await page.goto('/settings')
 }
 
 async function openSettingsProfile(page: Page) {
-  await page.setExtraHTTPHeaders({
-    'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
-  })
+  await page.setExtraHTTPHeaders({ 'x-staging-key': requireStagingKey() })
   await page.goto('/settings/profile')
 }
 
@@ -33,9 +35,7 @@ test.describe('Account Linking - LINK-04: settings IA + Account collegati card',
   })
 
   test('LINK-04 /profile redirects to /settings/profile (D-04)', async ({ page }) => {
-    await page.setExtraHTTPHeaders({
-      'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
-    })
+    await page.setExtraHTTPHeaders({ 'x-staging-key': requireStagingKey() })
     await page.goto('/profile')
     await expect(page).toHaveURL(/\/settings\/profile/)
   })

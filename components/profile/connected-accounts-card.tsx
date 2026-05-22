@@ -24,10 +24,10 @@ import type { Provider } from '@/components/auth/social-provider-buttons'
 
 // ---------- Constants ----------
 
-const PROVIDER_LABELS: Record<Provider, string> = {
+const PROVIDER_LABELS = {
   google: 'Google',
   github: 'GitHub',
-}
+} satisfies Record<Provider, string>
 
 // Stable display order — Google first (matches Phase 31 D-03 precedent)
 const PROVIDER_ORDER: Provider[] = ['google', 'github']
@@ -132,12 +132,11 @@ export function ConnectedAccountsCard({
   // not be visible yet. Delay-refresh once + show success toast.
   useEffect(() => {
     if (!initialLinked) return
+    if (!PROVIDER_ORDER.includes(initialLinked as Provider)) return
     const provider = initialLinked as Provider
-    const label = PROVIDER_LABELS[provider] ?? initialLinked
+    const label = PROVIDER_LABELS[provider]
     toast.success(`${label} collegato.`)
-    const t = setTimeout(() => {
-      void refreshAccounts()
-    }, 400)
+    const t = setTimeout(() => void refreshAccounts(), 400)
     return () => clearTimeout(t)
   }, [initialLinked])
 
@@ -175,6 +174,7 @@ export function ConnectedAccountsCard({
 
   async function handleUnlink(provider: Provider) {
     setPendingUnlink(provider)
+    setUnlinkDialog(null)
     try {
       const result = await authClient.unlinkAccount({ providerId: provider })
       if (result?.error) {
@@ -183,7 +183,6 @@ export function ConnectedAccountsCard({
       }
       await refreshAccounts()
       toast.success(UNLINK_SUCCESS_TOAST)
-      setUnlinkDialog(null)
     } catch {
       toast.error(UNLINK_ERROR_TOAST)
     } finally {
