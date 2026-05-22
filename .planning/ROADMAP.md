@@ -5,7 +5,7 @@
 - ✅ **M001–M006** — Foundation → Dashboard Insight Suite (Phases 1–23, shipped ~2026-05)
 - ✅ **M007: Zero-cost Production Deploy** — Phases 24–28 (shipped 2026-05-19)
 - ✅ **v1.8 / M008: Dashboard Intelligence** — Phase 29 (shipped 2026-05-20)
-- 🚧 **v1.9: Social Auth** — Phases 30–32 (in progress)
+- ✅ **v1.9: Social Auth** — Phases 30–32 (complete 2026-05-22)
 
 ## Phases
 
@@ -50,7 +50,7 @@
 
 - [x] **Phase 30: oauth-config** — OAuth provider setup, env wiring, and registration guardrail removal *(complete 2026-05-21)*
 - [x] **Phase 31: oauth-ui** — Social login/register buttons on auth pages *(complete 2026-05-21)*
-- [ ] **Phase 32: account-linking** — Link/unlink providers from settings
+- [x] **Phase 32: account-linking** — Link/unlink providers from settings *(complete 2026-05-22)*
 
 ## Phase Details
 
@@ -94,9 +94,9 @@
   3. User can link GitHub to an existing email/password account via an OAuth flow initiated from settings
   4. User can unlink a provider only when at least one other auth method (password or another provider) remains on the account
 **Plans**: 3 plans
-- [ ] 32-00-PLAN.md — Wave 0 test scaffolding: tests/connected-accounts-card.test.tsx (LINK-03 / LINK-04 vitest stubs), tests/account-linking.spec.ts (LINK-01..04 navigation + fixme stubs for live OAuth), retarget tests/profile.spec.ts to /settings/profile
-- [ ] 32-01-PLAN.md — Settings IA + routes (D-01, D-04, D-05): lib/routes.ts adds profile + profileSettings, /settings becomes hub via components/settings/settings-hub.tsx, /profile becomes redirect shim, topbar Profilo link points to APP_ROUTES.profileSettings
-- [ ] 32-02-PLAN.md — ConnectedAccountsCard + /settings/profile page (LINK-01..04, D-03, D-06..D-17): components/profile/connected-accounts-card.tsx (link/unlink + last-method guard + Italian errors), app/(app)/settings/profile/page.tsx (server component with searchParams + configuredProviders)
+- [x] 32-00-PLAN.md — Wave 0 test scaffolding: tests/connected-accounts-card.test.tsx (LINK-03 / LINK-04 vitest stubs), tests/account-linking.spec.ts (LINK-01..04 navigation + fixme stubs for live OAuth), retarget tests/profile.spec.ts to /settings/profile
+- [x] 32-01-PLAN.md — Settings IA + routes (D-01, D-04, D-05): lib/routes.ts adds profile + profileSettings, /settings becomes hub via components/settings/settings-hub.tsx, /profile becomes redirect shim, topbar Profilo link points to APP_ROUTES.profileSettings
+- [x] 32-02-PLAN.md — ConnectedAccountsCard + /settings/profile page (LINK-01..04, D-03, D-06..D-17): components/profile/connected-accounts-card.tsx (link/unlink + last-method guard + Italian errors), app/(app)/settings/profile/page.tsx (server component with searchParams + configuredProviders)
 **UI hint**: yes
 
 ## Progress

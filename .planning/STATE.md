@@ -2,16 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Social Auth
-status: in_progress
-stopped_at: Phase 32 Plan 01 complete
-last_updated: "2026-05-22T07:30:00.000Z"
-last_activity: 2026-05-22 — Phase 32 Plan 01 complete (settings IA routing scaffold)
+current_phase: 32 (account-linking) — plans 00 and 01 done, plan 02 pending
+status: completed
+stopped_at: Phase 32 Plan 02 complete
+last_updated: "2026-05-22T07:38:00.000Z"
+last_activity: 2026-05-22 — Phase 32 Plan 02 complete (ConnectedAccountsCard + /settings/profile page)
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
-  percent: 89
+  completed_plans: 9
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +27,11 @@ See: .planning/PROJECT.md
 ## Current Position
 
 Phase: 32 (in progress)
-Plan: 32-01 (complete ✓)
-Status: Plan 01 complete — settings IA routing scaffold — ready for Plan 02
-Last activity: 2026-05-22 — Phase 32 Plan 01 complete
+Plan: 32-02 (complete ✓)
+Status: Plan 02 complete — ConnectedAccountsCard + /settings/profile page — Phase 32 complete
+Last activity: 2026-05-22 — Phase 32 Plan 02 complete
 
-Progress: [████████░░] 89%
+Progress: [██████████] 100%
 
 ## Accumulated Context
 
@@ -56,6 +57,11 @@ v1.9 phase structure:
 - SettingsHub extracted as server component in components/settings/settings-hub.tsx
 - /profile is now a 6-line redirect shim; Plan 02 creates /settings/profile page body
 
+- Phase 32 Plan 02: ConnectedAccountsCard + /settings/profile page complete — LINK-01..04 all satisfied
+- React 19 renderToStaticMarkup apostrophe encoding: Wave 0 test assertion updated to &#x27; form
+- canUnlink guard checks credential OR other social (more robust than total count)
+- configuredProviders derived from process.env booleans — no NEXT_PUBLIC_* vars introduced
+
 ### Known Gaps
 
 R038, R039, R041 are PARTIAL — live Vercel/Supabase/R2 deploy is operator-pending. Code, config, and runbook complete in M007. See `docs/deploy/vercel-supabase-r2.md`.
@@ -67,10 +73,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-22T07:30:00Z
-Stopped at: Phase 32 Plan 01 complete
+Last session: 2026-05-22T07:38:00Z
+Stopped at: Phase 32 Plan 02 complete
 Resume file: None
 
-**Current Phase:** 32 (account-linking) — plans 00 and 01 done, plan 02 pending
-
-**Planned Phase:** 32 (account-linking) — 3 plans — 2026-05-22T06:17:13.727Z
+**Current Phase:** 32 (account-linking) — all 3 plans complete (00, 01, 02) — Phase 32 DONE
