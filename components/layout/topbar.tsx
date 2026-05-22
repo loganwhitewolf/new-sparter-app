@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { authClient } from '@/lib/auth-client'
 import { signOutAction } from '@/lib/actions/auth'
+import { APP_ROUTES } from '@/lib/routes'
 
 function ThemeTogglePlaceholder() {
   return (
@@ -45,7 +46,9 @@ export function Topbar() {
         <DropdownMenu>
         <DropdownMenuTrigger aria-label="Menu utente" className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Avatar className="h-8 w-8">
-            <AvatarImage src="" alt="Avatar utente" />
+            {session?.user?.image && (
+              <AvatarImage src={session.user.image} alt="Avatar utente" />
+            )}
             <AvatarFallback className="bg-primary text-xs font-medium text-primary-foreground">
               {fallback}
             </AvatarFallback>
@@ -54,13 +57,13 @@ export function Topbar() {
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col gap-1">
-              <p className="truncate text-sm font-medium">{email || 'Utente'}</p>
-              <p className="truncate text-xs text-muted-foreground">{email || 'utente@example.com'}</p>
+              <p className="truncate text-sm font-medium">{session?.user?.name || email || 'Utente'}</p>
+              <p className="truncate text-xs text-muted-foreground">{email}</p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link href="/profile">
+            <Link href={APP_ROUTES.profileSettings}>
               <User className="mr-2 h-4 w-4" />
               Profilo
             </Link>

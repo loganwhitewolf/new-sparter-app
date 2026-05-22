@@ -1,18 +1,22 @@
 import { expect, test, type Page } from '@playwright/test'
 
+function requireStagingKey(): string {
+  const key = process.env.STAGING_KEY
+  if (!key) throw new Error('STAGING_KEY env var is required for E2E tests')
+  return key
+}
+
 async function openProfile(page: Page) {
-  await page.setExtraHTTPHeaders({
-    'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
-  })
-  await page.goto('/profile')
+  await page.setExtraHTTPHeaders({ 'x-staging-key': requireStagingKey() })
+  await page.goto('/settings/profile')
 }
 
 test.describe('Profile - PROF-01: page shell', () => {
   test('PROF-01 /profile returns 200', async ({ page }) => {
     await page.setExtraHTTPHeaders({
-      'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
+      'x-staging-key': requireStagingKey(),
     })
-    const response = await page.goto('/profile')
+    const response = await page.goto('/settings/profile')
     expect(response?.status()).toBe(200)
   })
 
@@ -86,7 +90,7 @@ test.describe('Profile - PROF-03: read-only account fields', () => {
 test.describe('Profile - PROF-04: topbar navigation', () => {
   test('PROF-04 topbar profile dropdown navigates to /profile', async ({ page }) => {
     await page.setExtraHTTPHeaders({
-      'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
+      'x-staging-key': requireStagingKey(),
     })
     await page.goto('/dashboard')
 
@@ -96,7 +100,7 @@ test.describe('Profile - PROF-04: topbar navigation', () => {
     // Click the Profilo menu item — it is a link inside DropdownMenuItem asChild
     await page.getByRole('menuitem', { name: 'Profilo' }).click()
 
-    await expect(page).toHaveURL(/\/profile/)
+    await expect(page).toHaveURL(/\/settings\/profile/)
     await expect(page.getByRole('heading', { name: 'Profilo' })).toBeVisible()
   })
 })

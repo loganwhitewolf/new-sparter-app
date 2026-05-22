@@ -4,7 +4,6 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { LoginSchema, RegisterSchema } from '@/lib/validations/auth'
 import { getSafeSignUpErrorMessage, logSanitizedAuthError } from '@/lib/actions/auth-errors'
-import { isRegistrationEnabled, REGISTRATION_DISABLED_MESSAGE } from '@/lib/auth/registration'
 
 export type { AuthActionState } from '@/lib/validations/auth'
 
@@ -36,10 +35,6 @@ export async function signUpAction(
   _prev: { error: string | null },
   formData: FormData
 ): Promise<{ error: string | null }> {
-  if (!isRegistrationEnabled()) {
-    return { error: REGISTRATION_DISABLED_MESSAGE }
-  }
-
   const parsed = RegisterSchema.safeParse({
     email: formData.get('email'),
     password: formData.get('password'),

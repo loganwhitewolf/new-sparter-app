@@ -63,21 +63,6 @@ async function register(page: Page, email: string, password: string) {
   await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible()
 }
 
-async function expectDisabledSignup(request: APIRequestContext) {
-  const nonce = `${Date.now()}-${Math.random().toString(36).slice(2)}`
-  const response = await request.post(SIGNUP_PATH, {
-    data: {
-      name: 'Production Smoke',
-      email: `production-smoke-disabled-${nonce}@example.invalid`,
-      password: `Smoke-${nonce}-Password!`,
-    },
-  })
-  expect(response.status()).toBe(403)
-
-  const body = await response.json().catch(() => null) as { error?: { code?: string } } | null
-  expect(body?.error?.code).toBe('registration_disabled')
-}
-
 async function installSafeDiagnosticCollector(page: Page) {
   await page.addInitScript(() => {
     const append = (kind: string, payload: unknown) => {
@@ -130,8 +115,6 @@ test.describe('optional production browser smoke', () => {
   })
 
   test('enabled registration creates a disposable user and reaches dashboard', async ({ page }) => {
-    test.skip(envFlag('PLAYWRIGHT_SMOKE_EXPECT_REGISTRATION_DISABLED'), 'Registration-disabled phase requested; enabled signup smoke intentionally skipped.')
-
     const { email, password } = disposableCredentials()
 
     await test.step('register disposable account through deployed UI', async () => {
@@ -140,20 +123,6 @@ test.describe('optional production browser smoke', () => {
 
     await test.step('login preserves authenticated dashboard checkpoint', async () => {
       await page.context().clearCookies()
-      await login(page, email, password)
-    })
-  })
-
-  test('disabled registration rejects direct signup while existing login still works', async ({ page, request }) => {
-    test.skip(!envFlag('PLAYWRIGHT_SMOKE_EXPECT_REGISTRATION_DISABLED'), 'Set PLAYWRIGHT_SMOKE_EXPECT_REGISTRATION_DISABLED=1 after redeploying with REGISTRATION_ENABLED=false.')
-
-    const { email, password } = disposableCredentials()
-
-    await test.step('direct signup returns sanitized disabled-registration code', async () => {
-      await expectDisabledSignup(request)
-    })
-
-    await test.step('existing user can still login to dashboard', async () => {
       await login(page, email, password)
     })
   })
