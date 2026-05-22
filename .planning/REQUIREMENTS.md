@@ -78,36 +78,36 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SUG-01 | — | Pending |
-| SUG-02 | — | Pending |
-| SUG-03 | — | Pending |
-| SUG-04 | — | Pending |
-| SUG-05 | — | Pending |
-| SUG-06 | — | Pending |
-| ANL-01 | — | Pending |
-| ANL-02 | — | Pending |
-| ANL-03 | — | Pending |
-| ANL-04 | — | Pending |
-| ANL-05 | — | Pending |
-| REV-01 | — | Pending |
-| REV-02 | — | Pending |
-| REV-03 | — | Pending |
-| REV-04 | — | Pending |
-| REV-05 | — | Pending |
-| POST-01 | — | Pending |
-| POST-02 | — | Pending |
-| POST-03 | — | Pending |
-| POST-04 | — | Pending |
-| POST-05 | — | Pending |
-| SCOP-01 | — | Pending |
-| SCOP-02 | — | Pending |
-| SCOP-03 | — | Pending |
+| SUG-01 | Phase 33 | Pending |
+| SUG-02 | Phase 33 | Pending |
+| SUG-03 | Phase 33 | Pending |
+| SUG-04 | Phase 33 | Pending |
+| SUG-05 | Phase 33 | Pending |
+| SUG-06 | Phase 33 | Pending |
+| ANL-01 | Phase 34 | Pending |
+| ANL-02 | Phase 33 | Pending |
+| ANL-03 | Phase 34 | Pending |
+| ANL-04 | Phase 33 | Pending |
+| ANL-05 | Phase 34 | Pending |
+| REV-01 | Phase 35 | Pending |
+| REV-02 | Phase 35 | Pending |
+| REV-03 | Phase 35 | Pending |
+| REV-04 | Phase 35 | Pending |
+| REV-05 | Phase 35 | Pending |
+| POST-01 | Phase 36 | Pending |
+| POST-02 | Phase 36 | Pending |
+| POST-03 | Phase 36 | Pending |
+| POST-04 | Phase 36 | Pending |
+| POST-05 | Phase 36 | Pending |
+| SCOP-01 | Phase 34 | Pending |
+| SCOP-02 | Phase 34 | Pending |
+| SCOP-03 | Phase 36 | Pending |
 
 **Coverage:**
 - v1 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24
+- Mapped to phases: 24
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after milestone v1.10 requirements definition*
+*Last updated: 2026-05-22 after milestone v1.10 roadmap creation*
