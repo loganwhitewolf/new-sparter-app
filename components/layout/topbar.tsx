@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { authClient } from '@/lib/auth-client'
 import { signOutAction } from '@/lib/actions/auth'
+import { APP_ROUTES } from '@/lib/routes'
 
 function ThemeTogglePlaceholder() {
   return (
@@ -60,7 +61,7 @@ export function Topbar() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link href="/profile">
+            <Link href={APP_ROUTES.profileSettings}>
               <User className="mr-2 h-4 w-4" />
               Profilo
             </Link>
