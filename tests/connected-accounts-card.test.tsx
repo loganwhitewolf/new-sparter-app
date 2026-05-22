@@ -74,8 +74,10 @@ describe('ConnectedAccountsCard initial state (LINK-04)', () => {
         initialError="email_doesn%27t_match"
       />
     )
+    // React 19 renderToStaticMarkup encodes apostrophes as &#x27; in text content.
+    // We check for the HTML-encoded form which is what the DOM actually contains.
     expect(html).toContain(
-      "L'email del provider non corrisponde all'email del tuo account Sparter."
+      "L&#x27;email del provider non corrisponde all&#x27;email del tuo account Sparter."
     )
   })
 
