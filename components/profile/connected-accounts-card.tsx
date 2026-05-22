@@ -163,7 +163,7 @@ export function ConnectedAccountsCard({
       await authClient.linkSocial({
         provider,
         callbackURL: `${APP_ROUTES.profileSettings}?linked=${provider}`,
-        errorCallbackURL: `${APP_ROUTES.profileSettings}?error=OAuthCallbackError`,
+        errorCallbackURL: APP_ROUTES.profileSettings,
       })
     } catch {
       setPendingLink(null)
