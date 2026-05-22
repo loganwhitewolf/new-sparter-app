@@ -61,35 +61,50 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 <details open>
 <summary>◆ v1.10: Pattern Suggestions (Phases 33–36) — PLANNED</summary>
 
-- [ ] Phase 33: pattern-suggestion-detector — Build the deterministic detector contract from the ADR.
-  - Requirements: SUG-01, SUG-02, SUG-03, SUG-04, SUG-05, SUG-06, ANL-02, ANL-04
-  - Success criteria:
-    1. Pure detector emits suggestions for recurring uncategorized normalized token prefixes.
-    2. Numeric token stripping, longest-prefix behavior, minimum count/token floors, regex escaping, and amount-sign inference are covered by tests.
-    3. Invalid, duplicate, and already-covered rows are excluded without introducing persistence or new dependencies.
+- [ ] **Phase 33: pattern-suggestion-detector** — Build the deterministic detector contract from the ADR.
+- [ ] **Phase 34: import-analysis-suggestions** — Integrate suggestions into import analysis safely.
+- [ ] **Phase 35: import-review-promotion** — Let users review and promote suggestions before import confirmation.
+- [ ] **Phase 36: post-import-reanalysis** — Re-run suggestions from persisted transactions after import.
 
-- [ ] Phase 34: import-analysis-suggestions — Integrate suggestions into import analysis safely.
-  - Requirements: ANL-01, ANL-03, ANL-05, SCOP-01, SCOP-02
-  - Success criteria:
-    1. `analyzeFile` returns capped, ranked `patternSuggestions` in `ImportAnalysisResult`.
-    2. Suggestion detection uses the same active-pattern coverage rules as import categorization.
-    3. Analysis failures remain safe and do not leak R2 keys, presigned URLs, raw rows, or stack traces.
-    4. Existing import analysis and confirmation behavior still works when no suggestions exist.
+### Phase 33: pattern-suggestion-detector
 
-- [ ] Phase 35: import-review-promotion — Let users review and promote suggestions before import confirmation.
-  - Requirements: REV-01, REV-02, REV-03, REV-04, REV-05
-  - Success criteria:
-    1. Import analysis UI shows suggestion cards with sample descriptions.
-    2. User can choose a destination subcategory and create a categorization pattern from a suggestion.
-    3. Promotion success and validation errors are visible, and import confirmation remains optional and unblocked.
+**Goal:** Build the deterministic detector contract from the ADR.
+**Requirements:** SUG-01, SUG-02, SUG-03, SUG-04, SUG-05, SUG-06, ANL-02, ANL-04
+**Plans:** 1 plan
+- [ ] 33-01-PLAN.md — Wave 0 failing tests + skeleton, then Wave 1 detectPatternSuggestions implementation (single plan, 2 tasks, all 8 requirements)
+**Success Criteria**:
+1. Pure detector emits suggestions for recurring uncategorized normalized token prefixes.
+2. Numeric token stripping, longest-prefix behavior, minimum count/token floors, regex escaping, and amount-sign inference are covered by tests.
+3. Invalid, duplicate, and already-covered rows are excluded without introducing persistence or new dependencies.
 
-- [ ] Phase 36: post-import-reanalysis — Re-run suggestions from persisted transactions after import.
-  - Requirements: POST-01, POST-02, POST-03, POST-04, POST-05, SCOP-03
-  - Success criteria:
-    1. User can trigger suggestion re-analysis for an imported file without reading the raw R2 object.
-    2. Re-analysis is scoped by session-owned `fileId`, uses persisted transactions, and excludes already categorized transactions.
-    3. User can promote post-import suggestions to categorization patterns.
-    4. The UI and copy do not imply existing transactions are automatically reclassified.
+### Phase 34: import-analysis-suggestions
+
+**Goal:** Integrate suggestions into import analysis safely.
+**Requirements:** ANL-01, ANL-03, ANL-05, SCOP-01, SCOP-02
+**Success Criteria**:
+1. `analyzeFile` returns capped, ranked `patternSuggestions` in `ImportAnalysisResult`.
+2. Suggestion detection uses the same active-pattern coverage rules as import categorization.
+3. Analysis failures remain safe and do not leak R2 keys, presigned URLs, raw rows, or stack traces.
+4. Existing import analysis and confirmation behavior still works when no suggestions exist.
+
+### Phase 35: import-review-promotion
+
+**Goal:** Let users review and promote suggestions before import confirmation.
+**Requirements:** REV-01, REV-02, REV-03, REV-04, REV-05
+**Success Criteria**:
+1. Import analysis UI shows suggestion cards with sample descriptions.
+2. User can choose a destination subcategory and create a categorization pattern from a suggestion.
+3. Promotion success and validation errors are visible, and import confirmation remains optional and unblocked.
+
+### Phase 36: post-import-reanalysis
+
+**Goal:** Re-run suggestions from persisted transactions after import.
+**Requirements:** POST-01, POST-02, POST-03, POST-04, POST-05, SCOP-03
+**Success Criteria**:
+1. User can trigger suggestion re-analysis for an imported file without reading the raw R2 object.
+2. Re-analysis is scoped by session-owned `fileId`, uses persisted transactions, and excludes already categorized transactions.
+3. User can promote post-import suggestions to categorization patterns.
+4. The UI and copy do not imply existing transactions are automatically reclassified.
 
 Full context: `.planning/REQUIREMENTS.md`, `.planning/research/SUMMARY.md`
 
@@ -105,7 +120,7 @@ Full context: `.planning/REQUIREMENTS.md`, `.planning/research/SUMMARY.md`
 | 30 | v1.9 | 3/3 | Complete | 2026-05-21 |
 | 31 | v1.9 | 3/3 | Complete | 2026-05-21 |
 | 32 | v1.9 | 3/3 | Complete | 2026-05-22 |
-| 33 | v1.10 | — | Planned | — |
+| 33 | v1.10 | 0/1 | Planned | — |
 | 34 | v1.10 | — | Planned | — |
 | 35 | v1.10 | — | Planned | — |
 | 36 | v1.10 | — | Planned | — |
