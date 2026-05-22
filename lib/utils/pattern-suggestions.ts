@@ -20,13 +20,130 @@ export interface PatternSuggestion {
   sampleDescriptions: string[]
 }
 
+function isNumericToken(token: string): boolean {
+  return /^\d+$/.test(token)
+}
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function amountSignMatches(
+  amountSign: 'positive' | 'negative' | 'any',
+  amount: string | null,
+): boolean {
+  if (amountSign === 'any') return true
+  if (amount === null) return true
+  try {
+    const d = new Decimal(amount)
+    if (amountSign === 'positive') return d.greaterThanOrEqualTo(0)
+    if (amountSign === 'negative') return d.lessThan(0)
+  } catch {
+    // unparseable amount — treat as match (defensive: do not lose row to bad data)
+  }
+  return true
+}
+
+function isCoveredByPatterns(
+  row: PatternDetectorRow,
+  coveragePatterns: CoveragePattern[],
+): boolean {
+  for (const p of coveragePatterns) {
+    try {
+      const regex = new RegExp(p.pattern, 'i')
+      if (regex.test(row.normalizedDescription) && amountSignMatches(p.amountSign, row.amount)) {
+        return true
+      }
+    } catch {
+      // invalid regex pattern — skip and continue
+    }
+  }
+  return false
+}
+
+function stripNumericTokens(normalized: string): string[] {
+  return normalized.split(/\s+/).filter(t => t.length > 0 && !isNumericToken(t))
+}
+
+function longestCommonPrefix(a: string[], b: string[]): string[] {
+  const result: string[] = []
+  const len = Math.min(a.length, b.length)
+  for (let i = 0; i < len; i++) {
+    if (a[i] !== b[i]) break
+    result.push(a[i])
+  }
+  return result
+}
+
+function inferAmountSign(amounts: (string | null)[]): 'positive' | 'negative' | 'any' {
+  const signs = new Set<'positive' | 'negative'>()
+  for (const amount of amounts) {
+    if (amount === null) continue
+    try {
+      const d = new Decimal(amount)
+      if (d.lessThan(0)) signs.add('negative')
+      else signs.add('positive')
+    } catch {
+      // unparseable — skip
+    }
+  }
+  if (signs.size === 1) {
+    return signs.has('positive') ? 'positive' : 'negative'
+  }
+  return 'any'
+}
+
 export function detectPatternSuggestions(
   rows: PatternDetectorRow[],
   coveragePatterns: CoveragePattern[],
 ): PatternSuggestion[] {
-  // TODO Task 2: implement
-  void rows
-  void coveragePatterns
-  void Decimal
-  return []
+  // Step 1: filter eligible rows and compute stripped tokens; drop rows with <2 stripped tokens
+  type Candidate = { row: PatternDetectorRow; tokens: string[] }
+  const candidates: Candidate[] = []
+  for (const r of rows) {
+    if (!r.valid) continue
+    if (r.covered) continue
+    if (isCoveredByPatterns(r, coveragePatterns)) continue
+    const tokens = stripNumericTokens(r.normalizedDescription)
+    if (tokens.length < 2) continue
+    candidates.push({ row: r, tokens })
+  }
+
+  // Step 2: bucket by first stripped token (any group sharing a >=2-token prefix
+  // must share the first token by definition)
+  const buckets = new Map<string, Candidate[]>()
+  for (const c of candidates) {
+    const head = c.tokens[0]
+    const list = buckets.get(head) ?? []
+    list.push(c)
+    buckets.set(head, list)
+  }
+
+  // Step 3: for each bucket with >=2 members, compute the longest prefix
+  // shared by ALL members (intersect down). If the shared prefix has >=2 tokens,
+  // emit one suggestion.
+  const suggestions: PatternSuggestion[] = []
+  for (const group of buckets.values()) {
+    if (group.length < 2) continue
+    let prefix = group[0].tokens
+    for (let i = 1; i < group.length; i++) {
+      prefix = longestCommonPrefix(prefix, group[i].tokens)
+      if (prefix.length < 2) break
+    }
+    if (prefix.length < 2) continue
+
+    const prefixString = prefix.join(' ')
+    const escaped = escapeRegex(prefixString)
+    const amounts = group.map(g => g.row.amount)
+    const sampleDescriptions = group.slice(0, 3).map(g => g.row.description)
+
+    suggestions.push({
+      pattern: escaped,
+      matchCount: group.length,
+      detectedAmountSign: inferAmountSign(amounts),
+      sampleDescriptions,
+    })
+  }
+
+  return suggestions
 }
