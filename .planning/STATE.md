@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Social Auth
-status: verifying
-stopped_at: Phase 32 context gathered
-last_updated: "2026-05-22T06:17:13.734Z"
-last_activity: 2026-05-21 — Phase 31 verified
+status: in_progress
+stopped_at: Phase 32 Plan 00 complete
+last_updated: "2026-05-22T09:24:00.000Z"
+last_activity: 2026-05-22 — Phase 32 Plan 00 complete (Wave 0 test scaffolding)
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 9
-  completed_plans: 6
-  percent: 67
+  completed_plans: 7
+  percent: 78
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Phase: 31 (complete ✓)
-Plan: 31-03 (last)
-Status: Verified — all must_haves PASS — ready for Phase 32
-Last activity: 2026-05-21 — Phase 31 verified
+Phase: 32 (in progress)
+Plan: 32-00 (complete ✓)
+Status: Plan 00 complete — Wave 0 test scaffolding delivered — ready for Plan 01
+Last activity: 2026-05-22 — Phase 32 Plan 00 complete
 
-Progress: [██████░░░░] 67%
+Progress: [███████░░░] 78%
 
 ## Accumulated Context
 
@@ -47,6 +47,10 @@ v1.9 phase structure:
 - OAuth vars remain commented out in .env.example to prevent accidental secret commit
 - Callback URL pattern documented as {BETTER_AUTH_URL}/api/auth/callback/{provider-id}
 
+- Phase 32 Plan 00: Wave 0 test scaffolding complete — unit + E2E stubs + profile.spec.ts retargeted
+- PROF-06 retains goto('/profile') to verify Plan 01 compat redirect shim
+- Unit test in RED state (correct) until Plan 02 ships ConnectedAccountsCard
+
 ### Known Gaps
 
 R038, R039, R041 are PARTIAL — live Vercel/Supabase/R2 deploy is operator-pending. Code, config, and runbook complete in M007. See `docs/deploy/vercel-supabase-r2.md`.
@@ -58,10 +62,10 @@ None.
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 32 context gathered
-Resume file: --resume-file
+Last session: 2026-05-22T09:24:00Z
+Stopped at: Phase 32 Plan 00 complete
+Resume file: None
 
-**Next Phase:** 32 (account-linking) — account linking UI in settings
+**Current Phase:** 32 (account-linking) — plan 00 done, plans 01 and 02 pending
 
 **Planned Phase:** 32 (account-linking) — 3 plans — 2026-05-22T06:17:13.727Z

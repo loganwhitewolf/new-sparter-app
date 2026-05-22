@@ -15,10 +15,14 @@
 
 ### Account Linking
 
-- [ ] **LINK-01**: User can link a Google account to their existing account from settings
-- [ ] **LINK-02**: User can link a GitHub account to their existing account from settings
-- [ ] **LINK-03**: User can unlink a linked provider (only when at least one other auth method remains)
-- [ ] **LINK-04**: Settings page shows which providers are currently linked to the account
+- [x] **LINK-01
+**: User can link a Google account to their existing account from settings
+- [x] **LINK-02
+**: User can link a GitHub account to their existing account from settings
+- [x] **LINK-03
+**: User can unlink a linked provider (only when at least one other auth method remains)
+- [x] **LINK-04
+**: Settings page shows which providers are currently linked to the account
 
 ### Registration
 
