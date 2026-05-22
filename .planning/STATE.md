@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Social Auth
-current_phase: 32 (account-linking) — plans 00 and 01 done, plan 02 pending
-status: completed
-stopped_at: Phase 32 Plan 02 complete
-last_updated: "2026-05-22T07:38:00.000Z"
-last_activity: 2026-05-22 — Phase 32 Plan 02 complete (ConnectedAccountsCard + /settings/profile page)
+current_phase: 32 (account-linking) — all plans complete
+status: milestone_complete
+stopped_at: v1.9 milestone archived
+last_updated: "2026-05-22T00:00:00.000Z"
+last_activity: 2026-05-22 — v1.9 Social Auth milestone archived
 progress:
   total_phases: 3
   completed_phases: 3
@@ -19,17 +19,14 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md
+See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** v1.9 Social Auth — Google and GitHub OAuth with account linking.
+**Current focus:** Planning next milestone.
 
 ## Current Position
 
-Phase: 32 (in progress)
-Plan: 32-02 (complete ✓)
-Status: Plan 02 complete — ConnectedAccountsCard + /settings/profile page — Phase 32 complete
-Last activity: 2026-05-22 — Phase 32 Plan 02 complete
+Milestone v1.9 archived. All phases complete (30, 31, 32). Ready for next milestone.
 
 Progress: [██████████] 100%
 

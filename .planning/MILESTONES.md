@@ -1,5 +1,38 @@
 # Milestones
 
+## v1.9 — Social Auth
+
+**Shipped:** 2026-05-22
+**Phases:** 30–32 (3 phases)
+**Plans:** 9
+**Commits:** 45
+
+### Delivered
+
+Enabled Google and GitHub OAuth for Sparter: users can sign in or register with social providers, link or unlink providers from a new /settings/profile page, and the registration guardrail has been removed so any OAuth account can register freely. Settings navigation reorganized with a /settings hub and dedicated profile page hosting ConnectedAccountsCard.
+
+### Key Accomplishments
+
+1. Removed registration guardrail (REG-01) — deleted `lib/auth/registration.ts` and all consumers; any user can now register via OAuth or email/password
+2. Added env-conditional Google + GitHub OAuth providers to Better Auth via conditional spread on CLIENT_ID — no code change needed to activate a provider
+3. `SocialProviderButtons` client component with inline SVG GitHub icon, pending state, Italian error mapping, and per-page `errorCallbackURL`
+4. Login and Register pages converted to async server components reading `process.env` — provider buttons appear only when credentials are configured
+5. Settings IA reorganized: `/settings` hub, `/settings/profile` canonical page, `/profile` compatibility redirect shim, topbar retargeted
+6. `ConnectedAccountsCard` — link/unlink flows via `authClient`, `canUnlink` guard (credential OR other social), confirmation Dialog, `decodeAndMapError`, stable `PROVIDER_ORDER`
+
+### Known Deferred Items
+
+- LINK-01..04 live OAuth E2E tests are `test.fixme()` stubs — require real provider credentials configured for dev URL
+- R038/R039/R041 — live Vercel/Supabase/R2 deploy remains operator-pending (code complete in M007)
+- R029 — partial categorization revalidation coverage
+
+### Archive
+
+- `.planning/milestones/v1.9-ROADMAP.md`
+- `.planning/milestones/v1.9-REQUIREMENTS.md`
+
+---
+
 ## v1.8 — Dashboard Intelligence
 
 **Shipped:** 2026-05-20
