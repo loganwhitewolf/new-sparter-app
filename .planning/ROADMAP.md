@@ -61,7 +61,7 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 <details open>
 <summary>◆ v1.10: Pattern Suggestions (Phases 33–36) — PLANNED</summary>
 
-- [ ] **Phase 33: pattern-suggestion-detector** — Build the deterministic detector contract from the ADR.
+- [x] **Phase 33: pattern-suggestion-detector** — Build the deterministic detector contract from the ADR.
 - [ ] **Phase 34: import-analysis-suggestions** — Integrate suggestions into import analysis safely.
 - [ ] **Phase 35: import-review-promotion** — Let users review and promote suggestions before import confirmation.
 - [ ] **Phase 36: post-import-reanalysis** — Re-run suggestions from persisted transactions after import.
