@@ -9,6 +9,8 @@ export const APP_ROUTES = {
   transactions: '/transactions',
   settings: '/settings',
   categorySettings: '/settings/categories',
+  profile: '/profile',                  // compatibility alias (D-04)
+  profileSettings: '/settings/profile', // canonical (D-03)
 } as const
 
 type DashboardCategoryFilters = {
