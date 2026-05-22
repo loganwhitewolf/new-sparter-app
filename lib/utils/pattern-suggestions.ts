@@ -33,15 +33,15 @@ function amountSignMatches(
   amount: string | null,
 ): boolean {
   if (amountSign === 'any') return true
-  if (amount === null) return true
+  if (amount === null) return false
   try {
     const d = new Decimal(amount)
     if (amountSign === 'positive') return d.greaterThanOrEqualTo(0)
     if (amountSign === 'negative') return d.lessThan(0)
   } catch {
-    // unparseable amount — treat as match (defensive: do not lose row to bad data)
+    // unparseable amount — cannot confirm sign, do not claim coverage
   }
-  return true
+  return false
 }
 
 function isCoveredByPatterns(
@@ -109,11 +109,12 @@ export function detectPatternSuggestions(
     candidates.push({ row: r, tokens })
   }
 
-  // Step 2: bucket by first stripped token (any group sharing a >=2-token prefix
-  // must share the first token by definition)
+  // Step 2: bucket by first 2 stripped tokens — any qualifying suggestion (min prefix
+  // length = 2) must share the same first 2 tokens. Bucketing at this granularity
+  // prevents outliers with a different second token from collapsing unrelated subgroups.
   const buckets = new Map<string, Candidate[]>()
   for (const c of candidates) {
-    const head = c.tokens[0]
+    const head = c.tokens.slice(0, 2).join(' ')
     const list = buckets.get(head) ?? []
     list.push(c)
     buckets.set(head, list)

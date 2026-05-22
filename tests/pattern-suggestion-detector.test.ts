@@ -128,6 +128,8 @@ describe('detectPatternSuggestions', () => {
       // Proves descriptions came from row.description NOT row.normalizedDescription
       expect(desc).toMatch(/^PAGAMENTO POS [A-E]$/)
     }
+    // Sample descriptions must be distinct
+    expect(new Set(s.sampleDescriptions).size).toBe(s.sampleDescriptions.length)
   })
 
   it('ANL-04: detectedAmountSign is positive when all amounts >=0, negative when all <0, any when mixed or all-null', () => {
