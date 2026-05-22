@@ -93,7 +93,10 @@
   2. User can link Google to an existing email/password account via an OAuth flow initiated from settings
   3. User can link GitHub to an existing email/password account via an OAuth flow initiated from settings
   4. User can unlink a provider only when at least one other auth method (password or another provider) remains on the account
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 32-00-PLAN.md — Wave 0 test scaffolding: tests/connected-accounts-card.test.tsx (LINK-03 / LINK-04 vitest stubs), tests/account-linking.spec.ts (LINK-01..04 navigation + fixme stubs for live OAuth), retarget tests/profile.spec.ts to /settings/profile
+- [ ] 32-01-PLAN.md — Settings IA + routes (D-01, D-04, D-05): lib/routes.ts adds profile + profileSettings, /settings becomes hub via components/settings/settings-hub.tsx, /profile becomes redirect shim, topbar Profilo link points to APP_ROUTES.profileSettings
+- [ ] 32-02-PLAN.md — ConnectedAccountsCard + /settings/profile page (LINK-01..04, D-03, D-06..D-17): components/profile/connected-accounts-card.tsx (link/unlink + last-method guard + Italian errors), app/(app)/settings/profile/page.tsx (server component with searchParams + configuredProviders)
 **UI hint**: yes
 
 ## Progress
@@ -105,6 +108,6 @@
 | 29 | v1.8/M008 | 4/4 | Complete | 2026-05-20 |
 | 30 | v1.9 | 3/3 | Complete | 2026-05-21 |
 | 31 | v1.9 | 3/3 | Complete | 2026-05-21 |
-| 32 | v1.9 | 0/? | Not started | — |
+| 32 | v1.9 | 0/3 | Planned | — |
 
-**Total: 32 phases · 117 plans complete · 1 phase pending (v1.9)**
+**Total: 32 phases · 117 plans complete · 1 phase pending (v1.9) — Phase 32 planned (3 plans)**
