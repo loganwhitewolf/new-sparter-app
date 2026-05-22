@@ -1,0 +1,159 @@
+import { describe, expect, it } from 'vitest'
+import {
+  detectPatternSuggestions,
+  type PatternDetectorRow,
+  type CoveragePattern,
+} from '../lib/utils/pattern-suggestions'
+
+function row(overrides: Partial<PatternDetectorRow> & { normalizedDescription: string }): PatternDetectorRow {
+  return {
+    description: overrides.normalizedDescription.toUpperCase(),
+    amount: '-10.00',
+    valid: true,
+    covered: false,
+    ...overrides,
+  }
+}
+
+describe('detectPatternSuggestions', () => {
+  it('SUG-01: groups two rows sharing a normalized 2-token prefix and emits one suggestion', () => {
+    const rows = [
+      row({ normalizedDescription: 'pagamento pos 12345', amount: '-10.00' }),
+      row({ normalizedDescription: 'pagamento pos 67890', amount: '-20.00' }),
+    ]
+    const suggestions = detectPatternSuggestions(rows, [])
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0].pattern).toBe('pagamento pos')
+    expect(suggestions[0].matchCount).toBe(2)
+  })
+
+  it('SUG-02: strips purely numeric tokens (digits-only) before prefix comparison', () => {
+    const rows = [
+      row({ normalizedDescription: 'pagamento 2026 supermercato' }),
+      row({ normalizedDescription: 'pagamento 2025 supermercato' }),
+    ]
+    const suggestions = detectPatternSuggestions(rows, [])
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0].pattern).toBe('pagamento supermercato')
+    expect(suggestions[0].matchCount).toBe(2)
+  })
+
+  it('SUG-03: rejects groups with <2 rows OR <2 non-numeric prefix tokens', () => {
+    // (a) Single-row input
+    const singleRow = [row({ normalizedDescription: 'pagamento pos market' })]
+    expect(detectPatternSuggestions(singleRow, [])).toHaveLength(0)
+
+    // (b) Two rows sharing only a 1-token prefix after numeric strip
+    const oneTokenPrefix = [
+      row({ normalizedDescription: 'bonifico 123' }),
+      row({ normalizedDescription: 'bonifico 456' }),
+    ]
+    expect(detectPatternSuggestions(oneTokenPrefix, [])).toHaveLength(0)
+
+    // (c) Two rows whose stripped token lists are entirely numeric
+    const allNumeric = [
+      row({ normalizedDescription: '12345 67890' }),
+      row({ normalizedDescription: '11111 22222' }),
+    ]
+    expect(detectPatternSuggestions(allNumeric, [])).toHaveLength(0)
+  })
+
+  it('SUG-04: preserves the longest qualifying common prefix (3-token example), not truncated to 2', () => {
+    const rows = [
+      row({ normalizedDescription: 'pagamento pos negozio rossi' }),
+      row({ normalizedDescription: 'pagamento pos negozio bianchi' }),
+      row({ normalizedDescription: 'pagamento pos negozio verdi' }),
+    ]
+    const suggestions = detectPatternSuggestions(rows, [])
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0].pattern).toBe('pagamento pos negozio')
+    expect(suggestions[0].matchCount).toBe(3)
+  })
+
+  it('SUG-05: excludes invalid rows, caller-flagged covered rows, and coveragePattern-matched rows', () => {
+    const coverage: CoveragePattern[] = [{ pattern: 'pagamento pos', amountSign: 'negative' }]
+    const rows = [
+      // row A: valid:true, covered:false → INCLUDED
+      row({ normalizedDescription: 'pagamento pos market', description: 'ROW A', amount: '10.00' }),
+      // row B: valid:false, covered:false → EXCLUDED (invalid)
+      row({ normalizedDescription: 'pagamento pos market', description: 'ROW B', valid: false }),
+      // row C: valid:true, covered:true → EXCLUDED (caller flag)
+      row({ normalizedDescription: 'pagamento pos market', description: 'ROW C', covered: true }),
+      // row D: valid:true, covered:false, amount negative — coveragePattern matches → EXCLUDED
+      row({ normalizedDescription: 'pagamento pos market', description: 'ROW D', amount: '-10.00' }),
+      // row E: valid:true, covered:false → INCLUDED
+      row({ normalizedDescription: 'pagamento pos market', description: 'ROW E', amount: '10.00' }),
+    ]
+    const suggestions = detectPatternSuggestions(rows, coverage)
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0].matchCount).toBe(2)
+  })
+
+  it('SUG-06: escapes regex metacharacters in the generated pattern string', () => {
+    const rows = [
+      row({ normalizedDescription: 'addebito s.p.a. roma' }),
+      row({ normalizedDescription: 'addebito s.p.a. milano' }),
+    ]
+    const suggestions = detectPatternSuggestions(rows, [])
+    expect(suggestions).toHaveLength(1)
+    // The literal dots must appear as escaped \. in the pattern source
+    expect(suggestions[0].pattern).toBe('addebito s\\.p\\.a\\.')
+    // Round-trip verification: the escaped pattern matches the original but not arbitrary chars
+    expect(new RegExp(suggestions[0].pattern, 'i').test('addebito s.p.a. roma')).toBe(true)
+    expect(new RegExp(suggestions[0].pattern, 'i').test('addebito sXpXaX roma')).toBe(false)
+  })
+
+  it('ANL-02: each PatternSuggestion exposes pattern, matchCount, detectedAmountSign, sampleDescriptions (max 3 from raw description)', () => {
+    const rows = [
+      { description: 'PAGAMENTO POS A', normalizedDescription: 'pagamento pos a', amount: '-10.00', valid: true, covered: false },
+      { description: 'PAGAMENTO POS B', normalizedDescription: 'pagamento pos b', amount: '-10.00', valid: true, covered: false },
+      { description: 'PAGAMENTO POS C', normalizedDescription: 'pagamento pos c', amount: '-10.00', valid: true, covered: false },
+      { description: 'PAGAMENTO POS D', normalizedDescription: 'pagamento pos d', amount: '-10.00', valid: true, covered: false },
+      { description: 'PAGAMENTO POS E', normalizedDescription: 'pagamento pos e', amount: '-10.00', valid: true, covered: false },
+    ]
+    const suggestions = detectPatternSuggestions(rows, [])
+    expect(suggestions).toHaveLength(1)
+    const s = suggestions[0]
+    // Has exactly the four required keys
+    expect(s).toHaveProperty('pattern')
+    expect(s).toHaveProperty('matchCount')
+    expect(s).toHaveProperty('detectedAmountSign')
+    expect(s).toHaveProperty('sampleDescriptions')
+    // matchCount includes all 5 rows
+    expect(s.matchCount).toBe(5)
+    // sampleDescriptions capped at 3, from raw description (uppercase)
+    expect(s.sampleDescriptions).toHaveLength(3)
+    for (const desc of s.sampleDescriptions) {
+      expect(['PAGAMENTO POS A', 'PAGAMENTO POS B', 'PAGAMENTO POS C', 'PAGAMENTO POS D', 'PAGAMENTO POS E']).toContain(desc)
+      // Proves descriptions came from row.description NOT row.normalizedDescription
+      expect(desc).toMatch(/^PAGAMENTO POS [A-E]$/)
+    }
+  })
+
+  it('ANL-04: detectedAmountSign is positive when all amounts >=0, negative when all <0, any when mixed or all-null', () => {
+    const makeRows = (amounts: (string | null)[]) =>
+      amounts.map((amount, i) =>
+        ({ description: `ROW ${i}`, normalizedDescription: `pagamento pos ${i}`, amount, valid: true, covered: false })
+      )
+
+    // (a) All negative
+    const negRows = makeRows(['-10.00', '-20.00'])
+    const negSuggestions = detectPatternSuggestions(negRows, [])
+    expect(negSuggestions[0].detectedAmountSign).toBe('negative')
+
+    // (b) All positive
+    const posRows = makeRows(['10.00', '20.00'])
+    const posSuggestions = detectPatternSuggestions(posRows, [])
+    expect(posSuggestions[0].detectedAmountSign).toBe('positive')
+
+    // (c) Mixed
+    const mixRows = makeRows(['-10.00', '20.00'])
+    const mixSuggestions = detectPatternSuggestions(mixRows, [])
+    expect(mixSuggestions[0].detectedAmountSign).toBe('any')
+
+    // (d) All null
+    const nullRows = makeRows([null, null])
+    const nullSuggestions = detectPatternSuggestions(nullRows, [])
+    expect(nullSuggestions[0].detectedAmountSign).toBe('any')
+  })
+})
