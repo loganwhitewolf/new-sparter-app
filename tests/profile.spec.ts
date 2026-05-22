@@ -4,7 +4,7 @@ async function openProfile(page: Page) {
   await page.setExtraHTTPHeaders({
     'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
   })
-  await page.goto('/profile')
+  await page.goto('/settings/profile')
 }
 
 test.describe('Profile - PROF-01: page shell', () => {
@@ -12,7 +12,7 @@ test.describe('Profile - PROF-01: page shell', () => {
     await page.setExtraHTTPHeaders({
       'x-staging-key': process.env.STAGING_KEY ?? 'test-staging-key',
     })
-    const response = await page.goto('/profile')
+    const response = await page.goto('/settings/profile')
     expect(response?.status()).toBe(200)
   })
 
@@ -96,7 +96,7 @@ test.describe('Profile - PROF-04: topbar navigation', () => {
     // Click the Profilo menu item — it is a link inside DropdownMenuItem asChild
     await page.getByRole('menuitem', { name: 'Profilo' }).click()
 
-    await expect(page).toHaveURL(/\/profile/)
+    await expect(page).toHaveURL(/\/settings\/profile/)
     await expect(page.getByRole('heading', { name: 'Profilo' })).toBeVisible()
   })
 })
