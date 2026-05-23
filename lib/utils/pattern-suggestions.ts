@@ -25,7 +25,7 @@ function isNumericToken(token: string): boolean {
 }
 
 function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
 }
 
 function amountSignMatches(
