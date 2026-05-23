@@ -75,6 +75,9 @@ export async function createPatternAction(
     if (err instanceof Error && /invalid/i.test(err.message)) {
       return { error: "Pattern regex non valido." };
     }
+    if (err instanceof Error && /unique.*constraint|duplicate key/i.test(err.message)) {
+      return { error: "Un pattern identico esiste già." };
+    }
     return { error: "Si è verificato un errore. Riprova tra qualche secondo." };
   }
 
@@ -169,6 +172,9 @@ export async function promoteSuggestionAction(
   } catch (err) {
     if (err instanceof Error && /invalid/i.test(err.message)) {
       return { error: "Pattern regex non valido." };
+    }
+    if (err instanceof Error && /unique.*constraint|duplicate key/i.test(err.message)) {
+      return { error: "Un pattern identico esiste già." };
     }
     return { error: "Si è verificato un errore. Riprova tra qualche secondo." };
   }
