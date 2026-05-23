@@ -38,7 +38,7 @@ vi.mock('@/lib/validations/pattern', async () => {
   return actual
 })
 
-const { createPatternAction, updatePatternAction, deletePatternAction } = await import('../lib/actions/patterns')
+const { createPatternAction, updatePatternAction, deletePatternAction, promoteSuggestionAction } = await import('../lib/actions/patterns')
 
 const paidSession = {
   userId: 'user-abc',
@@ -72,6 +72,16 @@ function validCreateForm(overrides: Record<string, string | null> = {}) {
     confidence: '0.95',
     description: 'Streaming subscriptions',
     ...overrides,
+  })
+}
+
+function validPromoteForm(overrides: Record<string, string | null> = {}) {
+  return makeFormData({
+    pattern: 'netflix',          // pre-normalized suggestion.pattern (no /…/i delimiters)
+    subCategoryId: '42',
+    amountSign: 'negative',
+    ...overrides,
+    // NOTE: `confidence` intentionally NOT included — server hardcodes 0.85 per D-01
   })
 }
 
@@ -313,6 +323,91 @@ describe('pattern Server Actions', () => {
 
       expect(result.error).toBe('Si è verificato un errore. Riprova tra qualche secondo.')
       expect(result.error).not.toContain('database host')
+      expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('promoteSuggestionAction', () => {
+    it('passes session userId, hardcoded confidence 0.85, and rejects FormData userId tampering (REV-03, T-35-01)', async () => {
+      const result = await promoteSuggestionAction({ error: null }, validPromoteForm({ userId: 'attacker-id' }))
+
+      expect(result).toEqual({ error: null })
+      expect(mocks.createPattern).toHaveBeenCalledWith({
+        userId: 'user-abc',          // from session, NOT 'attacker-id' from FormData
+        pattern: 'netflix',
+        subCategoryId: 42,
+        amountSign: 'negative',
+        confidence: 0.85,            // hardcoded — never read from FormData
+        description: undefined,
+      })
+      expectExactCategoryRevalidationRoutes()
+    })
+
+    it('ignores FormData confidence value and always sends 0.85 to the DAL', async () => {
+      const result = await promoteSuggestionAction(
+        { error: null },
+        validPromoteForm({ confidence: '0.99' }),
+      )
+
+      expect(result).toEqual({ error: null })
+      expect(mocks.createPattern).toHaveBeenCalledWith(
+        expect.objectContaining({ confidence: 0.85 }),
+      )
+    })
+
+    it('allows free users to promote even when CATEGORIZATION_CUSTOM_PATTERNS_MIN_PLAN=basic (D-03)', async () => {
+      process.env.CATEGORIZATION_CUSTOM_PATTERNS_MIN_PLAN = 'basic'
+      mocks.verifySession.mockResolvedValueOnce(freeSession)
+
+      const result = await promoteSuggestionAction({ error: null }, validPromoteForm())
+
+      expect(result).toEqual({ error: null })
+      expect(mocks.createPattern).toHaveBeenCalledOnce()
+      expectExactCategoryRevalidationRoutes()
+    })
+
+    it('returns validation error without writing when subcategory is missing', async () => {
+      const result = await promoteSuggestionAction(
+        { error: null },
+        validPromoteForm({ subCategoryId: null }),
+      )
+
+      expect(result.error).toMatch(/sottocategoria/i)
+      expect(mocks.createPattern).not.toHaveBeenCalled()
+      expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+
+    it('returns "Pattern regex non valido." for malformed pattern source', async () => {
+      const result = await promoteSuggestionAction(
+        { error: null },
+        validPromoteForm({ pattern: '([' }),
+      )
+
+      expect(result.error).toBe('Pattern regex non valido.')
+      expect(mocks.createPattern).not.toHaveBeenCalled()
+      expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+
+    it('returns generic error without leaking DAL failure detail', async () => {
+      mocks.createPattern.mockRejectedValueOnce(
+        new Error('FATAL: password authentication failed for db_admin'),
+      )
+
+      const result = await promoteSuggestionAction({ error: null }, validPromoteForm())
+
+      expect(result.error).toBe('Si è verificato un errore. Riprova tra qualche secondo.')
+      expect(result.error).not.toContain('FATAL')
+      expect(result.error).not.toContain('db_admin')
+      expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+
+    it('prevents mutation when auth lookup fails', async () => {
+      mocks.verifySession.mockRejectedValueOnce(new Error('NEXT_REDIRECT'))
+
+      await expect(
+        promoteSuggestionAction({ error: null }, validPromoteForm()),
+      ).rejects.toThrow('NEXT_REDIRECT')
+      expect(mocks.createPattern).not.toHaveBeenCalled()
       expect(mocks.revalidatePath).not.toHaveBeenCalled()
     })
   })
