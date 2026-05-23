@@ -1,10 +1,11 @@
 ---
 phase: 35
 slug: import-review-promotion
-status: draft
+status: approved
 shadcn_initialized: true
 preset: "new-york / zinc / cssVariables"
 created: 2026-05-23
+reviewed_at: 2026-05-23
 ---
 
 # Phase 35 — UI Design Contract
@@ -54,9 +55,10 @@ Inherits project-wide tokens. No new sizes introduced.
 |------|------|--------|-------------|-------|
 | Section heading | 16px (text-base) | 600 (font-semibold) | 1.4 | `text-base font-semibold` |
 | Body / label | 14px (text-sm) | 400 (font-normal) | 1.5 | `text-sm` |
-| Label (form fields) | 14px (text-sm) | 500 (font-medium) | 1.5 | `text-sm font-medium` |
 | Caption / meta | 12px (text-xs) | 400 (font-normal) | 1.4 | `text-xs text-muted-foreground` |
-| Pattern string | 13px (text-sm) | 400 (font-normal) | 1.4 | `font-mono text-sm` |
+| Pattern string | 14px (text-sm) | 400 (font-normal) | 1.4 | `font-mono text-sm` |
+
+Two weights only: `font-normal` (400) for body text, labels, captions, and mono pattern strings; `font-semibold` (600) for section headings.
 
 Pattern strings use `font-mono` (Geist Mono) to signal machine-readable regex content. This aligns with how `CreatePatternDialog` already uses `font-mono` for the pattern field hint.
 
@@ -133,10 +135,10 @@ The section sits inside `ImportPreview`'s `flex flex-col gap-6` container, betwe
 
 ```
 <Card class="border bg-card">
-  <CardHeader class="pb-3">            ← 12px bottom padding
+  <CardHeader class="pb-2">            ← 8px bottom padding
     <div class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-2">
-        <code class="font-mono text-sm bg-muted px-1.5 py-0.5 rounded">  ← pattern
+        <code class="font-mono text-sm bg-muted px-2 py-1 rounded">  ← pattern
         <Badge variant="secondary">N match</Badge>
       </div>
       <Badge variant="outline" ...>Pattern creato</Badge>  ← only when promoted
@@ -155,11 +157,11 @@ The section sits inside `ImportPreview`'s `flex flex-col gap-6` container, betwe
 ### SuggestionPromoteForm
 
 ```
-<form class="flex flex-col gap-3">
+<form class="flex flex-col gap-4">
   <!-- Hidden inputs: pattern, amountSign, confidence=0.85 -->
-  <div class="grid gap-3 sm:grid-cols-2">
-    <!-- Category Select -->
-    <!-- Subcategory Select (disabled until category selected) -->
+  <div class="grid gap-4 sm:grid-cols-2">
+    <!-- Category Select (label: font-normal) -->
+    <!-- Subcategory Select (label: font-normal, disabled until category selected) -->
   </div>
   <Alert variant="destructive">  ← only when state.error !== null
   <Button type="submit" size="sm" class="self-start">
@@ -232,8 +234,8 @@ All UI copy is in Italian (product language convention).
 | Match count badge | `N match` | e.g. `3 match`. Badge variant="secondary". |
 | Sample toggle — collapsed | `Mostra N esempi` | N = `sampleDescriptions.length`, max 3. |
 | Sample toggle — expanded | `Nascondi esempi` | — |
-| Category label | `Categoria` | Above category Select. |
-| Subcategory label | `Sottocategoria` | Above subcategory Select. Matches `CreatePatternDialog`. |
+| Category label | `Categoria` | Above category Select. `font-normal`. |
+| Subcategory label | `Sottocategoria` | Above subcategory Select. `font-normal`. Matches `CreatePatternDialog`. |
 | Category placeholder | `Categoria` | Inside SelectValue. |
 | Subcategory placeholder | `Sottocategoria` | Inside SelectValue. Disabled until category selected. |
 | Submit button — idle | `Crea pattern` | Button size="sm". |
