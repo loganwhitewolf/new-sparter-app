@@ -15,7 +15,7 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v1.9 complete as of 2026-05-22. The app is starting milestone v1.10: Pattern Suggestions. It has:
+All milestones M001–v1.9 complete. Milestone v1.10 Pattern Suggestions in progress: Phase 34 (import analysis suggestions) and Phase 35 (import review promotion) complete as of 2026-05-23. The app now shows pattern suggestions during import review and allows users to promote them to personal patterns inline. It has:
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
 - Import management, categorization (Tier 1 regex, Tier 2 history, Tier 3 AI gated)
 - Category settings with user-owned and system categories/subcategories
@@ -145,4 +145,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-22 — milestone v1.10 Pattern Suggestions started*
+*Last updated: 2026-05-23 — Phase 35 complete: pattern suggestion promotion live in import review*
