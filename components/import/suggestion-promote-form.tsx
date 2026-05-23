@@ -19,9 +19,10 @@ type Props = {
   suggestion: PatternSuggestion
   categories: CategoryWithSubCategories[]
   onPromoted: () => void
+  disabled?: boolean
 }
 
-export function SuggestionPromoteForm({ suggestion, categories, onPromoted }: Props) {
+export function SuggestionPromoteForm({ suggestion, categories, onPromoted, disabled }: Props) {
   const [categoryId, setCategoryId] = useState('')
   const [subCategoryId, setSubCategoryId] = useState('')
   const [state, formAction, isPending] = useActionState(promoteSuggestionAction, { error: null })
@@ -109,7 +110,7 @@ export function SuggestionPromoteForm({ suggestion, categories, onPromoted }: Pr
         </Alert>
       )}
 
-      <Button type="submit" size="sm" className="self-start" disabled={isPending || !subCategoryId}>
+      <Button type="submit" size="sm" className="self-start" disabled={isPending || !subCategoryId || disabled}>
         {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
         Crea pattern
       </Button>

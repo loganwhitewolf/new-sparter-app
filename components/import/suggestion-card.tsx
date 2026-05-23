@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SuggestionPromoteForm } from './suggestion-promote-form'
@@ -15,6 +15,8 @@ type Props = {
 export function SuggestionCard({ suggestion, categories }: Props) {
   const [promoted, setPromoted] = useState(false)
   const [showSamples, setShowSamples] = useState(false)
+
+  const handlePromoted = useCallback(() => setPromoted(true), [])
 
   const sampleCount = suggestion.sampleDescriptions.length
   const samplesId = `samples-${suggestion.pattern}`
@@ -69,7 +71,8 @@ export function SuggestionCard({ suggestion, categories }: Props) {
           <SuggestionPromoteForm
             suggestion={suggestion}
             categories={categories}
-            onPromoted={() => setPromoted(true)}
+            onPromoted={handlePromoted}
+            disabled={promoted}
           />
         </div>
       </CardContent>
