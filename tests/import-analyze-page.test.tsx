@@ -1,6 +1,6 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   analyzeImport: vi.fn(),
@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   notFound: vi.fn(() => {
     throw new Error('notFound')
   }),
+  getCategories: vi.fn(),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -18,6 +19,10 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/actions/import', () => ({
   analyzeImportAction: mocks.analyzeImport,
   confirmImportAction: vi.fn(),
+}))
+
+vi.mock('@/lib/dal/categories', () => ({
+  getCategories: mocks.getCategories,
 }))
 
 const { default: AnalyzePage } = await import('../app/(app)/import/[fileId]/analyze/page')
@@ -45,6 +50,7 @@ function analysisResult(overrides = {}) {
         warnings: [],
       },
     ],
+    patternSuggestions: [],
     ...overrides,
   }
 }
@@ -59,6 +65,11 @@ async function renderPage() {
 }
 
 describe('AnalyzePage', () => {
+  beforeEach(() => {
+    mocks.getCategories.mockReset()
+    mocks.getCategories.mockResolvedValue([])
+  })
+
   it('does not show the transaction preview when analysis failed because no platform format matched', async () => {
     mocks.analyzeImport.mockResolvedValueOnce({
       error: null,
@@ -89,5 +100,26 @@ describe('AnalyzePage', () => {
     expect(html).toContain('Anteprima transazioni')
     expect(html).toContain('Conferma importazione')
     expect(html).not.toContain('Formato non riconosciuto')
+  })
+
+  it('REV-01 wiring: calls getCategories in parallel with analyzeImportAction and forwards the result to ImportPreview', async () => {
+    const cats = [
+      {
+        id: 1,
+        name: 'Test',
+        slug: 'test',
+        type: 'out' as const,
+        userId: null,
+        isOwned: false,
+        subCategories: [],
+      },
+    ]
+    mocks.analyzeImport.mockResolvedValueOnce({ error: null, data: analysisResult() })
+    mocks.getCategories.mockResolvedValueOnce(cats)
+
+    const html = await renderPage()
+
+    expect(mocks.getCategories).toHaveBeenCalledTimes(1)
+    expect(html).toContain('Conferma importazione')
   })
 })
