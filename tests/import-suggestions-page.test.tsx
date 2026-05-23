@@ -176,6 +176,23 @@ describe('suggestions page', () => {
     })
   })
 
+  it('POST-01/POST-02 adapter: normalizes description to uppercase with collapsed whitespace', async () => {
+    mocks.getUncategorizedTransactionsByFileId.mockResolvedValue([
+      { description: 'Coffee  Shop 001', amount: '-4.50' },
+    ])
+    await renderPage()
+
+    const callArg = mocks.detectPatternSuggestions.mock.calls[0][0]
+    expect(callArg).toHaveLength(1)
+    expect(callArg[0]).toEqual({
+      description: 'Coffee  Shop 001',
+      normalizedDescription: 'COFFEE SHOP 001',
+      amount: '-4.50',
+      valid: true,
+      covered: false,
+    })
+  })
+
   it('D-04 sort+cap: passes at most 5 suggestions to render (sorted by matchCount desc)', async () => {
     const manySuggestions = [
       makeSuggestion({ pattern: 'A', matchCount: 1 }),

@@ -32,7 +32,7 @@ export default async function SuggestionsPage({
 
   const detectorRows: PatternDetectorRow[] = uncategorizedTxs.map((t) => ({
     description: t.description,
-    normalizedDescription: t.description,
+    normalizedDescription: t.description.toUpperCase().replace(/\s+/g, ' ').trim(),
     amount: t.amount,
     valid: true,
     covered: false,
