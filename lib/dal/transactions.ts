@@ -405,6 +405,8 @@ export const getTransactionsByExpenseId = cache(
   },
 )
 
+const UNCATEGORIZED_TX_LIMIT = 2000
+
 export async function getUncategorizedTransactionsByFileId(
   database: DbOrTx,
   fileId: string,
@@ -424,6 +426,7 @@ export async function getUncategorizedTransactionsByFileId(
         isNull(transaction.expenseId),
       ),
     )
+    .limit(UNCATEGORIZED_TX_LIMIT)
 }
 
 export { db }
