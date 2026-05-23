@@ -142,3 +142,37 @@ export async function deletePatternAction(
   revalidateCategorizationSurfaces();
   return { error: null };
 }
+
+export async function promoteSuggestionAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await verifySession();
+  // Per D-03 (35-CONTEXT.md): suggestion promotion is available to all plans,
+  // including `free`. Intentionally NOT calling requireCustomPatternsAccess here.
+
+  const parsed = CreatePatternSchema.safeParse({
+    pattern: formData.get("pattern"),
+    subCategoryId: formData.get("subCategoryId")
+      ? Number(formData.get("subCategoryId"))
+      : undefined,
+    amountSign: formData.get("amountSign"),
+    confidence: 0.85, // Hardcoded per D-01; FormData `confidence` is intentionally NOT read (anti-tampering).
+    description: undefined, // Inline form does not collect a description (D-01).
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  try {
+    await createPattern({ ...parsed.data, userId });
+  } catch (err) {
+    if (err instanceof Error && /invalid/i.test(err.message)) {
+      return { error: "Pattern regex non valido." };
+    }
+    return { error: "Si è verificato un errore. Riprova tra qualche secondo." };
+  }
+
+  revalidateCategorizationSurfaces();
+  return { error: null };
+}
