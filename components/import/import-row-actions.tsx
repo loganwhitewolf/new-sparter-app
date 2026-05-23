@@ -74,7 +74,7 @@ export function ImportRowActions({ row, displayName, onRename, onDelete, onDelet
           </Link>
         </Button>
       )}
-      {row.status === 'failed' && (
+      {row.status === 'failed' && !unknownFormat && (
         <Button asChild size="sm" variant="outline" aria-label={`Riprova analisi di ${displayName}`}>
           <Link href={`/import/${encodeURIComponent(row.id)}/analyze`}>Riprova analisi</Link>
         </Button>

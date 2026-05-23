@@ -234,7 +234,7 @@ describe("ImportRowActions — state matrix", () => {
     expect(html).toContain(`aria-label="Altre azioni per ${DISPLAY_NAME}"`);
   });
 
-  it("failed (unknown-format): shows Configura formato link, Riprova analisi, and delete in overflow menu", () => {
+  it("failed (unknown-format): shows Configura formato link and delete in overflow menu, no Riprova analisi", () => {
     const html = render(
       makeRow({
         status: "failed",
@@ -245,8 +245,7 @@ describe("ImportRowActions — state matrix", () => {
 
     expect(html).toContain("Configura formato");
     expect(html).toContain(`/import/${FILE_ID}/configure`);
-    expect(html).toContain("Riprova analisi");
-    expect(html).toContain(`/import/${FILE_ID}/analyze`);
+    expect(html).not.toContain("Riprova analisi");
     expect(html).toContain("Elimina");
     expect(html).not.toContain("Vedi transazioni");
   });
