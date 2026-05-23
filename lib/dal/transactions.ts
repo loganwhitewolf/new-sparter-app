@@ -18,6 +18,10 @@ import type {
   TransactionSortDirection,
 } from '@/lib/validations/transactions'
 
+function escapeLikePattern(input: string): string {
+  return input.replace(/[\\%_]/g, '\\$&')
+}
+
 export const TRANSACTION_LIST_LIMIT = 50
 
 export type TransactionPagination = {
@@ -160,7 +164,7 @@ export const getTransactions = cache(
     }
 
     if (filters.name) {
-      const pattern = `%${filters.name}%`
+      const pattern = `%${escapeLikePattern(filters.name)}%`
       conditions.push(
         or(
           ilike(transaction.description, pattern),
