@@ -62,7 +62,7 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 <summary>◆ v1.10: Pattern Suggestions (Phases 33–36) — PLANNED</summary>
 
 - [x] **Phase 33: pattern-suggestion-detector** — Build the deterministic detector contract from the ADR.
-- [ ] **Phase 34: import-analysis-suggestions** — Integrate suggestions into import analysis safely.
+- [x] **Phase 34: import-analysis-suggestions** — Integrate suggestions into import analysis safely. *(complete 2026-05-23)*
 - [ ] **Phase 35: import-review-promotion** — Let users review and promote suggestions before import confirmation.
 - [ ] **Phase 36: post-import-reanalysis** — Re-run suggestions from persisted transactions after import.
 
@@ -83,7 +83,7 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 **Requirements:** ANL-01, ANL-03, ANL-05, SCOP-01, SCOP-02
 **Plans:** 2 plans
 - [x] 34-01-PLAN.md — Wave 0 test scaffolding: add detectPatternSuggestions mock and 6 failing tests pinning ANL-01, ANL-03, ANL-05, SCOP-01, SCOP-02 + D-03/D-05/D-07
-- [ ] 34-02-PLAN.md — Wave 1 implementation: extend ImportAnalysisResult, wire detectPatternSuggestions into analyzeFile with isolated try/catch, sort+cap, sanitized warn log
+- [x] 34-02-PLAN.md — Wave 1 implementation: extend ImportAnalysisResult, wire detectPatternSuggestions into analyzeFile with isolated try/catch, sort+cap, sanitized warn log
 **Success Criteria**:
 1. `analyzeFile` returns capped, ranked `patternSuggestions` in `ImportAnalysisResult`.
 2. Suggestion detection uses the same active-pattern coverage rules as import categorization.
