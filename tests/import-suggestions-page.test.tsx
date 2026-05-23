@@ -101,7 +101,7 @@ async function renderPage(fileId = FILE_ID) {
   return renderToStaticMarkup(createElement(() => element))
 }
 
-describe("suggestions page", () => {
+describe('suggestions page', () => {
   beforeEach(() => {
     vi.resetModules()
     mocks.verifySession.mockReset()
@@ -110,6 +110,10 @@ describe("suggestions page", () => {
     mocks.loadActivePatterns.mockReset()
     mocks.getCategories.mockReset()
     mocks.detectPatternSuggestions.mockReset()
+    mocks.notFound.mockReset()
+    mocks.notFound.mockImplementation(() => {
+      throw new Error('notFound')
+    })
 
     // Default happy-path setup
     mocks.verifySession.mockResolvedValue({ userId: USER_ID })
