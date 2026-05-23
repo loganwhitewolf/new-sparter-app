@@ -389,3 +389,88 @@ describe('transaction DAL query helpers', () => {
     expect(mocks.orderByArgs[0]).toEqual({ op: 'asc', column: 'transaction.amount' })
   })
 })
+
+// makeQueryChain terminates at .offset(); getUncategorizedTransactionsByFileId ends at .where().
+// This variant makes .where() the terminal step so await resolves to the final value.
+function makeWhereTerminalChain(finalValue: unknown[] = []) {
+  const chain = {
+    from: vi.fn(() => chain),
+    leftJoin: vi.fn(() => chain),
+    innerJoin: vi.fn(() => chain),
+    where: vi.fn((arg: unknown) => {
+      mocks.whereArgs.push(arg)
+      return Promise.resolve(finalValue)
+    }),
+    select: vi.fn((shape: unknown) => {
+      mocks.selectedShapes.push(shape)
+      return chain
+    }),
+  }
+  return chain
+}
+
+describe('getUncategorizedTransactionsByFileId', () => {
+  beforeEach(() => {
+    mocks.selectedShapes.length = 0
+    mocks.whereArgs.length = 0
+    mocks.verifySession.mockReset()
+  })
+
+  it('returns only description+amount rows and filters by fileId + expenseId IS NULL (POST-04)', async () => {
+    const chain = makeWhereTerminalChain([{ description: 'AMAZON 123', amount: '-12.50' }])
+    const { getUncategorizedTransactionsByFileId } = await import('@/lib/dal/transactions')
+    const result = await getUncategorizedTransactionsByFileId(chain as never, 'file-1', 'user-1')
+    expect(result).toEqual([{ description: 'AMAZON 123', amount: '-12.50' }])
+    const lastWhere = mocks.whereArgs.at(-1) as { op: string; args: unknown[] }
+    // The where arg is { op: 'and', args: [...] } produced by the mocked drizzle-orm and()
+    expect(lastWhere.op).toBe('and')
+    expect(lastWhere.args).toEqual(
+      expect.arrayContaining([
+        { op: 'isNull', column: 'transaction.expenseId' },
+        { op: 'eq', left: 'transaction.fileId', right: 'file-1' },
+      ]),
+    )
+  })
+
+  it('enforces ownership via innerJoin on importFile and userId equality (POST-03)', async () => {
+    const chain = makeWhereTerminalChain([])
+    const { getUncategorizedTransactionsByFileId } = await import('@/lib/dal/transactions')
+    await getUncategorizedTransactionsByFileId(chain as never, 'file-1', 'user-1')
+    expect(chain.innerJoin).toHaveBeenCalledTimes(1)
+    expect(chain.innerJoin).toHaveBeenCalledWith(
+      expect.anything(), // importFile schema reference
+      expect.anything(), // join condition: eq(transaction.fileId, importFile.id)
+    )
+    const lastWhere = mocks.whereArgs.at(-1) as { op: string; args: unknown[] }
+    expect(lastWhere.op).toBe('and')
+    expect(lastWhere.args).toEqual(
+      expect.arrayContaining([
+        { op: 'eq', left: 'file.userId', right: 'user-1' },
+      ]),
+    )
+  })
+
+  it('selects only { description, amount } (narrow projection)', async () => {
+    const chain = makeWhereTerminalChain([])
+    const { getUncategorizedTransactionsByFileId } = await import('@/lib/dal/transactions')
+    await getUncategorizedTransactionsByFileId(chain as never, 'file-1', 'user-1')
+    const shape = mocks.selectedShapes[0] as Record<string, unknown>
+    expect(Object.keys(shape).sort()).toEqual(['amount', 'description'])
+  })
+
+  it('does not call verifySession (userId is passed explicitly — composability)', async () => {
+    const chain = makeWhereTerminalChain([])
+    const { getUncategorizedTransactionsByFileId } = await import('@/lib/dal/transactions')
+    await getUncategorizedTransactionsByFileId(chain as never, 'file-1', 'user-1')
+    expect(mocks.verifySession).not.toHaveBeenCalled()
+  })
+
+  it('uses the passed-in DbOrTx argument, not the module-level db singleton', async () => {
+    const chain = makeWhereTerminalChain([])
+    const { getUncategorizedTransactionsByFileId } = await import('@/lib/dal/transactions')
+    await getUncategorizedTransactionsByFileId(chain as never, 'file-1', 'user-1')
+    // .from() is called on the chain returned by .select(), which itself is on chain (the db substitute)
+    expect(chain.from).toHaveBeenCalledTimes(1)
+    expect(chain.select).toHaveBeenCalledTimes(1)
+  })
+})

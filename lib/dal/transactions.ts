@@ -401,4 +401,25 @@ export const getTransactionsByExpenseId = cache(
   },
 )
 
+export async function getUncategorizedTransactionsByFileId(
+  database: DbOrTx,
+  fileId: string,
+  userId: string,
+): Promise<Array<{ description: string; amount: string }>> {
+  return database
+    .select({
+      description: transaction.description,
+      amount: transaction.amount,
+    })
+    .from(transaction)
+    .innerJoin(importFile, eq(transaction.fileId, importFile.id))
+    .where(
+      and(
+        eq(transaction.fileId, fileId),
+        eq(importFile.userId, userId),
+        isNull(transaction.expenseId),
+      ),
+    )
+}
+
 export { db }
