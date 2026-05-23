@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ImportPreview } from '@/components/import/import-preview'
 import { analyzeImportAction } from '@/lib/actions/import'
+import { getCategories } from '@/lib/dal/categories'
 import type { ImportAnalysisResult } from '@/lib/services/import'
 import { UNKNOWN_FORMAT_ERROR } from '@/lib/utils/import-status'
 
@@ -41,7 +42,10 @@ export default async function AnalyzePage({
     fd.set('selectedFormatVersionId', selectedFormatVersionId)
   }
 
-  const result = await analyzeImportAction(fd)
+  const [result, categories] = await Promise.all([
+    analyzeImportAction(fd),
+    getCategories(),
+  ])
 
   if (result.error && !result.data) {
     if (result.error.includes('not found') || result.error.includes('access denied')) {
@@ -117,7 +121,7 @@ export default async function AnalyzePage({
         </Card>
       )}
 
-      {!isUnknownFormat && <ImportPreview result={result.data} />}
+      {!isUnknownFormat && <ImportPreview result={result.data} categories={categories} />}
     </div>
   )
 }
