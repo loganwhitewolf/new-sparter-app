@@ -310,8 +310,10 @@ export async function analyzeFile(input: {
         .sort((a, b) => b.matchCount - a.matchCount)
         .slice(0, 5)
     } catch (error) {
+      const msg = safeImportErrorMessage(error, 'Pattern suggestion detection failed.', { exposeMessage: false })
       logger.warn({
         event: 'pattern_suggestion_detection_failed',
+        message: msg,
         userId: input.userId,
         fileId: input.fileId,
       })
