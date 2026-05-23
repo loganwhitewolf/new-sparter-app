@@ -31,12 +31,43 @@ const baseResult = {
   patternSuggestions: [],
 }
 
+const sampleSuggestion = {
+  pattern: 'netflix',
+  matchCount: 3,
+  detectedAmountSign: 'negative' as const,
+  sampleDescriptions: ['NETFLIX 10/01', 'NETFLIX 11/01', 'NETFLIX 12/01'],
+}
+
+const sampleCategories = [
+  {
+    id: 1,
+    name: 'Spese',
+    slug: 'spese',
+    type: 'out' as const,
+    userId: null,
+    isOwned: false,
+    subCategories: [
+      {
+        id: 42,
+        name: 'Streaming',
+        slug: 'streaming',
+        originalName: 'Streaming',
+        userId: null,
+        isOwned: false,
+        hasOverride: false,
+        customName: null,
+      },
+    ],
+  },
+]
+
 describe('ImportPreview UI', () => {
   it('does not render a destructive error box or confirm action when confirmation is disabled upstream', () => {
     const html = renderToStaticMarkup(
       createElement(ImportPreview, {
         result: baseResult,
-        confirmDisabledReason: 'Configura un formato privato prima di confermare l’importazione.',
+        categories: [],
+        confirmDisabledReason: "Configura un formato privato prima di confermare l'importazione.",
       }),
     )
 
@@ -54,11 +85,47 @@ describe('ImportPreview UI', () => {
           ...baseResult,
           errors: ['Impossibile leggere il file caricato. Riprova.'],
         },
+        categories: [],
       }),
     )
 
     expect(html).toContain('Impossibile leggere il file caricato. Riprova.')
     expect(html).toContain('data-slot="alert"')
     expect(html).not.toContain('Conferma importazione')
+  })
+
+  it('REV-01: renders the Suggerimenti pattern section when patternSuggestions has entries', () => {
+    const html = renderToStaticMarkup(
+      createElement(ImportPreview, {
+        result: { ...baseResult, patternSuggestions: [sampleSuggestion] },
+        categories: sampleCategories,
+      }),
+    )
+
+    expect(html).toContain('Suggerimenti pattern (1)')
+    expect(html).toContain('netflix')
+  })
+
+  it('REV-01: does NOT render the Suggerimenti pattern section when patternSuggestions is empty', () => {
+    const html = renderToStaticMarkup(
+      createElement(ImportPreview, {
+        result: baseResult,
+        categories: sampleCategories,
+      }),
+    )
+
+    expect(html).not.toContain('Suggerimenti pattern')
+  })
+
+  it('REV-04: confirm button remains visible alongside the suggestions section (no blocking)', () => {
+    const html = renderToStaticMarkup(
+      createElement(ImportPreview, {
+        result: { ...baseResult, patternSuggestions: [sampleSuggestion] },
+        categories: sampleCategories,
+      }),
+    )
+
+    expect(html).toContain('Suggerimenti pattern (1)')
+    expect(html).toContain('Conferma importazione')
   })
 })
