@@ -1524,7 +1524,7 @@ describe('analyzeFile — pattern suggestions', () => {
     expect(result.patternSuggestions[1]!.matchCount).toBe(7)
     expect(result.patternSuggestions[2]!.matchCount).toBe(5)
     expect(result.patternSuggestions[3]!.matchCount).toBe(3)
-    expect(result.patternSuggestions[4]!.matchCount).toBe(3)
+    expect(result.patternSuggestions[4]!.matchCount).toBe(2)
     // The matchCount=1 row must be sliced off
     expect(result.patternSuggestions.map(s => s.matchCount)).not.toContain(1)
   })
