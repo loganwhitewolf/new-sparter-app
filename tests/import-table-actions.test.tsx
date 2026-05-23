@@ -359,6 +359,26 @@ describe("ImportRowActions — state matrix", () => {
   });
 });
 
+describe("ImportRowActions — Rivedi suggerimenti dropdown item (POST-01)", () => {
+  it('shows "Rivedi suggerimenti" dropdown item only for status=imported', () => {
+    const importedHtml = render(makeRow({ status: "imported", id: "file-42" }));
+    expect(importedHtml).toContain("Rivedi suggerimenti");
+    expect(importedHtml).toContain('href="/import/file-42/suggestions"');
+
+    const uploadedHtml = render(makeRow({ status: "uploaded", id: "file-43" }));
+    expect(uploadedHtml).not.toContain("Rivedi suggerimenti");
+    expect(uploadedHtml).not.toContain("/suggestions");
+  });
+
+  it('does not show "Rivedi suggerimenti" for non-imported statuses', () => {
+    for (const status of ["analyzed", "failed", "pending_upload"] as const) {
+      const html = render(makeRow({ status }));
+      expect(html).not.toContain("Rivedi suggerimenti");
+      expect(html).not.toContain("/suggestions");
+    }
+  });
+});
+
 describe("ImportRowActions — in-progress states do not expose duplicate-operation CTAs", () => {
   it("analyzing row: no analyze, import, delete, or configure links", () => {
     const html = render(makeRow({ status: "analyzing" }));
