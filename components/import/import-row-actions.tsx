@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Clock, ExternalLink, MoreHorizontal, Pencil, Settings, Trash2 } from 'lucide-react'
+import { Clock, ExternalLink, MoreHorizontal, Pencil, Settings, Sparkles, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -103,6 +103,15 @@ export function ImportRowActions({ row, displayName, onRename, onDelete, onDelet
               <Link href={`/transactions?importId=${encodeURIComponent(row.id)}`}>
                 <ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" />
                 Vedi transazioni
+              </Link>
+            </DropdownMenuItem>
+          )}
+
+          {row.status === 'imported' && (
+            <DropdownMenuItem asChild>
+              <Link href={`/import/${encodeURIComponent(row.id)}/suggestions`}>
+                <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
+                Rivedi suggerimenti
               </Link>
             </DropdownMenuItem>
           )}
