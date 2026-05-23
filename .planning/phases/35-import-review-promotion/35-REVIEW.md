@@ -21,7 +21,7 @@ findings:
   warning: 3
   info: 2
   total: 8
-status: issues_found
+status: fixed
 ---
 
 # Phase 35: Code Review Report
