@@ -32,17 +32,17 @@
 
 ### Post-Import Re-Analysis
 
-- [ ] **POST-01**: User can re-run pattern suggestion analysis for an imported file using persisted transactions filtered by `fileId`.
-- [ ] **POST-02**: Post-import re-analysis uses the same detection algorithm and suggestion shape as pre-import analysis.
-- [ ] **POST-03**: Post-import re-analysis enforces session user ownership of the import file.
-- [ ] **POST-04**: Post-import suggestions exclude transactions that already have category coverage.
-- [ ] **POST-05**: User can promote a post-import suggestion to a categorization pattern.
+- [x] **POST-01**: User can re-run pattern suggestion analysis for an imported file using persisted transactions filtered by `fileId`.
+- [x] **POST-02**: Post-import re-analysis uses the same detection algorithm and suggestion shape as pre-import analysis.
+- [x] **POST-03**: Post-import re-analysis enforces session user ownership of the import file.
+- [x] **POST-04**: Post-import suggestions exclude transactions that already have category coverage.
+- [x] **POST-05**: User can promote a post-import suggestion to a categorization pattern.
 
 ### Scope Boundaries
 
 - [ ] **SCOP-01**: Dismissed suggestions are not persisted.
 - [ ] **SCOP-02**: Pattern suggestions are scoped to one import file, not global transaction history.
-- [ ] **SCOP-03**: Creating a post-import pattern does not automatically reclassify existing transactions unless a later requirement adds that behavior.
+- [x] **SCOP-03**: Creating a post-import pattern does not automatically reclassify existing transactions unless a later requirement adds that behavior.
 
 ## Future Requirements
 
@@ -94,14 +94,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REV-03 | Phase 35 | Complete |
 | REV-04 | Phase 35 | Complete |
 | REV-05 | Phase 35 | Complete |
-| POST-01 | Phase 36 | Pending |
-| POST-02 | Phase 36 | Pending |
-| POST-03 | Phase 36 | Pending |
-| POST-04 | Phase 36 | Pending |
-| POST-05 | Phase 36 | Pending |
+| POST-01 | Phase 36 | Complete |
+| POST-02 | Phase 36 | Complete |
+| POST-03 | Phase 36 | Complete |
+| POST-04 | Phase 36 | Complete |
+| POST-05 | Phase 36 | Complete |
 | SCOP-01 | Phase 34 | Pending |
 | SCOP-02 | Phase 34 | Pending |
-| SCOP-03 | Phase 36 | Pending |
+| SCOP-03 | Phase 36 | Complete |
 
 **Coverage:**
 - v1 requirements: 24 total

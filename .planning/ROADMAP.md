@@ -131,6 +131,6 @@ Full context: `.planning/REQUIREMENTS.md`, `.planning/research/SUMMARY.md`
 | 33 | v1.10 | 0/1 | Planned | — |
 | 34 | v1.10 | 0/2 | Planned | — |
 | 35 | v1.10 | 4/4 | Complete    | 2026-05-23 |
-| 36 | v1.10 | — | Planned | — |
+| 36 | v1.10 | 2/2 | Complete    | 2026-05-23 |
 
 **Total: 36 phases · 120 plans complete · 4 phases planned for v1.10**
