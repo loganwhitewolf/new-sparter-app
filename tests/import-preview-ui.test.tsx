@@ -28,6 +28,7 @@ const baseResult = {
   warnings: [],
   errors: [],
   sampleRows: [],
+  patternSuggestions: [],
 }
 
 describe('ImportPreview UI', () => {

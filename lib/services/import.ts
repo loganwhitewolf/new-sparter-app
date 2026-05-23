@@ -24,6 +24,11 @@ import {
   loadActivePatterns,
   type SubscriptionPlan,
 } from '@/lib/services/categorization'
+import {
+  detectPatternSuggestions,
+  type PatternDetectorRow,
+  type PatternSuggestion,
+} from '@/lib/utils/pattern-suggestions'
 import { normalizeTransactionRow } from '@/lib/utils/import'
 import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
@@ -48,6 +53,7 @@ export type ImportAnalysisResult = {
     errors: string[]
     warnings: string[]
   }[]
+  patternSuggestions: PatternSuggestion[]
 }
 
 export type ImportFileResult = {
