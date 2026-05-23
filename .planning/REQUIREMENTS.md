@@ -24,11 +24,11 @@
 
 ### Import Review
 
-- [ ] **REV-01**: User can see pattern suggestions on the import analysis page before confirming import.
-- [ ] **REV-02**: User can inspect sample descriptions for each suggestion.
-- [ ] **REV-03**: User can select a destination subcategory and promote a suggestion to a categorization pattern.
-- [ ] **REV-04**: User can continue import confirmation without handling suggestions.
-- [ ] **REV-05**: User sees clear success or validation feedback after attempting to promote a suggestion.
+- [x] **REV-01**: User can see pattern suggestions on the import analysis page before confirming import.
+- [x] **REV-02**: User can inspect sample descriptions for each suggestion.
+- [x] **REV-03**: User can select a destination subcategory and promote a suggestion to a categorization pattern.
+- [x] **REV-04**: User can continue import confirmation without handling suggestions.
+- [x] **REV-05**: User sees clear success or validation feedback after attempting to promote a suggestion.
 
 ### Post-Import Re-Analysis
 
@@ -89,11 +89,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ANL-03 | Phase 34 | Pending |
 | ANL-04 | Phase 33 | Pending |
 | ANL-05 | Phase 34 | Pending |
-| REV-01 | Phase 35 | Pending |
-| REV-02 | Phase 35 | Pending |
-| REV-03 | Phase 35 | Pending |
-| REV-04 | Phase 35 | Pending |
-| REV-05 | Phase 35 | Pending |
+| REV-01 | Phase 35 | Complete |
+| REV-02 | Phase 35 | Complete |
+| REV-03 | Phase 35 | Complete |
+| REV-04 | Phase 35 | Complete |
+| REV-05 | Phase 35 | Complete |
 | POST-01 | Phase 36 | Pending |
 | POST-02 | Phase 36 | Pending |
 | POST-03 | Phase 36 | Pending |

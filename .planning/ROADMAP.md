@@ -95,10 +95,10 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 **Goal:** Let users review and promote suggestions before import confirmation.
 **Requirements:** REV-01, REV-02, REV-03, REV-04, REV-05
 **Plans:** 4 plans
-- [ ] 35-01-PLAN.md — Wave 0 test scaffolding: extend 3 test files + create 2 new ones; all RED pinning REV-01..05 + T-35-01/02/03
-- [ ] 35-02-PLAN.md — Wave 1 promoteSuggestionAction Server Action in lib/actions/patterns.ts (no plan gate, hardcoded confidence 0.85, session userId)
-- [ ] 35-03-PLAN.md — Wave 1 UI components: SuggestionSection + SuggestionCard + SuggestionPromoteForm in components/import/
-- [ ] 35-04-PLAN.md — Wave 2 integration: ImportPreview accepts categories prop + renders SuggestionSection; AnalyzePage parallel-fetches getCategories
+- [x] 35-01-PLAN.md — Wave 0 test scaffolding: extend 3 test files + create 2 new ones; all RED pinning REV-01..05 + T-35-01/02/03
+- [x] 35-02-PLAN.md — Wave 1 promoteSuggestionAction Server Action in lib/actions/patterns.ts (no plan gate, hardcoded confidence 0.85, session userId)
+- [x] 35-03-PLAN.md — Wave 1 UI components: SuggestionSection + SuggestionCard + SuggestionPromoteForm in components/import/
+- [x] 35-04-PLAN.md — Wave 2 integration: ImportPreview accepts categories prop + renders SuggestionSection; AnalyzePage parallel-fetches getCategories
 **Success Criteria**:
 1. Import analysis UI shows suggestion cards with sample descriptions.
 2. User can choose a destination subcategory and create a categorization pattern from a suggestion.
@@ -130,7 +130,7 @@ Full context: `.planning/REQUIREMENTS.md`, `.planning/research/SUMMARY.md`
 | 32 | v1.9 | 3/3 | Complete | 2026-05-22 |
 | 33 | v1.10 | 0/1 | Planned | — |
 | 34 | v1.10 | 0/2 | Planned | — |
-| 35 | v1.10 | 0/4 | Planned | — |
+| 35 | v1.10 | 4/4 | Complete    | 2026-05-23 |
 | 36 | v1.10 | — | Planned | — |
 
 **Total: 36 phases · 120 plans complete · 4 phases planned for v1.10**
