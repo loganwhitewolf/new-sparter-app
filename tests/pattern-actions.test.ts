@@ -13,11 +13,12 @@ const mocks = vi.hoisted(() => ({
   updatePattern: vi.fn(),
   deletePattern: vi.fn(),
   revalidatePath: vi.fn(),
+  refresh: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
 vi.mock('next/cache', () => ({
-  refresh: vi.fn(),
+  refresh: mocks.refresh,
   revalidatePath: mocks.revalidatePath,
 }))
 
@@ -103,6 +104,7 @@ function expectExactCategoryRevalidationRoutes() {
   ].sort()
 
   expect(uniqueSortedPaths).toEqual([...EXPECTED_CATEGORY_REVALIDATION_ROUTES].sort())
+  expect(mocks.refresh).toHaveBeenCalledOnce()
 }
 
 describe('pattern Server Actions', () => {
