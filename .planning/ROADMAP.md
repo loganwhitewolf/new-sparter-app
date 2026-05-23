@@ -81,6 +81,9 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 
 **Goal:** Integrate suggestions into import analysis safely.
 **Requirements:** ANL-01, ANL-03, ANL-05, SCOP-01, SCOP-02
+**Plans:** 2 plans
+- [x] 34-01-PLAN.md — Wave 0 test scaffolding: add detectPatternSuggestions mock and 6 failing tests pinning ANL-01, ANL-03, ANL-05, SCOP-01, SCOP-02 + D-03/D-05/D-07
+- [ ] 34-02-PLAN.md — Wave 1 implementation: extend ImportAnalysisResult, wire detectPatternSuggestions into analyzeFile with isolated try/catch, sort+cap, sanitized warn log
 **Success Criteria**:
 1. `analyzeFile` returns capped, ranked `patternSuggestions` in `ImportAnalysisResult`.
 2. Suggestion detection uses the same active-pattern coverage rules as import categorization.
@@ -121,7 +124,7 @@ Full context: `.planning/REQUIREMENTS.md`, `.planning/research/SUMMARY.md`
 | 31 | v1.9 | 3/3 | Complete | 2026-05-21 |
 | 32 | v1.9 | 3/3 | Complete | 2026-05-22 |
 | 33 | v1.10 | 0/1 | Planned | — |
-| 34 | v1.10 | — | Planned | — |
+| 34 | v1.10 | 0/2 | Planned | — |
 | 35 | v1.10 | — | Planned | — |
 | 36 | v1.10 | — | Planned | — |
 
