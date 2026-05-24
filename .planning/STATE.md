@@ -69,10 +69,16 @@ R029 — categorization revalidation partial.
 
 None.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260524-pnk | mostrare durante import solo pattern con porzione stringa uguale non completamente uguali | 2026-05-24 | 889ae56 | [260524-pnk-mostrare-durante-import-solo-pattern-con](.planning/quick/260524-pnk-mostrare-durante-import-solo-pattern-con/) |
+
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 36 context gathered
+Last session: 2026-05-24
+Stopped at: Completed quick task 260524-pnk: mostrare durante import solo pattern con porzione stringa uguale non completamente uguali
 Resume file: --resume-file
 
 **Current Phase:** 36
