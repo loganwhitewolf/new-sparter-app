@@ -17,9 +17,11 @@ function row(overrides: Partial<PatternDetectorRow> & { normalizedDescription: s
 
 describe('detectPatternSuggestions', () => {
   it('SUG-01: groups two rows sharing a normalized 2-token prefix and emits one suggestion', () => {
+    // Row 1 has an extra non-numeric token "supermercato" so the bucket is a genuine partial
+    // match (one member extends beyond the shared prefix ["pagamento", "pos"]).
     const rows = [
-      row({ normalizedDescription: 'pagamento pos 12345', amount: '-10.00' }),
-      row({ normalizedDescription: 'pagamento pos 67890', amount: '-20.00' }),
+      row({ normalizedDescription: 'pagamento pos supermercato', amount: '-10.00' }),
+      row({ normalizedDescription: 'pagamento pos farmacia', amount: '-20.00' }),
     ]
     const suggestions = detectPatternSuggestions(rows, [])
     expect(suggestions).toHaveLength(1)
@@ -28,9 +30,11 @@ describe('detectPatternSuggestions', () => {
   })
 
   it('SUG-02: strips purely numeric tokens (digits-only) before prefix comparison', () => {
+    // The year tokens (2026/2025) are purely numeric and stripped; one row adds a
+    // non-numeric city suffix so the bucket qualifies as a partial match.
     const rows = [
-      row({ normalizedDescription: 'pagamento 2026 supermercato' }),
-      row({ normalizedDescription: 'pagamento 2025 supermercato' }),
+      row({ normalizedDescription: 'pagamento 2026 supermercato roma' }),
+      row({ normalizedDescription: 'pagamento 2025 supermercato milano' }),
     ]
     const suggestions = detectPatternSuggestions(rows, [])
     expect(suggestions).toHaveLength(1)
@@ -81,8 +85,9 @@ describe('detectPatternSuggestions', () => {
       row({ normalizedDescription: 'pagamento pos market', description: 'ROW C', covered: true }),
       // row D: valid:true, covered:false, amount negative — coveragePattern matches → EXCLUDED
       row({ normalizedDescription: 'pagamento pos market', description: 'ROW D', amount: '-10.00' }),
-      // row E: valid:true, covered:false → INCLUDED
-      row({ normalizedDescription: 'pagamento pos market', description: 'ROW E', amount: '10.00' }),
+      // row E: valid:true, covered:false → INCLUDED; differs from row A with "shop" so the
+      // pair is a genuine partial match (extends beyond the shared prefix "pagamento pos")
+      row({ normalizedDescription: 'pagamento pos shop', description: 'ROW E', amount: '10.00' }),
     ]
     const suggestions = detectPatternSuggestions(rows, coverage)
     expect(suggestions).toHaveLength(1)
@@ -133,9 +138,12 @@ describe('detectPatternSuggestions', () => {
   })
 
   it('ANL-04: detectedAmountSign is positive when all amounts >=0, negative when all <0, any when mixed or all-null', () => {
+    // Use non-numeric letter suffixes so each pair is a genuine partial match after
+    // numeric stripping (one row extends the shared prefix ["pagamento", "pos"]).
+    const suffixes = ['alfa', 'beta', 'gamma', 'delta']
     const makeRows = (amounts: (string | null)[]) =>
       amounts.map((amount, i) =>
-        ({ description: `ROW ${i}`, normalizedDescription: `pagamento pos ${i}`, amount, valid: true, covered: false })
+        ({ description: `ROW ${suffixes[i]}`, normalizedDescription: `pagamento pos ${suffixes[i]}`, amount, valid: true, covered: false })
       )
 
     // (a) All negative
