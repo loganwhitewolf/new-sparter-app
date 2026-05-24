@@ -133,6 +133,12 @@ export function detectPatternSuggestions(
     }
     if (prefix.length < 2) continue
 
+    // Partial-match-only: skip buckets where every member's stripped tokens equal the prefix exactly.
+    // Fully identical normalized descriptions are handled by Tier 2 (history) categorization;
+    // emitting a regex for them produces noise (see docs/adr/0002).
+    const hasExtension = group.some(g => g.tokens.length > prefix.length)
+    if (!hasExtension) continue
+
     const prefixString = prefix.join(' ')
     const escaped = escapeRegex(prefixString)
     const amounts = group.map(g => g.row.amount)
