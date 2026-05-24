@@ -132,6 +132,42 @@ describe('detectPatternSuggestions', () => {
     expect(new Set(s.sampleDescriptions).size).toBe(s.sampleDescriptions.length)
   })
 
+  it('SUG-07a: fully identical normalizedDescriptions (no numeric variation) produce no suggestion', () => {
+    // Both rows share exactly "pagamento pos market" — no extension beyond the shared prefix.
+    // Tier 2 history categorization covers fully identical descriptions; emitting a regex is noise.
+    const rows = [
+      row({ normalizedDescription: 'pagamento pos market', amount: '-10.00' }),
+      row({ normalizedDescription: 'pagamento pos market', amount: '-10.00' }),
+    ]
+    const suggestions = detectPatternSuggestions(rows, [])
+    expect(suggestions).toHaveLength(0)
+  })
+
+  it('SUG-07b: bucket with mixed identical + extended rows emits one suggestion covering all members', () => {
+    // Two rows are identical ("netflix abbonamento"), one has an extra token ("netflix abbonamento premium").
+    // At least one member extends beyond the prefix → bucket qualifies. matchCount includes all 3 rows.
+    const rows = [
+      row({ normalizedDescription: 'netflix abbonamento', amount: '-10.00' }),
+      row({ normalizedDescription: 'netflix abbonamento', amount: '-10.00' }),
+      row({ normalizedDescription: 'netflix abbonamento premium', amount: '-10.00' }),
+    ]
+    const suggestions = detectPatternSuggestions(rows, [])
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0].pattern).toBe('netflix abbonamento')
+    expect(suggestions[0].matchCount).toBe(3)
+  })
+
+  it('SUG-07c: rows differing only in numeric tokens (stripped to identical arrays) produce no suggestion', () => {
+    // After stripping "12345" and "67890" (numeric tokens), both rows reduce to ["pagamento", "pos"].
+    // The stripped arrays are fully identical — no extension beyond prefix → no suggestion emitted.
+    const rows = [
+      row({ normalizedDescription: 'pagamento pos 12345', amount: '-10.00' }),
+      row({ normalizedDescription: 'pagamento pos 67890', amount: '-10.00' }),
+    ]
+    const suggestions = detectPatternSuggestions(rows, [])
+    expect(suggestions).toHaveLength(0)
+  })
+
   it('ANL-04: detectedAmountSign is positive when all amounts >=0, negative when all <0, any when mixed or all-null', () => {
     const makeRows = (amounts: (string | null)[]) =>
       amounts.map((amount, i) =>
