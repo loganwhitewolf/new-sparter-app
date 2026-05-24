@@ -158,4 +158,43 @@ describe('detectPatternSuggestions', () => {
     const nullSuggestions = detectPatternSuggestions(nullRows, [])
     expect(nullSuggestions[0].detectedAmountSign).toBe('any')
   })
+
+  it('SUG-07a: fully identical normalized descriptions (no numeric tail) emit no suggestion', () => {
+    // Both rows strip to ["pagamento", "pos", "market"] — prefix equals every member's
+    // full token list, so no row extends beyond it → fully identical → no suggestion.
+    // Tier 2 (history) handles exact duplicates; regex suggestions are noise here.
+    const rows = [
+      row({ normalizedDescription: 'pagamento pos market' }),
+      row({ normalizedDescription: 'pagamento pos market' }),
+    ]
+    const suggestions = detectPatternSuggestions(rows, [])
+    expect(suggestions).toHaveLength(0)
+  })
+
+  it('SUG-07b: two identical rows + one extension → one suggestion covering all three', () => {
+    // "premium" row has tokens ["netflix", "abbonamento", "premium"] which extend beyond
+    // the shared prefix ["netflix", "abbonamento"], so the bucket qualifies as a partial match.
+    // All three rows are counted in matchCount.
+    const rows = [
+      row({ normalizedDescription: 'netflix abbonamento' }),
+      row({ normalizedDescription: 'netflix abbonamento' }),
+      row({ normalizedDescription: 'netflix abbonamento premium' }),
+    ]
+    const suggestions = detectPatternSuggestions(rows, [])
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0].pattern).toBe('netflix abbonamento')
+    expect(suggestions[0].matchCount).toBe(3)
+  })
+
+  it('SUG-07c: rows differing only in stripped numeric tokens emit no suggestion', () => {
+    // "12345" and "67890" are purely numeric → stripped away, leaving ["pagamento", "pos"]
+    // for both rows. Shared prefix also equals ["pagamento", "pos"], so no row extends
+    // beyond the prefix → fully identical post-strip → no suggestion.
+    const rows = [
+      row({ normalizedDescription: 'pagamento pos 12345' }),
+      row({ normalizedDescription: 'pagamento pos 67890' }),
+    ]
+    const suggestions = detectPatternSuggestions(rows, [])
+    expect(suggestions).toHaveLength(0)
+  })
 })
