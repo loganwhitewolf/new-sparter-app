@@ -85,4 +85,46 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 | 35 | v1.10 | 4/4 | Complete | 2026-05-23 |
 | 36 | v1.10 | 2/2 | Complete | 2026-05-23 |
 
-**Total: 36 phases · 129 plans complete**
+| 37 | v1.11 | 0/? | Pending | — |
+
+**Total: 36 phases shipped · 129 plans complete**
+
+---
+
+## v1.11: FlowNature & Segmented Chart
+
+### Phase 37: flow-nature-chart
+
+**Goal:** Add `nature` enum column to `sub_category`; evolve `EntrateUsciteChart` into a stacked nature-segmented chart with URL-persisted toggles; seed system subcategories with default natures; expose nature override in `/settings/categories`.
+**Status:** Pending
+**Depends on:** Phase 29 (EntrateUsciteChart), Phase 35 (subcategory UI patterns)
+**Requirements:** R-FN-01, R-FN-02, R-FN-03, R-FN-04, R-FN-05, R-FN-06, R-FN-07, R-FN-08, R-FN-09
+
+- [ ] **Phase 37: flow-nature-chart** — Add `nature` enum column to `sub_category`; evolve `EntrateUsciteChart` into a stacked nature-segmented chart with URL-persisted toggles; seed system subcategories with default natures; expose nature override in `/settings/categories`.
+
+**Requirements:**
+
+- R-FN-01: `nature` column on `sub_category` (nullable enum: `essential | discretionary | operational | financial | debt | extraordinary`)
+- R-FN-02: Drizzle migration for `nature` column
+- R-FN-03: System subcategories seeded with default natures in `seed-data.ts`
+- R-FN-04: `EntrateUsciteChart` replaced by stacked bar chart grouped by nature (algebraic sum per nature, not sign-split)
+- R-FN-05: Nature toggle via URL param `?hidden=` (comma-separated nature values); persisted across navigation
+- R-FN-06: Null nature renders as "non classificato" segment in chart
+- R-FN-07: Nature field exposed and editable in `/settings/categories` subcategory UI (required on creation, with preselected default)
+- R-FN-08: `MonthlyTrendPoint` / DAL query updated to group by nature algebraically
+- R-FN-09: `Transfer` flows (`ignore → trasferimenti`) continue to be excluded via existing `excludeFromTotals` — no new nature type needed
+
+**Plans:** 5 plans
+**Wave 1**
+
+- [ ] 37-01-PLAN.md — Wave 0 test scaffolding + `lib/utils/nature-labels.ts` shared label utility (R-FN-06, R-FN-07)
+- [ ] 37-02-PLAN.md — Schema migration: `flowNatureEnum`, nature columns on `sub_category` + `user_subcategory_override`, drop `custom_name` NOT NULL, seed nature assignment (R-FN-01, R-FN-02, R-FN-03) [BLOCKING migration]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 37-03-PLAN.md — DAL: `getMonthlyTrendByNature` + `MonthlyNatureTrendPoint` + `effectiveNature` on `CategoryWithSubCategories` (R-FN-04, R-FN-05, R-FN-08, R-FN-09)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 37-04-PLAN.md — Chart rewrite: stacked nature `EntrateUsciteChart` with URL-persisted legend toggle + overview page wiring (R-FN-04, R-FN-05, R-FN-06)
+- [ ] 37-05-PLAN.md — Settings: nature required on creation + inline `SubcategoryNatureSelect` + `setSubcategoryNatureAction` (R-FN-07)
