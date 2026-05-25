@@ -50,8 +50,19 @@ type Props = {
 
 const PAGE_SIZE = 50
 
+function dedupeExpenseRows(rows: ExpenseRow[]): ExpenseRow[] {
+  const seen = new Set<string>()
+  const unique: ExpenseRow[] = []
+  for (const row of rows) {
+    if (seen.has(row.id)) continue
+    seen.add(row.id)
+    unique.push(row)
+  }
+  return unique
+}
+
 export function ExpenseTable({ expenses, categories, filters }: Props) {
-  const [loadedExpenses, setLoadedExpenses] = useState(expenses)
+  const [loadedExpenses, setLoadedExpenses] = useState(() => dedupeExpenseRows(expenses))
   const [hasMore, setHasMore] = useState(expenses.length === PAGE_SIZE)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -94,7 +105,9 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
         return
       }
 
-      setLoadedExpenses((current) => [...current, ...result.expenses])
+      setLoadedExpenses((current) =>
+        dedupeExpenseRows([...current, ...result.expenses]),
+      )
       setHasMore(result.hasMore)
     } catch {
       const error = 'Non è stato possibile caricare altre spese. Riprova.'

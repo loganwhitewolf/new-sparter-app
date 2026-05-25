@@ -17,8 +17,8 @@ function makeQueryChain(finalValue: unknown[] = []) {
       mocks.whereArgs.push(arg)
       return chain
     }),
-    orderBy: vi.fn((arg: unknown) => {
-      mocks.orderByArgs.push(arg)
+    orderBy: vi.fn((...args: unknown[]) => {
+      mocks.orderByArgs.push(...args)
       return chain
     }),
     limit: vi.fn((arg: number) => {
@@ -114,7 +114,10 @@ describe('expense DAL list pagination', () => {
     expect(mocks.verifySession).toHaveBeenCalledTimes(1)
     expect(mocks.limitArgs).toEqual([EXPENSE_LIST_LIMIT])
     expect(mocks.offsetArgs).toEqual([0])
-    expect(mocks.orderByArgs[0]).toEqual({ op: 'desc', column: 'expense.createdAt' })
+    expect(mocks.orderByArgs).toEqual([
+      { op: 'desc', column: 'expense.createdAt' },
+      { op: 'desc', column: 'expense.id' },
+    ])
     expect((mocks.selectedShapes[0] as { subCategoryName: unknown }).subCategoryName).toMatchObject({ op: 'sql' })
   })
 
@@ -141,6 +144,9 @@ describe('expense DAL list pagination', () => {
   it('orders expenses by total amount when requested', async () => {
     await getExpenses({ sort: 'totalAmount', dir: 'asc' })
 
-    expect(mocks.orderByArgs[0]).toEqual({ op: 'asc', column: 'expense.totalAmount' })
+    expect(mocks.orderByArgs).toEqual([
+      { op: 'asc', column: 'expense.totalAmount' },
+      { op: 'asc', column: 'expense.id' },
+    ])
   })
 })

@@ -55,8 +55,10 @@ export function buildExpenseOrderBy({
   dir = 'desc',
 }: Pick<ExpenseFilters, 'sort' | 'dir'> = {}) {
   const column = getExpenseSortColumn(sort)
-
-  return dir === 'asc' ? asc(column) : desc(column)
+  // Tie-break on id so OFFSET pagination never returns the same expense twice.
+  return dir === 'asc'
+    ? [asc(column), asc(expense.id)]
+    : [desc(column), desc(expense.id)]
 }
 
 export const getExpenses = cache(async (
@@ -113,7 +115,7 @@ export const getExpenses = cache(async (
       ),
     )
     .where(and(...conditions))
-    .orderBy(buildExpenseOrderBy(filters))
+    .orderBy(...buildExpenseOrderBy(filters))
     .limit(limit)
     .offset(offset)
 })
