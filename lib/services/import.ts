@@ -24,6 +24,11 @@ import {
   loadActivePatterns,
   type SubscriptionPlan,
 } from '@/lib/services/categorization'
+import {
+  detectPatternSuggestions,
+  type PatternDetectorRow,
+  type PatternSuggestion,
+} from '@/lib/utils/pattern-suggestions'
 import { normalizeTransactionRow } from '@/lib/utils/import'
 import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
@@ -48,6 +53,7 @@ export type ImportAnalysisResult = {
     errors: string[]
     warnings: string[]
   }[]
+  patternSuggestions: PatternSuggestion[]
 }
 
 export type ImportFileResult = {
@@ -288,6 +294,32 @@ export async function analyzeFile(input: {
     ? applyExistingHashesToStats(provisionalStats, existingHashes)
     : { ...EMPTY_IMPORT_STATS, rowCount: parsed.rowCount }
 
+  let patternSuggestions: PatternSuggestion[] = []
+  if (best) {
+    try {
+      const activePatterns = await loadActivePatterns(db, input.userId)
+      const detectorRows: PatternDetectorRow[] = provisionalStats.normalizedRows.map((r) => ({
+        description: r.description,
+        normalizedDescription: r.normalizedDescription,
+        amount: r.amount,
+        valid: r.valid,
+        covered: false,
+      }))
+      const raw = detectPatternSuggestions(detectorRows, activePatterns)
+      patternSuggestions = raw
+        .sort((a, b) => b.matchCount - a.matchCount)
+        .slice(0, 5)
+    } catch (error) {
+      const msg = safeImportErrorMessage(error, 'Pattern suggestion detection failed.', { exposeMessage: false })
+      logger.warn({
+        event: 'pattern_suggestion_detection_failed',
+        message: msg,
+        userId: input.userId,
+        fileId: input.fileId,
+      })
+    }
+  }
+
   const sampleRows = detected.preview.sampleRows.map((r) => ({
     rowIndex: r.rowIndex,
     description: r.description,
@@ -342,6 +374,7 @@ export async function analyzeFile(input: {
     warnings: detected.warnings,
     errors: detected.errors,
     sampleRows,
+    patternSuggestions,
   }
 }
 

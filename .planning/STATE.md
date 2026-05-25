@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.9
-milestone_name: Social Auth
-current_phase: 32 (account-linking) — plans 00 and 01 done, plan 02 pending
-status: completed
-stopped_at: Phase 32 Plan 02 complete
-last_updated: "2026-05-22T07:38:00.000Z"
-last_activity: 2026-05-22 — Phase 32 Plan 02 complete (ConnectedAccountsCard + /settings/profile page)
+milestone: v1.8
+milestone_name: milestone
+current_phase: 36
+status: milestone_complete
+stopped_at: milestone v1.10 archived (2026-05-25)
+last_updated: "2026-05-25T00:00:00.000Z"
+last_activity: "2026-05-25 - v1.10 Pattern Suggestions milestone archived"
 progress:
-  total_phases: 3
-  completed_phases: 3
+  total_phases: 4
+  completed_phases: 4
   total_plans: 9
   completed_plans: 9
   percent: 100
@@ -19,19 +19,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md
+See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** v1.9 Social Auth — Google and GitHub OAuth with account linking.
+**Current focus:** Phase --phase — 36
 
 ## Current Position
 
-Phase: 32 (in progress)
-Plan: 32-02 (complete ✓)
-Status: Plan 02 complete — ConnectedAccountsCard + /settings/profile page — Phase 32 complete
-Last activity: 2026-05-22 — Phase 32 Plan 02 complete
-
-Progress: [██████████] 100%
+Phase: --phase (36) — EXECUTING
+Plan: Not started
+Status: Milestone complete
+Last activity: 2026-05-25 - Completed quick task 260525-ga2: fix applyNewPatternToExpenses
 
 ## Accumulated Context
 
@@ -71,10 +69,19 @@ R029 — categorization revalidation partial.
 
 None.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260524-pnk | mostrare durante import solo pattern con porzione stringa uguale non completamente uguali | 2026-05-24 | 889ae56 | [260524-pnk-mostrare-durante-import-solo-pattern-con](.planning/quick/260524-pnk-mostrare-durante-import-solo-pattern-con/) |
+| 260525-ga2 | fix applyNewPatternToExpenses: pattern promoted from suggestions not applied to all uncategorized expenses | 2026-05-25 | 4a722f2 | [260525-ga2-fix-applynewpatterntoexpenses-pattern-pr](.planning/quick/260525-ga2-fix-applynewpatterntoexpenses-pattern-pr/) |
+
 ## Session Continuity
 
-Last session: 2026-05-22T07:38:00Z
-Stopped at: Phase 32 Plan 02 complete
+Last session: 2026-05-25T12:06:21.648Z
+Stopped at: context exhaustion at 75% (2026-05-25)
 Resume file: None
 
-**Current Phase:** 32 (account-linking) — all 3 plans complete (00, 01, 02) — Phase 32 DONE
+**Current Phase:** — (milestone complete)
+
+**Next:** `/gsd-new-milestone` to plan v1.11

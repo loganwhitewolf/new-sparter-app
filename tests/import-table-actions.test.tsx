@@ -234,7 +234,7 @@ describe("ImportRowActions — state matrix", () => {
     expect(html).toContain(`aria-label="Altre azioni per ${DISPLAY_NAME}"`);
   });
 
-  it("failed (unknown-format): shows Configura formato link, Riprova analisi, and delete in overflow menu", () => {
+  it("failed (unknown-format): shows Configura formato link and delete in overflow menu, no Riprova analisi", () => {
     const html = render(
       makeRow({
         status: "failed",
@@ -245,8 +245,7 @@ describe("ImportRowActions — state matrix", () => {
 
     expect(html).toContain("Configura formato");
     expect(html).toContain(`/import/${FILE_ID}/configure`);
-    expect(html).toContain("Riprova analisi");
-    expect(html).toContain(`/import/${FILE_ID}/analyze`);
+    expect(html).not.toContain("Riprova analisi");
     expect(html).toContain("Elimina");
     expect(html).not.toContain("Vedi transazioni");
   });
@@ -356,6 +355,26 @@ describe("ImportRowActions — state matrix", () => {
       }),
     );
     expect(failedHtml).toContain(`/import/${safeId}/configure`);
+  });
+});
+
+describe("ImportRowActions — Rivedi suggerimenti dropdown item (POST-01)", () => {
+  it('shows "Rivedi suggerimenti" dropdown item only for status=imported', () => {
+    const importedHtml = render(makeRow({ status: "imported", id: "file-42" }));
+    expect(importedHtml).toContain("Rivedi suggerimenti");
+    expect(importedHtml).toContain('href="/import/file-42/suggestions"');
+
+    const uploadedHtml = render(makeRow({ status: "uploaded", id: "file-43" }));
+    expect(uploadedHtml).not.toContain("Rivedi suggerimenti");
+    expect(uploadedHtml).not.toContain("/suggestions");
+  });
+
+  it('does not show "Rivedi suggerimenti" for non-imported statuses', () => {
+    for (const status of ["analyzed", "failed", "pending_upload"] as const) {
+      const html = render(makeRow({ status }));
+      expect(html).not.toContain("Rivedi suggerimenti");
+      expect(html).not.toContain("/suggestions");
+    }
   });
 });
 

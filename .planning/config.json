@@ -4,6 +4,7 @@
     "enabled": true
   },
   "workflow": {
-    "ui_safety_gate": false
+    "ui_safety_gate": false,
+    "_auto_chain_active": false
   }
 }

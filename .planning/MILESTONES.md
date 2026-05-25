@@ -1,5 +1,74 @@
 # Milestones
 
+## v1.10 — Pattern Suggestions
+
+**Shipped:** 2026-05-25
+**Phases:** 33–36 (4 phases)
+**Plans:** 9
+**Quick Tasks:** 2
+**Timeline:** 2026-05-22 → 2026-05-25 (4 days)
+
+### Delivered
+
+Full end-to-end pattern suggestion pipeline for the import flow. Users can now discover recurring uncategorized bank descriptions via a deterministic token-prefix detector, see ranked suggestions during import analysis, promote useful ones to categorization patterns before confirming the import, and re-run suggestion analysis after an import from persisted transactions at `/import/[fileId]/suggestions` — without touching the raw R2 file. Two quick-task fixes added: partial-match-only filter (SUG-07) and pattern application bug with numeric token stripping.
+
+### Key Accomplishments
+
+1. Pure `detectPatternSuggestions` utility — tokenizes bank descriptions, strips numeric tokens, emits longest common prefixes (≥2 tokens, ≥2 uncategorized matches), infers `detectedAmountSign`, escapes regex metacharacters
+2. `analyzeFile` extended with isolated try/catch pattern detection — detection failures never block import; `ImportAnalysisResult` carries capped, ranked `patternSuggestions`
+3. `promoteSuggestionAction` Server Action with `verifySession()` + `CreatePatternSchema.safeParse()` + hardcoded confidence 0.85 — no UI tamperability
+4. `SuggestionSection` + `SuggestionCard` + `SuggestionPromoteForm` components wired into `ImportPreview` and `AnalyzePage` via parallel fetch; 577 Vitest tests GREEN
+5. `getUncategorizedTransactionsByFileId` DAL function with `innerJoin` ownership enforcement; `/import/[fileId]/suggestions` server component page with `notFound()` guard
+6. `createPattern` handles unique-constraint violations by reactivating soft-deleted user patterns instead of throwing
+
+### Known Deferred Items
+
+- REVAL-01: Apply newly created pattern to existing transactions from same import file
+- GLOBAL-01: Pattern suggestions across all uncategorized transaction history
+- DISM-01: Persistent dismissal of noisy suggestions
+- R038/R039/R041 — live Vercel/Supabase/R2 deploy remains operator-pending
+- R029 — partial categorization revalidation coverage
+
+### Archive
+
+- `.planning/milestones/v1.10-ROADMAP.md`
+- `.planning/milestones/v1.10-REQUIREMENTS.md`
+
+---
+
+## v1.9 — Social Auth
+
+**Shipped:** 2026-05-22
+**Phases:** 30–32 (3 phases)
+**Plans:** 9
+**Commits:** 45
+
+### Delivered
+
+Enabled Google and GitHub OAuth for Sparter: users can sign in or register with social providers, link or unlink providers from a new /settings/profile page, and the registration guardrail has been removed so any OAuth account can register freely. Settings navigation reorganized with a /settings hub and dedicated profile page hosting ConnectedAccountsCard.
+
+### Key Accomplishments
+
+1. Removed registration guardrail (REG-01) — deleted `lib/auth/registration.ts` and all consumers; any user can now register via OAuth or email/password
+2. Added env-conditional Google + GitHub OAuth providers to Better Auth via conditional spread on CLIENT_ID — no code change needed to activate a provider
+3. `SocialProviderButtons` client component with inline SVG GitHub icon, pending state, Italian error mapping, and per-page `errorCallbackURL`
+4. Login and Register pages converted to async server components reading `process.env` — provider buttons appear only when credentials are configured
+5. Settings IA reorganized: `/settings` hub, `/settings/profile` canonical page, `/profile` compatibility redirect shim, topbar retargeted
+6. `ConnectedAccountsCard` — link/unlink flows via `authClient`, `canUnlink` guard (credential OR other social), confirmation Dialog, `decodeAndMapError`, stable `PROVIDER_ORDER`
+
+### Known Deferred Items
+
+- LINK-01..04 live OAuth E2E tests are `test.fixme()` stubs — require real provider credentials configured for dev URL
+- R038/R039/R041 — live Vercel/Supabase/R2 deploy remains operator-pending (code complete in M007)
+- R029 — partial categorization revalidation coverage
+
+### Archive
+
+- `.planning/milestones/v1.9-ROADMAP.md`
+- `.planning/milestones/v1.9-REQUIREMENTS.md`
+
+---
+
 ## v1.8 — Dashboard Intelligence
 
 **Shipped:** 2026-05-20

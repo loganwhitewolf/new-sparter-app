@@ -18,6 +18,10 @@ import type {
   TransactionSortDirection,
 } from '@/lib/validations/transactions'
 
+function escapeLikePattern(input: string): string {
+  return input.replace(/[\\%_]/g, '\\$&')
+}
+
 export const TRANSACTION_LIST_LIMIT = 50
 
 export type TransactionPagination = {
@@ -160,7 +164,7 @@ export const getTransactions = cache(
     }
 
     if (filters.name) {
-      const pattern = `%${filters.name}%`
+      const pattern = `%${escapeLikePattern(filters.name)}%`
       conditions.push(
         or(
           ilike(transaction.description, pattern),
@@ -400,5 +404,30 @@ export const getTransactionsByExpenseId = cache(
       .orderBy(desc(transaction.occurredAt))
   },
 )
+
+const UNCATEGORIZED_TX_LIMIT = 2000
+
+export async function getUncategorizedTransactionsByFileId(
+  database: DbOrTx,
+  fileId: string,
+  userId: string,
+): Promise<Array<{ description: string; amount: string }>> {
+  return database
+    .select({
+      description: transaction.description,
+      amount: transaction.amount,
+    })
+    .from(transaction)
+    .innerJoin(importFile, eq(transaction.fileId, importFile.id))
+    .innerJoin(expense, eq(transaction.expenseId, expense.id))
+    .where(
+      and(
+        eq(transaction.fileId, fileId),
+        eq(importFile.userId, userId),
+        isNull(expense.subCategoryId),
+      ),
+    )
+    .limit(UNCATEGORIZED_TX_LIMIT)
+}
 
 export { db }

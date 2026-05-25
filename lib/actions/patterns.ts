@@ -1,5 +1,6 @@
 "use server";
 import { verifySession } from "@/lib/dal/auth";
+import { db } from "@/lib/db";
 import {
   CreatePatternSchema,
   UpdatePatternSchema,
@@ -16,6 +17,7 @@ import {
   type PlanGate,
 } from "@/lib/config/categorization";
 import { revalidateCategorizationSurfaces } from "@/lib/actions/revalidation";
+import { applyNewPatternToExpenses } from "@/lib/services/pattern-application";
 
 function customPatternsUnavailableMessage(currentPlan: PlanGate): string {
   const minPlan = getCategorizationAccessConfig().customPatternsMinPlan;
@@ -69,13 +71,49 @@ export async function createPatternAction(
     return { error: parsed.error.issues[0].message };
   }
 
+  let created: Awaited<ReturnType<typeof createPattern>>;
   try {
-    await createPattern({ ...parsed.data, userId });
+    created = await createPattern({ ...parsed.data, userId });
   } catch (err) {
-    if (err instanceof Error && /invalid/i.test(err.message)) {
+    const causeMsg: string = (err as any)?.cause?.message ?? "";
+    const causeCode: string = (err as any)?.cause?.code ?? "";
+    if (
+      err instanceof Error &&
+      /invalid|valido/i.test(err.message + causeMsg)
+    ) {
       return { error: "Pattern regex non valido." };
     }
+    if (
+      causeCode === "23505" ||
+      (err instanceof Error &&
+        /unique.*constraint|duplicate key/i.test(err.message + causeMsg))
+    ) {
+      return { error: "Un pattern identico esiste già." };
+    }
+    console.error(
+      "[createPatternAction] createPattern error:",
+      err instanceof Error ? err.message : err,
+      (err as any)?.cause,
+    );
     return { error: "Si è verificato un errore. Riprova tra qualche secondo." };
+  }
+
+  try {
+    await applyNewPatternToExpenses(
+      db,
+      userId,
+      created.id,
+      created.pattern,
+      created.subCategoryId,
+      created.amountSign,
+      Number(created.confidence),
+    );
+  } catch (err) {
+    console.error(
+      '[createPatternAction] applyNewPatternToExpenses failed (pattern saved, retroactive apply failed):',
+      err instanceof Error ? err.message : err,
+      (err as any)?.cause,
+    )
   }
 
   revalidateCategorizationSurfaces();
@@ -137,6 +175,77 @@ export async function deletePatternAction(
     if (!deleted) return { error: "Pattern non trovato o accesso negato." };
   } catch {
     return { error: "Si è verificato un errore. Riprova tra qualche secondo." };
+  }
+
+  revalidateCategorizationSurfaces();
+  return { error: null };
+}
+
+export async function promoteSuggestionAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await verifySession();
+  // Per D-03 (35-CONTEXT.md): suggestion promotion is available to all plans,
+  // including `free`. Intentionally NOT calling requireCustomPatternsAccess here.
+
+  const parsed = CreatePatternSchema.safeParse({
+    pattern: formData.get("pattern"),
+    subCategoryId: formData.get("subCategoryId")
+      ? Number(formData.get("subCategoryId"))
+      : undefined,
+    amountSign: formData.get("amountSign"),
+    confidence: 0.85, // Hardcoded per D-01; FormData `confidence` is intentionally NOT read (anti-tampering).
+    description: undefined, // Inline form does not collect a description (D-01).
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  let created: Awaited<ReturnType<typeof createPattern>>;
+  try {
+    created = await createPattern({ ...parsed.data, userId });
+  } catch (err) {
+    console.error(
+      "[promoteSuggestionAction] createPattern error:",
+      err instanceof Error ? err.message : err,
+      (err as any)?.cause,
+    );
+
+    const causeMsg: string = (err as any)?.cause?.message ?? "";
+    const causeCode: string = (err as any)?.cause?.code ?? "";
+    if (
+      err instanceof Error &&
+      /invalid|valido/i.test(err.message + causeMsg)
+    ) {
+      return { error: "Pattern regex non valido." };
+    }
+    if (
+      causeCode === "23505" ||
+      (err instanceof Error &&
+        /unique.*constraint|duplicate key/i.test(err.message + causeMsg))
+    ) {
+      return { error: "Un pattern identico esiste già." };
+    }
+    return { error: "Si è verificato un errore. Riprova tra qualche secondo." };
+  }
+
+  try {
+    await applyNewPatternToExpenses(
+      db,
+      userId,
+      created.id,
+      created.pattern,
+      created.subCategoryId,
+      created.amountSign,
+      Number(created.confidence),
+    );
+  } catch (err) {
+    console.error(
+      '[promoteSuggestionAction] applyNewPatternToExpenses failed (pattern saved, retroactive apply failed):',
+      err instanceof Error ? err.message : err,
+      (err as any)?.cause,
+    )
   }
 
   revalidateCategorizationSurfaces();
