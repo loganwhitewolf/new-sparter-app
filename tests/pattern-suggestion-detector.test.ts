@@ -194,15 +194,32 @@ describe('detectPatternSuggestions', () => {
     expect(suggestions[0].matchCount).toBe(3)
   })
 
-  it('SUG-07c: rows differing only in stripped numeric tokens emit no suggestion', () => {
-    // "12345" and "67890" are purely numeric → stripped away, leaving ["pagamento", "pos"]
-    // for both rows. Shared prefix also equals ["pagamento", "pos"], so no row extends
-    // beyond the prefix → fully identical post-strip → no suggestion.
+  it('SUG-07c: rows differing only in stripped numeric tokens emit one suggestion', () => {
+    // "12345" and "67890" are purely numeric → stripped, leaving ["pagamento", "pos"] for
+    // prefix computation. But the raw descriptions ARE different: different hashes → Tier 2
+    // does NOT cross-match them. A regex pattern "pagamento pos" IS useful here.
     const rows = [
       row({ normalizedDescription: 'pagamento pos 12345' }),
       row({ normalizedDescription: 'pagamento pos 67890' }),
     ]
     const suggestions = detectPatternSuggestions(rows, [])
-    expect(suggestions).toHaveLength(0)
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0].pattern).toBe('pagamento pos')
+    expect(suggestions[0].matchCount).toBe(2)
+  })
+
+  it('SUG-07d: virtual-card rows with numeric reference suffix emit one suggestion', () => {
+    // "Revolut **5920* 1505" and "Revolut **5920* 1506": the reference suffix is numeric →
+    // stripped, leaving ["revolut", "**5920*"]. The full descriptions differ → different
+    // hashes → Tier 2 does NOT cross-match → pattern "revolut \\*\\*5920\\*" is useful.
+    const rows = [
+      row({ normalizedDescription: 'revolut **5920* 1505' }),
+      row({ normalizedDescription: 'revolut **5920* 1506' }),
+      row({ normalizedDescription: 'revolut **5920* 1507' }),
+    ]
+    const suggestions = detectPatternSuggestions(rows, [])
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0].pattern).toBe('revolut \\*\\*5920\\*')
+    expect(suggestions[0].matchCount).toBe(3)
   })
 })

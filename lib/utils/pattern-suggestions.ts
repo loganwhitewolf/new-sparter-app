@@ -133,13 +133,15 @@ export function detectPatternSuggestions(
     }
     if (prefix.length < 2) continue
 
-    // Partial-match-only: skip buckets where every member's stripped token list
-    // is exactly the shared prefix. Fully identical normalized descriptions
-    // (after numeric stripping) are covered by Tier 2 (history) categorization
-    // once the user assigns a category to one of them; surfacing a regex
-    // suggestion for them is noise. See docs/adr/0002.
-    const hasExtension = group.some(g => g.tokens.length > prefix.length)
-    if (!hasExtension) continue
+    // Skip only when every description in the group is literally identical (same normalized text).
+    // Identical descriptions → same descriptionHash → same expense record → Tier 2 handles
+    // them after one manual categorization. Descriptions that differ (even only in numeric
+    // tokens such as reference numbers) have different hashes and are NOT cross-matched by
+    // Tier 2; those groups need a regex pattern. See docs/adr/0002.
+    const allLiterallyIdentical = group.every(
+      g => g.row.normalizedDescription === group[0].row.normalizedDescription
+    )
+    if (allLiterallyIdentical) continue
 
     const prefixString = prefix.join(' ')
     const escaped = escapeRegex(prefixString)

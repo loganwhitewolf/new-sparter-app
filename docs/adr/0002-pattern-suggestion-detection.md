@@ -19,7 +19,7 @@ Numeric stripping is intentional: bank reference numbers and dates vary per tran
 
 Pattern detection runs only on rows not already matched by an active `CategorizationPattern`. Suggesting patterns where coverage already exists produces noise, not value.
 
-**Partial matches only.** A bucket of fully identical normalized descriptions (after numeric stripping) does not produce a suggestion. Identical descriptions are covered by Tier 2 (history) categorization once the user assigns a category to one of them; surfacing a regex for them is noise. The detector requires at least one row in the bucket to have stripped tokens beyond the shared prefix.
+**Literal duplicates only suppressed.** A bucket where every description is literally identical (same raw normalized text, not just same stripped-token list) does not produce a suggestion. Literally identical descriptions share the same `descriptionHash` and map to the same expense record; Tier 2 handles them after one manual categorization. Descriptions that differ only in numeric tokens (e.g., reference numbers or date suffixes) have different hashes and are NOT cross-matched by Tier 2 — those buckets DO produce a suggestion because a regex pattern is the only reliable way to capture all variants.
 
 ### Timing: part of ImportAnalysisResult, re-analysis on persisted transactions
 
