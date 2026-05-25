@@ -1175,8 +1175,8 @@ export const getAggregatedTransactionsData = cache(
       rows = await db
         .select({
           month: monthSql,
-          totalIn: sql<string>`coalesce(sum(case when ${transactionTable.amount} > 0 and (${category.slug} is null or ${category.slug} <> 'ignore') then ${transactionTable.amount} else 0 end), 0)::text`,
-          totalOut: sql<string>`coalesce(abs(sum(case when ${transactionTable.amount} < 0 and (${category.slug} is null or ${category.slug} <> 'ignore') then ${transactionTable.amount} else 0 end)), 0)::text`,
+          totalIn: sql<string>`coalesce(sum(case when ${transactionTable.amount} > 0 and (${category.slug} is null or ${category.slug} <> 'ignore') and (${subCategory.excludeFromTotals} is null or ${subCategory.excludeFromTotals} = false) then ${transactionTable.amount} else 0 end), 0)::text`,
+          totalOut: sql<string>`coalesce(abs(sum(case when ${transactionTable.amount} < 0 and (${category.slug} is null or ${category.slug} <> 'ignore') and (${subCategory.excludeFromTotals} is null or ${subCategory.excludeFromTotals} = false) then ${transactionTable.amount} else 0 end)), 0)::text`,
           totalNc: sql<number>`count(distinct case when ${expense.status} = '1' and ${expense.subCategoryId} is null then ${expense.id} end)`,
           totalIgn: sql<number>`count(distinct case when ${category.slug} = 'ignore' then ${expense.id} end)`,
         })
