@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: milestone
 current_phase: 36
-status: completed
+status: shipped
 stopped_at: context exhaustion at 75% (2026-05-25)
 last_updated: "2026-05-25T12:06:21.652Z"
-last_activity: "2026-05-25 - Completed quick task 260525-ga2: fix applyNewPatternToExpenses"
+last_activity: "2026-05-25 - Shipped milestone v1.8 — PR #8"
 progress:
   total_phases: 4
   completed_phases: 4
