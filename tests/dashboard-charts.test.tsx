@@ -21,8 +21,9 @@ const { EntrateUsciteChart } = await import('@/components/dashboard/entrate-usci
 const { BilancioBarsChart } = await import('@/components/dashboard/bilancio-bars-chart')
 
 // Fixture shaped for MonthlyNatureTrendPoint (Plan 37-03 will define this type).
-// segments keys are FlowNature values; values are decimal strings.
-const data = [
+// Cast as any: MonthlyNatureTrendPoint does not exist yet; type errors would block tsc rather than produce runtime RED failures.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const data: any[] = [
   {
     month: '2026-01',
     label: 'Gen',
