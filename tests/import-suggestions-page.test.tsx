@@ -169,14 +169,14 @@ describe('suggestions page', () => {
     expect(callArg).toHaveLength(1)
     expect(callArg[0]).toEqual({
       description: 'X',
-      normalizedDescription: 'X',
+      normalizedDescription: 'x',
       amount: '-1.00',
       valid: true,
       covered: false,
     })
   })
 
-  it('POST-01/POST-02 adapter: normalizes description to uppercase with collapsed whitespace', async () => {
+  it('POST-01/POST-02 adapter: normalizes description to lowercase with collapsed whitespace', async () => {
     mocks.getUncategorizedTransactionsByFileId.mockResolvedValue([
       { description: 'Coffee  Shop 001', amount: '-4.50' },
     ])
@@ -186,7 +186,7 @@ describe('suggestions page', () => {
     expect(callArg).toHaveLength(1)
     expect(callArg[0]).toEqual({
       description: 'Coffee  Shop 001',
-      normalizedDescription: 'COFFEE SHOP 001',
+      normalizedDescription: 'coffee shop 001',
       amount: '-4.50',
       valid: true,
       covered: false,

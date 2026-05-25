@@ -59,20 +59,42 @@ export async function createPattern(
 ): Promise<PatternRow> {
   const normalizedPattern = normalizePatternInput(input.pattern)
 
-  const rows = await database
-    .insert(categorizationPattern)
-    .values({
-      userId: input.userId,
-      pattern: normalizedPattern,
-      subCategoryId: input.subCategoryId,
-      amountSign: input.amountSign,
-      confidence: input.confidence.toFixed(2),
-      priority: 100,
-      description: input.description ?? null,
-      isActive: true,
-    })
-    .returning()
-  return rows[0] as PatternRow
+  try {
+    const rows = await database
+      .insert(categorizationPattern)
+      .values({
+        userId: input.userId,
+        pattern: normalizedPattern,
+        subCategoryId: input.subCategoryId,
+        amountSign: input.amountSign,
+        confidence: input.confidence.toFixed(2),
+        priority: 100,
+        description: input.description ?? null,
+        isActive: true,
+      })
+      .returning()
+    return rows[0] as PatternRow
+  } catch (err) {
+    // Unique violation: the row may be a soft-deleted user pattern — reactivate it.
+    // If the conflict is on a system pattern or another user's pattern, re-throw.
+    if ((err as any)?.cause?.code === '23505') {
+      const reactivated = await database
+        .update(categorizationPattern)
+        .set({ isActive: true, updatedAt: new Date() })
+        .where(
+          and(
+            eq(categorizationPattern.pattern, normalizedPattern),
+            eq(categorizationPattern.subCategoryId, input.subCategoryId),
+            eq(categorizationPattern.amountSign, input.amountSign),
+            eq(categorizationPattern.userId, input.userId),
+            eq(categorizationPattern.isActive, false),
+          ),
+        )
+        .returning()
+      if (reactivated[0]) return reactivated[0] as PatternRow
+    }
+    throw err
+  }
 }
 
 export async function updatePattern(

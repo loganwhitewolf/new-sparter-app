@@ -94,6 +94,7 @@ vi.mock('@/lib/db/schema', () => ({
   expense: {
     id: 'expense.id',
     status: 'expense.status',
+    subCategoryId: 'expense.subCategoryId',
     title: 'expense.title',
     userId: 'expense.userId',
   },
@@ -399,7 +400,7 @@ function makeWhereTerminalChain(finalValue: unknown[] = []) {
     innerJoin: vi.fn(() => chain),
     where: vi.fn((arg: unknown) => {
       mocks.whereArgs.push(arg)
-      return Promise.resolve(finalValue)
+      return { limit: vi.fn(() => Promise.resolve(finalValue)) }
     }),
     select: vi.fn((shape: unknown) => {
       mocks.selectedShapes.push(shape)
@@ -416,7 +417,7 @@ describe('getUncategorizedTransactionsByFileId', () => {
     mocks.verifySession.mockReset()
   })
 
-  it('returns only description+amount rows and filters by fileId + expenseId IS NULL (POST-04)', async () => {
+  it('returns only description+amount rows and filters by fileId + expense.subCategoryId IS NULL (POST-04)', async () => {
     const chain = makeWhereTerminalChain([{ description: 'AMAZON 123', amount: '-12.50' }])
     const { getUncategorizedTransactionsByFileId } = await import('@/lib/dal/transactions')
     const result = await getUncategorizedTransactionsByFileId(chain as never, 'file-1', 'user-1')
@@ -426,20 +427,26 @@ describe('getUncategorizedTransactionsByFileId', () => {
     expect(lastWhere.op).toBe('and')
     expect(lastWhere.args).toEqual(
       expect.arrayContaining([
-        { op: 'isNull', column: 'transaction.expenseId' },
+        { op: 'isNull', column: 'expense.subCategoryId' },
         { op: 'eq', left: 'transaction.fileId', right: 'file-1' },
       ]),
     )
   })
 
-  it('enforces ownership via innerJoin on importFile and userId equality (POST-03)', async () => {
+  it('enforces ownership via innerJoin on importFile and expense (POST-03)', async () => {
     const chain = makeWhereTerminalChain([])
     const { getUncategorizedTransactionsByFileId } = await import('@/lib/dal/transactions')
     await getUncategorizedTransactionsByFileId(chain as never, 'file-1', 'user-1')
-    expect(chain.innerJoin).toHaveBeenCalledTimes(1)
-    expect(chain.innerJoin).toHaveBeenCalledWith(
+    expect(chain.innerJoin).toHaveBeenCalledTimes(2)
+    expect(chain.innerJoin).toHaveBeenNthCalledWith(
+      1,
       expect.anything(), // importFile schema reference
       expect.anything(), // join condition: eq(transaction.fileId, importFile.id)
+    )
+    expect(chain.innerJoin).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(), // expense schema reference
+      expect.anything(), // join condition: eq(transaction.expenseId, expense.id)
     )
     const lastWhere = mocks.whereArgs.at(-1) as { op: string; args: unknown[] }
     expect(lastWhere.op).toBe('and')

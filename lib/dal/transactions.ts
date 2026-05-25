@@ -419,11 +419,12 @@ export async function getUncategorizedTransactionsByFileId(
     })
     .from(transaction)
     .innerJoin(importFile, eq(transaction.fileId, importFile.id))
+    .innerJoin(expense, eq(transaction.expenseId, expense.id))
     .where(
       and(
         eq(transaction.fileId, fileId),
         eq(importFile.userId, userId),
-        isNull(transaction.expenseId),
+        isNull(expense.subCategoryId),
       ),
     )
     .limit(UNCATEGORIZED_TX_LIMIT)

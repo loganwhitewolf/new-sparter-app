@@ -39,6 +39,10 @@ L'atto di assegnare categoria e sottocategoria a una transazione. Può avvenire 
 Transazione senza categoria e sottocategoria assegnate. È un segnale d'azione, non uno stato definitivo.
 _Avoid_: da classificare
 
+**PatternSuggestion** (Suggerimento di pattern):
+Candidato regex rilevato automaticamente durante la fase di analisi dell'import, a partire da descrizioni di transazioni non coperte da pattern esistenti che condividono un prefisso comune (≥2 token, ≥2 occorrenze nel file). Campi: `pattern` (prefisso estratto), `matchCount` (occorrenze nel file/import), `detectedAmountSign`, `sampleDescriptions` (max 3 descrizioni originali). Non è un `CategorizationPattern` finché l'utente non assegna una sottocategoria e lo salva. Può essere prodotto sia pre-import (da righe parse) sia post-import su transazioni già persistite (per rianalisi per `fileId`). Al massimo 5 per analisi, ordinate per `matchCount` discendente.
+_Avoid_: pattern suggerito, candidato, hint
+
 ### Dashboard e analisi
 
 **Reference Period** (Periodo di riferimento):

@@ -9,6 +9,7 @@ import {
   detectPatternSuggestions,
   type PatternDetectorRow,
 } from '@/lib/utils/pattern-suggestions'
+import { normalizeDescription } from '@/lib/utils/import'
 import { SuggestionSection } from '@/components/import/suggestion-section'
 
 export default async function SuggestionsPage({
@@ -32,7 +33,7 @@ export default async function SuggestionsPage({
 
   const detectorRows: PatternDetectorRow[] = uncategorizedTxs.map((t) => ({
     description: t.description,
-    normalizedDescription: t.description.toUpperCase().replace(/\s+/g, ' ').trim(),
+    normalizedDescription: normalizeDescription(t.description),
     amount: t.amount,
     valid: true,
     covered: false,
