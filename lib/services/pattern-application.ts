@@ -58,11 +58,14 @@ export async function applyNewPatternToExpenses(
   console.info('[applyNewPatternToExpenses] scanned', { userId, patternId, uncategorizedCount: uncategorized.length })
 
   const matchingIds = uncategorized
-    .filter(
-      (e) =>
-        regex.test(normalizeDescription(e.title)) &&
-        totalAmountMatchesSign(amountSign, e.totalAmount),
-    )
+    .filter((e) => {
+      const normalized = normalizeDescription(e.title)
+      // Patterns generated from suggestions strip pure-numeric tokens (e.g. "114" in
+      // "***** 114 data operazione"). Test against both the full normalized title and
+      // the stripped form so suggestion-generated patterns still match.
+      const stripped = normalized.split(/\s+/).filter(t => t.length > 0 && !/^\d+$/.test(t)).join(' ')
+      return (regex.test(normalized) || regex.test(stripped)) && totalAmountMatchesSign(amountSign, e.totalAmount)
+    })
     .map((e) => e.id)
 
   console.info('[applyNewPatternToExpenses] matched', { userId, patternId, matchedCount: matchingIds.length, sample: matchingIds.slice(0, 5) })

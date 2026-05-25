@@ -84,7 +84,8 @@ export function applyTier1Regex(
   for (const p of patterns) {
     try {
       const regex = new RegExp(p.pattern, 'i')
-      if (regex.test(description) && amountSignMatches(p.amountSign, amount)) {
+      const stripped = description.split(/\s+/).filter(t => t.length > 0 && !/^\d+$/.test(t)).join(' ')
+      if ((regex.test(description) || regex.test(stripped)) && amountSignMatches(p.amountSign, amount)) {
         const source = p.userId === null ? 'system_pattern' : 'user_pattern'
         return {
           subCategoryId: p.subCategoryId,
