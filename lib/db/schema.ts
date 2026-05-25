@@ -49,6 +49,15 @@ export const classificationSourceEnum = pgEnum("classification_source", [
   "import_default",
 ]);
 
+export const flowNatureEnum = pgEnum("flow_nature", [
+  "essential",
+  "discretionary",
+  "operational",
+  "financial",
+  "debt",
+  "extraordinary",
+]);
+
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -179,6 +188,7 @@ export const subCategory = pgTable(
     displayOrder: integer("display_order").default(0),
     isActive: boolean("is_active").default(true).notNull(),
     excludeFromTotals: boolean("exclude_from_totals").default(false).notNull(),
+    nature: flowNatureEnum("nature"),
   },
   (table) => [
     index("sub_category_userId_idx").on(table.userId),
@@ -202,7 +212,8 @@ export const userSubcategoryOverride = pgTable(
     subCategoryId: integer("sub_category_id")
       .notNull()
       .references(() => subCategory.id, { onDelete: "cascade" }),
-    customName: varchar("custom_name", { length: 100 }).notNull(),
+    customName: varchar("custom_name", { length: 100 }),
+    nature: flowNatureEnum("nature"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
