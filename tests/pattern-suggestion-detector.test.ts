@@ -208,6 +208,29 @@ describe('detectPatternSuggestions', () => {
     expect(suggestions[0].matchCount).toBe(2)
   })
 
+  it('SUG-08: coverage check strips numeric tokens before regex match — existing pattern covers new rows with numeric tokens', () => {
+    // Stored pattern was built from stripped descriptions: no numeric tokens (e.g. no '114').
+    // New import rows still carry the numeric reference between non-numeric tokens, so a
+    // naive regex test against the full normalizedDescription fails. The fix: also test
+    // against the stripped form of the description, matching applyTier1Regex behavior.
+    const coverage: CoveragePattern[] = [{
+      pattern: 'revolut\\*\\*5920\\* dublin ie carta n\\. \\*\\*\\*\\*\\* data operazione',
+      amountSign: 'negative',
+    }]
+    const rows = [
+      row({
+        normalizedDescription: 'revolut**5920* dublin ie carta n. ***** 114 data operazione',
+        amount: '-50.00',
+      }),
+      row({
+        normalizedDescription: 'revolut**5920* dublin ie carta n. ***** 115 data operazione',
+        amount: '-75.00',
+      }),
+    ]
+    // Both rows are covered by the existing pattern → no new suggestion emitted
+    expect(detectPatternSuggestions(rows, coverage)).toHaveLength(0)
+  })
+
   it('SUG-07d: virtual-card rows with numeric reference suffix emit one suggestion', () => {
     // "Revolut **5920* 1505" and "Revolut **5920* 1506": the reference suffix is numeric →
     // stripped, leaving ["revolut", "**5920*"]. The full descriptions differ → different
