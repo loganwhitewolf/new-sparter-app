@@ -70,7 +70,7 @@ async function seed() {
   console.log(`  ${categories.length} categories inserted (or already present).`)
 
   console.log('Seeding subcategories...')
-  await db.insert(subCategory).values(subCategories).onConflictDoNothing()
+  await db.insert(subCategory).values(subCategories as Array<typeof subCategory.$inferInsert>).onConflictDoNothing()
   console.log(`  ${subCategories.length} sottocategories inserted (or already present).`)
 
   await db

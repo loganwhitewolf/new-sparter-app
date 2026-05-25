@@ -264,7 +264,7 @@ export async function renameUserSubcategory(
 export async function upsertSystemSubcategoryOverride(
   userId: string,
   subCategoryId: number,
-  customName: string,
+  customName: string | null,
   database: DbOrTx = db,
 ) {
   const rows = await database

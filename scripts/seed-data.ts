@@ -226,6 +226,7 @@ export const subCategories = [
     slug: "conto-risparmio",
     displayOrder: 0,
     isActive: true,
+    nature: 'extraordinary',
   },
   {
     categoryId: 1,
@@ -233,6 +234,7 @@ export const subCategories = [
     slug: "fondo-emergenze",
     displayOrder: 0,
     isActive: true,
+    nature: 'extraordinary',
   },
   {
     categoryId: 1,
@@ -240,6 +242,7 @@ export const subCategories = [
     slug: "fondo-pensione",
     displayOrder: 0,
     isActive: true,
+    nature: 'extraordinary',
   },
   {
     categoryId: 1,
@@ -247,6 +250,7 @@ export const subCategories = [
     slug: "risparmio-per-progetti",
     displayOrder: 0,
     isActive: true,
+    nature: 'extraordinary',
   },
   {
     categoryId: 1,
@@ -254,6 +258,7 @@ export const subCategories = [
     slug: "risparmio-per-investimenti",
     displayOrder: 0,
     isActive: true,
+    nature: 'extraordinary',
   },
   {
     categoryId: 1,
@@ -261,6 +266,7 @@ export const subCategories = [
     slug: "obiettivi-a-lungo-termine",
     displayOrder: 0,
     isActive: true,
+    nature: 'extraordinary',
   },
   {
     categoryId: 1,
@@ -268,6 +274,7 @@ export const subCategories = [
     slug: "risparmio-per-salute",
     displayOrder: 0,
     isActive: true,
+    nature: 'extraordinary',
   },
   {
     categoryId: 2,
@@ -275,6 +282,7 @@ export const subCategories = [
     slug: "altri-abbonamenti",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 2,
@@ -282,6 +290,7 @@ export const subCategories = [
     slug: "streaming-video",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 2,
@@ -289,6 +298,7 @@ export const subCategories = [
     slug: "streaming-musica",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 2,
@@ -296,6 +306,7 @@ export const subCategories = [
     slug: "software-e-app",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 2,
@@ -303,6 +314,7 @@ export const subCategories = [
     slug: "servizi-telefonici-e-internet",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 2,
@@ -310,6 +322,7 @@ export const subCategories = [
     slug: "piattaforme-didattiche",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 2,
@@ -317,6 +330,7 @@ export const subCategories = [
     slug: "banca",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 3,
@@ -324,6 +338,7 @@ export const subCategories = [
     slug: "auto",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 3,
@@ -331,6 +346,7 @@ export const subCategories = [
     slug: "casa",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 3,
@@ -338,6 +354,7 @@ export const subCategories = [
     slug: "salute",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 3,
@@ -345,6 +362,7 @@ export const subCategories = [
     slug: "viaggio",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 3,
@@ -352,6 +370,7 @@ export const subCategories = [
     slug: "responsabilita-civile",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 3,
@@ -359,6 +378,7 @@ export const subCategories = [
     slug: "animali-domestici",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 4,
@@ -366,6 +386,7 @@ export const subCategories = [
     slug: "alloggio",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 4,
@@ -373,6 +394,7 @@ export const subCategories = [
     slug: "trasporto",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 4,
@@ -380,6 +402,7 @@ export const subCategories = [
     slug: "attivita-e-intrattenimento",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 4,
@@ -387,6 +410,7 @@ export const subCategories = [
     slug: "cibo-e-bevande",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 4,
@@ -394,6 +418,7 @@ export const subCategories = [
     slug: "assicurazione-viaggio",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 5,
@@ -401,6 +426,7 @@ export const subCategories = [
     slug: "compleanni",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 5,
@@ -408,6 +434,7 @@ export const subCategories = [
     slug: "festivita",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 5,
@@ -415,6 +442,7 @@ export const subCategories = [
     slug: "anniversari",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 5,
@@ -422,6 +450,7 @@ export const subCategories = [
     slug: "amici-e-conoscenti",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 7,
@@ -429,6 +458,7 @@ export const subCategories = [
     slug: "carburante",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 7,
@@ -436,6 +466,7 @@ export const subCategories = [
     slug: "elettricita-per-auto",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 7,
@@ -443,6 +474,7 @@ export const subCategories = [
     slug: "mezzi-pubblici",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 7,
@@ -450,6 +482,7 @@ export const subCategories = [
     slug: "taxi-e-ride-sharing",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 7,
@@ -457,6 +490,7 @@ export const subCategories = [
     slug: "treno",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 7,
@@ -464,6 +498,7 @@ export const subCategories = [
     slug: "pedaggi-autostradali",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 7,
@@ -471,6 +506,7 @@ export const subCategories = [
     slug: "spese-telepass",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 7,
@@ -478,6 +514,7 @@ export const subCategories = [
     slug: "ztl-e-parcheggi",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 8,
@@ -485,6 +522,7 @@ export const subCategories = [
     slug: "supermercato",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 8,
@@ -492,6 +530,7 @@ export const subCategories = [
     slug: "spesa-online",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 8,
@@ -499,6 +538,7 @@ export const subCategories = [
     slug: "prodotti-freschi",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 8,
@@ -506,6 +546,7 @@ export const subCategories = [
     slug: "prodotti-non-alimentari",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 8,
@@ -513,6 +554,7 @@ export const subCategories = [
     slug: "spesa-bio",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 9,
@@ -520,6 +562,7 @@ export const subCategories = [
     slug: "visite-mediche",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 9,
@@ -527,6 +570,7 @@ export const subCategories = [
     slug: "farmaci-e-medicinali",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 9,
@@ -534,6 +578,7 @@ export const subCategories = [
     slug: "trattamenti-medici",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 9,
@@ -541,6 +586,7 @@ export const subCategories = [
     slug: "farmaci-generici",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 9,
@@ -548,6 +594,7 @@ export const subCategories = [
     slug: "parafarmaceutici",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 10,
@@ -555,6 +602,7 @@ export const subCategories = [
     slug: "cene-fuori",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 10,
@@ -562,6 +610,7 @@ export const subCategories = [
     slug: "pranzi",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 10,
@@ -569,6 +618,7 @@ export const subCategories = [
     slug: "colazioni-e-snack",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 10,
@@ -576,6 +626,7 @@ export const subCategories = [
     slug: "take-away",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 11,
@@ -583,6 +634,7 @@ export const subCategories = [
     slug: "elettronica",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 11,
@@ -590,6 +642,7 @@ export const subCategories = [
     slug: "abbigliamento",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 11,
@@ -597,6 +650,7 @@ export const subCategories = [
     slug: "prodotti-per-la-casa",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 11,
@@ -604,6 +658,7 @@ export const subCategories = [
     slug: "giocattoli",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 11,
@@ -611,6 +666,7 @@ export const subCategories = [
     slug: "scarpe",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 11,
@@ -618,6 +674,7 @@ export const subCategories = [
     slug: "accessori",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 11,
@@ -625,6 +682,7 @@ export const subCategories = [
     slug: "attrezzatura-sportiva",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 12,
@@ -632,6 +690,7 @@ export const subCategories = [
     slug: "azioni",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 12,
@@ -639,6 +698,7 @@ export const subCategories = [
     slug: "obbligazioni",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 12,
@@ -646,6 +706,7 @@ export const subCategories = [
     slug: "criptovalute",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 12,
@@ -653,6 +714,7 @@ export const subCategories = [
     slug: "fondi-comuni",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 12,
@@ -660,6 +722,7 @@ export const subCategories = [
     slug: "immobili",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 13,
@@ -667,6 +730,7 @@ export const subCategories = [
     slug: "energia-elettrica",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 13,
@@ -674,6 +738,7 @@ export const subCategories = [
     slug: "gas",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 13,
@@ -681,6 +746,7 @@ export const subCategories = [
     slug: "acqua",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 13,
@@ -688,6 +754,7 @@ export const subCategories = [
     slug: "rifiuti",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 14,
@@ -695,6 +762,7 @@ export const subCategories = [
     slug: "mutuo-casa",
     displayOrder: 0,
     isActive: true,
+    nature: 'debt',
   },
   {
     categoryId: 14,
@@ -702,6 +770,7 @@ export const subCategories = [
     slug: "finanziamenti-auto",
     displayOrder: 0,
     isActive: true,
+    nature: 'debt',
   },
   {
     categoryId: 14,
@@ -709,6 +778,7 @@ export const subCategories = [
     slug: "altri-finanziamenti",
     displayOrder: 0,
     isActive: true,
+    nature: 'debt',
   },
   {
     categoryId: 15,
@@ -716,6 +786,7 @@ export const subCategories = [
     slug: "imposte",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 15,
@@ -723,6 +794,7 @@ export const subCategories = [
     slug: "imposte-governative",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 15,
@@ -730,6 +802,7 @@ export const subCategories = [
     slug: "bolli-auto",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 15,
@@ -737,6 +810,7 @@ export const subCategories = [
     slug: "commissioni-bancarie",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 18,
@@ -744,6 +818,7 @@ export const subCategories = [
     slug: "spese-scolastiche",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 18,
@@ -751,6 +826,7 @@ export const subCategories = [
     slug: "attivita-extra-scolastiche",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 18,
@@ -758,6 +834,7 @@ export const subCategories = [
     slug: "baby-sitter",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 19,
@@ -765,6 +842,7 @@ export const subCategories = [
     slug: "manutenzione-ordinaria",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 19,
@@ -772,6 +850,7 @@ export const subCategories = [
     slug: "ristrutturazione",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 19,
@@ -779,6 +858,7 @@ export const subCategories = [
     slug: "affitto",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 19,
@@ -786,6 +866,7 @@ export const subCategories = [
     slug: "badante",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 19,
@@ -793,6 +874,7 @@ export const subCategories = [
     slug: "servizi-di-pulizia",
     displayOrder: 0,
     isActive: true,
+    nature: 'essential',
   },
   {
     categoryId: 21,
@@ -800,6 +882,7 @@ export const subCategories = [
     slug: "corsi-online",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 21,
@@ -807,6 +890,7 @@ export const subCategories = [
     slug: "universita",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 21,
@@ -814,6 +898,7 @@ export const subCategories = [
     slug: "corsi-di-specializzazione",
     displayOrder: 0,
     isActive: true,
+    nature: 'operational',
   },
   {
     categoryId: 22,
@@ -821,6 +906,7 @@ export const subCategories = [
     slug: "libri-cartacei",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 22,
@@ -828,6 +914,7 @@ export const subCategories = [
     slug: "e-book",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 22,
@@ -835,6 +922,7 @@ export const subCategories = [
     slug: "audiolibri",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 23,
@@ -842,6 +930,7 @@ export const subCategories = [
     slug: "cinema",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 23,
@@ -849,6 +938,7 @@ export const subCategories = [
     slug: "eventi",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 24,
@@ -856,6 +946,7 @@ export const subCategories = [
     slug: "stipendio-base",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 24,
@@ -863,6 +954,7 @@ export const subCategories = [
     slug: "bonus",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 24,
@@ -870,6 +962,7 @@ export const subCategories = [
     slug: "indennita",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 24,
@@ -877,6 +970,7 @@ export const subCategories = [
     slug: "overtime",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 24,
@@ -884,6 +978,7 @@ export const subCategories = [
     slug: "freelance",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 24,
@@ -891,6 +986,7 @@ export const subCategories = [
     slug: "consulenze",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 24,
@@ -898,6 +994,7 @@ export const subCategories = [
     slug: "progetti-occasionali",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 24,
@@ -905,6 +1002,7 @@ export const subCategories = [
     slug: "commissioni",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 25,
@@ -912,6 +1010,7 @@ export const subCategories = [
     slug: "dividendi-azionari",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 25,
@@ -919,6 +1018,7 @@ export const subCategories = [
     slug: "dividendi-fondi-comuni",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 25,
@@ -926,6 +1026,7 @@ export const subCategories = [
     slug: "dividendi-immobiliari",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 26,
@@ -933,6 +1034,7 @@ export const subCategories = [
     slug: "rimborso-spese-lavorative",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 26,
@@ -940,6 +1042,7 @@ export const subCategories = [
     slug: "rimborso-spese-sanitarie",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 26,
@@ -947,6 +1050,7 @@ export const subCategories = [
     slug: "rimborso-spese-viaggi",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 26,
@@ -954,6 +1058,7 @@ export const subCategories = [
     slug: "rimborso-ordine-online",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 26,
@@ -961,6 +1066,7 @@ export const subCategories = [
     slug: "cashback-carta-di-credito",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 26,
@@ -968,6 +1074,7 @@ export const subCategories = [
     slug: "cashback-acquisti-online",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 26,
@@ -975,6 +1082,7 @@ export const subCategories = [
     slug: "cashback-programmi-fedelta",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 26,
@@ -982,6 +1090,7 @@ export const subCategories = [
     slug: "sconto-abbonamento",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 26,
@@ -989,6 +1098,7 @@ export const subCategories = [
     slug: "sconto-promozionale",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 26,
@@ -996,6 +1106,7 @@ export const subCategories = [
     slug: "sconto-canone",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 27,
@@ -1003,6 +1114,7 @@ export const subCategories = [
     slug: "vendita-di-beni-usati",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 27,
@@ -1010,6 +1122,7 @@ export const subCategories = [
     slug: "commercio-online",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 27,
@@ -1017,6 +1130,7 @@ export const subCategories = [
     slug: "immobili-vendita",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 27,
@@ -1024,6 +1138,7 @@ export const subCategories = [
     slug: "vendita-investimenti",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 28,
@@ -1031,6 +1146,7 @@ export const subCategories = [
     slug: "bonifico-in-entrata",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 28,
@@ -1038,6 +1154,7 @@ export const subCategories = [
     slug: "ricariche-conti",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 32,
@@ -1045,6 +1162,7 @@ export const subCategories = [
     slug: "trasferimento",
     displayOrder: 0,
     isActive: true,
+    nature: null,
   },
   {
     categoryId: 32,
@@ -1052,6 +1170,7 @@ export const subCategories = [
     slug: "addebito-carta-di-credito",
     displayOrder: 0,
     isActive: true,
+    nature: null,
   },
   {
     categoryId: 33,
@@ -1059,6 +1178,7 @@ export const subCategories = [
     slug: "cure-estetiche",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 33,
@@ -1066,6 +1186,7 @@ export const subCategories = [
     slug: "sport",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 33,
@@ -1073,6 +1194,7 @@ export const subCategories = [
     slug: "psicologia",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 33,
@@ -1080,6 +1202,7 @@ export const subCategories = [
     slug: "massaggi",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 33,
@@ -1087,6 +1210,7 @@ export const subCategories = [
     slug: "corsi-fitness",
     displayOrder: 0,
     isActive: true,
+    nature: 'discretionary',
   },
   {
     categoryId: 34,
@@ -1094,6 +1218,7 @@ export const subCategories = [
     slug: "bonifico-in-uscita",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
   {
     categoryId: 34,
@@ -1101,6 +1226,7 @@ export const subCategories = [
     slug: "rimborsi",
     displayOrder: 0,
     isActive: true,
+    nature: 'financial',
   },
 ]
 
