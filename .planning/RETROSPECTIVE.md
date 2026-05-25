@@ -4,6 +4,48 @@ Living retrospective — one section per milestone, newest first.
 
 ---
 
+## Milestone: v1.10 — Pattern Suggestions
+
+**Shipped:** 2026-05-25
+**Phases:** 4 (33, 34, 35, 36) | **Plans:** 9 | **Quick Tasks:** 2 | **Timeline:** 4 days
+
+### What Was Built
+
+- Pure `detectPatternSuggestions` utility with ADR-compliant token-prefix algorithm
+- `ImportAnalysisResult` extended with `patternSuggestions`; detection in isolated try/catch
+- `promoteSuggestionAction` server action with auth gate, input validation, anti-tampering
+- `SuggestionSection` / `SuggestionCard` / `SuggestionPromoteForm` UI components
+- `ImportPreview` + `AnalyzePage` parallel fetch wiring — 577 Vitest tests GREEN
+- `getUncategorizedTransactionsByFileId` DAL with `innerJoin` ownership enforcement
+- `/import/[fileId]/suggestions` server component page + "Rivedi suggerimenti" dropdown entry
+- Quick-task fixes: partial-match-only rule (SUG-07), `applyNewPatternToExpenses` numeric-token strip
+
+### What Worked
+
+- TDD wave structure (RED→GREEN) on phase 35 made the implementation fast and verified from day one — no regressions during wiring
+- Isolated try/catch decision for detection early in plan phase removed ambiguity about error handling throughout execution
+- `innerJoin` for ownership enforcement in DAL caught the ownership requirement at the data layer — no need for a separate guard elsewhere
+- ADR 0002 as a single source of truth made the algorithm contract clear across all 4 phases without re-debating design
+
+### What Was Inefficient
+
+- REQUIREMENTS.md checkboxes for phases 33/34 were not updated during execution — discovered only at milestone close; adds noise to readiness checks
+- ROADMAP.md progress table rows for phases 33/34 were not updated after execution — minor tracking lag
+- GSD toolkit local install removed from `.claude/` mid-milestone (migration to global install); staged as a large deletion commit, slightly noisy in git log
+
+### Patterns Established
+
+- `normalizeDescription` utility extracted for consistent uppercase+trim — previously inlined in multiple places
+- `createPattern` reactivation pattern for soft-deleted rows on unique constraint — reusable DAL pattern for any entity with soft-delete
+- Parallel `Promise.all` fetch in server components with owned-resource guard (`notFound()`) — mirrors `AnalyzePage`, now consistent across import sub-pages
+
+### Key Lessons
+
+- Keep phase completion tracking (REQUIREMENTS.md checkboxes, ROADMAP.md table) in sync during execution — stale tracking creates noise at close and can mask genuine gaps
+- Quick tasks during a milestone's tail are fine but should note which requirement they affect; 260525-ga2 was effectively REQ-adjacent and should have been linked
+
+---
+
 ## Milestone: v1.9 — Social Auth
 
 **Shipped:** 2026-05-22
