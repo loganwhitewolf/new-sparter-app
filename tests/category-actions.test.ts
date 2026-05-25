@@ -234,3 +234,30 @@ describe('category Server Actions', () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
   })
 })
+
+describe('createSubcategoryAction nature requirement (R-FN-09 action layer)', () => {
+  it('setSubcategoryNatureAction exists as an export (R-FN-07) — RED until Plan 37-05 ships', async () => {
+    try {
+      const actions = await import('../lib/actions/categories')
+      const action = (actions as Record<string, unknown>)['setSubcategoryNatureAction']
+      expect(action).toBeDefined()
+    } catch {
+      // Plan 37-05 has not landed yet — this is the expected RED state
+      expect(true).toBe(false)
+    }
+  })
+
+  it('createSubcategoryAction returns validation error when nature is missing (R-FN-09) — RED until Plan 37-05 extends schema', async () => {
+    const fd = new FormData()
+    fd.append('name', 'Test Sub')
+    fd.append('categoryId', '1')
+    // intentionally omit nature field
+
+    const { createSubcategoryAction } = await import('../lib/actions/categories')
+    const result = await createSubcategoryAction({ error: null }, fd)
+    // After Plan 37-05, nature becomes required and this should return a validation error
+    // Currently passes without nature — so we assert the OPPOSITE to keep it RED
+    expect(result).toHaveProperty('error')
+    expect(result.error).not.toBeNull()
+  })
+})
