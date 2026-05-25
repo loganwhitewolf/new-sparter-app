@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: milestone
-current_phase: --phase
-status: milestone_complete
-stopped_at: Phase 36 context gathered
-last_updated: "2026-05-23T17:53:41.303Z"
-last_activity: 2026-05-23 -- Phase --phase execution started
+current_phase: 36
+status: completed
+stopped_at: context exhaustion at 75% (2026-05-25)
+last_updated: "2026-05-25T08:11:56.801Z"
+last_activity: 2026-05-23
 progress:
   total_phases: 4
   completed_phases: 4
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 9
   percent: 100
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 Phase: --phase (36) — EXECUTING
 Plan: Not started
 Status: Milestone complete
-Last activity: 2026-05-23
+Last activity: 2026-05-25 - Completed quick task 260525-ga2: fix applyNewPatternToExpenses
 
 ## Accumulated Context
 
@@ -74,12 +74,13 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260524-pnk | mostrare durante import solo pattern con porzione stringa uguale non completamente uguali | 2026-05-24 | 889ae56 | [260524-pnk-mostrare-durante-import-solo-pattern-con](.planning/quick/260524-pnk-mostrare-durante-import-solo-pattern-con/) |
+| 260525-ga2 | fix applyNewPatternToExpenses: pattern promoted from suggestions not applied to all uncategorized expenses | 2026-05-25 | 4a722f2 | [260525-ga2-fix-applynewpatterntoexpenses-pattern-pr](.planning/quick/260525-ga2-fix-applynewpatterntoexpenses-pattern-pr/) |
 
 ## Session Continuity
 
-Last session: 2026-05-24
-Stopped at: Completed quick task 260524-pnk: mostrare durante import solo pattern con porzione stringa uguale non completamente uguali
-Resume file: --resume-file
+Last session: 2026-05-25T08:11:56.797Z
+Stopped at: context exhaustion at 75% (2026-05-25)
+Resume file: None
 
 **Current Phase:** 36
 
