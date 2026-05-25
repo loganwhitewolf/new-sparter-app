@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Sparter is a personal finance app for the Italian market. It supports email/password and Google/GitHub OAuth authentication with account linking, transaction and expense management, import history, CSV/Excel import flows backed by Cloudflare R2, user-managed categories, actionable dashboard insights with deviation analysis, structured logging, and a health endpoint. The app is deployed on Vercel (operator action) or runnable locally with a Supabase/R2 stack.
+Sparter is a personal finance app for the Italian market. It supports email/password and Google/GitHub OAuth authentication with account linking, transaction and expense management, import history, CSV/Excel import flows backed by Cloudflare R2, user-managed categories, actionable dashboard insights with deviation analysis, pattern suggestion detection and promotion, structured logging, and a health endpoint. The app is deployed on Vercel (operator action) or runnable locally with a Supabase/R2 stack.
 
 ## Core Value
 
@@ -15,9 +15,10 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v1.9 complete. Milestone v1.10 Pattern Suggestions in progress: Phase 34 (import analysis suggestions) and Phase 35 (import review promotion) complete as of 2026-05-23. The app now shows pattern suggestions during import review and allows users to promote them to personal patterns inline. It has:
+All milestones M001–v1.10 complete. The app now has a full pattern suggestion pipeline:
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
 - Import management, categorization (Tier 1 regex, Tier 2 history, Tier 3 AI gated)
+- Pattern suggestions: detect recurring uncategorized descriptions → review and promote during analysis → re-run post-import from `/import/[fileId]/suggestions`
 - Category settings with user-owned and system categories/subcategories
 - Dashboard overview with deviation badges on category pages, EntrateUsciteChart, BilancioBarsChart
 - R2 upload services, Drizzle migrations, operational health diagnostics
@@ -25,16 +26,14 @@ All milestones M001–v1.9 complete. Milestone v1.10 Pattern Suggestions in prog
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Current Milestone: v1.10 Pattern Suggestions
+## Current Milestone: v1.11 (planning)
 
-**Goal:** Help users discover recurring uncategorized bank descriptions during import and turn useful suggestions into categorization patterns before or after committing an import.
+v1.10 Pattern Suggestions shipped 2026-05-25. Planning next milestone.
 
-**Target features:**
-- Detect recurring uncategorized transaction descriptions with the ADR's deterministic token-prefix algorithm.
-- Include capped `PatternSuggestion` candidates in `ImportAnalysisResult` during import analysis.
-- Let users review and promote suggestions to `CategorizationPattern` entries before committing an import.
-- Let users re-run suggestion analysis after import from persisted transactions filtered by `fileId`.
-- Keep dismissed suggestions ephemeral; do not add dismissal persistence.
+**Likely candidates for v1.11:**
+- REVAL-01: Apply newly created pattern to existing transactions from same import
+- R029: Complete categorization revalidation for all entrypoints
+- Operator deploy: Vercel/Supabase/R2 production activation (R038, R039, R041)
 
 ## Architecture / Key Patterns
 
@@ -52,7 +51,7 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 
 ## Capability Contract
 
-### Validated (M001–v1.9)
+### Validated (M001–v1.10)
 
 - ✓ Pino structured logging, AsyncLocalStorage context, optional Better Stack — M002
 - ✓ Full import lifecycle (pending → uploaded → analyzing → analyzed → importing → imported → failed) — M004
@@ -65,13 +64,15 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 - ✓ Google + GitHub OAuth sign-in/register with env-conditional provider activation — v1.9
 - ✓ Account linking: link/unlink social providers from /settings/profile with canUnlink guard — v1.9
 - ✓ Registration guardrail removed — any user can register freely via OAuth or email/password — v1.9
+- ✓ Pattern suggestion detection: `detectPatternSuggestions` utility; tokenize, strip numeric tokens, longest-prefix grouping, escaping — v1.10
+- ✓ Import analysis returns `patternSuggestions`; detection in isolated try/catch, capped at 5 sorted by matchCount — v1.10
+- ✓ Import review: `SuggestionSection` + `SuggestionCard` + `promoteSuggestionAction`; promote suggestion to pattern before import commit — v1.10
+- ✓ Post-import re-analysis: `/import/[fileId]/suggestions` page from persisted transactions; "Rivedi suggerimenti" dropdown — v1.10
 
-### Active (v1.10)
+### Active (v1.11 — planning)
 
-- [ ] Pattern suggestions detect recurring uncategorized import rows with deterministic token-prefix grouping.
-- [ ] Import analysis returns capped, ranked `PatternSuggestion` candidates with sample descriptions and amount-sign inference.
-- [ ] Import review lets users promote useful suggestions to categorization patterns before import commit.
-- [ ] Post-import re-analysis lets users revisit skipped suggestions from persisted transactions by `fileId`.
+- [ ] REVAL-01: Apply newly created pattern to existing transactions from same import file.
+- [ ] R029: Complete categorization revalidation for all entrypoints.
 
 ### Active (carryover / operator-pending)
 
@@ -102,7 +103,7 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 - [x] M007: Zero-cost Production Deploy — Deploy runbook, Vercel env contract, R2/Supabase config, smoke suite. Operator deploy pending.
 - [x] v1.8 / M008: Dashboard Intelligence — Deviation view, chart clarity, sort toggle. Shipped 2026-05-20.
 - [x] v1.9: Social Auth — Google/GitHub OAuth login/register, account linking UI, registration guardrail removed. Shipped 2026-05-22.
-- [ ] v1.10: Pattern Suggestions — Detect recurring uncategorized bank descriptions and promote useful suggestions to categorization patterns.
+- [x] v1.10: Pattern Suggestions — Detect recurring uncategorized bank descriptions and promote useful suggestions to categorization patterns. Shipped 2026-05-25.
 
 ## Key Decisions
 
@@ -124,8 +125,11 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 | `configuredProviders` from process.env booleans | No NEXT_PUBLIC_* vars needed for provider visibility | ✓ Good |
 | `/settings` hub + `/settings/profile` canonical | Settings IA extensible; `/profile` is a compat redirect shim | ✓ Good |
 | Registration guardrail removed (REG-01) | `lib/auth/registration.ts` deleted; any OAuth account can register | ✓ Good |
-| PatternSuggestion detector uses token-prefix grouping | Deterministic, readable regex prefixes without LLM cost or substring noise | — Pending |
-| Dismissed pattern suggestions are ephemeral | Avoids schema complexity for low-frequency suggestion noise | — Pending |
+| PatternSuggestion detector uses token-prefix grouping | Deterministic, readable regex prefixes without LLM cost or substring noise | ✓ Good |
+| Dismissed pattern suggestions are ephemeral | Avoids schema complexity for low-frequency suggestion noise | ✓ Good |
+| Post-import DAL uses `innerJoin` on `importFile` | Ownership enforced at query level; non-null `fileId` for all imported rows | ✓ Good |
+| `promoteSuggestionAction` confidence hardcoded 0.85 | No UI knob; consistent with existing pattern confidence semantics | ✓ Good |
+| `createPattern` reactivates soft-deleted user patterns on unique conflict | Prevents duplicate errors when user re-promotes a previously deleted pattern | ✓ Good |
 
 ## Evolution
 
@@ -145,4 +149,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-23 — Phase 35 complete: pattern suggestion promotion live in import review*
+*Last updated: 2026-05-25 after v1.10 milestone — Pattern Suggestions pipeline shipped*

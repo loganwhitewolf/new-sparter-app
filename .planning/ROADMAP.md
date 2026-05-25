@@ -6,7 +6,7 @@
 - ✅ **M007: Zero-cost Production Deploy** — Phases 24–28 (shipped 2026-05-19)
 - ✅ **v1.8 / M008: Dashboard Intelligence** — Phase 29 (shipped 2026-05-20)
 - ✅ **v1.9: Social Auth** — Phases 30–32 (shipped 2026-05-22)
-- ◆ **v1.10: Pattern Suggestions** — Phases 33–36 (planned)
+- ✅ **v1.10: Pattern Suggestions** — Phases 33–36 (shipped 2026-05-25)
 
 ## Phases
 
@@ -58,63 +58,15 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 
 </details>
 
-<details open>
-<summary>◆ v1.10: Pattern Suggestions (Phases 33–36) — PLANNED</summary>
+<details>
+<summary>✅ v1.10: Pattern Suggestions (Phases 33–36) — SHIPPED 2026-05-25</summary>
 
-- [x] **Phase 33: pattern-suggestion-detector** — Build the deterministic detector contract from the ADR.
-- [x] **Phase 34: import-analysis-suggestions** — Integrate suggestions into import analysis safely. *(complete 2026-05-23)*
-- [ ] **Phase 35: import-review-promotion** — Let users review and promote suggestions before import confirmation.
-- [ ] **Phase 36: post-import-reanalysis** — Re-run suggestions from persisted transactions after import.
+- [x] **Phase 33: pattern-suggestion-detector** — Pure `detectPatternSuggestions` utility; deterministic token-prefix algorithm *(complete 2026-05-22)*
+- [x] **Phase 34: import-analysis-suggestions** — `analyzeFile` returns `patternSuggestions`; isolated try/catch, cap-5 sort *(complete 2026-05-23)*
+- [x] **Phase 35: import-review-promotion** — Suggestions UI + `promoteSuggestionAction`; 577 tests GREEN *(complete 2026-05-23)*
+- [x] **Phase 36: post-import-reanalysis** — `/import/[fileId]/suggestions` page; "Rivedi suggerimenti" dropdown *(complete 2026-05-23)*
 
-### Phase 33: pattern-suggestion-detector
-
-**Goal:** Build the deterministic detector contract from the ADR.
-**Requirements:** SUG-01, SUG-02, SUG-03, SUG-04, SUG-05, SUG-06, ANL-02, ANL-04
-**Plans:** 1 plan
-- [ ] 33-01-PLAN.md — Wave 0 failing tests + skeleton, then Wave 1 detectPatternSuggestions implementation (single plan, 2 tasks, all 8 requirements)
-**Success Criteria**:
-1. Pure detector emits suggestions for recurring uncategorized normalized token prefixes.
-2. Numeric token stripping, longest-prefix behavior, minimum count/token floors, regex escaping, and amount-sign inference are covered by tests.
-3. Invalid, duplicate, and already-covered rows are excluded without introducing persistence or new dependencies.
-
-### Phase 34: import-analysis-suggestions
-
-**Goal:** Integrate suggestions into import analysis safely.
-**Requirements:** ANL-01, ANL-03, ANL-05, SCOP-01, SCOP-02
-**Plans:** 2 plans
-- [x] 34-01-PLAN.md — Wave 0 test scaffolding: add detectPatternSuggestions mock and 6 failing tests pinning ANL-01, ANL-03, ANL-05, SCOP-01, SCOP-02 + D-03/D-05/D-07
-- [x] 34-02-PLAN.md — Wave 1 implementation: extend ImportAnalysisResult, wire detectPatternSuggestions into analyzeFile with isolated try/catch, sort+cap, sanitized warn log
-**Success Criteria**:
-1. `analyzeFile` returns capped, ranked `patternSuggestions` in `ImportAnalysisResult`.
-2. Suggestion detection uses the same active-pattern coverage rules as import categorization.
-3. Analysis failures remain safe and do not leak R2 keys, presigned URLs, raw rows, or stack traces.
-4. Existing import analysis and confirmation behavior still works when no suggestions exist.
-
-### Phase 35: import-review-promotion
-
-**Goal:** Let users review and promote suggestions before import confirmation.
-**Requirements:** REV-01, REV-02, REV-03, REV-04, REV-05
-**Plans:** 4 plans
-- [x] 35-01-PLAN.md — Wave 0 test scaffolding: extend 3 test files + create 2 new ones; all RED pinning REV-01..05 + T-35-01/02/03
-- [x] 35-02-PLAN.md — Wave 1 promoteSuggestionAction Server Action in lib/actions/patterns.ts (no plan gate, hardcoded confidence 0.85, session userId)
-- [x] 35-03-PLAN.md — Wave 1 UI components: SuggestionSection + SuggestionCard + SuggestionPromoteForm in components/import/
-- [x] 35-04-PLAN.md — Wave 2 integration: ImportPreview accepts categories prop + renders SuggestionSection; AnalyzePage parallel-fetches getCategories
-**Success Criteria**:
-1. Import analysis UI shows suggestion cards with sample descriptions.
-2. User can choose a destination subcategory and create a categorization pattern from a suggestion.
-3. Promotion success and validation errors are visible, and import confirmation remains optional and unblocked.
-
-### Phase 36: post-import-reanalysis
-
-**Goal:** Re-run suggestions from persisted transactions after import.
-**Requirements:** POST-01, POST-02, POST-03, POST-04, POST-05, SCOP-03
-**Success Criteria**:
-1. User can trigger suggestion re-analysis for an imported file without reading the raw R2 object.
-2. Re-analysis is scoped by session-owned `fileId`, uses persisted transactions, and excludes already categorized transactions.
-3. User can promote post-import suggestions to categorization patterns.
-4. The UI and copy do not imply existing transactions are automatically reclassified.
-
-Full context: `.planning/REQUIREMENTS.md`, `.planning/research/SUMMARY.md`
+Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 </details>
 
@@ -128,9 +80,9 @@ Full context: `.planning/REQUIREMENTS.md`, `.planning/research/SUMMARY.md`
 | 30 | v1.9 | 3/3 | Complete | 2026-05-21 |
 | 31 | v1.9 | 3/3 | Complete | 2026-05-21 |
 | 32 | v1.9 | 3/3 | Complete | 2026-05-22 |
-| 33 | v1.10 | 0/1 | Planned | — |
-| 34 | v1.10 | 0/2 | Planned | — |
-| 35 | v1.10 | 4/4 | Complete    | 2026-05-23 |
-| 36 | v1.10 | 2/2 | Complete    | 2026-05-23 |
+| 33 | v1.10 | 1/1 | Complete | 2026-05-22 |
+| 34 | v1.10 | 2/2 | Complete | 2026-05-23 |
+| 35 | v1.10 | 4/4 | Complete | 2026-05-23 |
+| 36 | v1.10 | 2/2 | Complete | 2026-05-23 |
 
-**Total: 36 phases · 120 plans complete · 4 phases planned for v1.10**
+**Total: 36 phases · 129 plans complete**

@@ -1,5 +1,41 @@
 # Milestones
 
+## v1.10 — Pattern Suggestions
+
+**Shipped:** 2026-05-25
+**Phases:** 33–36 (4 phases)
+**Plans:** 9
+**Quick Tasks:** 2
+**Timeline:** 2026-05-22 → 2026-05-25 (4 days)
+
+### Delivered
+
+Full end-to-end pattern suggestion pipeline for the import flow. Users can now discover recurring uncategorized bank descriptions via a deterministic token-prefix detector, see ranked suggestions during import analysis, promote useful ones to categorization patterns before confirming the import, and re-run suggestion analysis after an import from persisted transactions at `/import/[fileId]/suggestions` — without touching the raw R2 file. Two quick-task fixes added: partial-match-only filter (SUG-07) and pattern application bug with numeric token stripping.
+
+### Key Accomplishments
+
+1. Pure `detectPatternSuggestions` utility — tokenizes bank descriptions, strips numeric tokens, emits longest common prefixes (≥2 tokens, ≥2 uncategorized matches), infers `detectedAmountSign`, escapes regex metacharacters
+2. `analyzeFile` extended with isolated try/catch pattern detection — detection failures never block import; `ImportAnalysisResult` carries capped, ranked `patternSuggestions`
+3. `promoteSuggestionAction` Server Action with `verifySession()` + `CreatePatternSchema.safeParse()` + hardcoded confidence 0.85 — no UI tamperability
+4. `SuggestionSection` + `SuggestionCard` + `SuggestionPromoteForm` components wired into `ImportPreview` and `AnalyzePage` via parallel fetch; 577 Vitest tests GREEN
+5. `getUncategorizedTransactionsByFileId` DAL function with `innerJoin` ownership enforcement; `/import/[fileId]/suggestions` server component page with `notFound()` guard
+6. `createPattern` handles unique-constraint violations by reactivating soft-deleted user patterns instead of throwing
+
+### Known Deferred Items
+
+- REVAL-01: Apply newly created pattern to existing transactions from same import file
+- GLOBAL-01: Pattern suggestions across all uncategorized transaction history
+- DISM-01: Persistent dismissal of noisy suggestions
+- R038/R039/R041 — live Vercel/Supabase/R2 deploy remains operator-pending
+- R029 — partial categorization revalidation coverage
+
+### Archive
+
+- `.planning/milestones/v1.10-ROADMAP.md`
+- `.planning/milestones/v1.10-REQUIREMENTS.md`
+
+---
+
 ## v1.9 — Social Auth
 
 **Shipped:** 2026-05-22

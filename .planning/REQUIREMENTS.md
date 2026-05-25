@@ -7,20 +7,20 @@
 
 ### Detection
 
-- [ ] **SUG-01**: User receives pattern suggestions for recurring valid uncategorized import rows that share a common normalized token prefix.
-- [ ] **SUG-02**: Suggested patterns strip purely numeric tokens before prefix comparison.
-- [ ] **SUG-03**: Suggested patterns require at least 2 matching rows and at least 2 non-numeric prefix tokens.
-- [ ] **SUG-04**: Suggested patterns preserve the longest qualifying common prefix, not exactly 2 tokens.
-- [ ] **SUG-05**: Suggested patterns exclude rows that are invalid, duplicate, or already matched by an active categorization pattern.
-- [ ] **SUG-06**: Suggested regex sources are escaped so bank-description metacharacters cannot create unintended regex behavior.
+- [x] **SUG-01**: User receives pattern suggestions for recurring valid uncategorized import rows that share a common normalized token prefix.
+- [x] **SUG-02**: Suggested patterns strip purely numeric tokens before prefix comparison.
+- [x] **SUG-03**: Suggested patterns require at least 2 matching rows and at least 2 non-numeric prefix tokens.
+- [x] **SUG-04**: Suggested patterns preserve the longest qualifying common prefix, not exactly 2 tokens.
+- [x] **SUG-05**: Suggested patterns exclude rows that are invalid, duplicate, or already matched by an active categorization pattern.
+- [x] **SUG-06**: Suggested regex sources are escaped so bank-description metacharacters cannot create unintended regex behavior.
 
 ### Analysis Contract
 
-- [ ] **ANL-01**: Import analysis returns `patternSuggestions` in `ImportAnalysisResult`.
-- [ ] **ANL-02**: Each pattern suggestion includes `pattern`, `matchCount`, `detectedAmountSign`, and up to 3 sample descriptions.
-- [ ] **ANL-03**: Import analysis returns at most 5 pattern suggestions sorted by `matchCount` descending.
-- [ ] **ANL-04**: `detectedAmountSign` is `positive`, `negative`, or `any` based on grouped transaction amounts.
-- [ ] **ANL-05**: Pattern suggestion detection failures do not leak raw R2 object keys, presigned URLs, raw rows, or stack traces.
+- [x] **ANL-01**: Import analysis returns `patternSuggestions` in `ImportAnalysisResult`.
+- [x] **ANL-02**: Each pattern suggestion includes `pattern`, `matchCount`, `detectedAmountSign`, and up to 3 sample descriptions.
+- [x] **ANL-03**: Import analysis returns at most 5 pattern suggestions sorted by `matchCount` descending.
+- [x] **ANL-04**: `detectedAmountSign` is `positive`, `negative`, or `any` based on grouped transaction amounts.
+- [x] **ANL-05**: Pattern suggestion detection failures do not leak raw R2 object keys, presigned URLs, raw rows, or stack traces.
 
 ### Import Review
 
@@ -40,8 +40,8 @@
 
 ### Scope Boundaries
 
-- [ ] **SCOP-01**: Dismissed suggestions are not persisted.
-- [ ] **SCOP-02**: Pattern suggestions are scoped to one import file, not global transaction history.
+- [x] **SCOP-01**: Dismissed suggestions are not persisted.
+- [x] **SCOP-02**: Pattern suggestions are scoped to one import file, not global transaction history.
 - [x] **SCOP-03**: Creating a post-import pattern does not automatically reclassify existing transactions unless a later requirement adds that behavior.
 
 ## Future Requirements
@@ -78,17 +78,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SUG-01 | Phase 33 | Pending |
-| SUG-02 | Phase 33 | Pending |
-| SUG-03 | Phase 33 | Pending |
-| SUG-04 | Phase 33 | Pending |
-| SUG-05 | Phase 33 | Pending |
-| SUG-06 | Phase 33 | Pending |
-| ANL-01 | Phase 34 | Pending |
-| ANL-02 | Phase 33 | Pending |
-| ANL-03 | Phase 34 | Pending |
-| ANL-04 | Phase 33 | Pending |
-| ANL-05 | Phase 34 | Pending |
+| SUG-01 | Phase 33 | Complete |
+| SUG-02 | Phase 33 | Complete |
+| SUG-03 | Phase 33 | Complete |
+| SUG-04 | Phase 33 | Complete |
+| SUG-05 | Phase 33 | Complete |
+| SUG-06 | Phase 33 | Complete |
+| ANL-01 | Phase 34 | Complete |
+| ANL-02 | Phase 33 | Complete |
+| ANL-03 | Phase 34 | Complete |
+| ANL-04 | Phase 33 | Complete |
+| ANL-05 | Phase 34 | Complete |
 | REV-01 | Phase 35 | Complete |
 | REV-02 | Phase 35 | Complete |
 | REV-03 | Phase 35 | Complete |
@@ -99,8 +99,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | POST-03 | Phase 36 | Complete |
 | POST-04 | Phase 36 | Complete |
 | POST-05 | Phase 36 | Complete |
-| SCOP-01 | Phase 34 | Pending |
-| SCOP-02 | Phase 34 | Pending |
+| SCOP-01 | Phase 34 | Complete |
+| SCOP-02 | Phase 34 | Complete |
 | SCOP-03 | Phase 36 | Complete |
 
 **Coverage:**
