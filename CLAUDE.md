@@ -11,7 +11,7 @@ Personal finance app for the Italian market. Rebuilt from the previous Express +
 | **Engineering** | Ask don't assume · simplest first · scoped diffs only · flag low confidence before proceeding |
 | **Decisions** | Outside GSD: 2–3 approaches, wait for choice. GSD execute: follow locked `*-PLAN.md`; no re-open between tasks. |
 | **GSD entry** | `/gsd-quick` · `/gsd-debug` · `/gsd-execute-phase` before substantive edits unless bypass requested. |
-| **Hard rules** | Decimal.js for money · import in `db.transaction` · R2 presigned PUT · no `drizzle-kit push` in prod · `dal` / `services` / `actions` · dev English, IT product surfaces · `CONTEXT.md` for domain terms · seeds are additive (never edit `seed-data.ts` for new columns — add a new `seed-*.ts` step) |
+| **Hard rules** | Decimal.js for money · import in `db.transaction` · R2 presigned PUT · no `drizzle-kit push` in prod · `dal` / `services` / `actions` · dev English, IT product surfaces · `CONTEXT.md` for domain terms · seeds are additive (never edit `seed-data.ts` for new columns — append to `seed-extras.ts` STEPS) |
 | **Session memory** | Read `MEMORY.md` + `ERRORS.md` at start. Decisions → `MEMORY.md`; wrap-up on "session end" / "wrapping up"; retries → `ERRORS.md`. |
 | **Planning** | `.planning/PROJECT.md`, `REQUIREMENTS.md`, `phases/` · `CONTEXT.md` (domain language) |
 
@@ -33,7 +33,7 @@ These facts are always true for this project. Apply them to every session withou
 - **Uploads** — browser → R2 via presigned PUT only; never proxy file bytes through Server Actions or Route Handlers.
 - **Auth** — Better Auth + Drizzle `pg` adapter; `proxy.ts` does session checks only (no DB in edge runtime).
 - **Migrations** — `drizzle-kit generate` + `scripts/migrate.ts`; never `drizzle-kit push` in production.
-- **Seeds are additive** — `scripts/seed-data.ts` and `scripts/seed.ts` define the baseline insert (idempotent via `onConflictDoNothing`). When a new feature needs data written to existing rows (e.g. a new column on an already-seeded table), create a new `scripts/seed-<feature>.ts` that does UPDATE/upsert by slug or id — never add new columns to the `seed-data.ts` shapes. Add the corresponding `db:seed-<feature>` script to `package.json`.
+- **Seeds are additive** — `scripts/seed-data.ts` and `scripts/seed.ts` define the baseline insert (idempotent via `onConflictDoNothing`). When a new feature needs data written to existing rows (e.g. a new column on an already-seeded table), append a new step to `scripts/seed-extras.ts` — never add new columns to the `seed-data.ts` shapes. Run with `yarn db:seed-extras`.
 - **Layers** — queries in `lib/dal/`, business logic in `lib/services/`, thin `"use server"` in `lib/actions/`.
 - **Language** — developer-facing code and docs in English; Italian only for intentional product/domain surfaces (see Language Convention below). Run `yarn check:language` when touching routes, comments, tests, or developer strings.
 - **Domain terms** — for dashboard, categorization, or import work, read `CONTEXT.md` and use its vocabulary (e.g. Transaction vs Expense, Deviation vs delta, Reference Period).
@@ -151,7 +151,7 @@ lib/
 
 scripts/seed.ts         # Operator seed runner (baseline insert, onConflictDoNothing)
 scripts/seed-data.ts    # Canonical taxonomy rows (categories, subcategories, platforms, patterns)
-scripts/seed-<feature>  # Additive seed steps for new columns on existing rows (one per feature)
+scripts/seed-extras.ts  # Additive seed steps — ordered STEPS array, append here for new columns
 drizzle/migrations/     # Generated SQL migrations only
 proxy.ts             # Route protection and staging bypass
 auth.ts              # Better Auth configuration
@@ -169,13 +169,13 @@ Seed scripts follow the same additive model as migrations: each step is independ
 
 Inserted once via `onConflictDoNothing()`. Never add new columns to `seed-data.ts` shapes — the insert already ran in production.
 
-**Additive seed steps** (`seed-<feature>.ts`): when a phase introduces a new column on an already-seeded table, add a dedicated script that UPDATEs existing rows by slug or id. Example: `seed-nature.ts` sets `sub_category.nature` after the `0012_flow_nature.sql` migration. Each additive script gets its own `db:seed-<feature>` entry in `package.json`.
+**Additive seed steps** (`seed-extras.ts`): when a phase introduces a new column on an already-seeded table, append a new named step to the `STEPS` array in `scripts/seed-extras.ts`. Each step is an idempotent async function that UPDATEs existing rows by slug or id. All steps run in order via `yarn db:seed-extras`.
 
 **Run order after a schema migration:**
 ```bash
-yarn db:migrate            # apply SQL migration
-yarn db:seed               # baseline insert (idempotent)
-yarn db:seed-<feature>     # fill new column on existing rows
+yarn db:migrate        # apply SQL migration
+yarn db:seed           # baseline insert (idempotent)
+yarn db:seed-extras    # fill new columns on existing rows (all steps)
 ```
 
 Domain values are intentionally Italian because the product taxonomy is Italian. Developer comments and operational logs around the seed flow must stay English.

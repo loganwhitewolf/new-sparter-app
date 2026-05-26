@@ -1,8 +1,9 @@
-// Sets FlowNature on system subcategories. Idempotent — safe to run multiple times.
+// Additive seed steps — runs after yarn db:seed. Each step is idempotent.
+// Add new steps to the STEPS array; existing steps are re-run safely.
 // Usage mirrors yarn db:seed:
-//   yarn db:seed-nature              → DATABASE_URL
-//   yarn db:seed-nature:staging      → STAGING_DATABASE_URL
-//   yarn db:seed-nature:production   → PRODUCTION_DATABASE_URL + PRODUCTION_MIGRATION_CONFIRM
+//   yarn db:seed-extras              → DATABASE_URL
+//   yarn db:seed-extras:staging      → STAGING_DATABASE_URL
+//   yarn db:seed-extras:production   → PRODUCTION_DATABASE_URL + PRODUCTION_MIGRATION_CONFIRM
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { inArray } from 'drizzle-orm'
@@ -10,7 +11,9 @@ import { subCategory } from '../lib/db/schema'
 import type { FlowNature } from '../lib/utils/nature-labels'
 import {
   getOperatorDatabaseConfig,
+  isDirectSupabaseHost,
   loadOperatorEnv,
+  operatorConnectionFailureHint,
   pgPoolConfigFromOperatorConfig,
   resolveOperatorDatabaseTarget,
 } from './db-config'
@@ -21,21 +24,34 @@ const seedTarget = resolveOperatorDatabaseTarget()
 const seedConfigResult = getOperatorDatabaseConfig({ target: seedTarget })
 
 if (!seedConfigResult.ok) {
-  console.error(JSON.stringify({ event: 'seed_nature_failed', target: seedTarget, error: seedConfigResult.error }))
+  console.error(JSON.stringify({ event: 'seed_extras_failed', target: seedTarget, error: seedConfigResult.error }))
   process.exit(1)
 }
 
 const { config: seedConfig, diagnostics: seedDiagnostics } = seedConfigResult
 
 console.log(JSON.stringify({
-  event: 'seed_nature_connection',
+  event: 'seed_extras_connection',
   target: seedDiagnostics.target,
   host: seedDiagnostics.host,
 }))
 
+if (isDirectSupabaseHost(seedDiagnostics.host)) {
+  const hint = operatorConnectionFailureHint(seedDiagnostics.host, seedDiagnostics.target)
+  if (hint) console.warn(JSON.stringify({ event: 'seed_extras_connection_warning', message: hint }))
+}
+
 const pool = new Pool(pgPoolConfigFromOperatorConfig(seedConfig))
 const db = drizzle(pool)
 
+type Db = typeof db
+
+// ---------------------------------------------------------------------------
+// Step definitions
+// ---------------------------------------------------------------------------
+
+// Step 1 (phase 37): set FlowNature on system subcategories
+// trasferimento and addebito-carta-di-credito are intentionally null — no UPDATE needed
 const NATURE_SLUGS: Record<FlowNature, string[]> = {
   extraordinary: [
     'conto-risparmio',
@@ -175,30 +191,45 @@ const NATURE_SLUGS: Record<FlowNature, string[]> = {
   ],
 }
 
-// trasferimento and addebito-carta-di-credito are intentionally null (no UPDATE needed)
-
-async function seedNature() {
-  console.log(JSON.stringify({ event: 'seed_nature_started', target: seedDiagnostics.target }))
-
+async function setSubcategoryNature(database: Db): Promise<void> {
   let totalUpdated = 0
-
   for (const [nature, slugs] of Object.entries(NATURE_SLUGS) as [FlowNature, string[]][]) {
     if (slugs.length === 0) continue
-    const result = await db
-      .update(subCategory)
-      .set({ nature })
-      .where(inArray(subCategory.slug, slugs))
+    const result = await database.update(subCategory).set({ nature }).where(inArray(subCategory.slug, slugs))
     const count = (result as unknown as { rowCount?: number }).rowCount ?? 0
-    console.log(`  nature=${nature}: ${count} rows updated (${slugs.length} slugs targeted)`)
+    console.log(`    nature=${nature}: ${count} rows updated`)
     totalUpdated += count
   }
-
-  console.log(JSON.stringify({ event: 'seed_nature_succeeded', target: seedDiagnostics.target, totalUpdated }))
+  console.log(`    total: ${totalUpdated} rows updated`)
 }
 
-seedNature()
+// ---------------------------------------------------------------------------
+// Registry — append new steps here
+// ---------------------------------------------------------------------------
+
+const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
+  { name: 'set-subcategory-nature', run: setSubcategoryNature },
+]
+
+// ---------------------------------------------------------------------------
+// Runner
+// ---------------------------------------------------------------------------
+
+async function runExtras() {
+  console.log(JSON.stringify({ event: 'seed_extras_started', target: seedDiagnostics.target, steps: STEPS.length }))
+
+  for (const step of STEPS) {
+    console.log(`  [${step.name}] running...`)
+    await step.run(db)
+    console.log(`  [${step.name}] done`)
+  }
+
+  console.log(JSON.stringify({ event: 'seed_extras_succeeded', target: seedDiagnostics.target }))
+}
+
+runExtras()
   .catch((error: unknown) => {
-    console.error(JSON.stringify({ event: 'seed_nature_failed', error: String(error) }))
+    console.error(JSON.stringify({ event: 'seed_extras_failed', error: String(error) }))
     process.exit(1)
   })
   .finally(() => pool.end())

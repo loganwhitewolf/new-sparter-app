@@ -18,9 +18,9 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:seed:staging": "tsx scripts/seed.ts --staging",
     "db:seed:production": "tsx scripts/seed.ts --production",
-    "db:seed-nature": "tsx scripts/seed-nature.ts",
-    "db:seed-nature:staging": "tsx scripts/seed-nature.ts --staging",
-    "db:seed-nature:production": "tsx scripts/seed-nature.ts --production",
+    "db:seed-extras": "tsx scripts/seed-extras.ts",
+    "db:seed-extras:staging": "tsx scripts/seed-extras.ts --staging",
+    "db:seed-extras:production": "tsx scripts/seed-extras.ts --production",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down"
   },
