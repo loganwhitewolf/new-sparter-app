@@ -148,12 +148,7 @@ const NATURE_SLUGS: Record<FlowNature, string[]> = {
     'acqua',
     'rifiuti',
   ],
-  financial: [
-    'azioni',
-    'obbligazioni',
-    'criptovalute',
-    'fondi-comuni',
-    'immobili',
+  income: [
     'stipendio-base',
     'bonus',
     'indennita',
@@ -165,6 +160,13 @@ const NATURE_SLUGS: Record<FlowNature, string[]> = {
     'dividendi-azionari',
     'dividendi-fondi-comuni',
     'dividendi-immobiliari',
+  ],
+  financial: [
+    'azioni',
+    'obbligazioni',
+    'criptovalute',
+    'fondi-comuni',
+    'immobili',
     'rimborso-spese-lavorative',
     'rimborso-spese-sanitarie',
     'rimborso-spese-viaggi',

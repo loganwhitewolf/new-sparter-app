@@ -3,6 +3,7 @@ export type FlowNature =
   | 'discretionary'
   | 'operational'
   | 'financial'
+  | 'income'
   | 'debt'
   | 'extraordinary'
 
@@ -11,6 +12,7 @@ export const NATURE_LABELS: Record<FlowNature | 'unclassified', string> = {
   discretionary: 'Discrezionale',
   operational: 'Operativo',
   financial: 'Finanziario',
+  income: 'Entrate',
   debt: 'Debiti',
   extraordinary: 'Straordinario',
   unclassified: 'Non classificato',
@@ -21,6 +23,7 @@ export const NATURE_ORDER: ReadonlyArray<FlowNature | null> = [
   'discretionary',
   'operational',
   'financial',
+  'income',
   'debt',
   'extraordinary',
   null,
@@ -31,6 +34,7 @@ export const NATURE_COLORS: Record<FlowNature | 'unclassified', string> = {
   discretionary: '#f97316',
   operational: '#60a5fa',
   financial: '#a78bfa',
+  income: '#34d399',
   debt: '#f87171',
   extraordinary: '#fbbf24',
   unclassified: '#a1a1aa',

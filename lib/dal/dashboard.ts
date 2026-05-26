@@ -667,6 +667,7 @@ export function buildMonthlyNatureTrendData(input: {
     discretionary: ZERO_AMOUNT,
     operational: ZERO_AMOUNT,
     financial: ZERO_AMOUNT,
+    income: ZERO_AMOUNT,
     debt: ZERO_AMOUNT,
     extraordinary: ZERO_AMOUNT,
     unclassified: ZERO_AMOUNT,

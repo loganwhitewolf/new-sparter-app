@@ -54,6 +54,7 @@ export const flowNatureEnum = pgEnum("flow_nature", [
   "discretionary",
   "operational",
   "financial",
+  "income",
   "debt",
   "extraordinary",
 ]);
