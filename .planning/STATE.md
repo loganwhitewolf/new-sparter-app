@@ -1,18 +1,18 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.8
-milestone_name: milestone
+milestone: v1.11
+milestone_name: FlowNature & Segmented Chart
 current_phase: 37
-status: executing
-stopped_at: context exhaustion at 75% (2026-05-25)
-last_updated: "2026-05-25T19:01:40.766Z"
-last_activity: 2026-05-25 -- Phase 37 execution started
+status: complete
+stopped_at: ~
+last_updated: "2026-05-26T10:00:00.000Z"
+last_activity: 2026-05-26 -- Phase 37 complete (5/5 plans)
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 1
-  percent: 0
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
@@ -22,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 37 — flow-nature-chart
+**Current focus:** Phase 37 — flow-nature-chart (COMPLETE)
 
 ## Current Position
 
-Phase: 37 (flow-nature-chart) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 37
-Last activity: 2026-05-25 -- Phase 37 execution started
+Phase: 37 (flow-nature-chart) — COMPLETE
+Plan: 5 of 5
+Status: Phase 37 shipped. All 5 plans done.
+Last activity: 2026-05-26 -- Phase 37 complete (5/5 plans)
 
 ## Accumulated Context
 
@@ -60,6 +60,15 @@ v1.9 phase structure:
 - canUnlink guard checks credential OR other social (more robust than total count)
 - configuredProviders derived from process.env booleans — no NEXT_PUBLIC_* vars introduced
 
+v1.11 / Phase 37 decisions:
+
+- NATURE_COLORS: hex values for Recharts fill (green/orange/blue/purple/red/amber/gray)
+- Migration 0012_flow_nature applied to prod DB; 126 subcategories seeded with nature; ignore category (cat 32) left null
+- effectiveNature = COALESCE(override.nature, sub.nature) — user override wins over seed default (D-09)
+- Default on CreateSubcategoryDialog: 'discretionary' — defensive default, most new subcategories are lifestyle spend
+- unclassified sentinel in SubcategoryNatureSelect → null stored on override row → DAL COALESCE falls to seed default
+- setSubcategoryNatureAction revalidates /expenses, /transactions, /dashboard, /settings/categories, /import (layout)
+
 ### Known Gaps
 
 R038, R039, R041 are PARTIAL — live Vercel/Supabase/R2 deploy is operator-pending. Code, config, and runbook complete in M007. See `docs/deploy/vercel-supabase-r2.md`.
@@ -78,10 +87,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-25T19:01:40.763Z
-Stopped at: context exhaustion at 75% (2026-05-25)
+Last session: 2026-05-26
+Stopped at: Phase 37 complete
 Resume file: None
 
-**Current Phase:** 37
+**Current Phase:** 37 (COMPLETE)
 
-**Next:** `/gsd-new-milestone` to plan v1.11
+**Next:** `/gsd-new-milestone` to plan v1.12
