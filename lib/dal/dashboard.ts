@@ -19,6 +19,7 @@ import { category, expense, subCategory, transaction as transactionTable, userSu
 import type { DashboardFilters, DashboardPreset } from '@/lib/validations/dashboard'
 import type { DateRange } from '@/lib/utils/date'
 import { dashboardPresetToDateRange, monthLabel, monthsBetween } from '@/lib/utils/date'
+import type { FlowNature } from '@/lib/utils/nature-labels'
 import {
   buildDeviationMap,
   computeBreakdownPercentages,
@@ -131,6 +132,14 @@ export type MonthlyTrendPoint = {
   totalIgn: number
 }
 
+export type MonthlyNatureTrendPoint = {
+  month: string
+  label: string
+  segments: Record<FlowNature | 'unclassified', string>
+  totalNc: number
+  totalIgn: number
+}
+
 export type DeviationData = {
   deviation: number | null
   isNew: boolean
@@ -182,6 +191,14 @@ type TrendAggregateRow = {
   month: string
   totalIn: string | null
   totalOut: string | null
+  totalNc: number | string | null
+  totalIgn: number | string | null
+}
+
+type NatureTrendAggregateRow = {
+  month: string
+  nature: FlowNature | null
+  amount: string | null
   totalNc: number | string | null
   totalIgn: number | string | null
 }
@@ -635,6 +652,49 @@ export function buildMonthlyTrendData(input: {
       bucket.totalNc = normalizeCount(row.totalNc)
       bucket.totalIgn = normalizeCount(row.totalIgn)
     }
+  }
+
+  return Array.from(buckets.values())
+}
+
+export function buildMonthlyNatureTrendData(input: {
+  from: Date
+  to: Date
+  rows: NatureTrendAggregateRow[]
+}): MonthlyNatureTrendPoint[] {
+  const emptySegments = (): Record<FlowNature | 'unclassified', string> => ({
+    essential: ZERO_AMOUNT,
+    discretionary: ZERO_AMOUNT,
+    operational: ZERO_AMOUNT,
+    financial: ZERO_AMOUNT,
+    debt: ZERO_AMOUNT,
+    extraordinary: ZERO_AMOUNT,
+    unclassified: ZERO_AMOUNT,
+  })
+
+  const buckets = new Map<string, MonthlyNatureTrendPoint>(
+    monthsBetween(input.from, input.to).map((month) => [
+      month,
+      {
+        month,
+        label: monthLabel(month),
+        segments: emptySegments(),
+        totalNc: 0,
+        totalIgn: 0,
+      },
+    ])
+  )
+
+  for (const row of input.rows) {
+    const bucket = buckets.get(row.month)
+    if (!bucket) continue
+
+    const segmentKey: FlowNature | 'unclassified' = row.nature ?? 'unclassified'
+    bucket.segments[segmentKey] = toDecimal(bucket.segments[segmentKey])
+      .plus(toDecimal(row.amount ?? 0))
+      .toFixed(2)
+    bucket.totalNc += normalizeCount(row.totalNc)
+    bucket.totalIgn += normalizeCount(row.totalIgn)
   }
 
   return Array.from(buckets.values())
@@ -1193,3 +1253,46 @@ export const getAggregatedTransactionsData = cache(
     return buildMonthlyTrendData({ from, to, rows })
   }
 )
+
+export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Promise<MonthlyNatureTrendPoint[]> => {
+  const { userId } = await verifySession()
+  const { from, to } = dashboardPresetToDateRange(preset)
+  const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
+  const natureSql = sql<FlowNature | null>`coalesce(${userSubcategoryOverride.nature}, ${subCategory.nature})`
+
+  let rows: NatureTrendAggregateRow[] = []
+
+  try {
+    rows = await db
+      .select({
+        month: monthSql,
+        nature: natureSql,
+        amount: sql<string>`coalesce(sum(${transactionTable.amount}), 0)::text`,
+        totalNc: sql<number>`count(distinct case when ${expense.status} = '1' and ${expense.subCategoryId} is null then ${expense.id} end)`,
+        totalIgn: sql<number>`count(distinct case when ${category.slug} = 'ignore' then ${expense.id} end)`,
+      })
+      .from(transactionTable)
+      .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
+      .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+      .leftJoin(category, eq(subCategory.categoryId, category.id))
+      .leftJoin(
+        userSubcategoryOverride,
+        and(
+          eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+          eq(userSubcategoryOverride.userId, userId),
+        ),
+      )
+      .where(
+        and(
+          dateScopedTransactions(userId, from, to),
+          expenseStatusIncludedInDashboardTotals(),
+          notExcludedFromTotals(),
+        )
+      )
+      .groupBy(monthSql, natureSql)
+  } catch {
+    rows = []
+  }
+
+  return buildMonthlyNatureTrendData({ from, to, rows })
+})

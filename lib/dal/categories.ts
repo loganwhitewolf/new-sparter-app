@@ -4,6 +4,7 @@ import { db, type DbOrTx } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import { category, expense, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
 import { and, asc, eq, isNull, or, sql } from 'drizzle-orm'
+import type { FlowNature } from '@/lib/utils/nature-labels'
 
 export type CategoryWithSubCategories = {
   id: number
@@ -21,6 +22,7 @@ export type CategoryWithSubCategories = {
     isOwned: boolean
     hasOverride: boolean
     customName: string | null
+    effectiveNature: FlowNature | null
   }>
 }
 
@@ -74,6 +76,7 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
       subCategorySlug: subCategory.slug,
       subCategoryUserId: subCategory.userId,
       overrideCustomName: userSubcategoryOverride.customName,
+      effectiveNature: sql<FlowNature | null>`coalesce(${userSubcategoryOverride.nature}, ${subCategory.nature})`,
     })
     .from(category)
     .leftJoin(
@@ -128,6 +131,7 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
         isOwned: row.subCategoryUserId === userId,
         hasOverride: row.overrideCustomName !== null,
         customName: row.overrideCustomName,
+        effectiveNature: row.effectiveNature,
       })
     }
   }

@@ -39,6 +39,7 @@ const categories = [
         isOwned: false,
         hasOverride: false,
         customName: null,
+        effectiveNature: null,
       },
     ],
   },
