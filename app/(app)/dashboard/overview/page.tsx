@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { getOverview, getAggregatedTransactionsData } from '@/lib/dal/dashboard'
+import { getOverview, getAggregatedTransactionsData, getMonthlyTrendByNature } from '@/lib/dal/dashboard'
 import { parseDashboardFilters } from '@/lib/validations/dashboard'
 import { KpiCards } from '@/components/dashboard/kpi-cards'
 import { EntrateUsciteChart } from '@/components/dashboard/entrate-uscite-chart'
@@ -22,20 +22,25 @@ async function OverviewContent({ preset }: { preset: string | undefined }) {
 
 async function TrendContent({ preset }: { preset: string | undefined }) {
   const filters = parseDashboardFilters({ preset }, { defaultPreset: OVERVIEW_DEFAULT_PRESET })
-  const data = await getAggregatedTransactionsData(filters.preset)
+  const [aggregated, natureTrend] = await Promise.all([
+    getAggregatedTransactionsData(filters.preset),
+    getMonthlyTrendByNature(filters.preset),
+  ])
   return (
     <div className="flex flex-col gap-6">
       <section className="space-y-3" aria-labelledby="overview-entrate-uscite-heading">
         <h2 id="overview-entrate-uscite-heading" className="text-lg font-semibold">
           Entrate e uscite per mese
         </h2>
-        <EntrateUsciteChart data={data} />
+        <Suspense>
+          <EntrateUsciteChart data={natureTrend} />
+        </Suspense>
       </section>
       <section className="space-y-3" aria-labelledby="overview-bilancio-heading">
         <h2 id="overview-bilancio-heading" className="text-lg font-semibold">
           Bilancio mensile
         </h2>
-        <BilancioBarsChart data={data} />
+        <BilancioBarsChart data={aggregated} />
       </section>
     </div>
   )
