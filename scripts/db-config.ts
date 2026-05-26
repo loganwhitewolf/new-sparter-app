@@ -1,4 +1,4 @@
-/** Shared operator DB config for yarn db:migrate and yarn db:seed (PRODUCTION_* in .env). */
+/** Shared operator DB config for yarn db:migrate* and yarn db:seed* (target-specific env in .env). */
 import { existsSync } from 'node:fs'
 import type { PoolConfig } from 'pg'
 import { enhanceDatabaseUrlForSsl } from '../lib/db/config'
@@ -9,7 +9,15 @@ export const DEFAULT_OPERATOR_POOL_MAX = 1
 export const MAX_OPERATOR_POOL_MAX = 2
 export const PRODUCTION_MIGRATION_CONFIRM_VALUE = 'apply-to-production'
 
+export type OperatorDatabaseTarget = 'local' | 'staging' | 'production'
+
 export type OperatorDatabaseEnv = {
+  DATABASE_URL?: string
+  DATABASE_SSL?: string
+  DATABASE_POOL_MAX?: string
+  STAGING_DATABASE_URL?: string
+  STAGING_DATABASE_SSL?: string
+  STAGING_DATABASE_POOL_MAX?: string
   PRODUCTION_DATABASE_URL?: string
   PRODUCTION_DATABASE_SSL?: string
   PRODUCTION_DATABASE_POOL_MAX?: string
@@ -21,7 +29,7 @@ export type OperatorSslConfig = {
 }
 
 export type OperatorDatabaseConfig = {
-  targetClass: 'production'
+  target: OperatorDatabaseTarget
   connectionString: string
   migrationsFolder: string
   max: number
@@ -29,7 +37,7 @@ export type OperatorDatabaseConfig = {
 }
 
 export type OperatorDatabaseDiagnostics = {
-  targetClass: 'production'
+  target: OperatorDatabaseTarget
   migrationsFolder: string
   poolMax: number
   sslEnabled: boolean
@@ -37,6 +45,8 @@ export type OperatorDatabaseDiagnostics = {
 }
 
 export type OperatorValidationErrorCode =
+  | 'missing_database_url'
+  | 'missing_staging_database_url'
   | 'missing_production_database_url'
   | 'missing_production_migration_confirm'
   | 'invalid_production_migration_confirm'
@@ -61,8 +71,45 @@ export type OperatorDatabaseConfigResult =
     }
 
 export type GetOperatorDatabaseConfigOptions = {
+  target?: OperatorDatabaseTarget
   env?: OperatorDatabaseEnv
   migrationsFolder?: string
+}
+
+type TargetSpec = {
+  target: OperatorDatabaseTarget
+  urlKey: keyof OperatorDatabaseEnv
+  sslKey: keyof OperatorDatabaseEnv
+  poolMaxKey: keyof OperatorDatabaseEnv
+  missingCode: OperatorValidationErrorCode
+  requiresProductionConfirm: boolean
+}
+
+const TARGET_SPECS: Record<OperatorDatabaseTarget, TargetSpec> = {
+  local: {
+    target: 'local',
+    urlKey: 'DATABASE_URL',
+    sslKey: 'DATABASE_SSL',
+    poolMaxKey: 'DATABASE_POOL_MAX',
+    missingCode: 'missing_database_url',
+    requiresProductionConfirm: false,
+  },
+  staging: {
+    target: 'staging',
+    urlKey: 'STAGING_DATABASE_URL',
+    sslKey: 'STAGING_DATABASE_SSL',
+    poolMaxKey: 'STAGING_DATABASE_POOL_MAX',
+    missingCode: 'missing_staging_database_url',
+    requiresProductionConfirm: false,
+  },
+  production: {
+    target: 'production',
+    urlKey: 'PRODUCTION_DATABASE_URL',
+    sslKey: 'PRODUCTION_DATABASE_SSL',
+    poolMaxKey: 'PRODUCTION_DATABASE_POOL_MAX',
+    missingCode: 'missing_production_database_url',
+    requiresProductionConfirm: true,
+  },
 }
 
 /** Operator migrate/seed scripts read secrets from .env only (not .env.local). */
@@ -70,6 +117,27 @@ export function loadOperatorEnv(): void {
   if (existsSync(OPERATOR_ENV_FILE)) {
     process.loadEnvFile?.(OPERATOR_ENV_FILE)
   }
+}
+
+export function resolveOperatorDatabaseTarget(argv: string[] = process.argv.slice(2)): OperatorDatabaseTarget {
+  if (argv.includes('--production')) {
+    return 'production'
+  }
+
+  if (argv.includes('--staging')) {
+    return 'staging'
+  }
+
+  if (argv.includes('--local')) {
+    return 'local'
+  }
+
+  const fromEnv = process.env.OPERATOR_DATABASE_TARGET ?? process.env.MIGRATION_TARGET
+  if (fromEnv === 'production' || fromEnv === 'staging' || fromEnv === 'local') {
+    return fromEnv
+  }
+
+  return 'local'
 }
 
 function isBlank(value: string | undefined): boolean {
@@ -112,7 +180,7 @@ export function connectionHost(connectionString: string | undefined): string | u
 
 function diagnosticsFor(config: OperatorDatabaseConfig): OperatorDatabaseDiagnostics {
   return {
-    targetClass: config.targetClass,
+    target: config.target,
     migrationsFolder: config.migrationsFolder,
     poolMax: config.max,
     sslEnabled: config.ssl?.rejectUnauthorized === true,
@@ -124,49 +192,62 @@ function productionConfirmationError(value: string | undefined): SafeMigrationEr
   if (value === undefined || value.trim() === '') {
     return {
       code: 'missing_production_migration_confirm',
-      message: `Set PRODUCTION_MIGRATION_CONFIRM=${PRODUCTION_MIGRATION_CONFIRM_VALUE} in ${OPERATOR_ENV_FILE} to run operator database commands.`,
+      message: `Set PRODUCTION_MIGRATION_CONFIRM=${PRODUCTION_MIGRATION_CONFIRM_VALUE} in ${OPERATOR_ENV_FILE} to run production operator database commands.`,
     }
   }
 
   if (value !== PRODUCTION_MIGRATION_CONFIRM_VALUE) {
     return {
       code: 'invalid_production_migration_confirm',
-      message: `Set PRODUCTION_MIGRATION_CONFIRM=${PRODUCTION_MIGRATION_CONFIRM_VALUE} in ${OPERATOR_ENV_FILE} to run operator database commands.`,
+      message: `Set PRODUCTION_MIGRATION_CONFIRM=${PRODUCTION_MIGRATION_CONFIRM_VALUE} in ${OPERATOR_ENV_FILE} to run production operator database commands.`,
     }
   }
 
   return undefined
 }
 
+function envValue(env: OperatorDatabaseEnv, key: keyof OperatorDatabaseEnv): string | undefined {
+  return env[key]
+}
+
+function missingUrlMessage(spec: TargetSpec): string {
+  return `${spec.urlKey} is required in ${OPERATOR_ENV_FILE} for yarn db:migrate${spec.target === 'local' ? '' : `:${spec.target}`} and matching db:seed commands.`
+}
+
 export function getOperatorDatabaseConfig(
   options: GetOperatorDatabaseConfigOptions = {},
 ): OperatorDatabaseConfigResult {
+  const target = options.target ?? resolveOperatorDatabaseTarget()
+  const spec = TARGET_SPECS[target]
   const env = options.env ?? (process.env as OperatorDatabaseEnv)
   const migrationsFolder = options.migrationsFolder ?? DEFAULT_MIGRATIONS_FOLDER
 
-  if (isBlank(env.PRODUCTION_DATABASE_URL)) {
+  const databaseUrl = envValue(env, spec.urlKey)
+  if (isBlank(databaseUrl)) {
     return {
       ok: false,
       error: {
-        code: 'missing_production_database_url',
-        message: `PRODUCTION_DATABASE_URL is required in ${OPERATOR_ENV_FILE} for operator database commands.`,
+        code: spec.missingCode,
+        message: missingUrlMessage(spec),
       },
     }
   }
 
-  const confirmationError = productionConfirmationError(env.PRODUCTION_MIGRATION_CONFIRM)
-  if (confirmationError) {
-    return { ok: false, error: confirmationError }
+  if (spec.requiresProductionConfirm) {
+    const confirmationError = productionConfirmationError(env.PRODUCTION_MIGRATION_CONFIRM)
+    if (confirmationError) {
+      return { ok: false, error: confirmationError }
+    }
   }
 
-  const connectionString = env.PRODUCTION_DATABASE_URL!.trim()
+  const connectionString = databaseUrl!.trim()
 
   const config: OperatorDatabaseConfig = {
-    targetClass: 'production',
+    target: spec.target,
     connectionString,
     migrationsFolder,
-    max: parseOperatorPoolMax(env.PRODUCTION_DATABASE_POOL_MAX),
-    ssl: strictSsl(env.PRODUCTION_DATABASE_SSL),
+    max: parseOperatorPoolMax(envValue(env, spec.poolMaxKey)),
+    ssl: strictSsl(envValue(env, spec.sslKey)),
   }
 
   return {
@@ -198,14 +279,19 @@ export function isDirectSupabaseHost(host: string | undefined): boolean {
   return host !== undefined && DIRECT_SUPABASE_HOST.test(host)
 }
 
-export function operatorConnectionFailureHint(host: string | undefined): string | undefined {
+export function operatorConnectionFailureHint(
+  host: string | undefined,
+  target: OperatorDatabaseTarget = 'production',
+): string | undefined {
   if (!host || !DIRECT_SUPABASE_HOST.test(host)) {
     return undefined
   }
 
+  const urlKey = TARGET_SPECS[target].urlKey
+
   return [
-    'PRODUCTION_DATABASE_URL uses the Supabase direct host (db.*.supabase.co), which often does not resolve from a local machine.',
-    'Set the pooler/session connection string from the Supabase dashboard (Connect → Session or Transaction pooler) in PRODUCTION_DATABASE_URL.',
+    `${urlKey} uses the Supabase direct host (db.*.supabase.co), which often does not resolve from a local machine.`,
+    `Set the pooler/session connection string from the Supabase dashboard (Connect → Session or Transaction pooler) in ${urlKey}.`,
   ].join(' ')
 }
 

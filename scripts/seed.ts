@@ -1,5 +1,8 @@
-// Run with: yarn db:seed (PRODUCTION_* in .env — shared with yarn db:migrate via scripts/db-config.ts)
-// Uses onConflictDoNothing() — safe to run multiple times (idempotent).
+// Operator seed (reads .env only, not .env.local). Target from yarn script / CLI flag:
+//   yarn db:seed              → DATABASE_URL
+//   yarn db:seed:staging      → STAGING_DATABASE_URL
+//   yarn db:seed:production   → PRODUCTION_DATABASE_URL + PRODUCTION_MIGRATION_CONFIRM
+// Same resolution as yarn db:migrate* (scripts/db-config.ts). Idempotent (onConflictDoNothing).
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { inArray, sql } from 'drizzle-orm'
@@ -10,6 +13,7 @@ import {
   loadOperatorEnv,
   operatorConnectionFailureHint,
   pgPoolConfigFromOperatorConfig,
+  resolveOperatorDatabaseTarget,
 } from './db-config'
 import {
   categories,
@@ -20,12 +24,11 @@ import {
 
 loadOperatorEnv()
 
-const seedConfigResult = getOperatorDatabaseConfig()
+const seedTarget = resolveOperatorDatabaseTarget()
+const seedConfigResult = getOperatorDatabaseConfig({ target: seedTarget })
 
 if (!seedConfigResult.ok) {
-  console.error(
-    JSON.stringify({ event: 'seed_failed', targetClass: 'production', error: seedConfigResult.error }),
-  )
+  console.error(JSON.stringify({ event: 'seed_failed', target: seedTarget, error: seedConfigResult.error }))
   process.exit(1)
 }
 
@@ -34,7 +37,7 @@ const { config: seedConfig, diagnostics: seedDiagnostics } = seedConfigResult
 console.log(
   JSON.stringify({
     event: 'seed_connection',
-    targetClass: seedDiagnostics.targetClass,
+    target: seedDiagnostics.target,
     host: seedDiagnostics.host,
     sslEnabled: seedDiagnostics.sslEnabled,
     poolMax: seedDiagnostics.poolMax,
@@ -42,7 +45,7 @@ console.log(
 )
 
 if (isDirectSupabaseHost(seedDiagnostics.host)) {
-  const hint = operatorConnectionFailureHint(seedDiagnostics.host)
+  const hint = operatorConnectionFailureHint(seedDiagnostics.host, seedDiagnostics.target)
   if (hint) {
     console.warn(JSON.stringify({ event: 'seed_connection_warning', message: hint }))
   }
@@ -64,7 +67,7 @@ function headerSignatureFor(platformSeed: (typeof seedPlatforms)[number]) {
 }
 
 async function seed() {
-  console.log(JSON.stringify({ event: 'seed_started', targetClass: 'production' }))
+  console.log(JSON.stringify({ event: 'seed_started', target: seedDiagnostics.target }))
   console.log('Seeding categories...')
   await db.insert(category).values(categories as Array<typeof category.$inferInsert>).onConflictDoNothing()
   console.log(`  ${categories.length} categories inserted (or already present).`)
@@ -136,7 +139,7 @@ async function seed() {
     .onConflictDoNothing()
   console.log(`  ${seedCategorizationPatterns.length} system patterns inserted (or already present).`)
 
-  console.log(JSON.stringify({ event: 'seed_succeeded', targetClass: 'production' }))
+  console.log(JSON.stringify({ event: 'seed_succeeded', target: seedDiagnostics.target }))
 }
 
 seed()
@@ -148,11 +151,11 @@ seed()
         : undefined
 
     if (code === 'ENOTFOUND') {
-      const hint = operatorConnectionFailureHint(seedDiagnostics.host)
+      const hint = operatorConnectionFailureHint(seedDiagnostics.host, seedDiagnostics.target)
       console.error(
         JSON.stringify({
           event: 'seed_failed',
-          targetClass: 'production',
+          target: seedDiagnostics.target,
           host: seedDiagnostics.host,
           error: { code, message: 'Database host could not be resolved (DNS).' },
           hint,
