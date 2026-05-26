@@ -19,6 +19,7 @@ import {
   RenameCategoryDialog,
   RenameSubcategoryDialog,
 } from "./category-mutation-dialogs";
+import { SubcategoryNatureSelect } from "./subcategory-nature-select";
 
 type CategorySettingsPanelProps = {
   categories: CategoryWithSubCategories[];
@@ -160,6 +161,10 @@ function SubcategoryList({
                 ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-1">
+                <SubcategoryNatureSelect
+                  subCategoryId={subCategory.id}
+                  effectiveNature={subCategory.effectiveNature}
+                />
                 <RenameSubcategoryDialog subCategory={subCategory} />
                 {subCategory.isOwned && (
                   <DeleteSubcategoryDialog subCategory={subCategory} />

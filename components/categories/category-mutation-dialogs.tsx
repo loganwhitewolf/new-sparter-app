@@ -33,6 +33,7 @@ import {
   renameSubcategoryAction,
 } from '@/lib/actions/categories'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
+import { NATURE_LABELS, NATURE_ORDER } from '@/lib/utils/nature-labels'
 import type { ActionState } from '@/lib/validations/category'
 
 type CategoryType = 'in' | 'out'
@@ -163,6 +164,21 @@ export function CreateSubcategoryDialog({ category }: { category: CategoryWithSu
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" htmlFor={`subcategory-name-new-${category.id}`}>Nome sottocategoria</label>
             <Input id={`subcategory-name-new-${category.id}`} name="name" required placeholder="es. Supermercato" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" htmlFor={`subcategory-nature-new-${category.id}`}>Natura</label>
+            <Select name="nature" defaultValue="discretionary" required>
+              <SelectTrigger id={`subcategory-nature-new-${category.id}`} className="w-full" aria-label="Natura sottocategoria">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {NATURE_ORDER.filter(Boolean).map((key) => (
+                  <SelectItem key={key!} value={key!}>
+                    {NATURE_LABELS[key!]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <ActionError error={state.error} />
           <DialogFooter>
