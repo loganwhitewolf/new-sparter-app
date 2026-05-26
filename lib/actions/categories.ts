@@ -10,6 +10,7 @@ import {
   deleteUserSubcategory,
   renameUserCategory,
   renameUserSubcategory,
+  upsertSubcategoryNatureOverride,
   upsertSystemSubcategoryOverride,
 } from '@/lib/dal/categories'
 import {
@@ -19,8 +20,10 @@ import {
   DeleteSubcategorySchema,
   RenameCategorySchema,
   RenameSubcategorySchema,
+  SetSubcategoryNatureSchema,
   type ActionState,
 } from '@/lib/validations/category'
+import type { FlowNature } from '@/lib/utils/nature-labels'
 
 const GENERIC_ERROR = 'Si è verificato un errore. Riprova tra qualche secondo.'
 const NOT_FOUND_ERROR = 'Elemento non trovato o accesso negato.'
@@ -122,6 +125,7 @@ export async function createSubcategoryAction(
   const parsed = CreateSubcategorySchema.safeParse({
     categoryId: formData.get('categoryId'),
     name: formData.get('name'),
+    nature: formData.get('nature'),
   })
 
   if (!parsed.success) return { error: firstValidationError(parsed.error) }
@@ -133,6 +137,24 @@ export async function createSubcategoryAction(
   }
 
   return successAfterRevalidation()
+}
+
+export async function setSubcategoryNatureAction(input: {
+  subCategoryId: number
+  nature: FlowNature | null
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { userId } = await verifySession()
+  const parsed = SetSubcategoryNatureSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Dati non validi.' }
+  }
+  try {
+    await upsertSubcategoryNatureOverride({ userId, subCategoryId: parsed.data.subCategoryId, nature: parsed.data.nature })
+  } catch {
+    return { ok: false, error: GENERIC_ERROR }
+  }
+  revalidateCategorizationSurfaces()
+  return { ok: true }
 }
 
 export async function renameSubcategoryAction(

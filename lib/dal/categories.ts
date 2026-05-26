@@ -208,7 +208,7 @@ export async function deleteUserCategory(
 }
 
 export async function createUserSubcategory(
-  input: { userId: string, categoryId: number, name: string, slug: string },
+  input: { userId: string, categoryId: number, name: string, slug: string, nature: FlowNature },
   database: DbOrTx = db,
 ) {
   const categoryRows = await database
@@ -235,9 +235,26 @@ export async function createUserSubcategory(
         name: input.name,
         slug: input.slug,
         isActive: true,
+        nature: input.nature,
       })
       .returning(),
   )
+
+  return rows[0] ?? null
+}
+
+export async function upsertSubcategoryNatureOverride(
+  { userId, subCategoryId, nature }: { userId: string; subCategoryId: number; nature: FlowNature | null },
+  database: DbOrTx = db,
+) {
+  const rows = await database
+    .insert(userSubcategoryOverride)
+    .values({ userId, subCategoryId, nature, customName: null })
+    .onConflictDoUpdate({
+      target: [userSubcategoryOverride.userId, userSubcategoryOverride.subCategoryId],
+      set: { nature, updatedAt: new Date() },
+    })
+    .returning()
 
   return rows[0] ?? null
 }
