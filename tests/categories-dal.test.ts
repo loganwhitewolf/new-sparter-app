@@ -450,7 +450,7 @@ describe('categories DAL mutations', () => {
   it('creates subcategories only under categories visible to the user', async () => {
     mocks.selectResults.push([{ id: 2 }])
 
-    await createUserSubcategory({ userId: 'user-1', categoryId: 2, name: 'Affitto', slug: 'affitto' })
+    await createUserSubcategory({ userId: 'user-1', categoryId: 2, name: 'Affitto', slug: 'affitto', nature: 'essential' })
 
     expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.id', right: 2 })
     expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.isActive', right: true })
