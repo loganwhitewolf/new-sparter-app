@@ -8,6 +8,7 @@ import {
   createUserSubcategory,
   deleteUserCategory,
   deleteUserSubcategory,
+  isSubCategoryVisibleToUser,
   renameUserCategory,
   renameUserSubcategory,
   upsertSubcategoryNatureOverride,
@@ -147,6 +148,10 @@ export async function setSubcategoryNatureAction(input: {
   const parsed = SetSubcategoryNatureSchema.safeParse(input)
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Dati non validi.' }
+  }
+  const visible = await isSubCategoryVisibleToUser(parsed.data.subCategoryId, userId)
+  if (!visible) {
+    return { ok: false, error: NOT_FOUND_ERROR }
   }
   try {
     await upsertSubcategoryNatureOverride({ userId, subCategoryId: parsed.data.subCategoryId, nature: parsed.data.nature })

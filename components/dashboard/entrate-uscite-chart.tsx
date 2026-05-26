@@ -18,6 +18,7 @@ import type { MonthlyNatureTrendPoint } from '@/lib/dal/dashboard'
 type SegmentKey = FlowNature | 'unclassified'
 
 const SEGMENT_KEYS: ReadonlyArray<SegmentKey> = NATURE_ORDER.map((n) => n ?? 'unclassified')
+const VALID_SEGMENT_SET = new Set<string>(SEGMENT_KEYS)
 
 const chartConfig = Object.fromEntries(
   SEGMENT_KEYS.map((key) => [key, { label: NATURE_LABELS[key], color: NATURE_COLORS[key] }])
@@ -62,7 +63,7 @@ export function EntrateUsciteChart({ data }: Props) {
   const hidden = useMemo<Set<SegmentKey>>(() => {
     const raw = searchParams.get('hidden')
     if (!raw) return new Set()
-    return new Set(raw.split(',') as SegmentKey[])
+    return new Set(raw.split(',').filter((k): k is SegmentKey => VALID_SEGMENT_SET.has(k)))
   }, [searchParams])
 
   const unclassifiedHasData = useMemo(

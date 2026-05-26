@@ -693,8 +693,8 @@ export function buildMonthlyNatureTrendData(input: {
     bucket.segments[segmentKey] = toDecimal(bucket.segments[segmentKey])
       .plus(toDecimal(row.amount ?? 0))
       .toFixed(2)
-    bucket.totalNc += normalizeCount(row.totalNc)
-    bucket.totalIgn += normalizeCount(row.totalIgn)
+    if (bucket.totalNc === 0) bucket.totalNc = normalizeCount(row.totalNc)
+    if (bucket.totalIgn === 0) bucket.totalIgn = normalizeCount(row.totalIgn)
   }
 
   return Array.from(buckets.values())
@@ -1287,6 +1287,7 @@ export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Pr
           dateScopedTransactions(userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
           notExcludedFromTotals(),
+          notIgnoredCategory(),
         )
       )
       .groupBy(monthSql, natureSql)

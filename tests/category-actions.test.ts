@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   deleteUserSubcategory: vi.fn(),
   upsertSystemSubcategoryOverride: vi.fn(),
   upsertSubcategoryNatureOverride: vi.fn(),
+  isSubCategoryVisibleToUser: vi.fn(),
   revalidatePath: vi.fn(),
   refresh: vi.fn(),
 }))
@@ -40,6 +41,7 @@ vi.mock('@/lib/dal/categories', async () => {
     deleteUserSubcategory: mocks.deleteUserSubcategory,
     upsertSystemSubcategoryOverride: mocks.upsertSystemSubcategoryOverride,
     upsertSubcategoryNatureOverride: mocks.upsertSubcategoryNatureOverride,
+    isSubCategoryVisibleToUser: mocks.isSubCategoryVisibleToUser,
   }
 })
 
@@ -247,6 +249,7 @@ describe('setSubcategoryNatureAction (R-FN-07)', () => {
     vi.clearAllMocks()
     mocks.verifySession.mockResolvedValue({ userId: 'user-1', subscriptionPlan: 'basic' })
     mocks.upsertSubcategoryNatureOverride.mockResolvedValue({ id: 20 })
+    mocks.isSubCategoryVisibleToUser.mockResolvedValue(true)
   })
 
   it('returns ok:true and calls upsertSubcategoryNatureOverride with the given nature', async () => {
@@ -271,6 +274,13 @@ describe('setSubcategoryNatureAction (R-FN-07)', () => {
 
   it('returns ok:false for an invalid nature string', async () => {
     const result = await setSubcategoryNatureAction({ subCategoryId: 10, nature: 'invalid' as never })
+    expect(result).toMatchObject({ ok: false })
+    expect(mocks.upsertSubcategoryNatureOverride).not.toHaveBeenCalled()
+  })
+
+  it('rejects override for subcategory not visible to the session user (IDOR guard)', async () => {
+    mocks.isSubCategoryVisibleToUser.mockResolvedValueOnce(false)
+    const result = await setSubcategoryNatureAction({ subCategoryId: 999, nature: 'essential' })
     expect(result).toMatchObject({ ok: false })
     expect(mocks.upsertSubcategoryNatureOverride).not.toHaveBeenCalled()
   })
