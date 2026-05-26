@@ -1,0 +1,37 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-26T05:42:38.029Z",
+  "phase": "37",
+  "phase_name": "flow-nature-chart",
+  "phase_dir": ".planning/phases/37-flow-nature-chart",
+  "plan": 3,
+  "task": 1,
+  "total_tasks": 7,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": "37-01", "name": "nature-labels utility + Wave 0 RED scaffolds", "status": "done", "commit": "35a400c"},
+    {"id": "37-02", "name": "DB schema migration + seed-data nature assignments", "status": "done", "commit": "35a400c"}
+  ],
+  "remaining_tasks": [
+    {"id": "37-03", "name": "DAL getMonthlyTrendByNature + MonthlyNatureTrendPoint type", "status": "not_started", "wave": 2},
+    {"id": "37-04", "name": "Rewrite EntrateUsciteChart as nature-segmented stacked chart", "status": "not_started", "wave": 3},
+    {"id": "37-05", "name": "Settings UI: nature field on subcategory creation + inline Select override", "status": "not_started", "wave": 3}
+  ],
+  "blockers": [
+    {"description": "Subagent executor lacks Bash permissions in this environment — use interactive mode (--interactive flag or inline execution)", "type": "technical", "workaround": "Execute plans inline without spawning gsd-executor subagents"}
+  ],
+  "human_actions_pending": [],
+  "decisions": [
+    {"decision": "Interactive mode for all remaining plans", "rationale": "Subagent executors lack Bash permissions; inline execution is the only viable path", "phase": "37"},
+    {"decision": "NATURE_COLORS palette: green/orange/blue/purple/red/amber/gray", "rationale": "Hex values for Recharts fill prop compatibility", "phase": "37"},
+    {"decision": "Spurious platform.id serial drift removed from migration", "rationale": "Pre-existing snapshot drift unrelated to phase 37", "phase": "37"}
+  ],
+  "uncommitted_files": [
+    ".planning/STATE.md",
+    "CONTEXT.md",
+    "docs/adr/0003-flownature-at-subcategory-level.md",
+    "docs/adr/0004-nature-segments-algebraic-sum.md"
+  ],
+  "next_action": "Execute Plan 37-03 inline: implement getMonthlyTrendByNature in lib/dal/dashboard.ts and define MonthlyNatureTrendPoint type. Read 37-03-PLAN.md first.",
+  "context_notes": "Wave 1 complete. Wave 2 (37-03) is a single plan with no parallelism needed. Wave 3 (37-04, 37-05) has no file overlap so can be sequential. All RED scaffolds are in place from 37-01. Migration 0012 applied to prod DB. Use /gsd-execute-phase 37 --interactive to continue."
+}

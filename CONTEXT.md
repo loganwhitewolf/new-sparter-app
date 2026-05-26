@@ -37,6 +37,18 @@ L'atto di assegnare categoria e sottocategoria a una transazione. Può avvenire 
 
 **Uncategorized** (Non categorizzato):
 Transazione senza categoria e sottocategoria assegnate. È un segnale d'azione, non uno stato definitivo.
+
+**FlowNature** (Natura del flusso):
+Classificazione economica applicata a ogni sottocategoria. Ogni sottocategoria ha esattamente una natura (o è non classificata). Valori canonici:
+- `essential` — spesa necessaria e ricorrente (affitto, bollette, spesa alimentare, salute)
+- `discretionary` — consumo opzionale (ristoranti, intrattenimento, shopping)
+- `operational` — reddito da lavoro ordinario (stipendio, freelance)
+- `financial` — risparmio e investimenti, e le relative entrate (ETF, dividendi, conto deposito)
+- `debt` — rimborso di debiti (rate mutuo quota capitale, finanziamenti)
+- `extraordinary` — eventi non ricorrenti (bonus, rimborso fiscale, eredità, vendita beni usati)
+
+Le sottocategorie di sistema escono dal seed con una natura predefinita ragionevole. L'utente può sovrascrivere la natura dalle impostazioni. Una sottocategoria senza natura assegnata è visibile nel grafico come segmento "non classificato".
+_Avoid_: tipo di spesa, carattere, tag economico
 _Avoid_: da classificare
 
 **PatternSuggestion** (Suggerimento di pattern):
@@ -70,6 +82,7 @@ _Avoid_: periodo, filtro, intervallo
 - Un **Import** produce zero o più **Transaction**
 - Una **Transaction** appartiene a esattamente una **Category** e zero o una **Subcategory**
 - Una **Category** contiene zero o più **Subcategory**
+- Una **Subcategory** ha zero o una **FlowNature** (null = non classificata)
 - La **Deviation** di una **Subcategory** è calcolata rispetto alla sua **Baseline**
 - La **Baseline** si calcola solo se esistono dati nei 3 mesi precedenti il **Reference Period**
 
