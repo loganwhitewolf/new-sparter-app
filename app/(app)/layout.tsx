@@ -1,12 +1,40 @@
+/**
+ * Onboarding gate per D-11:
+ * - proxy.ts forwards 'x-pathname' on every request (session-only, no DB in edge runtime)
+ * - This RSC layout reads the pathname and redirects users with 0 transactions to /onboarding
+ * - /onboarding and /settings/* are exempt from the redirect guard
+ */
+import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
+import { verifySession } from '@/lib/dal/auth'
+import { getTransactionCount } from '@/lib/dal/transactions'
+import { APP_ROUTES } from '@/lib/routes'
 
-export default function AppLayout({
+export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { userId } = await verifySession()
+
+  const requestHeaders = await headers()
+  const pathname = requestHeaders.get('x-pathname') ?? ''
+
+  // Exempt /onboarding and /settings/* from the zero-transaction redirect guard
+  const isExempt =
+    pathname.startsWith(APP_ROUTES.onboarding) ||
+    pathname.startsWith(APP_ROUTES.settings)
+
+  if (!isExempt) {
+    const txCount = await getTransactionCount(userId)
+    if (txCount === 0) {
+      redirect(APP_ROUTES.onboarding)
+    }
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       <aside
