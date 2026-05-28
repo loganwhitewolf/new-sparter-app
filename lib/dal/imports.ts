@@ -1,9 +1,9 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, desc, eq, gte, ilike, lte, or, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gte, ilike, isNotNull, lte, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
-import { file, importFormatVersion, platform, transaction } from '@/lib/db/schema'
+import { expense, file, importFormatVersion, platform, transaction } from '@/lib/db/schema'
 import type { ParsedImportFilters } from '@/lib/validations/import'
 
 export const IMPORT_LIST_LIMIT = 50
@@ -141,6 +141,82 @@ export const getImportRows = cache(
 )
 
 export const getImports = getImportRows
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Latest import summary for onboarding steps 2 and 3 — R-OB-05, R-OB-06
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type LatestImportSummary = {
+  fileId: string
+  fileName: string
+  importedCount: number
+  autoCategorizedCount: number
+  uncategorizedCount: number
+  positiveTotal: string
+  negativeTotal: string
+  firstMonth: Date | null
+  lastMonth: Date | null
+}
+
+/**
+ * Returns aggregate stats for the user's most recent imported file.
+ * All expense counts are scoped to the file (T-38-07: WHERE userId = $1).
+ * Month range is derived via getFileCoveredMonths which enforces ownership.
+ * Returns null when the user has no imported files yet (defensive path for step=3).
+ */
+export const getLatestImportSummaryForUser = cache(
+  async (userId: string): Promise<LatestImportSummary | null> => {
+    // Fetch the latest imported file for this user (ordered by importedAt desc)
+    const fileRows = await db
+      .select({
+        id: file.id,
+        displayName: file.displayName,
+        originalName: file.originalName,
+        importedCount: file.importedCount,
+        positiveTotal: file.positiveTotal,
+        negativeTotal: file.negativeTotal,
+      })
+      .from(file)
+      .where(and(eq(file.userId, userId), isNotNull(file.importedAt)))
+      .orderBy(desc(file.importedAt))
+      .limit(1)
+
+    const latestFile = fileRows[0]
+    if (!latestFile) return null
+
+    // Count auto-categorized expenses (subCategoryId IS NOT NULL) for this file
+    const categorisedRows = await db
+      .select({
+        autoCategorizedCount: count(),
+      })
+      .from(expense)
+      .where(
+        and(
+          eq(expense.importedFromFileId, latestFile.id),
+          eq(expense.userId, userId),
+          isNotNull(expense.subCategoryId),
+        ),
+      )
+
+    const autoCategorizedCount = categorisedRows[0]?.autoCategorizedCount ?? 0
+    const uncategorizedCount = Math.max(0, latestFile.importedCount - autoCategorizedCount)
+
+    // Derive month range using the same ownership-enforcing query as getFileCoveredMonths
+    const monthRange = await getFileCoveredMonths(latestFile.id, userId)
+
+    return {
+      fileId: latestFile.id,
+      fileName: latestFile.displayName ?? latestFile.originalName,
+      importedCount: latestFile.importedCount,
+      autoCategorizedCount,
+      uncategorizedCount,
+      positiveTotal: latestFile.positiveTotal,
+      negativeTotal: latestFile.negativeTotal,
+      firstMonth: monthRange?.firstMonth ?? null,
+      lastMonth: monthRange?.lastMonth ?? null,
+    }
+  },
+)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // File covered months query — R-OB-10 / D-10
