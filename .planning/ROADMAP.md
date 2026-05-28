@@ -7,6 +7,7 @@
 - ✅ **v1.8 / M008: Dashboard Intelligence** — Phase 29 (shipped 2026-05-20)
 - ✅ **v1.9: Social Auth** — Phases 30–32 (shipped 2026-05-22)
 - ✅ **v1.10: Pattern Suggestions** — Phases 33–36 (shipped 2026-05-25)
+- 🔄 **v1.12: First-import Onboarding** — Phase 38 (in planning)
 
 ## Phases
 
@@ -128,3 +129,41 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 - [x] 37-04-PLAN.md — Chart rewrite: stacked nature `EntrateUsciteChart` with URL-persisted legend toggle + overview page wiring (R-FN-04, R-FN-05, R-FN-06)
 - [x] 37-05-PLAN.md — Settings: nature required on creation + inline `SubcategoryNatureSelect` + `setSubcategoryNatureAction` (R-FN-07)
+
+---
+
+## 🔄 v1.12: First-import Onboarding (Phase 38) — IN PLANNING
+
+### Phase 38: first-import-onboarding
+
+**Goal:** New users with zero transactions see a dedicated 5-step onboarding flow instead of an empty dashboard. The flow guides them through upload → overview → categorization education → manual categorization wizard → outro. A hard routing gate (per D-11, implemented in the `app/(app)` RSC layout — NOT in `proxy.ts` because Drizzle cannot run in the Edge runtime) redirects all authenticated routes to `/onboarding` while `count(transaction) === 0`.
+**Status:** Pending
+**Depends on:** Phase 11–16 (Import), Phase 37 (FlowNature — nature badge in categorization)
+
+**Requirements:**
+
+- R-OB-01: Routing gate redirects any authenticated route with 0 transactions to `/onboarding` (except `/onboarding` itself and `/settings`); implemented in `app/(app)/layout.tsx` RSC per D-11, proxy.ts stays session-only
+- R-OB-02: `getTransactionCount(userId)` DAL function used by the layout guard
+- R-OB-03: `/onboarding` route group with step state (URL-driven: `?step=1..5`)
+- R-OB-04: Step 1 — Upload: single-file drop-zone, platform auto-detected; if not detected, `import-format-wizard` creates private platform
+- R-OB-05: Step 2 — Overview: N transactions, income total, expenses total, months covered (derived label), % auto-categorized
+- R-OB-06: Step 3 — Categorization education: contextual tip about transfers/giroconto excluded from totals
+- R-OB-07: Step 4 — Manual categorization wizard: top 15 uncategorized expenses by `|totalAmount| DESC`, shadcn Combobox with FlowNature badge per subcategory, "Categorize the rest later" global skip CTA
+- R-OB-08: Step 5 — Outro: "Vai alla dashboard" CTA → `/dashboard`, "Personalizza categorie" CTA → `/settings/categories`
+- R-OB-09: Full-screen hero design (Variant B) — dark bg Steps 1–3+5, light bg Step 4; progress dots + step label in header
+- R-OB-10: Month label derived on-the-fly from transaction dates (no stored field); date-range filter on `/import` uses `referenceStartedAt`/`referenceEndedAt`
+- R-OB-11: Prototype files deleted after first merge (`app/(app)/prototype/onboarding/`)
+
+**Plans:** 3/3
+
+**Wave 1**
+
+- [ ] 38-01-PLAN.md — DAL foundation + RSC layout guard: `getTransactionCount`, `getTopUncategorizedExpenses`, `getFileCoveredMonths`, `formatMonthRange`, `APP_ROUTES.onboarding`, async `app/(app)/layout.tsx` redirect guard, `proxy.ts` forwards `x-pathname` (R-OB-01, R-OB-02, R-OB-10)
+
+**Wave 2**
+
+- [ ] 38-02-PLAN.md — Onboarding route group + Steps 1–3: `/onboarding` page with Zod step parser, `OnboardingShell` + `ProgressDots`, Step 1 upload (reuses R2 presigned PUT + analyze/confirm actions), Step 2 overview RSC (real data + `formatMonthRange`), Step 3 education with giroconto tip, design-system tokens only (R-OB-03, R-OB-04, R-OB-05, R-OB-06, R-OB-09, R-OB-10)
+
+**Wave 3**
+
+- [ ] 38-03-PLAN.md — Step 4 categorization wizard (shadcn Combobox + FlowNature badges) + `onboardingCategorizeExpense` action + Step 5 outro + prototype deletion + `yarn build` E2E gate (R-OB-07, R-OB-08, R-OB-09, R-OB-11)
