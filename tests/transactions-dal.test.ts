@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   offsetArgs: [] as number[],
   updateSetArgs: [] as unknown[],
   updateWhereArgs: [] as unknown[],
+  executeArgs: [] as unknown[],
+  executeResult: null as unknown,
 }))
 
 function makeQueryChain(finalValue: unknown[] = []) {
@@ -56,15 +58,19 @@ function makeUpdateChain() {
 
 vi.mock('@/lib/db', () => ({
   db: {
-    select: (shape: unknown) => {
+    select: vi.fn((shape: unknown) => {
       mocks.selectedShapes.push(shape)
       return makeQueryChain([])
-    },
-    selectDistinct: (shape: unknown) => {
+    }),
+    selectDistinct: vi.fn((shape: unknown) => {
       mocks.selectedShapes.push(shape)
       return makeQueryChain([])
-    },
+    }),
     update: vi.fn(() => makeUpdateChain()),
+    execute: vi.fn((query: unknown) => {
+      mocks.executeArgs.push(query)
+      return Promise.resolve(mocks.executeResult ?? { rows: [] })
+    }),
   },
 }))
 function mockSql(strings: TemplateStringsArray, ...values: unknown[]) {
@@ -152,6 +158,8 @@ const {
   transactionListSelect,
   transactionPlatformSelect,
   updateTransactionCustomTitle,
+  getTransactionCount,
+  getTopUncategorizedExpenses,
 } = await import('../lib/dal/transactions')
 
 describe('transaction DAL query helpers', () => {
@@ -479,5 +487,139 @@ describe('getUncategorizedTransactionsByFileId', () => {
     // .from() is called on the chain returned by .select(), which itself is on chain (the db substitute)
     expect(chain.from).toHaveBeenCalledTimes(1)
     expect(chain.select).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getTransactionCount — R-OB-02
+// ─────────────────────────────────────────────────────────────────────────────
+
+// makeCountChain: terminates at .where() (count query has no limit/offset)
+function makeCountChain(finalValue: unknown[] = []) {
+  const chain = {
+    from: vi.fn(() => chain),
+    where: vi.fn((arg: unknown) => {
+      mocks.whereArgs.push(arg)
+      return Promise.resolve(finalValue)
+    }),
+  }
+  return chain
+}
+
+describe('getTransactionCount (R-OB-02)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.selectedShapes.length = 0
+    mocks.whereArgs.length = 0
+    mocks.executeArgs.length = 0
+    mocks.executeResult = null
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+  })
+
+  it('returns the integer COUNT(*) for the userId argument (R-OB-02)', async () => {
+    const { db } = await import('@/lib/db')
+    const countChain = makeCountChain([{ c: 7 }])
+    ;(db.select as ReturnType<typeof vi.fn>).mockImplementationOnce((shape: unknown) => {
+      mocks.selectedShapes.push(shape)
+      return countChain
+    })
+
+    const result = await getTransactionCount('user-1')
+
+    expect(result).toBe(7)
+  })
+
+  it('returns 0 when no rows exist (R-OB-02)', async () => {
+    const { db } = await import('@/lib/db')
+    const countChain = makeCountChain([])
+    ;(db.select as ReturnType<typeof vi.fn>).mockImplementationOnce((shape: unknown) => {
+      mocks.selectedShapes.push(shape)
+      return countChain
+    })
+
+    const result = await getTransactionCount('user-1')
+
+    expect(result).toBe(0)
+  })
+
+  it('does NOT call verifySession (userId is an explicit argument) (R-OB-02)', async () => {
+    const { db } = await import('@/lib/db')
+    const countChain = makeCountChain([{ c: 3 }])
+    ;(db.select as ReturnType<typeof vi.fn>).mockImplementationOnce((shape: unknown) => {
+      mocks.selectedShapes.push(shape)
+      return countChain
+    })
+
+    await getTransactionCount('user-1')
+
+    expect(mocks.verifySession).not.toHaveBeenCalled()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getTopUncategorizedExpenses — R-OB-07 query
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('getTopUncategorizedExpenses (R-OB-07 query)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.selectedShapes.length = 0
+    mocks.whereArgs.length = 0
+    mocks.executeArgs.length = 0
+    mocks.executeResult = null
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+  })
+
+  it('executes parameterized SQL with DISTINCT ON, sub_category_id IS NULL, total_amount < 0, ORDER BY ABS DESC, LIMIT (R-OB-07)', async () => {
+    const { db } = await import('@/lib/db')
+
+    mocks.executeResult = { rows: [] }
+
+    await getTopUncategorizedExpenses('user-1')
+
+    expect(db.execute).toHaveBeenCalledTimes(1)
+    const sqlArg = mocks.executeArgs[0] as { strings: string[]; values: unknown[] }
+    const fullSql = sqlArg.strings.join('?')
+    expect(fullSql).toContain('DISTINCT ON (description_hash)')
+    expect(fullSql).toContain('sub_category_id IS NULL')
+    expect(fullSql).toContain('total_amount::numeric < 0')
+    expect(fullSql).toContain('ORDER BY description_hash, ABS(total_amount::numeric) DESC')
+    expect(fullSql).toContain('LIMIT')
+  })
+
+  it('defaults limit to 15 when not provided (R-OB-07)', async () => {
+    mocks.executeResult = { rows: [] }
+
+    await getTopUncategorizedExpenses('user-1')
+
+    const sqlArg = mocks.executeArgs[0] as { strings: string[]; values: unknown[] }
+    // The limit value (15) is bound as a parameterized value
+    expect(sqlArg.values).toContain(15)
+  })
+
+  it('passes through custom limit (R-OB-07)', async () => {
+    mocks.executeResult = { rows: [] }
+
+    await getTopUncategorizedExpenses('user-1', 5)
+
+    const sqlArg = mocks.executeArgs[0] as { strings: string[]; values: unknown[] }
+    expect(sqlArg.values).toContain(5)
+  })
+
+  it('returns rows sorted by |totalAmount| DESC after JS-side reorder (R-OB-07)', async () => {
+    // Rows in descriptionHash order (as DISTINCT ON returns them), not by amount
+    mocks.executeResult = {
+      rows: [
+        { id: 'e1', title: 'AMAZON', descriptionHash: 'aaa', totalAmount: '-5.00' },
+        { id: 'e2', title: 'NETFLIX', descriptionHash: 'bbb', totalAmount: '-99.00' },
+        { id: 'e3', title: 'GAS', descriptionHash: 'ccc', totalAmount: '-12.50' },
+      ],
+    }
+
+    const result = await getTopUncategorizedExpenses('user-1')
+
+    expect(result[0].id).toBe('e2') // -99.00 largest absolute value
+    expect(result[1].id).toBe('e3') // -12.50
+    expect(result[2].id).toBe('e1') // -5.00
   })
 })
