@@ -7,7 +7,7 @@
 - ✅ **v1.8 / M008: Dashboard Intelligence** — Phase 29 (shipped 2026-05-20)
 - ✅ **v1.9: Social Auth** — Phases 30–32 (shipped 2026-05-22)
 - ✅ **v1.10: Pattern Suggestions** — Phases 33–36 (shipped 2026-05-25)
-- 🔄 **v1.12: First-import Onboarding** — Phase 38 (in planning)
+- ✅ **v1.12: First-import Onboarding** — Phase 38 (shipped 2026-05-28)
 
 ## Phases
 
@@ -87,8 +87,9 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 | 36 | v1.10 | 2/2 | Complete | 2026-05-23 |
 
 | 37 | v1.11 | 5/5 | Complete | 2026-05-26 |
+| 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
 
-**Total: 37 phases shipped · 134 plans complete**
+**Total: 38 phases shipped · 137 plans complete**
 
 ---
 
@@ -132,29 +133,29 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 ---
 
-## 🔄 v1.12: First-import Onboarding (Phase 38) — IN PLANNING
+## ✅ v1.12: First-import Onboarding (Phase 38) — SHIPPED 2026-05-28
 
 ### Phase 38: first-import-onboarding
 
 **Goal:** New users with zero transactions see a dedicated 5-step onboarding flow instead of an empty dashboard. The flow guides them through upload → overview → categorization education → manual categorization wizard → outro. A hard routing gate (per D-11, implemented in the `app/(app)` RSC layout — NOT in `proxy.ts` because Drizzle cannot run in the Edge runtime) redirects all authenticated routes to `/onboarding` while `count(transaction) === 0`.
-**Status:** Pending
+**Status:** Complete
 **Depends on:** Phase 11–16 (Import), Phase 37 (FlowNature — nature badge in categorization)
 
 **Requirements:**
 
-- R-OB-01: Routing gate redirects any authenticated route with 0 transactions to `/onboarding` (except `/onboarding` itself and `/settings`); implemented in `app/(app)/layout.tsx` RSC per D-11, proxy.ts stays session-only
-- R-OB-02: `getTransactionCount(userId)` DAL function used by the layout guard
-- R-OB-03: `/onboarding` route group with step state (URL-driven: `?step=1..5`)
-- R-OB-04: Step 1 — Upload: single-file drop-zone, platform auto-detected; if not detected, `import-format-wizard` creates private platform
-- R-OB-05: Step 2 — Overview: N transactions, income total, expenses total, months covered (derived label), % auto-categorized
-- R-OB-06: Step 3 — Categorization education: contextual tip about transfers/giroconto excluded from totals
-- R-OB-07: Step 4 — Manual categorization wizard: top 15 uncategorized expenses by `|totalAmount| DESC`, shadcn Combobox with FlowNature badge per subcategory, "Categorize the rest later" global skip CTA
-- R-OB-08: Step 5 — Outro: "Vai alla dashboard" CTA → `/dashboard`, "Personalizza categorie" CTA → `/settings/categories`
-- R-OB-09: Full-screen hero design (Variant B) — dark bg Steps 1–3+5, light bg Step 4; progress dots + step label in header
-- R-OB-10: Month label derived on-the-fly from transaction dates (no stored field); date-range filter on `/import` uses `referenceStartedAt`/`referenceEndedAt`
-- R-OB-11: Prototype files deleted after first merge (`app/(app)/prototype/onboarding/`)
+- R-OB-01 ✓: Routing gate redirects any authenticated route with 0 transactions to `/onboarding` (except `/onboarding` itself and `/settings`); implemented in `app/(app)/layout.tsx` RSC per D-11, proxy.ts stays session-only
+- R-OB-02 ✓: `getTransactionCount(userId)` DAL function used by the layout guard
+- R-OB-03 ✓: `/onboarding` route group with step state (URL-driven: `?step=1..5`)
+- R-OB-04 ✓: Step 1 — Upload: single-file drop-zone, platform auto-detected; if not detected, `import-format-wizard` creates private platform
+- R-OB-05 ✓: Step 2 — Overview: N transactions, income total, expenses total, months covered (derived label), % auto-categorized
+- R-OB-06 ✓: Step 3 — Categorization education: contextual tip about transfers/giroconto excluded from totals
+- R-OB-07 ✓: Step 4 — Manual categorization wizard: top 15 uncategorized expenses by `|totalAmount| DESC`, shadcn Combobox with FlowNature badge per subcategory, "Categorize the rest later" global skip CTA
+- R-OB-08 ✓: Step 5 — Outro: "Vai alla dashboard" CTA → `/dashboard`, "Personalizza categorie" CTA → `/settings/categories`
+- R-OB-09 ✓: Full-screen hero design (Variant B) — dark bg Steps 1–3+5, light bg Step 4; progress dots + step label in header
+- R-OB-10 ✓: Month label derived on-the-fly from transaction dates (no stored field); date-range filter on `/import` uses `referenceStartedAt`/`referenceEndedAt`
+- R-OB-11 ✓: Prototype files deleted after first merge (`app/(app)/prototype/onboarding/`)
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 **Wave 1**
 
@@ -166,4 +167,4 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 **Wave 3**
 
-- [ ] 38-03-PLAN.md — Step 4 categorization wizard (shadcn Combobox + FlowNature badges) + `onboardingCategorizeExpense` action + Step 5 outro + prototype deletion + `yarn build` E2E gate (R-OB-07, R-OB-08, R-OB-09, R-OB-11)
+- [x] 38-03-PLAN.md — Step 4 categorization wizard (shadcn Combobox + FlowNature badges) + `onboardingCategorizeExpense` action + Step 5 outro + prototype deletion + `yarn build` E2E gate (R-OB-07, R-OB-08, R-OB-09, R-OB-11)
