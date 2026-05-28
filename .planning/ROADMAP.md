@@ -154,7 +154,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 - R-OB-10: Month label derived on-the-fly from transaction dates (no stored field); date-range filter on `/import` uses `referenceStartedAt`/`referenceEndedAt`
 - R-OB-11: Prototype files deleted after first merge (`app/(app)/prototype/onboarding/`)
 
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 **Wave 1**
 
@@ -162,7 +162,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 **Wave 2**
 
-- [ ] 38-02-PLAN.md — Onboarding route group + Steps 1–3: `/onboarding` page with Zod step parser, `OnboardingShell` + `ProgressDots`, Step 1 upload (reuses R2 presigned PUT + analyze/confirm actions), Step 2 overview RSC (real data + `formatMonthRange`), Step 3 education with giroconto tip, design-system tokens only (R-OB-03, R-OB-04, R-OB-05, R-OB-06, R-OB-09, R-OB-10)
+- [x] 38-02-PLAN.md — Onboarding route group + Steps 1–3: `/onboarding` page with Zod step parser, `OnboardingShell` + `ProgressDots`, Step 1 upload (reuses R2 presigned PUT + analyze/confirm actions), Step 2 overview RSC (real data + `formatMonthRange`), Step 3 education with giroconto tip, design-system tokens only (R-OB-03, R-OB-04, R-OB-05, R-OB-06, R-OB-09, R-OB-10)
 
 **Wave 3**
 
