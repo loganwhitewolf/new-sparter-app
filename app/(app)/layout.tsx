@@ -35,6 +35,12 @@ export default async function AppLayout({
     }
   }
 
+  // Bypass app chrome (Sidebar, Topbar, BottomNav) for the onboarding route group (D-09, D-11)
+  const isOnboarding = pathname.startsWith(APP_ROUTES.onboarding)
+  if (isOnboarding) {
+    return <>{children}</>
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       <aside
