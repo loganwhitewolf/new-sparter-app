@@ -430,4 +430,68 @@ export async function getUncategorizedTransactionsByFileId(
     .limit(UNCATEGORIZED_TX_LIMIT)
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Onboarding gate queries (R-OB-02, R-OB-07) — Phase 38 Plan 01
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Returns the total number of transactions for the given userId.
+ * Does NOT call verifySession — caller (RSC layout guard) provides a verified userId.
+ * Wrapped in react cache() per DAL convention for RSC deduplication.
+ */
+export const getTransactionCount = cache(
+  async (userId: string): Promise<number> => {
+    const rows = await db
+      .select({ c: sql<number>`count(*)::int` })
+      .from(transaction)
+      .where(eq(transaction.userId, userId))
+
+    return Number(rows[0]?.c ?? 0)
+  },
+)
+
+/** Row shape returned by getTopUncategorizedExpenses (R-OB-07) */
+export type TopUncategorizedExpenseRow = {
+  id: string
+  title: string
+  descriptionHash: string
+  totalAmount: string
+}
+
+/**
+ * Returns up to `limit` uncategorized expense rows for the given userId.
+ * Filtering: subCategoryId IS NULL AND totalAmount < 0.
+ * Deduplication: DISTINCT ON (description_hash) keeping highest |amount| per hash.
+ * Result is sorted client-side by |totalAmount| DESC.
+ *
+ * Security: userId bound from session (T-38-03). Limit hard-capped at 100 (T-38-05).
+ */
+export const getTopUncategorizedExpenses = cache(
+  async (userId: string, limit = 15): Promise<TopUncategorizedExpenseRow[]> => {
+    // T-38-05: hard cap to prevent DoS from large limit values
+    const safeLimitValue = Math.min(limit, 100)
+
+    const result = await db.execute(sql`
+      SELECT DISTINCT ON (description_hash)
+        id,
+        title,
+        description_hash AS "descriptionHash",
+        total_amount AS "totalAmount"
+      FROM expense
+      WHERE user_id = ${userId}
+        AND sub_category_id IS NULL
+        AND total_amount::numeric < 0
+      ORDER BY description_hash, ABS(total_amount::numeric) DESC
+      LIMIT ${safeLimitValue}
+    `)
+
+    const rows = result.rows as TopUncategorizedExpenseRow[]
+
+    // JS-side sort by |totalAmount| DESC because DISTINCT ON orders by description_hash
+    return rows.sort(
+      (a, b) => Math.abs(parseFloat(b.totalAmount)) - Math.abs(parseFloat(a.totalAmount)),
+    )
+  },
+)
+
 export { db }
