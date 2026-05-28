@@ -154,11 +154,11 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 - R-OB-10: Month label derived on-the-fly from transaction dates (no stored field); date-range filter on `/import` uses `referenceStartedAt`/`referenceEndedAt`
 - R-OB-11: Prototype files deleted after first merge (`app/(app)/prototype/onboarding/`)
 
-**Plans:** 3/3
+**Plans:** 1/3 plans executed
 
 **Wave 1**
 
-- [ ] 38-01-PLAN.md — DAL foundation + RSC layout guard: `getTransactionCount`, `getTopUncategorizedExpenses`, `getFileCoveredMonths`, `formatMonthRange`, `APP_ROUTES.onboarding`, async `app/(app)/layout.tsx` redirect guard, `proxy.ts` forwards `x-pathname` (R-OB-01, R-OB-02, R-OB-10)
+- [x] 38-01-PLAN.md — DAL foundation + RSC layout guard: `getTransactionCount`, `getTopUncategorizedExpenses`, `getFileCoveredMonths`, `formatMonthRange`, `APP_ROUTES.onboarding`, async `app/(app)/layout.tsx` redirect guard, `proxy.ts` forwards `x-pathname` (R-OB-01, R-OB-02, R-OB-10)
 
 **Wave 2**
 
