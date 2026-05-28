@@ -10,6 +10,7 @@ const {
 
 function productionEnv(overrides: Record<string, string | undefined> = {}) {
   return {
+    NODE_ENV: 'production' as const,
     CLOUDFLARE_API_TOKEN: 'token-secret-value',
     R2_ACCOUNT_ID: 'account-secret-value',
     R2_BUCKET_NAME: 'bucket-secret-value',

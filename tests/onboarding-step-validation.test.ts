@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 // Import module under test — fails until lib/validations/onboarding.ts is created
-const { parseOnboardingStep, OnboardingStepSchema, STEP_NAMES } = await import(
+const { parseOnboardingStep, STEP_NAMES } = await import(
   '../lib/validations/onboarding'
 )
 

@@ -659,7 +659,16 @@ describe('buildMonthlyNatureTrendData (R-FN-04, R-FN-08, R-FN-09)', () => {
     expect(result).toHaveLength(2)
     for (const point of result) {
       expect(Object.keys(point.segments).sort()).toEqual(
-        ['debt', 'discretionary', 'essential', 'extraordinary', 'financial', 'operational', 'unclassified'].sort()
+        [
+          'debt',
+          'discretionary',
+          'essential',
+          'extraordinary',
+          'financial',
+          'income',
+          'operational',
+          'unclassified',
+        ].sort()
       )
       for (const val of Object.values(point.segments)) {
         expect(val).toBe('0.00')

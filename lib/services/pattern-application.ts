@@ -6,6 +6,12 @@ import { expense } from '@/lib/db/schema'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
 import { normalizeDescription } from '@/lib/utils/import'
 
+function errorCause(error: unknown): unknown {
+  return typeof error === 'object' && error !== null && 'cause' in error
+    ? (error as { cause?: unknown }).cause
+    : undefined
+}
+
 function totalAmountMatchesSign(
   sign: 'positive' | 'negative' | 'any',
   totalAmount: string,
@@ -50,7 +56,7 @@ export async function applyNewPatternToExpenses(
         '[applyNewPatternToExpenses] db error',
         { userId, patternId, stage: 'select' },
         err instanceof Error ? err.message : err,
-        (err as any)?.cause,
+        errorCause(err),
       )
       throw err
     })
@@ -81,7 +87,7 @@ export async function applyNewPatternToExpenses(
         '[applyNewPatternToExpenses] db error',
         { userId, patternId, stage: 'update' },
         err instanceof Error ? err.message : err,
-        (err as any)?.cause,
+        errorCause(err),
       )
       throw err
     })

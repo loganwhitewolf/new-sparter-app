@@ -1,6 +1,5 @@
-import { expect, test, type Page, type APIRequestContext } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
-const SIGNUP_PATH = '/api/auth/sign-up/email'
 const AUTHENTICATED_CHECKPOINT = /\/dashboard(?:[/?#]|$)/
 const ANALYZE_CHECKPOINT = /\/import\/[^/]+\/analyze(?:[/?#]|$)/
 

@@ -19,6 +19,22 @@ import {
 import { revalidateCategorizationSurfaces } from "@/lib/actions/revalidation";
 import { applyNewPatternToExpenses } from "@/lib/services/pattern-application";
 
+function errorCause(error: unknown): unknown {
+  return typeof error === "object" && error !== null && "cause" in error
+    ? (error as { cause?: unknown }).cause
+    : undefined;
+}
+
+function causeField(error: unknown, field: "message" | "code"): string {
+  const cause = errorCause(error);
+  if (typeof cause !== "object" || cause === null || !(field in cause)) {
+    return "";
+  }
+
+  const value = (cause as Record<"message" | "code", unknown>)[field];
+  return typeof value === "string" ? value : "";
+}
+
 function customPatternsUnavailableMessage(currentPlan: PlanGate): string {
   const minPlan = getCategorizationAccessConfig().customPatternsMinPlan;
 
@@ -75,8 +91,8 @@ export async function createPatternAction(
   try {
     created = await createPattern({ ...parsed.data, userId });
   } catch (err) {
-    const causeMsg: string = (err as any)?.cause?.message ?? "";
-    const causeCode: string = (err as any)?.cause?.code ?? "";
+    const causeMsg = causeField(err, "message");
+    const causeCode = causeField(err, "code");
     if (
       err instanceof Error &&
       /invalid|valido/i.test(err.message + causeMsg)
@@ -93,7 +109,7 @@ export async function createPatternAction(
     console.error(
       "[createPatternAction] createPattern error:",
       err instanceof Error ? err.message : err,
-      (err as any)?.cause,
+      errorCause(err),
     );
     return { error: "Si è verificato un errore. Riprova tra qualche secondo." };
   }
@@ -112,7 +128,7 @@ export async function createPatternAction(
     console.error(
       '[createPatternAction] applyNewPatternToExpenses failed (pattern saved, retroactive apply failed):',
       err instanceof Error ? err.message : err,
-      (err as any)?.cause,
+      errorCause(err),
     )
   }
 
@@ -209,11 +225,11 @@ export async function promoteSuggestionAction(
     console.error(
       "[promoteSuggestionAction] createPattern error:",
       err instanceof Error ? err.message : err,
-      (err as any)?.cause,
+      errorCause(err),
     );
 
-    const causeMsg: string = (err as any)?.cause?.message ?? "";
-    const causeCode: string = (err as any)?.cause?.code ?? "";
+    const causeMsg = causeField(err, "message");
+    const causeCode = causeField(err, "code");
     if (
       err instanceof Error &&
       /invalid|valido/i.test(err.message + causeMsg)
@@ -244,7 +260,7 @@ export async function promoteSuggestionAction(
     console.error(
       '[promoteSuggestionAction] applyNewPatternToExpenses failed (pattern saved, retroactive apply failed):',
       err instanceof Error ? err.message : err,
-      (err as any)?.cause,
+      errorCause(err),
     )
   }
 
