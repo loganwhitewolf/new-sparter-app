@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { CheckCircle } from 'lucide-react'
 import { getLatestImportSummaryForUser } from '@/lib/dal/imports'
-import { formatMonthRange } from '@/lib/utils/date'
 import { APP_ROUTES } from '@/lib/routes'
 import { buildStep2ViewModel } from '@/app/(app)/onboarding/_components/step-2-view-model'
 

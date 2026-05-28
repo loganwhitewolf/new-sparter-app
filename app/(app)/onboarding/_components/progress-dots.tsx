@@ -4,6 +4,7 @@ import { STEP_NAMES } from '@/lib/validations/onboarding'
 
 type ProgressDotsProps = {
   current: 1 | 2 | 3 | 4 | 5
+  /** Theme is forwarded from OnboardingShell for future dot colour variants. Currently unused internally. */
   theme?: 'dark' | 'light'
 }
 
@@ -12,7 +13,7 @@ type ProgressDotsProps = {
  * Uses design-system tokens only — no hardcoded slate-* or hex values (D-09).
  * In dark theme, foreground is resolved via the [data-theme="onboarding-dark"] override.
  */
-export function ProgressDots({ current, theme = 'dark' }: ProgressDotsProps) {
+export function ProgressDots({ current }: ProgressDotsProps) {
   return (
     <div className="flex items-center gap-3">
       <div className="flex gap-1.5 items-center">
