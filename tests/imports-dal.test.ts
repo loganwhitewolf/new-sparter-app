@@ -5,11 +5,13 @@ const mocks = vi.hoisted(() => ({
   selectedShapes: [] as unknown[],
   fromArgs: [] as unknown[],
   leftJoinArgs: [] as unknown[],
+  innerJoinArgs: [] as unknown[],
   whereArgs: [] as unknown[],
   orderByArgs: [] as unknown[][],
   limitArgs: [] as number[],
   offsetArgs: [] as number[],
   queryResult: [] as unknown[],
+  fileCoveredMonthsResult: [] as unknown[],
   updateTables: [] as unknown[],
   setArgs: [] as unknown[],
   updateWhereArgs: [] as unknown[],
@@ -25,6 +27,10 @@ function makeQueryChain() {
     }),
     leftJoin: vi.fn((table: unknown, condition: unknown) => {
       mocks.leftJoinArgs.push({ table, condition })
+      return chain
+    }),
+    innerJoin: vi.fn((table: unknown, condition: unknown) => {
+      mocks.innerJoinArgs.push({ table, condition })
       return chain
     }),
     where: vi.fn((arg: unknown) => {
@@ -45,6 +51,29 @@ function makeQueryChain() {
     }),
   }
 
+  return chain
+}
+
+// makeWhereTerminalChain: terminates at .where() for DAL functions without limit/offset
+function makeWhereTerminalChain(finalValue: unknown[]) {
+  const chain = {
+    from: vi.fn((arg: unknown) => {
+      mocks.fromArgs.push(arg)
+      return chain
+    }),
+    leftJoin: vi.fn((table: unknown, condition: unknown) => {
+      mocks.leftJoinArgs.push({ table, condition })
+      return chain
+    }),
+    innerJoin: vi.fn((table: unknown, condition: unknown) => {
+      mocks.innerJoinArgs.push({ table, condition })
+      return chain
+    }),
+    where: vi.fn((arg: unknown) => {
+      mocks.whereArgs.push(arg)
+      return Promise.resolve(finalValue)
+    }),
+  }
   return chain
 }
 
@@ -72,10 +101,10 @@ vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T
 vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
 vi.mock('@/lib/db', () => ({
   db: {
-    select: (shape: unknown) => {
+    select: vi.fn((shape: unknown) => {
       mocks.selectedShapes.push(shape)
       return makeQueryChain()
-    },
+    }),
     update: (table: unknown) => {
       mocks.updateTables.push(table)
       return makeUpdateChain()
@@ -129,6 +158,12 @@ vi.mock('@/lib/db/schema', () => ({
     name: 'platform.name',
     slug: 'platform.slug',
   },
+  transaction: {
+    id: 'transaction.id',
+    userId: 'transaction.userId',
+    fileId: 'transaction.fileId',
+    occurredAt: 'transaction.occurredAt',
+  },
 }))
 
 const {
@@ -138,6 +173,7 @@ const {
   importListOrderTimestamp,
   importListSelect,
   updateImportDisplayName,
+  getFileCoveredMonths,
 } = await import('../lib/dal/imports')
 
 describe('imports DAL read model', () => {
@@ -146,6 +182,7 @@ describe('imports DAL read model', () => {
     mocks.selectedShapes.length = 0
     mocks.fromArgs.length = 0
     mocks.leftJoinArgs.length = 0
+    mocks.innerJoinArgs.length = 0
     mocks.whereArgs.length = 0
     mocks.orderByArgs.length = 0
     mocks.limitArgs.length = 0
@@ -155,6 +192,7 @@ describe('imports DAL read model', () => {
     mocks.updateWhereArgs.length = 0
     mocks.returningArgs.length = 0
     mocks.queryResult = []
+    mocks.fileCoveredMonthsResult = []
     mocks.updateResult = []
     mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
   })
@@ -404,5 +442,95 @@ describe('imports DAL read model', () => {
         { op: 'eq', left: 'file.userId', right: 'user-1' },
       ],
     })
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getFileCoveredMonths — R-OB-10 / D-10
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('getFileCoveredMonths (R-OB-10)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.selectedShapes.length = 0
+    mocks.fromArgs.length = 0
+    mocks.leftJoinArgs.length = 0
+    mocks.innerJoinArgs.length = 0
+    mocks.whereArgs.length = 0
+    mocks.fileCoveredMonthsResult = []
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+  })
+
+  it("executes a query with DATE_TRUNC('month', MIN(transaction.occurredAt)) and DATE_TRUNC('month', MAX(transaction.occurredAt)) (R-OB-10)", async () => {
+    const { db } = await import('@/lib/db')
+    const terminalChain = makeWhereTerminalChain([{ firstMonth: null, lastMonth: null }])
+    ;(db.select as ReturnType<typeof vi.fn>).mockImplementationOnce((shape: unknown) => {
+      mocks.selectedShapes.push(shape)
+      return terminalChain
+    })
+
+    await getFileCoveredMonths('file-1', 'user-1')
+
+    const shape = mocks.selectedShapes[0] as Record<string, { op: string; strings: string[] }>
+    // firstMonth SQL fragment must include date_trunc and min
+    expect(shape.firstMonth.op).toBe('sql')
+    const firstSql = shape.firstMonth.strings.join('').toLowerCase()
+    expect(firstSql).toContain('date_trunc')
+    expect(firstSql).toContain('min')
+    // lastMonth SQL fragment must include date_trunc and max
+    expect(shape.lastMonth.op).toBe('sql')
+    const lastSql = shape.lastMonth.strings.join('').toLowerCase()
+    expect(lastSql).toContain('date_trunc')
+    expect(lastSql).toContain('max')
+  })
+
+  it('filters by transaction.fileId AND file.userId (ownership) (R-OB-10)', async () => {
+    const { db } = await import('@/lib/db')
+    const terminalChain = makeWhereTerminalChain([{ firstMonth: null, lastMonth: null }])
+    ;(db.select as ReturnType<typeof vi.fn>).mockImplementationOnce((shape: unknown) => {
+      mocks.selectedShapes.push(shape)
+      return terminalChain
+    })
+
+    await getFileCoveredMonths('file-abc', 'user-xyz')
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.op).toBe('and')
+    expect(where.args).toEqual(
+      expect.arrayContaining([
+        { op: 'eq', left: 'transaction.fileId', right: 'file-abc' },
+        { op: 'eq', left: 'file.userId', right: 'user-xyz' },
+      ]),
+    )
+  })
+
+  it('returns null when MIN(occurredAt) is null (no transactions for this file) (R-OB-10)', async () => {
+    const { db } = await import('@/lib/db')
+    const terminalChain = makeWhereTerminalChain([{ firstMonth: null, lastMonth: null }])
+    ;(db.select as ReturnType<typeof vi.fn>).mockImplementationOnce((shape: unknown) => {
+      mocks.selectedShapes.push(shape)
+      return terminalChain
+    })
+
+    const result = await getFileCoveredMonths('file-empty', 'user-1')
+
+    expect(result).toBeNull()
+  })
+
+  it('returns { firstMonth, lastMonth } as Date instances when both present (R-OB-10)', async () => {
+    const { db } = await import('@/lib/db')
+    const first = new Date(2026, 0, 1) // January 2026
+    const last = new Date(2026, 4, 1)  // May 2026
+    const terminalChain = makeWhereTerminalChain([{ firstMonth: first, lastMonth: last }])
+    ;(db.select as ReturnType<typeof vi.fn>).mockImplementationOnce((shape: unknown) => {
+      mocks.selectedShapes.push(shape)
+      return terminalChain
+    })
+
+    const result = await getFileCoveredMonths('file-1', 'user-1')
+
+    expect(result).not.toBeNull()
+    expect(result!.firstMonth).toBe(first)
+    expect(result!.lastMonth).toBe(last)
   })
 })

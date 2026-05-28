@@ -42,7 +42,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.nextUrl))
   }
 
-  return NextResponse.next()
+  // Forward the pathname as a request header so RSC layouts can read it
+  // without depending on edge-runtime-incompatible APIs. The layout reads
+  // 'x-pathname' to implement the onboarding gate (D-11).
+  // NOTE: this header is overwritten here on every request — a client-supplied
+  // 'x-pathname' value is replaced before reaching the layout (T-38-01).
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-pathname', request.nextUrl.pathname)
+  return NextResponse.next({ request: { headers: requestHeaders } })
 }
 
 export const config = {
