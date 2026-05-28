@@ -12,6 +12,8 @@ import React from 'react'
 const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   getLatestImportSummaryForUser: vi.fn(),
+  getTopUncategorizedExpenses: vi.fn(),
+  getCategories: vi.fn(),
   redirect: vi.fn(),
 }))
 
@@ -24,6 +26,12 @@ vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
 vi.mock('@/lib/dal/imports', () => ({
   getLatestImportSummaryForUser: mocks.getLatestImportSummaryForUser,
   getFileCoveredMonths: vi.fn(),
+}))
+vi.mock('@/lib/dal/transactions', () => ({
+  getTopUncategorizedExpenses: mocks.getTopUncategorizedExpenses,
+}))
+vi.mock('@/lib/dal/categories', () => ({
+  getCategories: mocks.getCategories,
 }))
 vi.mock('next/navigation', () => ({
   redirect: mocks.redirect,
@@ -89,7 +97,18 @@ vi.mock('@/app/(app)/onboarding/_components/step-3-education', () => ({
 
 vi.mock('@/app/(app)/onboarding/_components/sticky-cta', () => ({
   StickyCta: ({ step }: { step: number }) =>
-    React.createElement('div', { 'data-testid': 'sticky-cta', 'data-step': step }),
+    step === 5
+      ? null
+      : React.createElement(
+          'div',
+          { 'data-testid': 'sticky-cta', 'data-step': step },
+          step === 4 ? 'Categorizza il resto dopo' : 'Continua',
+        ),
+}))
+
+vi.mock('@/app/(app)/onboarding/_components/subcategory-combobox', () => ({
+  SubcategoryCombobox: ({ expenseTitle }: { expenseTitle: string }) =>
+    React.createElement('div', { 'data-testid': 'subcategory-combobox' }, expenseTitle),
 }))
 
 // Lazy import after all mocks registered
@@ -108,6 +127,15 @@ describe('OnboardingPage routing (R-OB-03, R-OB-04, R-OB-06, R-OB-09)', () => {
     vi.clearAllMocks()
     mocks.verifySession.mockResolvedValue({ userId: 'user-1', subscriptionPlan: 'basic' })
     mocks.getLatestImportSummaryForUser.mockResolvedValue(null)
+    mocks.getTopUncategorizedExpenses.mockResolvedValue([
+      {
+        id: 'expense-1',
+        title: 'Supermercato',
+        descriptionHash: 'hash-1',
+        totalAmount: '-42.50',
+      },
+    ])
+    mocks.getCategories.mockResolvedValue([])
   })
 
   it('renders Step1Upload when ?step is missing (R-OB-03)', async () => {
@@ -134,14 +162,17 @@ describe('OnboardingPage routing (R-OB-03, R-OB-04, R-OB-06, R-OB-09)', () => {
     expect(html).toContain('I trasferimenti tra conti e i giroconti vengono esclusi')
   })
 
-  it('renders step placeholder for ?step=4 (Plan 38-03 will fill)', async () => {
+  it('R-OB-07 renders Step4Categorize with the user id from session when ?step=4', async () => {
     const html = await renderPageHtml('4')
-    expect(html).toContain('data-testid="step-placeholder"')
+    expect(html).toContain('Categorizza le spese principali')
+    expect(html).toContain('data-testid="subcategory-combobox"')
+    expect(mocks.getTopUncategorizedExpenses).toHaveBeenCalledWith('user-1', 15)
   })
 
-  it('renders step placeholder for ?step=5 (Plan 38-03 will fill)', async () => {
+  it('R-OB-08 renders Step5Outro when ?step=5', async () => {
     const html = await renderPageHtml('5')
-    expect(html).toContain('data-testid="step-placeholder"')
+    expect(html).toContain('Benvenuto in Sparter!')
+    expect(html).toContain('Vai alla dashboard')
   })
 
   it("uses 'light' theme on step 4, 'dark' otherwise (R-OB-09)", async () => {
@@ -157,6 +188,16 @@ describe('OnboardingPage routing (R-OB-03, R-OB-04, R-OB-06, R-OB-09)', () => {
   it("uses 'dark' theme on step 3 (R-OB-09)", async () => {
     const html = await renderPageHtml('3')
     expect(html).toContain('data-theme="dark"')
+  })
+
+  it('step=5 sticky CTA bar is not rendered', async () => {
+    const html = await renderPageHtml('5')
+    expect(html).not.toContain('data-testid="sticky-cta"')
+  })
+
+  it("step=4 renders the secondary 'Categorizza il resto dopo' button (D-07)", async () => {
+    const html = await renderPageHtml('4')
+    expect(html).toContain('Categorizza il resto dopo')
   })
 
   it("Step1Upload shows file accept hint 'CSV, XLS, XLSX · max 10 MB' (R-OB-04)", async () => {
