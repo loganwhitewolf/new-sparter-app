@@ -1,7 +1,6 @@
 'use server'
 
 import { and, eq } from 'drizzle-orm'
-import { revalidateCategorizationSurfaces } from '@/lib/actions/revalidation'
 import { verifySession } from '@/lib/dal/auth'
 import { isSubCategoryVisibleToUser } from '@/lib/dal/categories'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
@@ -72,8 +71,6 @@ export async function onboardingCategorizeExpense(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
-
-  revalidateCategorizationSurfaces()
 
   return { error: null }
 }

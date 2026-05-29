@@ -79,10 +79,10 @@ export function SubcategoryCombobox({
 
   if (isCategorized) {
     return (
-      <div className="rounded-2xl bg-foreground/5 border border-foreground/5 p-4 flex items-center gap-3">
+      <div className="rounded-2xl bg-success/10 border border-success/20 p-4 flex items-center gap-3">
         <CheckCircle className="h-4 w-4 text-success shrink-0" aria-hidden="true" />
-        <p className="text-sm text-foreground/50 flex-1 min-w-0 truncate">{expenseTitle}</p>
-        <p className="text-sm shrink-0 text-foreground/40">{formatAmount(expenseAmount)}</p>
+        <p className="text-sm text-foreground/60 flex-1 min-w-0 truncate">{expenseTitle}</p>
+        <p className="text-sm shrink-0 text-foreground/50">{formatAmount(expenseAmount)}</p>
       </div>
     )
   }

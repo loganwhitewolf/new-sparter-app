@@ -48,11 +48,11 @@ export async function Step2Overview({ userId }: Step2OverviewProps) {
       {/* Income + expenses stat cards */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="rounded-2xl bg-foreground/10 p-5">
-          <div className="text-2xl font-bold text-success">+€{vm.formattedPositiveTotal}</div>
+          <div className="text-2xl font-bold text-success">€{vm.formattedPositiveTotal}</div>
           <div className="text-xs text-foreground/50 mt-1">entrate</div>
         </div>
         <div className="rounded-2xl bg-foreground/10 p-5">
-          <div className="text-2xl font-bold text-destructive">−€{vm.formattedNegativeTotal}</div>
+          <div className="text-2xl font-bold text-destructive">€{vm.formattedNegativeTotal}</div>
           <div className="text-xs text-foreground/50 mt-1">uscite</div>
         </div>
       </div>
