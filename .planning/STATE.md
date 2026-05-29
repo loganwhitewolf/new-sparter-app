@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 Phase: 38 (first-import-onboarding) — COMPLETE
 Plan: 3 of 3
 Status: Milestone complete
-Last activity: 2026-05-28
+Last activity: 2026-05-29 - Completed quick task 260529-ds7: Fix onboarding redirect loop when user deletes import file
 
 ## Accumulated Context
 
@@ -84,6 +84,7 @@ None.
 |---|-------------|------|--------|-----------|
 | 260524-pnk | mostrare durante import solo pattern con porzione stringa uguale non completamente uguali | 2026-05-24 | 889ae56 | [260524-pnk-mostrare-durante-import-solo-pattern-con](.planning/quick/260524-pnk-mostrare-durante-import-solo-pattern-con/) |
 | 260525-ga2 | fix applyNewPatternToExpenses: pattern promoted from suggestions not applied to all uncategorized expenses | 2026-05-25 | 4a722f2 | [260525-ga2-fix-applynewpatterntoexpenses-pattern-pr](.planning/quick/260525-ga2-fix-applynewpatterntoexpenses-pattern-pr/) |
+| 260529-ds7 | Fix onboarding redirect loop when user deletes import file — onboarding_completed_at flag | 2026-05-29 | 1a13048 | [260529-ds7-onboarding-completed-flag](.planning/quick/260529-ds7-onboarding-completed-flag/) |
 
 ## Session Continuity
 
