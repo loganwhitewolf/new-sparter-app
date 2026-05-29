@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
-import { ChevronsUpDownIcon, Loader2 } from 'lucide-react'
+import { CheckCircle, ChevronsUpDownIcon, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -47,7 +47,7 @@ export function buildOnboardingCategorizeFormData(
 function formatAmount(amount: string) {
   const decimal = toDecimal(amount)
   const sign = decimal.isNegative() ? '−' : '+'
-  return `${sign}€${amountFormatter.format(decimal.abs().toNumber())}`
+  return `${sign}${amountFormatter.format(decimal.abs().toNumber())} €`
 }
 
 function amountClassName(amount: string) {
@@ -78,7 +78,13 @@ export function SubcategoryCombobox({
   }, [state])
 
   if (isCategorized) {
-    return null
+    return (
+      <div className="rounded-2xl bg-foreground/5 border border-foreground/5 p-4 flex items-center gap-3">
+        <CheckCircle className="h-4 w-4 text-success shrink-0" aria-hidden="true" />
+        <p className="text-sm text-foreground/50 flex-1 min-w-0 truncate">{expenseTitle}</p>
+        <p className="text-sm shrink-0 text-foreground/40">{formatAmount(expenseAmount)}</p>
+      </div>
+    )
   }
 
   const isPending = isActionPending || isTransitionPending
@@ -95,7 +101,7 @@ export function SubcategoryCombobox({
   }
 
   return (
-    <div className="rounded-2xl bg-card border border-border p-4">
+    <div className="rounded-2xl bg-foreground/10 border border-foreground/10 p-4">
       <div className="flex items-start justify-between gap-3 mb-3">
         <p className="text-sm font-semibold text-card-foreground break-words">
           {expenseTitle}

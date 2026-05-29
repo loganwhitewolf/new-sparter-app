@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { verifySession } from '@/lib/dal/auth'
+import { markOnboardingCompleted } from '@/lib/dal/users'
 import { parseOnboardingStep } from '@/lib/validations/onboarding'
 import { OnboardingShell } from '@/app/(app)/onboarding/_components/onboarding-shell'
 import { Step1Upload } from '@/app/(app)/onboarding/_components/step-1-upload'
@@ -23,8 +24,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
 
   const { userId } = await verifySession()
 
-  // Step 4 uses a light theme (categorisation = active work); all others are dark
-  const theme = step === 4 ? 'light' : 'dark'
+  const theme = 'dark'
 
   // Show sticky CTA on steps 2-4; step 1 auto-advances on upload and step 5 has final CTAs.
   const footer = step >= 2 && step <= 4 ? <StickyCta step={step} /> : undefined
@@ -39,6 +39,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
   } else if (step === 4) {
     content = await Step4Categorize({ userId })
   } else {
+    await markOnboardingCompleted(userId)
     content = <Step5Outro />
   }
 

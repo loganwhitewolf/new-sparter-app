@@ -27,7 +27,7 @@ export function buildStep2ViewModel(summary: LatestImportSummary): Step2ViewMode
   const negativeDecimal = toDecimal(summary.negativeTotal)
 
   const formattedPositiveTotal = italianFormatter.format(positiveDecimal.toNumber())
-  const formattedNegativeTotal = italianFormatter.format(negativeDecimal.toNumber())
+  const formattedNegativeTotal = italianFormatter.format(negativeDecimal.abs().toNumber())
 
   // Percentage uses integer division on transaction counts (not money) — native JS arithmetic OK
   const pct =
