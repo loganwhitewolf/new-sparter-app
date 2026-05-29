@@ -86,6 +86,7 @@ None.
 | 260525-ga2 | fix applyNewPatternToExpenses: pattern promoted from suggestions not applied to all uncategorized expenses | 2026-05-25 | 4a722f2 | [260525-ga2-fix-applynewpatterntoexpenses-pattern-pr](.planning/quick/260525-ga2-fix-applynewpatterntoexpenses-pattern-pr/) |
 | 260529-ds7 | Fix onboarding redirect loop when user deletes import file — onboarding_completed_at flag | 2026-05-29 | 1a13048 | [260529-ds7-onboarding-completed-flag](.planning/quick/260529-ds7-onboarding-completed-flag/) |
 | 260529-eh0 | Remove revalidatePath(onboarding) from categorize action — page reload loop during step 4 | 2026-05-29 | 40af612 | [260529-eh0-remove-onboarding-revalidate](.planning/quick/260529-eh0-remove-onboarding-revalidate/) |
+| 260529-f3k | Fix post-registration reload loop — signUpAction redirects directly to /onboarding instead of /dashboard | 2026-05-29 | ceb3651 | inline |
 
 ## Session Continuity
 
