@@ -33,6 +33,7 @@ import {
   renameSubcategoryAction,
 } from '@/lib/actions/categories'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
+import { NATURE_LABELS, NATURE_ORDER } from '@/lib/utils/nature-labels'
 import type { ActionState } from '@/lib/validations/category'
 
 type CategoryType = 'in' | 'out'
@@ -138,9 +139,11 @@ export function CreateCategoryDialog() {
 }
 
 export function CreateSubcategoryDialog({ category }: { category: CategoryWithSubCategories }) {
+  const [nature, setNature] = useState<string>('discretionary')
   const { open, setOpen, state, submit, isPending } = useDialogAction(
     createSubcategoryAction,
     'Sottocategoria creata.',
+    () => setNature('discretionary'),
   )
 
   return (
@@ -155,14 +158,30 @@ export function CreateSubcategoryDialog({ category }: { category: CategoryWithSu
         <DialogHeader>
           <DialogTitle>Nuova sottocategoria</DialogTitle>
           <DialogDescription>
-            Aggiungi una sottocategoria personale sotto “{category.name}”.
+            Aggiungi una sottocategoria personale sotto "{category.name}".
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="flex flex-col gap-4">
           <input type="hidden" name="categoryId" value={category.id} />
+          <input type="hidden" name="nature" value={nature} />
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" htmlFor={`subcategory-name-new-${category.id}`}>Nome sottocategoria</label>
             <Input id={`subcategory-name-new-${category.id}`} name="name" required placeholder="es. Supermercato" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" htmlFor={`subcategory-nature-new-${category.id}`}>Natura</label>
+            <Select value={nature} onValueChange={setNature}>
+              <SelectTrigger id={`subcategory-nature-new-${category.id}`} className="w-full" aria-label="Natura sottocategoria">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {NATURE_ORDER.filter(Boolean).map((key) => (
+                  <SelectItem key={key!} value={key!}>
+                    {NATURE_LABELS[key!]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <ActionError error={state.error} />
           <DialogFooter>
@@ -236,7 +255,7 @@ export function RenameSubcategoryDialog({ subCategory }: { subCategory: Subcateg
           <DialogDescription>
             {subCategory.isOwned
               ? 'Aggiorna il nome della tua sottocategoria personale.'
-              : `Crea un nome visibile solo per te. Il nome originale resta “${subCategory.originalName}”.`}
+              : `Crea un nome visibile solo per te. Il nome originale resta "${subCategory.originalName}".`}
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="flex flex-col gap-4">
@@ -273,7 +292,7 @@ export function DeleteCategoryDialog({ category }: { category: CategoryWithSubCa
         <DialogHeader>
           <DialogTitle>Elimina categoria personale</DialogTitle>
           <DialogDescription>
-            La categoria verrà disattivata. Se contiene sottocategorie collegate a spese, l’operazione verrà bloccata.
+            La categoria verrà disattivata. Se contiene sottocategorie collegate a spese, l'operazione verrà bloccata.
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="flex flex-col gap-4">

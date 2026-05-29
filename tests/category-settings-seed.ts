@@ -234,3 +234,20 @@ export async function cleanupCategorySettingsSeed(seed: CategorySettingsSeed) {
     await database.pool.end()
   }
 }
+
+// RED scaffold for R-FN-03 — turns GREEN in Plan 37-02 when seed-data gains nature fields
+import { describe, it, expect } from 'vitest'
+import { FlowNature } from '@/lib/utils/nature-labels'
+
+describe('seed nature assignment (R-FN-03)', () => {
+  it('FlowNature import from @/lib/utils/nature-labels succeeds (regression guard)', () => {
+    const validNatures: FlowNature[] = ['essential', 'discretionary', 'operational', 'financial', 'debt', 'extraordinary']
+    expect(validNatures).toHaveLength(6)
+  })
+
+  it.todo('at least 1 system subcategory has nature: essential (R-FN-03) — enable after Plan 37-02 adds nature to subCategories seed')
+
+  it.todo('at least 1 system subcategory has nature: discretionary (R-FN-03) — enable after Plan 37-02')
+
+  it.todo('ignore-category subcategories have nature null (R-FN-03) — enable after Plan 37-02')
+})

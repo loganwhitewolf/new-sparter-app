@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { LoginSchema, RegisterSchema } from '@/lib/validations/auth'
 import { getSafeSignUpErrorMessage, logSanitizedAuthError } from '@/lib/actions/auth-errors'
+import { APP_ROUTES } from '@/lib/routes'
 
 export type { AuthActionState } from '@/lib/validations/auth'
 
@@ -58,7 +59,7 @@ export async function signUpAction(
     // D-06: keep credential/account errors generic, but surface safe local DB setup failures.
     return { error: getSafeSignUpErrorMessage(error) }
   }
-  redirect('/dashboard') // D-02: auto-login via autoSignIn:true → redirect directly to dashboard
+  redirect(APP_ROUTES.onboarding) // New users have 0 transactions — go directly to onboarding to avoid a /dashboard → /onboarding double-redirect that confuses the Next.js router post-SA cookie refresh
 }
 
 export async function signOutAction(): Promise<void> {

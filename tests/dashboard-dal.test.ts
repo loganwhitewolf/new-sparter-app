@@ -28,11 +28,13 @@ vi.mock('@/lib/db/schema', () => ({
     categoryId: 'subCategory.categoryId',
     isActive: 'subCategory.isActive',
     excludeFromTotals: 'subCategory.excludeFromTotals',
+    nature: 'subCategory.nature',
   },
   userSubcategoryOverride: {
     customName: 'userSubcategoryOverride.customName',
     subCategoryId: 'userSubcategoryOverride.subCategoryId',
     userId: 'userSubcategoryOverride.userId',
+    nature: 'userSubcategoryOverride.nature',
   },
   transaction: {
     id: 'transaction.id',
@@ -63,6 +65,7 @@ const {
   buildCategoryDetailData,
   buildCategoryRankingData,
   buildDeviationDataset,
+  buildMonthlyNatureTrendData,
   buildMonthlyTrendData,
   buildOverviewData,
   getDeviationDateRanges,
@@ -630,5 +633,110 @@ describe('getDeviationDateRanges (D-02, D-03)', () => {
         to: new Date(2025, 10, 30, 23, 59, 59, 999),
       },
     })
+  })
+})
+
+describe('getMonthlyTrendByNature (R-FN-04, R-FN-08, R-FN-09)', () => {
+  it('getMonthlyTrendByNature is exported from @/lib/dal/dashboard (R-FN-04)', async () => {
+    const dal = await import('@/lib/dal/dashboard')
+    expect(typeof (dal as Record<string, unknown>)['getMonthlyTrendByNature']).toBe('function')
+  })
+
+  it('MonthlyNatureTrendPoint type token is reachable (R-FN-08)', async () => {
+    const dal = await import('@/lib/dal/dashboard')
+    expect(dal).toBeTruthy()
+  })
+})
+
+describe('buildMonthlyNatureTrendData (R-FN-04, R-FN-08, R-FN-09)', () => {
+  it('pre-populates all 7 nature keys at 0.00 for every month even with no data', () => {
+    const result = buildMonthlyNatureTrendData({
+      from: new Date(2026, 0, 1),
+      to: new Date(2026, 1, 28, 23, 59, 59, 999),
+      rows: [],
+    })
+
+    expect(result).toHaveLength(2)
+    for (const point of result) {
+      expect(Object.keys(point.segments).sort()).toEqual(
+        [
+          'debt',
+          'discretionary',
+          'essential',
+          'extraordinary',
+          'financial',
+          'income',
+          'operational',
+          'unclassified',
+        ].sort()
+      )
+      for (const val of Object.values(point.segments)) {
+        expect(val).toBe('0.00')
+      }
+      expect(point.totalNc).toBe(0)
+      expect(point.totalIgn).toBe(0)
+    }
+  })
+
+  it('algebraic sum: positive and negative rows for the same nature net correctly (ADR-0004)', () => {
+    const result = buildMonthlyNatureTrendData({
+      from: new Date(2026, 0, 1),
+      to: new Date(2026, 0, 31, 23, 59, 59, 999),
+      rows: [
+        { month: '2026-01', nature: 'essential', amount: '500.00', totalNc: 0, totalIgn: 0 },
+        { month: '2026-01', nature: 'essential', amount: '-200.00', totalNc: 0, totalIgn: 0 },
+      ],
+    })
+
+    expect(result[0]?.segments.essential).toBe('300.00')
+    expect(result[0]?.segments.discretionary).toBe('0.00')
+  })
+
+  it('null-nature rows are mapped to the unclassified segment key', () => {
+    const result = buildMonthlyNatureTrendData({
+      from: new Date(2026, 0, 1),
+      to: new Date(2026, 0, 31, 23, 59, 59, 999),
+      rows: [
+        { month: '2026-01', nature: null, amount: '150.00', totalNc: 2, totalIgn: 1 },
+      ],
+    })
+
+    expect(result[0]?.segments.unclassified).toBe('150.00')
+    expect(result[0]?.segments.essential).toBe('0.00')
+    expect(result[0]?.totalNc).toBe(2)
+    expect(result[0]?.totalIgn).toBe(1)
+  })
+
+  it('segments across different natures accumulate independently per month', () => {
+    const result = buildMonthlyNatureTrendData({
+      from: new Date(2026, 0, 1),
+      to: new Date(2026, 1, 28, 23, 59, 59, 999),
+      rows: [
+        { month: '2026-01', nature: 'essential', amount: '300.00', totalNc: 0, totalIgn: 0 },
+        { month: '2026-01', nature: 'discretionary', amount: '100.00', totalNc: 0, totalIgn: 0 },
+        { month: '2026-02', nature: 'financial', amount: '50.00', totalNc: 1, totalIgn: 0 },
+      ],
+    })
+
+    expect(result[0]?.segments.essential).toBe('300.00')
+    expect(result[0]?.segments.discretionary).toBe('100.00')
+    expect(result[0]?.segments.financial).toBe('0.00')
+    expect(result[1]?.segments.financial).toBe('50.00')
+    expect(result[1]?.segments.essential).toBe('0.00')
+    expect(result[1]?.totalNc).toBe(1)
+  })
+
+  it('rows outside the preset month range are silently skipped (R-FN-09 SQL boundary)', () => {
+    const result = buildMonthlyNatureTrendData({
+      from: new Date(2026, 0, 1),
+      to: new Date(2026, 0, 31, 23, 59, 59, 999),
+      rows: [
+        { month: '2026-01', nature: 'essential', amount: '400.00', totalNc: 0, totalIgn: 0 },
+        { month: '2025-12', nature: 'essential', amount: '999.00', totalNc: 0, totalIgn: 0 },
+      ],
+    })
+
+    expect(result).toHaveLength(1)
+    expect(result[0]?.segments.essential).toBe('400.00')
   })
 })

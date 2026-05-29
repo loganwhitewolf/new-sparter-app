@@ -38,32 +38,12 @@ async function startServer(handler: Handler) {
   return { origin: `http://127.0.0.1:${address.port}` }
 }
 
-async function readRequestBody(request: IncomingMessage) {
-  const chunks: Buffer[] = []
-  for await (const chunk of request) {
-    chunks.push(Buffer.from(chunk))
-  }
-  return Buffer.concat(chunks).toString('utf8')
-}
-
 function json(response: ServerResponse, status: number, body: unknown) {
   response.writeHead(status, { 'Content-Type': 'application/json', 'Set-Cookie': 'session=super-secret-cookie' })
   response.end(JSON.stringify(body))
 }
 
-function okHealth() {
-  return {
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    components: {
-      db: { ok: true, latencyMs: 4 },
-      r2: { ok: true },
-    },
-    ignoredSecretLikeField: 'postgres://user:super-secret@example.invalid/db?password=super-secret',
-  }
-}
-
-async function runSmoke(args: string[], env: NodeJS.ProcessEnv = {}): Promise<SmokeRun> {
+async function runSmoke(args: string[], env: Partial<NodeJS.ProcessEnv> = {}): Promise<SmokeRun> {
   const child = spawn(process.execPath, [SCRIPT_PATH, ...args], {
     env: { ...process.env, ...env },
     stdio: ['ignore', 'pipe', 'pipe'],

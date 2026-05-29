@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const EXPECTED_CATEGORY_REVALIDATION_ROUTES = [
   '/dashboard',
   '/expenses',
+  '/import',
   '/settings/categories',
   '/transactions',
 ]

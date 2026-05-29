@@ -56,6 +56,7 @@ const sampleCategories = [
         isOwned: false,
         hasOverride: false,
         customName: null,
+        effectiveNature: null,
       },
     ],
   },

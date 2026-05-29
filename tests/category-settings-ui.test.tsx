@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   createSubcategoryAction: vi.fn(),
   renameSubcategoryAction: vi.fn(),
   deleteSubcategoryAction: vi.fn(),
+  setSubcategoryNatureAction: vi.fn(),
   createPatternAction: vi.fn(),
   updatePatternAction: vi.fn(),
   deletePatternAction: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock('@/lib/actions/categories', () => ({
   createSubcategoryAction: mocks.createSubcategoryAction,
   renameSubcategoryAction: mocks.renameSubcategoryAction,
   deleteSubcategoryAction: mocks.deleteSubcategoryAction,
+  setSubcategoryNatureAction: mocks.setSubcategoryNatureAction,
 }))
 vi.mock('@/lib/actions/patterns', () => ({
   createPatternAction: mocks.createPatternAction,
@@ -55,6 +57,7 @@ const categories = [
         isOwned: false,
         hasOverride: true,
         customName: 'Alimentari speciali',
+        effectiveNature: 'essential' as const,
       },
       {
         id: 11,
@@ -65,6 +68,7 @@ const categories = [
         isOwned: true,
         hasOverride: false,
         customName: null,
+        effectiveNature: 'discretionary' as const,
       },
     ],
   },
@@ -153,5 +157,15 @@ describe('/settings/categories UI', () => {
     expect(html).not.toContain('Error:')
     expect(html).not.toContain('Elimina categoria Spese')
     expect(html).not.toContain('Elimina sottocategoria Alimentari speciali')
+  })
+
+  it('renders SubcategoryNatureSelect within subcategory rows (R-FN-07)', async () => {
+    const html = await renderCategoriesPage()
+    expect(html).toContain('aria-label="Natura sottocategoria"')
+  })
+
+  it('CreateSubcategoryDialog includes a Natura label for the required nature field', async () => {
+    const html = await renderCategoriesPage()
+    expect(html).toContain('Natura')
   })
 })

@@ -1,18 +1,18 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.8
-milestone_name: milestone
-current_phase: 36
+milestone: v1.12
+milestone_name: First-import Onboarding
+current_phase: 38
 status: milestone_complete
-stopped_at: milestone v1.10 archived (2026-05-25)
-last_updated: "2026-05-25T00:00:00.000Z"
-last_activity: "2026-05-25 - v1.10 Pattern Suggestions milestone archived"
+last_updated: 2026-05-28T20:46:52.886Z
+last_activity: 2026-05-28
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  total_phases: 1
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 3
   percent: 100
+stopped_at: Milestone complete (Phase 38 was final phase)
 ---
 
 # Project State
@@ -22,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase --phase — 36
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Phase: --phase (36) — EXECUTING
-Plan: Not started
+Phase: 38 (first-import-onboarding) — COMPLETE
+Plan: 3 of 3
 Status: Milestone complete
-Last activity: 2026-05-25 - Completed quick task 260525-ga2: fix applyNewPatternToExpenses
+Last activity: 2026-05-29 - Completed quick task 260529-ds7: Fix onboarding redirect loop when user deletes import file
 
 ## Accumulated Context
 
@@ -60,6 +60,15 @@ v1.9 phase structure:
 - canUnlink guard checks credential OR other social (more robust than total count)
 - configuredProviders derived from process.env booleans — no NEXT_PUBLIC_* vars introduced
 
+v1.11 / Phase 37 decisions:
+
+- NATURE_COLORS: hex values for Recharts fill (green/orange/blue/purple/red/amber/gray)
+- Migration 0012_flow_nature applied to prod DB; 126 subcategories seeded with nature; ignore category (cat 32) left null
+- effectiveNature = COALESCE(override.nature, sub.nature) — user override wins over seed default (D-09)
+- Default on CreateSubcategoryDialog: 'discretionary' — defensive default, most new subcategories are lifestyle spend
+- unclassified sentinel in SubcategoryNatureSelect → null stored on override row → DAL COALESCE falls to seed default
+- setSubcategoryNatureAction revalidates /expenses, /transactions, /dashboard, /settings/categories, /import (layout)
+
 ### Known Gaps
 
 R038, R039, R041 are PARTIAL — live Vercel/Supabase/R2 deploy is operator-pending. Code, config, and runbook complete in M007. See `docs/deploy/vercel-supabase-r2.md`.
@@ -75,13 +84,17 @@ None.
 |---|-------------|------|--------|-----------|
 | 260524-pnk | mostrare durante import solo pattern con porzione stringa uguale non completamente uguali | 2026-05-24 | 889ae56 | [260524-pnk-mostrare-durante-import-solo-pattern-con](.planning/quick/260524-pnk-mostrare-durante-import-solo-pattern-con/) |
 | 260525-ga2 | fix applyNewPatternToExpenses: pattern promoted from suggestions not applied to all uncategorized expenses | 2026-05-25 | 4a722f2 | [260525-ga2-fix-applynewpatterntoexpenses-pattern-pr](.planning/quick/260525-ga2-fix-applynewpatterntoexpenses-pattern-pr/) |
+| 260529-ds7 | Fix onboarding redirect loop when user deletes import file — onboarding_completed_at flag | 2026-05-29 | 1a13048 | [260529-ds7-onboarding-completed-flag](.planning/quick/260529-ds7-onboarding-completed-flag/) |
+| 260529-eh0 | Remove revalidatePath(onboarding) from categorize action — page reload loop during step 4 | 2026-05-29 | 40af612 | [260529-eh0-remove-onboarding-revalidate](.planning/quick/260529-eh0-remove-onboarding-revalidate/) |
+| 260529-f3k | Fix post-registration reload loop — signUpAction redirects directly to /onboarding instead of /dashboard | 2026-05-29 | ceb3651 | inline |
+| 260529-u9p | Step 2 remove +/- signs from amount cards; Step 4 green done card + stop RSC re-render on categorize | 2026-05-29 | HEAD | inline |
 
 ## Session Continuity
 
-Last session: 2026-05-25T12:06:21.648Z
-Stopped at: context exhaustion at 75% (2026-05-25)
+Last session: 2026-05-28
+Stopped at: Phase 38 complete
 Resume file: None
 
-**Current Phase:** — (milestone complete)
+**Current Phase:** 38
 
-**Next:** `/gsd-new-milestone` to plan v1.11
+**Next:** Start the next milestone when ready.

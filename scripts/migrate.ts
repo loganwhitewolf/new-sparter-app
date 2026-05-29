@@ -1,9 +1,10 @@
-// Run with: yarn db:migrate (reads PRODUCTION_* from .env)
+// Run with: yarn db:migrate | db:migrate:staging | db:migrate:production (see scripts/db-config.ts)
 import { execSync } from 'node:child_process'
 import {
   connectionStringWithSsl,
   getOperatorDatabaseConfig,
   loadOperatorEnv,
+  resolveOperatorDatabaseTarget,
   sanitizeMigrationError,
   type OperatorDatabaseDiagnostics,
   type SafeMigrationError,
@@ -11,12 +12,14 @@ import {
 
 loadOperatorEnv()
 
+const migrationTarget = resolveOperatorDatabaseTarget()
+
 const MIGRATION_FAILURE_EXIT_CODE = 2
 const VALIDATION_FAILURE_EXIT_CODE = 1
 
 function safeStatusFields(diagnostics: OperatorDatabaseDiagnostics) {
   return {
-    targetClass: diagnostics.targetClass,
+    target: diagnostics.target,
     migrationsFolder: diagnostics.migrationsFolder,
     sslEnabled: diagnostics.sslEnabled,
     poolMax: diagnostics.poolMax,
@@ -49,13 +52,13 @@ function logMigrationFailure(
 }
 
 async function main() {
-  const configResult = getOperatorDatabaseConfig()
+  const configResult = getOperatorDatabaseConfig({ target: migrationTarget })
 
   if (!configResult.ok) {
     console.error(
       JSON.stringify({
         event: 'migration_failed',
-        targetClass: 'production',
+        target: migrationTarget,
         error: configResult.error,
       }),
     )
@@ -73,7 +76,7 @@ async function main() {
       DATABASE_URL: connectionStringWithSsl(config),
     }
 
-    const result = execSync('npx drizzle-kit migrate 2>&1', {
+    const result = execSync('yarn drizzle-kit migrate 2>&1', {
       env,
       encoding: 'utf8',
     })

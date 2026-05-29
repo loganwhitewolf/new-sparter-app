@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const EXPECTED_CATEGORY_REVALIDATION_ROUTES = [
   '/dashboard',
   '/expenses',
+  '/import',
   '/settings/categories',
   '/transactions',
 ]
@@ -16,12 +17,15 @@ const mocks = vi.hoisted(() => ({
   renameUserSubcategory: vi.fn(),
   deleteUserSubcategory: vi.fn(),
   upsertSystemSubcategoryOverride: vi.fn(),
+  upsertSubcategoryNatureOverride: vi.fn(),
+  isSubCategoryVisibleToUser: vi.fn(),
   revalidatePath: vi.fn(),
+  refresh: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
 vi.mock('next/cache', () => ({
-  refresh: vi.fn(),
+  refresh: mocks.refresh,
   revalidatePath: mocks.revalidatePath,
 }))
 vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
@@ -36,6 +40,8 @@ vi.mock('@/lib/dal/categories', async () => {
     renameUserSubcategory: mocks.renameUserSubcategory,
     deleteUserSubcategory: mocks.deleteUserSubcategory,
     upsertSystemSubcategoryOverride: mocks.upsertSystemSubcategoryOverride,
+    upsertSubcategoryNatureOverride: mocks.upsertSubcategoryNatureOverride,
+    isSubCategoryVisibleToUser: mocks.isSubCategoryVisibleToUser,
   }
 })
 
@@ -46,6 +52,7 @@ const {
   createSubcategoryAction,
   renameSubcategoryAction,
   deleteSubcategoryAction,
+  setSubcategoryNatureAction,
 } = await import('../lib/actions/categories')
 const { CategoryMutationError } = await import('../lib/dal/categories')
 
@@ -70,6 +77,7 @@ describe('category Server Actions', () => {
     mocks.renameUserCategory.mockResolvedValue({ id: 1 })
     mocks.deleteUserCategory.mockResolvedValue(true)
     mocks.createUserSubcategory.mockResolvedValue({ id: 10 })
+    mocks.upsertSubcategoryNatureOverride.mockResolvedValue({ id: 20 })
     mocks.renameUserSubcategory.mockResolvedValue({ id: 10 })
     mocks.deleteUserSubcategory.mockResolvedValue(true)
     mocks.upsertSystemSubcategoryOverride.mockResolvedValue({ id: 20 })
@@ -108,7 +116,7 @@ describe('category Server Actions', () => {
   it('creates a user-owned subcategory under a visible category', async () => {
     const result = await createSubcategoryAction(
       { error: null },
-      makeFormData({ categoryId: '2', name: ' Affitto ' }),
+      makeFormData({ categoryId: '2', name: ' Affitto ', nature: 'essential' }),
     )
 
     expect(result).toEqual({ error: null })
@@ -117,6 +125,7 @@ describe('category Server Actions', () => {
       categoryId: 2,
       name: 'Affitto',
       slug: 'affitto',
+      nature: 'essential',
     })
     expectExactCategoryRevalidationRoutes()
   })
@@ -232,5 +241,80 @@ describe('category Server Actions', () => {
     expect(result.error).toBe('Si è verificato un errore. Riprova tra qualche secondo.')
     expect(result.error).not.toContain('SQL')
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  })
+})
+
+describe('setSubcategoryNatureAction (R-FN-07)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1', subscriptionPlan: 'basic' })
+    mocks.upsertSubcategoryNatureOverride.mockResolvedValue({ id: 20 })
+    mocks.isSubCategoryVisibleToUser.mockResolvedValue(true)
+  })
+
+  it('returns ok:true and calls upsertSubcategoryNatureOverride with the given nature', async () => {
+    const result = await setSubcategoryNatureAction({ subCategoryId: 10, nature: 'debt' })
+    expect(result).toEqual({ ok: true })
+    expect(mocks.upsertSubcategoryNatureOverride).toHaveBeenCalledWith({
+      userId: 'user-1',
+      subCategoryId: 10,
+      nature: 'debt',
+    })
+  })
+
+  it('accepts null nature to reset override to seed default', async () => {
+    const result = await setSubcategoryNatureAction({ subCategoryId: 10, nature: null })
+    expect(result).toEqual({ ok: true })
+    expect(mocks.upsertSubcategoryNatureOverride).toHaveBeenCalledWith({
+      userId: 'user-1',
+      subCategoryId: 10,
+      nature: null,
+    })
+  })
+
+  it('returns ok:false for an invalid nature string', async () => {
+    const result = await setSubcategoryNatureAction({ subCategoryId: 10, nature: 'invalid' as never })
+    expect(result).toMatchObject({ ok: false })
+    expect(mocks.upsertSubcategoryNatureOverride).not.toHaveBeenCalled()
+  })
+
+  it('rejects override for subcategory not visible to the session user (IDOR guard)', async () => {
+    mocks.isSubCategoryVisibleToUser.mockResolvedValueOnce(false)
+    const result = await setSubcategoryNatureAction({ subCategoryId: 999, nature: 'essential' })
+    expect(result).toMatchObject({ ok: false })
+    expect(mocks.upsertSubcategoryNatureOverride).not.toHaveBeenCalled()
+  })
+
+  it('prevents mutation when auth lookup fails', async () => {
+    mocks.verifySession.mockRejectedValueOnce(new Error('NEXT_REDIRECT'))
+    await expect(setSubcategoryNatureAction({ subCategoryId: 10, nature: 'essential' })).rejects.toThrow('NEXT_REDIRECT')
+    expect(mocks.upsertSubcategoryNatureOverride).not.toHaveBeenCalled()
+  })
+})
+
+describe('createSubcategoryAction nature requirement (R-FN-09 action layer)', () => {
+  it('setSubcategoryNatureAction exists as an export (R-FN-07) — RED until Plan 37-05 ships', async () => {
+    try {
+      const actions = await import('../lib/actions/categories')
+      const action = (actions as Record<string, unknown>)['setSubcategoryNatureAction']
+      expect(action).toBeDefined()
+    } catch {
+      // Plan 37-05 has not landed yet — this is the expected RED state
+      expect(true).toBe(false)
+    }
+  })
+
+  it('createSubcategoryAction returns validation error when nature is missing (R-FN-09) — RED until Plan 37-05 extends schema', async () => {
+    const fd = new FormData()
+    fd.append('name', 'Test Sub')
+    fd.append('categoryId', '1')
+    // intentionally omit nature field
+
+    const { createSubcategoryAction } = await import('../lib/actions/categories')
+    const result = await createSubcategoryAction({ error: null }, fd)
+    // After Plan 37-05, nature becomes required and this should return a validation error
+    // Currently passes without nature — so we assert the OPPOSITE to keep it RED
+    expect(result).toHaveProperty('error')
+    expect(result.error).not.toBeNull()
   })
 })

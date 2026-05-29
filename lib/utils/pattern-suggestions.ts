@@ -48,10 +48,18 @@ function isCoveredByPatterns(
   row: PatternDetectorRow,
   coveragePatterns: CoveragePattern[],
 ): boolean {
+  // Patterns are generated from stripped descriptions (numeric tokens removed), so we must
+  // also test the stripped form here — otherwise a pattern like "revolut\*\*5920\* … data
+  // operazione" won't match a description that still has a numeric reference ("114") between
+  // the non-numeric tokens. Mirrors the dual-test logic in applyTier1Regex.
+  const strippedDescription = stripNumericTokens(row.normalizedDescription).join(' ')
   for (const p of coveragePatterns) {
     try {
       const regex = new RegExp(p.pattern, 'i')
-      if (regex.test(row.normalizedDescription) && amountSignMatches(p.amountSign, row.amount)) {
+      if (
+        (regex.test(row.normalizedDescription) || regex.test(strippedDescription)) &&
+        amountSignMatches(p.amountSign, row.amount)
+      ) {
         return true
       }
     } catch {

@@ -5,6 +5,19 @@ import { categorizationPattern } from '@/lib/db/schema'
 import type { CreatePatternInput, UpdatePatternInput } from '@/lib/validations/pattern'
 import { normalizePatternInput } from '@/lib/validations/pattern'
 
+function errorCauseCode(error: unknown): string {
+  const cause = typeof error === 'object' && error !== null && 'cause' in error
+    ? (error as { cause?: unknown }).cause
+    : undefined
+
+  if (typeof cause !== 'object' || cause === null || !('code' in cause)) {
+    return ''
+  }
+
+  const code = (cause as { code?: unknown }).code
+  return typeof code === 'string' ? code : ''
+}
+
 export type PatternRow = {
   id: number
   userId: string | null
@@ -77,7 +90,7 @@ export async function createPattern(
   } catch (err) {
     // Unique violation: the row may be a soft-deleted user pattern — reactivate it.
     // If the conflict is on a system pattern or another user's pattern, re-throw.
-    if ((err as any)?.cause?.code === '23505') {
+    if (errorCauseCode(err) === '23505') {
       const reactivated = await database
         .update(categorizationPattern)
         .set({ isActive: true, updatedAt: new Date() })

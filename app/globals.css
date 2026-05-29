@@ -105,6 +105,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -121,6 +122,36 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* ─── Onboarding theme overrides (D-09) ─────────────────────────────────────
+   Components use only design-system tokens (bg-background, text-foreground, etc.)
+   These blocks remap those tokens to the Variant B palette values without
+   introducing any hardcoded slate-* or hex colours in component files.
+──────────────────────────────────────────────────────────────────────────── */
+
+[data-theme="onboarding-dark"] {
+  --background: oklch(0.147 0.004 285.75);       /* slate-900 equivalent */
+  --foreground: oklch(0.985 0.002 247.84);       /* near-white */
+  --border: oklch(1 0 0 / 10%);                  /* white/10 */
+  --muted-foreground: oklch(0.704 0.013 265.64); /* white/60 equivalent */
+  --success: oklch(0.696 0.17 153.85);           /* green-400 equivalent */
+  --color-success: var(--success);
+}
+
+[data-theme="onboarding-light"] {
+  --background: oklch(1 0 0);                    /* white */
+  --foreground: oklch(0.211 0.026 264.88);       /* slate-900 equivalent */
+  --border: oklch(0.929 0.007 264.53);           /* slate-200 equivalent */
+  --muted-foreground: oklch(0.556 0.013 265.64);
+  --success: oklch(0.515 0.154 153.85);
+  --color-success: var(--success);
+}
+
+/* ─── Global --success token (used in Step 2 income display) ─────────────── */
+:root {
+  --success: oklch(0.515 0.154 153.85);
+  --color-success: var(--success);
 }
 
 @layer base {

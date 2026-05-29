@@ -6,6 +6,7 @@ export const APP_ROUTES = {
   dashboardCategories: '/dashboard/categories',
   expenses: '/expenses',
   import: '/import',
+  onboarding: '/onboarding',
   transactions: '/transactions',
   settings: '/settings',
   categorySettings: '/settings/categories',

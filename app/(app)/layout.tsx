@@ -1,12 +1,51 @@
-import { BottomNav } from '@/components/layout/bottom-nav'
-import { Sidebar } from '@/components/layout/sidebar'
-import { Topbar } from '@/components/layout/topbar'
+/**
+ * Onboarding gate per D-11:
+ * - proxy.ts forwards 'x-pathname' on every request (session-only, no DB in edge runtime)
+ * - This RSC layout reads the pathname and redirects users with 0 transactions to /onboarding
+ * - /onboarding and /settings/* are exempt from the redirect guard
+ */
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { BottomNav } from "@/components/layout/bottom-nav";
+import { Sidebar } from "@/components/layout/sidebar";
+import { Topbar } from "@/components/layout/topbar";
+import { verifySession } from "@/lib/dal/auth";
+import { getTransactionCount } from "@/lib/dal/transactions";
+import { getOnboardingCompletedAt } from "@/lib/dal/users";
+import { APP_ROUTES } from "@/lib/routes";
 
-export default function AppLayout({
+export default async function AppLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
+  const { userId } = await verifySession();
+
+  const requestHeaders = await headers();
+  const pathname = requestHeaders.get("x-pathname") ?? "";
+
+  // Exempt /onboarding, /settings/*, and /import/* from the zero-transaction redirect guard.
+  // /import is part of the data-ingestion flow (including the format-wizard reached from step 1).
+  const isExempt =
+    pathname.startsWith(APP_ROUTES.onboarding) ||
+    pathname.startsWith(APP_ROUTES.settings) ||
+    pathname.startsWith(APP_ROUTES.import);
+  if (!isExempt) {
+    const txCount = await getTransactionCount(userId);
+    if (txCount === 0) {
+      const completedAt = await getOnboardingCompletedAt(userId);
+      if (!completedAt) {
+        redirect(APP_ROUTES.onboarding);
+      }
+    }
+  }
+
+  // Bypass app chrome (Sidebar, Topbar, BottomNav) for the onboarding route group (D-09, D-11)
+  const isOnboarding = pathname.startsWith(APP_ROUTES.onboarding);
+  if (isOnboarding) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       <aside
@@ -24,5 +63,5 @@ export default function AppLayout({
         <BottomNav className="md:hidden" />
       </div>
     </div>
-  )
+  );
 }

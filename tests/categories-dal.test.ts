@@ -19,6 +19,8 @@ const mocks = vi.hoisted(() => ({
   countResult: [] as unknown[],
 }))
 
+type FlowNature = 'essential' | 'discretionary' | 'operational' | 'financial' | 'debt' | 'extraordinary'
+
 type CategoryRowFixture = {
   categoryId: number
   categoryName: string
@@ -30,6 +32,7 @@ type CategoryRowFixture = {
   subCategorySlug: string | null
   subCategoryUserId: string | null
   overrideCustomName: string | null
+  effectiveNature: FlowNature | null
 }
 
 function nextSelectResult() {
@@ -108,6 +111,7 @@ function systemCategoryRow(overrides: Partial<CategoryRowFixture> = {}): Categor
     subCategorySlug: 'rent',
     subCategoryUserId: null,
     overrideCustomName: null,
+    effectiveNature: null,
     ...overrides,
   }
 }
@@ -181,6 +185,7 @@ vi.mock('@/lib/db/schema', () => ({
     categoryId: 'subCategory.categoryId',
     displayOrder: 'subCategory.displayOrder',
     isActive: 'subCategory.isActive',
+    nature: 'subCategory.nature',
   },
   userSubcategoryOverride: {
     id: 'userSubcategoryOverride.id',
@@ -188,6 +193,7 @@ vi.mock('@/lib/db/schema', () => ({
     subCategoryId: 'userSubcategoryOverride.subCategoryId',
     userId: 'userSubcategoryOverride.userId',
     updatedAt: 'userSubcategoryOverride.updatedAt',
+    nature: 'userSubcategoryOverride.nature',
   },
   expense: {
     id: 'expense.id',
@@ -248,6 +254,7 @@ describe('categories DAL merged tree', () => {
             isOwned: false,
             hasOverride: false,
             customName: null,
+            effectiveNature: null,
           },
         ],
       },
@@ -285,6 +292,7 @@ describe('categories DAL merged tree', () => {
         isOwned: true,
         hasOverride: false,
         customName: null,
+        effectiveNature: null,
       },
     ])
   })
@@ -442,7 +450,7 @@ describe('categories DAL mutations', () => {
   it('creates subcategories only under categories visible to the user', async () => {
     mocks.selectResults.push([{ id: 2 }])
 
-    await createUserSubcategory({ userId: 'user-1', categoryId: 2, name: 'Affitto', slug: 'affitto' })
+    await createUserSubcategory({ userId: 'user-1', categoryId: 2, name: 'Affitto', slug: 'affitto', nature: 'essential' })
 
     expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.id', right: 2 })
     expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.isActive', right: true })
@@ -504,5 +512,57 @@ describe('categories DAL mutations', () => {
     expectContainsPredicate(mocks.whereArgs[1], { op: 'eq', left: 'subCategory.id', right: 10 })
     expectContainsPredicate(mocks.whereArgs[1], { op: 'eq', left: 'subCategory.userId', right: 'user-1' })
     expectContainsPredicate(mocks.whereArgs[1], { op: 'eq', left: 'subCategory.isActive', right: true })
+  })
+})
+
+describe('effectiveNature resolution on subcategories (D-09)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.selectedShapes.length = 0
+    mocks.fromArgs.length = 0
+    mocks.leftJoinArgs.length = 0
+    mocks.whereArgs.length = 0
+    mocks.orderByArgs.length = 0
+    mocks.selectResults.length = 0
+    mocks.queryResult = []
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+  })
+
+  it('exposes seed nature when no user override exists', async () => {
+    mocks.queryResult = [systemCategoryRow({ effectiveNature: 'essential' })]
+
+    const categories = await getCategories()
+
+    expect(categories[0]?.subCategories[0]?.effectiveNature).toBe('essential')
+  })
+
+  it('uses override nature over seed nature when override is set (D-09)', async () => {
+    mocks.queryResult = [systemCategoryRow({ effectiveNature: 'debt' })]
+
+    const categories = await getCategories()
+
+    expect(categories[0]?.subCategories[0]?.effectiveNature).toBe('debt')
+  })
+
+  it('falls back to seed nature when override row exists but override nature is null', async () => {
+    mocks.queryResult = [systemCategoryRow({ effectiveNature: 'operational' })]
+
+    const categories = await getCategories()
+
+    expect(categories[0]?.subCategories[0]?.effectiveNature).toBe('operational')
+  })
+
+  it('returns null for subcategories in the ignore category (seed nature null, no override)', async () => {
+    mocks.queryResult = [
+      systemCategoryRow({
+        categorySlug: 'ignore',
+        categoryType: 'system',
+        effectiveNature: null,
+      }),
+    ]
+
+    const categories = await getCategories()
+
+    expect(categories[0]?.subCategories[0]?.effectiveNature).toBeNull()
   })
 })

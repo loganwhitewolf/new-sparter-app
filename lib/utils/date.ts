@@ -91,3 +91,43 @@ export function monthsBetween(from: Date, to: Date): string[] {
 
   return months
 }
+
+/**
+ * Formats an Italian short month abbreviation from a Date.
+ * Strips trailing dot (Intl may emit "mag." in some locales) and capitalizes first letter.
+ * Examples: "Mag", "Gen", "Dic"
+ */
+function formatMonthShort(date: Date, locale: string): string {
+  const raw = new Intl.DateTimeFormat(locale, { month: 'short' }).format(date)
+  const stripped = raw.replace(/\.$/, '')
+  return stripped.charAt(0).toUpperCase() + stripped.slice(1)
+}
+
+/**
+ * Formats a date range as a human-readable Italian short-month label (R-OB-10 / D-10).
+ *
+ * - Same month+year: "Mag 2026"
+ * - Same year, different months: "Apr–Mag 2026" (en-dash U+2013)
+ * - Different years: "Dic 2025–Gen 2026"
+ *
+ * Month names are produced by Intl.DateTimeFormat with the given locale (default 'it-IT').
+ */
+export function formatMonthRange(first: Date, last: Date, locale = 'it-IT'): string {
+  const firstYear = first.getFullYear()
+  const lastYear = last.getFullYear()
+  const firstShort = formatMonthShort(first, locale)
+  const lastShort = formatMonthShort(last, locale)
+
+  if (firstYear === lastYear && first.getMonth() === last.getMonth()) {
+    // Single month
+    return `${firstShort} ${firstYear}`
+  }
+
+  if (firstYear === lastYear) {
+    // Same year, different months — append year once at the end
+    return `${firstShort}–${lastShort} ${firstYear}`
+  }
+
+  // Different years — each side includes its own year
+  return `${firstShort} ${firstYear}–${lastShort} ${lastYear}`
+}

@@ -54,9 +54,24 @@ export const DeleteCategorySchema = z.object({
   id: IdSchema,
 })
 
+export const NatureSchema = z.enum([
+  'essential',
+  'discretionary',
+  'operational',
+  'financial',
+  'debt',
+  'extraordinary',
+])
+
+export const SetSubcategoryNatureSchema = z.object({
+  subCategoryId: z.coerce.number().int().positive(),
+  nature: NatureSchema.nullable(),
+})
+
 export const CreateSubcategorySchema = z.object({
   categoryId: IdSchema,
   name: NameSchema,
+  nature: NatureSchema,
 }).transform((input) => ({
   ...input,
   slug: deriveCategorySlug(input.name),
@@ -80,3 +95,4 @@ export type DeleteCategoryInput = z.infer<typeof DeleteCategorySchema>
 export type CreateSubcategoryInput = z.infer<typeof CreateSubcategorySchema>
 export type RenameSubcategoryInput = z.infer<typeof RenameSubcategorySchema>
 export type DeleteSubcategoryInput = z.infer<typeof DeleteSubcategorySchema>
+export type SetSubcategoryNatureInput = z.infer<typeof SetSubcategoryNatureSchema>

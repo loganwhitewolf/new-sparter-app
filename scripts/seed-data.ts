@@ -1,4 +1,4 @@
-// Canonical seed dataset for yarn db:seed and unit tests.
+// Canonical seed dataset for yarn db:seed / db:seed:staging / db:seed:production and unit tests.
 
 export const categories = [
   {

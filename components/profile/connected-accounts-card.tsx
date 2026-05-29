@@ -125,7 +125,8 @@ export function ConnectedAccountsCard({
 
   // Initial mount fetch.
   useEffect(() => {
-    void refreshAccounts()
+    const timer = window.setTimeout(() => void refreshAccounts(), 0)
+    return () => window.clearTimeout(timer)
   }, [])
 
   // Pitfall 2: after a successful link return, session cookie / account row may

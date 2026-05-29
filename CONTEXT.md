@@ -37,11 +37,33 @@ L'atto di assegnare categoria e sottocategoria a una transazione. Può avvenire 
 
 **Uncategorized** (Non categorizzato):
 Transazione senza categoria e sottocategoria assegnate. È un segnale d'azione, non uno stato definitivo.
+
+**FlowNature** (Natura del flusso):
+Classificazione economica applicata a ogni sottocategoria. Ogni sottocategoria ha esattamente una natura (o è non classificata). Valori canonici:
+- `essential` — spesa necessaria e ricorrente (affitto, bollette, spesa alimentare, salute)
+- `discretionary` — consumo opzionale (ristoranti, intrattenimento, shopping)
+- `operational` — reddito da lavoro ordinario (stipendio, freelance)
+- `financial` — risparmio e investimenti, e le relative entrate (ETF, dividendi, conto deposito)
+- `debt` — rimborso di debiti (rate mutuo quota capitale, finanziamenti)
+- `extraordinary` — eventi non ricorrenti (bonus, rimborso fiscale, eredità, vendita beni usati)
+
+Le sottocategorie di sistema escono dal seed con una natura predefinita ragionevole. L'utente può sovrascrivere la natura dalle impostazioni. Una sottocategoria senza natura assegnata è visibile nel grafico come segmento "non classificato".
+_Avoid_: tipo di spesa, carattere, tag economico
 _Avoid_: da classificare
 
 **PatternSuggestion** (Suggerimento di pattern):
 Candidato regex rilevato automaticamente durante la fase di analisi dell'import, a partire da descrizioni di transazioni non coperte da pattern esistenti che condividono un prefisso comune (≥2 token, ≥2 occorrenze nel file). Campi: `pattern` (prefisso estratto), `matchCount` (occorrenze nel file/import), `detectedAmountSign`, `sampleDescriptions` (max 3 descrizioni originali). Non è un `CategorizationPattern` finché l'utente non assegna una sottocategoria e lo salva. Può essere prodotto sia pre-import (da righe parse) sia post-import su transazioni già persistite (per rianalisi per `fileId`). Al massimo 5 per analisi, ordinate per `matchCount` discendente.
 _Avoid_: pattern suggerito, candidato, hint
+
+### Onboarding e primo import
+
+**Onboarding**:
+Il flusso di accesso riservato agli utenti con zero transazioni. Attivo finché `count(transaction) === 0`. Composto da 5 step: upload → overview → educazione → categorizzazione → outro. Termina quando l'utente esce verso la dashboard o le impostazioni.
+_Avoid_: wizard di registrazione, setup iniziale
+
+**Months Covered** (Mesi coperti):
+Label derivata on-the-fly dalle date delle transazioni di un file (es. "Apr–Giu 2026"). Non è una proprietà persistita sul file. Calcolata da `DATE_TRUNC('month', MIN/MAX(transaction.date))` per quel `fileId`. Usata solo a fini di display nella lista file e nell'overview di onboarding.
+_Avoid_: periodo del file, mese assegnato
 
 ### Dashboard e analisi
 
@@ -70,6 +92,7 @@ _Avoid_: periodo, filtro, intervallo
 - Un **Import** produce zero o più **Transaction**
 - Una **Transaction** appartiene a esattamente una **Category** e zero o una **Subcategory**
 - Una **Category** contiene zero o più **Subcategory**
+- Una **Subcategory** ha zero o una **FlowNature** (null = non classificata)
 - La **Deviation** di una **Subcategory** è calcolata rispetto alla sua **Baseline**
 - La **Baseline** si calcola solo se esistono dati nei 3 mesi precedenti il **Reference Period**
 

@@ -85,6 +85,27 @@
       "when": 1778674142689,
       "tag": "0011_user_passion_field",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1779735384645,
+      "tag": "0012_flow_nature",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1779819069824,
+      "tag": "0013_brief_pride",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1780041750810,
+      "tag": "0014_onboarding_completed_at",
+      "breakpoints": true
     }
   ]
 }

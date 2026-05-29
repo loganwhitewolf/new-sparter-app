@@ -4,6 +4,7 @@ import { db, type DbOrTx } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import { category, expense, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
 import { and, asc, eq, isNull, or, sql } from 'drizzle-orm'
+import type { FlowNature } from '@/lib/utils/nature-labels'
 
 export type CategoryWithSubCategories = {
   id: number
@@ -21,6 +22,7 @@ export type CategoryWithSubCategories = {
     isOwned: boolean
     hasOverride: boolean
     customName: string | null
+    effectiveNature: FlowNature | null
   }>
 }
 
@@ -74,6 +76,7 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
       subCategorySlug: subCategory.slug,
       subCategoryUserId: subCategory.userId,
       overrideCustomName: userSubcategoryOverride.customName,
+      effectiveNature: sql<FlowNature | null>`coalesce(${userSubcategoryOverride.nature}, ${subCategory.nature})`,
     })
     .from(category)
     .leftJoin(
@@ -128,6 +131,7 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
         isOwned: row.subCategoryUserId === userId,
         hasOverride: row.overrideCustomName !== null,
         customName: row.overrideCustomName,
+        effectiveNature: row.effectiveNature,
       })
     }
   }
@@ -204,7 +208,7 @@ export async function deleteUserCategory(
 }
 
 export async function createUserSubcategory(
-  input: { userId: string, categoryId: number, name: string, slug: string },
+  input: { userId: string, categoryId: number, name: string, slug: string, nature: FlowNature },
   database: DbOrTx = db,
 ) {
   const categoryRows = await database
@@ -231,9 +235,26 @@ export async function createUserSubcategory(
         name: input.name,
         slug: input.slug,
         isActive: true,
+        nature: input.nature,
       })
       .returning(),
   )
+
+  return rows[0] ?? null
+}
+
+export async function upsertSubcategoryNatureOverride(
+  { userId, subCategoryId, nature }: { userId: string; subCategoryId: number; nature: FlowNature | null },
+  database: DbOrTx = db,
+) {
+  const rows = await database
+    .insert(userSubcategoryOverride)
+    .values({ userId, subCategoryId, nature, customName: null })
+    .onConflictDoUpdate({
+      target: [userSubcategoryOverride.userId, userSubcategoryOverride.subCategoryId],
+      set: { nature, updatedAt: new Date() },
+    })
+    .returning()
 
   return rows[0] ?? null
 }
@@ -264,7 +285,7 @@ export async function renameUserSubcategory(
 export async function upsertSystemSubcategoryOverride(
   userId: string,
   subCategoryId: number,
-  customName: string,
+  customName: string | null,
   database: DbOrTx = db,
 ) {
   const rows = await database
