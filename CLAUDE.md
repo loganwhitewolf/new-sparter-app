@@ -77,7 +77,10 @@ Cloudflare R2 (CSV/Excel file storage)
 Zod (validation)
 Decimal.js (monetary arithmetic — REQUIRED)
 Tailwind CSS + shadcn/ui
+Vercel (hosting — preview deploy per branch; env scoped per ambiente)
 ```
+
+**Deploy & prototipi.** Si deploya su Vercel: ogni branch ha un preview deployment con URL proprio. I prototipi throwaway per stakeholder esterni vivono in `app/proto/*` — fuori dal gruppo autenticato `(app)`, esenti in `proxy.ts`, `noindex`, e abilitati solo dove esiste l'env `PROTOTYPES_ENABLED` (scoped su Preview in Vercel) → 404 in Production.
 
 ## Language Convention
 

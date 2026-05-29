@@ -29,7 +29,10 @@ export async function proxy(request: NextRequest) {
   const session = await getAuthSessionOrNull(request.headers)
 
   const isAuthenticated = !!session?.user
-  const isPublicRoute = PUBLIC_ROUTES.includes(path)
+  // /proto/* is the public prototype area (throwaway demos). It carries no auth and is
+  // gated to Vercel Preview via PROTOTYPES_ENABLED in its own layout, so skip the login
+  // redirect here. Production never sets that env, so the route 404s there regardless.
+  const isPublicRoute = PUBLIC_ROUTES.includes(path) || path.startsWith('/proto')
   const isAuthRoute = AUTH_ROUTES.includes(path)
 
   // Redirect authenticated users away from auth pages
