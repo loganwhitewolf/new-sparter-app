@@ -14,14 +14,7 @@ export const metadata = {
 }
 
 export default function ProtoLayout({ children }: { children: ReactNode }) {
-  // DIAGNOSTIC (temporary): shows in Vercel deployment Runtime Logs.
-  // If this line never logs → the request isn't reaching the route (middleware /
-  // deployment protection / build). If it logs `undefined` → the env isn't present
-  // at runtime (wrong scope or name). If it logs "1" but still 404 → look elsewhere.
-  console.log('[proto] layout hit — PROTOTYPES_ENABLED =', JSON.stringify(process.env.PROTOTYPES_ENABLED))
-
   if (!process.env.PROTOTYPES_ENABLED) {
-    console.log('[proto] gate CLOSED → notFound()')
     notFound()
   }
 
