@@ -11,6 +11,7 @@ import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import { verifySession } from '@/lib/dal/auth'
 import { getTransactionCount } from '@/lib/dal/transactions'
+import { getOnboardingCompletedAt } from '@/lib/dal/users'
 import { APP_ROUTES } from '@/lib/routes'
 
 export default async function AppLayout({
@@ -31,7 +32,10 @@ export default async function AppLayout({
   if (!isExempt) {
     const txCount = await getTransactionCount(userId)
     if (txCount === 0) {
-      redirect(APP_ROUTES.onboarding)
+      const completedAt = await getOnboardingCompletedAt(userId)
+      if (!completedAt) {
+        redirect(APP_ROUTES.onboarding)
+      }
     }
   }
 
