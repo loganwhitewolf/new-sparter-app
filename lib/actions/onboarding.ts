@@ -1,6 +1,5 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import { and, eq } from 'drizzle-orm'
 import { revalidateCategorizationSurfaces } from '@/lib/actions/revalidation'
 import { verifySession } from '@/lib/dal/auth'
@@ -8,7 +7,6 @@ import { isSubCategoryVisibleToUser } from '@/lib/dal/categories'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
 import { db } from '@/lib/db'
 import { expense } from '@/lib/db/schema'
-import { APP_ROUTES } from '@/lib/routes'
 import {
   SingleCategorizeSchema,
   type ActionState,
@@ -76,7 +74,6 @@ export async function onboardingCategorizeExpense(
   }
 
   revalidateCategorizationSurfaces()
-  revalidatePath(APP_ROUTES.onboarding)
 
   return { error: null }
 }
