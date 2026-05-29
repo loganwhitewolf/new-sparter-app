@@ -4,45 +4,44 @@
  * - This RSC layout reads the pathname and redirects users with 0 transactions to /onboarding
  * - /onboarding and /settings/* are exempt from the redirect guard
  */
-import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
-import { BottomNav } from '@/components/layout/bottom-nav'
-import { Sidebar } from '@/components/layout/sidebar'
-import { Topbar } from '@/components/layout/topbar'
-import { verifySession } from '@/lib/dal/auth'
-import { getTransactionCount } from '@/lib/dal/transactions'
-import { getOnboardingCompletedAt } from '@/lib/dal/users'
-import { APP_ROUTES } from '@/lib/routes'
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { BottomNav } from "@/components/layout/bottom-nav";
+import { Sidebar } from "@/components/layout/sidebar";
+import { Topbar } from "@/components/layout/topbar";
+import { verifySession } from "@/lib/dal/auth";
+import { getTransactionCount } from "@/lib/dal/transactions";
+import { getOnboardingCompletedAt } from "@/lib/dal/users";
+import { APP_ROUTES } from "@/lib/routes";
 
 export default async function AppLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  const { userId } = await verifySession()
+  const { userId } = await verifySession();
 
-  const requestHeaders = await headers()
-  const pathname = requestHeaders.get('x-pathname') ?? ''
+  const requestHeaders = await headers();
+  const pathname = requestHeaders.get("x-pathname") ?? "";
 
   // Exempt /onboarding and /settings/* from the zero-transaction redirect guard
   const isExempt =
     pathname.startsWith(APP_ROUTES.onboarding) ||
-    pathname.startsWith(APP_ROUTES.settings)
-
+    pathname.startsWith(APP_ROUTES.settings);
   if (!isExempt) {
-    const txCount = await getTransactionCount(userId)
+    const txCount = await getTransactionCount(userId);
     if (txCount === 0) {
-      const completedAt = await getOnboardingCompletedAt(userId)
+      const completedAt = await getOnboardingCompletedAt(userId);
       if (!completedAt) {
-        redirect(APP_ROUTES.onboarding)
+        redirect(APP_ROUTES.onboarding);
       }
     }
   }
 
   // Bypass app chrome (Sidebar, Topbar, BottomNav) for the onboarding route group (D-09, D-11)
-  const isOnboarding = pathname.startsWith(APP_ROUTES.onboarding)
+  const isOnboarding = pathname.startsWith(APP_ROUTES.onboarding);
   if (isOnboarding) {
-    return <>{children}</>
+    return <>{children}</>;
   }
 
   return (
@@ -62,5 +61,5 @@ export default async function AppLayout({
         <BottomNav className="md:hidden" />
       </div>
     </div>
-  )
+  );
 }
