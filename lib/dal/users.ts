@@ -1,5 +1,5 @@
 import 'server-only'
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { user } from '@/lib/db/schema'
 import type { ProfileValues } from '@/lib/validations/profile'
@@ -88,4 +88,20 @@ export async function updateUserProfile(
     })
 
   return rows[0] ?? null
+}
+
+export async function markOnboardingCompleted(userId: string): Promise<void> {
+  await db
+    .update(user)
+    .set({ onboardingCompletedAt: new Date() })
+    .where(and(eq(user.id, userId), isNull(user.onboardingCompletedAt)))
+}
+
+export async function getOnboardingCompletedAt(userId: string): Promise<Date | null> {
+  const rows = await db
+    .select({ onboardingCompletedAt: user.onboardingCompletedAt })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1)
+  return rows[0]?.onboardingCompletedAt ?? null
 }
