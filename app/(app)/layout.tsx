@@ -24,10 +24,12 @@ export default async function AppLayout({
   const requestHeaders = await headers();
   const pathname = requestHeaders.get("x-pathname") ?? "";
 
-  // Exempt /onboarding and /settings/* from the zero-transaction redirect guard
+  // Exempt /onboarding, /settings/*, and /import/* from the zero-transaction redirect guard.
+  // /import is part of the data-ingestion flow (including the format-wizard reached from step 1).
   const isExempt =
     pathname.startsWith(APP_ROUTES.onboarding) ||
-    pathname.startsWith(APP_ROUTES.settings);
+    pathname.startsWith(APP_ROUTES.settings) ||
+    pathname.startsWith(APP_ROUTES.import);
   if (!isExempt) {
     const txCount = await getTransactionCount(userId);
     if (txCount === 0) {
