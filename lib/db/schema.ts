@@ -81,6 +81,7 @@ export const user = pgTable("user", {
     .notNull(),
   subscriptionPlan: subscriptionPlanEnum("subscriptionPlan").default("free"),
   role: roleEnum("role").default("user"),
+  onboardingCompletedAt: timestamp("onboarding_completed_at", { withTimezone: true }),
 });
 
 export const session = pgTable(
