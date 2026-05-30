@@ -30,6 +30,7 @@ type ImportFormatRow = {
   platformPositiveAmountColumn: string | null
   platformNegativeAmountColumn: string | null
   platformMultiplyBy: number
+  platformDescriptionStripPattern: string | null
 }
 
 const GLOBAL_VISIBILITY = 'global'
@@ -60,7 +61,8 @@ function hasExpectedRowShape(row: Partial<ImportFormatRow>): row is ImportFormat
     (typeof row.platformAmountColumn === 'string' || row.platformAmountColumn === null) &&
     (typeof row.platformPositiveAmountColumn === 'string' || row.platformPositiveAmountColumn === null) &&
     (typeof row.platformNegativeAmountColumn === 'string' || row.platformNegativeAmountColumn === null) &&
-    typeof row.platformMultiplyBy === 'number'
+    typeof row.platformMultiplyBy === 'number' &&
+    (typeof row.platformDescriptionStripPattern === 'string' || row.platformDescriptionStripPattern === null)
   )
 }
 
@@ -107,6 +109,7 @@ function toCandidate(row: ImportFormatRow): ImportFormatCandidateInput {
       positiveAmountColumn: row.platformPositiveAmountColumn,
       negativeAmountColumn: row.platformNegativeAmountColumn,
       multiplyBy: row.platformMultiplyBy,
+      descriptionStripPattern: row.platformDescriptionStripPattern,
     },
   }
 }
@@ -174,6 +177,7 @@ export async function loadImportFormatsForDetection(input: {
       platformPositiveAmountColumn: platform.positiveAmountColumn,
       platformNegativeAmountColumn: platform.negativeAmountColumn,
       platformMultiplyBy: platform.multiplyBy,
+      platformDescriptionStripPattern: platform.descriptionStripPattern,
     })
     .from(importFormatVersion)
     .innerJoin(platform, eq(importFormatVersion.platformId, platform.id))

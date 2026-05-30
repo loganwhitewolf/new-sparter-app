@@ -20,7 +20,7 @@ const expectedFixtureHeaders = [
 const formats = seedPlatforms.map((platform) => ({
   id: platform.id * 10,
   platformId: platform.id,
-  platform,
+  platform: { ...platform, descriptionStripPattern: null as string | null },
   version: 1,
   headerSignature: [
     platform.timestampColumn,
@@ -110,6 +110,7 @@ describe('import detector fixture contracts', () => {
             country: 'IT',
             timestampColumn: 'Quando',
             descriptionColumn: 'Cosa',
+            descriptionStripPattern: null,
             amountType: 'single',
             amountColumn: 'Valore',
             positiveAmountColumn: null,

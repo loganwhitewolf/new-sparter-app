@@ -411,6 +411,7 @@ function makeFormatCandidate(overrides: Record<string, unknown> = {}) {
       country: 'IT',
       timestampColumn: '"Data Movimento"',
       descriptionColumn: '"Descrizione"',
+      descriptionStripPattern: null,
       amountType: 'single' as const,
       amountColumn: '"Importo"',
       positiveAmountColumn: null,

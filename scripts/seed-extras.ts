@@ -6,8 +6,8 @@
 //   yarn db:seed-extras:production   → PRODUCTION_DATABASE_URL + PRODUCTION_MIGRATION_CONFIRM
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import { inArray } from 'drizzle-orm'
-import { subCategory } from '../lib/db/schema'
+import { eq, inArray } from 'drizzle-orm'
+import { platform, subCategory } from '../lib/db/schema'
 import type { FlowNature } from '../lib/utils/nature-labels'
 import {
   getOperatorDatabaseConfig,
@@ -205,12 +205,23 @@ async function setSubcategoryNature(database: Db): Promise<void> {
   console.log(`    total: ${totalUpdated} rows updated`)
 }
 
+// Step 2 (phase description-strip-pattern): set descriptionStripPattern on Fineco platform
+async function setFinecoDescriptionStripPattern(database: Db): Promise<void> {
+  const result = await database
+    .update(platform)
+    .set({ descriptionStripPattern: '\\s+Carta N\\..*$' })
+    .where(eq(platform.slug, 'fineco'))
+  const count = (result as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(`    fineco description_strip_pattern: ${count} rows updated`)
+}
+
 // ---------------------------------------------------------------------------
 // Registry — append new steps here
 // ---------------------------------------------------------------------------
 
 const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'set-subcategory-nature', run: setSubcategoryNature },
+  { name: 'set-fineco-description-strip-pattern', run: setFinecoDescriptionStripPattern },
 ]
 
 // ---------------------------------------------------------------------------

@@ -77,6 +77,7 @@ describe('import utility fixture contracts', () => {
         platformId: 5,
         timestampColumn: 'Data operazione',
         descriptionColumn: 'Descrizione',
+        descriptionStripPattern: null,
         amountType: 'single',
         amountColumn: 'Addebiti',
         positiveAmountColumn: null,
@@ -98,6 +99,7 @@ describe('import utility fixture contracts', () => {
         platformId: 7,
         timestampColumn: 'Data',
         descriptionColumn: 'Descrizione_Completa',
+        descriptionStripPattern: null,
         amountType: 'separate',
         amountColumn: null,
         positiveAmountColumn: 'Entrate',
@@ -112,6 +114,7 @@ describe('import utility fixture contracts', () => {
         platformId: 7,
         timestampColumn: 'Data',
         descriptionColumn: 'Descrizione_Completa',
+        descriptionStripPattern: null,
         amountType: 'separate',
         amountColumn: null,
         positiveAmountColumn: 'Entrate',
@@ -123,5 +126,63 @@ describe('import utility fixture contracts', () => {
 
     expect(income.amount).toBe('2500.00')
     expect(outflow.amount).toBe('-12.34')
+  })
+
+  it('strips bank boilerplate suffix via descriptionStripPattern before normalizing', () => {
+    const withSuffix = normalizeTransactionRow(
+      { Data: '28/04/2026', Descrizione_Completa: 'AMAZON MARKETPLACE Carta N. ***** 114 Data operazione 28/04/26', Entrate: '', Uscite: '29.90' },
+      {
+        platformId: 7,
+        timestampColumn: 'Data',
+        descriptionColumn: 'Descrizione_Completa',
+        descriptionStripPattern: '\\s+Carta N\\..*$',
+        amountType: 'separate',
+        amountColumn: null,
+        positiveAmountColumn: 'Entrate',
+        negativeAmountColumn: 'Uscite',
+        multiplyBy: 1,
+      },
+      { userId: 'user-1', rowIndex: 1 },
+    )
+    const withoutSuffix = normalizeTransactionRow(
+      { Data: '05/05/2026', Descrizione_Completa: 'AMAZON MARKETPLACE Carta N. ***** 114 Data operazione 05/05/26', Entrate: '', Uscite: '9.99' },
+      {
+        platformId: 7,
+        timestampColumn: 'Data',
+        descriptionColumn: 'Descrizione_Completa',
+        descriptionStripPattern: '\\s+Carta N\\..*$',
+        amountType: 'separate',
+        amountColumn: null,
+        positiveAmountColumn: 'Entrate',
+        negativeAmountColumn: 'Uscite',
+        multiplyBy: 1,
+      },
+      { userId: 'user-1', rowIndex: 2 },
+    )
+
+    expect(withSuffix.description).toBe('AMAZON MARKETPLACE')
+    expect(withoutSuffix.description).toBe('AMAZON MARKETPLACE')
+    expect(withSuffix.descriptionHash).toBe(withoutSuffix.descriptionHash)
+  })
+
+  it('preserves raw description in rawRow when descriptionStripPattern is applied', () => {
+    const row = normalizeTransactionRow(
+      { Data: '28/04/2026', Descrizione_Completa: 'AMAZON MARKETPLACE Carta N. ***** 114 Data operazione 28/04/26', Entrate: '', Uscite: '29.90' },
+      {
+        platformId: 7,
+        timestampColumn: 'Data',
+        descriptionColumn: 'Descrizione_Completa',
+        descriptionStripPattern: '\\s+Carta N\\..*$',
+        amountType: 'separate',
+        amountColumn: null,
+        positiveAmountColumn: 'Entrate',
+        negativeAmountColumn: 'Uscite',
+        multiplyBy: 1,
+      },
+      { userId: 'user-1', rowIndex: 1 },
+    )
+
+    expect(row.description).toBe('AMAZON MARKETPLACE')
+    expect(row.rawRow['Descrizione_Completa']).toBe('AMAZON MARKETPLACE Carta N. ***** 114 Data operazione 28/04/26')
   })
 })
