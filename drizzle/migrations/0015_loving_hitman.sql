@@ -1,0 +1,1 @@
+ALTER TABLE "platform" ADD COLUMN "description_strip_pattern" text;

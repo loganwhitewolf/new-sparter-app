@@ -9,6 +9,7 @@ export type ImportPlatformConfig = {
   id?: number
   timestampColumn: string
   descriptionColumn: string
+  descriptionStripPattern: string | null
   amountType: AmountType
   amountColumn: string | null
   positiveAmountColumn: string | null
@@ -198,7 +199,10 @@ export function normalizeTransactionRow(
 ): NormalizedTransactionRow {
   const errors: string[] = []
   const warnings: string[] = []
-  const description = String(row[platform.descriptionColumn] ?? '').trim()
+  const rawDescription = String(row[platform.descriptionColumn] ?? '').trim()
+  const description = platform.descriptionStripPattern
+    ? rawDescription.replace(new RegExp(platform.descriptionStripPattern, 'i'), '').trim()
+    : rawDescription
   const normalizedDescription = normalizeDescription(description)
   const occurredAt = parseBankDate(row[platform.timestampColumn] as string | number | null | undefined as string | null | undefined)
 

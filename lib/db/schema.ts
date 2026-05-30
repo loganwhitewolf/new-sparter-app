@@ -253,6 +253,7 @@ export const platform = pgTable(
     dateReplace: boolean("date_replace").default(false).notNull(),
     decimalReplace: boolean("decimal_replace").default(false).notNull(),
     multiplyBy: integer("multiply_by").default(1).notNull(),
+    descriptionStripPattern: text("description_strip_pattern"),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
