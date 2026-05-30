@@ -47,6 +47,7 @@ type WizardFieldValues = {
 
 type Props = {
   context: ImportFormatWizardContext
+  from?: string
   createAction?: typeof createPrivateImportFormatAction
 }
 
@@ -122,6 +123,7 @@ function readFormValues(form: HTMLFormElement): WizardFieldValues {
 
 export function ImportFormatWizard({
   context,
+  from,
   createAction = createPrivateImportFormatAction,
 }: Props) {
   const router = useRouter()
@@ -188,6 +190,7 @@ export function ImportFormatWizard({
           ) : (
             <form action={formAction} onSubmit={handleSubmit} className="space-y-6" noValidate>
               <input type="hidden" name="fileId" value={context.fileId} />
+              {from && <input type="hidden" name="from" value={from} />}
 
               {/* Hidden inputs for shadcn Select values */}
               <input type="hidden" name="delimiter" value={delimiter} />

@@ -78,5 +78,21 @@ export const auth = betterAuth({
       },
     },
   },
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ['google', 'github'],
+      requireLocalEmailVerified: false,
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          return { data: { ...user, emailVerified: true } }
+        },
+      },
+    },
+  },
   plugins: [nextCookies()],
 })

@@ -30,11 +30,12 @@ export default async function AnalyzePage({
   searchParams,
 }: {
   params: Promise<{ fileId: string }>
-  searchParams?: Promise<{ formatVersionId?: string | string[] }>
+  searchParams?: Promise<{ formatVersionId?: string | string[], from?: string | string[] }>
 }) {
   const { fileId } = await params
   const resolvedSearchParams = searchParams ? await searchParams : {}
   const selectedFormatVersionId = firstSearchParam(resolvedSearchParams.formatVersionId)
+  const from = firstSearchParam(resolvedSearchParams.from)
 
   const fd = new FormData()
   fd.set('fileId', fileId)
@@ -121,7 +122,13 @@ export default async function AnalyzePage({
         </Card>
       )}
 
-      {!isUnknownFormat && <ImportPreview result={result.data} categories={categories} />}
+      {!isUnknownFormat && (
+        <ImportPreview
+          result={result.data}
+          categories={categories}
+          returnTo={from === 'onboarding' ? '/onboarding?step=2' : undefined}
+        />
+      )}
     </div>
   )
 }

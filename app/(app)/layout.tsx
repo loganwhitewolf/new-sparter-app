@@ -40,8 +40,14 @@ export default async function AppLayout({
     }
   }
 
-  // Bypass app chrome (Sidebar, Topbar, BottomNav) for the onboarding route group (D-09, D-11)
-  const isOnboarding = pathname.startsWith(APP_ROUTES.onboarding);
+  // Bypass app chrome (Sidebar, Topbar, BottomNav) for onboarding flows:
+  // - always on /onboarding/*
+  // - on /import/* when ?from=onboarding is present (user reached import wizard from step 1)
+  const search = requestHeaders.get("x-search") ?? "";
+  const fromParam = new URLSearchParams(search).get("from");
+  const isOnboarding =
+    pathname.startsWith(APP_ROUTES.onboarding) ||
+    (pathname.startsWith(APP_ROUTES.import) && fromParam === "onboarding");
   if (isOnboarding) {
     return <>{children}</>;
   }
