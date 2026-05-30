@@ -51,6 +51,7 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
     platformPositiveAmountColumn: null,
     platformNegativeAmountColumn: null,
     platformMultiplyBy: 1,
+    platformDescriptionStripPattern: null,
     ...overrides,
   }
 }

@@ -167,16 +167,36 @@ describe('detectPatternSuggestions', () => {
     expect(nullSuggestions[0].detectedAmountSign).toBe('any')
   })
 
-  it('SUG-07a: fully identical normalized descriptions (no numeric tail) emit no suggestion', () => {
-    // Both rows strip to ["pagamento", "pos", "market"] — prefix equals every member's
-    // full token list, so no row extends beyond it → fully identical → no suggestion.
-    // Tier 2 (history) handles exact duplicates; regex suggestions are noise here.
+  it('SUG-07a: fully identical normalized descriptions emit one suggestion', () => {
+    // Even identical descriptions deserve a pattern suggestion: useful for first-import
+    // bulk categorization (Tier 2 has no history yet). isCoveredByPatterns already
+    // suppresses re-suggestions once a pattern is in place.
+    // Regression: DescriptionStripPattern can make originally-different Fineco descriptions
+    // identical by removing the variable boilerplate (date, card ref). The allLiterallyIdentical
+    // guard was a false positive — it prevented suggestions for these stripped groups.
     const rows = [
       row({ normalizedDescription: 'pagamento pos market' }),
       row({ normalizedDescription: 'pagamento pos market' }),
     ]
     const suggestions = detectPatternSuggestions(rows, [])
-    expect(suggestions).toHaveLength(0)
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0].pattern).toBe('pagamento pos market')
+    expect(suggestions[0].matchCount).toBe(2)
+  })
+
+  it('SUG-07a-strip: Fineco stripped-identical descriptions (originally different) emit one suggestion', () => {
+    // All three rows originally had a different Fineco boilerplate suffix (date + card ref).
+    // After descriptionStripPattern, all normalize to the same string. The suggestion is
+    // essential for first-import Tier 1 rule setup.
+    const rows = [
+      { description: 'Revolut**5920* Dublin IE', normalizedDescription: 'revolut**5920* dublin ie', amount: '-50.00', valid: true, covered: false },
+      { description: 'Revolut**5920* Dublin IE', normalizedDescription: 'revolut**5920* dublin ie', amount: '-75.00', valid: true, covered: false },
+      { description: 'Revolut**5920* Dublin IE', normalizedDescription: 'revolut**5920* dublin ie', amount: '-30.00', valid: true, covered: false },
+    ]
+    const suggestions = detectPatternSuggestions(rows, [])
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0].pattern).toBe('revolut\\*\\*5920\\* dublin ie')
+    expect(suggestions[0].matchCount).toBe(3)
   })
 
   it('SUG-07b: two identical rows + one extension → one suggestion covering all three', () => {

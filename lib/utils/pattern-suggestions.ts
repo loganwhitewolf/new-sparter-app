@@ -141,16 +141,6 @@ export function detectPatternSuggestions(
     }
     if (prefix.length < 2) continue
 
-    // Skip only when every description in the group is literally identical (same normalized text).
-    // Identical descriptions → same descriptionHash → same expense record → Tier 2 handles
-    // them after one manual categorization. Descriptions that differ (even only in numeric
-    // tokens such as reference numbers) have different hashes and are NOT cross-matched by
-    // Tier 2; those groups need a regex pattern. See docs/adr/0002.
-    const allLiterallyIdentical = group.every(
-      g => g.row.normalizedDescription === group[0].row.normalizedDescription
-    )
-    if (allLiterallyIdentical) continue
-
     const prefixString = prefix.join(' ')
     const escaped = escapeRegex(prefixString)
     const amounts = group.map(g => g.row.amount)
