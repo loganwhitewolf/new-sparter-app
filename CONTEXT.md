@@ -22,6 +22,10 @@ _Avoid_: upload, sincronizzazione
 Un istituto bancario o servizio di pagamento (es. Intesa SP, Revolut, Fineco) con il proprio formato di import.
 _Avoid_: banca, conto
 
+**DescriptionStripPattern** (Pattern di pulizia descrizione):
+Regex nullable configurata per Platform. Quando presente, viene applicata alla descrizione grezza estratta dal CSV prima di `normalizeDescription` e del calcolo degli hash. Rimuove boilerplate prevedibile (es. suffissi con numero carta e data operazione) che altrimenti impedisce l'aggregazione delle transazioni dello stesso esercente e la categorizzazione automatica. Il valore originale è sempre preservato in `rawRow`.
+_Avoid_: regex di normalizzazione, filtro descrizione
+
 ### Categorizzazione
 
 **Category** (Categoria):
