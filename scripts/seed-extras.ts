@@ -7,7 +7,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
-import { categorizationPattern, expense, platform, subCategory } from '../lib/db/schema'
+import { categorizationPattern, category, expense, platform, subCategory } from '../lib/db/schema'
 import type { FlowNature } from '../lib/utils/nature-labels'
 import {
   getOperatorDatabaseConfig,
@@ -191,6 +191,7 @@ const NATURE_SLUGS: Record<FlowNature, string[]> = {
     'finanziamenti-auto',
     'altri-finanziamenti',
   ],
+  transfer: [],
 }
 
 async function setSubcategoryNature(database: Db): Promise<void> {
@@ -295,6 +296,114 @@ async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
   console.log(`    deactivate deprecated subcategories: ${deactivateCount} rows updated`)
 }
 
+// Step 4: reorganize Trasferimenti (cat 32) and Rimborsi (cat 26) categories
+// - Cat 32 "ignore" → "Trasferimenti" (type: transfer); rename/add subcategories; set excludeFromTotals+nature
+// - Cat 28 "movimenti di liquidità" → isActive=false (and its subcategories)
+// - Cat 26 "sconti, rimborsi e cashback" → "rimborsi, cashback e bonus"; merge/rename subcategories; add new one
+async function reorganizeTransferRimborsiCategories(database: Db): Promise<void> {
+  // --- Cat 32: rename to Trasferimenti, change type to transfer ---
+  const cat32Result = await database
+    .update(category)
+    .set({ name: 'Trasferimenti', slug: 'trasferimenti', type: 'transfer' })
+    .where(eq(category.id, 32))
+  console.log(`    cat32 rename/retype: ${(cat32Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 32 subcategories: rename "trasferimento" → "Trasferimento tra conti" ---
+  const sub32RenameResult = await database
+    .update(subCategory)
+    .set({ name: 'Trasferimento tra conti', slug: 'trasferimento-tra-conti' })
+    .where(and(eq(subCategory.slug, 'trasferimento'), isNull(subCategory.userId)))
+  console.log(`    sub32 rename trasferimento: ${(sub32RenameResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 32 subcategories: set excludeFromTotals=true, nature=transfer on all ---
+  const sub32NatureResult = await database
+    .update(subCategory)
+    .set({ excludeFromTotals: true, nature: 'transfer' })
+    .where(and(eq(subCategory.categoryId, 32), isNull(subCategory.userId)))
+  console.log(`    sub32 set nature/excludeFromTotals: ${(sub32NatureResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 32: insert "Prelievo contante" if not exists (idempotent via slug check) ---
+  const existingPrelievo = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'prelievo-contante'), isNull(subCategory.userId)))
+    .limit(1)
+  if (existingPrelievo.length === 0) {
+    await database.insert(subCategory).values({
+      categoryId: 32,
+      name: 'Prelievo contante',
+      slug: 'prelievo-contante',
+      displayOrder: 0,
+      isActive: true,
+      excludeFromTotals: true,
+      nature: 'transfer',
+    })
+    console.log('    sub32 insert prelievo-contante: 1 row inserted')
+  } else {
+    console.log('    sub32 insert prelievo-contante: already exists, skipped')
+  }
+
+  // --- Cat 28: deactivate category and its subcategories ---
+  const cat28Result = await database
+    .update(category)
+    .set({ isActive: false })
+    .where(eq(category.id, 28))
+  console.log(`    cat28 deactivate: ${(cat28Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  const sub28Result = await database
+    .update(subCategory)
+    .set({ isActive: false })
+    .where(and(eq(subCategory.categoryId, 28), isNull(subCategory.userId)))
+  console.log(`    sub28 deactivate: ${(sub28Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 26: rename category ---
+  const cat26Result = await database
+    .update(category)
+    .set({ name: 'rimborsi, cashback e bonus', slug: 'rimborsi-cashback-e-bonus' })
+    .where(eq(category.id, 26))
+  console.log(`    cat26 rename: ${(cat26Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 26: rename sconto-abbonamento → rimborso-abbonamento-e-canoni ---
+  const sub26AbbonaResult = await database
+    .update(subCategory)
+    .set({ name: 'rimborso abbonamento e canoni', slug: 'rimborso-abbonamento-e-canoni' })
+    .where(and(eq(subCategory.slug, 'sconto-abbonamento'), isNull(subCategory.userId)))
+  console.log(`    sub26 rename sconto-abbonamento: ${(sub26AbbonaResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 26: deactivate sconto-canone (merged into rimborso-abbonamento-e-canoni) ---
+  const sub26CanoneResult = await database
+    .update(subCategory)
+    .set({ isActive: false })
+    .where(and(eq(subCategory.slug, 'sconto-canone'), isNull(subCategory.userId)))
+  console.log(`    sub26 deactivate sconto-canone: ${(sub26CanoneResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 26: rename sconto-promozionale → bonus-promozionale ---
+  const sub26PromoResult = await database
+    .update(subCategory)
+    .set({ name: 'bonus promozionale', slug: 'bonus-promozionale' })
+    .where(and(eq(subCategory.slug, 'sconto-promozionale'), isNull(subCategory.userId)))
+  console.log(`    sub26 rename sconto-promozionale: ${(sub26PromoResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 26: insert "rimborso da persona" if not exists ---
+  const existingRimborsoPersona = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'rimborso-da-persona'), isNull(subCategory.userId)))
+    .limit(1)
+  if (existingRimborsoPersona.length === 0) {
+    await database.insert(subCategory).values({
+      categoryId: 26,
+      name: 'rimborso da persona',
+      slug: 'rimborso-da-persona',
+      displayOrder: 0,
+      isActive: true,
+    })
+    console.log('    sub26 insert rimborso-da-persona: 1 row inserted')
+  } else {
+    console.log('    sub26 insert rimborso-da-persona: already exists, skipped')
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Registry — append new steps here
 // ---------------------------------------------------------------------------
@@ -303,6 +412,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'set-subcategory-nature', run: setSubcategoryNature },
   { name: 'set-fineco-description-strip-pattern', run: setFinecoDescriptionStripPattern },
   { name: 'reorganize-spesa-subcategories', run: reorganizeSpesaSubcategories },
+  { name: 'reorganize-transfer-rimborsi-categories', run: reorganizeTransferRimborsiCategories },
 ]
 
 // ---------------------------------------------------------------------------

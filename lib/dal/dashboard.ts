@@ -169,7 +169,7 @@ type BreakdownAggregateRow = {
   categoryId: number | null
   categoryName: string | null
   categorySlug: string | null
-  categoryType: 'in' | 'out' | 'system' | null
+  categoryType: 'in' | 'out' | 'system' | 'transfer' | null
   subCategoryId: number | null
   subCategoryName: string | null
   subCategorySlug: string | null
@@ -181,7 +181,7 @@ type CategoryRankingAggregateRow = {
   categoryId: number | null
   categoryName: string | null
   categorySlug: string | null
-  categoryType: 'in' | 'out' | 'system' | null
+  categoryType: 'in' | 'out' | 'system' | 'transfer' | null
   month: string | null
   count: number | string | null
   amount: string | null
@@ -206,7 +206,7 @@ type NatureTrendAggregateRow = {
 type CategoryDetailTrendRow = {
   categoryId: number | null
   categorySlug: string | null
-  categoryType: 'in' | 'out' | 'system' | null
+  categoryType: 'in' | 'out' | 'system' | 'transfer' | null
   month: string | null
   count: number | string | null
   amount: string | null
@@ -215,7 +215,7 @@ type CategoryDetailTrendRow = {
 type CategoryDetailSubcategoryRow = {
   categoryId: number | null
   categorySlug: string | null
-  categoryType: 'in' | 'out' | 'system' | null
+  categoryType: 'in' | 'out' | 'system' | 'transfer' | null
   subCategoryId: number | null
   subCategoryName: string | null
   subCategorySlug: string | null
@@ -227,7 +227,7 @@ type CategoryDetailTopTransactionRow = {
   id: string | null
   categoryId: number | null
   categorySlug: string | null
-  categoryType: 'in' | 'out' | 'system' | null
+  categoryType: 'in' | 'out' | 'system' | 'transfer' | null
   description: string | null
   customTitle: string | null
   amount: string | null
@@ -370,18 +370,18 @@ function emptyCategoryDetailData(
 
 function rowMatchesCategory(
   categoryData: CategoryDetailCategory,
-  row: { categoryId: number | null; categorySlug: string | null; categoryType: 'in' | 'out' | 'system' | null }
+  row: { categoryId: number | null; categorySlug: string | null; categoryType: 'in' | 'out' | 'system' | 'transfer' | null }
 ): boolean {
   return (
     row.categoryId === categoryData.id &&
     row.categorySlug === categoryData.slug &&
-    row.categorySlug !== 'ignore' &&
+    row.categoryType !== 'transfer' &&
     row.categoryType === categoryData.type
   )
 }
 
-function notIgnoredCategory() {
-  return or(isNull(category.slug), ne(category.slug, 'ignore'))
+function notTransferCategory() {
+  return or(isNull(category.type), ne(category.type, 'transfer'))
 }
 
 export function notExcludedFromTotals() {
@@ -417,7 +417,7 @@ async function getUncategorizedCount(userId: string, from: Date, to: Date): Prom
           dateScopedTransactions(userId, from, to),
           expenseStatusUncategorized(),
           isNull(expense.subCategoryId),
-          notIgnoredCategory(),
+          notTransferCategory(),
           notExcludedFromTotals()
         )
       )
@@ -439,7 +439,7 @@ async function getOverviewAmountTotals(userId: string, from: Date, to: Date): Pr
       .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
-      .where(and(dateScopedTransactions(userId, from, to), expenseStatusIncludedInDashboardTotals(), notIgnoredCategory(), notExcludedFromTotals()))
+      .where(and(dateScopedTransactions(userId, from, to), expenseStatusIncludedInDashboardTotals(), notTransferCategory(), notExcludedFromTotals()))
 
     return rows[0] ?? { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT }
   } catch {
@@ -490,7 +490,7 @@ export function buildBreakdownData(rows: BreakdownAggregateRow[]): BreakdownCate
       row.categoryName === null ||
       row.categorySlug === null ||
       row.categoryType === null ||
-      row.categoryType === 'system' ||
+      row.categoryType === 'transfer' ||
       row.subCategoryId === null ||
       row.subCategoryName === null ||
       row.subCategorySlug === null
@@ -517,7 +517,7 @@ export function buildBreakdownData(rows: BreakdownAggregateRow[]): BreakdownCate
         id: row.categoryId,
         name: row.categoryName,
         slug: row.categorySlug,
-        type: row.categoryType,
+        type: row.categoryType as 'in' | 'out',
         count: countValue,
         amount,
         subCategories: [
@@ -565,9 +565,8 @@ export function buildCategoryRankingData(input: {
       row.categoryId === null ||
       row.categoryName === null ||
       row.categorySlug === null ||
-      row.categorySlug === 'ignore' ||
       row.categoryType === null ||
-      row.categoryType === 'system' ||
+      row.categoryType === 'transfer' ||
       row.month === null ||
       !monthKeySet.has(row.month)
     ) {
@@ -598,7 +597,7 @@ export function buildCategoryRankingData(input: {
         id: row.categoryId,
         name: row.categoryName,
         slug: row.categorySlug,
-        type: row.categoryType,
+        type: row.categoryType as 'in' | 'out',
         count: countValue,
         amount,
         sparkline: Array.from(sparklineBuckets.values()),
@@ -670,6 +669,7 @@ export function buildMonthlyNatureTrendData(input: {
     income: ZERO_AMOUNT,
     debt: ZERO_AMOUNT,
     extraordinary: ZERO_AMOUNT,
+    transfer: ZERO_AMOUNT,
     unclassified: ZERO_AMOUNT,
   })
 
@@ -901,7 +901,7 @@ export const getCategoriesBreakdown = cache(
           and(
             dateScopedTransactions(userId, from, to),
             expenseStatusIncludedInDashboardTotals(),
-            ne(category.slug, 'ignore'),
+            ne(category.type, 'transfer'),
             notExcludedFromTotals(),
             typeFilter
           )
@@ -951,8 +951,7 @@ export const getCategoryRanking = cache(
           and(
             dateScopedTransactions(userId, from, to),
             expenseStatusIncludedInDashboardTotals(),
-            ne(category.slug, 'ignore'),
-            ne(category.type, 'system'),
+            ne(category.type, 'transfer'),
             notExcludedFromTotals(),
             typeFilter
           )
@@ -996,8 +995,7 @@ export const getCategoryDeviations = cache(
             and(
               dateScopedTransactions(userId, reference.from, reference.to),
               expenseStatusIncludedInDashboardTotals(),
-              ne(category.slug, 'ignore'),
-              ne(category.type, 'system'),
+              ne(category.type, 'transfer'),
               notExcludedFromTotals(),
               typeFilter,
               categoryScope
@@ -1018,8 +1016,7 @@ export const getCategoryDeviations = cache(
             and(
               dateScopedTransactions(userId, baseline.from, baseline.to),
               expenseStatusIncludedInDashboardTotals(),
-              ne(category.slug, 'ignore'),
-              ne(category.type, 'system'),
+              ne(category.type, 'transfer'),
               notExcludedFromTotals(),
               typeFilter,
               categoryScope
@@ -1068,8 +1065,7 @@ export const getCategoryDetail = cache(
           and(
             eq(category.id, categoryId),
             eq(category.type, selectedType),
-            ne(category.type, 'system'),
-            ne(category.slug, 'ignore'),
+            ne(category.type, 'transfer'),
             eq(category.isActive, true),
             or(isNull(category.userId), eq(category.userId, userId))
           )
@@ -1078,12 +1074,12 @@ export const getCategoryDetail = cache(
 
       const row = categoryRows[0]
 
-      if (row && row.type !== 'system') {
+      if (row && row.type !== 'transfer') {
         categoryData = {
           id: row.id,
           name: row.name,
           slug: row.slug,
-          type: row.type,
+          type: row.type as 'in' | 'out',
         }
       }
     } catch {
@@ -1098,8 +1094,7 @@ export const getCategoryDetail = cache(
     const activeScopedCategory = and(
       eq(category.id, categoryId),
       eq(category.type, selectedType),
-      ne(category.slug, 'ignore'),
-      ne(category.type, 'system'),
+      ne(category.type, 'transfer'),
       eq(category.isActive, true),
       or(isNull(category.userId), eq(category.userId, userId))
     )
@@ -1236,10 +1231,10 @@ export const getAggregatedTransactionsData = cache(
       rows = await db
         .select({
           month: monthSql,
-          totalIn: sql<string>`coalesce(sum(case when ${transactionTable.amount} > 0 and (${category.slug} is null or ${category.slug} <> 'ignore') and (${subCategory.excludeFromTotals} is null or ${subCategory.excludeFromTotals} = false) then ${transactionTable.amount} else 0 end), 0)::text`,
-          totalOut: sql<string>`coalesce(abs(sum(case when ${transactionTable.amount} < 0 and (${category.slug} is null or ${category.slug} <> 'ignore') and (${subCategory.excludeFromTotals} is null or ${subCategory.excludeFromTotals} = false) then ${transactionTable.amount} else 0 end)), 0)::text`,
+          totalIn: sql<string>`coalesce(sum(case when ${transactionTable.amount} > 0 and (${category.type} is null or ${category.type} <> 'transfer') and (${subCategory.excludeFromTotals} is null or ${subCategory.excludeFromTotals} = false) then ${transactionTable.amount} else 0 end), 0)::text`,
+          totalOut: sql<string>`coalesce(abs(sum(case when ${transactionTable.amount} < 0 and (${category.type} is null or ${category.type} <> 'transfer') and (${subCategory.excludeFromTotals} is null or ${subCategory.excludeFromTotals} = false) then ${transactionTable.amount} else 0 end)), 0)::text`,
           totalNc: sql<number>`count(distinct case when ${expense.status} = '1' and ${expense.subCategoryId} is null then ${expense.id} end)`,
-          totalIgn: sql<number>`count(distinct case when ${category.slug} = 'ignore' then ${expense.id} end)`,
+          totalIgn: sql<number>`count(distinct case when ${category.type} = 'transfer' then ${expense.id} end)`,
         })
         .from(transactionTable)
         .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -1270,7 +1265,7 @@ export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Pr
         nature: natureSql,
         amount: sql<string>`coalesce(sum(${transactionTable.amount}), 0)::text`,
         totalNc: sql<number>`count(distinct case when ${expense.status} = '1' and ${expense.subCategoryId} is null then ${expense.id} end)`,
-        totalIgn: sql<number>`count(distinct case when ${category.slug} = 'ignore' then ${expense.id} end)`,
+        totalIgn: sql<number>`count(distinct case when ${category.type} = 'transfer' then ${expense.id} end)`,
       })
       .from(transactionTable)
       .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -1288,7 +1283,7 @@ export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Pr
           dateScopedTransactions(userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
           notExcludedFromTotals(),
-          notIgnoredCategory(),
+          notTransferCategory(),
         )
       )
       .groupBy(monthSql, natureSql)

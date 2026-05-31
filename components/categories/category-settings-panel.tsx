@@ -29,9 +29,10 @@ const TYPE_LABELS: Record<CategoryWithSubCategories["type"], string> = {
   in: "Entrate",
   out: "Uscite",
   system: "Sistema",
+  transfer: "Trasferimenti",
 };
 
-const TYPE_ORDER: CategoryWithSubCategories["type"][] = ["out", "in", "system"];
+const TYPE_ORDER: CategoryWithSubCategories["type"][] = ["out", "in", "transfer", "system"];
 
 function CategorySidebar({
   categories,
