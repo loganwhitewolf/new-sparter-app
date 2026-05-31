@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 Phase: 38 (first-import-onboarding) — COMPLETE
 Plan: 3 of 3
 Status: Milestone complete
-Last activity: 2026-05-29 - Completed quick task 260529-ds7: Fix onboarding redirect loop when user deletes import file
+Last activity: 2026-05-31 - Completed quick task 260531-fko: Riorganizza sottocategorie Spesa (categoryId 8)
 
 ## Accumulated Context
 
@@ -88,6 +88,7 @@ None.
 | 260529-eh0 | Remove revalidatePath(onboarding) from categorize action — page reload loop during step 4 | 2026-05-29 | 40af612 | [260529-eh0-remove-onboarding-revalidate](.planning/quick/260529-eh0-remove-onboarding-revalidate/) |
 | 260529-f3k | Fix post-registration reload loop — signUpAction redirects directly to /onboarding instead of /dashboard | 2026-05-29 | ceb3651 | inline |
 | 260529-u9p | Step 2 remove +/- signs from amount cards; Step 4 green done card + stop RSC re-render on categorize | 2026-05-29 | HEAD | inline |
+| 260531-fko | Riorganizza sottocategorie Spesa (categoryId 8) — aggiunte 4 nuove, rinominata spesa-bio, migrazione expense + pattern, disattivate prodotti-freschi e prodotti-non-alimentari | 2026-05-31 | f979ae1 | [260531-fko-riorganizza-sottocategorie-spesa-categor](.planning/quick/260531-fko-riorganizza-sottocategorie-spesa-categor/) |
 
 ## Session Continuity
 
