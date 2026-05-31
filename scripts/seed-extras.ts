@@ -6,8 +6,8 @@
 //   yarn db:seed-extras:production   → PRODUCTION_DATABASE_URL + PRODUCTION_MIGRATION_CONFIRM
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import { eq, inArray } from 'drizzle-orm'
-import { platform, subCategory } from '../lib/db/schema'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { categorizationPattern, expense, platform, subCategory } from '../lib/db/schema'
 import type { FlowNature } from '../lib/utils/nature-labels'
 import {
   getOperatorDatabaseConfig,
@@ -215,6 +215,86 @@ async function setFinecoDescriptionStripPattern(database: Db): Promise<void> {
   console.log(`    fineco description_strip_pattern: ${count} rows updated`)
 }
 
+// Step 3 (quick-260531-fko): reorganize Spesa (categoryId 8) subcategory taxonomy
+// Ordering is critical: migrate expenses + patterns BEFORE deactivating deprecated rows.
+// isActive=false hides subcategories from dashboard/expense queries, so any expense not
+// remapped first would be silently dropped from listings.
+async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
+  // 1. Rename spesa-bio → bio-e-naturale (idempotent: re-run finds 0 rows after first run)
+  const renameResult = await database
+    .update(subCategory)
+    .set({ name: 'bio e naturale', slug: 'bio-e-naturale' })
+    .where(and(eq(subCategory.slug, 'spesa-bio'), isNull(subCategory.userId)))
+  const renameCount = (renameResult as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(`    rename spesa-bio → bio-e-naturale: ${renameCount} rows updated`)
+
+  // 2. Set nature='essential' on the 4 new subcategory slugs
+  const newSlugs = ['discount', 'negozio-di-quartiere', 'mercato-rionale', 'drogheria-e-casalinghi']
+  const natureResult = await database
+    .update(subCategory)
+    .set({ nature: 'essential' as const })
+    .where(and(inArray(subCategory.slug, newSlugs), isNull(subCategory.userId)))
+  const natureCount = (natureResult as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(`    set nature=essential on new slugs: ${natureCount} rows updated`)
+
+  // 3. Resolve system subcategory IDs by slug for migration
+  const sourceRows = await database
+    .select({ id: subCategory.id, slug: subCategory.slug })
+    .from(subCategory)
+    .where(and(inArray(subCategory.slug, ['prodotti-freschi', 'prodotti-non-alimentari', 'negozio-di-quartiere', 'drogheria-e-casalinghi']), isNull(subCategory.userId)))
+
+  const idBySlug = Object.fromEntries(sourceRows.map((r) => [r.slug, r.id]))
+
+  const prodottiFreschiId = idBySlug['prodotti-freschi']
+  const prodottiNonAlimentariId = idBySlug['prodotti-non-alimentari']
+  const negozioDiQuartiereId = idBySlug['negozio-di-quartiere']
+  const drogheriaECasalinghiId = idBySlug['drogheria-e-casalinghi']
+
+  // 4. Migrate expenses: prodotti-freschi → negozio-di-quartiere
+  if (prodottiFreschiId == null || negozioDiQuartiereId == null) {
+    console.log(`    skip expense migration (prodotti-freschi → negozio-di-quartiere): source or target already absent`)
+  } else {
+    const expMigrate1 = await database
+      .update(expense)
+      .set({ subCategoryId: negozioDiQuartiereId })
+      .where(eq(expense.subCategoryId, prodottiFreschiId))
+    const expMigrate1Count = (expMigrate1 as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    migrate expenses prodotti-freschi → negozio-di-quartiere: ${expMigrate1Count} rows updated`)
+  }
+
+  // 4b. Migrate expenses: prodotti-non-alimentari → drogheria-e-casalinghi
+  if (prodottiNonAlimentariId == null || drogheriaECasalinghiId == null) {
+    console.log(`    skip expense migration (prodotti-non-alimentari → drogheria-e-casalinghi): source or target already absent`)
+  } else {
+    const expMigrate2 = await database
+      .update(expense)
+      .set({ subCategoryId: drogheriaECasalinghiId })
+      .where(eq(expense.subCategoryId, prodottiNonAlimentariId))
+    const expMigrate2Count = (expMigrate2 as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    migrate expenses prodotti-non-alimentari → drogheria-e-casalinghi: ${expMigrate2Count} rows updated`)
+  }
+
+  // 5. Migrate categorization patterns: prodotti-freschi → negozio-di-quartiere
+  if (prodottiFreschiId == null || negozioDiQuartiereId == null) {
+    console.log(`    skip pattern migration (prodotti-freschi → negozio-di-quartiere): source or target already absent`)
+  } else {
+    const patMigrate = await database
+      .update(categorizationPattern)
+      .set({ subCategoryId: negozioDiQuartiereId })
+      .where(eq(categorizationPattern.subCategoryId, prodottiFreschiId))
+    const patMigrateCount = (patMigrate as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    migrate patterns prodotti-freschi → negozio-di-quartiere: ${patMigrateCount} rows updated`)
+  }
+
+  // 6. Deactivate deprecated rows (MUST run after migrations above)
+  const deactivateResult = await database
+    .update(subCategory)
+    .set({ isActive: false })
+    .where(and(inArray(subCategory.slug, ['prodotti-freschi', 'prodotti-non-alimentari']), isNull(subCategory.userId)))
+  const deactivateCount = (deactivateResult as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(`    deactivate deprecated subcategories: ${deactivateCount} rows updated`)
+}
+
 // ---------------------------------------------------------------------------
 // Registry — append new steps here
 // ---------------------------------------------------------------------------
@@ -222,6 +302,7 @@ async function setFinecoDescriptionStripPattern(database: Db): Promise<void> {
 const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'set-subcategory-nature', run: setSubcategoryNature },
   { name: 'set-fineco-description-strip-pattern', run: setFinecoDescriptionStripPattern },
+  { name: 'reorganize-spesa-subcategories', run: reorganizeSpesaSubcategories },
 ]
 
 // ---------------------------------------------------------------------------
