@@ -276,9 +276,22 @@ async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
   }
 
   // 5. Migrate categorization patterns: prodotti-freschi → negozio-di-quartiere
+  // unique("categorization_pattern_unique").on(pattern, subCategoryId, amountSign) — must delete
+  // prodotti-freschi patterns that already exist for negozio-di-quartiere before migrating the rest.
   if (prodottiFreschiId == null || negozioDiQuartiereId == null) {
     console.log(`    skip pattern migration (prodotti-freschi → negozio-di-quartiere): source or target already absent`)
   } else {
+    const patConflictDelete = await database
+      .delete(categorizationPattern)
+      .where(
+        and(
+          eq(categorizationPattern.subCategoryId, prodottiFreschiId),
+          sql`(${categorizationPattern.pattern}, ${categorizationPattern.amountSign}) IN (SELECT pattern, amount_sign FROM categorization_pattern WHERE sub_category_id = ${negozioDiQuartiereId})`
+        )
+      )
+    const patConflictDeleteCount = (patConflictDelete as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    delete conflicting patterns prodotti-freschi: ${patConflictDeleteCount} rows deleted`)
+
     const patMigrate = await database
       .update(categorizationPattern)
       .set({ subCategoryId: negozioDiQuartiereId })
