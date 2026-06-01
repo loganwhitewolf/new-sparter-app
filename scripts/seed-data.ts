@@ -515,6 +515,34 @@ export const subCategories = [
     isActive: true,
   },
   {
+    categoryId: 8,
+    name: "discount",
+    slug: "discount",
+    displayOrder: 0,
+    isActive: true,
+  },
+  {
+    categoryId: 8,
+    name: "negozio di quartiere",
+    slug: "negozio-di-quartiere",
+    displayOrder: 0,
+    isActive: true,
+  },
+  {
+    categoryId: 8,
+    name: "mercato rionale",
+    slug: "mercato-rionale",
+    displayOrder: 0,
+    isActive: true,
+  },
+  {
+    categoryId: 8,
+    name: "drogheria e casalinghi",
+    slug: "drogheria-e-casalinghi",
+    displayOrder: 0,
+    isActive: true,
+  },
+  {
     categoryId: 9,
     name: "visite mediche",
     slug: "visite-mediche",
@@ -1253,7 +1281,7 @@ export const categorizationPatterns = [
   {
     pattern:
       "(?:\\bmacelleria\\b|\\bmacellaio\\b|\\bpescheria\\b|\\bpescivendolo\\b|\\bittic[oa]\\b|\\bortofrutta\\b|\\bortofrutt[ai]\\b|\\bfrutta e verdura\\b|\\bfruttivendolo\\b|\\bpanificio\\b|\\bpanetteria\\b|\\bforno\\b|\\bfornaio\\b|\\bgastronomia\\b|\\brosticceria\\b|\\bsalumeria\\b|\\bsalumiere\\b|\\bcaseificio\\b|\\blatticin[io]\\b|\\blatticini\\b|\\bformaggi\\b)",
-    subCategorySlug: "prodotti-freschi",
+    subCategorySlug: "negozio-di-quartiere",
     amountSign: "negative" as AmountSign,
     confidence: 0.9,
     priority: 15,

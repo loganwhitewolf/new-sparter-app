@@ -23,7 +23,7 @@ export const subscriptionPlanEnum = pgEnum("subscription_plan", [
 
 export const roleEnum = pgEnum("user_role", ["user", "admin"]);
 
-export const categoryTypeEnum = pgEnum("category_type", ["in", "out", "system"]);
+export const categoryTypeEnum = pgEnum("category_type", ["in", "out", "system", "transfer"]);
 
 export const expenseStatusEnum = pgEnum("expense_status", ["1", "2", "3", "4"]);
 
@@ -57,6 +57,7 @@ export const flowNatureEnum = pgEnum("flow_nature", [
   "income",
   "debt",
   "extraordinary",
+  "transfer",
 ]);
 
 export const user = pgTable("user", {

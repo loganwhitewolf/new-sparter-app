@@ -14,6 +14,7 @@ const ALL_NATURE_KEYS: Array<FlowNature | 'unclassified'> = [
   'income',
   'debt',
   'extraordinary',
+  'transfer',
   'unclassified',
 ]
 
@@ -25,12 +26,13 @@ const EXPECTED_LABELS: Record<FlowNature | 'unclassified', string> = {
   income: 'Entrate',
   debt: 'Debiti',
   extraordinary: 'Straordinario',
+  transfer: 'Trasferimento',
   unclassified: 'Non classificato',
 }
 
 describe('NATURE_LABELS', () => {
-  it('has all 8 expected keys', () => {
-    expect(Object.keys(NATURE_LABELS)).toHaveLength(8)
+  it('has all 9 expected keys', () => {
+    expect(Object.keys(NATURE_LABELS)).toHaveLength(9)
   })
 
   it.each(ALL_NATURE_KEYS)('has correct Italian label for %s', (key) => {
@@ -39,23 +41,23 @@ describe('NATURE_LABELS', () => {
 })
 
 describe('NATURE_ORDER', () => {
-  it('has length 8', () => {
-    expect(NATURE_ORDER).toHaveLength(8)
+  it('has length 9', () => {
+    expect(NATURE_ORDER).toHaveLength(9)
   })
 
   it('has null as last element (unclassified slot)', () => {
     expect(NATURE_ORDER[NATURE_ORDER.length - 1]).toBeNull()
   })
 
-  it('has 7 non-null nature values before null', () => {
+  it('has 8 non-null nature values before null', () => {
     const nonNull = NATURE_ORDER.filter((n) => n !== null)
-    expect(nonNull).toHaveLength(7)
+    expect(nonNull).toHaveLength(8)
   })
 })
 
 describe('NATURE_COLORS', () => {
-  it('has all 8 keys', () => {
-    expect(Object.keys(NATURE_COLORS)).toHaveLength(8)
+  it('has all 9 keys', () => {
+    expect(Object.keys(NATURE_COLORS)).toHaveLength(9)
   })
 
   it.each(ALL_NATURE_KEYS)('has non-empty color for %s', (key) => {

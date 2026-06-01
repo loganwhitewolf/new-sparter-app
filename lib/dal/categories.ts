@@ -10,7 +10,7 @@ export type CategoryWithSubCategories = {
   id: number
   name: string
   slug: string
-  type: 'in' | 'out' | 'system'
+  type: 'in' | 'out' | 'system' | 'transfer'
   userId: string | null
   isOwned: boolean
   subCategories: Array<{

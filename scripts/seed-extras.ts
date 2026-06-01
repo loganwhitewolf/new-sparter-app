@@ -6,8 +6,8 @@
 //   yarn db:seed-extras:production   → PRODUCTION_DATABASE_URL + PRODUCTION_MIGRATION_CONFIRM
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import { eq, inArray } from 'drizzle-orm'
-import { platform, subCategory } from '../lib/db/schema'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { categorizationPattern, category, expense, platform, subCategory } from '../lib/db/schema'
 import type { FlowNature } from '../lib/utils/nature-labels'
 import {
   getOperatorDatabaseConfig,
@@ -191,6 +191,7 @@ const NATURE_SLUGS: Record<FlowNature, string[]> = {
     'finanziamenti-auto',
     'altri-finanziamenti',
   ],
+  transfer: [],
 }
 
 async function setSubcategoryNature(database: Db): Promise<void> {
@@ -215,6 +216,207 @@ async function setFinecoDescriptionStripPattern(database: Db): Promise<void> {
   console.log(`    fineco description_strip_pattern: ${count} rows updated`)
 }
 
+// Step 3 (quick-260531-fko): reorganize Spesa (categoryId 8) subcategory taxonomy
+// Ordering is critical: migrate expenses + patterns BEFORE deactivating deprecated rows.
+// isActive=false hides subcategories from dashboard/expense queries, so any expense not
+// remapped first would be silently dropped from listings.
+async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
+  // 1. Rename spesa-bio → bio-e-naturale (idempotent: re-run finds 0 rows after first run)
+  const renameResult = await database
+    .update(subCategory)
+    .set({ name: 'bio e naturale', slug: 'bio-e-naturale' })
+    .where(and(eq(subCategory.slug, 'spesa-bio'), isNull(subCategory.userId)))
+  const renameCount = (renameResult as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(`    rename spesa-bio → bio-e-naturale: ${renameCount} rows updated`)
+
+  // 2. Set nature='essential' on the 4 new subcategory slugs
+  const newSlugs = ['discount', 'negozio-di-quartiere', 'mercato-rionale', 'drogheria-e-casalinghi']
+  const natureResult = await database
+    .update(subCategory)
+    .set({ nature: 'essential' as const })
+    .where(and(inArray(subCategory.slug, newSlugs), isNull(subCategory.userId)))
+  const natureCount = (natureResult as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(`    set nature=essential on new slugs: ${natureCount} rows updated`)
+
+  // 3. Resolve system subcategory IDs by slug for migration
+  const sourceRows = await database
+    .select({ id: subCategory.id, slug: subCategory.slug })
+    .from(subCategory)
+    .where(and(inArray(subCategory.slug, ['prodotti-freschi', 'prodotti-non-alimentari', 'negozio-di-quartiere', 'drogheria-e-casalinghi']), isNull(subCategory.userId)))
+
+  const idBySlug = Object.fromEntries(sourceRows.map((r) => [r.slug, r.id]))
+
+  const prodottiFreschiId = idBySlug['prodotti-freschi']
+  const prodottiNonAlimentariId = idBySlug['prodotti-non-alimentari']
+  const negozioDiQuartiereId = idBySlug['negozio-di-quartiere']
+  const drogheriaECasalinghiId = idBySlug['drogheria-e-casalinghi']
+
+  // 4. Migrate expenses: prodotti-freschi → negozio-di-quartiere
+  if (prodottiFreschiId == null || negozioDiQuartiereId == null) {
+    console.log(`    skip expense migration (prodotti-freschi → negozio-di-quartiere): source or target already absent`)
+  } else {
+    const expMigrate1 = await database
+      .update(expense)
+      .set({ subCategoryId: negozioDiQuartiereId })
+      .where(eq(expense.subCategoryId, prodottiFreschiId))
+    const expMigrate1Count = (expMigrate1 as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    migrate expenses prodotti-freschi → negozio-di-quartiere: ${expMigrate1Count} rows updated`)
+  }
+
+  // 4b. Migrate expenses: prodotti-non-alimentari → drogheria-e-casalinghi
+  if (prodottiNonAlimentariId == null || drogheriaECasalinghiId == null) {
+    console.log(`    skip expense migration (prodotti-non-alimentari → drogheria-e-casalinghi): source or target already absent`)
+  } else {
+    const expMigrate2 = await database
+      .update(expense)
+      .set({ subCategoryId: drogheriaECasalinghiId })
+      .where(eq(expense.subCategoryId, prodottiNonAlimentariId))
+    const expMigrate2Count = (expMigrate2 as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    migrate expenses prodotti-non-alimentari → drogheria-e-casalinghi: ${expMigrate2Count} rows updated`)
+  }
+
+  // 5. Migrate categorization patterns: prodotti-freschi → negozio-di-quartiere
+  // unique("categorization_pattern_unique").on(pattern, subCategoryId, amountSign) — must delete
+  // prodotti-freschi patterns that already exist for negozio-di-quartiere before migrating the rest.
+  if (prodottiFreschiId == null || negozioDiQuartiereId == null) {
+    console.log(`    skip pattern migration (prodotti-freschi → negozio-di-quartiere): source or target already absent`)
+  } else {
+    const patConflictDelete = await database
+      .delete(categorizationPattern)
+      .where(
+        and(
+          eq(categorizationPattern.subCategoryId, prodottiFreschiId),
+          sql`(${categorizationPattern.pattern}, ${categorizationPattern.amountSign}) IN (SELECT pattern, amount_sign FROM categorization_pattern WHERE sub_category_id = ${negozioDiQuartiereId})`
+        )
+      )
+    const patConflictDeleteCount = (patConflictDelete as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    delete conflicting patterns prodotti-freschi: ${patConflictDeleteCount} rows deleted`)
+
+    const patMigrate = await database
+      .update(categorizationPattern)
+      .set({ subCategoryId: negozioDiQuartiereId })
+      .where(eq(categorizationPattern.subCategoryId, prodottiFreschiId))
+    const patMigrateCount = (patMigrate as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    migrate patterns prodotti-freschi → negozio-di-quartiere: ${patMigrateCount} rows updated`)
+  }
+
+  // 6. Deactivate deprecated rows (MUST run after migrations above)
+  const deactivateResult = await database
+    .update(subCategory)
+    .set({ isActive: false })
+    .where(and(inArray(subCategory.slug, ['prodotti-freschi', 'prodotti-non-alimentari']), isNull(subCategory.userId)))
+  const deactivateCount = (deactivateResult as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(`    deactivate deprecated subcategories: ${deactivateCount} rows updated`)
+}
+
+// Step 4: reorganize Trasferimenti (cat 32) and Rimborsi (cat 26) categories
+// - Cat 32 "ignore" → "Trasferimenti" (type: transfer); rename/add subcategories; set excludeFromTotals+nature
+// - Cat 28 "movimenti di liquidità" → isActive=false (and its subcategories)
+// - Cat 26 "sconti, rimborsi e cashback" → "rimborsi, cashback e bonus"; merge/rename subcategories; add new one
+async function reorganizeTransferRimborsiCategories(database: Db): Promise<void> {
+  // --- Cat 32: rename to Trasferimenti, change type to transfer ---
+  const cat32Result = await database
+    .update(category)
+    .set({ name: 'Trasferimenti', slug: 'trasferimenti', type: 'transfer' })
+    .where(eq(category.id, 32))
+  console.log(`    cat32 rename/retype: ${(cat32Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 32 subcategories: rename "trasferimento" → "Trasferimento tra conti" ---
+  const sub32RenameResult = await database
+    .update(subCategory)
+    .set({ name: 'Trasferimento tra conti', slug: 'trasferimento-tra-conti' })
+    .where(and(eq(subCategory.slug, 'trasferimento'), isNull(subCategory.userId)))
+  console.log(`    sub32 rename trasferimento: ${(sub32RenameResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 32 subcategories: set excludeFromTotals=true, nature=transfer on all ---
+  const sub32NatureResult = await database
+    .update(subCategory)
+    .set({ excludeFromTotals: true, nature: 'transfer' })
+    .where(and(eq(subCategory.categoryId, 32), isNull(subCategory.userId)))
+  console.log(`    sub32 set nature/excludeFromTotals: ${(sub32NatureResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 32: insert "Prelievo contante" if not exists (idempotent via slug check) ---
+  const existingPrelievo = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'prelievo-contante'), isNull(subCategory.userId)))
+    .limit(1)
+  if (existingPrelievo.length === 0) {
+    await database.insert(subCategory).values({
+      categoryId: 32,
+      name: 'Prelievo contante',
+      slug: 'prelievo-contante',
+      displayOrder: 0,
+      isActive: true,
+      excludeFromTotals: true,
+      nature: 'transfer',
+    })
+    console.log('    sub32 insert prelievo-contante: 1 row inserted')
+  } else {
+    console.log('    sub32 insert prelievo-contante: already exists, skipped')
+  }
+
+  // --- Cat 28: deactivate category and its subcategories ---
+  const cat28Result = await database
+    .update(category)
+    .set({ isActive: false })
+    .where(eq(category.id, 28))
+  console.log(`    cat28 deactivate: ${(cat28Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  const sub28Result = await database
+    .update(subCategory)
+    .set({ isActive: false })
+    .where(and(eq(subCategory.categoryId, 28), isNull(subCategory.userId)))
+  console.log(`    sub28 deactivate: ${(sub28Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 26: rename category ---
+  const cat26Result = await database
+    .update(category)
+    .set({ name: 'rimborsi, cashback e bonus', slug: 'rimborsi-cashback-e-bonus' })
+    .where(eq(category.id, 26))
+  console.log(`    cat26 rename: ${(cat26Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 26: rename sconto-abbonamento → rimborso-abbonamento-e-canoni ---
+  const sub26AbbonaResult = await database
+    .update(subCategory)
+    .set({ name: 'rimborso abbonamento e canoni', slug: 'rimborso-abbonamento-e-canoni' })
+    .where(and(eq(subCategory.slug, 'sconto-abbonamento'), isNull(subCategory.userId)))
+  console.log(`    sub26 rename sconto-abbonamento: ${(sub26AbbonaResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 26: deactivate sconto-canone (merged into rimborso-abbonamento-e-canoni) ---
+  const sub26CanoneResult = await database
+    .update(subCategory)
+    .set({ isActive: false })
+    .where(and(eq(subCategory.slug, 'sconto-canone'), isNull(subCategory.userId)))
+  console.log(`    sub26 deactivate sconto-canone: ${(sub26CanoneResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 26: rename sconto-promozionale → bonus-promozionale ---
+  const sub26PromoResult = await database
+    .update(subCategory)
+    .set({ name: 'bonus promozionale', slug: 'bonus-promozionale' })
+    .where(and(eq(subCategory.slug, 'sconto-promozionale'), isNull(subCategory.userId)))
+  console.log(`    sub26 rename sconto-promozionale: ${(sub26PromoResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+
+  // --- Cat 26: insert "rimborso da persona" if not exists ---
+  const existingRimborsoPersona = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'rimborso-da-persona'), isNull(subCategory.userId)))
+    .limit(1)
+  if (existingRimborsoPersona.length === 0) {
+    await database.insert(subCategory).values({
+      categoryId: 26,
+      name: 'rimborso da persona',
+      slug: 'rimborso-da-persona',
+      displayOrder: 0,
+      isActive: true,
+    })
+    console.log('    sub26 insert rimborso-da-persona: 1 row inserted')
+  } else {
+    console.log('    sub26 insert rimborso-da-persona: already exists, skipped')
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Registry — append new steps here
 // ---------------------------------------------------------------------------
@@ -222,6 +424,8 @@ async function setFinecoDescriptionStripPattern(database: Db): Promise<void> {
 const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'set-subcategory-nature', run: setSubcategoryNature },
   { name: 'set-fineco-description-strip-pattern', run: setFinecoDescriptionStripPattern },
+  { name: 'reorganize-spesa-subcategories', run: reorganizeSpesaSubcategories },
+  { name: 'reorganize-transfer-rimborsi-categories', run: reorganizeTransferRimborsiCategories },
 ]
 
 // ---------------------------------------------------------------------------

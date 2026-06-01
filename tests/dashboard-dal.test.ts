@@ -184,13 +184,13 @@ describe('dashboard DAL amount mapping', () => {
         amount: '1000.00',
       },
       {
-        categoryId: 99,
-        categoryName: 'Ignora',
-        categorySlug: 'ignore',
-        categoryType: 'system',
+        categoryId: 32,
+        categoryName: 'Trasferimenti',
+        categorySlug: 'trasferimenti',
+        categoryType: 'transfer',
         subCategoryId: 99,
-        subCategoryName: 'Ignora',
-        subCategorySlug: 'ignore',
+        subCategoryName: 'Trasferimento tra conti',
+        subCategorySlug: 'trasferimento-tra-conti',
         count: 99,
         amount: '9999.00',
       },
@@ -203,7 +203,7 @@ describe('dashboard DAL amount mapping', () => {
       expect.objectContaining({ amount: '100.00', percentage: 10 }),
     ])
     expect(breakdown[1]).toMatchObject({ count: 1, amount: '1000.00', percentage: 50 })
-    expect(breakdown.map((row) => row.slug)).not.toContain('ignore')
+    expect(breakdown.map((row) => row.slug)).not.toContain('trasferimenti')
   })
 
   it('builds ranked category totals with Decimal-normalized amounts and zero-filled sparklines', () => {
@@ -259,7 +259,7 @@ describe('dashboard DAL amount mapping', () => {
     expect(ranking[1]?.sparkline[1]).toMatchObject({ month: '2026-02', amount: '0.00' })
   })
 
-  it('skips null, ignored, system, and out-of-range category ranking rows', () => {
+  it('skips null, transfer, and out-of-range category ranking rows', () => {
     const ranking = buildCategoryRankingData({
       from: new Date(2026, 0, 1),
       to: new Date(2026, 1, 28, 23, 59, 59, 999),
@@ -274,19 +274,19 @@ describe('dashboard DAL amount mapping', () => {
           amount: '1',
         },
         {
-          categoryId: 98,
-          categoryName: 'Ignora',
-          categorySlug: 'ignore',
-          categoryType: 'out',
+          categoryId: 32,
+          categoryName: 'Trasferimenti',
+          categorySlug: 'trasferimenti',
+          categoryType: 'transfer',
           month: '2026-01',
           count: 1,
           amount: '999',
         },
         {
           categoryId: 99,
-          categoryName: 'Sistema',
-          categorySlug: 'system',
-          categoryType: 'system',
+          categoryName: 'AltroTransfer',
+          categorySlug: 'altro-transfer',
+          categoryType: 'transfer',
           month: '2026-01',
           count: 1,
           amount: '999',
@@ -649,7 +649,7 @@ describe('getMonthlyTrendByNature (R-FN-04, R-FN-08, R-FN-09)', () => {
 })
 
 describe('buildMonthlyNatureTrendData (R-FN-04, R-FN-08, R-FN-09)', () => {
-  it('pre-populates all 7 nature keys at 0.00 for every month even with no data', () => {
+  it('pre-populates all 8 nature keys at 0.00 for every month even with no data', () => {
     const result = buildMonthlyNatureTrendData({
       from: new Date(2026, 0, 1),
       to: new Date(2026, 1, 28, 23, 59, 59, 999),
@@ -667,6 +667,7 @@ describe('buildMonthlyNatureTrendData (R-FN-04, R-FN-08, R-FN-09)', () => {
           'financial',
           'income',
           'operational',
+          'transfer',
           'unclassified',
         ].sort()
       )
