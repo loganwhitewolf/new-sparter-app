@@ -76,7 +76,7 @@ export function ExpenseCategorizeDialog({
             value={subCategoryId}
             onChange={setSubCategoryId}
             placeholder="Cerca sottocategoria…"
-            allowedCategoryTypes={['in', 'out', 'system']}
+            allowedCategoryTypes={['in', 'out', 'system', 'transfer']}
           />
 
           {state.error && (
