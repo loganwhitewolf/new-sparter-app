@@ -50,6 +50,18 @@ const regexString = z.string().transform((val, ctx) => {
   }
 })
 
+/**
+ * Derives the amountSign for a pattern from the parent category type.
+ * Per ADR 0008: out -> negative, in -> positive, transfer/system -> any.
+ */
+export function deriveAmountSign(
+  categoryType: 'in' | 'out' | 'system' | 'transfer',
+): 'positive' | 'negative' | 'any' {
+  if (categoryType === 'out') return 'negative'
+  if (categoryType === 'in') return 'positive'
+  return 'any' // transfer | system
+}
+
 export const CreatePatternSchema = z.object({
   pattern: regexString,
   subCategoryId: z.number({ error: 'Seleziona una sottocategoria.' }).int().positive({ error: 'Seleziona una sottocategoria.' }),

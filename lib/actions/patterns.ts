@@ -10,7 +10,9 @@ import {
   createPattern,
   updatePattern,
   deletePattern,
+  getCategoryTypeForSubCategory,
 } from "@/lib/dal/patterns";
+import { deriveAmountSign } from "@/lib/validations/pattern";
 import {
   canManageCustomPatterns,
   getCategorizationAccessConfig,
@@ -72,24 +74,39 @@ export async function createPatternAction(
   const accessError = requireCustomPatternsAccess(subscriptionPlan);
   if (accessError) return accessError;
 
+  const subCategoryIdRaw = formData.get("subCategoryId")
+    ? Number(formData.get("subCategoryId"))
+    : undefined;
+
+  // Parse only the fields we trust from the client (pattern, subCategoryId, description).
+  // amountSign and confidence are derived/hardcoded server-side (ADR 0008, T-39-09).
   const parsed = CreatePatternSchema.safeParse({
     pattern: formData.get("pattern"),
-    subCategoryId: formData.get("subCategoryId")
-      ? Number(formData.get("subCategoryId"))
-      : undefined,
-    amountSign: formData.get("amountSign"),
-    confidence: formData.get("confidence")
-      ? Number(formData.get("confidence"))
-      : undefined,
+    subCategoryId: subCategoryIdRaw,
+    // Provide placeholder values that satisfy the schema; they will be overridden below.
+    amountSign: "any",
+    confidence: 1,
     description: (formData.get("description") as string) || undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
 
+  // Derive amountSign server-side from the subcategory's category type (ADR 0008, T-39-10).
+  const categoryType = await getCategoryTypeForSubCategory(parsed.data.subCategoryId, userId);
+  if (!categoryType) {
+    return { error: "Seleziona una sottocategoria valida." };
+  }
+  const derivedAmountSign = deriveAmountSign(categoryType);
+
   let created: Awaited<ReturnType<typeof createPattern>>;
   try {
-    created = await createPattern({ ...parsed.data, userId });
+    created = await createPattern({
+      ...parsed.data,
+      amountSign: derivedAmountSign,
+      confidence: 1,
+      userId,
+    });
   } catch (err) {
     const causeMsg = causeField(err, "message");
     const causeCode = causeField(err, "code");
@@ -148,23 +165,36 @@ export async function updatePatternAction(
   const id = Number(formData.get("id"));
   if (!id || isNaN(id)) return { error: "ID pattern mancante." };
 
+  const subCategoryIdRaw = formData.get("subCategoryId")
+    ? Number(formData.get("subCategoryId"))
+    : undefined;
+
+  // Parse only the fields we trust from the client (pattern, subCategoryId, description).
+  // amountSign and confidence are derived/hardcoded server-side (ADR 0008, T-39-09).
   const parsed = UpdatePatternSchema.safeParse({
     pattern: formData.get("pattern") || undefined,
-    subCategoryId: formData.get("subCategoryId")
-      ? Number(formData.get("subCategoryId"))
-      : undefined,
-    amountSign: formData.get("amountSign") || undefined,
-    confidence: formData.get("confidence")
-      ? Number(formData.get("confidence"))
-      : undefined,
+    subCategoryId: subCategoryIdRaw,
     description: (formData.get("description") as string) || undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
 
+  // Derive amountSign server-side when a subCategoryId is provided (ADR 0008, T-39-10).
+  let derivedAmountSign: 'positive' | 'negative' | 'any' | undefined;
+  if (parsed.data.subCategoryId !== undefined) {
+    const categoryType = await getCategoryTypeForSubCategory(parsed.data.subCategoryId, userId);
+    if (!categoryType) {
+      return { error: "Seleziona una sottocategoria valida." };
+    }
+    derivedAmountSign = deriveAmountSign(categoryType);
+  }
+
   try {
-    const updated = await updatePattern(id, userId, parsed.data);
+    const updated = await updatePattern(id, userId, {
+      ...parsed.data,
+      ...(derivedAmountSign !== undefined ? { amountSign: derivedAmountSign, confidence: 1 } : {}),
+    });
     if (!updated) return { error: "Pattern non trovato o accesso negato." };
   } catch {
     return { error: "Si è verificato un errore. Riprova tra qualche secondo." };
@@ -205,22 +235,38 @@ export async function promoteSuggestionAction(
   // Per D-03 (35-CONTEXT.md): suggestion promotion is available to all plans,
   // including `free`. Intentionally NOT calling requireCustomPatternsAccess here.
 
+  const subCategoryIdRaw = formData.get("subCategoryId")
+    ? Number(formData.get("subCategoryId"))
+    : undefined;
+
+  // Parse only the fields we trust from the client (pattern, subCategoryId).
+  // amountSign is derived server-side; confidence is hardcoded to 1 (ADR 0008, T-39-09).
   const parsed = CreatePatternSchema.safeParse({
     pattern: formData.get("pattern"),
-    subCategoryId: formData.get("subCategoryId")
-      ? Number(formData.get("subCategoryId"))
-      : undefined,
-    amountSign: formData.get("amountSign"),
-    confidence: 0.85, // Hardcoded per D-01; FormData `confidence` is intentionally NOT read (anti-tampering).
+    subCategoryId: subCategoryIdRaw,
+    amountSign: "any", // placeholder; overridden below
+    confidence: 1,
     description: undefined, // Inline form does not collect a description (D-01).
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
 
+  // Derive amountSign server-side from the subcategory's category type (ADR 0008, T-39-10).
+  const categoryType = await getCategoryTypeForSubCategory(parsed.data.subCategoryId, userId);
+  if (!categoryType) {
+    return { error: "Seleziona una sottocategoria valida." };
+  }
+  const derivedAmountSign = deriveAmountSign(categoryType);
+
   let created: Awaited<ReturnType<typeof createPattern>>;
   try {
-    created = await createPattern({ ...parsed.data, userId });
+    created = await createPattern({
+      ...parsed.data,
+      amountSign: derivedAmountSign,
+      confidence: 1,
+      userId,
+    });
   } catch (err) {
     console.error(
       "[promoteSuggestionAction] createPattern error:",
