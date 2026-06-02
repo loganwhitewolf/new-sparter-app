@@ -336,8 +336,8 @@ export function TransactionTable({ transactions, filters, searchParams, categori
                   className={cn(
                     'text-right font-mono tabular-nums',
                     transaction.amount.trim().startsWith('-')
-                      ? 'text-emerald-700'
-                      : 'text-foreground',
+                      ? 'text-foreground'
+                      : 'text-emerald-700',
                   )}
                 >
                   {formatAmount(transaction.amount, transaction.currency)}
