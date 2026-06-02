@@ -71,7 +71,7 @@ export default async function ExpensesPage({
             Gestisci le tue spese
           </p>
         </div>
-        <ExpenseFormDialog categories={categories} mode="create" />
+        <ExpenseFormDialog categories={categories} mostUsed={mostUsed} mode="create" />
       </div>
 
       <Suspense fallback={<div className="h-10 rounded-md bg-muted animate-pulse" />}>

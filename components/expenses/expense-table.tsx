@@ -319,6 +319,7 @@ export function ExpenseTable({ expenses, categories, mostUsed, filters }: Props)
                         </DropdownMenuItem>
                         <ExpenseFormDialog
                           categories={categories}
+                          mostUsed={mostUsed}
                           mode="edit"
                           expense={exp}
                           onSuccess={(updatedTitle) => {
