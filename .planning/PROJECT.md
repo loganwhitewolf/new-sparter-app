@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Sparter is a personal finance app for the Italian market. It supports email/password and Google/GitHub OAuth authentication with account linking, transaction and expense management, import history, CSV/Excel import flows backed by Cloudflare R2, user-managed categories, actionable dashboard insights with deviation analysis, pattern suggestion detection and promotion, structured logging, and a health endpoint. The app is deployed on Vercel (operator action) or runnable locally with a Supabase/R2 stack.
+Sparter is a personal finance app for the Italian market. It supports email/password and Google/GitHub OAuth authentication with account linking, transaction and expense management, import history, CSV/Excel import flows backed by Cloudflare R2, user-managed categories, actionable dashboard insights with deviation analysis and flow-nature segmented charts, pattern suggestion detection and promotion, a guided first-import onboarding flow, a unified subcategory picker bottom sheet across all 7 selection surfaces, structured logging, and a health endpoint. The app is deployed on Vercel (operator action) or runnable locally with a Supabase/R2 stack.
 
 ## Core Value
 
@@ -15,22 +15,24 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v1.10 complete. The app now has a full pattern suggestion pipeline:
+All milestones M001–v1.13 complete. The app now has:
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
 - Import management, categorization (Tier 1 regex, Tier 2 history, Tier 3 AI gated)
 - Pattern suggestions: detect recurring uncategorized descriptions → review and promote during analysis → re-run post-import from `/import/[fileId]/suggestions`
-- Category settings with user-owned and system categories/subcategories
-- Dashboard overview with deviation badges on category pages, EntrateUsciteChart, BilancioBarsChart
+- Category settings with user-owned and system categories/subcategories, flow-nature segmented chart on dashboard
+- Dashboard overview with deviation badges on category pages, nature-segmented EntrateUsciteChart, BilancioBarsChart
+- First-import onboarding (5-step flow: upload → overview → education → categorize → outro); routing gate via RSC layout
+- Unified subcategory picker (vaul bottom sheet, type chips, master-detail rail, most-used section) across all 7 selection surfaces; pattern form reduced to regex + description + picker
 - R2 upload services, Drizzle migrations, operational health diagnostics
 - Zero-cost deploy runbook at `docs/deploy/vercel-supabase-r2.md`
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Current Milestone: v1.11 (planning)
+## Next Milestone: TBD
 
-v1.10 Pattern Suggestions shipped 2026-05-25. Planning next milestone.
+v1.13 Unified Categorization Picker shipped 2026-06-02. Planning next milestone.
 
-**Likely candidates for v1.11:**
+**Likely candidates:**
 - REVAL-01: Apply newly created pattern to existing transactions from same import
 - R029: Complete categorization revalidation for all entrypoints
 - Operator deploy: Vercel/Supabase/R2 production activation (R038, R039, R041)
@@ -68,8 +70,11 @@ v1.10 Pattern Suggestions shipped 2026-05-25. Planning next milestone.
 - ✓ Import analysis returns `patternSuggestions`; detection in isolated try/catch, capped at 5 sorted by matchCount — v1.10
 - ✓ Import review: `SuggestionSection` + `SuggestionCard` + `promoteSuggestionAction`; promote suggestion to pattern before import commit — v1.10
 - ✓ Post-import re-analysis: `/import/[fileId]/suggestions` page from persisted transactions; "Rivedi suggerimenti" dropdown — v1.10
+- ✓ FlowNature: `nature` enum column on `sub_category`; stacked nature-segmented EntrateUsciteChart; URL-persisted legend toggles; nature editable in /settings/categories — v1.11
+- ✓ First-import onboarding: 5-step flow (upload → overview → education → categorize → outro); RSC layout routing gate (`count(transaction) === 0 → /onboarding`); progress dots; dark/light variant per step — v1.12
+- ✓ Unified subcategory picker: `SubcategoryPicker` (vaul bottom sheet, type chips, master-detail rail, search-collapse, most-used DAL query) adopted across all 7 surfaces; `CategoryCombobox` + cascading Selects deleted; pattern form reduced to regex + description + Categorizza picker; `amountSign` derived server-side from category type per ADR 0008 — v1.13
 
-### Active (v1.11 — planning)
+### Active (next milestone — planning)
 
 - [ ] REVAL-01: Apply newly created pattern to existing transactions from same import file.
 - [ ] R029: Complete categorization revalidation for all entrypoints.
@@ -104,6 +109,9 @@ v1.10 Pattern Suggestions shipped 2026-05-25. Planning next milestone.
 - [x] v1.8 / M008: Dashboard Intelligence — Deviation view, chart clarity, sort toggle. Shipped 2026-05-20.
 - [x] v1.9: Social Auth — Google/GitHub OAuth login/register, account linking UI, registration guardrail removed. Shipped 2026-05-22.
 - [x] v1.10: Pattern Suggestions — Detect recurring uncategorized bank descriptions and promote useful suggestions to categorization patterns. Shipped 2026-05-25.
+- [x] v1.11: FlowNature & Segmented Chart — `nature` enum on subcategories, stacked nature chart with legend toggles, nature management in settings. Shipped 2026-05-26.
+- [x] v1.12: First-import Onboarding — 5-step guided flow for new users; RSC layout routing gate; categorization wizard with nature badges. Shipped 2026-05-28.
+- [x] v1.13: Unified Categorization Picker — Single `SubcategoryPicker` (vaul bottom sheet) across all 7 surfaces; pattern form rework; `amountSign` derived from subcategory type per ADR 0008. Shipped 2026-06-02.
 
 ## Key Decisions
 
@@ -130,6 +138,11 @@ v1.10 Pattern Suggestions shipped 2026-05-25. Planning next milestone.
 | Post-import DAL uses `innerJoin` on `importFile` | Ownership enforced at query level; non-null `fileId` for all imported rows | ✓ Good |
 | `promoteSuggestionAction` confidence hardcoded 0.85 | No UI knob; consistent with existing pattern confidence semantics | ✓ Good |
 | `createPattern` reactivates soft-deleted user patterns on unique conflict | Prevents duplicate errors when user re-promotes a previously deleted pattern | ✓ Good |
+| `nature` enum on `sub_category`, `effectiveNature` = COALESCE(override, seed default) | User override wins; system seed provides baseline; null = non classificato | ✓ Good |
+| Onboarding routing gate in RSC layout (not proxy.ts) | Drizzle cannot run in Edge runtime; D-11 rationale documented | ✓ Good |
+| `SubcategoryPicker` single output: `subCategoryId` | Uniform contract across commit-on-tap and fill-field surfaces | ✓ Good |
+| `amountSign` on patterns derived server-side from subcategory's category type (ADR 0008) | Removes manual error-prone UI field; confidence hardcoded to 1 | ✓ Good |
+| `getMostUsedSubcategories` DAL scoped per-user and by category type | Cold-start safe: section hidden when empty | ✓ Good |
 
 ## Evolution
 
@@ -149,4 +162,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-25 after v1.10 milestone — Pattern Suggestions pipeline shipped*
+*Last updated: 2026-06-02 after v1.13 milestone — Unified Categorization Picker shipped*

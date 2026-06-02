@@ -8,7 +8,7 @@
 - ✅ **v1.9: Social Auth** — Phases 30–32 (shipped 2026-05-22)
 - ✅ **v1.10: Pattern Suggestions** — Phases 33–36 (shipped 2026-05-25)
 - ✅ **v1.12: First-import Onboarding** — Phase 38 (shipped 2026-05-28)
-- 🔜 **v1.13: Unified Categorization Picker** — Phase 39 (planned)
+- ✅ **v1.13: Unified Categorization Picker** — Phase 39 (shipped 2026-06-02)
 
 ## Phases
 
@@ -89,7 +89,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 | 37 | v1.11 | 5/5 | Complete | 2026-05-26 |
 | 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
-| 39 | v1.13 | 6/6 | Complete   | 2026-06-02 |
+| 39 | v1.13 | 6/6 | Complete    | 2026-06-02 |
 
 **Total: 38 phases shipped · 137 plans complete**
 
@@ -173,13 +173,13 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 ---
 
-## 🔜 v1.13: Unified Categorization Picker (Phase 39) — PLANNED
+## ✅ v1.13: Unified Categorization Picker (Phase 39) — SHIPPED 2026-06-02
 
 ### Phase 39: unified-subcategory-picker
 
 **Goal:** Replace the three divergent subcategory-selection implementations (searchable `CategoryCombobox`, the onboarding `SubcategoryCombobox`, and the cascading `Select` pairs) with ONE reusable picker — winning prototype variant E: a fixed-height bottom sheet (via `vaul`) with type chips (Entrate/Uscite/Trasferimenti, preselected from the row's amount sign) and a two-column master-detail (left: "Più usate" + categories of the active type; right: subcategories as tiles). Adopt it across all 7 selection surfaces, add the "most used" DAL query, and rework the pattern-creation form to regex + description + a "Categorizza" button (deriving `amountSign` from the chosen subcategory's category type, confidence hardcoded to 1, per ADR 0008). Delete the prototype route on merge.
 
-**Status:** Pending
+**Status:** Complete
 **Depends on:** Phase 37 (FlowNature — `effectiveNature` on `CategoryWithSubCategories`), Phase 35 (pattern promotion UI), Phase 38 (onboarding categorization)
 **Design contract:** `app/(app)/prototype/subcategory-picker/NOTES.md` (10 locked decisions + variant E verdict), ADR `docs/adr/0008-pattern-amount-sign-derived-from-subcategory.md`, `CONTEXT.md` (Categorization)
 

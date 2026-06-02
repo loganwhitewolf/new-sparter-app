@@ -3,15 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: First-import Onboarding
 current_phase: 39
-status: executing
-last_updated: "2026-06-02T13:24:04.128Z"
+status: milestone_complete
+last_updated: 2026-06-02T16:53:33.397Z
 last_activity: 2026-06-02 -- Phase 39 execution started
 progress:
   total_phases: 1
   completed_phases: 1
   total_plans: 3
-  completed_plans: 3
+  completed_plans: 14
   percent: 100
+stopped_at: Milestone complete (Phase 39 was final phase)
 ---
 
 # Project State
@@ -21,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 39 — unified-subcategory-picker
+**Current focus:** v1.13 complete — planning next milestone
 
 ## Current Position
 
-Phase: 39 (unified-subcategory-picker) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 39
-Last activity: 2026-06-02 -- Phase 39 execution started
+Phase: 39 (unified-subcategory-picker) — COMPLETE
+Plan: 6/6 complete
+Status: Milestone v1.13 complete — ready to start next milestone
+Last activity: 2026-06-02
 
 ## Accumulated Context
 
@@ -58,6 +59,14 @@ v1.9 phase structure:
 - React 19 renderToStaticMarkup apostrophe encoding: Wave 0 test assertion updated to &#x27; form
 - canUnlink guard checks credential OR other social (more robust than total count)
 - configuredProviders derived from process.env booleans — no NEXT_PUBLIC_* vars introduced
+
+v1.13 / Phase 39 decisions:
+
+- `SubcategoryPicker` (vaul bottom sheet, variant E): single `subCategoryId` output, type chips (Entrate/Uscite/Trasferimenti), two-column master-detail, search-collapse, adopted across all 7 surfaces
+- `amountSign` on patterns derived server-side from chosen subcategory's category type per ADR 0008; confidence hardcoded to 1; manual fields removed from pattern/suggestion-promotion forms
+- `getMostUsedSubcategories` DAL: top ~6 per-user by categorization count, scoped by allowed category types, hidden at cold-start
+- Old pickers deleted: `CategoryCombobox`, onboarding `SubcategoryCombobox`, cascading `Select` pairs
+- Prototype route `app/(app)/prototype/subcategory-picker/` deleted on final plan merge
 
 v1.11 / Phase 37 decisions:
 
@@ -92,10 +101,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-28
-Stopped at: Phase 38 complete
+Last session: 2026-06-02
+Stopped at: Phase 39 complete — milestone v1.13 done
 Resume file: None
-
-**Current Phase:** 39
 
 **Next:** Start the next milestone when ready.
