@@ -89,7 +89,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 | 37 | v1.11 | 5/5 | Complete | 2026-05-26 |
 | 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
-| 39 | v1.13 | 1/6 | In Progress|  |
+| 39 | v1.13 | 2/6 | In Progress|  |
 
 **Total: 38 phases shipped · 137 plans complete**
 
@@ -196,7 +196,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 - R-UP-09: Old pickers removed (`CategoryCombobox`, onboarding `SubcategoryCombobox`, cascading `Select` pairs) once all surfaces migrated; no duplicate selection UX remains.
 - R-UP-10: Prototype route deleted on merge (`app/(app)/prototype/subcategory-picker/`); `yarn build` + `yarn check:language` green.
 
-**Plans:** 1/6 plans executed
+**Plans:** 2/6 plans executed
 
 **Wave 1**
 
@@ -204,7 +204,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 **Wave 2**
 
-- [ ] 39-02-PLAN.md — Build the shared `SubcategoryPicker` (variant E over `vaul`): fixed-height bottom sheet, type chips, two-column master-detail, search-collapse, single-`subCategoryId` output (R-UP-01, R-UP-02, R-UP-03, R-UP-08)
+- [x] 39-02-PLAN.md — Build the shared `SubcategoryPicker` (variant E over `vaul`): fixed-height bottom sheet, type chips, two-column master-detail, search-collapse, single-`subCategoryId` output (R-UP-01, R-UP-02, R-UP-03, R-UP-08)
 
 **Wave 3**
 
