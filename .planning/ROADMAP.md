@@ -89,7 +89,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 | 37 | v1.11 | 5/5 | Complete | 2026-05-26 |
 | 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
-| 39 | v1.13 | –/– | Pending | – |
+| 39 | v1.13 | 1/6 | In Progress|  |
 
 **Total: 38 phases shipped · 137 plans complete**
 
@@ -196,11 +196,11 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 - R-UP-09: Old pickers removed (`CategoryCombobox`, onboarding `SubcategoryCombobox`, cascading `Select` pairs) once all surfaces migrated; no duplicate selection UX remains.
 - R-UP-10: Prototype route deleted on merge (`app/(app)/prototype/subcategory-picker/`); `yarn build` + `yarn check:language` green.
 
-**Plans:** 6 plans
+**Plans:** 1/6 plans executed
 
 **Wave 1**
 
-- [ ] 39-01-PLAN.md — Foundation: `vaul` + shadcn `Drawer` primitive, `getMostUsedSubcategories` DAL query, extract `buildCategoryOptions`/`filterCategoryOptions` to `lib/categorization/subcategory-options.ts` (R-UP-04, R-UP-08)
+- [x] 39-01-PLAN.md — Foundation: `vaul` + shadcn `Drawer` primitive, `getMostUsedSubcategories` DAL query, extract `buildCategoryOptions`/`filterCategoryOptions` to `lib/categorization/subcategory-options.ts` (R-UP-04, R-UP-08)
 
 **Wave 2**
 

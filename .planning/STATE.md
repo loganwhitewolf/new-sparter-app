@@ -2,17 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: First-import Onboarding
-current_phase: 38
-status: milestone_complete
-last_updated: 2026-05-28T20:46:52.886Z
-last_activity: 2026-05-28
+current_phase: 39
+status: executing
+last_updated: "2026-06-01T21:35:13.578Z"
+last_activity: 2026-06-01 -- Phase 39 execution started
 progress:
   total_phases: 1
   completed_phases: 1
   total_plans: 3
   completed_plans: 3
   percent: 100
-stopped_at: Milestone complete (Phase 38 was final phase)
 ---
 
 # Project State
@@ -22,14 +21,14 @@ stopped_at: Milestone complete (Phase 38 was final phase)
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Milestone complete
+**Current focus:** Phase 39 — unified-subcategory-picker
 
 ## Current Position
 
-Phase: 38 (first-import-onboarding) — COMPLETE
-Plan: 3 of 3
-Status: Milestone complete
-Last activity: 2026-05-31 - Completed quick task 260531-fko: Riorganizza sottocategorie Spesa (categoryId 8)
+Phase: 39 (unified-subcategory-picker) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 39
+Last activity: 2026-06-01 -- Phase 39 execution started
 
 ## Accumulated Context
 
@@ -97,6 +96,6 @@ Last session: 2026-05-28
 Stopped at: Phase 38 complete
 Resume file: None
 
-**Current Phase:** 38
+**Current Phase:** 39
 
 **Next:** Start the next milestone when ready.
