@@ -46,7 +46,7 @@ export interface SubcategoryPickerProps {
   /**
    * Most-used subcategories for the current user, already scoped to the
    * call site's allowed types (from getMostUsedSubcategories).
-   * Empty array = hide "Più usate" section (cold-start / onboarding).
+   * Empty array = hide the "Most used" section (cold-start / onboarding).
    */
   mostUsed: MostUsedSubcategory[]
   /** Category types visible to this call site. */
