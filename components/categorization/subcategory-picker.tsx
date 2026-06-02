@@ -126,8 +126,9 @@ export function SubcategoryPicker({
           </Button>
         </SheetHeader>
 
-        {/* Body — filled in Task 2 */}
+        {/* Master-detail body — keyed on open to reset internal state on each open */}
         <PickerBody
+          key={open ? 'open' : 'closed'}
           options={options}
           categories={categories}
           mostUsed={mostUsed}
@@ -141,7 +142,7 @@ export function SubcategoryPicker({
 }
 
 // ---------------------------------------------------------------------------
-// PickerBody — placeholder until Task 2 (compiles but shows nothing)
+// PickerBody — master-detail layout with type chips, search, and rail
 // ---------------------------------------------------------------------------
 
 interface PickerBodyProps {
