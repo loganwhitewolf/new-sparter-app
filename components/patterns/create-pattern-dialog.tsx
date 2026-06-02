@@ -54,8 +54,16 @@ export function CreatePatternDialog({ categories }: Props) {
     }
   }
 
+  function handleOpenChange(next: boolean) {
+    setOpen(next)
+    if (!next) {
+      setSubCategoryId('')
+      setSubCategoryLabel(null)
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm">
           <ClientMountIcon icon={Plus} ariaHidden className="mr-2 h-4 w-4" />
