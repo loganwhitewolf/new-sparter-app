@@ -48,7 +48,9 @@ const categories = [
 const noopOnPromoted = () => {}
 
 describe('SuggestionPromoteForm', () => {
-  it('REV-03: renders hidden inputs for pattern and amountSign sourced from the suggestion', () => {
+  it('REV-03: renders hidden input for pattern but NOT for amountSign (server-derived per ADR 0008)', () => {
+    // amountSign was removed from the form — the Server Action derives it server-side from
+    // the subCategoryId via getCategoryTypeForSubCategory. This prevents FormData tampering (T-39-09).
     const html = renderToStaticMarkup(
       createElement(SuggestionPromoteForm, {
         suggestion,
@@ -57,11 +59,17 @@ describe('SuggestionPromoteForm', () => {
       }),
     )
 
+    // pattern hidden input MUST exist
     expect(html).toMatch(/<input[^>]*type="hidden"[^>]*name="pattern"[^>]*value="netflix"/)
-    expect(html).toMatch(/<input[^>]*type="hidden"[^>]*name="amountSign"[^>]*value="negative"/)
+    // subCategoryId hidden input MUST exist (filled via picker interaction)
+    expect(html).toMatch(/<input[^>]*type="hidden"[^>]*name="subCategoryId"/)
+    // amountSign MUST NOT be sent from the form (security: server derives it)
+    expect(html).not.toMatch(/<input[^>]*name="amountSign"/)
   })
 
-  it('REV-03: renders visible Categoria and Sottocategoria labels', () => {
+  it('REV-03: renders only Sottocategoria label — no cascading Categoria+Sottocategoria pair', () => {
+    // The rebuilt form removed the cascading Category→Subcategory Select pair (plan 39-05).
+    // Only a single "Sottocategoria" label + picker trigger remains.
     const html = renderToStaticMarkup(
       createElement(SuggestionPromoteForm, {
         suggestion,
@@ -70,8 +78,12 @@ describe('SuggestionPromoteForm', () => {
       }),
     )
 
-    expect(html).toContain('Categoria')
+    // "Sottocategoria" label still present
     expect(html).toContain('Sottocategoria')
+    // "Categoria" as a standalone label no longer exists (was removed with the cascading Select)
+    // Note: "Sottocategoria" contains the substring "categoria" — we check for the exact label text
+    // by looking for patterns that would indicate a separate Categoria label element
+    expect(html).not.toMatch(/<label[^>]*>\s*Categoria\s*<\/label>/)
   })
 
   it('renders the "Crea pattern" submit button', () => {

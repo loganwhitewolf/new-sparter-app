@@ -129,22 +129,29 @@ describe('SubcategoryCombobox (R-OB-07)', () => {
     expect(html).toContain('Seleziona categoria...')
   })
 
-  it('R-OB-07 renders subcategories grouped by category in the command list', () => {
+  it('R-OB-07 trigger button does not render subcategory list or grouped categories (Sheet is lazy/client-only)', () => {
+    // The rebuilt SubcategoryCombobox renders only a trigger button + SubcategoryPicker (Sheet).
+    // The Sheet is opened client-side; the subcategory list is NOT in the SSR static markup.
+    // This verifies the component no longer uses Popover+Command to render the list inline.
     const html = renderCombobox()
 
-    expect(html).toContain('aria-label="Spese"')
-    expect(html).toContain('aria-label="Entrate"')
-    expect(html).toContain('Alimentari')
-    expect(html).toContain('Stipendio')
+    // Trigger is present
+    expect(html).toContain('Seleziona categoria...')
+    // No Popover/Command artifacts remain
+    expect(html).not.toContain('data-slot="popover"')
+    expect(html).not.toContain('data-slot="command"')
+    // Subcategory names are NOT rendered inline (Sheet is lazy)
+    expect(html).not.toContain('Alimentari')
+    expect(html).not.toContain('Stipendio')
   })
 
-  it('R-OB-07 renders the FlowNature Italian label as a badge next to each subcategory', () => {
+  it('R-OB-07 FlowNature badges (Essenziale, Non classificato) are NOT rendered (removed per D-05)', () => {
+    // D-05 removed FlowNature badges from the rebuilt subcategory-combobox.
+    // The picker uses SubcategoryPicker which has no nature badges in its Tile component.
     const html = renderCombobox()
 
-    expect(html).toContain('Alimentari')
-    expect(html).toContain('Essenziale')
-    expect(html).toContain('Altro')
-    expect(html).toContain('Non classificato')
+    expect(html).not.toContain('Essenziale')
+    expect(html).not.toContain('Non classificato')
   })
 
   it('R-OB-07 builds FormData with the expense id and selected subCategoryId on select', () => {
