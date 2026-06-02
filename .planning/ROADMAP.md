@@ -89,7 +89,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 | 37 | v1.11 | 5/5 | Complete | 2026-05-26 |
 | 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
-| 39 | v1.13 | 5/6 | In Progress|  |
+| 39 | v1.13 | 6/6 | Complete   | 2026-06-02 |
 
 **Total: 38 phases shipped · 137 plans complete**
 
@@ -196,7 +196,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 - R-UP-09: Old pickers removed (`CategoryCombobox`, onboarding `SubcategoryCombobox`, cascading `Select` pairs) once all surfaces migrated; no duplicate selection UX remains.
 - R-UP-10: Prototype route deleted on merge (`app/(app)/prototype/subcategory-picker/`); `yarn build` + `yarn check:language` green.
 
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 
 **Wave 1**
 
@@ -217,4 +217,4 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 **Wave 5**
 
-- [ ] 39-06-PLAN.md — Cleanup: delete `CategoryCombobox` + old combobox/Select code + prototype route; final `yarn build` + `yarn check:language` gate (R-UP-09, R-UP-10)
+- [x] 39-06-PLAN.md — Cleanup: delete `CategoryCombobox` + old combobox/Select code + prototype route; final `yarn build` + `yarn check:language` gate (R-UP-09, R-UP-10)
