@@ -60,7 +60,8 @@ export function TransactionFormDialog({ categories, mostUsed }: Props) {
     const subCat = parentCat?.subCategories.find(
       (s) => String(s.id) === selectedSubCategoryId
     )
-    const label = subCat ? (subCat.customName ?? subCat.name) : ''
+    // sub.name already reflects the override (DAL bakes customName into name at row-map time)
+    const label = subCat ? subCat.name : ''
     setSubCategoryLabel(label)
   }
 
