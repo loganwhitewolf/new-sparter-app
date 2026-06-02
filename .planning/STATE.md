@@ -2,17 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: First-import Onboarding
-current_phase: 39
-status: milestone_complete
-last_updated: 2026-06-02T16:53:33.397Z
-last_activity: 2026-06-02 -- Phase 39 execution started
+status: Awaiting next milestone
+last_updated: "2026-06-02T17:21:32.295Z"
+last_activity: 2026-06-02 — Milestone v1.13 completed and archived
 progress:
   total_phases: 1
   completed_phases: 1
   total_plans: 3
-  completed_plans: 14
+  completed_plans: 3
   percent: 100
-stopped_at: Milestone complete (Phase 39 was final phase)
 ---
 
 # Project State
@@ -26,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 
 ## Current Position
 
-Phase: 39 (unified-subcategory-picker) — COMPLETE
-Plan: 6/6 complete
-Status: Milestone v1.13 complete — ready to start next milestone
-Last activity: 2026-06-02
+Phase: Milestone v1.13 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-02 — Milestone v1.13 completed and archived
 
 ## Accumulated Context
 
@@ -86,6 +84,20 @@ R029 — categorization revalidation partial.
 
 None.
 
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-06-02:
+
+| Category | Item | Status |
+|----------|------|--------|
+| quick_task | 260524-pha-mostrare-durante-import-solo-pattern-con | empty dir — likely duplicate of pnk variant |
+| quick_task | 260524-pnk-mostrare-durante-import-solo-pattern-con | shipped (889ae56) — audit false positive |
+| quick_task | 260525-ga2-fix-applynewpatterntoexpenses-pattern-pr | shipped (4a722f2) — audit false positive |
+| quick_task | 260529-ds7-onboarding-completed-flag | shipped (1a13048) — audit false positive |
+| quick_task | 260529-eh0-remove-onboarding-revalidate | shipped (40af612) — audit false positive |
+| quick_task | 260530-bib-description-strip-pattern | PLAN only — feature deferred to next milestone |
+| quick_task | 260531-fko-riorganizza-sottocategorie-spesa-categor | shipped (f979ae1) — audit false positive |
+
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Directory |
@@ -106,3 +118,7 @@ Stopped at: Phase 39 complete — milestone v1.13 done
 Resume file: None
 
 **Next:** Start the next milestone when ready.
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
