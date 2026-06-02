@@ -25,7 +25,9 @@ export function normalizePatternInput(input: string): string {
     }
   }
 
-  if (source.length === 0) {
+  // Reject empty source (e.g. //) or single-char source (e.g. ///) — too short to be meaningful
+  // and a bare `/` as source matches every string containing a slash (over-categorization).
+  if (source.length < 2) {
     throw new Error(INVALID_PATTERN_MESSAGE)
   }
 
