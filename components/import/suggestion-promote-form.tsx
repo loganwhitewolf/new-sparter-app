@@ -1,16 +1,11 @@
 'use client'
 
-import { useActionState, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { useActionState, useEffect, useRef, useState } from 'react'
+import { AlertCircle, Loader2, Tag } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { ClientMountIcon } from '@/components/ui/client-mount-icon'
+import { SubcategoryPicker } from '@/components/categorization/subcategory-picker'
 import { promoteSuggestionAction } from '@/lib/actions/patterns'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { PatternSuggestion } from '@/lib/utils/pattern-suggestions'
@@ -23,15 +18,11 @@ type Props = {
 }
 
 export function SuggestionPromoteForm({ suggestion, categories, onPromoted, disabled }: Props) {
-  const [categoryId, setCategoryId] = useState('')
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [subCategoryId, setSubCategoryId] = useState('')
+  const [subCategoryLabel, setSubCategoryLabel] = useState<string | null>(null)
   const [state, formAction, isPending] = useActionState(promoteSuggestionAction, { error: null })
   const submittedRef = useRef(false)
-
-  const selectedCategory = useMemo(
-    () => categories.find((category) => String(category.id) === categoryId),
-    [categories, categoryId],
-  )
 
   // submittedRef guards against the initial-render false positive
   // (state.error === null is also the initial state). See Pitfall 4.
@@ -42,9 +33,15 @@ export function SuggestionPromoteForm({ suggestion, categories, onPromoted, disa
     }
   }, [state, onPromoted])
 
-  function handleCategoryChange(value: string) {
-    setCategoryId(value)
-    setSubCategoryId('') // reset subcategory when category changes
+  function handlePickerChange(id: string) {
+    setSubCategoryId(id)
+    for (const cat of categories) {
+      const sub = cat.subCategories.find((s) => String(s.id) === id)
+      if (sub) {
+        setSubCategoryLabel(sub.name)
+        break
+      }
+    }
   }
 
   return (
@@ -55,53 +52,37 @@ export function SuggestionPromoteForm({ suggestion, categories, onPromoted, disa
       }}
       className="flex flex-col gap-4"
     >
-      {/* Hidden inputs pre-filled from the suggestion. */}
-      {/* NOTE: `confidence` is intentionally NOT a hidden input — the Server Action hardcodes 0.85. */}
+      {/*
+        Hidden inputs pre-filled from the suggestion.
+        amountSign is intentionally NOT sent — the Server Action derives it server-side (ADR 0008).
+        confidence is NOT sent — hardcoded to 1 server-side (T-39-09).
+      */}
       <input type="hidden" name="pattern" value={suggestion.pattern} />
-      <input type="hidden" name="amountSign" value={suggestion.detectedAmountSign} />
       <input type="hidden" name="subCategoryId" value={subCategoryId} />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm" htmlFor={`promote-category-${suggestion.pattern}`}>
-            Categoria
-          </label>
-          <Select value={categoryId} onValueChange={handleCategoryChange}>
-            <SelectTrigger id={`promote-category-${suggestion.pattern}`} className="w-full">
-              <SelectValue placeholder="Categoria" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={String(category.id)}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm" htmlFor={`promote-subcategory-${suggestion.pattern}`}>
-            Sottocategoria
-          </label>
-          <Select
-            value={subCategoryId}
-            onValueChange={setSubCategoryId}
-            disabled={!selectedCategory}
-          >
-            <SelectTrigger id={`promote-subcategory-${suggestion.pattern}`} className="w-full">
-              <SelectValue placeholder="Sottocategoria" />
-            </SelectTrigger>
-            <SelectContent>
-              {selectedCategory?.subCategories.map((subCategory) => (
-                <SelectItem key={subCategory.id} value={String(subCategory.id)}>
-                  {subCategory.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm">Sottocategoria</label>
+        <Button
+          type="button"
+          variant="outline"
+          className="justify-start font-normal"
+          onClick={() => setPickerOpen(true)}
+          disabled={disabled}
+        >
+          <ClientMountIcon icon={Tag} ariaHidden className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+          {subCategoryLabel ?? 'Categorizza…'}
+        </Button>
       </div>
+
+      <SubcategoryPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        categories={categories}
+        mostUsed={[]}
+        allowedCategoryTypes={['in', 'out', 'transfer', 'system']}
+        defaultType={null}
+        onChange={handlePickerChange}
+      />
 
       {state.error && (
         <Alert variant="destructive">

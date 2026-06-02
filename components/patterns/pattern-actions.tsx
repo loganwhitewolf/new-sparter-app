@@ -1,6 +1,6 @@
 'use client'
-import { useActionState, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, Loader2, Pencil, Trash2 } from 'lucide-react'
+import { useActionState, useEffect, useRef, useState } from 'react'
+import { AlertCircle, Loader2, Pencil, Tag, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -16,13 +16,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { SubcategoryPicker } from '@/components/categorization/subcategory-picker'
 import { deletePatternAction, updatePatternAction } from '@/lib/actions/patterns'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 
@@ -36,45 +30,43 @@ type Props = {
   categories: CategoryWithSubCategories[]
 }
 
-function getOwningCategoryId(categories: CategoryWithSubCategories[], subCategoryId: number) {
-  return categories.find((category) =>
-    category.subCategories.some((subCategory) => subCategory.id === subCategoryId),
-  )?.id
+/** Resolve the display name for a subcategory id from the categories tree. */
+function getSubCategoryLabel(
+  categories: CategoryWithSubCategories[],
+  subCategoryId: number,
+): string | null {
+  for (const cat of categories) {
+    const sub = cat.subCategories.find((s) => s.id === subCategoryId)
+    if (sub) return sub.name
+  }
+  return null
 }
 
 export function PatternActions({
   id,
   pattern,
   subCategoryId: initialSubCategoryId,
-  amountSign: initialAmountSign,
-  confidence: initialConfidence,
   description,
   categories,
 }: Props) {
-  const initialCategoryId = getOwningCategoryId(categories, initialSubCategoryId)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [categoryId, setCategoryId] = useState(initialCategoryId ? String(initialCategoryId) : '')
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  // subCategoryId state starts from the existing pattern's value
   const [subCategoryId, setSubCategoryId] = useState(String(initialSubCategoryId))
-  const [amountSign, setAmountSign] = useState(initialAmountSign)
-  const [confidence, setConfidence] = useState(initialConfidence)
+  const [subCategoryLabel, setSubCategoryLabel] = useState<string | null>(
+    getSubCategoryLabel(categories, initialSubCategoryId),
+  )
 
   const [editState, editAction, isEditPending] = useActionState(updatePatternAction, { error: null })
   const [deleteState, deleteAction, isDeletePending] = useActionState(deletePatternAction, { error: null })
   const editSubmittedRef = useRef(false)
   const deleteSubmittedRef = useRef(false)
 
-  const selectedCategory = useMemo(
-    () => categories.find((category) => String(category.id) === categoryId),
-    [categories, categoryId],
-  )
-
   function resetEditForm() {
-    const owningCategoryId = getOwningCategoryId(categories, initialSubCategoryId)
-    setCategoryId(owningCategoryId ? String(owningCategoryId) : '')
     setSubCategoryId(String(initialSubCategoryId))
-    setAmountSign(initialAmountSign)
-    setConfidence(initialConfidence)
+    setSubCategoryLabel(getSubCategoryLabel(categories, initialSubCategoryId))
   }
 
   function handleEditOpenChange(open: boolean) {
@@ -100,13 +92,20 @@ export function PatternActions({
     }
   }, [deleteState])
 
-  function handleCategoryChange(value: string) {
-    setCategoryId(value)
-    setSubCategoryId('')
+  function handlePickerChange(id: string) {
+    setSubCategoryId(id)
+    for (const cat of categories) {
+      const sub = cat.subCategories.find((s) => String(s.id) === id)
+      if (sub) {
+        setSubCategoryLabel(sub.name)
+        break
+      }
+    }
   }
 
   return (
     <div className="flex justify-end gap-1">
+      {/* Edit dialog */}
       <Dialog open={editOpen} onOpenChange={handleEditOpenChange}>
         <DialogTrigger asChild>
           <Button type="button" variant="ghost" size="icon-sm" aria-label="Modifica pattern">
@@ -130,10 +129,9 @@ export function PatternActions({
             }}
             className="flex flex-col gap-4"
           >
+            {/* Hidden inputs */}
             <input type="hidden" name="id" value={id} />
             <input type="hidden" name="subCategoryId" value={subCategoryId} />
-            <input type="hidden" name="amountSign" value={amountSign} />
-            <input type="hidden" name="confidence" value={confidence} />
 
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium" htmlFor={`pattern-regex-${id}`}>
@@ -152,71 +150,28 @@ export function PatternActions({
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Categoria</label>
-                <Select value={categoryId} onValueChange={handleCategoryChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={String(category.id)}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Sottocategoria</label>
-                <Select value={subCategoryId} onValueChange={setSubCategoryId} disabled={!selectedCategory}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Sottocategoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {selectedCategory?.subCategories.map((subCategory) => (
-                      <SelectItem key={subCategory.id} value={String(subCategory.id)}>
-                        {subCategory.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Sottocategoria</label>
+              <Button
+                type="button"
+                variant="outline"
+                className="justify-start font-normal"
+                onClick={() => setPickerOpen(true)}
+              >
+                <ClientMountIcon icon={Tag} ariaHidden className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                {subCategoryLabel ?? 'Categorizza…'}
+              </Button>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Segno importo</label>
-                <Select value={amountSign} onValueChange={(value) => setAmountSign(value as typeof amountSign)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="negative">Uscite</SelectItem>
-                    <SelectItem value="positive">Entrate</SelectItem>
-                    <SelectItem value="any">Qualsiasi</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium" htmlFor={`pattern-confidence-${id}`}>
-                  Confidenza
-                </label>
-                <Input
-                  id={`pattern-confidence-${id}`}
-                  inputMode="decimal"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  type="number"
-                  value={confidence}
-                  onChange={(event) => setConfidence(event.target.value)}
-                />
-              </div>
-            </div>
+            <SubcategoryPicker
+              open={pickerOpen}
+              onOpenChange={setPickerOpen}
+              categories={categories}
+              mostUsed={[]}
+              allowedCategoryTypes={['in', 'out', 'transfer', 'system']}
+              defaultType={null}
+              onChange={handlePickerChange}
+            />
 
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium" htmlFor={`pattern-description-${id}`}>
@@ -238,7 +193,7 @@ export function PatternActions({
                   Annulla
                 </Button>
               </DialogClose>
-              <Button type="submit" disabled={isEditPending || !subCategoryId || !confidence}>
+              <Button type="submit" disabled={isEditPending || !subCategoryId}>
                 {isEditPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Salva modifiche
               </Button>
@@ -247,6 +202,7 @@ export function PatternActions({
         </DialogContent>
       </Dialog>
 
+      {/* Delete dialog — unchanged */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogTrigger asChild>
           <Button type="button" variant="ghost" size="icon-sm" aria-label="Elimina pattern">
