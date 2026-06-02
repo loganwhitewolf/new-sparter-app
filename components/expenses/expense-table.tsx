@@ -40,11 +40,13 @@ import { ExpenseTitleEdit } from './expense-title-edit'
 import { ExpenseTransactionsDialog } from './expense-transactions-dialog'
 import type { ExpenseFilters, ExpenseRow } from '@/lib/dal/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
+import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import { cn } from '@/lib/utils'
 
 type Props = {
   expenses: ExpenseRow[]
   categories: CategoryWithSubCategories[]
+  mostUsed: MostUsedSubcategory[]
   filters: ExpenseFilters
 }
 
@@ -61,7 +63,7 @@ function dedupeExpenseRows(rows: ExpenseRow[]): ExpenseRow[] {
   return unique
 }
 
-export function ExpenseTable({ expenses, categories, filters }: Props) {
+export function ExpenseTable({ expenses, categories, mostUsed, filters }: Props) {
   const [loadedExpenses, setLoadedExpenses] = useState(() => dedupeExpenseRows(expenses))
   const [hasMore, setHasMore] = useState(expenses.length === PAGE_SIZE)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -397,6 +399,7 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
         onOpenChange={setBulkDialogOpen}
         selectedIds={selectedIds}
         categories={categories}
+        mostUsed={mostUsed}
         onSuccess={() => {
           setSelectedIds([])
           setBulkDialogOpen(false)
@@ -410,6 +413,7 @@ export function ExpenseTable({ expenses, categories, filters }: Props) {
         }}
         expense={categorizeDialogExpense ?? { id: '', title: '' }}
         categories={categories}
+        mostUsed={mostUsed}
         onSuccess={() => setCategorizeDialogExpense(null)}
       />
 

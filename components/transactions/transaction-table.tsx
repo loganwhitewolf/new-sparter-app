@@ -39,6 +39,7 @@ import {
 import { deleteTransaction, loadMoreTransactions } from '@/lib/actions/transactions'
 import type { TransactionListRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
+import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import type {
   ParsedTransactionFilters,
   TransactionSearchParams,
@@ -50,6 +51,7 @@ type Props = {
   filters: Pick<ParsedTransactionFilters, 'sort' | 'dir'>
   searchParams: TransactionSearchParams
   categories: CategoryWithSubCategories[]
+  mostUsed: MostUsedSubcategory[]
 }
 
 const PAGE_SIZE = 50
@@ -120,7 +122,7 @@ function transactionRowLabel(transaction: TransactionListRow) {
   return raw.length > 80 ? `${raw.slice(0, 77)}…` : raw
 }
 
-export function TransactionTable({ transactions, filters, searchParams, categories }: Props) {
+export function TransactionTable({ transactions, filters, searchParams, categories, mostUsed }: Props) {
   const [loadedTransactions, setLoadedTransactions] = useState(transactions)
   const [hasMore, setHasMore] = useState(transactions.length === PAGE_SIZE)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -501,6 +503,7 @@ export function TransactionTable({ transactions, filters, searchParams, categori
         onOpenChange={(open) => { if (!open) setCategorizeTarget(null) }}
         expense={categorizeTarget}
         categories={categories}
+        mostUsed={mostUsed}
         onSuccess={(subCategoryId) => {
           const txId = loadedTransactions.find((t) => t.expenseId === categorizeTarget.id)?.id
           if (txId) markExpenseCategorized(txId, subCategoryId)

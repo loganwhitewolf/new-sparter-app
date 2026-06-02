@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { getExpenses, type ExpenseFilters as ExpenseListFilters } from '@/lib/dal/expenses'
 import { getCategories } from '@/lib/dal/categories'
+import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
 import { ExpenseFilters } from '@/components/expenses/expense-filters'
 import { ExpenseTable } from '@/components/expenses/expense-table'
 import { ExpenseFormDialog } from '@/components/expenses/expense-form-dialog'
@@ -55,9 +56,10 @@ export default async function ExpensesPage({
     dir: params.dir === 'asc' ? 'asc' : undefined,
   }
 
-  const [expenses, categories] = await Promise.all([
+  const [expenses, categories, mostUsed] = await Promise.all([
     getExpenses(filters),
     getCategories(),
+    getMostUsedSubcategories(['in', 'out', 'transfer', 'system']),
   ])
 
   return (
@@ -80,6 +82,7 @@ export default async function ExpensesPage({
         key={buildExpenseTableKey(filters, expenses)}
         expenses={expenses}
         categories={categories}
+        mostUsed={mostUsed}
         filters={filters}
       />
     </div>

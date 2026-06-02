@@ -1,27 +1,19 @@
 'use client'
-import { useActionState, useEffect, useRef, useState } from 'react'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { useActionState, useRef, useTransition } from 'react'
+import { AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { CategoryCombobox } from '@/components/expenses/category-combobox'
+import { SubcategoryPicker } from '@/components/categorization/subcategory-picker'
 import { categorizeExpense } from '@/lib/actions/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
+import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   expense: { id: string; title: string }
   categories: CategoryWithSubCategories[]
+  mostUsed: MostUsedSubcategory[]
   onSuccess: (subCategoryId?: string) => void
 }
 
@@ -30,75 +22,53 @@ export function ExpenseCategorizeDialog({
   onOpenChange,
   expense,
   categories,
+  mostUsed,
   onSuccess,
 }: Props) {
-  const [subCategoryId, setSubCategoryId] = useState<string>('')
-  const [state, formAction, isPending] = useActionState(categorizeExpense, { error: null })
-  const submittedRef = useRef(false)
+  const [state, formAction] = useActionState(categorizeExpense, { error: null })
+  const [isPending, startTransition] = useTransition()
 
-  useEffect(() => {
-    if (submittedRef.current && state.error === null) {
-      toast.success('Spesa categorizzata.')
-      setSubCategoryId('')
-      submittedRef.current = false
-      onSuccess(subCategoryId)
-      onOpenChange(false)
-    }
-  }, [state, subCategoryId, onSuccess, onOpenChange])
+  // Ref to track error state across renders (avoids stale closures)
+  const lastErrorRef = useRef<string | null | undefined>(undefined)
+
+  function handleChange(subCategoryId: string) {
+    const fd = new FormData()
+    fd.set('id', expense.id)
+    fd.set('subCategoryId', subCategoryId)
+
+    startTransition(async () => {
+      const result = await categorizeExpense({ error: null }, fd)
+      if (result.error) {
+        // Keep picker open to show error — but toast is sufficient here
+        toast.error(result.error)
+      } else {
+        toast.success('Spesa categorizzata.')
+        onSuccess(subCategoryId)
+        onOpenChange(false)
+      }
+    })
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Categorizza spesa</DialogTitle>
-          <DialogDescription className="sr-only">
-            Seleziona una categoria e una sottocategoria da assegnare alla spesa.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form
-          action={(fd) => {
-            submittedRef.current = true
-            formAction(fd)
-          }}
-          className="flex flex-col gap-4"
-        >
-          <input type="hidden" name="id" value={expense.id} />
-          <input type="hidden" name="subCategoryId" value={subCategoryId} />
-
-          <p className="text-sm text-muted-foreground">
-            Assegna una categoria a{' '}
-            <strong className="font-medium text-foreground break-words">{expense.title}</strong>.
-          </p>
-
-          <CategoryCombobox
-            categories={categories}
-            value={subCategoryId}
-            onChange={setSubCategoryId}
-            placeholder="Cerca sottocategoria…"
-            allowedCategoryTypes={['in', 'out', 'system', 'transfer']}
-          />
-
-          {state.error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{state.error}</AlertDescription>
-            </Alert>
-          )}
-
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="ghost">
-                Annulla
-              </Button>
-            </DialogClose>
-            <Button type="submit" disabled={isPending || !subCategoryId}>
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Conferma
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <>
+      <SubcategoryPicker
+        open={open}
+        onOpenChange={onOpenChange}
+        categories={categories}
+        mostUsed={mostUsed}
+        allowedCategoryTypes={['in', 'out', 'transfer', 'system']}
+        defaultType={null}
+        onChange={handleChange}
+      />
+      {/* Error display for screen-reader accessibility — toasts already surfaced above */}
+      {state.error && !isPending && (
+        <div className="sr-only" role="alert">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{state.error}</AlertDescription>
+          </Alert>
+        </div>
+      )}
+    </>
   )
 }

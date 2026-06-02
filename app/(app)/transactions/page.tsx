@@ -4,6 +4,7 @@ import {
   getTransactions,
 } from '@/lib/dal/transactions'
 import { getCategories } from '@/lib/dal/categories'
+import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
 import {
   parseTransactionFilters,
   type TransactionSearchParams,
@@ -37,10 +38,11 @@ export default async function TransactionsPage({
 }) {
   const params = await searchParams
   const filters = parseTransactionFilters(params)
-  const [transactions, platforms, categories] = await Promise.all([
+  const [transactions, platforms, categories, mostUsed] = await Promise.all([
     getTransactions(filters),
     getTransactionPlatforms(),
     getCategories(),
+    getMostUsedSubcategories(['in', 'out', 'transfer', 'system']),
   ])
 
   return (
@@ -68,6 +70,7 @@ export default async function TransactionsPage({
         filters={filters}
         searchParams={params}
         categories={categories}
+        mostUsed={mostUsed}
       />
     </div>
   )
