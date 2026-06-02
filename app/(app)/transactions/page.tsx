@@ -55,7 +55,7 @@ export default async function TransactionsPage({
             ordina la lista senza modificare i dati originali.
           </p>
         </div>
-        <TransactionFormDialog categories={categories} />
+        <TransactionFormDialog categories={categories} mostUsed={mostUsed} />
       </div>
 
       <Suspense

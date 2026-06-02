@@ -16,26 +16,21 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { SubcategoryPicker } from '@/components/categorization/subcategory-picker'
 import { createTransaction } from '@/lib/actions/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
+import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 
 type Props = {
   categories: CategoryWithSubCategories[]
+  mostUsed: MostUsedSubcategory[]
 }
 
-export function TransactionFormDialog({ categories }: Props) {
+export function TransactionFormDialog({ categories, mostUsed }: Props) {
   const [open, setOpen] = useState(false)
-  const [categoryId, setCategoryId] = useState<string>('')
   const [subCategoryId, setSubCategoryId] = useState<string>('')
-
-  const selectedCategory = categories.find((c) => String(c.id) === categoryId)
+  const [subCategoryLabel, setSubCategoryLabel] = useState<string>('')
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   const [state, formAction, isPending] = useActionState(createTransaction, { error: null })
   const submittedRef = useRef(false)
@@ -51,14 +46,22 @@ export function TransactionFormDialog({ categories }: Props) {
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen)
     if (!nextOpen) {
-      setCategoryId('')
       setSubCategoryId('')
+      setSubCategoryLabel('')
     }
   }
 
-  function handleCategoryChange(value: string) {
-    setCategoryId(value)
-    setSubCategoryId('')
+  function handlePickerChange(selectedSubCategoryId: string) {
+    setSubCategoryId(selectedSubCategoryId)
+    // Resolve display label from categories tree
+    const parentCat = categories.find((c) =>
+      c.subCategories.some((s) => String(s.id) === selectedSubCategoryId)
+    )
+    const subCat = parentCat?.subCategories.find(
+      (s) => String(s.id) === selectedSubCategoryId
+    )
+    const label = subCat ? (subCat.customName ?? subCat.name) : ''
+    setSubCategoryLabel(label)
   }
 
   const todayISO = new Date().toISOString().slice(0, 10)
@@ -128,39 +131,20 @@ export function TransactionFormDialog({ categories }: Props) {
 
           <input type="hidden" name="currency" value="EUR" />
 
+          {/* Sottocategoria */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Categoria</label>
-            <Select value={categoryId} onValueChange={handleCategoryChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleziona una categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={String(cat.id)}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <label className="text-sm font-medium">Sottocategoria</label>
+            <Button
+              type="button"
+              variant="outline"
+              className="justify-start text-left font-normal"
+              onClick={() => setPickerOpen(true)}
+            >
+              {subCategoryLabel || (
+                <span className="text-muted-foreground">Categorizza…</span>
+              )}
+            </Button>
           </div>
-
-          {selectedCategory && (
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">Sottocategoria</label>
-              <Select value={subCategoryId} onValueChange={setSubCategoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona una sottocategoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedCategory.subCategories.map((sub) => (
-                    <SelectItem key={sub.id} value={String(sub.id)}>
-                      {sub.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           {state.error && (
             <Alert variant="destructive">
@@ -182,6 +166,16 @@ export function TransactionFormDialog({ categories }: Props) {
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <SubcategoryPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        categories={categories}
+        mostUsed={mostUsed}
+        allowedCategoryTypes={['in', 'out', 'transfer', 'system']}
+        defaultType={null}
+        onChange={handlePickerChange}
+      />
     </Dialog>
   )
 }
