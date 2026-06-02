@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import {
   CreatePatternSchema,
   UpdatePatternSchema,
+  UpdatePatternClientSchema,
   type ActionState,
 } from "@/lib/validations/pattern";
 import {
@@ -170,8 +171,10 @@ export async function updatePatternAction(
     : undefined;
 
   // Parse only the fields we trust from the client (pattern, subCategoryId, description).
-  // amountSign and confidence are derived/hardcoded server-side (ADR 0008, T-39-09).
-  const parsed = UpdatePatternSchema.safeParse({
+  // amountSign and confidence are deliberately omitted from the client schema (ADR 0008, T-39-09)
+  // — they are always derived server-side. Using UpdatePatternClientSchema ensures clients
+  // cannot inject amountSign/confidence even when subCategoryId is not changing.
+  const parsed = UpdatePatternClientSchema.safeParse({
     pattern: formData.get("pattern") || undefined,
     subCategoryId: subCategoryIdRaw,
     description: (formData.get("description") as string) || undefined,

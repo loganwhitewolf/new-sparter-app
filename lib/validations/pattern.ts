@@ -72,6 +72,16 @@ export const CreatePatternSchema = z.object({
 
 export const UpdatePatternSchema = CreatePatternSchema.partial()
 
+/**
+ * Client-facing update schema — omits server-derived fields (ADR 0008).
+ * Used by updatePatternAction to prevent clients from injecting amountSign
+ * or confidence values that must always be derived server-side.
+ */
+export const UpdatePatternClientSchema = CreatePatternSchema
+  .omit({ amountSign: true, confidence: true })
+  .partial()
+
 export type CreatePatternInput = z.infer<typeof CreatePatternSchema>
 export type UpdatePatternInput = z.infer<typeof UpdatePatternSchema>
+export type UpdatePatternClientInput = z.infer<typeof UpdatePatternClientSchema>
 export type ActionState = { error: string | null }
