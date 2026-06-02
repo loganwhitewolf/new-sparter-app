@@ -125,7 +125,12 @@ export async function createPattern(
     if (errorCauseCode(err) === '23505') {
       const reactivated = await database
         .update(categorizationPattern)
-        .set({ isActive: true, updatedAt: new Date() })
+        .set({
+          isActive: true,
+          amountSign: input.amountSign,     // enforce current server-derived value (ADR 0008)
+          confidence: input.confidence.toFixed(2),
+          updatedAt: new Date(),
+        })
         .where(
           and(
             eq(categorizationPattern.pattern, normalizedPattern),
