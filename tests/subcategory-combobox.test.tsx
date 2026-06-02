@@ -117,6 +117,7 @@ function renderCombobox(amount = '-42.50') {
       expenseTitle="Supermercato"
       expenseAmount={amount}
       categories={categories}
+      mostUsed={[]}
     />,
   )
 }
