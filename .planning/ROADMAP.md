@@ -89,7 +89,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 | 37 | v1.11 | 5/5 | Complete | 2026-05-26 |
 | 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
-| 39 | v1.13 | 2/6 | In Progress|  |
+| 39 | v1.13 | 4/6 | In Progress|  |
 
 **Total: 38 phases shipped · 137 plans complete**
 
@@ -196,7 +196,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 - R-UP-09: Old pickers removed (`CategoryCombobox`, onboarding `SubcategoryCombobox`, cascading `Select` pairs) once all surfaces migrated; no duplicate selection UX remains.
 - R-UP-10: Prototype route deleted on merge (`app/(app)/prototype/subcategory-picker/`); `yarn build` + `yarn check:language` green.
 
-**Plans:** 2/6 plans executed
+**Plans:** 4/6 plans executed
 
 **Wave 1**
 
@@ -208,8 +208,8 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 **Wave 3**
 
-- [ ] 39-03-PLAN.md — Adopt picker in the 4 commit-on-tap surfaces (single expense, transaction-table, bulk, onboarding); thread `mostUsed` through their pages (R-UP-05, R-UP-06)
-- [ ] 39-05-PLAN.md — Pattern form rework: regex + description + Categorizza-via-picker; derive `amountSign` server-side from category type, hardcode `confidence=1` (R-UP-07)
+- [x] 39-03-PLAN.md — Adopt picker in the 4 commit-on-tap surfaces (single expense, transaction-table, bulk, onboarding); thread `mostUsed` through their pages (R-UP-05, R-UP-06)
+- [x] 39-05-PLAN.md — Pattern form rework: regex + description + Categorizza-via-picker; derive `amountSign` server-side from category type, hardcode `confidence=1` (R-UP-07)
 
 **Wave 4**
 

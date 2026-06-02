@@ -4,8 +4,8 @@ milestone: v1.12
 milestone_name: First-import Onboarding
 current_phase: 39
 status: executing
-last_updated: "2026-06-01T21:35:13.578Z"
-last_activity: 2026-06-01 -- Phase 39 execution started
+last_updated: "2026-06-02T13:24:04.128Z"
+last_activity: 2026-06-02 -- Phase 39 execution started
 progress:
   total_phases: 1
   completed_phases: 1
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 Phase: 39 (unified-subcategory-picker) — EXECUTING
 Plan: 1 of 6
 Status: Executing Phase 39
-Last activity: 2026-06-01 -- Phase 39 execution started
+Last activity: 2026-06-02 -- Phase 39 execution started
 
 ## Accumulated Context
 
