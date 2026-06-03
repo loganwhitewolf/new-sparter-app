@@ -37,7 +37,7 @@ Classificazione di secondo livello all'interno di una categoria (es. "Caffè & B
 _Avoid_: tag, voce
 
 **Categorization** (Categorizzazione):
-L'atto di assegnare categoria e sottocategoria a una transazione. Può avvenire automaticamente (regex, storico) o manualmente.
+L'atto di categorizzare una transazione assegnandole **una Subcategory**. La Category non viene mai assegnata in modo indipendente: è derivata dalla Subcategory scelta. L'unità di categorizzazione è quindi sempre la Subcategory, mai una Category "nuda". Può avvenire automaticamente (regex, storico) o manualmente. Tutti i punti di selezione sottocategoria nel prodotto richiedono obbligatoriamente una Subcategory.
 
 **Uncategorized** (Non categorizzato):
 Transazione senza categoria e sottocategoria assegnate. È un segnale d'azione, non uno stato definitivo.
@@ -117,7 +117,7 @@ _Avoid_: periodo, filtro, intervallo
 
 - Una **Platform** definisce il formato di un **Import**
 - Un **Import** produce zero o più **Transaction**
-- Una **Transaction** appartiene a esattamente una **Category** e zero o una **Subcategory**
+- Una **Transaction** è o **non categorizzata** (nessuna Subcategory) o ha **esattamente una Subcategory**; la **Category** è sempre derivata dalla Subcategory, mai assegnata da sola
 - Una **Category** contiene zero o più **Subcategory**
 - Una **Subcategory** ha zero o una **FlowNature** (null = non classificata)
 - La **Deviation** di una **Subcategory** è calcolata rispetto alla sua **Baseline**
