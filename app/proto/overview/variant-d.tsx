@@ -38,7 +38,7 @@ export function VariantD({ year }: { year: number }) {
     <Tabs defaultValue="andamento" className="flex h-full min-h-0 flex-col gap-3">
       <TabsList className="shrink-0 self-start">
         <TabsTrigger value="andamento">Andamento</TabsTrigger>
-        <TabsTrigger value="variazioni">Variazioni ({moversCount})</TabsTrigger>
+        <TabsTrigger value="variazioni">Cambiamenti ({moversCount})</TabsTrigger>
       </TabsList>
 
       <TabsContent value="andamento" className="flex min-h-0 flex-1 flex-col gap-2">

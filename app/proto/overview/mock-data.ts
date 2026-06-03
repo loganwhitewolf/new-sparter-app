@@ -22,6 +22,17 @@ export const NATURE_LABELS: Record<UsciteNature, string> = {
   extraordinary: 'Straordinario',
 }
 
+// In-context education: one-liner per nature so the jargon labels are self-explanatory
+// at the point of use (the filter chips), not only after onboarding. See NOTES.md.
+export const NATURE_DESCRIPTIONS: Record<UsciteNature, string> = {
+  essential: 'Spese necessarie e ricorrenti: affitto, bollette, spesa alimentare, salute.',
+  discretionary: 'Consumi opzionali: ristoranti, intrattenimento, shopping.',
+  operational: 'Spese di gestione e lavoro: strumenti, costi professionali.',
+  financial: 'Risparmio e investimenti: ETF, conto deposito, fondi.',
+  debt: 'Rimborso di debiti: rate mutuo (quota capitale), finanziamenti.',
+  extraordinary: 'Spese una-tantum non ricorrenti: imprevisti, acquisti eccezionali.',
+}
+
 export const NATURE_COLORS: Record<UsciteNature, string> = {
   essential: '#4ade80',
   discretionary: '#f97316',
@@ -43,6 +54,11 @@ export const INCOME_LABELS: Record<IncomeType, string> = {
 export const INCOME_COLORS: Record<IncomeType, string> = {
   recurring: '#34d399',
   extraordinary: '#a7f3d0',
+}
+
+export const INCOME_DESCRIPTIONS: Record<IncomeType, string> = {
+  recurring: 'Entrate regolari e prevedibili: stipendio, pensione, affitti incassati.',
+  extraordinary: 'Entrate una-tantum: bonus, vendita di beni, rimborsi, regali.',
 }
 
 export type MonthPoint = {
@@ -102,30 +118,42 @@ const YEAR_2025: MonthPoint[] = MONTH_LABELS.map((_, i) =>
   )
 )
 
-const MOVERS: Record<number, { current: string; previous: string; rows: Mover[] }> = {
-  2026: {
-    current: 'Apr',
-    previous: 'Mar',
-    rows: [
-      { id: 12, name: 'Viaggi', prev: 0, curr: 220 },
-      { id: 7, name: 'Ristoranti', prev: 180, curr: 360 },
-      { id: 3, name: 'Shopping', prev: 150, curr: 60 },
-      { id: 1, name: 'Spesa alimentare', prev: 420, curr: 480 },
-      { id: 9, name: 'Bollette', prev: 210, curr: 160 },
-      { id: 4, name: 'Caffè', prev: 22, curr: 30 }, // below 15€ delta → filtered out
-    ],
-  },
-  2025: {
-    current: 'Dic',
-    previous: 'Nov',
-    rows: [
-      { id: 7, name: 'Ristoranti', prev: 210, curr: 410 },
-      { id: 14, name: 'Regali', prev: 30, curr: 290 },
-      { id: 1, name: 'Spesa alimentare', prev: 460, curr: 540 },
-      { id: 9, name: 'Bollette', prev: 240, curr: 180 },
-      { id: 3, name: 'Shopping', prev: 320, curr: 240 },
-    ],
-  },
+// Per-category monthly uscite (€) for the month-over-month drill-down. monthly[i] = month i.
+// Independent from the by-nature totals above: the drill-down shows TOP MOVERS only
+// (a subset of changes), not the full "di cui" composition (which would need to sum to
+// the bar total). 2026 baked so Apr-vs-Mar keeps the original narrative.
+type CategoryMonthly = { id: number; name: string; monthly: number[] }
+
+const CATEGORIES_2026: CategoryMonthly[] = [
+  { id: 1, name: 'Spesa alimentare', monthly: [430, 450, 420, 480, 460] },
+  { id: 7, name: 'Ristoranti', monthly: [210, 240, 180, 360, 300] },
+  { id: 12, name: 'Viaggi', monthly: [0, 0, 0, 220, 120] },
+  { id: 3, name: 'Shopping', monthly: [130, 180, 150, 60, 90] },
+  { id: 9, name: 'Bollette', monthly: [190, 220, 210, 160, 205] },
+  { id: 15, name: 'Trasporti', monthly: [95, 100, 100, 110, 105] },
+  { id: 16, name: 'Abbonamenti', monthly: [45, 45, 45, 60, 45] },
+  { id: 17, name: 'Salute', monthly: [0, 80, 0, 0, 55] },
+  { id: 4, name: 'Caffè & bar', monthly: [25, 28, 22, 30, 27] },
+]
+
+// 12 plausible months with Nov/Dec baked to keep the original year-end narrative.
+const gen2025 = (nov: number, dec: number, base: number, wiggle: number) =>
+  Array.from({ length: 12 }, (_, i) =>
+    i === 10 ? nov : i === 11 ? dec : Math.max(0, Math.round(base + wiggle * Math.sin(i * 1.3)))
+  )
+
+const CATEGORIES_2025: CategoryMonthly[] = [
+  { id: 7, name: 'Ristoranti', monthly: gen2025(210, 410, 250, 40) },
+  { id: 14, name: 'Regali', monthly: gen2025(30, 290, 45, 20) },
+  { id: 1, name: 'Spesa alimentare', monthly: gen2025(460, 540, 480, 35) },
+  { id: 9, name: 'Bollette', monthly: gen2025(240, 180, 210, 25) },
+  { id: 3, name: 'Shopping', monthly: gen2025(320, 240, 280, 60) },
+  { id: 12, name: 'Viaggi', monthly: gen2025(40, 90, 70, 80) },
+  { id: 15, name: 'Trasporti', monthly: gen2025(100, 105, 100, 12) },
+]
+
+function categoriesFor(year: number): CategoryMonthly[] {
+  return year === 2025 ? CATEGORIES_2025 : CATEGORIES_2026
 }
 
 export const AVAILABLE_YEARS = [2026, 2025] as const
@@ -136,14 +164,26 @@ export function getYearData(year: number): MonthPoint[] {
 
 const NOISE_FLOOR = 15
 
-export function getMovers(year: number) {
-  const set = MOVERS[year] ?? MOVERS[2026]
-  const rows = set.rows
-    .map((r) => ({ ...r, delta: r.curr - r.prev }))
+// Default selected month = the LAST month that has transactions. We can't know whether a
+// month is "complete" — only what's been imported — so this is the only honest default.
+export function lastMonthIndex(year: number): number {
+  return getYearData(year).length - 1
+}
+
+// Top movers of `monthIndex` vs the previous month (defaults to the last month with data).
+export function getMovers(year: number, monthIndex?: number, limit = 5) {
+  const idx = monthIndex ?? lastMonthIndex(year)
+  const prevIdx = idx - 1
+  const currentLabel = MONTH_LABELS[idx] ?? ''
+  if (prevIdx < 0) {
+    return { current: currentLabel, previous: '', monthIndex: idx, rows: [] as (Mover & { delta: number })[] }
+  }
+  const rows = categoriesFor(year)
+    .map((c) => ({ id: c.id, name: c.name, prev: c.monthly[prevIdx], curr: c.monthly[idx], delta: c.monthly[idx] - c.monthly[prevIdx] }))
     .filter((r) => Math.abs(r.delta) >= NOISE_FLOOR)
     .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
-    .slice(0, 5)
-  return { current: set.current, previous: set.previous, rows }
+    .slice(0, limit)
+  return { current: currentLabel, previous: MONTH_LABELS[prevIdx], monthIndex: idx, rows }
 }
 
 export function usciteTotal(point: MonthPoint, hidden: Set<UsciteNature>): number {
@@ -156,6 +196,10 @@ export function incomeTotal(point: MonthPoint, hidden: Set<IncomeType>): number 
 
 export const eur = (n: number) =>
   new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+
+// Compact label for always-on bar labels (k-notation) — fits even with 12 months.
+export const eurCompact = (n: number) =>
+  n >= 1000 ? `${(n / 1000).toLocaleString('it-IT', { maximumFractionDigits: 1 })}k` : String(Math.round(n))
 
 export const eurSigned = (n: number) =>
   `${n > 0 ? '+' : n < 0 ? '−' : ''}${eur(Math.abs(n))}`

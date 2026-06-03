@@ -18,7 +18,7 @@ export function YearSelect({ year }: { year: number }) {
 
   return (
     <Select value={String(year)} onValueChange={update}>
-      <SelectTrigger aria-label="Anno" className="w-[120px]">
+      <SelectTrigger aria-label="Anno" className="mt-1 h-auto w-auto gap-1 rounded-full border px-3 py-1 text-sm font-medium">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
