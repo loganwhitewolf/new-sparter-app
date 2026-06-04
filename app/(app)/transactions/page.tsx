@@ -5,13 +5,16 @@ import {
 } from '@/lib/dal/transactions'
 import { getCategories } from '@/lib/dal/categories'
 import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
+import { getMonthsWithData } from '@/lib/dal/months-with-data'
 import {
   parseTransactionFilters,
   type TransactionSearchParams,
 } from '@/lib/validations/transactions'
-import { TransactionFilters } from '@/components/transactions/transaction-filters'
+import { DataTableToolbar } from '@/components/data-table/DataTableToolbar'
 import { TransactionFormDialog } from '@/components/transactions/transaction-form-dialog'
 import { TransactionTable } from '@/components/transactions/transaction-table'
+import { transactionsTableConfig } from '@/app/(app)/transactions/transactions.table'
+import { APP_ROUTES } from '@/lib/routes'
 
 function buildTransactionTableKey(
   params: TransactionSearchParams,
@@ -28,7 +31,20 @@ function buildTransactionTableKey(
     ].join(':'))
     .join('|')
 
-  return `${JSON.stringify(params)}:${dataKey}`
+  // Include Wave 4 filter keys so the table remounts when filters change (D-04)
+  const filterKey = [
+    params.q ?? '',
+    params.sort ?? '',
+    params.dir ?? '',
+    params.platform ?? '',
+    params.category ?? '',
+    params.months ?? '',
+    params.amountMin ?? '',
+    params.amountMax ?? '',
+    params.status ?? '',
+  ].join(':')
+
+  return `${filterKey}:${dataKey}`
 }
 
 export default async function TransactionsPage({
@@ -38,12 +54,18 @@ export default async function TransactionsPage({
 }) {
   const params = await searchParams
   const filters = parseTransactionFilters(params)
-  const [transactions, platforms, categories, mostUsed] = await Promise.all([
+  const [transactions, platforms, categories, mostUsed, monthsWithData] = await Promise.all([
     getTransactions(filters),
     getTransactionPlatforms(),
     getCategories(),
     getMostUsedSubcategories(['in', 'out', 'transfer', 'system']),
+    getMonthsWithData('transactions'),
   ])
+
+  const platformOptions = platforms.map((p) => ({ value: p.slug, label: p.name }))
+  const categoryOptions = categories
+    .filter((c) => c.type !== 'system')
+    .map((c) => ({ value: c.slug, label: c.name }))
 
   return (
     <div className="flex flex-col gap-6">
@@ -61,7 +83,15 @@ export default async function TransactionsPage({
       <Suspense
         fallback={<div className="h-24 rounded-xl bg-muted animate-pulse" />}
       >
-        <TransactionFilters filters={filters} platforms={platforms} categories={categories} />
+        <DataTableToolbar
+          config={transactionsTableConfig}
+          route={APP_ROUTES.transactions}
+          monthsWithData={monthsWithData}
+          filterOptions={{
+            platform: platformOptions,
+            category: categoryOptions,
+          }}
+        />
       </Suspense>
 
       <TransactionTable

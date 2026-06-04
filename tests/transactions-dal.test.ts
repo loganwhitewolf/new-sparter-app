@@ -418,11 +418,19 @@ describe('transaction DAL query helpers', () => {
     await getTransactions({ months: ['2026-04', '2026-05'] })
 
     const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    // Find the OR whose every arg is a sql node (months OR), not the file-ownership OR
     const monthsCondition = where.args.find(
-      (arg) =>
-        typeof arg === 'object' &&
-        arg !== null &&
-        (arg as { op?: string }).op === 'or',
+      (arg) => {
+        if (typeof arg !== 'object' || arg === null) return false
+        const a = arg as { op?: string; args?: unknown[] }
+        if (a.op !== 'or' || !Array.isArray(a.args)) return false
+        return a.args.every(
+          (inner) =>
+            typeof inner === 'object' &&
+            inner !== null &&
+            (inner as { op?: string }).op === 'sql',
+        )
+      },
     ) as { op: string; args: { op: string; strings: string[]; values: unknown[] }[] } | undefined
 
     expect(monthsCondition).toBeDefined()
@@ -438,11 +446,19 @@ describe('transaction DAL query helpers', () => {
     await getTransactions({ months: ['2026-01'] })
 
     const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    // Find OR where every inner arg is sql (months OR)
     const monthsCondition = where.args.find(
-      (arg) =>
-        typeof arg === 'object' &&
-        arg !== null &&
-        (arg as { op?: string }).op === 'or',
+      (arg) => {
+        if (typeof arg !== 'object' || arg === null) return false
+        const a = arg as { op?: string; args?: unknown[] }
+        if (a.op !== 'or' || !Array.isArray(a.args)) return false
+        return a.args.every(
+          (inner) =>
+            typeof inner === 'object' &&
+            inner !== null &&
+            (inner as { op?: string }).op === 'sql',
+        )
+      },
     ) as { op: string; args: { op: string; strings: string[]; values: unknown[] }[] } | undefined
 
     expect(monthsCondition).toBeDefined()

@@ -1,6 +1,6 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import {
@@ -54,10 +54,11 @@ export type TransactionFilters = {
   subCategoryId?: number
   sort?: TransactionSort
   dir?: TransactionSortDirection
-  // Forward-looking optional keys for Wave 4 filter wiring (D-40-01):
+  // Wave 4 filter conditions (D-19..D-25):
   months?: string[]
   amountMin?: string
   amountMax?: string
+  status?: 'uncategorized' | 'categorized'
 }
 
 export const transactionListSelect = {
@@ -186,6 +187,29 @@ export const getTransactions = cache(
 
     if (filters.subCategoryId) {
       conditions.push(eq(subCategory.id, filters.subCategoryId))
+    }
+
+    // Wave 4: months filter — OR across TO_CHAR(occurredAt, 'YYYY-MM') = ym (D-07/D-08)
+    if (filters.months && filters.months.length > 0) {
+      conditions.push(
+        or(...filters.months.map((ym) => sql`TO_CHAR(${transaction.occurredAt}, 'YYYY-MM') = ${ym}`)),
+      )
+    }
+
+    // Wave 4: amount range — absolute value (D-20)
+    if (filters.amountMin) {
+      conditions.push(sql`ABS(${transaction.amount}::numeric) >= ${filters.amountMin}::numeric`)
+    }
+    if (filters.amountMax) {
+      conditions.push(sql`ABS(${transaction.amount}::numeric) <= ${filters.amountMax}::numeric`)
+    }
+
+    // Wave 4: categorization status (D-21/D-23)
+    if (filters.status === 'uncategorized') {
+      conditions.push(isNull(expense.subCategoryId))
+    }
+    if (filters.status === 'categorized') {
+      conditions.push(isNotNull(expense.subCategoryId))
     }
 
     return db
