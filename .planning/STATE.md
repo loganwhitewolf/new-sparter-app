@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: milestone
-status: Awaiting next milestone
+status: executing
 stopped_at: Phase 39 complete — milestone v1.13 done
-last_updated: "2026-06-04T16:14:48.376Z"
-last_activity: 2026-06-02 — Milestone v1.13 completed and archived
+last_updated: "2026-06-04T16:29:06.135Z"
+last_activity: 2026-06-04 -- Phase 40 Plan 01 complete
 progress:
   total_phases: 1
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  completed_phases: 0
+  total_plans: 5
+  completed_plans: 1
+  percent: 20
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** v1.13 complete — planning next milestone
+**Current focus:** Phase 40 — table-filter-sort
 
 ## Current Position
 
-Phase: Milestone v1.13 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-02 — Milestone v1.13 completed and archived
+Phase: 40 (table-filter-sort) — EXECUTING
+Plan: 2 of 5
+Status: Executing Phase 40
+Last activity: 2026-06-04 -- Plan 01 complete (types + parsers + id tiebreaker)
 
 ## Accumulated Context
 
@@ -66,6 +66,14 @@ v1.13 / Phase 39 decisions:
 - `getMostUsedSubcategories` DAL: top ~6 per-user by categorization count, scoped by allowed category types, hidden at cold-start
 - Old pickers deleted: `CategoryCombobox`, onboarding `SubcategoryCombobox`, cascading `Select` pairs
 - Prototype route `app/(app)/prototype/subcategory-picker/` deleted on final plan merge
+
+v1.14 / Phase 40 Plan 01 decisions (2026-06-04):
+
+- `TableConfig` / `FilterField` / `SortColumn` types live in `lib/utils/table-config.ts` (types only, no runtime)
+- URL param parsers are total functions (never throw); invalid tokens silently dropped (T-40-01 mitigated)
+- `buildTransactionOrderBy` returns `SQL[]` array — call site uses spread `.orderBy(...buildTransactionOrderBy(filters))`
+- `id` tiebreaker is always the LAST element in every DAL `orderBy` array (D-06)
+- `TransactionFilters` extended with `months?/amountMin?/amountMax?` now; WHERE clauses deferred to Wave 4
 
 v1.11 / Phase 37 decisions:
 
@@ -114,11 +122,11 @@ Items acknowledged and deferred at milestone close on 2026-06-02:
 
 ## Session Continuity
 
-Last session: 2026-06-02
-Stopped at: Phase 39 complete — milestone v1.13 done
+Last session: 2026-06-04
+Stopped at: Phase 40 Plan 01 complete — foundation wave shipped
 Resume file: None
 
-**Next:** Start the next milestone when ready.
+**Next:** Execute Phase 40 Plan 02 (Wave 2 — DataTableToolbar shared UI).
 
 ## Operator Next Steps
 
