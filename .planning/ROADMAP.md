@@ -92,9 +92,9 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 | 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
 | 39 | v1.13 | 6/6 | Complete    | 2026-06-02 |
 
-| 40 | v1.14 | 1/5 | Executing | — |
+| 40 | v1.14 | 2/5 | Executing | — |
 
-**Total: 38 phases shipped · 144 plans complete**
+**Total: 38 phases shipped · 145 plans complete**
 
 <details>
 <summary>🚧 v1.14: Unified Table Filter & Sort (Phase 40) — IN PROGRESS</summary>
@@ -107,7 +107,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 Plans:
 - [x] 40-01-PLAN.md — Foundation: shared TableConfig types + URL param parsers + id tiebreaker on transactions/imports DAL *(complete 2026-06-04)*
-- [ ] 40-02-PLAN.md — Shared UI: DataTableToolbar + HeaderSortButton + ChipsRow + URL-mutation hook (mock config)
+- [x] 40-02-PLAN.md — Shared UI: DataTableToolbar + HeaderSortButton + ChipsRow + URL-mutation hook (mock config) *(complete 2026-06-04)*
 - [ ] 40-03-PLAN.md — New controls: getMonthsWithData DAL + MonthMultiPicker + AmountRangePicker, wired into toolbar
 - [ ] 40-04-PLAN.md — Wire per-table configs + DAL filters for Transactions, Expenses, Files
 - [ ] 40-05-PLAN.md — Polish: empty states, a11y pass, URL migration, prototype deletion, yarn build green

@@ -4,14 +4,14 @@ milestone: v1.12
 milestone_name: milestone
 status: executing
 stopped_at: Phase 39 complete — milestone v1.13 done
-last_updated: "2026-06-04T16:29:06.135Z"
-last_activity: 2026-06-04 -- Phase 40 Plan 01 complete
+last_updated: "2026-06-04T18:51:00.000Z"
+last_activity: 2026-06-04 -- Phase 40 Plan 02 complete
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
-  percent: 20
+  completed_plans: 2
+  percent: 40
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 ## Current Position
 
 Phase: 40 (table-filter-sort) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Executing Phase 40
-Last activity: 2026-06-04 -- Plan 01 complete (types + parsers + id tiebreaker)
+Last activity: 2026-06-04 -- Plan 02 complete (DataTableToolbar shared UI)
 
 ## Accumulated Context
 
@@ -74,6 +74,14 @@ v1.14 / Phase 40 Plan 01 decisions (2026-06-04):
 - `buildTransactionOrderBy` returns `SQL[]` array — call site uses spread `.orderBy(...buildTransactionOrderBy(filters))`
 - `id` tiebreaker is always the LAST element in every DAL `orderBy` array (D-06)
 - `TransactionFilters` extended with `months?/amountMin?/amountMax?` now; WHERE clauses deferred to Wave 4
+
+v1.14 / Phase 40 Plan 02 decisions (2026-06-04):
+
+- `useTableUrl(route)` hook: replaceWith/updateParam/updateParams, scroll:false, used by DataTableToolbar
+- `nextSort(current, key)` pure helper: inactive→DESC, active DESC→ASC, active ASC→off (D-13)
+- `useToolbarSort(route)` exported from DataTableToolbar for desktop HeaderSortButton wiring
+- Tests use renderToStaticMarkup + vi.mock factory (project pattern, not @testing-library/react)
+- month-multi and amount-range render as placeholders in Wave 2; Wave 3 swaps in real pickers
 
 v1.11 / Phase 37 decisions:
 
@@ -123,10 +131,10 @@ Items acknowledged and deferred at milestone close on 2026-06-02:
 ## Session Continuity
 
 Last session: 2026-06-04
-Stopped at: Phase 40 Plan 01 complete — foundation wave shipped
+Stopped at: Phase 40 Plan 02 complete — DataTableToolbar shared UI shipped
 Resume file: None
 
-**Next:** Execute Phase 40 Plan 02 (Wave 2 — DataTableToolbar shared UI).
+**Next:** Execute Phase 40 Plan 03 (Wave 3 — MonthMultiPicker + AmountRangePicker + getMonthsWithData DAL).
 
 ## Operator Next Steps
 
