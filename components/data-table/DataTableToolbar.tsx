@@ -238,6 +238,9 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions 
   // amount-range: single chip from amountMin and/or amountMax.
   const chips = config.filters
     .filter((field) => {
+      if (field.type === 'amount-range') {
+        return searchParams.has('amountMin') || searchParams.has('amountMax')
+      }
       const v = searchParams.get(field.key)
       return v !== null && v !== ''
     })
@@ -267,10 +270,13 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions 
       return [{ key: field.key, label: field.toChip(raw), onRemove: () => updateParam(field.key, null) }]
     })
 
-  // "Cancella tutto": clear all filter keys (not q, not sort/dir) in one write.
+  // "Cancella tutto": clear all filter keys (including q) in one write.
   // amount-range fields map to amountMin/amountMax — clear both.
   function clearAllFilters() {
     const entries: Record<string, null> = {}
+    if (config.search) {
+      entries[config.search.key] = null
+    }
     for (const field of config.filters) {
       if (field.type === 'amount-range') {
         entries['amountMin'] = null
@@ -311,6 +317,7 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions 
         {/* Search input (desktop + mobile) */}
         {config.search && (
           <Input
+            key={searchParams.get('q') ?? ''}
             type="search"
             placeholder={config.search.placeholder}
             defaultValue={searchParams.get('q') ?? ''}
