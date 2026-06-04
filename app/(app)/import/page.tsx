@@ -107,6 +107,7 @@ export default async function ImportPage({
           <ImportTable
             key={filterKey}
             imports={imports}
+            route={APP_ROUTES.import}
             loadError={importHistoryLoadError}
             filters={filters}
             searchParams={rawSearchParams}

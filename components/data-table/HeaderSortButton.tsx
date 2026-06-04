@@ -10,6 +10,7 @@ type Props = {
   activeSort?: string
   activeDir?: 'asc' | 'desc'
   align?: 'left' | 'right'
+  className?: string
   onSort: (key: string) => void
 }
 
@@ -20,11 +21,12 @@ type Props = {
  * Sort cycle (Variant A, D-13): click inactive column → DESC; click active
  * DESC → ASC; click active ASC → off (params deleted = back to defaultSort).
  */
-export function HeaderSortButton({ column, activeSort, activeDir, align, onSort }: Props) {
+export function HeaderSortButton({ column, activeSort, activeDir, align, className, onSort }: Props) {
   const active = activeSort === column.key
 
   return (
     <TableHead
+      className={className}
       aria-sort={active ? (activeDir === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
       <button

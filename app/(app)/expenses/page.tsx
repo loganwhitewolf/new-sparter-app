@@ -117,6 +117,7 @@ export default async function ExpensesPage({
         <ExpenseTable
           key={buildExpenseTableKey(filters, expenses)}
           expenses={expenses}
+          route={APP_ROUTES.expenses}
           categories={categories}
           mostUsed={mostUsed}
           filters={filters}

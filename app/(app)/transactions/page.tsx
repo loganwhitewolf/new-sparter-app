@@ -120,7 +120,7 @@ export default async function TransactionsPage({
         <TransactionTable
           key={buildTransactionTableKey(params, transactions)}
           transactions={transactions}
-          filters={filters}
+          route={APP_ROUTES.transactions}
           searchParams={params}
           categories={categories}
           mostUsed={mostUsed}
