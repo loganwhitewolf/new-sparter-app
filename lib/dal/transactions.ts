@@ -245,13 +245,13 @@ export const getTransactionPlatforms = cache(
     return db
       .selectDistinct(transactionPlatformSelect)
       .from(transaction)
-      .leftJoin(importFile, eq(transaction.fileId, importFile.id))
-      .leftJoin(
+      .innerJoin(importFile, and(eq(transaction.fileId, importFile.id), eq(importFile.userId, userId)))
+      .innerJoin(
         importFormatVersion,
         eq(importFile.importFormatVersionId, importFormatVersion.id),
       )
       .innerJoin(platform, eq(importFormatVersion.platformId, platform.id))
-      .where(and(eq(transaction.userId, userId), eq(importFile.userId, userId)))
+      .where(eq(transaction.userId, userId))
       .orderBy(asc(platform.name))
   },
 )
