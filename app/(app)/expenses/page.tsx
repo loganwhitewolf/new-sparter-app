@@ -1,17 +1,24 @@
 import { Suspense } from 'react'
-import { getExpenses, type ExpenseFilters as ExpenseListFilters } from '@/lib/dal/expenses'
+import { getExpenses } from '@/lib/dal/expenses'
 import { getCategories } from '@/lib/dal/categories'
+import { getTransactionPlatforms } from '@/lib/dal/transactions'
 import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
-import { ExpenseFilters } from '@/components/expenses/expense-filters'
+import { parseExpenseFilters, type ExpenseSearchParams } from '@/lib/validations/expense'
+import type { ExpenseFilters as ExpenseListFilters } from '@/lib/dal/expenses'
+import { DataTableToolbar } from '@/components/data-table/DataTableToolbar'
 import { ExpenseTable } from '@/components/expenses/expense-table'
 import { ExpenseFormDialog } from '@/components/expenses/expense-form-dialog'
+import { expensesTableConfig } from '@/app/(app)/expenses/expenses.table'
+import { APP_ROUTES } from '@/lib/routes'
 
 function buildExpenseTableKey(filters: ExpenseListFilters, expenses: Awaited<ReturnType<typeof getExpenses>>) {
   const filterKey = [
+    filters.q ?? '',
     filters.categorySlug ?? '',
     filters.status ?? '',
-    filters.period ?? '',
-    filters.name ?? '',
+    filters.platform ?? '',
+    filters.amountMin ?? '',
+    filters.amountMax ?? '',
     filters.sort ?? '',
     filters.dir ?? '',
   ].join(':')
@@ -30,37 +37,36 @@ function buildExpenseTableKey(filters: ExpenseListFilters, expenses: Awaited<Ret
 export default async function ExpensesPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    category?: string
-    status?: string
-    period?: string
-    name?: string
-    sort?: string
-    dir?: string
-  }>
+  searchParams: Promise<ExpenseSearchParams>
 }) {
   const params = await searchParams
-  const rawName = params.name?.trim()
+  const parsed = parseExpenseFilters(params)
+
+  // Map parsed filters to DAL ExpenseFilters shape
   const filters: ExpenseListFilters = {
-    categorySlug: params.category,
-    status: params.status as 'uncategorized' | 'categorized' | undefined,
-    period: params.period as
-      | 'this-month'
-      | 'last-3-months'
-      | 'last-6-months'
-      | 'this-year'
-      | 'last-year'
-      | undefined,
-    name: rawName && rawName.length <= 200 ? rawName : undefined,
-    sort: params.sort === 'totalAmount' ? 'totalAmount' : undefined,
-    dir: params.dir === 'asc' ? 'asc' : undefined,
+    q: parsed.q,
+    name: parsed.q,
+    categorySlug: parsed.categorySlug,
+    platform: parsed.platform,
+    status: parsed.status,
+    amountMin: parsed.amountMin,
+    amountMax: parsed.amountMax,
+    sort: parsed.sort,
+    dir: parsed.dir,
+    // No period — D-05: default view is all-time
   }
 
-  const [expenses, categories, mostUsed] = await Promise.all([
+  const [expenses, categories, platforms, mostUsed] = await Promise.all([
     getExpenses(filters),
     getCategories(),
+    getTransactionPlatforms(),
     getMostUsedSubcategories(['in', 'out', 'transfer', 'system']),
   ])
+
+  const categoryOptions = categories
+    .filter((c) => c.type !== 'system')
+    .map((c) => ({ value: c.slug, label: c.name }))
+  const platformOptions = platforms.map((p) => ({ value: p.slug, label: p.name }))
 
   return (
     <div className="flex flex-col gap-6">
@@ -75,7 +81,14 @@ export default async function ExpensesPage({
       </div>
 
       <Suspense fallback={<div className="h-10 rounded-md bg-muted animate-pulse" />}>
-        <ExpenseFilters categories={categories} />
+        <DataTableToolbar
+          config={expensesTableConfig}
+          route={APP_ROUTES.expenses}
+          filterOptions={{
+            category: categoryOptions,
+            platform: platformOptions,
+          }}
+        />
       </Suspense>
 
       <ExpenseTable

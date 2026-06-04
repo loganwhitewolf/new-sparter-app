@@ -83,6 +83,21 @@ vi.mock('@/lib/db/schema', () => ({
     updatedAt: 'expense.updatedAt',
     userId: 'expense.userId',
     subCategoryId: 'expense.subCategoryId',
+    importedFromFileId: 'expense.importedFromFileId',
+  },
+  file: {
+    id: 'file.id',
+    userId: 'file.userId',
+    importFormatVersionId: 'file.importFormatVersionId',
+  },
+  importFormatVersion: {
+    id: 'importFormatVersion.id',
+    platformId: 'importFormatVersion.platformId',
+  },
+  platform: {
+    id: 'platform.id',
+    name: 'platform.name',
+    slug: 'platform.slug',
   },
   subCategory: {
     id: 'subCategory.id',
@@ -132,13 +147,8 @@ describe('expense DAL list pagination', () => {
       op: 'and',
       args: expect.arrayContaining([
         { op: 'eq', left: 'expense.userId', right: 'user-1' },
-        {
-          op: 'or',
-          args: [
-            { op: 'eq', left: 'expense.status', right: '2' },
-            { op: 'eq', left: 'expense.status', right: '3' },
-          ],
-        },
+        // Wave 4: status categorized → inArray(['2','3'])
+        { op: 'inArray', left: 'expense.status', right: ['2', '3'] },
       ]),
     })
   })
@@ -176,7 +186,7 @@ describe('expense DAL list pagination', () => {
   })
 
   it('date range is applied only when period is explicitly passed', async () => {
-    await getExpenses({ period: 'this-month' })
+    await getExpenses({ period: 'last-3-months' })
 
     const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
     // period set → gte + lte should be added
