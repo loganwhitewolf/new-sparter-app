@@ -29,7 +29,7 @@ export function useTableUrl(route: string) {
 
   function updateParam(key: string, value: string | null) {
     const params = new URLSearchParams(searchParams.toString())
-    if (value) {
+    if (value !== null) {
       params.set(key, value)
     } else {
       params.delete(key)
@@ -40,7 +40,7 @@ export function useTableUrl(route: string) {
   function updateParams(entries: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString())
     for (const [key, value] of Object.entries(entries)) {
-      if (value) {
+      if (value !== null) {
         params.set(key, value)
       } else {
         params.delete(key)
