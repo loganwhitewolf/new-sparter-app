@@ -33,8 +33,10 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { AmountRangePicker } from '@/components/data-table/AmountRangePicker'
 import { ChipsRow } from '@/components/data-table/ChipsRow'
 import { nextSort } from '@/components/data-table/HeaderSortButton'
+import { monthLabel, MonthMultiPicker } from '@/components/data-table/MonthMultiPicker'
 import { useTableUrl } from '@/components/data-table/use-table-url'
 import type { FilterField, TableConfig } from '@/lib/utils/table-config'
 
@@ -52,13 +54,19 @@ type Props = {
 /**
  * Count active filter params from URLSearchParams.
  * Excludes: 'q' (search), 'sort', 'dir'.
+ * amount-range fields map to amountMin / amountMax (either present counts as 1 active filter).
  */
 function countActiveFilters(searchParams: URLSearchParams, filters: FilterField[]): number {
-  const filterKeys = new Set(filters.map((f) => f.key))
   let count = 0
-  for (const key of filterKeys) {
+  for (const field of filters) {
+    const key = field.key
     if (key === 'q' || key === 'sort' || key === 'dir') continue
-    if (searchParams.has(key)) count++
+    if (field.type === 'amount-range') {
+      // amount-range is active when amountMin or amountMax is set
+      if (searchParams.has('amountMin') || searchParams.has('amountMax')) count++
+    } else {
+      if (searchParams.has(key)) count++
+    }
   }
   return count
 }
@@ -69,12 +77,18 @@ function FilterField({
   field,
   value,
   options,
+  monthsWithData,
+  searchParams,
   onChange,
+  onParamChange,
 }: {
   field: FilterField
   value: string | null
   options?: { value: string; label: string }[]
+  monthsWithData?: string[]
+  searchParams: URLSearchParams
   onChange: (v: string | null) => void
+  onParamChange: (key: string, v: string | null) => void
 }) {
   if (field.type === 'select' || field.type === 'multi-select') {
     const resolvedOptions = options ?? field.options ?? []
@@ -135,15 +149,16 @@ function FilterField({
     )
   }
 
-  // 'month-multi' and 'amount-range' — placeholder for Wave 3 pickers.
-  // Reads/writes correct URL keys so wiring is ready.
   if (field.type === 'month-multi') {
+    const selectedMonths = searchParams.get('months')?.split(',').filter(Boolean) ?? []
     return (
       <div className="grid gap-1.5">
         <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
-        <div className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
-          Selettore mesi — Wave 3
-        </div>
+        <MonthMultiPicker
+          value={selectedMonths}
+          monthsWithData={monthsWithData ?? []}
+          onChange={(m) => onParamChange('months', m.length ? m.join(',') : null)}
+        />
       </div>
     )
   }
@@ -152,9 +167,12 @@ function FilterField({
     return (
       <div className="grid gap-1.5">
         <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
-        <div className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
-          Range importo — Wave 3
-        </div>
+        <AmountRangePicker
+          min={searchParams.get('amountMin') ?? ''}
+          max={searchParams.get('amountMax') ?? ''}
+          onMin={(v) => onParamChange('amountMin', v || null)}
+          onMax={(v) => onParamChange('amountMax', v || null)}
+        />
       </div>
     )
   }
@@ -168,11 +186,13 @@ function FilterPanel({
   config,
   searchParams,
   filterOptions,
+  monthsWithData,
   updateParam,
 }: {
   config: TableConfig
   searchParams: URLSearchParams
   filterOptions?: Record<string, { value: string; label: string }[]>
+  monthsWithData?: string[]
   updateParam: (key: string, value: string | null) => void
 }) {
   return (
@@ -183,7 +203,10 @@ function FilterPanel({
           field={field}
           value={searchParams.get(field.key)}
           options={filterOptions?.[field.key]}
+          monthsWithData={monthsWithData}
+          searchParams={searchParams}
           onChange={(v) => updateParam(field.key, v)}
+          onParamChange={updateParam}
         />
       ))}
     </div>
@@ -192,7 +215,7 @@ function FilterPanel({
 
 // ---- Main component --------------------------------------------------------
 
-export function DataTableToolbar({ config, route, monthsWithData: _monthsWithData, filterOptions }: Props) {
+export function DataTableToolbar({ config, route, monthsWithData, filterOptions }: Props) {
   const { searchParams, isPending, updateParam, updateParams } = useTableUrl(route)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
@@ -201,23 +224,51 @@ export function DataTableToolbar({ config, route, monthsWithData: _monthsWithDat
   // Active filter count (excludes q/sort/dir)
   const activeCount = countActiveFilters(searchParams, config.filters)
 
-  // Build chips from active filter params
+  // Build chips from active filter params.
+  // month-multi: one chip per selected YYYY-MM, displayed as "Mag 2026" via monthLabel.
+  // amount-range: single chip from amountMin and/or amountMax.
   const chips = config.filters
     .filter((field) => {
       const v = searchParams.get(field.key)
       return v !== null && v !== ''
     })
-    .map((field) => ({
-      key: field.key,
-      label: field.toChip(searchParams.get(field.key)!),
-      onRemove: () => updateParam(field.key, null),
-    }))
+    .flatMap((field) => {
+      const raw = searchParams.get(field.key)!
+      if (field.type === 'month-multi') {
+        const months = raw.split(',').filter(Boolean)
+        // Produce one chip per month for granular removal
+        return months.map((ym) => ({
+          key: `months:${ym}`,
+          label: monthLabel(ym),
+          onRemove: () => {
+            const remaining = months.filter((m) => m !== ym)
+            updateParam('months', remaining.length ? remaining.join(',') : null)
+          },
+        }))
+      }
+      if (field.type === 'amount-range') {
+        // amount-range is spread across amountMin/amountMax — emit one chip per set value
+        const chips: { key: string; label: string; onRemove: () => void }[] = []
+        const min = searchParams.get('amountMin')
+        const max = searchParams.get('amountMax')
+        if (min) chips.push({ key: 'amountMin', label: `Min ${min} €`, onRemove: () => updateParam('amountMin', null) })
+        if (max) chips.push({ key: 'amountMax', label: `Max ${max} €`, onRemove: () => updateParam('amountMax', null) })
+        return chips
+      }
+      return [{ key: field.key, label: field.toChip(raw), onRemove: () => updateParam(field.key, null) }]
+    })
 
-  // "Cancella tutto": clear all filter keys (not q, not sort/dir) in one write
+  // "Cancella tutto": clear all filter keys (not q, not sort/dir) in one write.
+  // amount-range fields map to amountMin/amountMax — clear both.
   function clearAllFilters() {
     const entries: Record<string, null> = {}
     for (const field of config.filters) {
-      entries[field.key] = null
+      if (field.type === 'amount-range') {
+        entries['amountMin'] = null
+        entries['amountMax'] = null
+      } else {
+        entries[field.key] = null
+      }
     }
     updateParams(entries)
   }
@@ -274,6 +325,7 @@ export function DataTableToolbar({ config, route, monthsWithData: _monthsWithDat
                 config={config}
                 searchParams={searchParams}
                 filterOptions={filterOptions}
+                monthsWithData={monthsWithData}
                 updateParam={updateParam}
               />
             </PopoverContent>
@@ -317,6 +369,7 @@ export function DataTableToolbar({ config, route, monthsWithData: _monthsWithDat
               config={config}
               searchParams={searchParams}
               filterOptions={filterOptions}
+              monthsWithData={monthsWithData}
               updateParam={updateParam}
             />
           </div>
