@@ -85,6 +85,7 @@ vi.mock('drizzle-orm', () => ({
   gte: (left: unknown, right: unknown) => ({ op: 'gte', left, right }),
   inArray: (left: unknown, right: unknown) => ({ op: 'inArray', left, right }),
   isNull: (column: unknown) => ({ op: 'isNull', column }),
+  isNotNull: (column: unknown) => ({ op: 'isNotNull', column }),
   lte: (left: unknown, right: unknown) => ({ op: 'lte', left, right }),
   or: (...args: unknown[]) => ({ op: 'or', args }),
   sql: Object.assign(mockSql, {
@@ -409,6 +410,125 @@ describe('transaction DAL query helpers', () => {
       ]),
     })
     expect(mocks.orderByArgs[0]).toEqual({ op: 'asc', column: 'transaction.amount' })
+  })
+
+  // ── Wave 4: new filter conditions ──────────────────────────────────────────
+
+  it('months filter adds OR(TO_CHAR(occurredAt, YYYY-MM) = ym) for each month', async () => {
+    await getTransactions({ months: ['2026-04', '2026-05'] })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    const monthsCondition = where.args.find(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as { op?: string }).op === 'or',
+    ) as { op: string; args: { op: string; strings: string[]; values: unknown[] }[] } | undefined
+
+    expect(monthsCondition).toBeDefined()
+    expect(monthsCondition!.args).toHaveLength(2)
+    // Each element is a sql`` template node containing YYYY-MM values
+    expect(monthsCondition!.args[0].op).toBe('sql')
+    expect(monthsCondition!.args[0].values).toContain('2026-04')
+    expect(monthsCondition!.args[1].op).toBe('sql')
+    expect(monthsCondition!.args[1].values).toContain('2026-05')
+  })
+
+  it('single month produces OR with one sql node containing TO_CHAR and the month', async () => {
+    await getTransactions({ months: ['2026-01'] })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    const monthsCondition = where.args.find(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as { op?: string }).op === 'or',
+    ) as { op: string; args: { op: string; strings: string[]; values: unknown[] }[] } | undefined
+
+    expect(monthsCondition).toBeDefined()
+    expect(monthsCondition!.args[0].op).toBe('sql')
+    const sqlText = monthsCondition!.args[0].strings.join('')
+    expect(sqlText).toContain('YYYY-MM')
+    expect(monthsCondition!.args[0].values).toContain('2026-01')
+  })
+
+  it('amountMin adds ABS(amount::numeric) >= amountMin::numeric sql condition', async () => {
+    await getTransactions({ amountMin: '10' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    const amountMinCondition = where.args.find(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as { op?: string }).op === 'sql' &&
+        ((arg as { strings?: string[] }).strings ?? []).join('').includes('ABS'),
+    ) as { op: string; strings: string[]; values: unknown[] } | undefined
+
+    expect(amountMinCondition).toBeDefined()
+    const text = amountMinCondition!.strings.join('')
+    expect(text).toContain('ABS')
+    expect(text).toContain('>=')
+    expect(amountMinCondition!.values).toContain('10')
+  })
+
+  it('amountMax adds ABS(amount::numeric) <= amountMax::numeric sql condition', async () => {
+    await getTransactions({ amountMax: '200' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    const amountMaxCondition = where.args.find(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as { op?: string }).op === 'sql' &&
+        ((arg as { strings?: string[] }).strings ?? []).join('').includes('<='),
+    ) as { op: string; strings: string[]; values: unknown[] } | undefined
+
+    expect(amountMaxCondition).toBeDefined()
+    expect(amountMaxCondition!.values).toContain('200')
+  })
+
+  it('status uncategorized adds isNull(expense.subCategoryId)', async () => {
+    await getTransactions({ status: 'uncategorized' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.args).toEqual(
+      expect.arrayContaining([
+        { op: 'isNull', column: 'expense.subCategoryId' },
+      ]),
+    )
+  })
+
+  it('status categorized adds isNotNull(expense.subCategoryId)', async () => {
+    await getTransactions({ status: 'categorized' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.args).toEqual(
+      expect.arrayContaining([
+        { op: 'isNotNull', column: 'expense.subCategoryId' },
+      ]),
+    )
+  })
+
+  it('no months condition added when months array is empty', async () => {
+    await getTransactions({ months: [] })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    // The only OR in the where should be the file ownership OR, not a months OR
+    const orConditions = where.args.filter(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as { op?: string }).op === 'or',
+    ) as { op: string; args: unknown[] }[]
+
+    // The only OR should be the file ownership one (fileId IS NULL OR file.userId = user-1)
+    expect(orConditions).toHaveLength(1)
+    const fileOwnershipOr = orConditions[0]
+    expect(fileOwnershipOr.args).toEqual(
+      expect.arrayContaining([
+        { op: 'isNull', column: 'transaction.fileId' },
+      ]),
+    )
   })
 })
 
