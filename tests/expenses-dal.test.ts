@@ -61,6 +61,8 @@ vi.mock('drizzle-orm', () => ({
   desc: (column: unknown) => ({ op: 'desc', column }),
   eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
   gte: (left: unknown, right: unknown) => ({ op: 'gte', left, right }),
+  ilike: (left: unknown, right: unknown) => ({ op: 'ilike', left, right }),
+  inArray: (left: unknown, right: unknown) => ({ op: 'inArray', left, right }),
   lte: (left: unknown, right: unknown) => ({ op: 'lte', left, right }),
   or: (...args: unknown[]) => ({ op: 'or', args }),
   sql: Object.assign(mockSql, {}),
@@ -148,5 +150,101 @@ describe('expense DAL list pagination', () => {
       { op: 'asc', column: 'expense.totalAmount' },
       { op: 'asc', column: 'expense.id' },
     ])
+  })
+
+  // ── Wave 4: this-month default removed (D-05) ──────────────────────────────
+
+  it('no date clamp applied when no period filter is passed (D-05 — this-month default removed)', async () => {
+    await getExpenses({})
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    // Should only have the userId condition (no gte/lte date predicates)
+    const hasGte = where.args.some(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as { op?: string }).op === 'gte',
+    )
+    const hasLte = where.args.some(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as { op?: string }).op === 'lte',
+    )
+    expect(hasGte).toBe(false)
+    expect(hasLte).toBe(false)
+  })
+
+  it('date range is applied only when period is explicitly passed', async () => {
+    await getExpenses({ period: 'this-month' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    // period set → gte + lte should be added
+    const hasGte = where.args.some(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as { op?: string }).op === 'gte',
+    )
+    expect(hasGte).toBe(true)
+  })
+
+  // ── Wave 4: status 4 → uncategorized bucket (O-01) ────────────────────────
+
+  it("status 'uncategorized' maps to inArray(expense.status, ['1','4']) — O-01", async () => {
+    await getExpenses({ status: 'uncategorized' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.args).toEqual(
+      expect.arrayContaining([
+        { op: 'inArray', left: 'expense.status', right: ['1', '4'] },
+      ]),
+    )
+  })
+
+  it("status 'categorized' maps to inArray(expense.status, ['2','3'])", async () => {
+    await getExpenses({ status: 'categorized' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.args).toEqual(
+      expect.arrayContaining([
+        { op: 'inArray', left: 'expense.status', right: ['2', '3'] },
+      ]),
+    )
+  })
+
+  // ── Wave 4: amountMin/amountMax ABS conditions ─────────────────────────────
+
+  it('amountMin adds ABS(totalAmount::numeric) >= amountMin::numeric condition', async () => {
+    await getExpenses({ amountMin: '50' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    const amountMinCondition = where.args.find(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as { op?: string }).op === 'sql' &&
+        ((arg as { strings?: string[] }).strings ?? []).join('').includes('>='),
+    ) as { op: string; strings: string[]; values: unknown[] } | undefined
+
+    expect(amountMinCondition).toBeDefined()
+    expect(amountMinCondition!.strings.join('')).toContain('ABS')
+    expect(amountMinCondition!.values).toContain('50')
+  })
+
+  it('amountMax adds ABS(totalAmount::numeric) <= amountMax::numeric condition', async () => {
+    await getExpenses({ amountMax: '500' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    const amountMaxCondition = where.args.find(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as { op?: string }).op === 'sql' &&
+        ((arg as { strings?: string[] }).strings ?? []).join('').includes('<='),
+    ) as { op: string; strings: string[]; values: unknown[] } | undefined
+
+    expect(amountMaxCondition).toBeDefined()
+    expect(amountMaxCondition!.values).toContain('500')
   })
 })
