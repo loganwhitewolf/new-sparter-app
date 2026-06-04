@@ -5,11 +5,10 @@ import { getTransactionPlatforms } from '@/lib/dal/transactions'
 import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
 import { parseExpenseFilters, type ExpenseSearchParams } from '@/lib/validations/expense'
 import type { ExpenseFilters as ExpenseListFilters } from '@/lib/dal/expenses'
-import { DataTableToolbar } from '@/components/data-table/DataTableToolbar'
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { ExpenseTable } from '@/components/expenses/expense-table'
 import { ExpenseFormDialog } from '@/components/expenses/expense-form-dialog'
-import { expensesTableConfig } from '@/app/(app)/expenses/expenses.table'
+import { ExpensesToolbar } from '@/app/(app)/expenses/ExpensesToolbar'
 import { APP_ROUTES } from '@/lib/routes'
 
 /** Returns true when any filter param that narrows results is active */
@@ -91,8 +90,7 @@ export default async function ExpensesPage({
       </div>
 
       <Suspense fallback={<div className="h-10 rounded-md bg-muted animate-pulse" />}>
-        <DataTableToolbar
-          config={expensesTableConfig}
+        <ExpensesToolbar
           route={APP_ROUTES.expenses}
           filterOptions={{
             category: categoryOptions,

@@ -1,4 +1,3 @@
-import { DataTableToolbar } from '@/components/data-table/DataTableToolbar'
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { ImportTable } from '@/components/import/import-table'
 import { ImportUploadDialog } from '@/components/import/import-upload-dialog'
@@ -6,7 +5,7 @@ import { getImports, IMPORT_LIST_LIMIT, type ImportListRow } from '@/lib/dal/imp
 import { getMonthsWithData } from '@/lib/dal/months-with-data'
 import { getTransactionPlatforms } from '@/lib/dal/transactions'
 import { parseImportFilters, type ImportSearchParams } from '@/lib/validations/import'
-import { filesTableConfig } from '@/app/(app)/import/files.table'
+import { FilesToolbar } from '@/app/(app)/import/FilesToolbar'
 import { APP_ROUTES } from '@/lib/routes'
 
 /** Returns true when any filter param that narrows results is active */
@@ -85,8 +84,7 @@ export default async function ImportPage({
       </div>
 
       <section className="flex flex-col gap-3">
-        <DataTableToolbar
-          config={filesTableConfig}
+        <FilesToolbar
           route={APP_ROUTES.import}
           monthsWithData={monthsWithData}
           filterOptions={{ platform: platformOptions }}

@@ -10,11 +10,10 @@ import {
   parseTransactionFilters,
   type TransactionSearchParams,
 } from '@/lib/validations/transactions'
-import { DataTableToolbar } from '@/components/data-table/DataTableToolbar'
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { TransactionFormDialog } from '@/components/transactions/transaction-form-dialog'
 import { TransactionTable } from '@/components/transactions/transaction-table'
-import { transactionsTableConfig } from '@/app/(app)/transactions/transactions.table'
+import { TransactionsToolbar } from '@/app/(app)/transactions/TransactionsToolbar'
 import { APP_ROUTES } from '@/lib/routes'
 
 /** Returns true when any filter param that narrows results is active */
@@ -93,8 +92,7 @@ export default async function TransactionsPage({
       <Suspense
         fallback={<div className="h-24 rounded-xl bg-muted animate-pulse" />}
       >
-        <DataTableToolbar
-          config={transactionsTableConfig}
+        <TransactionsToolbar
           route={APP_ROUTES.transactions}
           monthsWithData={monthsWithData}
           filterOptions={{
