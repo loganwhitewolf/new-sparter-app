@@ -1,9 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.12
-milestone_name: First-import Onboarding
+milestone_name: milestone
 status: Awaiting next milestone
-last_updated: "2026-06-02T17:21:32.295Z"
+stopped_at: Phase 39 complete — milestone v1.13 done
+last_updated: "2026-06-04T16:14:48.376Z"
 last_activity: 2026-06-02 — Milestone v1.13 completed and archived
 progress:
   total_phases: 1
