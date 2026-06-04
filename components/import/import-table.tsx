@@ -84,12 +84,15 @@ function getImportDisplayName(row: ImportListRow) {
 }
 
 function hasActiveFilters(filters: ParsedImportFilters) {
+  // Wave 5: legacy importedFrom/importedTo/referenceFrom/referenceTo no longer parsed.
+  // Check only the canonical Wave 4+ filter keys.
   return Boolean(
     filters.q ||
-    filters.importedFrom ||
-    filters.importedTo ||
-    filters.referenceFrom ||
-    filters.referenceTo,
+    filters.platform ||
+    filters.statusBucket ||
+    (filters.months && filters.months.length > 0) ||
+    filters.amountMin ||
+    filters.amountMax,
   );
 }
 

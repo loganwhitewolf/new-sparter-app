@@ -149,8 +149,9 @@ export function getInclusiveToDate(value: string): Date | undefined {
 export function parseTransactionFilters(
   input: TransactionSearchParams,
 ): ParsedTransactionFilters {
-  const from = firstTrimmed(input.from)
-  const to = firstTrimmed(input.to)
+  // Wave 5 URL migration: legacy `from`/`to` date params are no longer parsed into active
+  // filters. Old shared links with ?from=&to= silently degrade to the default view (total
+  // parsing — never throw). The month-multi `months` param is the canonical temporal filter.
   const platform = firstTrimmed(input.platform)
   const rawImportId = firstTrimmed(input.importId)
   // D-19: canonical key is 'q'; 'name' accepted for back-compat (Wave 5 migrates old URLs)
@@ -159,8 +160,6 @@ export function parseTransactionFilters(
   const rawSubCategory = firstTrimmed(input.subCategory)
   const sort = transactionSortSchema.safeParse(firstTrimmed(input.sort))
   const dir = transactionSortDirectionSchema.safeParse(firstTrimmed(input.dir))
-  const fromDate = parseDateOnly(from)
-  const toDate = to ? getInclusiveToDate(to) : undefined
   const importId =
     rawImportId && UUID_RE.test(rawImportId) ? rawImportId : undefined
   const q = rawQ && rawQ.length <= 200 ? rawQ : undefined
@@ -178,8 +177,6 @@ export function parseTransactionFilters(
     | undefined
 
   return {
-    ...(fromDate ? { from, fromDate } : {}),
-    ...(toDate ? { to, toDate } : {}),
     ...(platform && PLATFORM_SLUG_RE.test(platform) ? { platform } : {}),
     ...(importId ? { importId } : {}),
     ...(q ? { q, name: q } : {}),

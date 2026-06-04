@@ -260,15 +260,11 @@ function getInclusiveDate(value: string | undefined): Date | undefined {
 const PLATFORM_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 export function parseImportFilters(input: ImportSearchParams): ParsedImportFilters {
+  // Wave 5 URL migration: legacy `importedFrom`/`importedTo`/`referenceFrom`/`referenceTo`
+  // date params are no longer parsed into active filters. Old shared links with those params
+  // silently degrade to the default view (total parsing — never throw).
+  // The month-multi `months` param is the canonical temporal filter for the Files table.
   const q = firstTrimmed(input.q)
-  const importedFrom = firstTrimmed(input.importedFrom)
-  const importedTo = firstTrimmed(input.importedTo)
-  const referenceFrom = firstTrimmed(input.referenceFrom)
-  const referenceTo = firstTrimmed(input.referenceTo)
-  const importedFromDate = parseDateOnly(importedFrom)
-  const importedToDate = getInclusiveDate(importedTo)
-  const referenceFromDate = parseDateOnly(referenceFrom)
-  const referenceToDate = getInclusiveDate(referenceTo)
 
   // Wave 4: new filter fields
   const rawPlatform = firstTrimmed(input.platform)
@@ -284,10 +280,6 @@ export function parseImportFilters(input: ImportSearchParams): ParsedImportFilte
 
   return {
     ...(q && q.length <= MAX_IMPORT_QUERY_LENGTH ? { q } : {}),
-    ...(importedFromDate ? { importedFrom, importedFromDate } : {}),
-    ...(importedToDate ? { importedTo, importedToDate } : {}),
-    ...(referenceFromDate ? { referenceFrom, referenceFromDate } : {}),
-    ...(referenceToDate ? { referenceTo, referenceToDate } : {}),
     ...(platform ? { platform } : {}),
     ...(statusBucket ? { statusBucket } : {}),
     ...(months.length > 0 ? { months } : {}),

@@ -34,11 +34,6 @@ function isNextNavigationError(error: unknown) {
 function getFilterKey(filters: ReturnType<typeof parseImportFilters>) {
   return JSON.stringify({
     q: filters.q ?? '',
-    importedFrom: filters.importedFrom ?? '',
-    importedTo: filters.importedTo ?? '',
-    referenceFrom: filters.referenceFrom ?? '',
-    referenceTo: filters.referenceTo ?? '',
-    // Wave 4: new filter keys
     platform: filters.platform ?? '',
     statusBucket: filters.statusBucket ?? '',
     months: (filters.months ?? []).join(','),

@@ -13,9 +13,11 @@ type Props = {
  *
  * Variants:
  *   - `no-data`   — the table has zero rows regardless of filters (e.g. fresh account,
- *                   no imports yet). Primary message: "Nessun dato".
+ *                   no imports yet). Default primary label is the Italian product string
+ *                   for "No data".
  *   - `no-result` — rows exist in the data set but the active filters exclude them all.
- *                   Primary message: "Nessun risultato"; hint encourages relaxing filters.
+ *                   Default primary label is the Italian product string for "No results";
+ *                   hint encourages relaxing filters.
  *
  * Custom `message` / `hint` strings override the defaults for per-table phrasing.
  */
