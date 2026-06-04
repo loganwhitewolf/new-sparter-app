@@ -197,10 +197,10 @@ export const getTransactions = cache(
     }
 
     // Wave 4: amount range — absolute value (D-20)
-    if (filters.amountMin) {
+    if (filters.amountMin !== undefined) {
       conditions.push(sql`ABS(${transaction.amount}::numeric) >= ${filters.amountMin}::numeric`)
     }
-    if (filters.amountMax) {
+    if (filters.amountMax !== undefined) {
       conditions.push(sql`ABS(${transaction.amount}::numeric) <= ${filters.amountMax}::numeric`)
     }
 
