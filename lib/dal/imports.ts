@@ -6,6 +6,10 @@ import { verifySession } from '@/lib/dal/auth'
 import { expense, file, importFormatVersion, platform, transaction } from '@/lib/db/schema'
 import type { ParsedImportFilters } from '@/lib/validations/import'
 
+function escapeLikePattern(input: string): string {
+  return input.replace(/[\\%_]/g, '\\$&')
+}
+
 export const IMPORT_LIST_LIMIT = 50
 
 export type ImportPagination = {
@@ -105,7 +109,7 @@ export const getImportRows = cache(
     const conditions: any[] = [eq(file.userId, userId)]
 
     if (filters.q) {
-      const pattern = `%${filters.q}%`
+      const pattern = `%${escapeLikePattern(filters.q)}%`
       conditions.push(or(ilike(file.displayName, pattern), ilike(file.originalName, pattern)))
     }
 
@@ -150,10 +154,10 @@ export const getImportRows = cache(
     }
 
     // Wave 4: amount ABS on negativeTotal (D-20)
-    if (filters.amountMin) {
+    if (filters.amountMin !== undefined) {
       conditions.push(sql`ABS(${file.negativeTotal}::numeric) >= ${filters.amountMin}::numeric`)
     }
-    if (filters.amountMax) {
+    if (filters.amountMax !== undefined) {
       conditions.push(sql`ABS(${file.negativeTotal}::numeric) <= ${filters.amountMax}::numeric`)
     }
 

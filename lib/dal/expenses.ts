@@ -8,6 +8,10 @@ import { periodToDateRange } from '@/lib/utils/date'
 
 export { periodToDateRange } from '@/lib/utils/date'
 
+function escapeLikePattern(input: string): string {
+  return input.replace(/[\\%_]/g, '\\$&')
+}
+
 export const EXPENSE_LIST_LIMIT = 50
 
 export type ExpenseSort = 'createdAt' | 'totalAmount'
@@ -104,15 +108,17 @@ export const getExpenses = cache(async (
   if (filters.categorySlug) {
     conditions.push(eq(category.slug, filters.categorySlug))
   }
-  if (filters.name) {
-    conditions.push(ilike(expense.title, `%${filters.name}%`))
+  const searchTerm = filters.q ?? filters.name
+  if (searchTerm) {
+    const pattern = `%${escapeLikePattern(searchTerm)}%`
+    conditions.push(ilike(expense.title, pattern))
   }
 
   // Wave 4: absolute-value amount range (D-20)
-  if (filters.amountMin) {
+  if (filters.amountMin !== undefined) {
     conditions.push(sql`ABS(${expense.totalAmount}::numeric) >= ${filters.amountMin}::numeric`)
   }
-  if (filters.amountMax) {
+  if (filters.amountMax !== undefined) {
     conditions.push(sql`ABS(${expense.totalAmount}::numeric) <= ${filters.amountMax}::numeric`)
   }
 
