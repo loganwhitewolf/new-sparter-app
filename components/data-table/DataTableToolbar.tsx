@@ -357,6 +357,7 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions 
             variant="outline"
             disabled={isPending}
             onClick={() => setSortSheetOpen(true)}
+            aria-label="Ordina"
           >
             <ArrowUpDown className="h-4 w-4" />
             Ordina

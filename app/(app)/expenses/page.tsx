@@ -6,10 +6,20 @@ import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
 import { parseExpenseFilters, type ExpenseSearchParams } from '@/lib/validations/expense'
 import type { ExpenseFilters as ExpenseListFilters } from '@/lib/dal/expenses'
 import { DataTableToolbar } from '@/components/data-table/DataTableToolbar'
+import { EmptyState } from '@/components/data-table/EmptyState'
 import { ExpenseTable } from '@/components/expenses/expense-table'
 import { ExpenseFormDialog } from '@/components/expenses/expense-form-dialog'
 import { expensesTableConfig } from '@/app/(app)/expenses/expenses.table'
 import { APP_ROUTES } from '@/lib/routes'
+
+/** Returns true when any filter param that narrows results is active */
+function hasActiveExpenseFilters(params: ExpenseSearchParams): boolean {
+  const keys = ['q', 'category', 'platform', 'status', 'amountMin', 'amountMax']
+  return keys.some((k) => {
+    const v = params[k]
+    return Array.isArray(v) ? v.length > 0 : Boolean(v)
+  })
+}
 
 function buildExpenseTableKey(filters: ExpenseListFilters, expenses: Awaited<ReturnType<typeof getExpenses>>) {
   const filterKey = [
@@ -91,13 +101,29 @@ export default async function ExpensesPage({
         />
       </Suspense>
 
-      <ExpenseTable
-        key={buildExpenseTableKey(filters, expenses)}
-        expenses={expenses}
-        categories={categories}
-        mostUsed={mostUsed}
-        filters={filters}
-      />
+      {expenses.length === 0 ? (
+        <EmptyState
+          variant={hasActiveExpenseFilters(params) ? 'no-result' : 'no-data'}
+          message={
+            hasActiveExpenseFilters(params)
+              ? 'Nessuna spesa trovata'
+              : 'Nessuna spesa'
+          }
+          hint={
+            hasActiveExpenseFilters(params)
+              ? 'Nessuna spesa corrisponde ai filtri attivi. Prova a modificare categoria, piattaforma o altri filtri.'
+              : 'Non hai ancora aggiunto spese. Clicca su "Nuova spesa" per iniziare.'
+          }
+        />
+      ) : (
+        <ExpenseTable
+          key={buildExpenseTableKey(filters, expenses)}
+          expenses={expenses}
+          categories={categories}
+          mostUsed={mostUsed}
+          filters={filters}
+        />
+      )}
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { DataTableToolbar } from '@/components/data-table/DataTableToolbar'
+import { EmptyState } from '@/components/data-table/EmptyState'
 import { ImportTable } from '@/components/import/import-table'
 import { ImportUploadDialog } from '@/components/import/import-upload-dialog'
 import { getImports, IMPORT_LIST_LIMIT, type ImportListRow } from '@/lib/dal/imports'
@@ -7,6 +8,19 @@ import { getTransactionPlatforms } from '@/lib/dal/transactions'
 import { parseImportFilters, type ImportSearchParams } from '@/lib/validations/import'
 import { filesTableConfig } from '@/app/(app)/import/files.table'
 import { APP_ROUTES } from '@/lib/routes'
+
+/** Returns true when any filter param that narrows results is active */
+function hasActiveImportFilters(params: ImportSearchParams): boolean {
+  const keys = [
+    'q', 'platform', 'statusBucket', 'months', 'amountMin', 'amountMax',
+    // Legacy date params — still recognized as "active" for empty-state variant
+    'importedFrom', 'importedTo', 'referenceFrom', 'referenceTo',
+  ]
+  return keys.some((k) => {
+    const v = params[k]
+    return Array.isArray(v) ? v.length > 0 : Boolean(v)
+  })
+}
 
 function isNextNavigationError(error: unknown) {
   if (!(error instanceof Error)) {
@@ -82,13 +96,29 @@ export default async function ImportPage({
           monthsWithData={monthsWithData}
           filterOptions={{ platform: platformOptions }}
         />
-        <ImportTable
-          key={filterKey}
-          imports={imports}
-          loadError={importHistoryLoadError}
-          filters={filters}
-          searchParams={rawSearchParams}
-        />
+        {!importHistoryLoadError && imports.length === 0 ? (
+          <EmptyState
+            variant={hasActiveImportFilters(rawSearchParams) ? 'no-result' : 'no-data'}
+            message={
+              hasActiveImportFilters(rawSearchParams)
+                ? 'Nessuna importazione trovata'
+                : 'Nessuna importazione'
+            }
+            hint={
+              hasActiveImportFilters(rawSearchParams)
+                ? 'Nessuna importazione corrisponde ai filtri attivi. Prova a modificare ricerca, piattaforma o periodo.'
+                : 'Carica un estratto conto per vedere qui stato, statistiche e intervallo di riferimento delle prossime importazioni.'
+            }
+          />
+        ) : (
+          <ImportTable
+            key={filterKey}
+            imports={imports}
+            loadError={importHistoryLoadError}
+            filters={filters}
+            searchParams={rawSearchParams}
+          />
+        )}
       </section>
     </div>
   )

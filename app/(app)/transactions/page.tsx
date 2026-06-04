@@ -11,10 +11,20 @@ import {
   type TransactionSearchParams,
 } from '@/lib/validations/transactions'
 import { DataTableToolbar } from '@/components/data-table/DataTableToolbar'
+import { EmptyState } from '@/components/data-table/EmptyState'
 import { TransactionFormDialog } from '@/components/transactions/transaction-form-dialog'
 import { TransactionTable } from '@/components/transactions/transaction-table'
 import { transactionsTableConfig } from '@/app/(app)/transactions/transactions.table'
 import { APP_ROUTES } from '@/lib/routes'
+
+/** Returns true when any filter param that narrows results is active */
+function hasActiveTransactionFilters(params: TransactionSearchParams): boolean {
+  const keys = ['q', 'name', 'months', 'amountMin', 'amountMax', 'platform', 'category', 'status']
+  return keys.some((k) => {
+    const v = params[k]
+    return Array.isArray(v) ? v.length > 0 : Boolean(v)
+  })
+}
 
 function buildTransactionTableKey(
   params: TransactionSearchParams,
@@ -94,14 +104,30 @@ export default async function TransactionsPage({
         />
       </Suspense>
 
-      <TransactionTable
-        key={buildTransactionTableKey(params, transactions)}
-        transactions={transactions}
-        filters={filters}
-        searchParams={params}
-        categories={categories}
-        mostUsed={mostUsed}
-      />
+      {transactions.length === 0 ? (
+        <EmptyState
+          variant={hasActiveTransactionFilters(params) ? 'no-result' : 'no-data'}
+          message={
+            hasActiveTransactionFilters(params)
+              ? 'Nessuna transazione trovata'
+              : 'Nessuna transazione'
+          }
+          hint={
+            hasActiveTransactionFilters(params)
+              ? 'Nessun movimento corrisponde ai filtri attivi. Prova a modificare periodo, piattaforma o altri filtri.'
+              : 'Non ci sono ancora movimenti importati. Importa un file bancario per iniziare.'
+          }
+        />
+      ) : (
+        <TransactionTable
+          key={buildTransactionTableKey(params, transactions)}
+          transactions={transactions}
+          filters={filters}
+          searchParams={params}
+          categories={categories}
+          mostUsed={mostUsed}
+        />
+      )}
     </div>
   )
 }
