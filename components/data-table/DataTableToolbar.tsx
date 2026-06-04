@@ -116,6 +116,12 @@ function FilterField({
   }
 
   if (field.type === 'status') {
+    // Use custom options when provided (e.g. 3-bucket processing status for Files)
+    // Fall back to the default 2-state categorization options for Transactions/Expenses
+    const statusOptions = field.options ?? [
+      { value: 'categorized', label: 'Categorizzate' },
+      { value: 'uncategorized', label: 'Da categorizzare' },
+    ]
     return (
       <div className="grid gap-1.5">
         <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
@@ -128,8 +134,11 @@ function FilterField({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tutte</SelectItem>
-            <SelectItem value="categorized">Categorizzate</SelectItem>
-            <SelectItem value="uncategorized">Da categorizzare</SelectItem>
+            {statusOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

@@ -1,6 +1,6 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, count, desc, eq, gte, ilike, isNotNull, lte, or, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gte, ilike, inArray, isNotNull, lte, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import { expense, file, importFormatVersion, platform, transaction } from '@/lib/db/schema'
@@ -123,6 +123,38 @@ export const getImportRows = cache(
 
     if (filters.referenceFromDate) {
       conditions.push(gte(file.referenceEndedAt, filters.referenceFromDate))
+    }
+
+    // Wave 4: platform slug filter (T-40-09 mitigated — slug allowlist enforced in parser)
+    if (filters.platform) {
+      conditions.push(eq(platform.slug, filters.platform))
+    }
+
+    // Wave 4: processing status bucket — 3 buckets (D-22)
+    if (filters.statusBucket === 'imported') {
+      conditions.push(eq(file.status, 'imported'))
+    } else if (filters.statusBucket === 'pending') {
+      // All transient states that are "in progress" or "uploaded but not imported"
+      conditions.push(
+        inArray(file.status, ['uploaded', 'analyzing', 'analyzed', 'importing', 'pending_upload']),
+      )
+    } else if (filters.statusBucket === 'failed') {
+      conditions.push(eq(file.status, 'failed'))
+    }
+
+    // Wave 4: coverage months — TO_CHAR(referenceStartedAt, 'YYYY-MM')
+    if (filters.months && filters.months.length > 0) {
+      conditions.push(
+        or(...filters.months.map((ym) => sql`TO_CHAR(${file.referenceStartedAt}, 'YYYY-MM') = ${ym}`)),
+      )
+    }
+
+    // Wave 4: amount ABS on negativeTotal (D-20)
+    if (filters.amountMin) {
+      conditions.push(sql`ABS(${file.negativeTotal}::numeric) >= ${filters.amountMin}::numeric`)
+    }
+    if (filters.amountMax) {
+      conditions.push(sql`ABS(${file.negativeTotal}::numeric) <= ${filters.amountMax}::numeric`)
     }
 
     return db
