@@ -147,6 +147,8 @@ export const getImportRows = cache(
     }
 
     // Wave 4: coverage months — TO_CHAR(referenceStartedAt, 'YYYY-MM')
+    // IMPORTANT: The length > 0 guard must stay. Drizzle's or() with zero arguments
+    // produces an invalid SQL fragment and throws at runtime.
     if (filters.months && filters.months.length > 0) {
       conditions.push(
         or(...filters.months.map((ym) => sql`TO_CHAR(${file.referenceStartedAt}, 'YYYY-MM') = ${ym}`)),
