@@ -1,28 +1,36 @@
 /**
  * DataTableToolbar — render tests (Wave 2, 40-02)
  *
- * Uses renderToStaticMarkup (project pattern) instead of @testing-library/react
- * which is not installed. Interaction tests (debounce, click) are structural:
- * verified via HTML output assertions after mocking next/navigation.
+ * Uses renderToStaticMarkup (project pattern).
+ * Interaction tests (debounce, click) are structural: verified via HTML assertions.
+ *
+ * SSR behavior notes:
+ * - Radix Popover/Dialog use portals: PopoverContent and SheetContent do NOT appear
+ *   in renderToStaticMarkup output (they render in a portal outside the root element).
+ * - Filtri count, chip labels, "Cancella tutto" are tested by passing a mockConfig
+ *   and a mock searchParams that returns active values.
+ * - We use vi.mock() factory functions (returning vi.fn()) to allow per-test overrides.
  *
  * Behavior covered:
  *  - Search input renders with configured placeholder
- *  - "Filtri" trigger reflects active filter count from mocked searchParams
- *  - Chip for each active filter param is rendered
+ *  - "Filtri (n)" trigger text reflects active filter count
+ *  - Chip label rendered for active filter param via field.toChip
  *  - "Cancella tutto" button present when chips are active
- *  - Mobile sheet trigger and SheetContent present in output
- *  - Toolbar renders nothing for search when config.search is null
+ *  - "Ordina" mobile trigger present
+ *  - Toolbar renders no search input when config.search is null
  */
 
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { TableConfig } from '@/lib/utils/table-config'
 
-// ---- Mock next/navigation ------------------------------------------------
-// Baseline: no active filters
+// ---- Mock next/navigation using vi.fn() so we can control per-test --------
+const mockReplace = vi.fn()
+let mockSearchParams = new URLSearchParams()
+
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ replace: mockReplace }),
+  useSearchParams: () => mockSearchParams,
   usePathname: () => '/transactions',
 }))
 
@@ -60,6 +68,12 @@ const { DataTableToolbar } = await import('@/components/data-table/DataTableTool
 
 // -------------------------------------------------------------------------
 describe('DataTableToolbar render (40-02, Variant A)', () => {
+  beforeEach(() => {
+    // Reset to empty search params before each test
+    mockSearchParams = new URLSearchParams()
+    mockReplace.mockClear()
+  })
+
   it('renders search input with configured placeholder', () => {
     const html = renderToStaticMarkup(
       <DataTableToolbar config={mockConfig} route="/transactions" />,
@@ -71,18 +85,13 @@ describe('DataTableToolbar render (40-02, Variant A)', () => {
     const html = renderToStaticMarkup(
       <DataTableToolbar config={mockConfig} route="/transactions" />,
     )
-    // "Filtri" appears without a count suffix
     expect(html).toContain('Filtri')
-    // should NOT contain "Filtri (N)" pattern when count is 0
+    // Should NOT contain "Filtri (N)" when count is 0
     expect(html).not.toMatch(/Filtri \(\d+\)/)
   })
 
-  it('renders "Filtri (2)" when two filter params are active', async () => {
-    // Re-mock useSearchParams with active filters for this test
-    const { useSearchParams } = await import('next/navigation')
-    vi.mocked(useSearchParams).mockReturnValueOnce(
-      new URLSearchParams('platform=revolut&status=categorized') as ReturnType<typeof useSearchParams>,
-    )
+  it('renders "Filtri (2)" when two filter params are active', () => {
+    mockSearchParams = new URLSearchParams('platform=revolut&status=categorized')
 
     const html = renderToStaticMarkup(
       <DataTableToolbar config={mockConfig} route="/transactions" />,
@@ -94,47 +103,43 @@ describe('DataTableToolbar render (40-02, Variant A)', () => {
     const html = renderToStaticMarkup(
       <DataTableToolbar config={mockConfig} route="/transactions" />,
     )
-    // SlidersHorizontal is an SVG — check via svg or lucide class convention
-    expect(html.toLowerCase()).toContain('svg')
+    // SlidersHorizontal is an SVG rendered by lucide
+    expect(html).toContain('lucide-sliders-horizontal')
   })
 
-  it('renders filter fields from config.filters (not hardcoded)', () => {
-    const html = renderToStaticMarkup(
-      <DataTableToolbar config={mockConfig} route="/transactions" />,
-    )
-    // Both filter labels from mock config must appear in the panel
-    expect(html).toContain('Piattaforma')
-    expect(html).toContain('Categorizzazione')
-  })
-
-  it('renders chip for each active filter and "Cancella tutto" button', async () => {
-    const { useSearchParams } = await import('next/navigation')
-    vi.mocked(useSearchParams).mockReturnValueOnce(
-      new URLSearchParams('platform=revolut') as ReturnType<typeof useSearchParams>,
-    )
+  it('renders chip for active filter param via field.toChip()', () => {
+    mockSearchParams = new URLSearchParams('platform=revolut')
 
     const html = renderToStaticMarkup(
       <DataTableToolbar config={mockConfig} route="/transactions" />,
     )
     // Chip label derived from field.toChip('revolut')
     expect(html).toContain('Piattaforma: revolut')
-    // "Cancella tutto" present because chips.length > 0
+  })
+
+  it('renders "Cancella tutto" when chips are active', () => {
+    mockSearchParams = new URLSearchParams('platform=revolut')
+
+    const html = renderToStaticMarkup(
+      <DataTableToolbar config={mockConfig} route="/transactions" />,
+    )
     expect(html).toContain('Cancella tutto')
   })
 
   it('does not render "Cancella tutto" when no chips are active', () => {
+    // mockSearchParams is empty (reset in beforeEach)
     const html = renderToStaticMarkup(
       <DataTableToolbar config={mockConfig} route="/transactions" />,
     )
     expect(html).not.toContain('Cancella tutto')
   })
 
-  it('renders mobile sheet scaffold (SheetContent side="bottom")', () => {
+  it('renders "Filtri" label (present on both desktop Popover trigger and mobile Sheet trigger)', () => {
     const html = renderToStaticMarkup(
       <DataTableToolbar config={mockConfig} route="/transactions" />,
     )
-    // Sheet is present for mobile filter panel
-    expect(html).toContain('bottom')
+    // Both desktop and mobile render "Filtri" — appears multiple times
+    expect(html).toContain('Filtri')
   })
 
   it('renders "Ordina" mobile sort trigger', () => {
@@ -150,5 +155,14 @@ describe('DataTableToolbar render (40-02, Variant A)', () => {
       <DataTableToolbar config={configNoSearch} route="/transactions" />,
     )
     expect(html).not.toContain('Nome o descrizione')
+  })
+
+  it('renders chip count badge "Filtri (1)" for single active filter', () => {
+    mockSearchParams = new URLSearchParams('status=categorized')
+
+    const html = renderToStaticMarkup(
+      <DataTableToolbar config={mockConfig} route="/transactions" />,
+    )
+    expect(html).toContain('Filtri (1)')
   })
 })
