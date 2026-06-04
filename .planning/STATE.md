@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: milestone
-status: executing
-stopped_at: Phase 40 Plan 04 complete — per-table filter wiring (Transactions + Expenses + Files)
-last_updated: "2026-06-04T19:10:00.000Z"
-last_activity: 2026-06-04 -- Plan 04 complete (per-table config + DAL conditions + DataTableToolbar wiring)
+status: complete
+stopped_at: Phase 40 Plan 05 complete — polish, empty states, a11y, URL migration, prototype cleanup, build green
+last_updated: "2026-06-04T20:00:00.000Z"
+last_activity: 2026-06-04 -- Plan 05 complete (Wave 5 polish — EmptyState, a11y, URL migration, prototype deleted)
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 5
-  completed_plans: 4
-  percent: 0
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 
 ## Current Position
 
-Phase: 40 (table-filter-sort) — EXECUTING
-Plan: 5 of 5
-Status: Ready to execute
-Last activity: 2026-06-04 -- Plan 04 complete (per-table config + DAL conditions + DataTableToolbar wiring)
+Phase: 40 (table-filter-sort) — COMPLETE
+Plan: 5 of 5 — ALL PLANS COMPLETE
+Status: Phase complete
+Last activity: 2026-06-04 -- Plan 05 complete (Wave 5 polish — EmptyState, a11y, URL migration, prototype deleted)
 
 ## Accumulated Context
 
@@ -84,6 +84,13 @@ v1.14 / Phase 40 Plan 04 decisions (2026-06-04):
 - Platform filter for expenses implemented via `importedFromFileId→file→importFormatVersion→platform` left join
 - DataTableToolbar `status` field type supports custom `field.options` override for Files 3-bucket status
 - Files statusBucket `'pending'` maps to all transient states: `['uploaded','analyzing','analyzed','importing','pending_upload']`
+
+v1.14 / Phase 40 Plan 05 decisions (2026-06-04):
+
+- Wave 5 URL migration: `from`/`to` dropped from `parseTransactionFilters`; `importedFrom`/`importedTo`/`referenceFrom`/`referenceTo` dropped from `parseImportFilters` (total parsing — legacy links degrade gracefully to default view)
+- `EmptyState` variant computed server-side in each page via `hasActiveXxxFilters(params)` helper; no new client state needed
+- `app/proto/table-toolbar/` deleted on Wave 5 final plan (mirrors Phase 38/39 convention)
+- Mobile sort trigger: `aria-label="Ordina"` added to `DataTableToolbar`
 
 v1.14 / Phase 40 Plan 02 decisions (2026-06-04):
 
@@ -141,11 +148,11 @@ Items acknowledged and deferred at milestone close on 2026-06-02:
 
 ## Session Continuity
 
-Last session: 2026-06-04T19:10:00.000Z
-Stopped at: Phase 40 Plan 04 complete — per-table filter wiring (Transactions + Expenses + Files)
+Last session: 2026-06-04T20:00:00.000Z
+Stopped at: Phase 40 complete — all 5 plans executed
 Resume file: None
 
-**Next:** Execute Phase 40 Plan 05 (Wave 5 — Polish: empty states, a11y, URL migration, prototype cleanup, yarn build).
+**Next:** Start the next milestone with /gsd-new-milestone.
 
 ## Operator Next Steps
 
@@ -157,3 +164,4 @@ Resume file: None
 |-------|------|----------|-------|
 | Phase 40 P03 | 222 | 2 tasks | 5 files |
 | Phase 40 P04 | 739 | 3 tasks | 13 files |
+| Phase 40 P05 | 1050 | 2 tasks | 15 files |
