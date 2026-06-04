@@ -54,6 +54,10 @@ export type TransactionFilters = {
   subCategoryId?: number
   sort?: TransactionSort
   dir?: TransactionSortDirection
+  // Forward-looking optional keys for Wave 4 filter wiring (D-40-01):
+  months?: string[]
+  amountMin?: string
+  amountMax?: string
 }
 
 export const transactionListSelect = {
@@ -128,8 +132,11 @@ export function buildTransactionOrderBy({
   dir = 'desc',
 }: Pick<TransactionFilters, 'sort' | 'dir'> = {}) {
   const column = getTransactionSortColumn(sort)
-
-  return dir === 'asc' ? asc(column) : desc(column)
+  // Tiebreaker on id as LAST element so OFFSET pagination never returns duplicate or
+  // missing rows when multiple rows share the same sort column value (D-06).
+  return dir === 'asc'
+    ? [asc(column), asc(transaction.id)]
+    : [desc(column), desc(transaction.id)]
 }
 
 export const getTransactions = cache(
@@ -201,7 +208,7 @@ export const getTransactions = cache(
         ),
       )
       .where(and(...conditions))
-      .orderBy(buildTransactionOrderBy(filters))
+      .orderBy(...buildTransactionOrderBy(filters))
       .limit(limit)
       .offset(offset)
   },

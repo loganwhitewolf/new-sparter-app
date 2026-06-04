@@ -181,19 +181,32 @@ describe('transaction DAL query helpers', () => {
     expect(getTransactionSortColumn('description' as never)).toBe('transaction.occurredAt')
   })
 
-  it('builds order direction without letting caller-provided values become columns', () => {
-    expect(buildTransactionOrderBy({ sort: 'amount', dir: 'asc' })).toEqual({
-      op: 'asc',
-      column: 'transaction.amount',
-    })
-    expect(buildTransactionOrderBy({ sort: 'amount', dir: 'desc' })).toEqual({
-      op: 'desc',
-      column: 'transaction.amount',
-    })
-    expect(buildTransactionOrderBy({ sort: 'description' as never, dir: 'asc' })).toEqual({
-      op: 'asc',
-      column: 'transaction.occurredAt',
-    })
+  it('builds orderBy array with id tiebreaker as LAST element (D-06)', () => {
+    // After the tiebreaker fix, buildTransactionOrderBy returns an array
+    // so that OFFSET pagination never returns duplicate or missing rows on amount sort.
+    expect(buildTransactionOrderBy({ sort: 'amount', dir: 'asc' })).toEqual([
+      { op: 'asc', column: 'transaction.amount' },
+      { op: 'asc', column: 'transaction.id' },
+    ])
+    expect(buildTransactionOrderBy({ sort: 'amount', dir: 'desc' })).toEqual([
+      { op: 'desc', column: 'transaction.amount' },
+      { op: 'desc', column: 'transaction.id' },
+    ])
+    expect(buildTransactionOrderBy({ sort: 'occurredAt', dir: 'desc' })).toEqual([
+      { op: 'desc', column: 'transaction.occurredAt' },
+      { op: 'desc', column: 'transaction.id' },
+    ])
+    expect(buildTransactionOrderBy({ sort: 'description' as never, dir: 'asc' })).toEqual([
+      { op: 'asc', column: 'transaction.occurredAt' },
+      { op: 'asc', column: 'transaction.id' },
+    ])
+  })
+
+  it('id tiebreaker is the LAST element in the orderBy array for default sort', () => {
+    const result = buildTransactionOrderBy()
+    expect(Array.isArray(result)).toBe(true)
+    const arr = result as unknown[]
+    expect(arr[arr.length - 1]).toEqual({ op: 'desc', column: 'transaction.id' })
   })
 
   it('keeps the list bounded and exposes display metadata for the /transactions table', () => {

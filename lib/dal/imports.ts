@@ -134,7 +134,7 @@ export const getImportRows = cache(
       )
       .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
       .where(and(...conditions))
-      .orderBy(desc(importListOrderTimestamp), desc(file.createdAt))
+      .orderBy(desc(importListOrderTimestamp), desc(file.createdAt), desc(file.id))
       .limit(limit)
       .offset(offset)
   },
