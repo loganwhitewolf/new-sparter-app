@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: milestone
 status: executing
-stopped_at: Phase 40 Plan 03 complete — MonthMultiPicker + AmountRangePicker + getMonthsWithData
-last_updated: "2026-06-04T16:55:03.466Z"
-last_activity: 2026-06-04 -- Plan 02 complete (DataTableToolbar shared UI)
+stopped_at: Phase 40 Plan 04 complete — per-table filter wiring (Transactions + Expenses + Files)
+last_updated: "2026-06-04T19:10:00.000Z"
+last_activity: 2026-06-04 -- Plan 04 complete (per-table config + DAL conditions + DataTableToolbar wiring)
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 ## Current Position
 
 Phase: 40 (table-filter-sort) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
-Last activity: 2026-06-04 -- Plan 02 complete (DataTableToolbar shared UI)
+Last activity: 2026-06-04 -- Plan 04 complete (per-table config + DAL conditions + DataTableToolbar wiring)
 
 ## Accumulated Context
 
@@ -74,6 +74,16 @@ v1.14 / Phase 40 Plan 01 decisions (2026-06-04):
 - `buildTransactionOrderBy` returns `SQL[]` array — call site uses spread `.orderBy(...buildTransactionOrderBy(filters))`
 - `id` tiebreaker is always the LAST element in every DAL `orderBy` array (D-06)
 - `TransactionFilters` extended with `months?/amountMin?/amountMax?` now; WHERE clauses deferred to Wave 4
+
+v1.14 / Phase 40 Plan 04 decisions (2026-06-04):
+
+- `transactionsTableConfig` / `expensesTableConfig` / `filesTableConfig` live in `*.table.ts` colocated with page
+- `expensesTableConfig` has NO month-multi field (D-11 confirmed: aggregate entity, no temporal filter)
+- expense.status 4 maps to uncategorized bucket via `inArray(['1','4'])` (O-01 resolved conservatively)
+- `ExpenseFilters.period` no longer includes `'this-month'` as valid value (D-05 fully applied)
+- Platform filter for expenses implemented via `importedFromFileId→file→importFormatVersion→platform` left join
+- DataTableToolbar `status` field type supports custom `field.options` override for Files 3-bucket status
+- Files statusBucket `'pending'` maps to all transient states: `['uploaded','analyzing','analyzed','importing','pending_upload']`
 
 v1.14 / Phase 40 Plan 02 decisions (2026-06-04):
 
@@ -131,11 +141,11 @@ Items acknowledged and deferred at milestone close on 2026-06-02:
 
 ## Session Continuity
 
-Last session: 2026-06-04T16:55:03.463Z
-Stopped at: Phase 40 Plan 03 complete — MonthMultiPicker + AmountRangePicker + getMonthsWithData
+Last session: 2026-06-04T19:10:00.000Z
+Stopped at: Phase 40 Plan 04 complete — per-table filter wiring (Transactions + Expenses + Files)
 Resume file: None
 
-**Next:** Execute Phase 40 Plan 03 (Wave 3 — MonthMultiPicker + AmountRangePicker + getMonthsWithData DAL).
+**Next:** Execute Phase 40 Plan 05 (Wave 5 — Polish: empty states, a11y, URL migration, prototype cleanup, yarn build).
 
 ## Operator Next Steps
 
@@ -146,3 +156,4 @@ Resume file: None
 | Phase | Plan | Duration | Notes |
 |-------|------|----------|-------|
 | Phase 40 P03 | 222 | 2 tasks | 5 files |
+| Phase 40 P04 | 739 | 3 tasks | 13 files |
