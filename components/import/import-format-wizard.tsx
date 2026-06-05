@@ -63,13 +63,13 @@ export function getVisibleHeaderOptions(headers: readonly string[]) {
   return headers.slice(0, MAX_HEADER_OPTIONS)
 }
 
-export function validateWizardFields(values: WizardFieldValues, headers: readonly string[]) {
+export function validateWizardFields(values: WizardFieldValues, headers: readonly string[], isExcel = false) {
   const errors: string[] = []
   const availableHeaders = new Set(headers)
   const requiredColumns = [values.timestampColumn, values.descriptionColumn]
 
   if (!values.platformName.trim()) errors.push('Inserisci il nome della piattaforma.')
-  if (!values.delimiter) errors.push('Seleziona il separatore del file.')
+  if (!isExcel && !values.delimiter) errors.push('Seleziona il separatore del file.')
   if (!values.timestampColumn) errors.push('Seleziona la colonna della data.')
   if (!values.descriptionColumn) errors.push('Seleziona la colonna della descrizione.')
 
@@ -139,6 +139,7 @@ export function ImportFormatWizard({
   const [positiveAmountColumn, setPositiveAmountColumn] = useState('')
   const [negativeAmountColumn, setNegativeAmountColumn] = useState('')
 
+  const isExcel = /\.(xlsx|xls)$/i.test(context.fileName)
   const headerOptions = useMemo(() => getVisibleHeaderOptions(context.headers), [context.headers])
   const hasHeaders = headerOptions.length > 0
   const truncatedHeaders = context.headers.length > headerOptions.length
@@ -146,16 +147,17 @@ export function ImportFormatWizard({
 
   useEffect(() => {
     if (createdFormatVersionId) {
+      const fromParam = from ? `&from=${encodeURIComponent(from)}` : ''
       router.push(
         `/import/${encodeURIComponent(context.fileId)}/analyze?formatVersionId=${encodeURIComponent(
           String(createdFormatVersionId),
-        )}`,
+        )}${fromParam}`,
       )
     }
-  }, [context.fileId, createdFormatVersionId, router])
+  }, [context.fileId, createdFormatVersionId, from, router])
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    const errors = validateWizardFields(readFormValues(event.currentTarget), context.headers)
+    const errors = validateWizardFields(readFormValues(event.currentTarget), context.headers, isExcel)
     setClientErrors(errors)
     if (errors.length > 0) {
       event.preventDefault()
@@ -245,14 +247,16 @@ export function ImportFormatWizard({
                   </p>
                 </div>
 
-                <SelectField
-                  id="delimiter"
-                  label="Separatore"
-                  value={delimiter}
-                  onValueChange={setDelimiter}
-                  options={DEFAULT_DELIMITERS}
-                  placeholder="Seleziona…"
-                />
+                {!isExcel && (
+                  <SelectField
+                    id="delimiter"
+                    label="Separatore"
+                    value={delimiter}
+                    onValueChange={setDelimiter}
+                    options={DEFAULT_DELIMITERS}
+                    placeholder="Seleziona…"
+                  />
+                )}
                 <SelectField
                   id="timestampColumn"
                   label="Colonna data"

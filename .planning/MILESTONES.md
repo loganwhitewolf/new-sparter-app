@@ -1,5 +1,36 @@
 # Milestones
 
+## v1.14 — Unified Table Filter & Sort
+
+**Shipped:** 2026-06-04
+**Phases:** 40 (1 phase)
+**Plans:** 5
+**Tasks:** 11
+
+### Delivered
+
+Unified filtering and sorting across the Transactions, Expenses, and Files tables behind one declarative `DataTableToolbar` driven by per-table `TableConfig`. URL is the single source of truth, filtering runs server-side, every DAL sort carries an `id` tiebreaker, Expenses have no temporal filter (ADR 0009), and there is no filter engine (ADR 0010).
+
+### Key Accomplishments
+
+1. Shared `TableConfig` / `FilterField` / `SortColumn` types and total URL param parsers (`parseMonths`, `parseAmount`, `parseStatus`, `parseSortDir`) with `id` tiebreaker appended to all transaction and import DAL `orderBy` calls
+2. Shared `DataTableToolbar` consuming `TableConfig`: inline search, "Filtri (n)" Popover, active-chip row ("Cancella tutto"), mobile Sheets for filters + sort, desktop `HeaderSortButton` with `aria-sort` and ASC→DESC→off cycle — all state in the URL via `useTableUrl`
+3. Session-scoped `getMonthsWithData` DAL (TDD) + data-aware `MonthMultiPicker` (year-grid, presets, "Tutto l'anno") + `AmountRangePicker` (absolute-value inputs) replacing Wave-2 placeholders
+4. Three `TableConfig` objects + DAL WHERE conditions + rewired pages: Transactions (months/amount/platform/category/categorization), Expenses (no temporal, all-time default, status-4→uncategorized), Files (3 processing buckets, coverage months, platform, amount)
+5. `EmptyState` component (no-data vs no-result) wired in all three table pages, mobile sort button labeled, legacy URL params silently dropped in total-function parsers, prototype route deleted, `yarn build` green
+
+### Known Deferred Items
+
+- Quick-task tracking artifacts acknowledged at close (4) — flagged by the open-artifact audit but triaged as already-shipped or deferred, none part of v1.14 scope: `260524-pha` (empty dir, dup of `pnk`), `260524-pnk` (shipped 889ae56), `260525-ga2` (shipped 4a722f2), `260530-bib-description-strip-pattern` (descriptionStripPattern — shipped separately, migration 0015)
+- R038, R039, R041 — live Vercel/Supabase/R2 deploy operator-pending
+- R029 — partial categorization revalidation coverage
+
+### Archive
+
+- `.planning/milestones/v1.14-ROADMAP.md`
+
+---
+
 ## v1.13 — Unified Categorization Picker
 
 **Shipped:** 2026-06-02

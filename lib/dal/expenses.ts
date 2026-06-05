@@ -2,7 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { db } from '@/lib/db'
 import { category, expense, file, importFormatVersion, platform, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
-import { eq, and, gte, ilike, inArray, lte, or, asc, desc, sql } from 'drizzle-orm'
+import { eq, and, gte, ilike, inArray, lte, asc, desc, sql } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { periodToDateRange } from '@/lib/utils/date'
 

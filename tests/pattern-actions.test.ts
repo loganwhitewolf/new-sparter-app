@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   createPattern: vi.fn(),
   updatePattern: vi.fn(),
   deletePattern: vi.fn(),
+  getCategoryTypeForSubCategory: vi.fn(),
   revalidatePath: vi.fn(),
   refresh: vi.fn(),
 }))
@@ -31,6 +32,7 @@ vi.mock('@/lib/dal/patterns', () => ({
   createPattern: mocks.createPattern,
   updatePattern: mocks.updatePattern,
   deletePattern: mocks.deletePattern,
+  getCategoryTypeForSubCategory: mocks.getCategoryTypeForSubCategory,
 }))
 
 vi.mock('@/lib/validations/pattern', async () => {
@@ -115,6 +117,7 @@ describe('pattern Server Actions', () => {
     mocks.createPattern.mockResolvedValue({ id: 7 })
     mocks.updatePattern.mockResolvedValue({ id: 7 })
     mocks.deletePattern.mockResolvedValue({ id: 7 })
+    mocks.getCategoryTypeForSubCategory.mockResolvedValue('out')
   })
 
   describe('createPatternAction', () => {

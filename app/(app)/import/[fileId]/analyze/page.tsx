@@ -110,7 +110,7 @@ export default async function AnalyzePage({
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <Button asChild>
-                <Link href={`/import/${encodeURIComponent(fileId)}/configure`}>
+                <Link href={`/import/${encodeURIComponent(fileId)}/configure${from ? `?from=${encodeURIComponent(from)}` : ''}`}>
                   Configura formato privato
                 </Link>
               </Button>
