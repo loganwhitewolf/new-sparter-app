@@ -38,9 +38,10 @@ type Props = {
   candidates?: FormatCandidate[]
   confirmDisabledReason?: string
   categories: CategoryWithSubCategories[]
+  returnTo?: string
 }
 
-export function ImportPreview({ result, candidates = [], confirmDisabledReason, categories }: Props) {
+export function ImportPreview({ result, candidates = [], confirmDisabledReason, categories, returnTo }: Props) {
   const router = useRouter()
   const [selectedFormatVersionId, setSelectedFormatVersionId] = useState<string>(
     result.formatVersionId ? String(result.formatVersionId) : '',
@@ -78,7 +79,7 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
         return
       }
       setSuccess(true)
-      router.push(APP_ROUTES.expenses)
+      router.push(returnTo ?? APP_ROUTES.expenses)
     } catch {
       setError('Importazione fallita. Riprova.')
       submitLock.current = false

@@ -143,6 +143,7 @@ Items acknowledged and deferred at milestone close on 2026-06-02:
 | 260529-eh0 | Remove revalidatePath(onboarding) from categorize action — page reload loop during step 4 | 2026-05-29 | 40af612 | [260529-eh0-remove-onboarding-revalidate](.planning/quick/260529-eh0-remove-onboarding-revalidate/) |
 | 260529-f3k | Fix post-registration reload loop — signUpAction redirects directly to /onboarding instead of /dashboard | 2026-05-29 | ceb3651 | inline |
 | 260529-u9p | Step 2 remove +/- signs from amount cards; Step 4 green done card + stop RSC re-render on categorize | 2026-05-29 | HEAD | inline |
+| 260529-lyd | Public /proto preview area for stakeholder demos — dashboard overview prototype (5 variants) out of (app), Vercel-Preview-gated | 2026-05-29 | c0048e0 | [260529-lyd-proto-public-preview](.planning/quick/260529-lyd-proto-public-preview/) |
 | 260531-fko | Riorganizza sottocategorie Spesa (categoryId 8) — aggiunte 4 nuove, rinominata spesa-bio, migrazione expense + pattern, disattivate prodotti-freschi e prodotti-non-alimentari | 2026-05-31 | f979ae1 | [260531-fko-riorganizza-sottocategorie-spesa-categor](.planning/quick/260531-fko-riorganizza-sottocategorie-spesa-categor/) |
 | 260531-trc | Riorganizza categorie Trasferimenti (cat 32: ignore → transfer type) e Rimborsi (cat 26: rename + subcategory delta) — migration, seed-extras, dashboard DAL filter refactor | 2026-05-31 | HEAD | [260531-trc-riorganizza-trasferimenti-rimborsi-categorie](.planning/quick/260531-trc-riorganizza-trasferimenti-rimborsi-categorie/) |
 
