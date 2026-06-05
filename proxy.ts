@@ -19,17 +19,23 @@ export async function proxy(request: NextRequest) {
 
   // Server Actions carry the `next-action` header. Redirecting them based on
   // session state breaks the action response format — the client expects RSC
-  // content-type, not a 307 redirect. Let all Server Action requests pass
-  // through unconditionally; the action itself handles auth or redirect.
+  // content-type, not a 307 redirect. Still set x-pathname so the RSC layout
+  // that renders as part of the SA response can evaluate isExempt correctly.
   if (request.headers.has('next-action')) {
-    return NextResponse.next()
+    const saHeaders = new Headers(request.headers)
+    saHeaders.set('x-pathname', request.nextUrl.pathname)
+    saHeaders.set('x-search', request.nextUrl.search)
+    return NextResponse.next({ request: { headers: saHeaders } })
   }
 
   // Session check via Better Auth Drizzle adapter (Node.js runtime)
   const session = await getAuthSessionOrNull(request.headers)
 
   const isAuthenticated = !!session?.user
-  const isPublicRoute = PUBLIC_ROUTES.includes(path)
+  // /proto/* is the public prototype area (throwaway demos). It carries no auth and is
+  // gated to Vercel Preview via PROTOTYPES_ENABLED in its own layout, so skip the login
+  // redirect here. Production never sets that env, so the route 404s there regardless.
+  const isPublicRoute = PUBLIC_ROUTES.includes(path) || path.startsWith('/proto')
   const isAuthRoute = AUTH_ROUTES.includes(path)
 
   // Redirect authenticated users away from auth pages
@@ -49,6 +55,7 @@ export async function proxy(request: NextRequest) {
   // 'x-pathname' value is replaced before reaching the layout (T-38-01).
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-pathname', request.nextUrl.pathname)
+  requestHeaders.set('x-search', request.nextUrl.search)
   return NextResponse.next({ request: { headers: requestHeaders } })
 }
 

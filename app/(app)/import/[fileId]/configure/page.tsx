@@ -9,10 +9,14 @@ import { APP_ROUTES } from '@/lib/routes'
 
 export default async function ConfigureImportFormatPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ fileId: string }>
+  searchParams?: Promise<{ from?: string | string[] }>
 }) {
   const { fileId } = await params
+  const resolvedSearch = searchParams ? await searchParams : {}
+  const from = Array.isArray(resolvedSearch.from) ? resolvedSearch.from[0] : resolvedSearch.from
   const formData = new FormData()
   formData.set('fileId', fileId)
   const result = await loadImportFormatWizardContextAction(formData)
@@ -55,7 +59,7 @@ export default async function ConfigureImportFormatPage({
         </p>
       </div>
 
-      <ImportFormatWizard context={result.data} />
+      <ImportFormatWizard context={result.data} from={from} />
     </div>
   )
 }

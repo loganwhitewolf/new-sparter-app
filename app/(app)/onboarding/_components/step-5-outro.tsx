@@ -16,11 +16,13 @@ export function Step5Outro() {
       </p>
 
       <div className="flex w-full max-w-sm flex-col gap-3">
+        {/* Hard navigation: OnboardingShell has fixed inset-0 z-50 — a client-side transition
+            would keep the shell overlay visible while the dashboard RSC loads, hiding the sidebar. */}
         <Button asChild size="lg" className="w-full">
-          <Link href={APP_ROUTES.dashboard}>
+          <a href={APP_ROUTES.dashboard}>
             Vai alla dashboard
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
+          </a>
         </Button>
         <Button asChild variant="outline" size="lg" className="w-full">
           <Link href={APP_ROUTES.categorySettings}>
