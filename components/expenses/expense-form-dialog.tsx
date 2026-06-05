@@ -16,21 +16,17 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { SubcategoryPicker } from '@/components/categorization/subcategory-picker'
 import { createExpense, updateExpense } from '@/lib/actions/expenses'
 import type { ExpenseRow } from '@/lib/dal/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
+import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 
 type Props =
   | {
       mode: 'create'
       categories: CategoryWithSubCategories[]
+      mostUsed: MostUsedSubcategory[]
       expense?: never
       trigger?: never
       open?: never
@@ -41,6 +37,7 @@ type Props =
   | {
       mode: 'edit'
       categories: CategoryWithSubCategories[]
+      mostUsed: MostUsedSubcategory[]
       expense: ExpenseRow
       trigger?: React.ReactNode
       open?: boolean
@@ -52,6 +49,7 @@ type Props =
 export function ExpenseFormDialog({
   mode,
   categories,
+  mostUsed,
   expense,
   trigger,
   open: controlledOpen,
@@ -62,10 +60,9 @@ export function ExpenseFormDialog({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const open = controlledOpen ?? uncontrolledOpen
 
-  const [categoryId, setCategoryId] = useState<string>('')
   const [subCategoryId, setSubCategoryId] = useState<string>('')
-
-  const selectedCategory = categories.find((c) => String(c.id) === categoryId)
+  const [subCategoryLabel, setSubCategoryLabel] = useState<string>('')
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   const action = mode === 'create' ? createExpense : updateExpense
   const [state, formAction, isPending] = useActionState(action, { error: null })
@@ -75,17 +72,22 @@ export function ExpenseFormDialog({
 
   const syncEditSelection = useCallback(() => {
     if (mode === 'edit' && expense.subCategoryId) {
-      const catId = String(
-        categories.find((c) => c.subCategories.some((s) => s.id === expense.subCategoryId))?.id ?? ''
+      const subIdStr = String(expense.subCategoryId)
+      setSubCategoryId(subIdStr)
+      // Resolve display label from categories tree
+      const parentCat = categories.find((c) =>
+        c.subCategories.some((s) => s.id === expense.subCategoryId)
       )
-      setCategoryId(catId)
-      setSubCategoryId(String(expense.subCategoryId))
+      const subCat = parentCat?.subCategories.find((s) => s.id === expense.subCategoryId)
+      // sub.name already reflects the override (DAL bakes customName into name at row-map time)
+    const label = subCat ? subCat.name : ''
+      setSubCategoryLabel(label)
     }
   }, [categories, expense, mode])
 
   const resetSelection = useCallback(() => {
-    setCategoryId('')
     setSubCategoryId('')
+    setSubCategoryLabel('')
   }, [])
 
   const setDialogOpen = useCallback(
@@ -125,9 +127,18 @@ export function ExpenseFormDialog({
     setDialogOpen(nextOpen)
   }
 
-  function handleCategoryChange(value: string) {
-    setCategoryId(value)
-    setSubCategoryId('')
+  function handlePickerChange(selectedSubCategoryId: string) {
+    setSubCategoryId(selectedSubCategoryId)
+    // Resolve display label from categories tree
+    const parentCat = categories.find((c) =>
+      c.subCategories.some((s) => String(s.id) === selectedSubCategoryId)
+    )
+    const subCat = parentCat?.subCategories.find(
+      (s) => String(s.id) === selectedSubCategoryId
+    )
+    // sub.name already reflects the override (DAL bakes customName into name at row-map time)
+    const label = subCat ? subCat.name : ''
+    setSubCategoryLabel(label)
   }
 
   return (
@@ -178,41 +189,20 @@ export function ExpenseFormDialog({
             />
           </div>
 
-          {/* Categoria */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Categoria</label>
-            <Select value={categoryId} onValueChange={handleCategoryChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleziona una categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={String(cat.id)}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Sottocategoria */}
-          {selectedCategory && (
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">Sottocategoria</label>
-              <Select value={subCategoryId} onValueChange={setSubCategoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona una sottocategoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedCategory.subCategories.map((sub) => (
-                    <SelectItem key={sub.id} value={String(sub.id)}>
-                      {sub.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">Sottocategoria</label>
+            <Button
+              type="button"
+              variant="outline"
+              className="justify-start text-left font-normal"
+              onClick={() => setPickerOpen(true)}
+            >
+              {subCategoryLabel || (
+                <span className="text-muted-foreground">Categorizza…</span>
+              )}
+            </Button>
+          </div>
 
           {/* Note */}
           <div className="flex flex-col gap-1.5">
@@ -249,6 +239,16 @@ export function ExpenseFormDialog({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <SubcategoryPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        categories={categories}
+        mostUsed={mostUsed}
+        allowedCategoryTypes={['in', 'out', 'transfer', 'system']}
+        defaultType={null}
+        onChange={handlePickerChange}
+      />
     </Dialog>
   )
 }

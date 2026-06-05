@@ -25,7 +25,9 @@ export function normalizePatternInput(input: string): string {
     }
   }
 
-  if (source.length === 0) {
+  // Reject empty source (e.g. //) or single-char source (e.g. ///) — too short to be meaningful
+  // and a bare `/` as source matches every string containing a slash (over-categorization).
+  if (source.length < 2) {
     throw new Error(INVALID_PATTERN_MESSAGE)
   }
 
@@ -50,6 +52,18 @@ const regexString = z.string().transform((val, ctx) => {
   }
 })
 
+/**
+ * Derives the amountSign for a pattern from the parent category type.
+ * Per ADR 0008: out -> negative, in -> positive, transfer/system -> any.
+ */
+export function deriveAmountSign(
+  categoryType: 'in' | 'out' | 'system' | 'transfer',
+): 'positive' | 'negative' | 'any' {
+  if (categoryType === 'out') return 'negative'
+  if (categoryType === 'in') return 'positive'
+  return 'any' // transfer | system
+}
+
 export const CreatePatternSchema = z.object({
   pattern: regexString,
   subCategoryId: z.number({ error: 'Seleziona una sottocategoria.' }).int().positive({ error: 'Seleziona una sottocategoria.' }),
@@ -60,6 +74,16 @@ export const CreatePatternSchema = z.object({
 
 export const UpdatePatternSchema = CreatePatternSchema.partial()
 
+/**
+ * Client-facing update schema — omits server-derived fields (ADR 0008).
+ * Used by updatePatternAction to prevent clients from injecting amountSign
+ * or confidence values that must always be derived server-side.
+ */
+export const UpdatePatternClientSchema = CreatePatternSchema
+  .omit({ amountSign: true, confidence: true })
+  .partial()
+
 export type CreatePatternInput = z.infer<typeof CreatePatternSchema>
 export type UpdatePatternInput = z.infer<typeof UpdatePatternSchema>
+export type UpdatePatternClientInput = z.infer<typeof UpdatePatternClientSchema>
 export type ActionState = { error: string | null }

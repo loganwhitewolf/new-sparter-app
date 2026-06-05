@@ -4,6 +4,110 @@ Living retrospective — one section per milestone, newest first.
 
 ---
 
+## Milestone: v1.13 — Unified Categorization Picker
+
+**Shipped:** 2026-06-02
+**Phases:** 1 (39) | **Plans:** 6 | **Commits:** ~50
+
+### What Was Built
+
+- `SubcategoryPicker` (vaul bottom sheet, variant E): type chips, two-column master-detail, search-collapse, fixed height, single `subCategoryId` output
+- `getMostUsedSubcategories` DAL — top ~6 per user by categorization count, cold-start safe
+- Adopted in 4 commit-on-tap surfaces (expense, transaction, bulk, onboarding) and 2 fill-field forms (create/edit expense, create transaction)
+- Pattern and suggestion-promotion forms reworked: `amountSign` derived server-side from category type (ADR 0008), `confidence` hardcoded 1
+- `CategoryCombobox`, onboarding `SubcategoryCombobox`, cascading `Select` pairs deleted
+- Prototype route deleted; `yarn build` + `yarn check:language` green
+
+### What Worked
+
+- **Prototype → plan structure**: grill-me + prototype session locked all 10 design decisions before a single line of production code was written — zero design churn during execution
+- **Variant E master-detail**: Fixed-height sheet with stable layout (no resize on filter change) proved easy to implement with vaul; the "only inner lists scroll" constraint made the height budget mechanical
+- **ADR 0008 as a contract for server-side derivation**: Pattern forms had no ambiguity about who derives `amountSign` — no client-side logic needed, no UI knob
+- **Code review caught real regressions**: CR-01 (amount color inversion), CR-02/WR-03 (stale picker body), CR-03 (client-supplied schema bypass), WR-02 (single-char pattern rejection) — all real issues addressed before UAT
+
+### What Was Inefficient
+
+- Wave numbering in PLAN.md was non-sequential (39-05 in Wave 3, 39-04 in Wave 4) — plan index confused the wave ordering; next time keep wave N = plan numeric order
+- Nyquist validation ran as a separate phase after UAT rather than inline — gap surfaced PROC-01 (audit trail) which was partially addressed; no execution impact but added a cycle
+
+### Patterns Established
+
+- `SubcategoryPicker` as the single picker contract across all surfaces — output always `subCategoryId`; caller owns the commit
+- `buildCategoryOptions` / `filterCategoryOptions` in `lib/categorization/subcategory-options.ts` — shared pure functions for list construction
+- `amountSign` derived server-side from `category.type` in DAL/action — avoids client trust for business-critical field
+
+### Key Lessons
+
+1. **Lock the design before writing the PLAN.md** — prototype + grill session upfront eliminated all mid-execution design questions
+2. **Wave numbering should match plan numeric order** — 39-03, 39-04, 39-05 in wave order 3→4→5, not swapped; reduces cognitive load during execution tracking
+3. **Pattern form amountSign**: Deriving a business-critical field server-side (not trusting client) is the right default — ADR 0008 pattern should apply broadly to any field that can be inferred from a trusted FK
+
+---
+
+## Milestone: v1.12 — First-import Onboarding
+
+**Shipped:** 2026-05-28
+**Phases:** 1 (38) | **Plans:** 3 | **Commits:** ~38
+
+### What Was Built
+
+- DAL: `getTransactionCount`, `getTopUncategorizedExpenses`, `getFileCoveredMonths`, `formatMonthRange`
+- RSC layout gate in `app/(app)/layout.tsx` — Drizzle cannot run in Edge runtime; D-11 constraint documented
+- 5-step onboarding flow: upload (R2 presigned PUT reuse), overview (real transaction data), education (giroconto tip), categorization wizard (FlowNature badges), outro
+- Full-screen hero design (dark bg steps 1–3+5, light bg step 4); progress dots + step label
+
+### What Worked
+
+- **RSC layout gate approach**: Clear rationale (Drizzle != Edge) prevented future confusion about why proxy.ts can't do the redirect; D-11 decision well-documented
+- **Step 4 reuse of existing actions**: `onboardingCategorizeExpense` thin wrapper over existing categorize action — no duplicated business logic
+- **Prototype deletion on merge**: Keeping prototype deletion in the final plan step meant cleanup was automatic; no zombie routes
+
+### What Was Inefficient
+
+- Step 4 onboarding originally used a shadcn `Combobox` — replaced by `SubcategoryPicker` in v1.13 (expected; was already planned as part of the picker migration)
+
+### Patterns Established
+
+- RSC layout guard pattern for transaction-count gates — `async` layout, `getTransactionCount()` inline, `redirect()` conditional
+- `formatMonthRange` utility for on-the-fly month range labels from transaction dates
+
+### Key Lessons
+
+1. **Edge runtime constraint**: Any guard that needs DB access goes in RSC layout, not proxy.ts — document this constraint once (D-11) and reference it everywhere
+2. **Prototype routes need deletion plans**: Including cleanup in the final plan wave means it can't be forgotten
+
+---
+
+## Milestone: v1.11 — FlowNature & Segmented Chart
+
+**Shipped:** 2026-05-26
+**Phases:** 1 (37) | **Plans:** 5 | **Commits:** ~45
+
+### What Was Built
+
+- `flowNatureEnum` migration + `nature` column on `sub_category` and `user_subcategory_override`
+- 126 system subcategories seeded with default natures
+- `getMonthlyTrendByNature` DAL; `effectiveNature = COALESCE(override, seed default)`
+- Stacked nature `EntrateUsciteChart` with URL-persisted legend toggles (`?hidden=` param)
+- `SubcategoryNatureSelect` + `setSubcategoryNatureAction` — nature required on creation in settings
+
+### What Worked
+
+- **COALESCE approach**: User override wins over seed default cleanly — no custom merge logic in the application layer
+- **URL-persisted toggles**: `?hidden=` param approach was re-usable from existing URL state patterns in the codebase; no new state management needed
+- **Wave 0 TDD**: Nature labels utility (`nature-labels.ts`) scaffolded first made subsequent chart implementation mechanical
+
+### What Was Inefficient
+
+- `ignore` category (cat 32) left with null nature — sentinel value needed for chart exclusion; the Transfer/Giroconto categorization rework in a later quick-task clarified the intent post-fact
+
+### Key Lessons
+
+1. **Seed defaults + user override pattern (COALESCE)**: A clean and forward-compatible pattern for any preference-like column — default is authoritative until user overrides
+2. **URL params for persistent toggles**: Zero client-side state; survives navigation and sharing; compatible with RSC — use as default for any toggle that belongs in the URL
+
+---
+
 ## Milestone: v1.10 — Pattern Suggestions
 
 **Shipped:** 2026-05-25

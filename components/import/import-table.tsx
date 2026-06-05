@@ -20,6 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useToolbarSort } from "@/components/data-table/DataTableToolbar";
+import { HeaderSortButton } from "@/components/data-table/HeaderSortButton";
 import { loadMoreImports } from "@/lib/actions/import";
 import type { ImportListRow } from "@/lib/dal/imports";
 import type {
@@ -30,6 +32,7 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   imports: ImportListRow[];
+  route: string;
   filters: ParsedImportFilters;
   searchParams: ImportSearchParams;
   loadError?: boolean;
@@ -84,17 +87,21 @@ function getImportDisplayName(row: ImportListRow) {
 }
 
 function hasActiveFilters(filters: ParsedImportFilters) {
+  // Wave 5: legacy importedFrom/importedTo/referenceFrom/referenceTo no longer parsed.
+  // Check only the canonical Wave 4+ filter keys.
   return Boolean(
     filters.q ||
-    filters.importedFrom ||
-    filters.importedTo ||
-    filters.referenceFrom ||
-    filters.referenceTo,
+    filters.platform ||
+    filters.statusBucket ||
+    (filters.months && filters.months.length > 0) ||
+    filters.amountMin ||
+    filters.amountMax,
   );
 }
 
 export function ImportTable({
   imports,
+  route,
   filters,
   searchParams,
   loadError = false,
@@ -110,6 +117,7 @@ export function ImportTable({
   const isLoadingMoreRef = useRef(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const filtered = hasActiveFilters(filters);
+  const { activeSort, activeDir, onSort } = useToolbarSort(route);
 
   const loadNextPage = useCallback(async () => {
     if (isLoadingMoreRef.current || !hasMore) {
@@ -225,18 +233,35 @@ export function ImportTable({
               <TableHead className="min-w-[16rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
                 File
               </TableHead>
-              <TableHead className="w-28 text-xs font-normal uppercase tracking-wide text-muted-foreground">
-                Stato
-              </TableHead>
-              <TableHead className="min-w-[9rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
-                Piattaforma
-              </TableHead>
-              <TableHead className="w-32 text-xs font-normal uppercase tracking-wide text-muted-foreground">
-                Importato il
-              </TableHead>
-              <TableHead className="w-24 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground">
-                Righe
-              </TableHead>
+              <HeaderSortButton
+                column={{ key: "status", label: "Stato" }}
+                activeSort={activeSort}
+                activeDir={activeDir}
+                onSort={onSort}
+                className="w-28 text-xs font-normal uppercase tracking-wide text-muted-foreground"
+              />
+              <HeaderSortButton
+                column={{ key: "platform", label: "Piattaforma" }}
+                activeSort={activeSort}
+                activeDir={activeDir}
+                onSort={onSort}
+                className="min-w-[9rem] text-xs font-normal uppercase tracking-wide text-muted-foreground"
+              />
+              <HeaderSortButton
+                column={{ key: "importedAt", label: "Importato il" }}
+                activeSort={activeSort}
+                activeDir={activeDir}
+                onSort={onSort}
+                className="w-32 text-xs font-normal uppercase tracking-wide text-muted-foreground"
+              />
+              <HeaderSortButton
+                column={{ key: "rowCount", label: "Righe" }}
+                activeSort={activeSort}
+                activeDir={activeDir}
+                align="right"
+                onSort={onSort}
+                className="w-24 text-xs font-normal uppercase tracking-wide text-muted-foreground"
+              />
               <TableHead className="min-w-[11rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
                 Periodo
               </TableHead>

@@ -36,20 +36,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useToolbarSort } from '@/components/data-table/DataTableToolbar'
+import { HeaderSortButton } from '@/components/data-table/HeaderSortButton'
 import { deleteTransaction, loadMoreTransactions } from '@/lib/actions/transactions'
 import type { TransactionListRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
-import type {
-  ParsedTransactionFilters,
-  TransactionSearchParams,
-} from '@/lib/validations/transactions'
+import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
+import type { TransactionSearchParams } from '@/lib/validations/transactions'
 import { cn } from '@/lib/utils'
 
 type Props = {
   transactions: TransactionListRow[]
-  filters: Pick<ParsedTransactionFilters, 'sort' | 'dir'>
+  route: string
   searchParams: TransactionSearchParams
   categories: CategoryWithSubCategories[]
+  mostUsed: MostUsedSubcategory[]
 }
 
 const PAGE_SIZE = 50
@@ -104,23 +105,12 @@ function getLinkedExpenseCategoryLabel(transaction: TransactionListRow) {
   return parts.length > 0 ? parts.join(' → ') : 'Categorizzata'
 }
 
-function getSortDirection(
-  filters: Pick<ParsedTransactionFilters, 'sort' | 'dir'>,
-  column: 'amount' | 'occurredAt',
-): 'ascending' | 'descending' | 'none' {
-  if (filters.sort !== column) {
-    return 'none'
-  }
-
-  return filters.dir === 'asc' ? 'ascending' : 'descending'
-}
-
 function transactionRowLabel(transaction: TransactionListRow) {
   const raw = transaction.customTitle?.trim() || transaction.description
   return raw.length > 80 ? `${raw.slice(0, 77)}…` : raw
 }
 
-export function TransactionTable({ transactions, filters, searchParams, categories }: Props) {
+export function TransactionTable({ transactions, route, searchParams, categories, mostUsed }: Props) {
   const [loadedTransactions, setLoadedTransactions] = useState(transactions)
   const [hasMore, setHasMore] = useState(transactions.length === PAGE_SIZE)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -131,6 +121,8 @@ export function TransactionTable({ transactions, filters, searchParams, categori
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const [categorizeTarget, setCategorizeTarget] = useState<{ id: string; title: string } | null>(null)
+
+  const { activeSort, activeDir, onSort } = useToolbarSort(route)
 
   const allSelected =
     loadedTransactions.length > 0 && selectedIds.length === loadedTransactions.length
@@ -274,27 +266,43 @@ export function TransactionTable({ transactions, filters, searchParams, categori
                 aria-label="Seleziona tutte le transazioni"
               />
             </TableHead>
-            <TableHead className="text-xs font-normal uppercase tracking-wide text-muted-foreground">
-              Transazione
-            </TableHead>
-            <TableHead
-              className="w-32 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground"
-              aria-sort={getSortDirection(filters, 'amount')}
-            >
-              Importo
-            </TableHead>
-            <TableHead
-              className="w-28 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground"
-              aria-sort={getSortDirection(filters, 'occurredAt')}
-            >
-              Data
-            </TableHead>
-            <TableHead className="w-40 text-xs font-normal uppercase tracking-wide text-muted-foreground">
-              Sorgente
-            </TableHead>
-            <TableHead className="w-48 text-xs font-normal uppercase tracking-wide text-muted-foreground">
-              Spesa collegata
-            </TableHead>
+            <HeaderSortButton
+              column={{ key: 'description', label: 'Transazione' }}
+              activeSort={activeSort}
+              activeDir={activeDir}
+              onSort={onSort}
+              className="text-xs font-normal uppercase tracking-wide text-muted-foreground"
+            />
+            <HeaderSortButton
+              column={{ key: 'amount', label: 'Importo' }}
+              activeSort={activeSort}
+              activeDir={activeDir}
+              align="right"
+              onSort={onSort}
+              className="w-32 text-xs font-normal uppercase tracking-wide text-muted-foreground"
+            />
+            <HeaderSortButton
+              column={{ key: 'occurredAt', label: 'Data' }}
+              activeSort={activeSort}
+              activeDir={activeDir}
+              align="right"
+              onSort={onSort}
+              className="w-28 text-xs font-normal uppercase tracking-wide text-muted-foreground"
+            />
+            <HeaderSortButton
+              column={{ key: 'platform', label: 'Sorgente' }}
+              activeSort={activeSort}
+              activeDir={activeDir}
+              onSort={onSort}
+              className="w-40 text-xs font-normal uppercase tracking-wide text-muted-foreground"
+            />
+            <HeaderSortButton
+              column={{ key: 'category', label: 'Spesa collegata' }}
+              activeSort={activeSort}
+              activeDir={activeDir}
+              onSort={onSort}
+              className="w-48 text-xs font-normal uppercase tracking-wide text-muted-foreground"
+            />
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
@@ -334,8 +342,8 @@ export function TransactionTable({ transactions, filters, searchParams, categori
                   className={cn(
                     'text-right font-mono tabular-nums',
                     transaction.amount.trim().startsWith('-')
-                      ? 'text-emerald-700'
-                      : 'text-foreground',
+                      ? 'text-foreground'
+                      : 'text-emerald-700',
                   )}
                 >
                   {formatAmount(transaction.amount, transaction.currency)}
@@ -501,6 +509,7 @@ export function TransactionTable({ transactions, filters, searchParams, categori
         onOpenChange={(open) => { if (!open) setCategorizeTarget(null) }}
         expense={categorizeTarget}
         categories={categories}
+        mostUsed={mostUsed}
         onSuccess={(subCategoryId) => {
           const txId = loadedTransactions.find((t) => t.expenseId === categorizeTarget.id)?.id
           if (txId) markExpenseCategorized(txId, subCategoryId)

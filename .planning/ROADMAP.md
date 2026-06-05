@@ -8,6 +8,8 @@
 - ✅ **v1.9: Social Auth** — Phases 30–32 (shipped 2026-05-22)
 - ✅ **v1.10: Pattern Suggestions** — Phases 33–36 (shipped 2026-05-25)
 - ✅ **v1.12: First-import Onboarding** — Phase 38 (shipped 2026-05-28)
+- ✅ **v1.13: Unified Categorization Picker** — Phase 39 (shipped 2026-06-02)
+- ✅ **v1.14: Unified Table Filter & Sort** — Phase 40 (shipped 2026-06-04)
 
 ## Phases
 
@@ -88,83 +90,68 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 | 37 | v1.11 | 5/5 | Complete | 2026-05-26 |
 | 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
+| 39 | v1.13 | 6/6 | Complete    | 2026-06-02 |
 
-**Total: 38 phases shipped · 137 plans complete**
+| 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
 
----
+**Total: 38 phases shipped · 146 plans complete**
 
-## ✅ v1.11: FlowNature & Segmented Chart (Phase 37) — SHIPPED 2026-05-26
+<details>
+<summary>✅ v1.14: Unified Table Filter & Sort (Phase 40) — SHIPPED 2026-06-04</summary>
 
-### Phase 37: flow-nature-chart
+- [x] **Phase 40: table-filter-sort** — Unified filtering + sorting across Transactions, Expenses, Files tables; shared `DataTableToolbar`; month-multi picker; `id` sort tiebreaker; per-table declarative config (ADR 0009, ADR 0010) *(complete 2026-06-04)*
+  - Goal: Replace the three divergent table controls with one coherent system — same behaviour, same UI shape, only the declared fields differ per table.
+  - Depends on: Phase 39
+  - Constraints: No filter engine (ADR 0010); URL = single source of truth; server-side filtering; offset+infinite-scroll pagination unchanged; `id` tiebreaker on all DAL sorts; Expenses have NO temporal filter (ADR 0009).
+  - Plans: 5 plans (5 waves)
 
-**Goal:** Add `nature` enum column to `sub_category`; evolve `EntrateUsciteChart` into a stacked nature-segmented chart with URL-persisted toggles; seed system subcategories with default natures; expose nature override in `/settings/categories`.
-**Status:** Complete
-**Depends on:** Phase 29 (EntrateUsciteChart), Phase 35 (subcategory UI patterns)
-**Requirements:** R-FN-01 ✓, R-FN-02 ✓, R-FN-03 ✓, R-FN-04 ✓, R-FN-05 ✓, R-FN-06 ✓, R-FN-07 ✓, R-FN-08 ✓, R-FN-09 ✓
+Plans:
 
-- [x] **Phase 37: flow-nature-chart** — Add `nature` enum column to `sub_category`; evolve `EntrateUsciteChart` into a stacked nature-segmented chart with URL-persisted toggles; seed system subcategories with default natures; expose nature override in `/settings/categories`.
+- [x] 40-01-PLAN.md — Foundation: shared TableConfig types + URL param parsers + id tiebreaker on transactions/imports DAL *(complete 2026-06-04)*
+- [x] 40-02-PLAN.md — Shared UI: DataTableToolbar + HeaderSortButton + ChipsRow + URL-mutation hook (mock config) *(complete 2026-06-04)*
+- [x] 40-03-PLAN.md — New controls: getMonthsWithData DAL + MonthMultiPicker + AmountRangePicker, wired into toolbar *(complete 2026-06-04)*
+- [x] 40-04-PLAN.md — Wire per-table configs + DAL filters for Transactions, Expenses, Files *(complete 2026-06-04)*
+- [x] 40-05-PLAN.md — Polish: empty states, a11y pass, URL migration, prototype deletion, yarn build green *(complete 2026-06-04)*
 
-**Requirements:**
+</details>
 
-- R-FN-01 ✓: `nature` column on `sub_category` (nullable enum: `essential | discretionary | operational | financial | debt | extraordinary`)
-- R-FN-02 ✓: Drizzle migration for `nature` column
-- R-FN-03 ✓: System subcategories seeded with default natures in `seed-data.ts`
-- R-FN-04 ✓: `EntrateUsciteChart` replaced by stacked bar chart grouped by nature (algebraic sum per nature, not sign-split)
-- R-FN-05 ✓: Nature toggle via URL param `?hidden=` (comma-separated nature values); persisted across navigation
-- R-FN-06 ✓: Null nature renders as "non classificato" segment in chart
-- R-FN-07 ✓: Nature field exposed and editable in `/settings/categories` subcategory UI (required on creation, with preselected default)
-- R-FN-08 ✓: `MonthlyTrendPoint` / DAL query updated to group by nature algebraically
-- R-FN-09 ✓: `Transfer` flows (`ignore → trasferimenti`) continue to be excluded via existing `excludeFromTotals` — no new nature type needed
+<details>
+<summary>✅ v1.11: FlowNature & Segmented Chart (Phase 37) — SHIPPED 2026-05-26</summary>
 
-**Plans:** 5/5
-**Wave 1**
+- [x] Phase 37: flow-nature-chart — `nature` enum on `sub_category`; stacked nature-segmented `EntrateUsciteChart`; URL-persisted legend toggles; nature editable in settings *(complete 2026-05-26)*
+  - [x] 37-01: Wave 0 scaffolding + `lib/utils/nature-labels.ts`
+  - [x] 37-02: Schema migration — `flowNatureEnum`, nature columns, seed 126 subcategories
+  - [x] 37-03: DAL `getMonthlyTrendByNature` + `effectiveNature` on `CategoryWithSubCategories`
+  - [x] 37-04: Stacked nature chart rewrite + URL-persisted legend toggle
+  - [x] 37-05: Settings — nature required on creation + `SubcategoryNatureSelect` + `setSubcategoryNatureAction`
 
-- [x] 37-01-PLAN.md — Wave 0 test scaffolding + `lib/utils/nature-labels.ts` shared label utility (R-FN-06, R-FN-07)
-- [x] 37-02-PLAN.md — Schema migration: `flowNatureEnum`, nature columns on `sub_category` + `user_subcategory_override`, drop `custom_name` NOT NULL, seed nature assignment (R-FN-01, R-FN-02, R-FN-03)
+Full details: `.planning/milestones/v1.13-ROADMAP.md`
 
-**Wave 2**
+</details>
 
-- [x] 37-03-PLAN.md — DAL: `getMonthlyTrendByNature` + `MonthlyNatureTrendPoint` + `effectiveNature` on `CategoryWithSubCategories` (R-FN-04, R-FN-05, R-FN-08, R-FN-09)
+<details>
+<summary>✅ v1.12: First-import Onboarding (Phase 38) — SHIPPED 2026-05-28</summary>
 
-**Wave 3**
+- [x] Phase 38: first-import-onboarding — 5-step guided flow; RSC layout routing gate; categorization wizard with nature badges *(complete 2026-05-28)*
+  - [x] 38-01: DAL foundation + RSC layout guard
+  - [x] 38-02: Onboarding route group + Steps 1–3
+  - [x] 38-03: Step 4 categorization wizard + Step 5 outro + prototype deletion
 
-- [x] 37-04-PLAN.md — Chart rewrite: stacked nature `EntrateUsciteChart` with URL-persisted legend toggle + overview page wiring (R-FN-04, R-FN-05, R-FN-06)
-- [x] 37-05-PLAN.md — Settings: nature required on creation + inline `SubcategoryNatureSelect` + `setSubcategoryNatureAction` (R-FN-07)
+Full details: `.planning/milestones/v1.13-ROADMAP.md`
 
----
+</details>
 
-## ✅ v1.12: First-import Onboarding (Phase 38) — SHIPPED 2026-05-28
+<details>
+<summary>✅ v1.13: Unified Categorization Picker (Phase 39) — SHIPPED 2026-06-02</summary>
 
-### Phase 38: first-import-onboarding
+- [x] Phase 39: unified-subcategory-picker — Single `SubcategoryPicker` (vaul bottom sheet) across all 7 surfaces; pattern form rework; `amountSign` derived server-side per ADR 0008 *(complete 2026-06-02)*
+  - [x] 39-01: vaul + `getMostUsedSubcategories` DAL + `subcategory-options.ts` extraction
+  - [x] 39-02: `SubcategoryPicker` component (variant E) — bottom sheet, type chips, master-detail, search-collapse
+  - [x] 39-03: Adopt in 4 commit-on-tap surfaces (expense, transaction, bulk, onboarding)
+  - [x] 39-05: Pattern forms rework — `amountSign` server-side, `confidence=1`
+  - [x] 39-04: Adopt in 2 fill-field forms (expense form, transaction form)
+  - [x] 39-06: Cleanup — delete legacy pickers + prototype route; `yarn build` green
 
-**Goal:** New users with zero transactions see a dedicated 5-step onboarding flow instead of an empty dashboard. The flow guides them through upload → overview → categorization education → manual categorization wizard → outro. A hard routing gate (per D-11, implemented in the `app/(app)` RSC layout — NOT in `proxy.ts` because Drizzle cannot run in the Edge runtime) redirects all authenticated routes to `/onboarding` while `count(transaction) === 0`.
-**Status:** Complete
-**Depends on:** Phase 11–16 (Import), Phase 37 (FlowNature — nature badge in categorization)
+Full details: `.planning/milestones/v1.13-ROADMAP.md`
 
-**Requirements:**
-
-- R-OB-01 ✓: Routing gate redirects any authenticated route with 0 transactions to `/onboarding` (except `/onboarding` itself and `/settings`); implemented in `app/(app)/layout.tsx` RSC per D-11, proxy.ts stays session-only
-- R-OB-02 ✓: `getTransactionCount(userId)` DAL function used by the layout guard
-- R-OB-03 ✓: `/onboarding` route group with step state (URL-driven: `?step=1..5`)
-- R-OB-04 ✓: Step 1 — Upload: single-file drop-zone, platform auto-detected; if not detected, `import-format-wizard` creates private platform
-- R-OB-05 ✓: Step 2 — Overview: N transactions, income total, expenses total, months covered (derived label), % auto-categorized
-- R-OB-06 ✓: Step 3 — Categorization education: contextual tip about transfers/giroconto excluded from totals
-- R-OB-07 ✓: Step 4 — Manual categorization wizard: top 15 uncategorized expenses by `|totalAmount| DESC`, shadcn Combobox with FlowNature badge per subcategory, "Categorize the rest later" global skip CTA
-- R-OB-08 ✓: Step 5 — Outro: "Vai alla dashboard" CTA → `/dashboard`, "Personalizza categorie" CTA → `/settings/categories`
-- R-OB-09 ✓: Full-screen hero design (Variant B) — dark bg Steps 1–3+5, light bg Step 4; progress dots + step label in header
-- R-OB-10 ✓: Month label derived on-the-fly from transaction dates (no stored field); date-range filter on `/import` uses `referenceStartedAt`/`referenceEndedAt`
-- R-OB-11 ✓: Prototype files deleted after first merge (`app/(app)/prototype/onboarding/`)
-
-**Plans:** 3/3 plans complete
-
-**Wave 1**
-
-- [x] 38-01-PLAN.md — DAL foundation + RSC layout guard: `getTransactionCount`, `getTopUncategorizedExpenses`, `getFileCoveredMonths`, `formatMonthRange`, `APP_ROUTES.onboarding`, async `app/(app)/layout.tsx` redirect guard, `proxy.ts` forwards `x-pathname` (R-OB-01, R-OB-02, R-OB-10)
-
-**Wave 2**
-
-- [x] 38-02-PLAN.md — Onboarding route group + Steps 1–3: `/onboarding` page with Zod step parser, `OnboardingShell` + `ProgressDots`, Step 1 upload (reuses R2 presigned PUT + analyze/confirm actions), Step 2 overview RSC (real data + `formatMonthRange`), Step 3 education with giroconto tip, design-system tokens only (R-OB-03, R-OB-04, R-OB-05, R-OB-06, R-OB-09, R-OB-10)
-
-**Wave 3**
-
-- [x] 38-03-PLAN.md — Step 4 categorization wizard (shadcn Combobox + FlowNature badges) + `onboardingCategorizeExpense` action + Step 5 outro + prototype deletion + `yarn build` E2E gate (R-OB-07, R-OB-08, R-OB-09, R-OB-11)
+</details>

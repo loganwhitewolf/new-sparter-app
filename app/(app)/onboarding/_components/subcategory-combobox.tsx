@@ -1,25 +1,12 @@
 'use client'
 
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
-import { CheckCircle, ChevronsUpDownIcon, Loader2 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { CheckCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
+import { SubcategoryPicker } from '@/components/categorization/subcategory-picker'
 import { onboardingCategorizeExpense } from '@/lib/actions/onboarding'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
-import { NATURE_LABELS } from '@/lib/utils/nature-labels'
+import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import { toDecimal } from '@/lib/utils/decimal'
 
 type SubcategoryComboboxProps = {
@@ -27,6 +14,7 @@ type SubcategoryComboboxProps = {
   expenseTitle: string
   expenseAmount: string
   categories: CategoryWithSubCategories[]
+  mostUsed: MostUsedSubcategory[]
 }
 
 const amountFormatter = new Intl.NumberFormat('it-IT', {
@@ -54,14 +42,26 @@ function amountClassName(amount: string) {
   return toDecimal(amount).isNegative() ? 'text-destructive' : 'text-success'
 }
 
+/** Derive defaultType for the picker from the expense amount sign (D-03). */
+function deriveDefaultType(amount: string): 'out' | 'in' | null {
+  try {
+    const decimal = toDecimal(amount)
+    if (decimal.isNegative()) return 'out'
+    if (decimal.isPositive()) return 'in'
+    return null
+  } catch {
+    return null
+  }
+}
+
 export function SubcategoryCombobox({
   expenseId,
   expenseTitle,
   expenseAmount,
   categories,
+  mostUsed,
 }: SubcategoryComboboxProps) {
   const [open, setOpen] = useState(false)
-  const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
   const [isCategorized, setIsCategorized] = useState(false)
   const [isTransitionPending, startTransition] = useTransition()
   const [state, formAction, isActionPending] = useActionState(
@@ -89,12 +89,11 @@ export function SubcategoryCombobox({
 
   const isPending = isActionPending || isTransitionPending
 
-  function handleSelect(subCategoryId: number, label: string) {
-    setSelectedLabel(label)
-    setOpen(false)
+  function handleSelect(subCategoryId: string) {
     submittedRef.current = true
+    setOpen(false)
 
-    const formData = buildOnboardingCategorizeFormData(expenseId, subCategoryId)
+    const formData = buildOnboardingCategorizeFormData(expenseId, Number(subCategoryId))
     startTransition(() => {
       formAction(formData)
     })
@@ -111,57 +110,36 @@ export function SubcategoryCombobox({
         </p>
       </div>
 
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            disabled={isPending}
-            className="w-full justify-between font-normal"
-          >
-            <span className={selectedLabel ? 'truncate' : 'truncate text-muted-foreground'}>
-              {selectedLabel ?? 'Seleziona categoria...'}
-            </span>
-            {isPending ? (
-              <Loader2 className="ml-2 size-4 shrink-0 animate-spin opacity-70" />
-            ) : (
-              <ChevronsUpDownIcon className="ml-2 size-4 shrink-0 opacity-50" />
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Cerca categoria..." />
-            <CommandList>
-              <CommandEmpty>Nessuna categoria trovata</CommandEmpty>
-              {categories.map((category) => (
-                <CommandGroup key={category.id} heading={category.name}>
-                  {category.subCategories.map((subCategory) => (
-                    <CommandItem
-                      key={subCategory.id}
-                      value={`${category.name} ${subCategory.name}`}
-                      onSelect={() => handleSelect(subCategory.id, subCategory.name)}
-                    >
-                      <span className="min-w-0 flex-1 truncate">{subCategory.name}</span>
-                      <Badge variant="secondary" className="ml-auto shrink-0">
-                        {NATURE_LABELS[subCategory.effectiveNature ?? 'unclassified']}
-                      </Badge>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              ))}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={isPending}
+        className="w-full justify-start font-normal"
+        onClick={() => setOpen(true)}
+      >
+        {isPending ? (
+          <Loader2 className="mr-2 size-4 shrink-0 animate-spin opacity-70" />
+        ) : null}
+        <span className="truncate text-muted-foreground">
+          {isPending ? 'Salvataggio…' : 'Seleziona categoria...'}
+        </span>
+      </Button>
 
       {state.error && (
         <p className="mt-2 text-xs text-destructive" aria-live="polite">
           {state.error}
         </p>
       )}
+
+      <SubcategoryPicker
+        open={open}
+        onOpenChange={setOpen}
+        categories={categories}
+        mostUsed={mostUsed}
+        allowedCategoryTypes={['in', 'out', 'transfer', 'system']}
+        defaultType={deriveDefaultType(expenseAmount)}
+        onChange={handleSelect}
+      />
     </div>
   )
 }

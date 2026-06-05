@@ -117,6 +117,7 @@ vi.mock('drizzle-orm', () => ({
   eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
   gte: (left: unknown, right: unknown) => ({ op: 'gte', left, right }),
   ilike: (left: unknown, right: unknown) => ({ op: 'ilike', left, right }),
+  inArray: (left: unknown, right: unknown) => ({ op: 'inArray', left, right }),
   lte: (left: unknown, right: unknown) => ({ op: 'lte', left, right }),
   or: (...args: unknown[]) => ({ op: 'or', args }),
   sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({
@@ -252,7 +253,7 @@ describe('imports DAL read model', () => {
     expect(mocks.offsetArgs).toEqual([0])
   })
 
-  it('orders newest imports first using imported, uploaded, then created timestamps', async () => {
+  it('orders newest imports first using imported, uploaded, then created timestamps, with file.id as tiebreaker', async () => {
     expect(importListOrderTimestamp).toEqual({
       op: 'sql',
       strings: ['coalesce(', ', ', ', ', ')'],
@@ -264,6 +265,7 @@ describe('imports DAL read model', () => {
     expect(mocks.orderByArgs[0]).toEqual([
       { op: 'desc', column: importListOrderTimestamp },
       { op: 'desc', column: 'file.createdAt' },
+      { op: 'desc', column: 'file.id' },
     ])
   })
 
@@ -442,6 +444,100 @@ describe('imports DAL read model', () => {
         { op: 'eq', left: 'file.userId', right: 'user-1' },
       ],
     })
+  })
+
+  // ── Wave 4: statusBucket 3-bucket processing filter (D-22) ─────────────────
+
+  it("statusBucket 'imported' adds eq(file.status, 'imported')", async () => {
+    await getImportRows({ statusBucket: 'imported' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.args).toEqual(
+      expect.arrayContaining([
+        { op: 'eq', left: 'file.status', right: 'imported' },
+      ]),
+    )
+  })
+
+  it("statusBucket 'pending' adds inArray(file.status, all transient states)", async () => {
+    await getImportRows({ statusBucket: 'pending' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    const inArrayCondition = where.args.find(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as { op?: string }).op === 'inArray',
+    ) as { op: string; left: string; right: string[] } | undefined
+
+    expect(inArrayCondition).toBeDefined()
+    expect(inArrayCondition!.left).toBe('file.status')
+    // Must include at minimum uploaded, analyzed, and pending_upload
+    expect(inArrayCondition!.right).toEqual(
+      expect.arrayContaining(['uploaded', 'analyzed', 'pending_upload']),
+    )
+    // Must NOT include 'imported' or 'failed'
+    expect(inArrayCondition!.right).not.toContain('imported')
+    expect(inArrayCondition!.right).not.toContain('failed')
+  })
+
+  it("statusBucket 'failed' adds eq(file.status, 'failed')", async () => {
+    await getImportRows({ statusBucket: 'failed' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.args).toEqual(
+      expect.arrayContaining([
+        { op: 'eq', left: 'file.status', right: 'failed' },
+      ]),
+    )
+  })
+
+  // ── Wave 4: coverage months via referenceStartedAt TO_CHAR ─────────────────
+
+  it('months filter adds OR(TO_CHAR(referenceStartedAt, YYYY-MM) = ym)', async () => {
+    await getImportRows({ months: ['2026-04', '2026-05'] })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    const monthsCondition = where.args.find(
+      (arg) => {
+        if (typeof arg !== 'object' || arg === null) return false
+        const a = arg as { op?: string; args?: unknown[] }
+        if (a.op !== 'or' || !Array.isArray(a.args)) return false
+        return a.args.every(
+          (inner) =>
+            typeof inner === 'object' &&
+            inner !== null &&
+            (inner as { op?: string }).op === 'sql',
+        )
+      },
+    ) as { op: string; args: { op: string; strings: string[]; values: unknown[] }[] } | undefined
+
+    expect(monthsCondition).toBeDefined()
+    expect(monthsCondition!.args).toHaveLength(2)
+    // Each arg is a sql template node with YYYY-MM
+    const sqlText = monthsCondition!.args[0].strings.join('')
+    expect(sqlText).toContain('YYYY-MM')
+    expect(monthsCondition!.args[0].values).toContain('2026-04')
+    expect(monthsCondition!.args[1].values).toContain('2026-05')
+  })
+
+  // ── Wave 4: amount ABS on negativeTotal ────────────────────────────────────
+
+  it('amountMin adds ABS(negativeTotal::numeric) >= amountMin::numeric condition', async () => {
+    await getImportRows({ amountMin: '100' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    const amountCondition = where.args.find(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as { op?: string }).op === 'sql' &&
+        ((arg as { strings?: string[] }).strings ?? []).join('').includes('ABS'),
+    ) as { op: string; strings: string[]; values: unknown[] } | undefined
+
+    expect(amountCondition).toBeDefined()
+    expect(amountCondition!.strings.join('')).toContain('>=')
+    expect(amountCondition!.values).toContain('100')
   })
 })
 

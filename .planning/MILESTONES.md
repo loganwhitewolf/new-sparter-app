@@ -1,5 +1,88 @@
 # Milestones
 
+## v1.13 — Unified Categorization Picker
+
+**Shipped:** 2026-06-02
+**Phases:** 39 (1 phase)
+**Plans:** 6
+**Commits:** ~50
+
+### Delivered
+
+Replaced three divergent subcategory-selection implementations with a single reusable `SubcategoryPicker` (vaul bottom sheet, variant E). Adopted across all 7 selection surfaces. Pattern and suggestion-promotion forms reduced to regex + description + Categorizza button; `amountSign` derived server-side from category type per ADR 0008; `confidence` hardcoded to 1. Old `CategoryCombobox`, `SubcategoryCombobox`, and cascading Select pairs deleted.
+
+### Key Accomplishments
+
+1. `SubcategoryPicker` (vaul bottom sheet): fixed-height, type chips (Entrate/Uscite/Trasferimenti), two-column master-detail, search-collapse, single `subCategoryId` output
+2. `getMostUsedSubcategories` DAL: top ~6 per-user by categorization count, hidden at cold-start
+3. Adopted picker in 4 commit-on-tap surfaces: single expense, transaction-table, bulk, onboarding step 4
+4. Adopted picker in 2 fill-field forms: create/edit expense, create transaction — cascading Selects deleted
+5. Pattern + suggestion-promotion forms reworked: `amountSign` server-side from category type, `confidence=1` (ADR 0008)
+6. Cleanup: `CategoryCombobox` + all legacy picker code deleted; prototype route removed; `yarn build` + `yarn check:language` green
+
+### Known Deferred Items
+
+- `260530-bib-description-strip-pattern` — `descriptionStripPattern` field on Platform (plan exists, not executed; backlog for next milestone)
+- R038, R039, R041 — live Vercel/Supabase/R2 deploy operator-pending
+- R029 — partial categorization revalidation coverage
+
+### Archive
+
+- `.planning/milestones/v1.13-ROADMAP.md`
+
+---
+
+## v1.12 — First-import Onboarding
+
+**Shipped:** 2026-05-28
+**Phases:** 38 (1 phase)
+**Plans:** 3
+**Commits:** ~38
+
+### Delivered
+
+New users with zero transactions see a dedicated 5-step onboarding flow instead of an empty dashboard. Flow: upload → overview → categorization education → manual categorization wizard → outro. RSC layout routing gate redirects all authenticated routes to `/onboarding` while `count(transaction) === 0`.
+
+### Key Accomplishments
+
+1. DAL foundation: `getTransactionCount`, `getTopUncategorizedExpenses`, `getFileCoveredMonths`, `formatMonthRange`
+2. RSC layout gate in `app/(app)/layout.tsx` — Drizzle not allowed in Edge runtime, implemented in RSC per D-11
+3. Onboarding route group + Steps 1–3: upload (reuses R2 presigned PUT), overview (real data), education (giroconto tip)
+4. Step 4: manual categorization wizard with FlowNature badges + `onboardingCategorizeExpense` action
+5. Step 5 outro + full-screen hero design (dark bg Steps 1–3+5, light bg Step 4) + prototype deletion
+
+### Known Deferred Items
+
+- R038, R039, R041 — live Vercel/Supabase/R2 deploy operator-pending
+- R029 — partial categorization revalidation coverage
+
+---
+
+## v1.11 — FlowNature & Segmented Chart
+
+**Shipped:** 2026-05-26
+**Phases:** 37 (1 phase)
+**Plans:** 5
+**Commits:** ~45
+
+### Delivered
+
+Added `nature` enum column to `sub_category` and evolved the dashboard chart into a stacked nature-segmented bar chart with URL-persisted legend toggles. Seeded 126 system subcategories with default natures. Exposed nature override in `/settings/categories`.
+
+### Key Accomplishments
+
+1. Schema migration: `flowNatureEnum` on `sub_category` + `user_subcategory_override`; 126 subcategories seeded with defaults
+2. `getMonthlyTrendByNature` DAL + `MonthlyNatureTrendPoint`; `effectiveNature = COALESCE(override, seed default)`
+3. Stacked nature `EntrateUsciteChart` with URL-persisted legend toggles (`?hidden=` param); null nature → "non classificato"
+4. `SubcategoryNatureSelect` + `setSubcategoryNatureAction` in settings — nature required on creation (default: discretionary)
+5. NATURE_COLORS: hex values for Recharts fill; `Transfer` flows excluded via existing `excludeFromTotals`
+
+### Known Deferred Items
+
+- R038, R039, R041 — live Vercel/Supabase/R2 deploy operator-pending
+
+---
+
 ## v1.10 — Pattern Suggestions
 
 **Shipped:** 2026-05-25

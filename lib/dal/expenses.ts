@@ -1,12 +1,16 @@
 import 'server-only'
 import { cache } from 'react'
 import { db } from '@/lib/db'
-import { category, expense, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
+import { category, expense, file, importFormatVersion, platform, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
 import { eq, and, gte, ilike, inArray, lte, or, asc, desc, sql } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { periodToDateRange } from '@/lib/utils/date'
 
 export { periodToDateRange } from '@/lib/utils/date'
+
+function escapeLikePattern(input: string): string {
+  return input.replace(/[\\%_]/g, '\\$&')
+}
 
 export const EXPENSE_LIST_LIMIT = 50
 
@@ -16,10 +20,22 @@ export type ExpenseSortDirection = 'asc' | 'desc'
 export type ExpenseFilters = {
   categorySlug?: string
   status?: 'uncategorized' | 'categorized'
-  period?: 'this-month' | 'last-3-months' | 'last-6-months' | 'this-year' | 'last-year'
+  /**
+   * Optional period filter — kept for backwards compatibility with any existing callers.
+   * D-05: the expenses page no longer defaults to any period; this is only applied when
+   * explicitly provided. D-11: Expenses toolbar does not expose a temporal filter at all.
+   */
+  period?: 'last-3-months' | 'last-6-months' | 'this-year' | 'last-year'
   name?: string
+  /** Canonical search param key (D-19); same semantics as name */
+  q?: string
   sort?: ExpenseSort
   dir?: ExpenseSortDirection
+  // Wave 4: absolute-value amount range (D-20)
+  amountMin?: string
+  amountMax?: string
+  /** Platform slug filter — requires importedFromFileId join chain */
+  platform?: string
 }
 
 export type ExpensePagination = {
@@ -66,29 +82,49 @@ export const getExpenses = cache(async (
   pagination: ExpensePagination = {},
 ): Promise<ExpenseRow[]> => {
   const { userId } = await verifySession()
-  const { from, to } = periodToDateRange(filters.period ?? 'this-month')
   const limit = pagination.limit ?? EXPENSE_LIST_LIMIT
   const offset = pagination.offset ?? 0
 
-  // Build conditions array — all expense queries are always scoped to userId
+  // Build conditions array — all expense queries are always scoped to userId.
+  // D-05: no implicit period — default view is all-time, no date clamp.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const conditions: any[] = [
     eq(expense.userId, userId),
-    gte(expense.createdAt, from),
-    lte(expense.createdAt, to),
   ]
 
+  // Period date range only when explicitly requested (D-05)
+  if (filters.period) {
+    const { from, to } = periodToDateRange(filters.period)
+    conditions.push(gte(expense.createdAt, from), lte(expense.createdAt, to))
+  }
+
+  // O-01: status 4 → uncategorized bucket (conservative mapping)
   if (filters.status === 'uncategorized') {
-    conditions.push(eq(expense.status, '1'))
+    conditions.push(inArray(expense.status, ['1', '4']))
   }
   if (filters.status === 'categorized') {
-    conditions.push(or(eq(expense.status, '2'), eq(expense.status, '3')))
+    conditions.push(inArray(expense.status, ['2', '3']))
   }
   if (filters.categorySlug) {
     conditions.push(eq(category.slug, filters.categorySlug))
   }
-  if (filters.name) {
-    conditions.push(ilike(expense.title, `%${filters.name}%`))
+  const searchTerm = filters.q ?? filters.name
+  if (searchTerm) {
+    const pattern = `%${escapeLikePattern(searchTerm)}%`
+    conditions.push(ilike(expense.title, pattern))
+  }
+
+  // Wave 4: absolute-value amount range (D-20)
+  if (filters.amountMin !== undefined) {
+    conditions.push(sql`ABS(${expense.totalAmount}::numeric) >= ${filters.amountMin}::numeric`)
+  }
+  if (filters.amountMax !== undefined) {
+    conditions.push(sql`ABS(${expense.totalAmount}::numeric) <= ${filters.amountMax}::numeric`)
+  }
+
+  // Wave 4: platform filter — via importedFromFileId → file → importFormatVersion → platform
+  if (filters.platform) {
+    conditions.push(eq(platform.slug, filters.platform))
   }
 
   return db
@@ -114,6 +150,10 @@ export const getExpenses = cache(async (
         eq(userSubcategoryOverride.userId, userId),
       ),
     )
+    // Platform join chain — only materializes a platform row when expense was imported from a file
+    .leftJoin(file, eq(expense.importedFromFileId, file.id))
+    .leftJoin(importFormatVersion, eq(file.importFormatVersionId, importFormatVersion.id))
+    .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
     .where(and(...conditions))
     .orderBy(...buildExpenseOrderBy(filters))
     .limit(limit)

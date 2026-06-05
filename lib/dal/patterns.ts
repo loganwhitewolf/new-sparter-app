@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, asc, eq, isNull, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
-import { categorizationPattern } from '@/lib/db/schema'
+import { categorizationPattern, category, subCategory } from '@/lib/db/schema'
 import type { CreatePatternInput, UpdatePatternInput } from '@/lib/validations/pattern'
 import { normalizePatternInput } from '@/lib/validations/pattern'
 
@@ -16,6 +16,38 @@ function errorCauseCode(error: unknown): string {
 
   const code = (cause as { code?: unknown }).code
   return typeof code === 'string' ? code : ''
+}
+
+/**
+ * Returns the category `type` of the parent category for the given subcategory,
+ * scoped to categories/subcategories visible to the requesting user.
+ * Returns null if the subcategory does not exist or is not visible.
+ *
+ * Used by pattern actions to derive amountSign server-side (ADR 0008, T-39-10).
+ */
+export async function getCategoryTypeForSubCategory(
+  subCategoryId: number,
+  userId: string,
+  database: DbOrTx = db,
+): Promise<'in' | 'out' | 'system' | 'transfer' | null> {
+  const rows = await database
+    .select({ type: category.type })
+    .from(subCategory)
+    .leftJoin(category, eq(category.id, subCategory.categoryId))
+    .where(
+      and(
+        eq(subCategory.id, subCategoryId),
+        eq(subCategory.isActive, true),
+        or(isNull(subCategory.userId), eq(subCategory.userId, userId)),
+        eq(category.isActive, true),
+        or(isNull(category.userId), eq(category.userId, userId)),
+      ),
+    )
+    .limit(1)
+
+  const row = rows[0]
+  if (!row) return null
+  return row.type
 }
 
 export type PatternRow = {
@@ -93,7 +125,12 @@ export async function createPattern(
     if (errorCauseCode(err) === '23505') {
       const reactivated = await database
         .update(categorizationPattern)
-        .set({ isActive: true, updatedAt: new Date() })
+        .set({
+          isActive: true,
+          amountSign: input.amountSign,     // enforce current server-derived value (ADR 0008)
+          confidence: input.confidence.toFixed(2),
+          updatedAt: new Date(),
+        })
         .where(
           and(
             eq(categorizationPattern.pattern, normalizedPattern),

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getCategories } from '@/lib/dal/categories'
+import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
 import { getTopUncategorizedExpenses } from '@/lib/dal/transactions'
 import { APP_ROUTES } from '@/lib/routes'
 import { SubcategoryCombobox } from '@/app/(app)/onboarding/_components/subcategory-combobox'
@@ -11,9 +12,10 @@ type Step4CategorizeProps = {
 }
 
 export async function Step4Categorize({ userId }: Step4CategorizeProps) {
-  const [expenses, categories] = await Promise.all([
+  const [expenses, categories, mostUsed] = await Promise.all([
     getTopUncategorizedExpenses(userId, 15),
     getCategories(),
+    getMostUsedSubcategories(['in', 'out', 'transfer', 'system']),
   ])
 
   return (
@@ -35,6 +37,7 @@ export async function Step4Categorize({ userId }: Step4CategorizeProps) {
                 expenseTitle={expense.title}
                 expenseAmount={expense.totalAmount}
                 categories={categories}
+                mostUsed={mostUsed}
               />
             ))}
           </div>

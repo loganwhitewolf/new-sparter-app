@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { parseAmount, parseMonths, parseStatus } from '@/lib/utils/search-params'
 
 export const CreateTransactionSchema = z.object({
   description: z
@@ -66,9 +67,16 @@ export type ParsedTransactionFilters = {
   toDate?: Date
   platform?: string
   importId?: string
+  /** Canonical search param key is 'q'; 'name' accepted for back-compat (Wave 5 migrates URLs) */
+  q?: string
+  /** Kept for back-compat — Wave 5 URL migration removes this key */
   name?: string
   categorySlug?: string
   subCategoryId?: number
+  months?: string[]
+  amountMin?: string
+  amountMax?: string
+  status?: 'uncategorized' | 'categorized'
   sort: TransactionSort
   dir: TransactionSortDirection
 }
@@ -141,34 +149,43 @@ export function getInclusiveToDate(value: string): Date | undefined {
 export function parseTransactionFilters(
   input: TransactionSearchParams,
 ): ParsedTransactionFilters {
-  const from = firstTrimmed(input.from)
-  const to = firstTrimmed(input.to)
+  // Wave 5 URL migration: legacy `from`/`to` date params are no longer parsed into active
+  // filters. Old shared links with ?from=&to= silently degrade to the default view (total
+  // parsing — never throw). The month-multi `months` param is the canonical temporal filter.
   const platform = firstTrimmed(input.platform)
   const rawImportId = firstTrimmed(input.importId)
-  const rawName = firstTrimmed(input.name)
+  // D-19: canonical key is 'q'; 'name' accepted for back-compat (Wave 5 migrates old URLs)
+  const rawQ = firstTrimmed(input.q) ?? firstTrimmed(input.name)
   const rawCategory = firstTrimmed(input.category)
   const rawSubCategory = firstTrimmed(input.subCategory)
   const sort = transactionSortSchema.safeParse(firstTrimmed(input.sort))
   const dir = transactionSortDirectionSchema.safeParse(firstTrimmed(input.dir))
-  const fromDate = parseDateOnly(from)
-  const toDate = to ? getInclusiveToDate(to) : undefined
   const importId =
     rawImportId && UUID_RE.test(rawImportId) ? rawImportId : undefined
-  const name = rawName && rawName.length <= 200 ? rawName : undefined
+  const q = rawQ && rawQ.length <= 200 ? rawQ : undefined
   const categorySlug = rawCategory && CATEGORY_SLUG_RE.test(rawCategory) ? rawCategory : undefined
   const parsedSubCategoryId = rawSubCategory ? Number(rawSubCategory) : NaN
   const subCategoryId = Number.isInteger(parsedSubCategoryId) && parsedSubCategoryId > 0
     ? parsedSubCategoryId
     : undefined
+  const months = parseMonths(input.months)
+  const amountMin = parseAmount(input.amountMin)
+  const amountMax = parseAmount(input.amountMax)
+  const status = parseStatus(input.status, ['categorized', 'uncategorized']) as
+    | 'categorized'
+    | 'uncategorized'
+    | undefined
 
   return {
-    ...(fromDate ? { from, fromDate } : {}),
-    ...(toDate ? { to, toDate } : {}),
     ...(platform && PLATFORM_SLUG_RE.test(platform) ? { platform } : {}),
     ...(importId ? { importId } : {}),
-    ...(name ? { name } : {}),
+    ...(q ? { q, name: q } : {}),
     ...(categorySlug ? { categorySlug } : {}),
     ...(subCategoryId ? { subCategoryId } : {}),
+    ...(months.length > 0 ? { months } : {}),
+    ...(amountMin ? { amountMin } : {}),
+    ...(amountMax ? { amountMax } : {}),
+    ...(status ? { status } : {}),
     sort: sort.success ? sort.data : DEFAULT_SORT,
     dir: dir.success ? dir.data : DEFAULT_DIR,
   }

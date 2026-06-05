@@ -216,12 +216,12 @@ async function setFinecoDescriptionStripPattern(database: Db): Promise<void> {
   console.log(`    fineco description_strip_pattern: ${count} rows updated`)
 }
 
-// Step 3 (quick-260531-fko): reorganize Spesa (categoryId 8) subcategory taxonomy
+// Step 3 (quick-260531-fko): reorganize grocery category (categoryId 8) subcategory taxonomy
 // Ordering is critical: migrate expenses + patterns BEFORE deactivating deprecated rows.
 // isActive=false hides subcategories from dashboard/expense queries, so any expense not
 // remapped first would be silently dropped from listings.
 async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
-  // 1. Rename spesa-bio → bio-e-naturale (idempotent: re-run finds 0 rows after first run)
+  // 1. Rename deprecated slug → bio-e-naturale (idempotent: re-run finds 0 rows after first run)
   const renameResult = await database
     .update(subCategory)
     .set({ name: 'bio e naturale', slug: 'bio-e-naturale' })
@@ -311,7 +311,7 @@ async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
 
 // Step 4: reorganize Trasferimenti (cat 32) and Rimborsi (cat 26) categories
 // - Cat 32 "ignore" → "Trasferimenti" (type: transfer); rename/add subcategories; set excludeFromTotals+nature
-// - Cat 28 "movimenti di liquidità" → isActive=false (and its subcategories)
+// - Cat 28 "movimenti di liquidita" → isActive=false (and its subcategories)
 // - Cat 26 "sconti, rimborsi e cashback" → "rimborsi, cashback e bonus"; merge/rename subcategories; add new one
 async function reorganizeTransferRimborsiCategories(database: Db): Promise<void> {
   // --- Cat 32: rename to Trasferimenti, change type to transfer ---

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildCategoryOptions,
   filterCategoryOptions,
-} from '@/components/expenses/category-combobox'
+} from '@/lib/categorization/subcategory-options'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 
 // ---------------------------------------------------------------------------
