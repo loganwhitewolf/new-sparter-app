@@ -1,0 +1,7 @@
+{
+  "sourceBranch": "develop",
+  "targetBranch": "main",
+  "timezone": "Europe/Rome",
+  "projectName": "SparterApp",
+  "taskIdPatterns": ["SPR-\\d+"]
+}

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { parseAmount, parseStatus } from '@/lib/utils/search-params'
 
 export const CreateExpenseSchema = z.object({
   title: z
@@ -51,3 +52,62 @@ export type BulkDeleteExpensesInput = z.infer<typeof BulkDeleteExpensesSchema>
 export type SingleCategorizeInput = z.infer<typeof SingleCategorizeSchema>
 export type IgnoreExpenseInput = z.infer<typeof IgnoreExpenseSchema>
 export type ActionState = { error: string | null }
+
+// ─── Shared filter parser for the Expenses page toolbar ───────────────────────
+
+export type ExpenseSearchParams = Record<string, string | string[] | undefined>
+
+export type ParsedExpenseFilters = {
+  q?: string
+  categorySlug?: string
+  platform?: string
+  status?: 'uncategorized' | 'categorized'
+  amountMin?: string
+  amountMax?: string
+  sort?: 'createdAt' | 'totalAmount'
+  dir?: 'asc' | 'desc'
+}
+
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+function firstTrimmed(value: string | string[] | undefined): string | undefined {
+  const raw = Array.isArray(value) ? value[0] : value
+  const trimmed = raw?.trim()
+  return trimmed ? trimmed : undefined
+}
+
+/**
+ * Total function — never throws. Drops invalid tokens silently.
+ * D-05: period is NOT included; expenses default to all-time view.
+ */
+export function parseExpenseFilters(input: ExpenseSearchParams): ParsedExpenseFilters {
+  const rawQ = firstTrimmed(input.q)
+  const rawCategory = firstTrimmed(input.category)
+  const rawPlatform = firstTrimmed(input.platform)
+  const rawSort = firstTrimmed(input.sort)
+  const rawDir = firstTrimmed(input.dir)
+
+  const q = rawQ && rawQ.length <= 200 ? rawQ : undefined
+  const categorySlug = rawCategory && SLUG_RE.test(rawCategory) ? rawCategory : undefined
+  const platform = rawPlatform && SLUG_RE.test(rawPlatform) ? rawPlatform : undefined
+  const status = parseStatus(input.status, ['categorized', 'uncategorized']) as
+    | 'categorized'
+    | 'uncategorized'
+    | undefined
+  const amountMin = parseAmount(input.amountMin)
+  const amountMax = parseAmount(input.amountMax)
+  const sort: 'createdAt' | 'totalAmount' | undefined =
+    rawSort === 'totalAmount' ? 'totalAmount' : rawSort === 'createdAt' ? 'createdAt' : undefined
+  const dir: 'asc' | 'desc' | undefined = rawDir === 'asc' ? 'asc' : rawDir === 'desc' ? 'desc' : undefined
+
+  return {
+    ...(q ? { q } : {}),
+    ...(categorySlug ? { categorySlug } : {}),
+    ...(platform ? { platform } : {}),
+    ...(status ? { status } : {}),
+    ...(amountMin ? { amountMin } : {}),
+    ...(amountMax ? { amountMax } : {}),
+    ...(sort ? { sort } : {}),
+    ...(dir ? { dir } : {}),
+  }
+}

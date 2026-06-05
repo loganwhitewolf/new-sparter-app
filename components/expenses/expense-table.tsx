@@ -30,6 +30,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { useToolbarSort } from '@/components/data-table/DataTableToolbar'
+import { HeaderSortButton } from '@/components/data-table/HeaderSortButton'
 import { deleteExpense, ignoreExpense, loadMoreExpenses } from '@/lib/actions/expenses'
 import { BulkActionBar } from './bulk-action-bar'
 import { BulkCategorizeDialog } from './bulk-categorize-dialog'
@@ -45,6 +47,7 @@ import { cn } from '@/lib/utils'
 
 type Props = {
   expenses: ExpenseRow[]
+  route: string
   categories: CategoryWithSubCategories[]
   mostUsed: MostUsedSubcategory[]
   filters: ExpenseFilters
@@ -63,7 +66,7 @@ function dedupeExpenseRows(rows: ExpenseRow[]): ExpenseRow[] {
   return unique
 }
 
-export function ExpenseTable({ expenses, categories, mostUsed, filters }: Props) {
+export function ExpenseTable({ expenses, route, categories, mostUsed, filters }: Props) {
   const [loadedExpenses, setLoadedExpenses] = useState(() => dedupeExpenseRows(expenses))
   const [hasMore, setHasMore] = useState(expenses.length === PAGE_SIZE)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -82,6 +85,8 @@ export function ExpenseTable({ expenses, categories, mostUsed, filters }: Props)
     id: string
     title: string
   } | null>(null)
+
+  const { activeSort, activeDir, onSort } = useToolbarSort(route)
 
   const allSelected = loadedExpenses.length > 0 && selectedIds.length === loadedExpenses.length
   const someSelected = selectedIds.length > 0 && selectedIds.length < loadedExpenses.length
@@ -201,21 +206,39 @@ export function ExpenseTable({ expenses, categories, mostUsed, filters }: Props)
                   aria-label="Seleziona tutte le spese"
                 />
               </TableHead>
-              <TableHead className="text-xs uppercase tracking-wide text-muted-foreground font-normal">
-                Titolo
-              </TableHead>
-              <TableHead className="w-44 text-xs uppercase tracking-wide text-muted-foreground font-normal">
-                Categoria
-              </TableHead>
+              <HeaderSortButton
+                column={{ key: 'title', label: 'Titolo' }}
+                activeSort={activeSort}
+                activeDir={activeDir}
+                onSort={onSort}
+                className="text-xs uppercase tracking-wide text-muted-foreground font-normal"
+              />
+              <HeaderSortButton
+                column={{ key: 'category', label: 'Categoria' }}
+                activeSort={activeSort}
+                activeDir={activeDir}
+                onSort={onSort}
+                className="w-44 text-xs uppercase tracking-wide text-muted-foreground font-normal"
+              />
               <TableHead className="w-36 text-center text-xs uppercase tracking-wide text-muted-foreground font-normal">
                 Stato
               </TableHead>
-              <TableHead className="w-32 text-right text-xs uppercase tracking-wide text-muted-foreground font-normal">
-                Totale
-              </TableHead>
-              <TableHead className="w-24 text-right text-xs uppercase tracking-wide text-muted-foreground font-normal">
-                Data
-              </TableHead>
+              <HeaderSortButton
+                column={{ key: 'totalAmount', label: 'Totale' }}
+                activeSort={activeSort}
+                activeDir={activeDir}
+                align="right"
+                onSort={onSort}
+                className="w-32 text-xs uppercase tracking-wide text-muted-foreground font-normal"
+              />
+              <HeaderSortButton
+                column={{ key: 'createdAt', label: 'Data' }}
+                activeSort={activeSort}
+                activeDir={activeDir}
+                align="right"
+                onSort={onSort}
+                className="w-24 text-xs uppercase tracking-wide text-muted-foreground font-normal"
+              />
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>

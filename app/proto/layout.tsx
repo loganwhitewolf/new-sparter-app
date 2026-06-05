@@ -5,8 +5,8 @@ import type { ReactNode } from 'react'
 // Lives OUTSIDE the authenticated (app) group: no session check, no onboarding gate.
 // Enabled only where PROTOTYPES_ENABLED is set — that env is scoped to Vercel Preview,
 // so this whole subtree is a 404 in Production (even if the branch is merged).
-// force-dynamic: ensure the env gate is evaluated at REQUEST time, not baked into a
-// static prerender at build time (a build without the env would otherwise bake a 404).
+// dynamic = 'force-dynamic' ensures the env gate is evaluated at REQUEST time, not baked
+// into a static prerender at build time (a build without the env would otherwise bake a 404).
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
@@ -18,5 +18,5 @@ export default function ProtoLayout({ children }: { children: ReactNode }) {
     notFound()
   }
 
-  return <main className="h-screen overflow-hidden bg-background p-4">{children}</main>
+  return <main className="min-h-screen bg-background p-4 md:p-6">{children}</main>
 }

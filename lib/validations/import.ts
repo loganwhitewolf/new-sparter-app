@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { parseAmount, parseMonths, parseStatus } from '@/lib/utils/search-params'
 
 export const MAX_IMPORT_FILE_SIZE_BYTES = 5 * 1024 * 1024
 
@@ -188,6 +189,12 @@ export type ParsedImportFilters = {
   referenceTo?: string
   referenceFromDate?: Date
   referenceToDate?: Date
+  // Wave 4: new filter fields
+  platform?: string
+  statusBucket?: 'imported' | 'pending' | 'failed'
+  months?: string[]
+  amountMin?: string
+  amountMax?: string
 }
 
 const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -250,22 +257,33 @@ function getInclusiveDate(value: string | undefined): Date | undefined {
   )
 }
 
+const PLATFORM_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
 export function parseImportFilters(input: ImportSearchParams): ParsedImportFilters {
+  // Wave 5 URL migration: legacy `importedFrom`/`importedTo`/`referenceFrom`/`referenceTo`
+  // date params are no longer parsed into active filters. Old shared links with those params
+  // silently degrade to the default view (total parsing — never throw).
+  // The month-multi `months` param is the canonical temporal filter for the Files table.
   const q = firstTrimmed(input.q)
-  const importedFrom = firstTrimmed(input.importedFrom)
-  const importedTo = firstTrimmed(input.importedTo)
-  const referenceFrom = firstTrimmed(input.referenceFrom)
-  const referenceTo = firstTrimmed(input.referenceTo)
-  const importedFromDate = parseDateOnly(importedFrom)
-  const importedToDate = getInclusiveDate(importedTo)
-  const referenceFromDate = parseDateOnly(referenceFrom)
-  const referenceToDate = getInclusiveDate(referenceTo)
+
+  // Wave 4: new filter fields
+  const rawPlatform = firstTrimmed(input.platform)
+  const platform = rawPlatform && PLATFORM_SLUG_RE.test(rawPlatform) ? rawPlatform : undefined
+  const statusBucket = parseStatus(input.statusBucket, ['imported', 'pending', 'failed']) as
+    | 'imported'
+    | 'pending'
+    | 'failed'
+    | undefined
+  const months = parseMonths(input.months)
+  const amountMin = parseAmount(input.amountMin)
+  const amountMax = parseAmount(input.amountMax)
 
   return {
     ...(q && q.length <= MAX_IMPORT_QUERY_LENGTH ? { q } : {}),
-    ...(importedFromDate ? { importedFrom, importedFromDate } : {}),
-    ...(importedToDate ? { importedTo, importedToDate } : {}),
-    ...(referenceFromDate ? { referenceFrom, referenceFromDate } : {}),
-    ...(referenceToDate ? { referenceTo, referenceToDate } : {}),
+    ...(platform ? { platform } : {}),
+    ...(statusBucket ? { statusBucket } : {}),
+    ...(months.length > 0 ? { months } : {}),
+    ...(amountMin ? { amountMin } : {}),
+    ...(amountMax ? { amountMax } : {}),
   }
 }

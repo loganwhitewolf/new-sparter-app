@@ -14,8 +14,9 @@ describe("parseTransactionFilters", () => {
     })
   })
 
-  it("accepts trimmed valid filters from plain Next searchParams", () => {
+  it("accepts trimmed valid filters from plain Next searchParams; legacy from/to are ignored (Wave 5 migration)", () => {
     const parsed = parseTransactionFilters({
+      // Wave 5: from/to params are no longer parsed — old links degrade to default view.
       from: " 2025-01-02 ",
       to: "2025-01-31",
       platform: " revolut-bank ",
@@ -26,20 +27,17 @@ describe("parseTransactionFilters", () => {
     })
 
     expect(parsed).toEqual({
-      from: "2025-01-02",
-      to: "2025-01-31",
       platform: "revolut-bank",
       categorySlug: "food-and-drinks",
       subCategoryId: 42,
       sort: "amount",
       dir: "asc",
-      fromDate: new Date("2025-01-02T00:00:00.000Z"),
-      toDate: new Date("2025-01-31T23:59:59.999Z"),
     })
   })
 
-  it("uses the first array item and ignores the field when that value is invalid", () => {
+  it("uses the first array item and ignores the field when that value is invalid; legacy from/to are ignored (Wave 5 migration)", () => {
     const parsed = parseTransactionFilters({
+      // Wave 5: from/to params are no longer parsed — old links degrade to default view.
       from: ["not-a-date", "2025-01-02"],
       to: ["2025-02-03", "not-a-date"],
       platform: [" bad slug ", "valid-slug"],
@@ -50,10 +48,8 @@ describe("parseTransactionFilters", () => {
     })
 
     expect(parsed).toEqual({
-      to: "2025-02-03",
       sort: "occurredAt",
       dir: "desc",
-      toDate: new Date("2025-02-03T23:59:59.999Z"),
     })
   })
 
@@ -147,10 +143,12 @@ describe("parseTransactionFilters", () => {
     ).toBeUndefined()
   })
 
-  it("composes importId with date, platform, and sort filters", () => {
+  it("composes importId with platform and sort filters; legacy from/to are ignored (Wave 5 migration)", () => {
     const uuid = "550e8400-e29b-41d4-a716-446655440000"
     const parsed = parseTransactionFilters({
       importId: uuid,
+      // Wave 5: legacy from/to params are no longer parsed into active filters.
+      // Old shared links silently degrade to the default view (total parsing).
       from: "2025-01-01",
       to: "2025-01-31",
       platform: "revolut",
@@ -159,8 +157,8 @@ describe("parseTransactionFilters", () => {
     })
 
     expect(parsed.importId).toBe(uuid)
-    expect(parsed.fromDate).toEqual(new Date("2025-01-01T00:00:00.000Z"))
-    expect(parsed.toDate).toEqual(new Date("2025-01-31T23:59:59.999Z"))
+    expect(parsed.fromDate).toBeUndefined()
+    expect(parsed.toDate).toBeUndefined()
     expect(parsed.platform).toBe("revolut")
     expect(parsed.sort).toBe("amount")
     expect(parsed.dir).toBe("asc")

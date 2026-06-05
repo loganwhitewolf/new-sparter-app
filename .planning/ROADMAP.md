@@ -9,6 +9,7 @@
 - ✅ **v1.10: Pattern Suggestions** — Phases 33–36 (shipped 2026-05-25)
 - ✅ **v1.12: First-import Onboarding** — Phase 38 (shipped 2026-05-28)
 - ✅ **v1.13: Unified Categorization Picker** — Phase 39 (shipped 2026-06-02)
+- ✅ **v1.14: Unified Table Filter & Sort** — Phase 40 (shipped 2026-06-04)
 
 ## Phases
 
@@ -91,7 +92,28 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 | 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
 | 39 | v1.13 | 6/6 | Complete    | 2026-06-02 |
 
-**Total: 38 phases shipped · 143 plans complete**
+| 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
+
+**Total: 38 phases shipped · 146 plans complete**
+
+<details>
+<summary>✅ v1.14: Unified Table Filter & Sort (Phase 40) — SHIPPED 2026-06-04</summary>
+
+- [x] **Phase 40: table-filter-sort** — Unified filtering + sorting across Transactions, Expenses, Files tables; shared `DataTableToolbar`; month-multi picker; `id` sort tiebreaker; per-table declarative config (ADR 0009, ADR 0010) *(complete 2026-06-04)*
+  - Goal: Replace the three divergent table controls with one coherent system — same behaviour, same UI shape, only the declared fields differ per table.
+  - Depends on: Phase 39
+  - Constraints: No filter engine (ADR 0010); URL = single source of truth; server-side filtering; offset+infinite-scroll pagination unchanged; `id` tiebreaker on all DAL sorts; Expenses have NO temporal filter (ADR 0009).
+  - Plans: 5 plans (5 waves)
+
+Plans:
+
+- [x] 40-01-PLAN.md — Foundation: shared TableConfig types + URL param parsers + id tiebreaker on transactions/imports DAL *(complete 2026-06-04)*
+- [x] 40-02-PLAN.md — Shared UI: DataTableToolbar + HeaderSortButton + ChipsRow + URL-mutation hook (mock config) *(complete 2026-06-04)*
+- [x] 40-03-PLAN.md — New controls: getMonthsWithData DAL + MonthMultiPicker + AmountRangePicker, wired into toolbar *(complete 2026-06-04)*
+- [x] 40-04-PLAN.md — Wire per-table configs + DAL filters for Transactions, Expenses, Files *(complete 2026-06-04)*
+- [x] 40-05-PLAN.md — Polish: empty states, a11y pass, URL migration, prototype deletion, yarn build green *(complete 2026-06-04)*
+
+</details>
 
 <details>
 <summary>✅ v1.11: FlowNature & Segmented Chart (Phase 37) — SHIPPED 2026-05-26</summary>
