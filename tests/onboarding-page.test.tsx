@@ -111,6 +111,14 @@ vi.mock('@/app/(app)/onboarding/_components/subcategory-combobox', () => ({
     React.createElement('div', { 'data-testid': 'subcategory-combobox' }, expenseTitle),
 }))
 
+vi.mock('@/lib/dal/subcategory-usage', () => ({
+  getMostUsedSubcategories: vi.fn().mockResolvedValue([]),
+}))
+
+vi.mock('@/lib/dal/users', () => ({
+  markOnboardingCompleted: vi.fn().mockResolvedValue(undefined),
+}))
+
 // Lazy import after all mocks registered
 const { default: OnboardingPage } = await import('../app/(app)/onboarding/page')
 

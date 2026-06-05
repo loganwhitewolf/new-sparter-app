@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   headers: vi.fn(),
   verifySession: vi.fn(),
   getTransactionCount: vi.fn(),
+  getOnboardingCompletedAt: vi.fn(),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -41,6 +42,10 @@ vi.mock('@/lib/dal/auth', () => ({
 
 vi.mock('@/lib/dal/transactions', () => ({
   getTransactionCount: mocks.getTransactionCount,
+}))
+
+vi.mock('@/lib/dal/users', () => ({
+  getOnboardingCompletedAt: mocks.getOnboardingCompletedAt,
 }))
 
 vi.mock('@/lib/routes', () => ({
@@ -76,6 +81,7 @@ describe('app/(app)/layout.tsx onboarding gate (R-OB-01)', () => {
     vi.clearAllMocks()
     mocks.verifySession.mockResolvedValue({ userId: 'u1' })
     mocks.getTransactionCount.mockResolvedValue(0)
+    mocks.getOnboardingCompletedAt.mockResolvedValue(null)
   })
 
   it('redirects to /onboarding when txCount === 0 and pathname is /dashboard (R-OB-01)', async () => {

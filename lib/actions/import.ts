@@ -1,6 +1,5 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/dal/auth";
 import {
   AnalyzeImportSchema,
@@ -205,8 +204,6 @@ export async function createPrivateImportFormatAction(
     };
   }
 
-  const from = typeof formData.get('from') === 'string' ? (formData.get('from') as string) : null
-
   let result: CreatePrivateImportFormatResult;
   try {
     result = await createPrivateImportFormat({ ...parsed.data, userId });
@@ -214,9 +211,7 @@ export async function createPrivateImportFormatAction(
   } catch (error) {
     return { error: mapImportFormatWizardError(error) };
   }
-  const params = new URLSearchParams({ formatVersionId: String(result.formatVersionId) })
-  if (from) params.set('from', from)
-  redirect(`/import/${encodeURIComponent(parsed.data.fileId)}/analyze?${params.toString()}`)
+  return { error: null, data: result };
 }
 
 export async function loadMoreImports({

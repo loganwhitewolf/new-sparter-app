@@ -37,6 +37,7 @@ const mocks = vi.hoisted(() => ({
   createPattern: vi.fn(),
   updatePattern: vi.fn(),
   deletePattern: vi.fn(),
+  getCategoryTypeForSubCategory: vi.fn(),
   writeClassificationHistory: vi.fn(),
 
   // logger
@@ -66,6 +67,7 @@ vi.mock('@/lib/dal/patterns', () => ({
   createPattern: mocks.createPattern,
   updatePattern: mocks.updatePattern,
   deletePattern: mocks.deletePattern,
+  getCategoryTypeForSubCategory: mocks.getCategoryTypeForSubCategory,
 }))
 vi.mock('@/lib/validations/pattern', () => ({
   CreatePatternSchema: {
@@ -78,6 +80,11 @@ vi.mock('@/lib/validations/pattern', () => ({
   },
   UpdatePatternSchema: {
     safeParse: (value: Record<string, unknown>) => ({ success: true, data: value }),
+  },
+  deriveAmountSign: (categoryType: string) => {
+    if (categoryType === 'out') return 'negative'
+    if (categoryType === 'in') return 'positive'
+    return 'any'
   },
 }))
 
@@ -765,6 +772,7 @@ describe('createPatternAction', () => {
       role: 'user',
     })
     mocks.createPattern.mockResolvedValue({ id: 1 })
+    mocks.getCategoryTypeForSubCategory.mockResolvedValue('out')
   })
 
   it('allows free users to create custom regex patterns by default during alpha', async () => {

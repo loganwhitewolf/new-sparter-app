@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   createPattern: vi.fn(),
   updatePattern: vi.fn(),
   deletePattern: vi.fn(),
+  getCategoryTypeForSubCategory: vi.fn(),
   dbTransaction: vi.fn(),
   dbUpdate: vi.fn(),
   and: vi.fn(() => ({ kind: 'and' })),
@@ -79,6 +80,7 @@ vi.mock('@/lib/dal/patterns', () => ({
   createPattern: mocks.createPattern,
   updatePattern: mocks.updatePattern,
   deletePattern: mocks.deletePattern,
+  getCategoryTypeForSubCategory: mocks.getCategoryTypeForSubCategory,
 }))
 
 vi.mock('@/lib/db/schema', () => ({
@@ -269,6 +271,7 @@ describe('categorization-related action route revalidation', () => {
     mocks.createPattern.mockResolvedValue({ id: 7 })
     mocks.updatePattern.mockResolvedValue({ id: 7 })
     mocks.deletePattern.mockResolvedValue({ id: 7 })
+    mocks.getCategoryTypeForSubCategory.mockResolvedValue('out')
   })
 
   describe('expense actions', () => {

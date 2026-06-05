@@ -260,11 +260,17 @@ function getInclusiveDate(value: string | undefined): Date | undefined {
 const PLATFORM_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 export function parseImportFilters(input: ImportSearchParams): ParsedImportFilters {
-  // Wave 5 URL migration: legacy `importedFrom`/`importedTo`/`referenceFrom`/`referenceTo`
-  // date params are no longer parsed into active filters. Old shared links with those params
-  // silently degrade to the default view (total parsing — never throw).
-  // The month-multi `months` param is the canonical temporal filter for the Files table.
   const q = firstTrimmed(input.q)
+
+  const importedFromDate = parseDateOnly(firstTrimmed(input.importedFrom))
+  const importedToDate = getInclusiveDate(firstTrimmed(input.importedTo))
+  const referenceFromDate = parseDateOnly(firstTrimmed(input.referenceFrom))
+  const referenceToDate = getInclusiveDate(firstTrimmed(input.referenceTo))
+
+  const importedFromStr = importedFromDate ? (firstTrimmed(input.importedFrom) as string) : undefined
+  const importedToStr = importedToDate ? (firstTrimmed(input.importedTo) as string) : undefined
+  const referenceFromStr = referenceFromDate ? (firstTrimmed(input.referenceFrom) as string) : undefined
+  const referenceToStr = referenceToDate ? (firstTrimmed(input.referenceTo) as string) : undefined
 
   // Wave 4: new filter fields
   const rawPlatform = firstTrimmed(input.platform)
@@ -280,6 +286,10 @@ export function parseImportFilters(input: ImportSearchParams): ParsedImportFilte
 
   return {
     ...(q && q.length <= MAX_IMPORT_QUERY_LENGTH ? { q } : {}),
+    ...(importedFromStr ? { importedFrom: importedFromStr, importedFromDate } : {}),
+    ...(importedToStr ? { importedTo: importedToStr, importedToDate } : {}),
+    ...(referenceFromStr ? { referenceFrom: referenceFromStr, referenceFromDate } : {}),
+    ...(referenceToStr ? { referenceTo: referenceToStr, referenceToDate } : {}),
     ...(platform ? { platform } : {}),
     ...(statusBucket ? { statusBucket } : {}),
     ...(months.length > 0 ? { months } : {}),

@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import {
   CreatePatternSchema,
   UpdatePatternSchema,
-  UpdatePatternClientSchema,
   type ActionState,
 } from "@/lib/validations/pattern";
 import {
@@ -79,14 +78,11 @@ export async function createPatternAction(
     ? Number(formData.get("subCategoryId"))
     : undefined;
 
-  // Parse only the fields we trust from the client (pattern, subCategoryId, description).
-  // amountSign and confidence are derived/hardcoded server-side (ADR 0008, T-39-09).
   const parsed = CreatePatternSchema.safeParse({
     pattern: formData.get("pattern"),
     subCategoryId: subCategoryIdRaw,
-    // Provide placeholder values that satisfy the schema; they will be overridden below.
-    amountSign: "any",
-    confidence: 1,
+    amountSign: "any", // placeholder; overridden below via getCategoryTypeForSubCategory
+    confidence: Number(formData.get("confidence")),
     description: (formData.get("description") as string) || undefined,
   });
   if (!parsed.success) {
@@ -105,7 +101,6 @@ export async function createPatternAction(
     created = await createPattern({
       ...parsed.data,
       amountSign: derivedAmountSign,
-      confidence: 1,
       userId,
     });
   } catch (err) {
@@ -170,13 +165,11 @@ export async function updatePatternAction(
     ? Number(formData.get("subCategoryId"))
     : undefined;
 
-  // Parse only the fields we trust from the client (pattern, subCategoryId, description).
-  // amountSign and confidence are deliberately omitted from the client schema (ADR 0008, T-39-09)
-  // — they are always derived server-side. Using UpdatePatternClientSchema ensures clients
-  // cannot inject amountSign/confidence even when subCategoryId is not changing.
-  const parsed = UpdatePatternClientSchema.safeParse({
+  const confidenceRaw = formData.get("confidence")
+  const parsed = UpdatePatternSchema.safeParse({
     pattern: formData.get("pattern") || undefined,
     subCategoryId: subCategoryIdRaw,
+    confidence: confidenceRaw !== null ? Number(confidenceRaw) : undefined,
     description: (formData.get("description") as string) || undefined,
   });
   if (!parsed.success) {
@@ -196,7 +189,7 @@ export async function updatePatternAction(
   try {
     const updated = await updatePattern(id, userId, {
       ...parsed.data,
-      ...(derivedAmountSign !== undefined ? { amountSign: derivedAmountSign, confidence: 1 } : {}),
+      ...(derivedAmountSign !== undefined ? { amountSign: derivedAmountSign } : {}),
     });
     if (!updated) return { error: "Pattern non trovato o accesso negato." };
   } catch {
@@ -267,7 +260,7 @@ export async function promoteSuggestionAction(
     created = await createPattern({
       ...parsed.data,
       amountSign: derivedAmountSign,
-      confidence: 1,
+      confidence: 0.85,
       userId,
     });
   } catch (err) {

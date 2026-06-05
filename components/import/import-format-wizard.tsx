@@ -146,13 +146,14 @@ export function ImportFormatWizard({
 
   useEffect(() => {
     if (createdFormatVersionId) {
+      const fromParam = from ? `&from=${encodeURIComponent(from)}` : ''
       router.push(
         `/import/${encodeURIComponent(context.fileId)}/analyze?formatVersionId=${encodeURIComponent(
           String(createdFormatVersionId),
-        )}`,
+        )}${fromParam}`,
       )
     }
-  }, [context.fileId, createdFormatVersionId, router])
+  }, [context.fileId, createdFormatVersionId, from, router])
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     const errors = validateWizardFields(readFormValues(event.currentTarget), context.headers)
