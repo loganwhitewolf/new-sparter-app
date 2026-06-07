@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.14
-milestone_name: milestone
-status: "Phase 41 shipped — PR #16"
-stopped_at: Phase 40 complete — all 5 plans executed
-last_updated: "2026-06-07T14:55:28.319Z"
+milestone: v1.15
+milestone_name: Collapsible Sidebar
+status: "v1.15 milestone complete — archived 2026-06-07"
+stopped_at: Phase 41 complete — milestone archived
+last_updated: "2026-06-07T17:30:00.000Z"
 last_activity: 2026-06-07
 progress:
   total_phases: 0
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 41 — collapsible-sidebar
+**Current focus:** Between milestones — v1.15 archived, planning next milestone
 
 ## Current Position
 
-Phase: 41
-Plan: Not started
-Status: Phase 41 shipped — PR #16
+Phase: 41 (complete)
+Plan: All 3/3 complete
+Status: v1.15 milestone archived — ready for next milestone
 Last activity: 2026-06-07
 
 ## Accumulated Context

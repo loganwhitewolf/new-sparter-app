@@ -1,5 +1,35 @@
 # Milestones
 
+## v1.15 — Collapsible Sidebar
+
+**Shipped:** 2026-06-07
+**Phases:** 41 (1 phase)
+**Plans:** 3
+**Tasks:** 7
+
+### Delivered
+
+Replaced the two-zone topbar+sidebar layout with a single collapsible icon-rail sidebar. The sidebar collapses to w-16 (icon-only with tooltips) and expands to w-60, persists state in localStorage key `sparter-sidebar-collapsed`, and contains all nav + user controls. Topbar deleted on all breakpoints. BottomNav gained a 5th "Impostazioni" entry. ThemeToggle moved to SettingsHub Aspetto section. ADR 0011 locked the decision.
+
+### Key Accomplishments
+
+1. `SidebarProvider` + `useSidebarCollapsed` hook: SSR-safe `useState(false)` default, `useEffect` restores from localStorage after mount — prevents hydration mismatch (D-14)
+2. `AppShell` client component drives `<aside>` width (`md:w-16`/`md:w-60`) from SidebarContext; RSC layout wraps `AppShell` in `SidebarProvider`; topbar import removed (D-01)
+3. Sidebar rewritten: chevron toggle with aria-labels, icon-only+tooltip collapsed nav (mounted guard), user Avatar dropdown at bottom with Profilo + Logout (D-03/D-04/D-06/D-07/D-08)
+4. BottomNav 5th entry `{ href: APP_ROUTES.settings, label: 'Impostazioni', icon: Settings }` (D-10); SettingsHub Aspetto section with ThemeToggle (D-11/D-12); topbar.tsx deleted
+5. Nyquist audit: `tests/sidebar-provider.test.tsx` (D-13/D-14) + `tests/settings-hub.test.tsx` (D-11/D-12) added; 836 tests green
+
+### Known Deferred Items
+
+- Quick-task tracking artifacts acknowledged at close (4) — same pre-existing items as v1.14: `260524-pha`, `260524-pnk`, `260525-ga2`, `260530-bib` (see STATE.md Deferred Items)
+- D-03/D-07/D-09 manual-only verification (see 41-VALIDATION.md)
+
+### Archive
+
+- `.planning/milestones/v1.15-ROADMAP.md`
+
+---
+
 ## v1.14 — Unified Table Filter & Sort
 
 **Shipped:** 2026-06-04

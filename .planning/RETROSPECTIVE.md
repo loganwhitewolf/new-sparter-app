@@ -4,6 +4,44 @@ Living retrospective — one section per milestone, newest first.
 
 ---
 
+## Milestone: v1.15 — Collapsible Sidebar
+
+**Shipped:** 2026-06-07
+**Phases:** 1 (41) | **Plans:** 3 | **Commits:** ~16
+
+### What Was Built
+
+- `SidebarProvider` + `useSidebarCollapsed`: SSR-safe `useState(false)`, `useEffect` restores from localStorage after mount; `STORAGE_KEY = 'sparter-sidebar-collapsed'`
+- `AppShell` client component driving `<aside>` width from SidebarContext; RSC layout simplified to `<SidebarProvider><AppShell>`
+- Sidebar rewritten: chevron toggle with alternating aria-labels, icon-only+tooltip collapsed nav (mounted guard for SSR safety), Avatar dropdown at bottom with Profilo + Logout
+- BottomNav 5th Impostazioni entry; SettingsHub Aspetto section with ThemeToggle; topbar.tsx deleted
+- Nyquist audit: 2 new unit test files, 836 tests green; 2 pre-existing onboarding test failures fixed (R-OB-07, R-OB-09)
+
+### What Worked
+
+- **ADR-first approach**: ADR 0011 locked all design decisions (widths, localStorage key, no topbar) before planning — zero design churn during execution
+- **Research phase identified Pitfall 6** (tooltip SSR mismatch) upfront — mounted guard implemented correctly on first try
+- **3-plan wave structure** was clean: foundation (provider+tooltip) → visible core (shell+sidebar) → cleanup (mobile+settings+tests); no dependencies reversed
+
+### What Was Inefficient
+
+- Two post-PR fixes needed (React 19 tooltip hydration, missing Impostazioni link) — these should have been caught by E2E before merge
+- Two onboarding test failures (`R-OB-07`, `R-OB-09`) were pre-existing but only fixed during this milestone's cleanup; they should have been caught at the time they regressed
+
+### Patterns Established
+
+- RSC layout + `SidebarProvider` + `AppShell` as the three-layer chrome pattern: server-fetches-in-layout, client-island-for-state, render-in-shell
+- `mounted && collapsed` guard for any client-only rendering (tooltips, hover states) to avoid SSR hydration mismatch
+- ADR as a PLAN.md context reference — executor reads `@docs/adr/NNNN-*.md` directly, no re-negotiation
+
+### Key Lessons
+
+1. **E2E smoke before merge**: The two post-PR fixes (hydration + Impostazioni) were visual/interactive regressions that unit tests won't catch — run `yarn playwright test tests/layout.spec.ts` before merging layout-touching PRs
+2. **Fix regressions in the phase that introduces them**: Pre-existing failures left in `in_progress` state add noise to future verification; address them in the phase that touches those files
+3. **localStorage booleans are safe without extra guards**: `stored === 'true'` coerces any tampered value to a safe boolean — no validation overhead needed for non-sensitive UI preferences
+
+---
+
 ## Milestone: v1.13 — Unified Categorization Picker
 
 **Shipped:** 2026-06-02

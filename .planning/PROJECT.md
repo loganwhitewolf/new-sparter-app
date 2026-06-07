@@ -53,7 +53,7 @@ v1.13 Unified Categorization Picker shipped 2026-06-02. Planning next milestone.
 
 ## Capability Contract
 
-### Validated (M001–v1.10)
+### Validated (M001–v1.15)
 
 - ✓ Pino structured logging, AsyncLocalStorage context, optional Better Stack — M002
 - ✓ Full import lifecycle (pending → uploaded → analyzing → analyzed → importing → imported → failed) — M004
@@ -73,6 +73,8 @@ v1.13 Unified Categorization Picker shipped 2026-06-02. Planning next milestone.
 - ✓ FlowNature: `nature` enum column on `sub_category`; stacked nature-segmented EntrateUsciteChart; URL-persisted legend toggles; nature editable in /settings/categories — v1.11
 - ✓ First-import onboarding: 5-step flow (upload → overview → education → categorize → outro); RSC layout routing gate (`count(transaction) === 0 → /onboarding`); progress dots; dark/light variant per step — v1.12
 - ✓ Unified subcategory picker: `SubcategoryPicker` (vaul bottom sheet, type chips, master-detail rail, search-collapse, most-used DAL query) adopted across all 7 surfaces; `CategoryCombobox` + cascading Selects deleted; pattern form reduced to regex + description + Categorizza picker; `amountSign` derived server-side from category type per ADR 0008 — v1.13
+- ✓ Unified table filter & sort: `DataTableToolbar` + `TableConfig` declarative system across Transactions, Expenses, Files; URL-first filtering, server-side WHERE, `id` tiebreaker on all DAL sorts; `MonthMultiPicker`, `AmountRangePicker`; Expenses no temporal filter (ADR 0009/0010) — v1.14
+- ✓ Collapsible icon-rail sidebar: `SidebarProvider` + `useSidebarCollapsed` (localStorage-backed, SSR-safe); `AppShell` drives `<aside>` width (w-16/w-60); chevron toggle + tooltips in collapsed mode; user Avatar dropdown at bottom; topbar deleted; BottomNav 5th Impostazioni entry; ThemeToggle in SettingsHub Aspetto section (ADR 0011) — v1.15
 
 ### Active (next milestone — planning)
 

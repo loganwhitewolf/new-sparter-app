@@ -10,7 +10,7 @@
 - ✅ **v1.12: First-import Onboarding** — Phase 38 (shipped 2026-05-28)
 - ✅ **v1.13: Unified Categorization Picker** — Phase 39 (shipped 2026-06-02)
 - ✅ **v1.14: Unified Table Filter & Sort** — Phase 40 (shipped 2026-06-04)
-- 🔄 **v1.15: Collapsible Sidebar** — Phase 41 (in progress)
+- ✅ **v1.15: Collapsible Sidebar** — Phase 41 (shipped 2026-06-07)
 
 ## Phases
 
