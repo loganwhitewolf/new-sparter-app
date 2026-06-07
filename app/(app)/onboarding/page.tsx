@@ -26,7 +26,7 @@ export default async function OnboardingPage({
 
   const { userId } = await verifySession();
 
-  const theme = "dark";
+  const theme = step === 4 ? "light" : "dark";
 
   // Show sticky CTA on steps 2-4; step 1 auto-advances on upload and step 5 has final CTAs.
   const footer = step >= 2 && step <= 4 ? <StickyCta step={step} /> : undefined;
