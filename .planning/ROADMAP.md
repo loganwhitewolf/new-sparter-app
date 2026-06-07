@@ -11,6 +11,7 @@
 - ✅ **v1.13: Unified Categorization Picker** — Phase 39 (shipped 2026-06-02)
 - ✅ **v1.14: Unified Table Filter & Sort** — Phase 40 (shipped 2026-06-04)
 - ✅ **v1.15: Collapsible Sidebar** — Phase 41 (shipped 2026-06-07)
+- 🚧 **v1.16: Dashboard Overview Redesign** — Phases 42–45 (in progress)
 
 ## Phases
 
@@ -74,60 +75,6 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 </details>
 
-## Progress
-
-| Phase | Milestone | Plans | Status | Completed |
-|-------|-----------|-------|--------|-----------|
-| 1–23 | M001–M006 | 87/87 | Complete | 2026-05 |
-| 24–28 | M007 | 20/20 | Complete | 2026-05-19 |
-| 29 | v1.8/M008 | 4/4 | Complete | 2026-05-20 |
-| 30 | v1.9 | 3/3 | Complete | 2026-05-21 |
-| 31 | v1.9 | 3/3 | Complete | 2026-05-21 |
-| 32 | v1.9 | 3/3 | Complete | 2026-05-22 |
-| 33 | v1.10 | 1/1 | Complete | 2026-05-22 |
-| 34 | v1.10 | 2/2 | Complete | 2026-05-23 |
-| 35 | v1.10 | 4/4 | Complete | 2026-05-23 |
-| 36 | v1.10 | 2/2 | Complete | 2026-05-23 |
-
-| 37 | v1.11 | 5/5 | Complete | 2026-05-26 |
-| 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
-| 39 | v1.13 | 6/6 | Complete    | 2026-06-02 |
-
-| 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
-| 41 | v1.15 | 3/3 | Complete    | 2026-06-07 |
-
-**Total: 38 phases shipped · 146 plans complete**
-
-## Phase 41: collapsible-sidebar
-
-- [x] **Phase 41: collapsible-sidebar** — Collapsible icon-rail sidebar; topbar removed on all breakpoints; app name + user controls (avatar, profile, logout) in sidebar; BottomNav gains Impostazioni entry; theme toggle moved to /settings page (ADR 0011) (completed 2026-06-07)
-  - Goal: Replace the topbar+sidebar two-zone layout with a single-zone sidebar that owns all chrome. The sidebar collapses to an icon rail, persists its state in localStorage, and contains everything the topbar held.
-  - Depends on: Phase 40
-  - Constraints: ADR 0011 locked; icon rail w-16/w-60; toggle at top; user controls at bottom; localStorage persistence; topbar deleted on all breakpoints; BottomNav gets Impostazioni for mobile.
-  - Plans: 3 plans
-    - [x] 41-01-PLAN.md — SidebarProvider context + localStorage hook + Tooltip wrapper (foundation)
-    - [x] 41-02-PLAN.md — AppShell + rewritten collapsible Sidebar (toggle, tooltips, bottom user controls); layout drops Topbar
-    - [x] 41-03-PLAN.md — BottomNav Impostazioni + SettingsHub Aspetto; delete topbar.tsx; update tests + build/a11y gate
-
-<details>
-<summary>✅ v1.14: Unified Table Filter & Sort (Phase 40) — SHIPPED 2026-06-04</summary>
-
-- [x] **Phase 40: table-filter-sort** — Unified filtering + sorting across Transactions, Expenses, Files tables; shared `DataTableToolbar`; month-multi picker; `id` sort tiebreaker; per-table declarative config (ADR 0009, ADR 0010) *(complete 2026-06-04)*
-  - Goal: Replace the three divergent table controls with one coherent system — same behaviour, same UI shape, only the declared fields differ per table.
-  - Depends on: Phase 39
-  - Constraints: No filter engine (ADR 0010); URL = single source of truth; server-side filtering; offset+infinite-scroll pagination unchanged; `id` tiebreaker on all DAL sorts; Expenses have NO temporal filter (ADR 0009).
-  - Plans: 5 plans (5 waves)
-
-Plans:
-
-- [x] 40-01-PLAN.md — Foundation: shared TableConfig types + URL param parsers + id tiebreaker on transactions/imports DAL *(complete 2026-06-04)*
-- [x] 40-02-PLAN.md — Shared UI: DataTableToolbar + HeaderSortButton + ChipsRow + URL-mutation hook (mock config) *(complete 2026-06-04)*
-- [x] 40-03-PLAN.md — New controls: getMonthsWithData DAL + MonthMultiPicker + AmountRangePicker, wired into toolbar *(complete 2026-06-04)*
-- [x] 40-04-PLAN.md — Wire per-table configs + DAL filters for Transactions, Expenses, Files *(complete 2026-06-04)*
-- [x] 40-05-PLAN.md — Polish: empty states, a11y pass, URL migration, prototype deletion, yarn build green *(complete 2026-06-04)*
-
-</details>
-
 <details>
 <summary>✅ v1.11: FlowNature & Segmented Chart (Phase 37) — SHIPPED 2026-05-26</summary>
 
@@ -168,3 +115,121 @@ Full details: `.planning/milestones/v1.13-ROADMAP.md`
 Full details: `.planning/milestones/v1.13-ROADMAP.md`
 
 </details>
+
+<details>
+<summary>✅ v1.14: Unified Table Filter & Sort (Phase 40) — SHIPPED 2026-06-04</summary>
+
+- [x] **Phase 40: table-filter-sort** — Unified filtering + sorting across Transactions, Expenses, Files tables; shared `DataTableToolbar`; month-multi picker; `id` sort tiebreaker; per-table declarative config (ADR 0009, ADR 0010) *(complete 2026-06-04)*
+  - Goal: Replace the three divergent table controls with one coherent system — same behaviour, same UI shape, only the declared fields differ per table.
+  - Depends on: Phase 39
+  - Constraints: No filter engine (ADR 0010); URL = single source of truth; server-side filtering; offset+infinite-scroll pagination unchanged; `id` tiebreaker on all DAL sorts; Expenses have NO temporal filter (ADR 0009).
+  - Plans: 5 plans (5 waves)
+
+Plans:
+
+- [x] 40-01-PLAN.md — Foundation: shared TableConfig types + URL param parsers + id tiebreaker on transactions/imports DAL *(complete 2026-06-04)*
+- [x] 40-02-PLAN.md — Shared UI: DataTableToolbar + HeaderSortButton + ChipsRow + URL-mutation hook (mock config) *(complete 2026-06-04)*
+- [x] 40-03-PLAN.md — New controls: getMonthsWithData DAL + MonthMultiPicker + AmountRangePicker, wired into toolbar *(complete 2026-06-04)*
+- [x] 40-04-PLAN.md — Wire per-table configs + DAL filters for Transactions, Expenses, Files *(complete 2026-06-04)*
+- [x] 40-05-PLAN.md — Polish: empty states, a11y pass, URL migration, prototype deletion, yarn build green *(complete 2026-06-04)*
+
+</details>
+
+<details>
+<summary>✅ v1.15: Collapsible Sidebar (Phase 41) — SHIPPED 2026-06-07</summary>
+
+- [x] **Phase 41: collapsible-sidebar** — Collapsible icon-rail sidebar; topbar removed on all breakpoints; app name + user controls (avatar, profile, logout) in sidebar; BottomNav gains Impostazioni entry; theme toggle moved to /settings page (ADR 0011) *(complete 2026-06-07)*
+  - [x] 41-01-PLAN.md — SidebarProvider context + localStorage hook + Tooltip wrapper (foundation)
+  - [x] 41-02-PLAN.md — AppShell + rewritten collapsible Sidebar (toggle, tooltips, bottom user controls); layout drops Topbar
+  - [x] 41-03-PLAN.md — BottomNav Impostazioni + SettingsHub Aspetto; delete topbar.tsx; update tests + build/a11y gate
+
+</details>
+
+---
+
+### 🚧 v1.16: Dashboard Overview Redesign (Phases 42–45)
+
+**Milestone Goal:** Replace the `/dashboard/overview` tab with the PO-approved redesign (variant A + header H1) — a year-scoped overview that clearly answers "where did my money go and what changed".
+
+- [ ] **Phase 42: overview-data-layer** — DAL foundation: getOverview, getMonthOverMonthCategoryChanges, getYearsWithData, income-split resolution, CONTEXT.md glossary update
+- [ ] **Phase 43: overview-shell** — Redesigned overview tab: header H1 + year selector, hero chart variant A (grouped bars, always-on labels), 4 KPI cards with qualitative reading lines
+- [ ] **Phase 44: overview-interactions** — Uncategorized nudge (inline amber, localStorage dismiss), chart filter chips (income type + expense nature), FlowNature ⓘ education popovers
+- [ ] **Phase 45: overview-movers** — Per-month movers drill-down: recharts bar click → top movers panel, humanized copy, highlighted bar, default to last month with data
+
+## Phase Details
+
+### Phase 42: overview-data-layer
+**Goal**: All server-side data contracts for the redesigned overview are in place and the project glossary reflects the new terms
+**Depends on**: Phase 41
+**Requirements**: DATA-01, DATA-02, DATA-03, DATA-04
+**Success Criteria** (what must be TRUE):
+  1. `getOverview(year)` returns four KPI totals plus YTD-vs-prior-YTD deltas for any year with data
+  2. `getMonthOverMonthCategoryChanges(year, monthIndex?, limit?)` returns per-month OUT category movers above the €15 noise threshold
+  3. `getYearsWithData()` returns only years that have at least one transaction
+  4. CONTEXT.md documents `MonthOverMonthChange` as canonical term and redefines `Reference Period` as "last month with data"
+**Plans**: TBD
+
+### Phase 43: overview-shell
+**Goal**: Users can view the redesigned overview tab with the year-scoped header, grouped bar chart, and 4 KPI cards
+**Depends on**: Phase 42
+**Requirements**: HEAD-01, HEAD-02, HEAD-03, CHART-01, CHART-02, CHART-03, KPI-01, KPI-02, KPI-03, KPI-04
+**Success Criteria** (what must be TRUE):
+  1. User sees the page title and a year-selector pill on the same row; only years with transaction data appear in the selector
+  2. Selecting a year updates the KPIs and chart to reflect that year's data (YTD if current, full-year if past)
+  3. User sees side-by-side green (Entrate) and red (Uscite) bars per month with always-on compact value labels; no stacking by nature, no balance series in the chart
+  4. User sees four KPI cards (Totale entrate, Totale uscite, Bilancio, Tasso risparmio) with a "vs anno prec." delta badge and a sentiment-colored qualitative reading line
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 44: overview-interactions
+**Goal**: Users can filter the chart by income type and expense nature, see inline FlowNature education, and dismiss the uncategorized nudge
+**Depends on**: Phase 43
+**Requirements**: NUDGE-01, NUDGE-02, NUDGE-03, NUDGE-04, FILT-01, FILT-02, FILT-03, EDU-01, EDU-02
+**Success Criteria** (what must be TRUE):
+  1. When the selected year has uncategorized OUT expenses, an inline amber nudge appears on the title row with a "Categorizza ora" link and an X to dismiss; it is absent when there are no uncategorized expenses
+  2. Dismissing the nudge persists in localStorage; it reappears when new uncategorized expenses arrive (lastSeenCount comparison), never written to the database
+  3. User can filter chart bars by income type (recurring / extraordinary) and expense nature (essential, discretionary, operational, financial, debt, extraordinary) via chips; KPI totals remain unchanged regardless of chip state
+  4. User can open a ⓘ legend popover next to the Entrate and Uscite filter groups, and see a one-line tooltip on each filter chip
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 45: overview-movers
+**Goal**: Users can click any month's bar to see that month's top spending movers versus the previous month
+**Depends on**: Phase 44
+**Requirements**: MOVE-01, MOVE-02, MOVE-03, MOVE-04, MOVE-05
+**Success Criteria** (what must be TRUE):
+  1. Clicking a month's bar highlights those bars visually and opens the movers panel for that month
+  2. The movers panel shows "Dove hai speso di più" (increases, red) and "Dove hai risparmiato" (decreases, green) as separate sections; an empty section is hidden
+  3. Each mover reads as a human sentence — "{categoria} · {importo} in più / in meno" — with "spesa nuova" when the previous month had no spend in that category; no percentages shown
+  4. The panel defaults to the last month that has transactions on initial load
+  5. Selecting the first available month shows an empty state (no prior month to compare)
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+## Progress
+
+| Phase | Milestone | Plans | Status | Completed |
+|-------|-----------|-------|--------|-----------|
+| 1–23 | M001–M006 | 87/87 | Complete | 2026-05 |
+| 24–28 | M007 | 20/20 | Complete | 2026-05-19 |
+| 29 | v1.8/M008 | 4/4 | Complete | 2026-05-20 |
+| 30 | v1.9 | 3/3 | Complete | 2026-05-21 |
+| 31 | v1.9 | 3/3 | Complete | 2026-05-21 |
+| 32 | v1.9 | 3/3 | Complete | 2026-05-22 |
+| 33 | v1.10 | 1/1 | Complete | 2026-05-22 |
+| 34 | v1.10 | 2/2 | Complete | 2026-05-23 |
+| 35 | v1.10 | 4/4 | Complete | 2026-05-23 |
+| 36 | v1.10 | 2/2 | Complete | 2026-05-23 |
+| 37 | v1.11 | 5/5 | Complete | 2026-05-26 |
+| 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
+| 39 | v1.13 | 6/6 | Complete | 2026-06-02 |
+| 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
+| 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
+| 42 | v1.16 | 0/TBD | Not started | - |
+| 43 | v1.16 | 0/TBD | Not started | - |
+| 44 | v1.16 | 0/TBD | Not started | - |
+| 45 | v1.16 | 0/TBD | Not started | - |
+
+**Total shipped: 38 phases · 146 plans complete**

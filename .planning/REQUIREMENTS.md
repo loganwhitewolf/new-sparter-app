@@ -77,4 +77,31 @@ Each requirement maps to exactly one roadmap phase. IDs continue the project's c
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| _(filled by roadmap)_ | | |
+| DATA-01 | Phase 42 | Pending |
+| DATA-02 | Phase 42 | Pending |
+| DATA-03 | Phase 42 | Pending |
+| DATA-04 | Phase 42 | Pending |
+| HEAD-01 | Phase 43 | Pending |
+| HEAD-02 | Phase 43 | Pending |
+| HEAD-03 | Phase 43 | Pending |
+| CHART-01 | Phase 43 | Pending |
+| CHART-02 | Phase 43 | Pending |
+| CHART-03 | Phase 43 | Pending |
+| KPI-01 | Phase 43 | Pending |
+| KPI-02 | Phase 43 | Pending |
+| KPI-03 | Phase 43 | Pending |
+| KPI-04 | Phase 43 | Pending |
+| NUDGE-01 | Phase 44 | Pending |
+| NUDGE-02 | Phase 44 | Pending |
+| NUDGE-03 | Phase 44 | Pending |
+| NUDGE-04 | Phase 44 | Pending |
+| FILT-01 | Phase 44 | Pending |
+| FILT-02 | Phase 44 | Pending |
+| FILT-03 | Phase 44 | Pending |
+| EDU-01 | Phase 44 | Pending |
+| EDU-02 | Phase 44 | Pending |
+| MOVE-01 | Phase 45 | Pending |
+| MOVE-02 | Phase 45 | Pending |
+| MOVE-03 | Phase 45 | Pending |
+| MOVE-04 | Phase 45 | Pending |
+| MOVE-05 | Phase 45 | Pending |
