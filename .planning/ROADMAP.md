@@ -94,7 +94,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 | 39 | v1.13 | 6/6 | Complete    | 2026-06-02 |
 
 | 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
-| 41 | v1.15 | 1/3 | In Progress|  |
+| 41 | v1.15 | 2/3 | In Progress|  |
 
 **Total: 38 phases shipped · 146 plans complete**
 
@@ -106,7 +106,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
   - Constraints: ADR 0011 locked; icon rail w-16/w-60; toggle at top; user controls at bottom; localStorage persistence; topbar deleted on all breakpoints; BottomNav gets Impostazioni for mobile.
   - Plans: 3 plans
     - [x] 41-01-PLAN.md — SidebarProvider context + localStorage hook + Tooltip wrapper (foundation)
-    - [ ] 41-02-PLAN.md — AppShell + rewritten collapsible Sidebar (toggle, tooltips, bottom user controls); layout drops Topbar
+    - [x] 41-02-PLAN.md — AppShell + rewritten collapsible Sidebar (toggle, tooltips, bottom user controls); layout drops Topbar
     - [ ] 41-03-PLAN.md — BottomNav Impostazioni + SettingsHub Aspetto; delete topbar.tsx; update tests + build/a11y gate
 
 <details>
