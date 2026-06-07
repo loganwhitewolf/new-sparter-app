@@ -10,6 +10,7 @@
 - ✅ **v1.12: First-import Onboarding** — Phase 38 (shipped 2026-05-28)
 - ✅ **v1.13: Unified Categorization Picker** — Phase 39 (shipped 2026-06-02)
 - ✅ **v1.14: Unified Table Filter & Sort** — Phase 40 (shipped 2026-06-04)
+- 🔄 **v1.15: Collapsible Sidebar** — Phase 41 (in progress)
 
 ## Phases
 
@@ -93,8 +94,20 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 | 39 | v1.13 | 6/6 | Complete    | 2026-06-02 |
 
 | 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
+| 41 | v1.15 | 0/3 | Planned | — |
 
 **Total: 38 phases shipped · 146 plans complete**
+
+## Phase 41: collapsible-sidebar
+
+- [ ] **Phase 41: collapsible-sidebar** — Collapsible icon-rail sidebar; topbar removed on all breakpoints; app name + user controls (avatar, profile, logout) in sidebar; BottomNav gains Impostazioni entry; theme toggle moved to /settings page (ADR 0011)
+  - Goal: Replace the topbar+sidebar two-zone layout with a single-zone sidebar that owns all chrome. The sidebar collapses to an icon rail, persists its state in localStorage, and contains everything the topbar held.
+  - Depends on: Phase 40
+  - Constraints: ADR 0011 locked; icon rail w-16/w-60; toggle at top; user controls at bottom; localStorage persistence; topbar deleted on all breakpoints; BottomNav gets Impostazioni for mobile.
+  - Plans: 3 plans
+    - [ ] 41-01-PLAN.md — SidebarProvider context + localStorage hook + Tooltip wrapper (foundation)
+    - [ ] 41-02-PLAN.md — AppShell + rewritten collapsible Sidebar (toggle, tooltips, bottom user controls); layout drops Topbar
+    - [ ] 41-03-PLAN.md — BottomNav Impostazioni + SettingsHub Aspetto; delete topbar.tsx; update tests + build/a11y gate
 
 <details>
 <summary>✅ v1.14: Unified Table Filter & Sort (Phase 40) — SHIPPED 2026-06-04</summary>
