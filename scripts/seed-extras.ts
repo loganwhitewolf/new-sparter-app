@@ -192,6 +192,9 @@ const NATURE_SLUGS: Record<FlowNature, string[]> = {
     'altri-finanziamenti',
   ],
   transfer: [],
+  // Phase 42: income split — extraordinary income subcategories
+  // Slug membership to be confirmed by PO and extended via seed-extras run
+  income_extraordinary: [],
 }
 
 async function setSubcategoryNature(database: Db): Promise<void> {
@@ -417,6 +420,24 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
   }
 }
 
+// Step 5 (phase 42: income split): re-bucket income_extraordinary subcategories
+// Guard: isNull(subCategory.userId) ensures only system subcategories are updated.
+async function rebucketIncomeNatures(database: Db): Promise<void> {
+  const slugs = NATURE_SLUGS['income_extraordinary']
+  if (slugs.length === 0) {
+    console.log('    income_extraordinary rebucket: slug list empty, skipping (PO confirmation pending)')
+    return
+  }
+
+  const result = await database
+    .update(subCategory)
+    .set({ nature: 'income_extraordinary' as FlowNature })
+    .where(and(inArray(subCategory.slug, slugs), isNull(subCategory.userId)))
+
+  const count = (result as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(`    income_extraordinary rebucket: ${count} rows updated`)
+}
+
 // ---------------------------------------------------------------------------
 // Registry — append new steps here
 // ---------------------------------------------------------------------------
@@ -426,6 +447,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'set-fineco-description-strip-pattern', run: setFinecoDescriptionStripPattern },
   { name: 'reorganize-spesa-subcategories', run: reorganizeSpesaSubcategories },
   { name: 'reorganize-transfer-rimborsi-categories', run: reorganizeTransferRimborsiCategories },
+  { name: 'rebucket-income-natures', run: rebucketIncomeNatures },
 ]
 
 // ---------------------------------------------------------------------------
