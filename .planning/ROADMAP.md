@@ -94,7 +94,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 | 39 | v1.13 | 6/6 | Complete    | 2026-06-02 |
 
 | 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
-| 41 | v1.15 | 2/3 | In Progress|  |
+| 41 | v1.15 | 3/3 | Complete   | 2026-06-07 |
 
 **Total: 38 phases shipped · 146 plans complete**
 
@@ -107,7 +107,7 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
   - Plans: 3 plans
     - [x] 41-01-PLAN.md — SidebarProvider context + localStorage hook + Tooltip wrapper (foundation)
     - [x] 41-02-PLAN.md — AppShell + rewritten collapsible Sidebar (toggle, tooltips, bottom user controls); layout drops Topbar
-    - [ ] 41-03-PLAN.md — BottomNav Impostazioni + SettingsHub Aspetto; delete topbar.tsx; update tests + build/a11y gate
+    - [x] 41-03-PLAN.md — BottomNav Impostazioni + SettingsHub Aspetto; delete topbar.tsx; update tests + build/a11y gate
 
 <details>
 <summary>✅ v1.14: Unified Table Filter & Sort (Phase 40) — SHIPPED 2026-06-04</summary>
