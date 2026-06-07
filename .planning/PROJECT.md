@@ -15,7 +15,7 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v1.13 complete. The app now has:
+All milestones M001–v1.15 (Phase 41) complete. The app now has:
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
 - Import management, categorization (Tier 1 regex, Tier 2 history, Tier 3 AI gated)
 - Pattern suggestions: detect recurring uncategorized descriptions → review and promote during analysis → re-run post-import from `/import/[fileId]/suggestions`
@@ -112,6 +112,7 @@ v1.13 Unified Categorization Picker shipped 2026-06-02. Planning next milestone.
 - [x] v1.11: FlowNature & Segmented Chart — `nature` enum on subcategories, stacked nature chart with legend toggles, nature management in settings. Shipped 2026-05-26.
 - [x] v1.12: First-import Onboarding — 5-step guided flow for new users; RSC layout routing gate; categorization wizard with nature badges. Shipped 2026-05-28.
 - [x] v1.13: Unified Categorization Picker — Single `SubcategoryPicker` (vaul bottom sheet) across all 7 surfaces; pattern form rework; `amountSign` derived from subcategory type per ADR 0008. Shipped 2026-06-02.
+- [x] v1.15 Phase 41: Collapsible Sidebar — Icon-rail sidebar with localStorage-persisted collapse state, chevron toggle, tooltips in collapsed mode, user dropdown at bottom; Topbar removed; BottomNav 5th "Impostazioni" entry; ThemeToggle moved to SettingsHub Aspetto section. Shipped 2026-06-07.
 
 ## Key Decisions
 
@@ -162,4 +163,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-02 after v1.13 milestone — Unified Categorization Picker shipped*
+*Last updated: 2026-06-07 after v1.15 Phase 41 — Collapsible Sidebar shipped*
