@@ -3,8 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: Dashboard Overview Redesign
 status: planning
-last_updated: "2026-06-07"
-last_activity: 2026-06-07
+stopped_at: Phase 42 context gathered
+last_updated: "2026-06-07T16:37:55.321Z"
+last_activity: 2026-06-07 — Roadmap created for v1.16 (4 phases, 28 requirements)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -38,6 +39,7 @@ Progress: [░░░░░░░░░░] 0%
 All milestones M001–v1.15 complete. Full decision log in PROJECT.md.
 
 v1.16 design decisions (LOCKED — do not re-open):
+
 - Chart variant A: side-by-side Entrate/Uscite bars, no stack-by-nature, no balance series
 - Header H1: year-selector pill inline on same row as title
 - KPIs: 4 cards only (drop "Da categorizzare"); qualitative reading line per card
@@ -67,8 +69,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-07
-Stopped at: Roadmap for v1.16 created — 4 phases (42–45), 28 requirements mapped
-Resume file: None
+Last session: 2026-06-07T16:37:55.317Z
+Stopped at: Phase 42 context gathered
+Resume file: .planning/phases/42-overview-data-layer/42-CONTEXT.md
 
 **Next:** `/gsd-plan-phase 42`
