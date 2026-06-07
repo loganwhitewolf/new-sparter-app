@@ -24,6 +24,7 @@ export function BottomNav({ className }: BottomNavProps) {
 
   return (
     <nav
+      aria-label="Navigazione mobile"
       data-bottom-nav
       className={cn(
         'fixed inset-x-0 bottom-0 z-50 flex h-16 items-center border-t border-border bg-background',

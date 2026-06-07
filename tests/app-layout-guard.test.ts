@@ -126,6 +126,16 @@ describe('app/(app)/layout.tsx onboarding gate (R-OB-01)', () => {
     expect(mocks.redirect).not.toHaveBeenCalled()
   })
 
+  it('does NOT redirect when txCount === 0 but onboarding was already completed (R-OB-01)', async () => {
+    mockPathname('/dashboard')
+    mocks.getTransactionCount.mockResolvedValue(0)
+    mocks.getOnboardingCompletedAt.mockResolvedValue(new Date('2026-01-01'))
+
+    await expect(AppLayout({ children: null })).resolves.not.toThrow()
+
+    expect(mocks.redirect).not.toHaveBeenCalled()
+  })
+
   it('calls verifySession before getTransactionCount and uses the returned userId (R-OB-01)', async () => {
     mockPathname('/expenses')
     mocks.verifySession.mockResolvedValue({ userId: 'user-abc' })

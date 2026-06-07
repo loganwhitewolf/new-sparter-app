@@ -17,7 +17,6 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   // D-14: Default SSR state is false (expanded) — never read localStorage in useState initializer
   // This avoids hydration mismatch (Pitfall 1): server renders expanded, client restores from storage
   const [collapsed, setCollapsed] = useState(false)
-  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     // Read localStorage only after mount to prevent SSR/hydration mismatch
@@ -25,7 +24,6 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     if (stored !== null) {
       setCollapsed(stored === 'true')
     }
-    setMounted(true)
   }, [])
 
   // Wrapper setter: syncs React state and persists to localStorage

@@ -60,6 +60,7 @@ export function Sidebar() {
 
   return (
     <nav
+      aria-label="Navigazione principale"
       className={cn(
         'flex h-full w-full flex-col bg-secondary py-4',
         collapsed ? 'px-2' : 'px-3'
