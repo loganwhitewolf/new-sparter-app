@@ -167,7 +167,12 @@ Plans:
   2. `getMonthOverMonthCategoryChanges(year, monthIndex?, limit?)` returns per-month OUT category movers above the €15 noise threshold
   3. `getYearsWithData()` returns only years that have at least one transaction
   4. CONTEXT.md documents `MonthOverMonthChange` as canonical term and redefines `Reference Period` as "last month with data"
-**Plans**: TBD
+**Plans**: 3 plans (3 waves)
+
+Plans:
+- [ ] 42-01-PLAN.md — Wave 0 tests + flowNatureEnum extension + FlowNature blast-radius + dashboard exports + enum migration (build green)
+- [ ] 42-02-PLAN.md — [BLOCKING] apply migration + additive seed-extras STEP re-bucketing income_extraordinary slugs (PO-confirmed)
+- [ ] 42-03-PLAN.md — lib/dal/overview.ts (getOverview, getYearsWithData, getMonthOverMonthCategoryChanges, getOverviewChart) + CONTEXT.md glossary
 
 ### Phase 43: overview-shell
 **Goal**: Users can view the redesigned overview tab with the year-scoped header, grouped bar chart, and 4 KPI cards
@@ -227,7 +232,7 @@ Plans:
 | 39 | v1.13 | 6/6 | Complete | 2026-06-02 |
 | 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
-| 42 | v1.16 | 0/TBD | Not started | - |
+| 42 | v1.16 | 0/3 | Not started | - |
 | 43 | v1.16 | 0/TBD | Not started | - |
 | 44 | v1.16 | 0/TBD | Not started | - |
 | 45 | v1.16 | 0/TBD | Not started | - |
