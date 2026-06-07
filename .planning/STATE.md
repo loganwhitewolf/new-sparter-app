@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.14
-milestone_name: Unified Table Filter & Sort
-status: Awaiting next milestone
+milestone_name: milestone
+status: executing
 stopped_at: Phase 40 complete — all 5 plans executed
-last_updated: "2026-06-05T13:33:59.712Z"
-last_activity: 2026-06-05 — Milestone v1.14 completed and archived
+last_updated: "2026-06-07T09:24:22.052Z"
+last_activity: 2026-06-07 -- Phase 41 execution started
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -21,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Planning next milestone
+**Current focus:** Phase 41 — collapsible-sidebar
 
 ## Current Position
 
-Phase: Milestone v1.14 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-05 — Milestone v1.14 completed and archived
+Phase: 41 (collapsible-sidebar) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 41
+Last activity: 2026-06-07 -- Phase 41 execution started
 
 ## Accumulated Context
 
