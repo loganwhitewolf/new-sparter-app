@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.15
-milestone_name: Collapsible Sidebar
-status: "v1.15 milestone complete — archived 2026-06-07"
-stopped_at: Phase 41 complete — milestone archived
-last_updated: "2026-06-07T17:30:00.000Z"
+milestone: v1.16
+milestone_name: Dashboard Overview Redesign
+status: planning
+last_updated: "2026-06-07T15:52:18.105Z"
 last_activity: 2026-06-07
 progress:
   total_phases: 0
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 
 ## Current Position
 
-Phase: 41 (complete)
-Plan: All 3/3 complete
-Status: v1.15 milestone archived — ready for next milestone
-Last activity: 2026-06-07
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-07 — Milestone v1.16 started
 
 ## Accumulated Context
 

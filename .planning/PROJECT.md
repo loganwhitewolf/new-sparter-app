@@ -28,14 +28,29 @@ All milestones M001–v1.15 (Phase 41) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Next Milestone: TBD
+## Current Milestone: v1.16 Dashboard Overview Redesign
 
-v1.13 Unified Categorization Picker shipped 2026-06-02. Planning next milestone.
+**Goal:** Replace the `/dashboard/overview` tab with the PO-approved redesign (variant A + header H1) — a clear, non-confusing year-scoped overview that answers "where did my money go and what changed", per the LOCKED design decisions in `app/proto/overview/NOTES.md`.
 
-**Likely candidates:**
-- REVAL-01: Apply newly created pattern to existing transactions from same import
-- R029: Complete categorization revalidation for all entrypoints
-- Operator deploy: Vercel/Supabase/R2 production activation (R038, R039, R041)
+**Target features:**
+- Hero chart: grouped Entrate (green) / Uscite (red) bars per month, always-on compact value labels, NO stack-by-nature, NO balance in chart (variant A)
+- Header H1: title + year-pill selector inline on the same row; years sourced from data (`getYearsWithData()`)
+- Year selector drives the whole tab; KPIs = YTD vs same span of prior year
+- 4 KPI cards (Entrate, Uscite, Bilancio, Tasso risparmio) each with a sentiment-colored qualitative reading line; the 5th "Da categorizzare" card is dropped
+- Inline amber "uncategorized" nudge on the title row (not a banner); localStorage dismiss with `lastSeenCount` reappear logic; counts OUT-only uncategorized
+- Per-month movers drill-down: click a month bar → top movers vs previous month ("Dove hai speso di più / risparmiato"), humanized copy, "spesa nuova" when prev=0; default = last month with transactions
+- In-context FlowNature education: ⓘ legend popover on Entrate/Uscite filter groups + per-chip tooltips
+- Filter chips: income (recurring/extraordinary) + expense (nature); KPIs stay on real totals (ignore chart filters)
+
+**Glossary tensions to resolve during planning:**
+- Redefine `Reference Period` — "last completed calendar month" is unknowable (only what's imported is known) → likely "last month with data"
+- Promote `MonthOverMonthChange` (`getMonthOverMonthCategoryChanges`) to CONTEXT.md; keep avoiding deprecated "variazione"
+
+**Open questions to close in planning:**
+- Income recurring/extraordinary split: map onto existing `nature` on the `in` side (income vs extraordinary) or add a dedicated field? (schema/DAL impact)
+- Year-selector source query `getYearsWithData()`
+
+**Deferred (not this milestone):** FlowNature taxonomy rename → future quick task. Carryover REVAL-01 / R029 stay parked. Operator deploy R038/R039/R041 remains operator-pending.
 
 ## Architecture / Key Patterns
 
@@ -76,7 +91,11 @@ v1.13 Unified Categorization Picker shipped 2026-06-02. Planning next milestone.
 - ✓ Unified table filter & sort: `DataTableToolbar` + `TableConfig` declarative system across Transactions, Expenses, Files; URL-first filtering, server-side WHERE, `id` tiebreaker on all DAL sorts; `MonthMultiPicker`, `AmountRangePicker`; Expenses no temporal filter (ADR 0009/0010) — v1.14
 - ✓ Collapsible icon-rail sidebar: `SidebarProvider` + `useSidebarCollapsed` (localStorage-backed, SSR-safe); `AppShell` drives `<aside>` width (w-16/w-60); chevron toggle + tooltips in collapsed mode; user Avatar dropdown at bottom; topbar deleted; BottomNav 5th Impostazioni entry; ThemeToggle in SettingsHub Aspetto section (ADR 0011) — v1.15
 
-### Active (next milestone — planning)
+### Active (v1.16 — planning)
+
+- Dashboard overview redesign requirements live in `.planning/REQUIREMENTS.md` (DASH-* IDs). See Current Milestone above.
+
+### Parked backlog (not in v1.16)
 
 - [ ] REVAL-01: Apply newly created pattern to existing transactions from same import file.
 - [ ] R029: Complete categorization revalidation for all entrypoints.
@@ -165,4 +184,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-07 after v1.15 Phase 41 — Collapsible Sidebar shipped*
+*Last updated: 2026-06-07 — started milestone v1.16 Dashboard Overview Redesign*
