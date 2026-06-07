@@ -53,6 +53,7 @@ vi.mock('@/lib/routes', () => ({
     onboarding: '/onboarding',
     settings: '/settings',
     dashboard: '/dashboard',
+    import: '/import',
   },
 }))
 
@@ -63,8 +64,12 @@ vi.mock('@/components/layout/bottom-nav', () => ({
 vi.mock('@/components/layout/sidebar', () => ({
   Sidebar: () => null,
 }))
-vi.mock('@/components/layout/topbar', () => ({
-  Topbar: () => null,
+vi.mock('@/components/layout/sidebar-provider', () => ({
+  SidebarProvider: ({ children }: { children: unknown }) => children,
+  useSidebarCollapsed: () => ({ collapsed: false, setCollapsed: () => {} }),
+}))
+vi.mock('@/components/layout/app-shell', () => ({
+  AppShell: ({ children }: { children: unknown }) => children,
 }))
 
 function mockPathname(pathname: string) {
