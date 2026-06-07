@@ -192,9 +192,37 @@ const NATURE_SLUGS: Record<FlowNature, string[]> = {
     'altri-finanziamenti',
   ],
   transfer: [],
-  // Phase 42: income split — extraordinary income subcategories
-  // Slug membership to be confirmed by PO and extended via seed-extras run
-  income_extraordinary: [],
+  // Phase 42: income split — extraordinary (one-off / non-recurring) income subcategories.
+  // Candidata base confirmed: dividends (dividendi-*) stay in `income` (recurring).
+  // Slugs from `income` that move here: one-off/variable earnings.
+  // Slugs from `financial` that move here: all IN-side money flows (D-03).
+  // Post-step-4 renamed slugs included: rimborso-abbonamento-e-canoni, bonus-promozionale, rimborso-da-persona.
+  income_extraordinary: [
+    // From income nature: one-off / variable earnings
+    'bonus',
+    'freelance',
+    'consulenze',
+    'progetti-occasionali',
+    'commissioni',
+    // From financial nature: IN-side money flows (per D-03, financial stays OUT/investment only)
+    'rimborso-spese-lavorative',
+    'rimborso-spese-sanitarie',
+    'rimborso-spese-viaggi',
+    'rimborso-ordine-online',
+    'cashback-carta-di-credito',
+    'cashback-acquisti-online',
+    'cashback-programmi-fedelta',
+    'rimborso-abbonamento-e-canoni',   // renamed from sconto-abbonamento by step 4
+    'bonus-promozionale',               // renamed from sconto-promozionale by step 4
+    'rimborso-da-persona',              // inserted by step 4
+    'vendita-di-beni-usati',
+    'commercio-online',
+    'immobili-vendita',
+    'vendita-investimenti',
+    'bonifico-in-entrata',
+    'ricariche-conti',
+    'rimborsi',
+  ],
 }
 
 async function setSubcategoryNature(database: Db): Promise<void> {
