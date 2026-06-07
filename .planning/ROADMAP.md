@@ -94,13 +94,13 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 | 39 | v1.13 | 6/6 | Complete    | 2026-06-02 |
 
 | 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
-| 41 | v1.15 | 3/3 | Complete   | 2026-06-07 |
+| 41 | v1.15 | 3/3 | Complete    | 2026-06-07 |
 
 **Total: 38 phases shipped · 146 plans complete**
 
 ## Phase 41: collapsible-sidebar
 
-- [ ] **Phase 41: collapsible-sidebar** — Collapsible icon-rail sidebar; topbar removed on all breakpoints; app name + user controls (avatar, profile, logout) in sidebar; BottomNav gains Impostazioni entry; theme toggle moved to /settings page (ADR 0011)
+- [x] **Phase 41: collapsible-sidebar** — Collapsible icon-rail sidebar; topbar removed on all breakpoints; app name + user controls (avatar, profile, logout) in sidebar; BottomNav gains Impostazioni entry; theme toggle moved to /settings page (ADR 0011) (completed 2026-06-07)
   - Goal: Replace the topbar+sidebar two-zone layout with a single-zone sidebar that owns all chrome. The sidebar collapses to an icon rail, persists its state in localStorage, and contains everything the topbar held.
   - Depends on: Phase 40
   - Constraints: ADR 0011 locked; icon rail w-16/w-60; toggle at top; user controls at bottom; localStorage persistence; topbar deleted on all breakpoints; BottomNav gets Impostazioni for mobile.
