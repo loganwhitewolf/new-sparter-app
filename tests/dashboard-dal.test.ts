@@ -649,7 +649,7 @@ describe('getMonthlyTrendByNature (R-FN-04, R-FN-08, R-FN-09)', () => {
 })
 
 describe('buildMonthlyNatureTrendData (R-FN-04, R-FN-08, R-FN-09)', () => {
-  it('pre-populates all 8 nature keys at 0.00 for every month even with no data', () => {
+  it('pre-populates all 9 nature keys at 0.00 for every month even with no data', () => {
     const result = buildMonthlyNatureTrendData({
       from: new Date(2026, 0, 1),
       to: new Date(2026, 1, 28, 23, 59, 59, 999),
@@ -666,6 +666,7 @@ describe('buildMonthlyNatureTrendData (R-FN-04, R-FN-08, R-FN-09)', () => {
           'extraordinary',
           'financial',
           'income',
+          'income_extraordinary',
           'operational',
           'transfer',
           'unclassified',
