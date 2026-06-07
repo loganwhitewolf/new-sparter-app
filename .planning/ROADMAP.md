@@ -159,55 +159,74 @@ Plans:
 ## Phase Details
 
 ### Phase 42: overview-data-layer
+
 **Goal**: All server-side data contracts for the redesigned overview are in place and the project glossary reflects the new terms
 **Depends on**: Phase 41
 **Requirements**: DATA-01, DATA-02, DATA-03, DATA-04
 **Success Criteria** (what must be TRUE):
+
   1. `getOverview(year)` returns four KPI totals plus YTD-vs-prior-YTD deltas for any year with data
   2. `getMonthOverMonthCategoryChanges(year, monthIndex?, limit?)` returns per-month OUT category movers above the €15 noise threshold
   3. `getYearsWithData()` returns only years that have at least one transaction
   4. CONTEXT.md documents `MonthOverMonthChange` as canonical term and redefines `Reference Period` as "last month with data"
-**Plans**: 3 plans (3 waves)
 
+**Plans**: 3 plans (3 waves)
 Plans:
+**Wave 1**
+
 - [ ] 42-01-PLAN.md — Wave 0 tests + flowNatureEnum extension + FlowNature blast-radius + dashboard exports + enum migration (build green)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 42-02-PLAN.md — [BLOCKING] apply migration + additive seed-extras STEP re-bucketing income_extraordinary slugs (PO-confirmed)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 42-03-PLAN.md — lib/dal/overview.ts (getOverview, getYearsWithData, getMonthOverMonthCategoryChanges, getOverviewChart) + CONTEXT.md glossary
 
 ### Phase 43: overview-shell
+
 **Goal**: Users can view the redesigned overview tab with the year-scoped header, grouped bar chart, and 4 KPI cards
 **Depends on**: Phase 42
 **Requirements**: HEAD-01, HEAD-02, HEAD-03, CHART-01, CHART-02, CHART-03, KPI-01, KPI-02, KPI-03, KPI-04
 **Success Criteria** (what must be TRUE):
+
   1. User sees the page title and a year-selector pill on the same row; only years with transaction data appear in the selector
   2. Selecting a year updates the KPIs and chart to reflect that year's data (YTD if current, full-year if past)
   3. User sees side-by-side green (Entrate) and red (Uscite) bars per month with always-on compact value labels; no stacking by nature, no balance series in the chart
   4. User sees four KPI cards (Totale entrate, Totale uscite, Bilancio, Tasso risparmio) with a "vs anno prec." delta badge and a sentiment-colored qualitative reading line
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 44: overview-interactions
+
 **Goal**: Users can filter the chart by income type and expense nature, see inline FlowNature education, and dismiss the uncategorized nudge
 **Depends on**: Phase 43
 **Requirements**: NUDGE-01, NUDGE-02, NUDGE-03, NUDGE-04, FILT-01, FILT-02, FILT-03, EDU-01, EDU-02
 **Success Criteria** (what must be TRUE):
+
   1. When the selected year has uncategorized OUT expenses, an inline amber nudge appears on the title row with a "Categorizza ora" link and an X to dismiss; it is absent when there are no uncategorized expenses
   2. Dismissing the nudge persists in localStorage; it reappears when new uncategorized expenses arrive (lastSeenCount comparison), never written to the database
   3. User can filter chart bars by income type (recurring / extraordinary) and expense nature (essential, discretionary, operational, financial, debt, extraordinary) via chips; KPI totals remain unchanged regardless of chip state
   4. User can open a ⓘ legend popover next to the Entrate and Uscite filter groups, and see a one-line tooltip on each filter chip
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 45: overview-movers
+
 **Goal**: Users can click any month's bar to see that month's top spending movers versus the previous month
 **Depends on**: Phase 44
 **Requirements**: MOVE-01, MOVE-02, MOVE-03, MOVE-04, MOVE-05
 **Success Criteria** (what must be TRUE):
+
   1. Clicking a month's bar highlights those bars visually and opens the movers panel for that month
   2. The movers panel shows "Dove hai speso di più" (increases, red) and "Dove hai risparmiato" (decreases, green) as separate sections; an empty section is hidden
   3. Each mover reads as a human sentence — "{categoria} · {importo} in più / in meno" — with "spesa nuova" when the previous month had no spend in that category; no percentages shown
   4. The panel defaults to the last month that has transactions on initial load
   5. Selecting the first available month shows an empty state (no prior month to compare)
+
 **Plans**: TBD
 **UI hint**: yes
 
