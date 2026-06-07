@@ -10,6 +10,7 @@ import {
   List,
   LogOut,
   Receipt,
+  Settings,
   Upload,
   User,
 } from 'lucide-react'
@@ -126,6 +127,33 @@ export function Sidebar() {
           })}
         </ul>
       </TooltipProvider>
+
+      {/* SETTINGS LINK: direct access to /settings hub (categories + theme) */}
+      <Separator className="my-2" />
+      {(() => {
+        const isActive = pathname === APP_ROUTES.settings || pathname.startsWith(`${APP_ROUTES.settings}/`)
+        const linkNode = (
+          <Link
+            href={APP_ROUTES.settings}
+            className={cn(
+              'flex items-center rounded-md py-2 text-sm font-medium transition-colors',
+              collapsed ? 'justify-center px-2' : 'gap-3 px-3',
+              isActive
+                ? 'border-l-2 border-primary bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+            )}
+          >
+            <ClientMountIcon icon={Settings} className="h-4 w-4 shrink-0" />
+            {!collapsed && <span className="flex-1">Impostazioni</span>}
+          </Link>
+        )
+        return collapsed && mounted ? (
+          <Tooltip>
+            <TooltipTrigger asChild>{linkNode}</TooltipTrigger>
+            <TooltipContent side="right">Impostazioni</TooltipContent>
+          </Tooltip>
+        ) : linkNode
+      })()}
 
       {/* BOTTOM SLOT: user avatar dropdown migrated from topbar (D-07/D-08) */}
       <div className="mt-auto">
