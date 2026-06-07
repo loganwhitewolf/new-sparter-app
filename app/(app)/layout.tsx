@@ -18,7 +18,7 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { userId } = await verifySession();
+  const { userId, email, name, image } = await verifySession();
 
   const requestHeaders = await headers();
   const pathname = requestHeaders.get("x-pathname") ?? "";
@@ -53,7 +53,7 @@ export default async function AppLayout({
 
   return (
     <SidebarProvider>
-      <AppShell>{children}</AppShell>
+      <AppShell user={{ email, name, image }}>{children}</AppShell>
     </SidebarProvider>
   );
 }

@@ -5,12 +5,14 @@ import { BottomNav } from '@/components/layout/bottom-nav'
 import { useSidebarCollapsed } from '@/components/layout/sidebar-provider'
 import { cn } from '@/lib/utils'
 
+type UserDisplay = { name: string; email: string; image: string | null }
+
 /**
  * AppShell: client component that reads SidebarContext to drive the <aside> width.
  * Renders the flex shell (sidebar + main content area) without a top bar (D-01).
  * Used by app/(app)/layout.tsx, wrapped in SidebarProvider.
  */
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, user }: { children: React.ReactNode; user: UserDisplay }) {
   const { collapsed } = useSidebarCollapsed()
 
   return (
@@ -22,7 +24,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           collapsed ? 'md:w-16' : 'md:w-60'
         )}
       >
-        <Sidebar />
+        <Sidebar user={user} />
       </aside>
 
       <div className="flex flex-1 flex-col overflow-hidden">

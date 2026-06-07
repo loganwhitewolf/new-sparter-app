@@ -19,6 +19,8 @@ export const verifySession = cache(async () => {
       email: 'staging@example.local',
       subscriptionPlan: 'basic' as const,
       role: 'user' as const,
+      name: 'Staging User',
+      image: null,
     }
   }
 
@@ -34,6 +36,8 @@ export const verifySession = cache(async () => {
     .select({
       subscriptionPlan: userTable.subscriptionPlan,
       role: userTable.role,
+      name: userTable.name,
+      image: userTable.image,
     })
     .from(userTable)
     .where(eq(userTable.id, userId))
@@ -44,5 +48,7 @@ export const verifySession = cache(async () => {
     email,
     subscriptionPlan: row?.subscriptionPlan ?? 'free',
     role: row?.role ?? 'user',
+    name: row?.name ?? email,
+    image: row?.image ?? null,
   }
 })

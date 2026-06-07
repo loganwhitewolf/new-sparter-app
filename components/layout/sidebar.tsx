@@ -32,10 +32,11 @@ import {
 import { ClientMountIcon } from '@/components/ui/client-mount-icon'
 import { Separator } from '@/components/ui/separator'
 import { useSidebarCollapsed } from '@/components/layout/sidebar-provider'
-import { authClient } from '@/lib/auth-client'
 import { signOutAction } from '@/lib/actions/auth'
 import { cn } from '@/lib/utils'
 import { APP_ROUTES } from '@/lib/routes'
+
+type UserDisplay = { name: string; email: string; image: string | null }
 
 const topNavItems = [
   { href: APP_ROUTES.dashboard, label: 'Dashboard', icon: LayoutDashboard },
@@ -44,10 +45,9 @@ const topNavItems = [
   { href: APP_ROUTES.import, label: 'Importazioni', icon: Upload },
 ]
 
-export function Sidebar() {
+export function Sidebar({ user }: { user: UserDisplay }) {
   const { collapsed, setCollapsed } = useSidebarCollapsed()
   const pathname = usePathname()
-  const { data: session } = authClient.useSession()
 
   // Delay tooltip rendering until after client mount to avoid SSR/hydration mismatch (Pitfall 6)
   const [mounted, setMounted] = useState(false)
@@ -55,9 +55,8 @@ export function Sidebar() {
     queueMicrotask(() => setMounted(true))
   }, [])
 
-  const email = session?.user?.email ?? ''
+  const { email, name, image } = user
   const fallback = email.charAt(0).toUpperCase() || 'U'
-  const name = session?.user?.name || email || 'Utente'
 
   return (
     <nav
@@ -90,7 +89,7 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* NAV LIST: icon + label when expanded, icon-only with tooltips when collapsed */}
+      {/* NAV LIST + SETTINGS LINK: wrapped in a single TooltipProvider so collapsed tooltips work */}
       <TooltipProvider>
         <ul className="flex flex-1 flex-col gap-1">
           {topNavItems.map(({ href, label, icon: Icon }) => {
@@ -126,34 +125,34 @@ export function Sidebar() {
             )
           })}
         </ul>
-      </TooltipProvider>
 
-      {/* SETTINGS LINK: direct access to /settings hub (categories + theme) */}
-      <Separator className="my-2" />
-      {(() => {
-        const isActive = pathname === APP_ROUTES.settings || pathname.startsWith(`${APP_ROUTES.settings}/`)
-        const linkNode = (
-          <Link
-            href={APP_ROUTES.settings}
-            className={cn(
-              'flex items-center rounded-md py-2 text-sm font-medium transition-colors',
-              collapsed ? 'justify-center px-2' : 'gap-3 px-3',
-              isActive
-                ? 'border-l-2 border-primary bg-primary/10 text-primary'
-                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-            )}
-          >
-            <ClientMountIcon icon={Settings} className="h-4 w-4 shrink-0" />
-            {!collapsed && <span className="flex-1">Impostazioni</span>}
-          </Link>
-        )
-        return collapsed && mounted ? (
-          <Tooltip>
-            <TooltipTrigger asChild>{linkNode}</TooltipTrigger>
-            <TooltipContent side="right">Impostazioni</TooltipContent>
-          </Tooltip>
-        ) : linkNode
-      })()}
+        {/* SETTINGS LINK: direct access to /settings hub (categories + theme) */}
+        <Separator className="my-2" />
+        {(() => {
+          const isActive = pathname === APP_ROUTES.settings || pathname.startsWith(`${APP_ROUTES.settings}/`)
+          const linkNode = (
+            <Link
+              href={APP_ROUTES.settings}
+              className={cn(
+                'flex items-center rounded-md py-2 text-sm font-medium transition-colors',
+                collapsed ? 'justify-center px-2' : 'gap-3 px-3',
+                isActive
+                  ? 'border-l-2 border-primary bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              )}
+            >
+              <ClientMountIcon icon={Settings} className="h-4 w-4 shrink-0" />
+              {!collapsed && <span className="flex-1">Impostazioni</span>}
+            </Link>
+          )
+          return collapsed && mounted ? (
+            <Tooltip>
+              <TooltipTrigger asChild>{linkNode}</TooltipTrigger>
+              <TooltipContent side="right">Impostazioni</TooltipContent>
+            </Tooltip>
+          ) : linkNode
+        })()}
+      </TooltipProvider>
 
       {/* BOTTOM SLOT: user avatar dropdown migrated from topbar (D-07/D-08) */}
       <div className="mt-auto">
@@ -167,8 +166,8 @@ export function Sidebar() {
             )}
           >
             <Avatar className="h-8 w-8 shrink-0">
-              {session?.user?.image && (
-                <AvatarImage src={session.user.image} alt="Avatar utente" />
+              {image && (
+                <AvatarImage src={image} alt="Avatar utente" />
               )}
               <AvatarFallback className="bg-primary text-xs font-medium text-primary-foreground">
                 {fallback}
