@@ -6,9 +6,8 @@
  */
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { BottomNav } from "@/components/layout/bottom-nav";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Topbar } from "@/components/layout/topbar";
+import { SidebarProvider } from "@/components/layout/sidebar-provider";
+import { AppShell } from "@/components/layout/app-shell";
 import { verifySession } from "@/lib/dal/auth";
 import { getTransactionCount } from "@/lib/dal/transactions";
 import { getOnboardingCompletedAt } from "@/lib/dal/users";
@@ -40,7 +39,7 @@ export default async function AppLayout({
     }
   }
 
-  // Bypass app chrome (Sidebar, Topbar, BottomNav) for onboarding flows:
+  // Bypass app chrome (Sidebar, BottomNav) for onboarding flows:
   // - always on /onboarding/*
   // - on /import/* when ?from=onboarding is present (user reached import wizard from step 1)
   const search = requestHeaders.get("x-search") ?? "";
@@ -53,21 +52,8 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <aside
-        data-sidebar
-        className="hidden border-r border-border md:flex md:w-60 md:shrink-0 md:flex-col"
-      >
-        <Sidebar />
-      </aside>
-
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Topbar />
-        <main className="flex-1 overflow-y-auto p-6 pb-20 md:pb-6">
-          {children}
-        </main>
-        <BottomNav className="md:hidden" />
-      </div>
-    </div>
+    <SidebarProvider>
+      <AppShell>{children}</AppShell>
+    </SidebarProvider>
   );
 }
