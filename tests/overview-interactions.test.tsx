@@ -12,6 +12,10 @@ const { OverviewNudge, shouldShowNudge } = await import(
   '@/components/dashboard/overview/overview-nudge'
 )
 
+const { OverviewChartFilters } = await import(
+  '@/components/dashboard/overview/overview-chart-filters'
+)
+
 // Fixture: a single OverviewChartPoint with distinct amounts per bucket
 // so that exclusion is clearly observable in assertions.
 const FIXTURE: OverviewChartPoint = {
@@ -128,6 +132,52 @@ describe('overview nudge (NUDGE-01..04, NUDGE-03)', () => {
       <OverviewNudge uncategorizedCount={5} year={2024} />
     )
     expect(html).toBe('')
+  })
+})
+
+describe('overview chart education (EDU-01, EDU-02)', () => {
+  // Pitfall 4: Tooltip and Popover content is portaled and will NOT appear in
+  // renderToStaticMarkup output. We assert only on trigger elements and aria-labels.
+
+  // Helper: all-on state for OverviewChartFilters
+  const allOnProps = {
+    includedIncome: new Set(INCOME_KEYS),
+    includedOut: new Set(OUT_KEYS),
+    onToggleIncome: () => {},
+    onToggleOut: () => {},
+  }
+
+  // EDU-01: group info popovers have accessible aria-labels on their triggers
+  it('education: Entrate group info trigger has aria-label "Informazioni sul gruppo Entrate"', () => {
+    const html = renderToStaticMarkup(<OverviewChartFilters {...allOnProps} />)
+    expect(html).toContain('aria-label="Informazioni sul gruppo Entrate"')
+  })
+
+  it('education: Uscite group info trigger has aria-label "Informazioni sul gruppo Uscite"', () => {
+    const html = renderToStaticMarkup(<OverviewChartFilters {...allOnProps} />)
+    expect(html).toContain('aria-label="Informazioni sul gruppo Uscite"')
+  })
+
+  // EDU-02: chip trigger labels render in static markup (button text, not portaled tooltip body)
+  it('tooltip: income chip label "Ricorrenti" appears as a trigger in the rendered output', () => {
+    const html = renderToStaticMarkup(<OverviewChartFilters {...allOnProps} />)
+    expect(html).toContain('Ricorrenti')
+  })
+
+  it('tooltip: income chip label "Straordinarie" appears as a trigger in the rendered output', () => {
+    const html = renderToStaticMarkup(<OverviewChartFilters {...allOnProps} />)
+    expect(html).toContain('Straordinarie')
+  })
+
+  it('tooltip: expense chip label "Essenziale" appears as a trigger in the rendered output', () => {
+    const html = renderToStaticMarkup(<OverviewChartFilters {...allOnProps} />)
+    expect(html).toContain('Essenziale')
+  })
+
+  // aria-pressed is present (accessibility check)
+  it('tooltip: chips render with aria-pressed attribute', () => {
+    const html = renderToStaticMarkup(<OverviewChartFilters {...allOnProps} />)
+    expect(html).toContain('aria-pressed')
   })
 })
 
