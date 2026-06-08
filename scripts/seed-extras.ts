@@ -371,11 +371,27 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
   console.log(`    cat32 rename/retype: ${(cat32Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
 
   // --- Cat 32 subcategories: rename "trasferimento" → "Trasferimento tra conti" ---
-  const sub32RenameResult = await database
-    .update(subCategory)
-    .set({ name: 'Trasferimento tra conti', slug: 'trasferimento-tra-conti' })
-    .where(and(eq(subCategory.slug, 'trasferimento'), isNull(subCategory.userId)))
-  console.log(`    sub32 rename trasferimento: ${(sub32RenameResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+  // Guard: if trasferimento-tra-conti already exists, skip rename and deactivate old slug instead.
+  const existingTrasferimentoTraConti = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'trasferimento-tra-conti'), isNull(subCategory.userId)))
+    .limit(1)
+
+  if (existingTrasferimentoTraConti.length > 0) {
+    const deactivateTrasferimento = await database
+      .update(subCategory)
+      .set({ isActive: false })
+      .where(and(eq(subCategory.slug, 'trasferimento'), isNull(subCategory.userId)))
+    const deactivateCount = (deactivateTrasferimento as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    sub32 rename trasferimento: skipped (target exists), deactivated old slug: ${deactivateCount} rows`)
+  } else {
+    const sub32RenameResult = await database
+      .update(subCategory)
+      .set({ name: 'Trasferimento tra conti', slug: 'trasferimento-tra-conti' })
+      .where(and(eq(subCategory.slug, 'trasferimento'), isNull(subCategory.userId)))
+    console.log(`    sub32 rename trasferimento: ${(sub32RenameResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+  }
 
   // --- Cat 32 subcategories: set excludeFromTotals=true, nature=transfer on all ---
   const sub32NatureResult = await database
@@ -426,11 +442,25 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
   console.log(`    cat26 rename: ${(cat26Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
 
   // --- Cat 26: rename sconto-abbonamento → rimborso-abbonamento-e-canoni ---
-  const sub26AbbonaResult = await database
-    .update(subCategory)
-    .set({ name: 'rimborso abbonamento e canoni', slug: 'rimborso-abbonamento-e-canoni' })
-    .where(and(eq(subCategory.slug, 'sconto-abbonamento'), isNull(subCategory.userId)))
-  console.log(`    sub26 rename sconto-abbonamento: ${(sub26AbbonaResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+  // Guard: if target already exists, deactivate old slug instead of renaming.
+  const existingRimborsoAbbonamento = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'rimborso-abbonamento-e-canoni'), isNull(subCategory.userId)))
+    .limit(1)
+  if (existingRimborsoAbbonamento.length > 0) {
+    const deactivateScontoAbbona = await database
+      .update(subCategory)
+      .set({ isActive: false })
+      .where(and(eq(subCategory.slug, 'sconto-abbonamento'), isNull(subCategory.userId)))
+    console.log(`    sub26 rename sconto-abbonamento: skipped (target exists), deactivated: ${(deactivateScontoAbbona as unknown as { rowCount?: number }).rowCount ?? 0} rows`)
+  } else {
+    const sub26AbbonaResult = await database
+      .update(subCategory)
+      .set({ name: 'rimborso abbonamento e canoni', slug: 'rimborso-abbonamento-e-canoni' })
+      .where(and(eq(subCategory.slug, 'sconto-abbonamento'), isNull(subCategory.userId)))
+    console.log(`    sub26 rename sconto-abbonamento: ${(sub26AbbonaResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+  }
 
   // --- Cat 26: deactivate sconto-canone (merged into rimborso-abbonamento-e-canoni) ---
   const sub26CanoneResult = await database
@@ -440,11 +470,25 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
   console.log(`    sub26 deactivate sconto-canone: ${(sub26CanoneResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
 
   // --- Cat 26: rename sconto-promozionale → bonus-promozionale ---
-  const sub26PromoResult = await database
-    .update(subCategory)
-    .set({ name: 'bonus promozionale', slug: 'bonus-promozionale' })
-    .where(and(eq(subCategory.slug, 'sconto-promozionale'), isNull(subCategory.userId)))
-  console.log(`    sub26 rename sconto-promozionale: ${(sub26PromoResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+  // Guard: if target already exists, deactivate old slug instead of renaming.
+  const existingBonusPromozionale = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'bonus-promozionale'), isNull(subCategory.userId)))
+    .limit(1)
+  if (existingBonusPromozionale.length > 0) {
+    const deactivateScontoPromo = await database
+      .update(subCategory)
+      .set({ isActive: false })
+      .where(and(eq(subCategory.slug, 'sconto-promozionale'), isNull(subCategory.userId)))
+    console.log(`    sub26 rename sconto-promozionale: skipped (target exists), deactivated: ${(deactivateScontoPromo as unknown as { rowCount?: number }).rowCount ?? 0} rows`)
+  } else {
+    const sub26PromoResult = await database
+      .update(subCategory)
+      .set({ name: 'bonus promozionale', slug: 'bonus-promozionale' })
+      .where(and(eq(subCategory.slug, 'sconto-promozionale'), isNull(subCategory.userId)))
+    console.log(`    sub26 rename sconto-promozionale: ${(sub26PromoResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+  }
 
   // --- Cat 26: insert "rimborso da persona" if not exists ---
   const existingRimborsoPersona = await database
