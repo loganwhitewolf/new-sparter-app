@@ -6,6 +6,11 @@ import {
   INCOME_KEYS,
 } from '@/components/dashboard/overview/overview-chart-utils'
 import type { OverviewChartPoint } from '@/lib/dal/overview'
+import { renderToStaticMarkup } from 'react-dom/server'
+
+const { OverviewNudge, shouldShowNudge } = await import(
+  '@/components/dashboard/overview/overview-nudge'
+)
 
 // Fixture: a single OverviewChartPoint with distinct amounts per bucket
 // so that exclusion is clearly observable in assertions.
@@ -81,6 +86,48 @@ describe('overview chart filters (FILT-01, FILT-02, FILT-03)', () => {
     const values = { recurring: '500.00' }
     const result = sumSelected(values, ['recurring', 'extraordinary'])
     expect(result.toNumber()).toBe(500)
+  })
+})
+
+describe('overview nudge (NUDGE-01..04, NUDGE-03)', () => {
+  // shouldShowNudge unit tests covering lastSeenCount semantics
+
+  it('shouldShowNudge: zero count is always hidden (NUDGE-04)', () => {
+    expect(shouldShowNudge(0, null)).toBe(false)
+  })
+
+  it('shouldShowNudge: count > 0 with no stored value shows the nudge (NUDGE-01)', () => {
+    expect(shouldShowNudge(5, null)).toBe(true)
+  })
+
+  it('shouldShowNudge: dismissed at current count hides the nudge (NUDGE-03)', () => {
+    expect(shouldShowNudge(5, { lastSeenCount: 5 })).toBe(false)
+  })
+
+  it('shouldShowNudge reappears when new uncategorized arrive above lastSeenCount (NUDGE-03 lastSeenCount)', () => {
+    expect(shouldShowNudge(8, { lastSeenCount: 5 })).toBe(true)
+  })
+
+  it('shouldShowNudge: count fell below lastSeenCount stays hidden', () => {
+    expect(shouldShowNudge(3, { lastSeenCount: 5 })).toBe(false)
+  })
+
+  // Static render tests: visible defaults false (SSR-safe), so count>0 renders nothing before hydration.
+  // NUDGE-04: count === 0 → renders empty string in static markup.
+  it('nudge renders nothing (empty string) when uncategorizedCount is 0 (NUDGE-04)', () => {
+    const html = renderToStaticMarkup(
+      <OverviewNudge uncategorizedCount={0} year={2024} />
+    )
+    expect(html).toBe('')
+  })
+
+  // NUDGE-01: count > 0 still renders nothing in static (visible=false before useEffect),
+  // but shouldShowNudge(5, null) === true covers the show logic at unit level.
+  it('nudge static render with count > 0 returns empty string (SSR-safe default hidden, NUDGE-01 covered by shouldShowNudge)', () => {
+    const html = renderToStaticMarkup(
+      <OverviewNudge uncategorizedCount={5} year={2024} />
+    )
+    expect(html).toBe('')
   })
 })
 
