@@ -151,7 +151,7 @@ Plans:
 
 **Milestone Goal:** Replace the `/dashboard/overview` tab with the PO-approved redesign (variant A + header H1) — a year-scoped overview that clearly answers "where did my money go and what changed".
 
-- [ ] **Phase 42: overview-data-layer** — DAL foundation: getOverview, getMonthOverMonthCategoryChanges, getYearsWithData, income-split resolution, CONTEXT.md glossary update
+- [x] **Phase 42: overview-data-layer** — DAL foundation: getOverview, getMonthOverMonthCategoryChanges, getYearsWithData, income-split resolution, CONTEXT.md glossary update (completed 2026-06-08)
 - [ ] **Phase 43: overview-shell** — Redesigned overview tab: header H1 + year selector, hero chart variant A (grouped bars, always-on labels), 4 KPI cards with qualitative reading lines
 - [ ] **Phase 44: overview-interactions** — Uncategorized nudge (inline amber, localStorage dismiss), chart filter chips (income type + expense nature), FlowNature ⓘ education popovers
 - [ ] **Phase 45: overview-movers** — Per-month movers drill-down: recharts bar click → top movers panel, humanized copy, highlighted bar, default to last month with data
@@ -182,7 +182,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 42-03-PLAN.md — lib/dal/overview.ts (getOverview, getYearsWithData, getMonthOverMonthCategoryChanges, getOverviewChart) + CONTEXT.md glossary
+- [x] 42-03-PLAN.md — lib/dal/overview.ts (getOverview, getYearsWithData, getMonthOverMonthCategoryChanges, getOverviewChart) + CONTEXT.md glossary
 
 ### Phase 43: overview-shell
 
@@ -251,7 +251,7 @@ Plans:
 | 39 | v1.13 | 6/6 | Complete | 2026-06-02 |
 | 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
-| 42 | v1.16 | 2/3 | In Progress|  |
+| 42 | v1.16 | 3/3 | Complete   | 2026-06-08 |
 | 43 | v1.16 | 0/TBD | Not started | - |
 | 44 | v1.16 | 0/TBD | Not started | - |
 | 45 | v1.16 | 0/TBD | Not started | - |
