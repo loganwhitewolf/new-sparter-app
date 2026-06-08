@@ -53,47 +53,50 @@ export function OverviewMoversPanel({ year, selectedMonth, movers, isPending }: 
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
+      ) : movers.length === 0 ? (
+        /* D-07: empty state — first month or all deltas below €15 noise floor (MOVE-05) */
+        <p className="text-sm text-muted-foreground">
+          Nessuna variazione significativa — mese di partenza o nessuna spesa sopra €15.
+        </p>
       ) : (
-        <>
+        /* Two-column layout: increases left, savings right — no scrolling needed */
+        <div className="grid grid-cols-2 gap-4">
           {/* D-02: "Dove hai speso di più" — red, hidden when empty (MOVE-02) */}
-          {increases.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-[var(--total-out)] mb-1">
-                Dove hai speso di più
-              </p>
-              <ul className="space-y-0.5">
-                {increases.map((m) => (
-                  <li key={m.categoryId} className="text-sm text-foreground">
-                    {formatMoverLine(m)}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <div>
+            {increases.length > 0 && (
+              <>
+                <p className="text-xs font-semibold text-[var(--total-out)] mb-1">
+                  Dove hai speso di più
+                </p>
+                <ul className="space-y-0.5">
+                  {increases.map((m) => (
+                    <li key={m.categoryId} className="text-sm text-foreground">
+                      {formatMoverLine(m)}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
 
           {/* D-02: "Dove hai risparmiato" — green, hidden when empty (MOVE-02) */}
-          {savings.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-[var(--total-in)] mb-1">
-                Dove hai risparmiato
-              </p>
-              <ul className="space-y-0.5">
-                {savings.map((m) => (
-                  <li key={m.categoryId} className="text-sm text-foreground">
-                    {formatMoverLine(m)}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* D-07: empty state — first month or all deltas below €15 noise floor (MOVE-05) */}
-          {movers.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              Nessuna variazione significativa — mese di partenza o nessuna spesa sopra €15.
-            </p>
-          )}
-        </>
+          <div>
+            {savings.length > 0 && (
+              <>
+                <p className="text-xs font-semibold text-[var(--total-in)] mb-1">
+                  Dove hai risparmiato
+                </p>
+                <ul className="space-y-0.5">
+                  {savings.map((m) => (
+                    <li key={m.categoryId} className="text-sm text-foreground">
+                      {formatMoverLine(m)}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </section>
   )
