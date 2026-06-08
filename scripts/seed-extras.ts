@@ -149,14 +149,10 @@ const NATURE_SLUGS: Record<FlowNature, string[]> = {
     'rifiuti',
   ],
   income: [
+    // Recurring income only — one-off slugs moved to income_extraordinary (phase 42)
     'stipendio-base',
-    'bonus',
     'indennita',
     'overtime',
-    'freelance',
-    'consulenze',
-    'progetti-occasionali',
-    'commissioni',
     'dividendi-azionari',
     'dividendi-fondi-comuni',
     'dividendi-immobiliari',
@@ -192,6 +188,37 @@ const NATURE_SLUGS: Record<FlowNature, string[]> = {
     'altri-finanziamenti',
   ],
   transfer: [],
+  // Phase 42: income split — extraordinary (one-off / non-recurring) income subcategories.
+  // Candidata base confirmed: dividends (dividendi-*) stay in `income` (recurring).
+  // Slugs from `income` that move here: one-off/variable earnings.
+  // Slugs from `financial` that move here: all IN-side money flows (D-03).
+  // Post-step-4 renamed slugs included: rimborso-abbonamento-e-canoni, bonus-promozionale, rimborso-da-persona.
+  income_extraordinary: [
+    // From income nature: one-off / variable earnings
+    'bonus',
+    'freelance',
+    'consulenze',
+    'progetti-occasionali',
+    'commissioni',
+    // From financial nature: IN-side money flows (per D-03, financial stays OUT/investment only)
+    'rimborso-spese-lavorative',
+    'rimborso-spese-sanitarie',
+    'rimborso-spese-viaggi',
+    'rimborso-ordine-online',
+    'cashback-carta-di-credito',
+    'cashback-acquisti-online',
+    'cashback-programmi-fedelta',
+    'rimborso-abbonamento-e-canoni',   // renamed from sconto-abbonamento by step 4
+    'bonus-promozionale',               // renamed from sconto-promozionale by step 4
+    'rimborso-da-persona',              // inserted by step 4
+    'vendita-di-beni-usati',
+    'commercio-online',
+    'immobili-vendita',
+    'vendita-investimenti',
+    'bonifico-in-entrata',
+    'ricariche-conti',
+    'rimborsi',
+  ],
 }
 
 async function setSubcategoryNature(database: Db): Promise<void> {
@@ -221,13 +248,31 @@ async function setFinecoDescriptionStripPattern(database: Db): Promise<void> {
 // isActive=false hides subcategories from dashboard/expense queries, so any expense not
 // remapped first would be silently dropped from listings.
 async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
-  // 1. Rename deprecated slug → bio-e-naturale (idempotent: re-run finds 0 rows after first run)
-  const renameResult = await database
-    .update(subCategory)
-    .set({ name: 'bio e naturale', slug: 'bio-e-naturale' })
-    .where(and(eq(subCategory.slug, 'spesa-bio'), isNull(subCategory.userId)))
-  const renameCount = (renameResult as unknown as { rowCount?: number }).rowCount ?? 0
-  console.log(`    rename spesa-bio → bio-e-naturale: ${renameCount} rows updated`)
+  // 1. Rename deprecated slug → bio-e-naturale.
+  // Guard: if bio-e-naturale already exists as a separate row (e.g. seeded by yarn db:seed),
+  // skip the rename and deactivate spesa-bio instead — avoids unique slug constraint violation on re-runs.
+  const existingBioNaturale = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'bio-e-naturale'), isNull(subCategory.userId)))
+    .limit(1)
+
+  if (existingBioNaturale.length > 0) {
+    // Target already exists — deactivate spesa-bio if still present
+    const deactivateSpaeBio = await database
+      .update(subCategory)
+      .set({ isActive: false })
+      .where(and(eq(subCategory.slug, 'spesa-bio'), isNull(subCategory.userId)))
+    const deactivateCount = (deactivateSpaeBio as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    rename spesa-bio → bio-e-naturale: skipped (target exists), deactivated spesa-bio: ${deactivateCount} rows`)
+  } else {
+    const renameResult = await database
+      .update(subCategory)
+      .set({ name: 'bio e naturale', slug: 'bio-e-naturale' })
+      .where(and(eq(subCategory.slug, 'spesa-bio'), isNull(subCategory.userId)))
+    const renameCount = (renameResult as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    rename spesa-bio → bio-e-naturale: ${renameCount} rows updated`)
+  }
 
   // 2. Set nature='essential' on the 4 new subcategory slugs
   const newSlugs = ['discount', 'negozio-di-quartiere', 'mercato-rionale', 'drogheria-e-casalinghi']
@@ -322,11 +367,27 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
   console.log(`    cat32 rename/retype: ${(cat32Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
 
   // --- Cat 32 subcategories: rename "trasferimento" → "Trasferimento tra conti" ---
-  const sub32RenameResult = await database
-    .update(subCategory)
-    .set({ name: 'Trasferimento tra conti', slug: 'trasferimento-tra-conti' })
-    .where(and(eq(subCategory.slug, 'trasferimento'), isNull(subCategory.userId)))
-  console.log(`    sub32 rename trasferimento: ${(sub32RenameResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+  // Guard: if trasferimento-tra-conti already exists, skip rename and deactivate old slug instead.
+  const existingTrasferimentoTraConti = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'trasferimento-tra-conti'), isNull(subCategory.userId)))
+    .limit(1)
+
+  if (existingTrasferimentoTraConti.length > 0) {
+    const deactivateTrasferimento = await database
+      .update(subCategory)
+      .set({ isActive: false })
+      .where(and(eq(subCategory.slug, 'trasferimento'), isNull(subCategory.userId)))
+    const deactivateCount = (deactivateTrasferimento as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    sub32 rename trasferimento: skipped (target exists), deactivated old slug: ${deactivateCount} rows`)
+  } else {
+    const sub32RenameResult = await database
+      .update(subCategory)
+      .set({ name: 'Trasferimento tra conti', slug: 'trasferimento-tra-conti' })
+      .where(and(eq(subCategory.slug, 'trasferimento'), isNull(subCategory.userId)))
+    console.log(`    sub32 rename trasferimento: ${(sub32RenameResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+  }
 
   // --- Cat 32 subcategories: set excludeFromTotals=true, nature=transfer on all ---
   const sub32NatureResult = await database
@@ -377,11 +438,25 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
   console.log(`    cat26 rename: ${(cat26Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
 
   // --- Cat 26: rename sconto-abbonamento → rimborso-abbonamento-e-canoni ---
-  const sub26AbbonaResult = await database
-    .update(subCategory)
-    .set({ name: 'rimborso abbonamento e canoni', slug: 'rimborso-abbonamento-e-canoni' })
-    .where(and(eq(subCategory.slug, 'sconto-abbonamento'), isNull(subCategory.userId)))
-  console.log(`    sub26 rename sconto-abbonamento: ${(sub26AbbonaResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+  // Guard: if target already exists, deactivate old slug instead of renaming.
+  const existingRimborsoAbbonamento = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'rimborso-abbonamento-e-canoni'), isNull(subCategory.userId)))
+    .limit(1)
+  if (existingRimborsoAbbonamento.length > 0) {
+    const deactivateScontoAbbona = await database
+      .update(subCategory)
+      .set({ isActive: false })
+      .where(and(eq(subCategory.slug, 'sconto-abbonamento'), isNull(subCategory.userId)))
+    console.log(`    sub26 rename sconto-abbonamento: skipped (target exists), deactivated: ${(deactivateScontoAbbona as unknown as { rowCount?: number }).rowCount ?? 0} rows`)
+  } else {
+    const sub26AbbonaResult = await database
+      .update(subCategory)
+      .set({ name: 'rimborso abbonamento e canoni', slug: 'rimborso-abbonamento-e-canoni' })
+      .where(and(eq(subCategory.slug, 'sconto-abbonamento'), isNull(subCategory.userId)))
+    console.log(`    sub26 rename sconto-abbonamento: ${(sub26AbbonaResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+  }
 
   // --- Cat 26: deactivate sconto-canone (merged into rimborso-abbonamento-e-canoni) ---
   const sub26CanoneResult = await database
@@ -391,11 +466,25 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
   console.log(`    sub26 deactivate sconto-canone: ${(sub26CanoneResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
 
   // --- Cat 26: rename sconto-promozionale → bonus-promozionale ---
-  const sub26PromoResult = await database
-    .update(subCategory)
-    .set({ name: 'bonus promozionale', slug: 'bonus-promozionale' })
-    .where(and(eq(subCategory.slug, 'sconto-promozionale'), isNull(subCategory.userId)))
-  console.log(`    sub26 rename sconto-promozionale: ${(sub26PromoResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+  // Guard: if target already exists, deactivate old slug instead of renaming.
+  const existingBonusPromozionale = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'bonus-promozionale'), isNull(subCategory.userId)))
+    .limit(1)
+  if (existingBonusPromozionale.length > 0) {
+    const deactivateScontoPromo = await database
+      .update(subCategory)
+      .set({ isActive: false })
+      .where(and(eq(subCategory.slug, 'sconto-promozionale'), isNull(subCategory.userId)))
+    console.log(`    sub26 rename sconto-promozionale: skipped (target exists), deactivated: ${(deactivateScontoPromo as unknown as { rowCount?: number }).rowCount ?? 0} rows`)
+  } else {
+    const sub26PromoResult = await database
+      .update(subCategory)
+      .set({ name: 'bonus promozionale', slug: 'bonus-promozionale' })
+      .where(and(eq(subCategory.slug, 'sconto-promozionale'), isNull(subCategory.userId)))
+    console.log(`    sub26 rename sconto-promozionale: ${(sub26PromoResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+  }
 
   // --- Cat 26: insert "rimborso da persona" if not exists ---
   const existingRimborsoPersona = await database
@@ -417,6 +506,24 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
   }
 }
 
+// Step 5 (phase 42: income split): re-bucket income_extraordinary subcategories
+// Guard: isNull(subCategory.userId) ensures only system subcategories are updated.
+async function rebucketIncomeNatures(database: Db): Promise<void> {
+  const slugs = NATURE_SLUGS['income_extraordinary']
+  if (slugs.length === 0) {
+    console.log('    income_extraordinary rebucket: slug list empty, skipping (PO confirmation pending)')
+    return
+  }
+
+  const result = await database
+    .update(subCategory)
+    .set({ nature: 'income_extraordinary' as FlowNature })
+    .where(and(inArray(subCategory.slug, slugs), isNull(subCategory.userId)))
+
+  const count = (result as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(`    income_extraordinary rebucket: ${count} rows updated`)
+}
+
 // ---------------------------------------------------------------------------
 // Registry — append new steps here
 // ---------------------------------------------------------------------------
@@ -426,6 +533,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'set-fineco-description-strip-pattern', run: setFinecoDescriptionStripPattern },
   { name: 'reorganize-spesa-subcategories', run: reorganizeSpesaSubcategories },
   { name: 'reorganize-transfer-rimborsi-categories', run: reorganizeTransferRimborsiCategories },
+  { name: 'rebucket-income-natures', run: rebucketIncomeNatures },
 ]
 
 // ---------------------------------------------------------------------------
