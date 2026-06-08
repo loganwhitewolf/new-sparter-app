@@ -29,15 +29,12 @@ const chartConfig = {
 
 type OverviewChartProps = {
   data: OverviewChartPoint[]
-  // D-03 / P45: called when user selects a month (movers drill-down seam)
-  onMonthSelect?: (monthIndex: number) => void
+  // D-03 / P45: controlled by parent — single source of truth shared with movers panel.
+  selectedMonth: number
+  onMonthSelect: (monthIndex: number) => void
 }
 
-export function OverviewChart({ data }: OverviewChartProps) {
-  // D-03 scaffold: internal selected-month state for P45 movers drill-down.
-  // Default to the last month index (most recent data).
-  const [selectedMonth, setSelectedMonth] = useState(() => data.length - 1)
-
+export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewChartProps) {
   // D-06: default all-on — all income and out keys included.
   // D-09: chip state is chart-local only (no URL, no localStorage).
   const [includedIncome, setIncludedIncome] = useState<Set<IncomeKey>>(
@@ -116,8 +113,8 @@ export function OverviewChart({ data }: OverviewChartProps) {
             radius={[4, 4, 0, 0]}
             cursor="default"
             activeBar={false}
-            // D-03: P45 will switch this to selected-month highlight + cursor:pointer
-            onClick={(_, index) => setSelectedMonth(index)}
+            // D-03: clicks are forwarded to the shared-state parent via controlled prop
+            onClick={(_, index) => onMonthSelect(index)}
           >
             {/* CHART-02: always-on compact k-notation labels above each bar */}
             <LabelList
@@ -128,6 +125,15 @@ export function OverviewChart({ data }: OverviewChartProps) {
               fontSize={10}
               formatter={(v: unknown) => formatEurCompact(Number(v))}
             />
+            {/* D-03: per-Cell opacity — selected month at full opacity, others dimmed (D-06) */}
+            {rows.map((_, i) => (
+              <Cell
+                key={i}
+                fill="var(--color-entrate)"
+                fillOpacity={i === selectedMonth ? 1 : 0.4}
+                cursor="pointer"
+              />
+            ))}
           </Bar>
 
           {/* Uscite bar — red fill via per-bar Cell, grouped side-by-side (CHART-01 / CHART-03) */}
@@ -136,8 +142,8 @@ export function OverviewChart({ data }: OverviewChartProps) {
             radius={[4, 4, 0, 0]}
             cursor="default"
             activeBar={false}
-            // D-03: P45 will switch this to selected-month highlight + cursor:pointer
-            onClick={(_, index) => setSelectedMonth(index)}
+            // D-03: clicks are forwarded to the shared-state parent via controlled prop
+            onClick={(_, index) => onMonthSelect(index)}
           >
             {/* CHART-02: always-on compact k-notation labels above each bar */}
             <LabelList
@@ -148,16 +154,13 @@ export function OverviewChart({ data }: OverviewChartProps) {
               fontSize={10}
               formatter={(v: unknown) => formatEurCompact(Number(v))}
             />
-            {/* D-03 scaffold: per-bar Cell for opacity control.
-                In P43/P44: constant fillOpacity=1, cursor=default (no visible affordance).
-                D-03: P45 will switch this to selected-month highlight + cursor:pointer */}
+            {/* D-03: per-Cell opacity — selected month at full opacity, others dimmed (D-06) */}
             {rows.map((_, i) => (
               <Cell
                 key={i}
                 fill="var(--color-uscite)"
-                // D-03: P45 will switch this to: i === selectedMonth ? 1 : 0.4
-                fillOpacity={1}
-                cursor="default"
+                fillOpacity={i === selectedMonth ? 1 : 0.4}
+                cursor="pointer"
               />
             ))}
           </Bar>
