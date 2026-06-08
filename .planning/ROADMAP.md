@@ -225,7 +225,20 @@ Plans:
   3. User can filter chart bars by income type (recurring / extraordinary) and expense nature (essential, discretionary, operational, financial, debt, extraordinary) via chips; KPI totals remain unchanged regardless of chip state
   4. User can open a ⓘ legend popover next to the Entrate and Uscite filter groups, and see a one-line tooltip on each filter chip
 
-**Plans**: TBD
+**Plans**: 3 plans (3 waves)
+Plans:
+**Wave 1**
+
+- [ ] 44-01-PLAN.md — Wave 0 test scaffold + pure filter-aware chart reduction helpers (overview-chart-utils.ts) — FILT-01..03 unit coverage
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 44-02-PLAN.md — OverviewNudge inline amber title-row nudge + localStorage lastSeenCount dismissal + page wiring — NUDGE-01..04
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 44-03-PLAN.md — OverviewChartFilters chips + ⓘ popovers + per-chip tooltips; filter-aware OverviewChart — FILT-01..03, EDU-01..02
+
 **UI hint**: yes
 
 ### Phase 45: overview-movers
@@ -267,7 +280,7 @@ Plans:
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
 | 42 | v1.16 | 3/3 | Complete    | 2026-06-08 |
 | 43 | v1.16 | 4/4 | Complete   | 2026-06-08 |
-| 44 | v1.16 | 0/TBD | Not started | - |
+| 44 | v1.16 | 0/3 | Planned | - |
 | 45 | v1.16 | 0/TBD | Not started | - |
 
 **Total shipped: 38 phases · 146 plans complete**
