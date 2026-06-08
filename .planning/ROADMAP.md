@@ -154,7 +154,7 @@ Plans:
 - [x] **Phase 42: overview-data-layer** — DAL foundation: getOverview, getMonthOverMonthCategoryChanges, getYearsWithData, income-split resolution, CONTEXT.md glossary update (completed 2026-06-08)
 - [x] **Phase 43: overview-shell** — Redesigned overview tab: header H1 + year selector, hero chart variant A (grouped bars, always-on labels), 4 KPI cards with qualitative reading lines (completed 2026-06-08)
 - [x] **Phase 44: overview-interactions** — Uncategorized nudge (inline amber, localStorage dismiss), chart filter chips (income type + expense nature), FlowNature ⓘ education popovers (completed 2026-06-08)
-- [ ] **Phase 45: overview-movers** — Per-month movers drill-down: recharts bar click → top movers panel, humanized copy, highlighted bar, default to last month with data
+- [ ] **Phase 45: overview-movers** — Per-month movers drill-down: recharts bar click → top movers panel, humanized copy, highlighted bar, default to last month with data (3 plans, 3 waves)
 
 ## Phase Details
 
@@ -254,7 +254,20 @@ Plans:
   4. The panel defaults to the last month that has transactions on initial load
   5. Selecting the first available month shows an empty state (no prior month to compare)
 
-**Plans**: TBD
+**Plans**: 3 plans (3 waves)
+Plans:
+**Wave 1**
+
+- [ ] 45-01-PLAN.md — fetchMovers server action (verifySession + bounded inputs) + pure formatMoverLine/splitMovers humanizers with Vitest coverage (MOVE-03)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 45-02-PLAN.md — Controlled OverviewChart (D-06 highlight both bars) + OverviewMoversSection shared-state parent + OverviewMoversPanel + page deriveDefaultMonthIndex/prefetch (MOVE-01, MOVE-02, MOVE-04, MOVE-05)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 45-03-PLAN.md — Build/test/language gate + human-verify drill-down end-to-end (MOVE-01..MOVE-05)
+
 **UI hint**: yes
 
 ---
@@ -281,6 +294,6 @@ Plans:
 | 42 | v1.16 | 3/3 | Complete    | 2026-06-08 |
 | 43 | v1.16 | 4/4 | Complete   | 2026-06-08 |
 | 44 | v1.16 | 3/3 | Complete   | 2026-06-08 |
-| 45 | v1.16 | 0/TBD | Not started | - |
+| 45 | v1.16 | 0/3 | Planned | - |
 
 **Total shipped: 38 phases · 146 plans complete**
