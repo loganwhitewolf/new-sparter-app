@@ -1,10 +1,16 @@
 import { Suspense } from 'react'
-import { getOverview, getOverviewChart, getYearsWithData } from '@/lib/dal/overview'
+import {
+  getOverview,
+  getOverviewChart,
+  getYearsWithData,
+  getMonthOverMonthCategoryChanges,
+  type OverviewChartPoint,
+} from '@/lib/dal/overview'
 import { resolveYear } from '@/components/dashboard/overview/resolve-year'
 import { OverviewEmptyState } from '@/components/dashboard/overview/overview-empty-state'
 import { OverviewHeader } from '@/components/dashboard/overview/overview-header'
 import { KpiRow } from '@/components/dashboard/overview/kpi-row'
-import { OverviewChart } from '@/components/dashboard/overview/overview-chart'
+import { OverviewMoversSection } from '@/components/dashboard/overview/overview-movers-section'
 import { OverviewPageSkeleton } from '@/components/dashboard/overview/overview-page-skeleton'
 import { OverviewNudge } from '@/components/dashboard/overview/overview-nudge'
 import { toDecimal } from '@/lib/utils/decimal'
@@ -19,13 +25,37 @@ function isYearWithNoData(totalIn: string, totalOut: string): boolean {
   return toDecimal(totalIn).isZero() && toDecimal(totalOut).isZero()
 }
 
-// Inner async component that fetches and renders KPIs + chart under Suspense.
+/**
+ * Derives the last month index that has any activity in the chart data (D-04).
+ *
+ * Scans from the most recent month downward using Decimal arithmetic on income and out.
+ * IMPORTANT: p.out is Record<OutNature, string> — must use Object.values, not .reduce on object.
+ * Returns 0 if no month has activity (all-zero year, already guarded by isYearWithNoData).
+ */
+function deriveDefaultMonthIndex(chart: OverviewChartPoint[]): number {
+  for (let i = chart.length - 1; i >= 0; i--) {
+    const p = chart[i]
+    const total = Object.values(p.out).reduce(
+      (acc, v) => acc.plus(toDecimal(v)),
+      toDecimal(p.income.recurring).plus(toDecimal(p.income.extraordinary))
+    )
+    if (!total.isZero()) return i
+  }
+  return 0
+}
+
+// Inner async component that fetches and renders KPIs + chart + movers under Suspense.
 async function OverviewDataSection({ year }: { year: number }) {
   const [overview, chart] = await Promise.all([getOverview(year), getOverviewChart(year)])
 
   if (isYearWithNoData(overview.totalIn, overview.totalOut)) {
     return <OverviewEmptyState variant="no-data-for-year" year={year} />
   }
+
+  // D-04: compute the real last-month-with-data index (not naively the last index).
+  const defaultMonthIndex = deriveDefaultMonthIndex(chart)
+  // D-03: pre-fetch that month's movers server-side so the panel is populated on first paint.
+  const initialMovers = await getMonthOverMonthCategoryChanges(year, defaultMonthIndex)
 
   return (
     <div className="flex flex-col gap-6">
@@ -34,12 +64,13 @@ async function OverviewDataSection({ year }: { year: number }) {
           Placed above KpiRow so it reads as part of the title context (D-02, D-03, D-10). */}
       <OverviewNudge uncategorizedCount={overview.uncategorizedCount} year={year} />
       <KpiRow data={overview} year={year} />
-      <section className="space-y-3" aria-labelledby="overview-chart-heading">
-        <h2 id="overview-chart-heading" className="text-lg font-semibold">
-          Entrate e uscite per mese
-        </h2>
-        <OverviewChart data={chart} />
-      </section>
+      {/* OverviewMoversSection owns the shared selectedMonth — chart + movers panel never drift. */}
+      <OverviewMoversSection
+        data={chart}
+        year={year}
+        defaultMonthIndex={defaultMonthIndex}
+        initialMovers={initialMovers}
+      />
     </div>
   )
 }
