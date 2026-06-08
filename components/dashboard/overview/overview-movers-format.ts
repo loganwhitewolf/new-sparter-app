@@ -5,17 +5,15 @@ import { formatEur } from './format'
 import type { MonthOverMonthChange } from '@/lib/dal/overview'
 
 /**
- * Formats a single mover entry into a human-readable Italian sentence.
+ * Formats a single mover entry into a humanized Italian sentence (D-08, MOVE-03).
  *
- * Rules (D-08, MOVE-03):
- * - isNew:true → "{name} · spesa nuova" (isNew wins regardless of delta)
- * - positive delta → "{name} · {amount} in più"
- * - negative delta → "{name} · {amount} in meno" (absolute value shown)
+ * isNew wins over delta: returns the "new spend" label regardless of delta value.
+ * Positive delta: "{name} · {amount} more" (Italian UI copy).
+ * Negative delta: "{name} · {amount} less" (absolute value, Italian UI copy).
  *
- * Note: Math.abs(Number(delta)) is used here for display formatting only
- * (passed to formatEur which produces a UI string). This is NOT monetary
- * arithmetic — no financial calculation occurs, so Decimal.js is not required.
- * See CLAUDE.md: Decimal.js applies to monetary arithmetic, not display conversions.
+ * Math.abs(Number(delta)) is used for display-only formatting — not monetary
+ * arithmetic — so Decimal.js is not required here (CLAUDE.md rule applies to
+ * financial calculations, not presentation-layer string conversions).
  */
 export function formatMoverLine(m: MonthOverMonthChange): string {
   if (m.isNew) {
@@ -31,12 +29,12 @@ export function formatMoverLine(m: MonthOverMonthChange): string {
 }
 
 /**
- * Partitions a flat movers array into two sections:
- * - increases: items where delta > 0 OR isNew === true (D-07: "Dove hai speso di più")
- * - savings:   items where delta < 0 AND isNew === false (D-07: "Dove hai risparmiato")
+ * Partitions a flat movers array into two sections (D-07):
+ * - increases: items where delta > 0 OR isNew === true ("spent more" section)
+ * - savings:   items where delta < 0 AND isNew === false ("saved more" section)
  *
- * Per D-07: isNew items are NEVER suppressed and always land in increases.
- * Input order is preserved within each section (the DAL already sorts by |Δ€| descending).
+ * isNew items are never suppressed — they always land in increases regardless of delta.
+ * Input order is preserved within each section (the DAL already sorts by |delta| descending).
  */
 export function splitMovers(movers: MonthOverMonthChange[]): {
   increases: MonthOverMonthChange[]
