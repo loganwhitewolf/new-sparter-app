@@ -229,7 +229,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 44-01-PLAN.md — Wave 0 test scaffold + pure filter-aware chart reduction helpers (overview-chart-utils.ts) — FILT-01..03 unit coverage
+- [x] 44-01-PLAN.md — Wave 0 test scaffold + pure filter-aware chart reduction helpers (overview-chart-utils.ts) — FILT-01..03 unit coverage
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -280,7 +280,7 @@ Plans:
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
 | 42 | v1.16 | 3/3 | Complete    | 2026-06-08 |
 | 43 | v1.16 | 4/4 | Complete   | 2026-06-08 |
-| 44 | v1.16 | 0/3 | Planned | - |
+| 44 | v1.16 | 1/3 | In Progress|  |
 | 45 | v1.16 | 0/TBD | Not started | - |
 
 **Total shipped: 38 phases · 146 plans complete**
