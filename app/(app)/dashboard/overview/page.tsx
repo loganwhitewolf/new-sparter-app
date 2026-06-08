@@ -6,6 +6,7 @@ import { OverviewHeader } from '@/components/dashboard/overview/overview-header'
 import { KpiRow } from '@/components/dashboard/overview/kpi-row'
 import { OverviewChart } from '@/components/dashboard/overview/overview-chart'
 import { OverviewPageSkeleton } from '@/components/dashboard/overview/overview-page-skeleton'
+import { OverviewNudge } from '@/components/dashboard/overview/overview-nudge'
 import { toDecimal } from '@/lib/utils/decimal'
 
 type Props = {
@@ -28,6 +29,10 @@ async function OverviewDataSection({ year }: { year: number }) {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Inline amber nudge: appears when uncategorized OUT expenses exist for the year.
+          Dismissal is localStorage-only (year-scoped, lastSeenCount semantics) — no DB write.
+          Placed above KpiRow so it reads as part of the title context (D-02, D-03, D-10). */}
+      <OverviewNudge uncategorizedCount={overview.uncategorizedCount} year={year} />
       <KpiRow data={overview} year={year} />
       <section className="space-y-3" aria-labelledby="overview-chart-heading">
         <h2 id="overview-chart-heading" className="text-lg font-semibold">
