@@ -252,13 +252,31 @@ async function setFinecoDescriptionStripPattern(database: Db): Promise<void> {
 // isActive=false hides subcategories from dashboard/expense queries, so any expense not
 // remapped first would be silently dropped from listings.
 async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
-  // 1. Rename deprecated slug → bio-e-naturale (idempotent: re-run finds 0 rows after first run)
-  const renameResult = await database
-    .update(subCategory)
-    .set({ name: 'bio e naturale', slug: 'bio-e-naturale' })
-    .where(and(eq(subCategory.slug, 'spesa-bio'), isNull(subCategory.userId)))
-  const renameCount = (renameResult as unknown as { rowCount?: number }).rowCount ?? 0
-  console.log(`    rename spesa-bio → bio-e-naturale: ${renameCount} rows updated`)
+  // 1. Rename deprecated slug → bio-e-naturale.
+  // Guard: if bio-e-naturale already exists as a separate row (e.g. seeded by yarn db:seed),
+  // skip the rename and deactivate spesa-bio instead — avoids unique slug constraint violation on re-runs.
+  const existingBioNaturale = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'bio-e-naturale'), isNull(subCategory.userId)))
+    .limit(1)
+
+  if (existingBioNaturale.length > 0) {
+    // Target already exists — deactivate spesa-bio if still present
+    const deactivateSpaeBio = await database
+      .update(subCategory)
+      .set({ isActive: false })
+      .where(and(eq(subCategory.slug, 'spesa-bio'), isNull(subCategory.userId)))
+    const deactivateCount = (deactivateSpaeBio as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    rename spesa-bio → bio-e-naturale: skipped (target exists), deactivated spesa-bio: ${deactivateCount} rows`)
+  } else {
+    const renameResult = await database
+      .update(subCategory)
+      .set({ name: 'bio e naturale', slug: 'bio-e-naturale' })
+      .where(and(eq(subCategory.slug, 'spesa-bio'), isNull(subCategory.userId)))
+    const renameCount = (renameResult as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    rename spesa-bio → bio-e-naturale: ${renameCount} rows updated`)
+  }
 
   // 2. Set nature='essential' on the 4 new subcategory slugs
   const newSlugs = ['discount', 'negozio-di-quartiere', 'mercato-rionale', 'drogheria-e-casalinghi']
