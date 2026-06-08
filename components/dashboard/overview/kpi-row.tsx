@@ -1,8 +1,5 @@
-// PROTOTYPE — wipe me. Year-scoped KPI row with a qualitative "reading" per card.
-// Readings differ by card: savings uses a benchmark (50/30/20 → 20% target), balance
-// uses its sign, entrate/uscite use the year-over-year trend (no fake absolute verdict —
-// there's no universal "good" income/spend). Gentle guidance, NOT financial advice.
-import { getKpis, eur } from './mock-data'
+import type { OverviewData } from '@/lib/dal/dashboard'
+import { formatEur } from './format'
 import { ReadingKpiCard, type Reading } from './kpi-card-reading'
 
 function savingsReading(rate: number): Reading {
@@ -30,50 +27,58 @@ function trendReading(delta: number, prevYear: number, kind: 'in' | 'out'): Read
     : { text: `Spendi più del ${prevYear}`, sentiment: 'warn' }
 }
 
-export function KpiRow({ year }: { year: number }) {
-  const k = getKpis(year, new Set(), new Set()) // KPIs show REAL totals, ignore chart filters
+export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
   const prevYear = year - 1
+  const balanceNumeric = Number(data.balance)
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
       <ReadingKpiCard
         label="Totale entrate"
-        value={eur(k.totalIn)}
+        value={formatEur(data.totalIn)}
         tone="in"
-        delta={k.deltas.totalIn}
+        delta={data.deltas.totalIn}
         goodWhenPositive
         prevYear={prevYear}
-        reading={trendReading(k.deltas.totalIn, prevYear, 'in')}
+        reading={
+          data.deltas.totalIn !== null
+            ? trendReading(data.deltas.totalIn, prevYear, 'in')
+            : { text: `In linea con il ${prevYear}`, sentiment: 'neutral' }
+        }
         className="min-h-0"
       />
       <ReadingKpiCard
         label="Totale uscite"
-        value={eur(k.totalOut)}
+        value={formatEur(data.totalOut)}
         tone="out"
-        delta={k.deltas.totalOut}
+        delta={data.deltas.totalOut}
         goodWhenPositive={false}
         prevYear={prevYear}
-        reading={trendReading(k.deltas.totalOut, prevYear, 'out')}
+        reading={
+          data.deltas.totalOut !== null
+            ? trendReading(data.deltas.totalOut, prevYear, 'out')
+            : { text: `In linea con il ${prevYear}`, sentiment: 'neutral' }
+        }
         className="min-h-0"
       />
       <ReadingKpiCard
         label="Bilancio"
-        value={eur(k.balance)}
+        value={formatEur(data.balance)}
         tone="balance"
-        delta={k.deltas.balance}
+        delta={data.deltas.balance}
         goodWhenPositive
         prevYear={prevYear}
-        reading={balanceReading(k.balance)}
+        reading={balanceReading(balanceNumeric)}
         className="min-h-0"
       />
       <ReadingKpiCard
         label="Tasso risparmio"
-        value={`${k.savings}%`}
+        value={`${data.savingsRate}%`}
         tone="savings"
-        delta={k.deltas.savings}
+        delta={data.deltas.savingsRate}
         goodWhenPositive
         prevYear={prevYear}
-        reading={savingsReading(k.savings)}
+        reading={savingsReading(data.savingsRate)}
         className="min-h-0"
       />
     </div>

@@ -1,6 +1,3 @@
-// PROTOTYPE — wipe me. Local clone of the real KpiCard that adds a "reading" line —
-// a short qualitative interpretation so the number isn't just a technical figure.
-// The real components/dashboard/kpi-card.tsx is shipped and stays untouched.
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
