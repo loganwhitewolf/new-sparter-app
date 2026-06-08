@@ -95,7 +95,7 @@ _Avoid_: periodo del file, mese assegnato
 ### Dashboard e analisi
 
 **Reference Period** (Periodo di riferimento):
-L'ultimo mese di calendario completato analizzato nella dashboard (es. aprile). È sempre un mese chiuso — mai il mese in corso parzialmente importato.
+L'ultimo mese per cui esistono transazioni importate per l'utente. Viene determinato dalla query, non dal calendario — corrisponde al `MAX(TO_CHAR(occurred_at, 'YYYY-MM'))` sulle transazioni dell'utente per l'anno selezionato. _Nota_: il motore Deviation (`getDeviationDateRanges`) usa ancora "ultimo mese di calendario completo" — deriva documentale in attesa di migrazione (deferred, D-12).
 _Avoid_: mese corrente, periodo attuale
 
 **Baseline**:
@@ -105,6 +105,10 @@ _Avoid_: media storica, riferimento
 **Deviation** (Deviazione):
 La differenza percentuale tra la spesa del Reference Period e la Baseline per una data categoria o sottocategoria. Positiva = speso di più della media, negativa = speso di meno.
 _Avoid_: scostamento, variazione, delta (riservato ai confronti KPI periodo-su-periodo)
+
+**MonthOverMonthChange** (Variazione mese su mese):
+Variazione della spesa di una categoria rispetto al mese di calendario precedente. Distinto dalla Deviation (che confronta vs la Baseline su 3 mesi). Query: `getMonthOverMonthCategoryChanges`. Copy UI: "Rispetto al mese scorso" / "Dove hai speso di più" / "Dove hai risparmiato". Campi: `{ categoryId, name, delta, isNew }` — `isNew = true` quando la spesa precedente era zero e quella attuale è positiva.
+_Avoid_: "variazione" (riservato-deprecato per evitare confusione con Deviation)
 
 **Noise Threshold** (Soglia di rumore):
 Importo minimo di spesa nel Reference Period (€15) sotto il quale una sottocategoria è esclusa dalla vista Deviation. Evita che micro-spese occasionali generino deviazioni percentuali fuorvianti.
