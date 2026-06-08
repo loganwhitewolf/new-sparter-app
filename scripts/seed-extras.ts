@@ -149,14 +149,10 @@ const NATURE_SLUGS: Record<FlowNature, string[]> = {
     'rifiuti',
   ],
   income: [
+    // Recurring income only — one-off slugs moved to income_extraordinary (phase 42)
     'stipendio-base',
-    'bonus',
     'indennita',
     'overtime',
-    'freelance',
-    'consulenze',
-    'progetti-occasionali',
-    'commissioni',
     'dividendi-azionari',
     'dividendi-fondi-comuni',
     'dividendi-immobiliari',
