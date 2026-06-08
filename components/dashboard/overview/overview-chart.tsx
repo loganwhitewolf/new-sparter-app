@@ -95,7 +95,7 @@ export function OverviewChart({ data }: OverviewChartProps) {
         onReset={handleReset}
       />
 
-      <ChartContainer config={chartConfig} className="aspect-auto min-h-0 w-full flex-1">
+      <ChartContainer config={chartConfig} className="aspect-auto h-[260px] w-full">
         <BarChart data={rows} barGap={4} barCategoryGap="24%">
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis dataKey="label" tickLine={false} axisLine={false} />
