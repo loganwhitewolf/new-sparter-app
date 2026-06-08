@@ -196,7 +196,21 @@ Plans:
   3. User sees side-by-side green (Entrate) and red (Uscite) bars per month with always-on compact value labels; no stacking by nature, no balance series in the chart
   4. User sees four KPI cards (Totale entrate, Totale uscite, Bilancio, Tasso risparmio) with a "vs anno prec." delta badge and a sentiment-colored qualitative reading line
 
-**Plans**: TBD
+**Plans**: 4 plans (3 waves)
+Plans:
+**Wave 1** *(parallel — no file overlap)*
+
+- [ ] 43-01-PLAN.md — Port KPI row + ReadingKpiCard + HeaderH1 + production formatters into components/dashboard/overview/ (HEAD-01..03, KPI-01..04)
+- [ ] 43-02-PLAN.md — Port hero chart variant A (grouped bars, always-on labels), strip P44/P45, keep D-03 inert scaffold (CHART-01..03)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 43-03-PLAN.md — Rewrite overview/page.tsx: searchParams.year + resolveYear (D-04) + Suspense + empty states (D-06), wiring header/KPIs/chart (HEAD-02/03, CHART-01, KPI-01)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 43-04-PLAN.md — Cleanup: delete superseded KpiCards/EntrateUsciteChart/BilancioBarsChart/OverviewFilters + skeletons + proto/overview route; yarn build green (D-02)
+
 **UI hint**: yes
 
 ### Phase 44: overview-interactions
@@ -252,7 +266,7 @@ Plans:
 | 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
 | 42 | v1.16 | 3/3 | Complete    | 2026-06-08 |
-| 43 | v1.16 | 0/TBD | Not started | - |
+| 43 | v1.16 | 0/4 | Not started | - |
 | 44 | v1.16 | 0/TBD | Not started | - |
 | 45 | v1.16 | 0/TBD | Not started | - |
 
