@@ -178,7 +178,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 42-02-PLAN.md — [BLOCKING] apply migration + additive seed-extras STEP re-bucketing income_extraordinary slugs (PO-confirmed)
+- [x] 42-02-PLAN.md — [BLOCKING] apply migration + additive seed-extras STEP re-bucketing income_extraordinary slugs (PO-confirmed)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -251,7 +251,7 @@ Plans:
 | 39 | v1.13 | 6/6 | Complete | 2026-06-02 |
 | 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
-| 42 | v1.16 | 1/3 | In Progress|  |
+| 42 | v1.16 | 2/3 | In Progress|  |
 | 43 | v1.16 | 0/TBD | Not started | - |
 | 44 | v1.16 | 0/TBD | Not started | - |
 | 45 | v1.16 | 0/TBD | Not started | - |
