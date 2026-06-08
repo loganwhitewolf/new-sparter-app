@@ -153,7 +153,7 @@ Plans:
 
 - [x] **Phase 42: overview-data-layer** — DAL foundation: getOverview, getMonthOverMonthCategoryChanges, getYearsWithData, income-split resolution, CONTEXT.md glossary update (completed 2026-06-08)
 - [x] **Phase 43: overview-shell** — Redesigned overview tab: header H1 + year selector, hero chart variant A (grouped bars, always-on labels), 4 KPI cards with qualitative reading lines (completed 2026-06-08)
-- [ ] **Phase 44: overview-interactions** — Uncategorized nudge (inline amber, localStorage dismiss), chart filter chips (income type + expense nature), FlowNature ⓘ education popovers
+- [x] **Phase 44: overview-interactions** — Uncategorized nudge (inline amber, localStorage dismiss), chart filter chips (income type + expense nature), FlowNature ⓘ education popovers (completed 2026-06-08)
 - [ ] **Phase 45: overview-movers** — Per-month movers drill-down: recharts bar click → top movers panel, humanized copy, highlighted bar, default to last month with data
 
 ## Phase Details
@@ -237,7 +237,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 44-03-PLAN.md — OverviewChartFilters chips + ⓘ popovers + per-chip tooltips; filter-aware OverviewChart — FILT-01..03, EDU-01..02
+- [x] 44-03-PLAN.md — OverviewChartFilters chips + ⓘ popovers + per-chip tooltips; filter-aware OverviewChart — FILT-01..03, EDU-01..02
 
 **UI hint**: yes
 
@@ -280,7 +280,7 @@ Plans:
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
 | 42 | v1.16 | 3/3 | Complete    | 2026-06-08 |
 | 43 | v1.16 | 4/4 | Complete   | 2026-06-08 |
-| 44 | v1.16 | 2/3 | In Progress|  |
+| 44 | v1.16 | 3/3 | Complete   | 2026-06-08 |
 | 45 | v1.16 | 0/TBD | Not started | - |
 
 **Total shipped: 38 phases · 146 plans complete**
