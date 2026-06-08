@@ -258,7 +258,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 45-01-PLAN.md — fetchMovers server action (verifySession + bounded inputs) + pure formatMoverLine/splitMovers humanizers with Vitest coverage (MOVE-03)
+- [x] 45-01-PLAN.md — fetchMovers server action (verifySession + bounded inputs) + pure formatMoverLine/splitMovers humanizers with Vitest coverage (MOVE-03)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -294,6 +294,6 @@ Plans:
 | 42 | v1.16 | 3/3 | Complete    | 2026-06-08 |
 | 43 | v1.16 | 4/4 | Complete   | 2026-06-08 |
 | 44 | v1.16 | 3/3 | Complete   | 2026-06-08 |
-| 45 | v1.16 | 0/3 | Planned | - |
+| 45 | v1.16 | 1/3 | In Progress|  |
 
 **Total shipped: 38 phases · 146 plans complete**
