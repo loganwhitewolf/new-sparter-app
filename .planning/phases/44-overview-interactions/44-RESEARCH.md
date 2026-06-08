@@ -393,17 +393,17 @@ Keep this pattern and make the selected keys variable. [VERIFIED: codebase grep]
 | A1 | Exact one-line Italian tooltip/popover wording can be selected by the planner from current labels and context. [ASSUMED] | Architecture Patterns / Code Examples | Low; wording may need PO copy review but behavior is unaffected. |
 | A2 | Unit tests for pure nudge/filter helpers plus static render tests are sufficient unless Playwright coverage is chosen for localStorage. [ASSUMED] | Validation Architecture | Medium; interactive localStorage behavior may need browser E2E for confidence. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should all-off per filter group be allowed or prevented?**
    - What we know: Empty bars are acceptable and no chart-empty panel should appear. [CITED: .planning/phases/44-overview-interactions/44-CONTEXT.md]
    - What's unclear: Context leaves all-off prevention vs reset affordance to planner discretion. [CITED: .planning/phases/44-overview-interactions/44-CONTEXT.md]
-   - Recommendation: Allow all-off per group and provide a compact reset action only if the UI feels ambiguous. [ASSUMED]
+   - RESOLVED: Allow all-off per group; no mandatory reset affordance. Discretionary item resolved in plan 44-03.
 
 2. **Should localStorage nudge state be unit-tested or E2E-tested?**
    - What we know: Existing sidebar localStorage persistence is covered by Playwright. [VERIFIED: codebase grep]
    - What's unclear: Phase context leaves test level to planner discretion. [CITED: .planning/phases/44-overview-interactions/44-CONTEXT.md]
-   - Recommendation: Put `shouldShowNudge` in a pure helper for Vitest and add one Playwright path only if an authenticated seeded overview fixture is reliable. [ASSUMED]
+   - RESOLVED: `shouldShowNudge` extracted to a pure helper covered by Vitest (plan 44-01/44-02); no new Playwright path required.
 
 ## Environment Availability
 
