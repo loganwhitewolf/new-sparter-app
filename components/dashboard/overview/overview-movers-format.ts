@@ -36,6 +36,20 @@ export function formatMoverLine(m: MonthOverMonthChange): string {
  * isNew items are never suppressed — they always land in increases regardless of delta.
  * Input order is preserved within each section (the DAL already sorts by |delta| descending).
  */
+/**
+ * Formats the right-side amount+label for a table-layout mover row.
+ *
+ * Returns only the amount portion (e.g. "€55 spesa nuova", "€100 in meno").
+ * Use m.name separately for the left side of the row.
+ * Always shows the absolute delta amount — including for isNew items.
+ */
+export function formatMoverAmount(m: MonthOverMonthChange): string {
+  // Display-only conversion — not monetary arithmetic (see formatMoverLine comment).
+  const absAmount = formatEur(Math.abs(Number(m.delta)))
+  if (m.isNew) return `${absAmount} spesa nuova`
+  return Number(m.delta) > 0 ? `${absAmount} in più` : `${absAmount} in meno`
+}
+
 export function splitMovers(movers: MonthOverMonthChange[]): {
   increases: MonthOverMonthChange[]
   savings: MonthOverMonthChange[]
