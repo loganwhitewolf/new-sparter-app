@@ -200,8 +200,8 @@ Plans:
 Plans:
 **Wave 1** *(parallel — no file overlap)*
 
-- [ ] 43-01-PLAN.md — Port KPI row + ReadingKpiCard + HeaderH1 + production formatters into components/dashboard/overview/ (HEAD-01..03, KPI-01..04)
-- [ ] 43-02-PLAN.md — Port hero chart variant A (grouped bars, always-on labels), strip P44/P45, keep D-03 inert scaffold (CHART-01..03)
+- [x] 43-01-PLAN.md — Port KPI row + ReadingKpiCard + HeaderH1 + production formatters into components/dashboard/overview/ (HEAD-01..03, KPI-01..04)
+- [x] 43-02-PLAN.md — Port hero chart variant A (grouped bars, always-on labels), strip P44/P45, keep D-03 inert scaffold (CHART-01..03)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -266,7 +266,7 @@ Plans:
 | 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
 | 42 | v1.16 | 3/3 | Complete    | 2026-06-08 |
-| 43 | v1.16 | 0/4 | Not started | - |
+| 43 | v1.16 | 2/4 | In Progress|  |
 | 44 | v1.16 | 0/TBD | Not started | - |
 | 45 | v1.16 | 0/TBD | Not started | - |
 
