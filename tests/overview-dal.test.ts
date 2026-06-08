@@ -24,6 +24,8 @@ vi.mock('drizzle-orm', () => ({
   isNull: (...args: unknown[]) => ({ op: 'isNull', args }),
   or: (...args: unknown[]) => ({ op: 'or', args }),
   desc: (...args: unknown[]) => ({ op: 'desc', args }),
+  // relations is needed by lib/db/schema.ts when it is transitively imported
+  relations: () => ({}),
 }))
 vi.mock('@/lib/db', () => ({
   db: {
