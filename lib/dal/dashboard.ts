@@ -404,7 +404,7 @@ function expenseStatusIncludedInDashboardTotals() {
   return inArray(expense.status, [...DASHBOARD_TOTAL_EXPENSE_STATUSES])
 }
 
-async function getUncategorizedCount(userId: string, from: Date, to: Date): Promise<number> {
+export async function getUncategorizedCount(userId: string, from: Date, to: Date): Promise<number> {
   try {
     const rows = await db
       .select({ total: countDistinct(expense.id) })
@@ -428,7 +428,7 @@ async function getUncategorizedCount(userId: string, from: Date, to: Date): Prom
   }
 }
 
-async function getOverviewAmountTotals(userId: string, from: Date, to: Date): Promise<OverviewAggregateRow> {
+export async function getOverviewAmountTotals(userId: string, from: Date, to: Date): Promise<OverviewAggregateRow> {
   try {
     const rows = await db
       .select({
@@ -667,6 +667,7 @@ export function buildMonthlyNatureTrendData(input: {
     operational: ZERO_AMOUNT,
     financial: ZERO_AMOUNT,
     income: ZERO_AMOUNT,
+    income_extraordinary: ZERO_AMOUNT,
     debt: ZERO_AMOUNT,
     extraordinary: ZERO_AMOUNT,
     transfer: ZERO_AMOUNT,
