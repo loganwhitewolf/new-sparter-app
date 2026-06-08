@@ -233,7 +233,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 44-02-PLAN.md — OverviewNudge inline amber title-row nudge + localStorage lastSeenCount dismissal + page wiring — NUDGE-01..04
+- [x] 44-02-PLAN.md — OverviewNudge inline amber title-row nudge + localStorage lastSeenCount dismissal + page wiring — NUDGE-01..04
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -280,7 +280,7 @@ Plans:
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
 | 42 | v1.16 | 3/3 | Complete    | 2026-06-08 |
 | 43 | v1.16 | 4/4 | Complete   | 2026-06-08 |
-| 44 | v1.16 | 1/3 | In Progress|  |
+| 44 | v1.16 | 2/3 | In Progress|  |
 | 45 | v1.16 | 0/TBD | Not started | - |
 
 **Total shipped: 38 phases · 146 plans complete**
