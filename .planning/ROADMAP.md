@@ -262,7 +262,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 45-02-PLAN.md — Controlled OverviewChart (D-06 highlight both bars) + OverviewMoversSection shared-state parent + OverviewMoversPanel + page deriveDefaultMonthIndex/prefetch (MOVE-01, MOVE-02, MOVE-04, MOVE-05)
+- [x] 45-02-PLAN.md — Controlled OverviewChart (D-06 highlight both bars) + OverviewMoversSection shared-state parent + OverviewMoversPanel + page deriveDefaultMonthIndex/prefetch (MOVE-01, MOVE-02, MOVE-04, MOVE-05)
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -294,6 +294,6 @@ Plans:
 | 42 | v1.16 | 3/3 | Complete    | 2026-06-08 |
 | 43 | v1.16 | 4/4 | Complete   | 2026-06-08 |
 | 44 | v1.16 | 3/3 | Complete   | 2026-06-08 |
-| 45 | v1.16 | 1/3 | In Progress|  |
+| 45 | v1.16 | 2/3 | In Progress|  |
 
 **Total shipped: 38 phases · 146 plans complete**
