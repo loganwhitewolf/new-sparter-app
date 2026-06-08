@@ -205,7 +205,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 43-03-PLAN.md — Rewrite overview/page.tsx: searchParams.year + resolveYear (D-04) + Suspense + empty states (D-06), wiring header/KPIs/chart (HEAD-02/03, CHART-01, KPI-01)
+- [x] 43-03-PLAN.md — Rewrite overview/page.tsx: searchParams.year + resolveYear (D-04) + Suspense + empty states (D-06), wiring header/KPIs/chart (HEAD-02/03, CHART-01, KPI-01)
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -266,7 +266,7 @@ Plans:
 | 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
 | 42 | v1.16 | 3/3 | Complete    | 2026-06-08 |
-| 43 | v1.16 | 2/4 | In Progress|  |
+| 43 | v1.16 | 3/4 | In Progress|  |
 | 44 | v1.16 | 0/TBD | Not started | - |
 | 45 | v1.16 | 0/TBD | Not started | - |
 
