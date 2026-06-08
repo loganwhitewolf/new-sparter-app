@@ -56,10 +56,10 @@ Each requirement maps to exactly one roadmap phase. IDs continue the project's c
 
 ### Data Layer & Glossary
 
-- [ ] **DATA-01**: `getOverview(year)` returns the four KPI totals with YTD-vs-prior-YTD comparison.
-- [ ] **DATA-02**: `getMonthOverMonthCategoryChanges(year, monthIndex?, limit?)` returns per-month category movers (OUT only, €15 noise threshold).
-- [ ] **DATA-03**: `getYearsWithData()` returns the years that have transactions, powering the year selector.
-- [ ] **DATA-04**: `Reference Period` is redefined to "last month with data" and the canonical term `MonthOverMonthChange` is documented in `CONTEXT.md` (deprecated "variazione" stays banned).
+- [x] **DATA-01**: `getOverview(year)` returns the four KPI totals with YTD-vs-prior-YTD comparison.
+- [x] **DATA-02**: `getMonthOverMonthCategoryChanges(year, monthIndex?, limit?)` returns per-month category movers (OUT only, €15 noise threshold).
+- [x] **DATA-03**: `getYearsWithData()` returns the years that have transactions, powering the year selector.
+- [x] **DATA-04**: `Reference Period` is redefined to "last month with data" and the canonical term `MonthOverMonthChange` is documented in `CONTEXT.md` (deprecated "variazione" stays banned).
 
 ## Future Requirements (deferred)
 
@@ -77,10 +77,10 @@ Each requirement maps to exactly one roadmap phase. IDs continue the project's c
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 42 | Pending |
-| DATA-02 | Phase 42 | Pending |
-| DATA-03 | Phase 42 | Pending |
-| DATA-04 | Phase 42 | Pending |
+| DATA-01 | Phase 42 | Complete |
+| DATA-02 | Phase 42 | Complete |
+| DATA-03 | Phase 42 | Complete |
+| DATA-04 | Phase 42 | Complete |
 | HEAD-01 | Phase 43 | Pending |
 | HEAD-02 | Phase 43 | Pending |
 | HEAD-03 | Phase 43 | Pending |

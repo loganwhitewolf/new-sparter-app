@@ -251,7 +251,7 @@ Plans:
 | 39 | v1.13 | 6/6 | Complete | 2026-06-02 |
 | 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
-| 42 | v1.16 | 3/3 | Complete   | 2026-06-08 |
+| 42 | v1.16 | 3/3 | Complete    | 2026-06-08 |
 | 43 | v1.16 | 0/TBD | Not started | - |
 | 44 | v1.16 | 0/TBD | Not started | - |
 | 45 | v1.16 | 0/TBD | Not started | - |
