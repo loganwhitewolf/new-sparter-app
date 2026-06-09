@@ -15,7 +15,7 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v1.15 (Phase 41) complete. The app now has:
+All milestones M001–v1.15 (Phase 41) complete, plus Phase 45 (per-month movers drill-down, v1.16). The app now has:
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
 - Import management, categorization (Tier 1 regex, Tier 2 history, Tier 3 AI gated)
 - Pattern suggestions: detect recurring uncategorized descriptions → review and promote during analysis → re-run post-import from `/import/[fileId]/suggestions`
@@ -23,6 +23,7 @@ All milestones M001–v1.15 (Phase 41) complete. The app now has:
 - Dashboard overview with deviation badges on category pages, nature-segmented EntrateUsciteChart, BilancioBarsChart
 - First-import onboarding (5-step flow: upload → overview → education → categorize → outro); routing gate via RSC layout
 - Unified subcategory picker (vaul bottom sheet, type chips, master-detail rail, most-used section) across all 7 selection surfaces; pattern form reduced to regex + description + picker
+- Per-month movers drill-down on `/dashboard/overview`: click any month bar → highlights Entrate+Uscite bars for that month, shows inline panel with red "Dove hai speso di più" / green "Dove hai risparmiato" sections, humanized copy ("€X in più/meno/spesa nuova"), defaults to last month with data (Phase 45)
 - R2 upload services, Drizzle migrations, operational health diagnostics
 - Zero-cost deploy runbook at `docs/deploy/vercel-supabase-r2.md`
 
