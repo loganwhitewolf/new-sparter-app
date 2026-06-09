@@ -53,7 +53,6 @@ export function OverviewMoversSection({ data, year, defaultMonthIndex, initialMo
         selectedMonth={selectedMonth}
         movers={movers}
         isPending={isPending}
-        data={data}
       />
     </section>
   )

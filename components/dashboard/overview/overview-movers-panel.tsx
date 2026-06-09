@@ -1,7 +1,6 @@
 'use client'
 import { Loader2 } from 'lucide-react'
 import type { MonthOverMonthChange } from '@/lib/dal/overview'
-import type { OverviewChartPoint } from '@/lib/dal/overview'
 import { formatMoverAmount, splitMovers } from './overview-movers-format'
 
 // Italian month names indexed 0–11 (lowercase for use in running text).
@@ -25,7 +24,6 @@ type Props = {
   selectedMonth: number
   movers: MonthOverMonthChange[]
   isPending: boolean
-  data: OverviewChartPoint[]
 }
 
 /**
