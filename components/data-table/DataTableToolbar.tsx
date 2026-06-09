@@ -42,11 +42,20 @@ import type { FilterField, TableConfig } from '@/lib/utils/table-config'
 
 // ---- Types -----------------------------------------------------------------
 
+/**
+ * dependentOptions: childFieldKey → parentUrlValue → option list.
+ * The '' key is the all-bucket (used when the parent param is absent).
+ * Built server-side (e.g. from buildTypeNatureMap / buildCategorySubcategoryMap)
+ * and passed through to FilterPanel → FilterField.
+ */
+type DependentOptions = Record<string, Record<string, { value: string; label: string }[]>>
+
 type Props = {
   config: TableConfig
   route: string
   monthsWithData?: string[]
   filterOptions?: Record<string, { value: string; label: string }[]>
+  dependentOptions?: DependentOptions
 }
 
 // ---- Filter count helper ---------------------------------------------------
@@ -81,6 +90,7 @@ function FilterField({
   searchParams,
   onChange,
   onParamChange,
+  dependentOptions,
 }: {
   field: FilterField
   value: string | null
@@ -89,9 +99,23 @@ function FilterField({
   searchParams: URLSearchParams
   onChange: (v: string | null) => void
   onParamChange: (key: string, v: string | null) => void
+  dependentOptions?: DependentOptions
 }) {
   if (field.type === 'select' || field.type === 'multi-select') {
-    const resolvedOptions = options ?? field.options ?? []
+    // Cascade-aware option resolution: if this field has a parent (dependsOn), resolve
+    // options from the parent's current URL value. Fall back to '' all-bucket when absent.
+    let resolvedOptions: { value: string; label: string }[]
+    if (field.dependsOn && dependentOptions?.[field.key]) {
+      const parentValue = searchParams.get(field.dependsOn) ?? ''
+      resolvedOptions =
+        dependentOptions[field.key][parentValue] ??
+        dependentOptions[field.key][''] ??
+        options ??
+        field.options ??
+        []
+    } else {
+      resolvedOptions = options ?? field.options ?? []
+    }
     return (
       <div className="grid gap-1.5">
         <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
@@ -197,13 +221,59 @@ function FilterPanel({
   filterOptions,
   monthsWithData,
   updateParam,
+  updateParams,
+  dependentOptions,
 }: {
   config: TableConfig
   searchParams: URLSearchParams
   filterOptions?: Record<string, { value: string; label: string }[]>
   monthsWithData?: string[]
   updateParam: (key: string, value: string | null) => void
+  updateParams: (entries: Record<string, string | null>) => void
+  dependentOptions?: DependentOptions
 }) {
+  /**
+   * Cascade-aware onChange for parent fields.
+   * When a field K is changed, clear any dependent children whose current value
+   * is not present in the newly-resolved option set for the new parent value.
+   * Parent + child clear happen in one URL write (avoids a stale intermediate render).
+   */
+  function handleFieldChange(field: FilterField, newValue: string | null) {
+    // Find children that depend on this field
+    const dependentChildren = config.filters.filter(
+      (f) => f.dependsOn === field.key,
+    )
+
+    if (dependentChildren.length === 0 || !dependentOptions) {
+      // No children — simple single-key write
+      updateParam(field.key, newValue)
+      return
+    }
+
+    // Build the multi-key update: parent value + any invalidated child clears
+    const entries: Record<string, string | null> = { [field.key]: newValue }
+
+    for (const child of dependentChildren) {
+      const currentChildValue = searchParams.get(child.key)
+      if (!currentChildValue) continue
+
+      // Resolve the child options for the new parent value
+      const parentValue = newValue ?? ''
+      const childOpts =
+        dependentOptions[child.key]?.[parentValue] ??
+        dependentOptions[child.key]?.[''] ??
+        child.options ??
+        []
+
+      const childValueValid = childOpts.some((o) => o.value === currentChildValue)
+      if (!childValueValid) {
+        entries[child.key] = null
+      }
+    }
+
+    updateParams(entries)
+  }
+
   return (
     <div className="space-y-3">
       {config.filters.map((field) => (
@@ -214,8 +284,9 @@ function FilterPanel({
           options={filterOptions?.[field.key]}
           monthsWithData={monthsWithData}
           searchParams={searchParams}
-          onChange={(v) => updateParam(field.key, v)}
+          onChange={(v) => handleFieldChange(field, v)}
           onParamChange={updateParam}
+          dependentOptions={dependentOptions}
         />
       ))}
     </div>
@@ -224,7 +295,7 @@ function FilterPanel({
 
 // ---- Main component --------------------------------------------------------
 
-export function DataTableToolbar({ config, route, monthsWithData, filterOptions }: Props) {
+export function DataTableToolbar({ config, route, monthsWithData, filterOptions, dependentOptions }: Props) {
   const { searchParams, isPending, updateParam, updateParams } = useTableUrl(route)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
@@ -357,6 +428,8 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions 
                 filterOptions={filterOptions}
                 monthsWithData={monthsWithData}
                 updateParam={updateParam}
+                updateParams={updateParams}
+                dependentOptions={dependentOptions}
               />
             </PopoverContent>
           </Popover>
@@ -402,6 +475,8 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions 
               filterOptions={filterOptions}
               monthsWithData={monthsWithData}
               updateParam={updateParam}
+              updateParams={updateParams}
+              dependentOptions={dependentOptions}
             />
           </div>
         </SheetContent>

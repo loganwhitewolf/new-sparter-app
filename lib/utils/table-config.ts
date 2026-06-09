@@ -17,6 +17,12 @@ export type FilterField = {
   label: string
   type: FilterFieldType
   options?: { value: string; label: string }[]
+  /**
+   * When set, this field is a dependent child of the field identified by the given key.
+   * The toolbar resolves this field's options from dependentOptions[this.key][parentUrlValue]
+   * (or the '' all-bucket when the parent is unset). Pure types only — no runtime code.
+   */
+  dependsOn?: string
   /** Converts raw URL value to display chip label */
   toChip: (v: string) => string
 }
