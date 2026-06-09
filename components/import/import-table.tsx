@@ -46,6 +46,11 @@ const dateFormatter = new Intl.DateTimeFormat("it-IT", {
   year: "numeric",
 });
 
+const currencyFormatter = new Intl.NumberFormat("it-IT", {
+  style: "currency",
+  currency: "EUR",
+});
+
 const statusLabels: Record<ImportListRow["status"], string> = {
   pending_upload: "In attesa",
   uploaded: "Caricato",
@@ -262,6 +267,12 @@ export function ImportTable({
                 onSort={onSort}
                 className="w-24 text-xs font-normal uppercase tracking-wide text-muted-foreground"
               />
+              <TableHead className="w-32 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground">
+                Totale entrate
+              </TableHead>
+              <TableHead className="w-32 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground">
+                Totale uscite
+              </TableHead>
               <TableHead className="min-w-[11rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
                 Periodo
               </TableHead>
@@ -315,6 +326,12 @@ export function ImportTable({
                         {row.importedCount} imp.
                       </span>
                     </div>
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm tabular-nums text-total-in">
+                    {currencyFormatter.format(Number(row.positiveTotal))}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm tabular-nums text-total-out">
+                    {currencyFormatter.format(Number(row.negativeTotal))}
                   </TableCell>
                   <TableCell className="text-sm">
                     {formatDateRange(

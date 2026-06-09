@@ -220,6 +220,9 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                 onSort={onSort}
                 className="w-44 text-xs uppercase tracking-wide text-muted-foreground font-normal"
               />
+              <TableHead className="w-36 text-xs uppercase tracking-wide text-muted-foreground font-normal">
+                Piattaforma
+              </TableHead>
               <TableHead className="w-36 text-center text-xs uppercase tracking-wide text-muted-foreground font-normal">
                 Stato
               </TableHead>
@@ -283,6 +286,7 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                     />
                   </TableCell>
                   <TableCell className="text-sm">{categoryLabel}</TableCell>
+                  <TableCell className="truncate text-sm">{exp.platformName ?? '—'}</TableCell>
                   <TableCell className="text-center">
                     {!isCategorized && !isIgnored ? (
                       <button

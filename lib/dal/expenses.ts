@@ -54,6 +54,7 @@ export type ExpenseRow = {
   subCategoryName: string | null
   categoryName: string | null
   categorySlug: string | null
+  platformName: string | null
 }
 
 export function getExpenseSortColumn(sort: ExpenseSort) {
@@ -139,6 +140,7 @@ export const getExpenses = cache(async (
       subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
       categoryName: category.name,
       categorySlug: category.slug,
+      platformName: platform.name,
     })
     .from(expense)
     .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
@@ -174,6 +176,7 @@ export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | und
       subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
       categoryName: category.name,
       categorySlug: category.slug,
+      platformName: platform.name,
     })
     .from(expense)
     .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
@@ -185,6 +188,10 @@ export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | und
         eq(userSubcategoryOverride.userId, userId),
       ),
     )
+    // Platform join chain for getExpenseById — mirrors getExpenses join order
+    .leftJoin(file, eq(expense.importedFromFileId, file.id))
+    .leftJoin(importFormatVersion, eq(file.importFormatVersionId, importFormatVersion.id))
+    .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
     .where(and(eq(expense.id, id), eq(expense.userId, userId)))
     .limit(1)
   return rows[0]
