@@ -1,5 +1,5 @@
 /**
- * DataTableToolbar — render tests (Wave 2, 40-02)
+ * DataTableToolbar — render tests (Wave 2, 40-02; cascade extension lcp-01 Task 2)
  *
  * Uses renderToStaticMarkup (project pattern).
  * Interaction tests (debounce, click) are structural: verified via HTML assertions.
@@ -18,6 +18,7 @@
  *  - "Cancella tutto" button present when chips are active
  *  - "Ordina" mobile trigger present
  *  - Toolbar renders no search input when config.search is null
+ *  - Cascade: dependentOptions prop accepted; child chip rendered from toChip; parent+child count as 2 active filters
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest'
@@ -33,6 +34,52 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => mockSearchParams,
   usePathname: () => '/transactions',
 }))
+
+// ---- Mock cascade TableConfig fixture (parent type → child nature) --------
+const cascadeConfig: TableConfig = {
+  id: 'transactions',
+  search: null,
+  filters: [
+    {
+      key: 'type',
+      label: 'Tipo',
+      type: 'select',
+      options: [
+        { value: 'in', label: 'Entrate' },
+        { value: 'out', label: 'Uscite' },
+      ],
+      toChip: (v) => `Tipo: ${v}`,
+    },
+    {
+      key: 'nature',
+      label: 'Natura',
+      type: 'select',
+      dependsOn: 'type',
+      options: [],
+      toChip: (v) => `Natura: ${v}`,
+    },
+  ],
+  sortable: [],
+  defaultSort: { key: 'createdAt', dir: 'desc' },
+}
+
+const cascadeDependentOptions = {
+  nature: {
+    '': [
+      { value: 'essential', label: 'Essenziale' },
+      { value: 'income', label: 'Entrate ricorrenti' },
+      { value: 'unclassified', label: 'Non classificato' },
+    ],
+    in: [
+      { value: 'income', label: 'Entrate ricorrenti' },
+      { value: 'unclassified', label: 'Non classificato' },
+    ],
+    out: [
+      { value: 'essential', label: 'Essenziale' },
+      { value: 'unclassified', label: 'Non classificato' },
+    ],
+  },
+}
 
 // ---- Mock TableConfig fixture -------------------------------------------
 const mockConfig: TableConfig = {
@@ -164,5 +211,61 @@ describe('DataTableToolbar render (40-02, Variant A)', () => {
       <DataTableToolbar config={mockConfig} route="/transactions" />,
     )
     expect(html).toContain('Filtri (1)')
+  })
+})
+
+// ─── Cascade (dependentOptions) tests ─────────────────────────────────────────
+
+describe('DataTableToolbar cascade (lcp-01 Task 2)', () => {
+  beforeEach(() => {
+    mockSearchParams = new URLSearchParams()
+    mockReplace.mockClear()
+  })
+
+  it('accepts dependentOptions prop without error when parent param is absent', () => {
+    // No type param in URL — child nature should use all-bucket ''
+    const html = renderToStaticMarkup(
+      <DataTableToolbar
+        config={cascadeConfig}
+        route="/transactions"
+        dependentOptions={cascadeDependentOptions}
+      />,
+    )
+    // Toolbar renders without crashing
+    expect(html).toBeTruthy()
+    // No filter count badge since no active params
+    expect(html).not.toMatch(/Filtri \(\d+\)/)
+  })
+
+  it('renders chip for active child (nature) param using field.toChip', () => {
+    // Child filter active: nature=income
+    mockSearchParams = new URLSearchParams('nature=income')
+
+    const html = renderToStaticMarkup(
+      <DataTableToolbar
+        config={cascadeConfig}
+        route="/transactions"
+        dependentOptions={cascadeDependentOptions}
+      />,
+    )
+    // Chip should be derived from nature field's toChip
+    expect(html).toContain('Natura: income')
+    expect(html).toContain('Filtri (1)')
+  })
+
+  it('counts parent and child as separate active filter items', () => {
+    // Both type and nature active
+    mockSearchParams = new URLSearchParams('type=in&nature=income')
+
+    const html = renderToStaticMarkup(
+      <DataTableToolbar
+        config={cascadeConfig}
+        route="/transactions"
+        dependentOptions={cascadeDependentOptions}
+      />,
+    )
+    expect(html).toContain('Filtri (2)')
+    expect(html).toContain('Tipo: in')
+    expect(html).toContain('Natura: income')
   })
 })
