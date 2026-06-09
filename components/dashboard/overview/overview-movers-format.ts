@@ -66,12 +66,12 @@ export function moverAmountTone(m: MonthOverMonthChange): 'increase' | 'decrease
 }
 
 /**
- * Returns only the trailing qualifier text in Italian:
- * - 'spesa nuova' when m.isNew
- * - 'in più' when delta > 0
- * - 'in meno' when delta <= 0
+ * Returns only the trailing qualifier text (Italian UI copy) for a mover row.
+ * - New spend label when m.isNew
+ * - Increase label when delta > 0
+ * - Decrease label when delta <= 0
  *
- * isNew wins: always returns 'spesa nuova' for new spend items.
+ * isNew wins: always returns the new-spend label regardless of delta sign.
  */
 export function moverQualifier(m: MonthOverMonthChange): string {
   if (m.isNew) return 'spesa nuova'

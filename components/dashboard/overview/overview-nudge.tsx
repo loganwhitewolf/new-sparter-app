@@ -112,30 +112,25 @@ export function OverviewNudge({ uncategorizedCount, year }: OverviewNudgeProps) 
   })
   const ctaHref = `${APP_ROUTES.transactions}?${params.toString()}`
 
+  // FRU-FIX-03: compact inline pill aligned right on the title row (no longer a full-width banner).
   return (
     <div
       role="status"
-      className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+      className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 pl-2.5 pr-1.5 py-1 text-xs text-amber-800"
     >
-      <div className="flex-1">
-        <span className="font-medium">Hai movimenti da categorizzare.</span>{' '}
-        <span className="text-amber-700">
-          Completarli rende la panoramica più precisa.
-        </span>{' '}
-        <Link
-          href={ctaHref}
-          className="font-medium underline underline-offset-2 hover:text-amber-900"
-        >
-          Categorizza ora
-        </Link>
-      </div>
+      <Link
+        href={ctaHref}
+        className="font-medium underline-offset-2 hover:underline hover:text-amber-900 whitespace-nowrap"
+      >
+        Movimenti da categorizzare
+      </Link>
       <button
         type="button"
         aria-label="Chiudi avviso"
         onClick={dismiss}
-        className="shrink-0 rounded p-0.5 hover:bg-amber-100"
+        className="shrink-0 rounded-full p-0.5 hover:bg-amber-100"
       >
-        <X className="h-4 w-4" />
+        <X className="h-3 w-3" />
       </button>
     </div>
   )

@@ -44,12 +44,19 @@ function deriveDefaultMonthIndex(chart: OverviewChartPoint[]): number {
   return 0
 }
 
-// Inner async component that fetches and renders KPIs + chart + movers under Suspense.
-async function OverviewDataSection({ year }: { year: number }) {
+// Inner async component that fetches and renders header + KPIs + chart + movers under Suspense.
+// FRU-FIX-03: OverviewHeader is rendered here (not eagerly) so it has access to
+// uncategorizedCount for the inline nudge slot on the title row.
+async function OverviewDataSection({ year, years }: { year: number; years: string[] }) {
   const [overview, chart] = await Promise.all([getOverview(year), getOverviewChart(year)])
 
   if (isYearWithNoData(overview.totalIn, overview.totalOut)) {
-    return <OverviewEmptyState variant="no-data-for-year" year={year} />
+    return (
+      <>
+        <OverviewHeader year={year} years={years} />
+        <OverviewEmptyState variant="no-data-for-year" year={year} />
+      </>
+    )
   }
 
   // D-04: compute the real last-month-with-data index (not naively the last index).
@@ -59,10 +66,13 @@ async function OverviewDataSection({ year }: { year: number }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Inline amber nudge: appears when uncategorized OUT expenses exist for the year.
-          Dismissal is localStorage-only (year-scoped, lastSeenCount semantics) — no DB write.
-          Placed above KpiRow so it reads as part of the title context (D-02, D-03, D-10). */}
-      <OverviewNudge uncategorizedCount={overview.uncategorizedCount} year={year} />
+      {/* FRU-FIX-03: header with inline nudge slot — nudge is right-aligned on the title row,
+          no longer its own full-width row. Year selector still works (router.replace ?year=). */}
+      <OverviewHeader
+        year={year}
+        years={years}
+        nudge={<OverviewNudge uncategorizedCount={overview.uncategorizedCount} year={year} />}
+      />
       <KpiRow data={overview} year={year} />
       {/* OverviewMoversSection owns the shared selectedMonth — chart + movers panel never drift. */}
       <OverviewMoversSection
@@ -86,15 +96,11 @@ export default async function DashboardOverviewPage({ searchParams }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header renders eagerly — it only needs the years list (HEAD-01/03). */}
-      <OverviewHeader year={year} years={years} />
-
-      {/* Data section streams under Suspense — KPIs + chart refetch together
-          when ?year= changes (HEAD-02: re-scoping is automatic via server component re-render). */}
-      <Suspense fallback={<OverviewPageSkeleton />}>
-        <OverviewDataSection year={year} />
-      </Suspense>
-    </div>
+    // FRU-FIX-03: OverviewHeader is now rendered inside OverviewDataSection so it can
+    // receive uncategorizedCount for the inline nudge slot. The Suspense fallback
+    // (OverviewPageSkeleton) covers both the header and the data section during streaming.
+    <Suspense fallback={<OverviewPageSkeleton />}>
+      <OverviewDataSection year={year} years={years} />
+    </Suspense>
   )
 }

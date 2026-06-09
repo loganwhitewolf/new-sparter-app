@@ -94,6 +94,51 @@ describe('overview chart filters (FILT-01, FILT-02, FILT-03)', () => {
   })
 })
 
+const { resolveTrendReading } = await import('@/components/dashboard/overview/kpi-row')
+
+describe('resolveTrendReading (FRU-FIX-04)', () => {
+  it('delta=null → neutral reading NOT "In linea con il {prevYear}"', () => {
+    const result = resolveTrendReading(null, 2023, 'in')
+    expect(result.text).not.toContain('In linea con il')
+    expect(result.sentiment).toBe('neutral')
+  })
+
+  it('delta=null → truthful neutral text includes the prevYear', () => {
+    const result = resolveTrendReading(null, 2023, 'in')
+    expect(result.text).toContain('2023')
+  })
+
+  it('delta=0 → "In linea con il 2023" (within ±1)', () => {
+    const result = resolveTrendReading(0, 2023, 'in')
+    expect(result.text).toBe('In linea con il 2023')
+    expect(result.sentiment).toBe('neutral')
+  })
+
+  it('delta=+10, kind=in → Più entrate, sentiment good', () => {
+    const result = resolveTrendReading(10, 2023, 'in')
+    expect(result.text).toContain('entrate')
+    expect(result.sentiment).toBe('good')
+  })
+
+  it('delta=+10, kind=out → Spendi più, sentiment warn', () => {
+    const result = resolveTrendReading(10, 2023, 'out')
+    expect(result.text).toContain('più')
+    expect(result.sentiment).toBe('warn')
+  })
+
+  it('delta=-10, kind=in → Meno entrate, sentiment warn', () => {
+    const result = resolveTrendReading(-10, 2023, 'in')
+    expect(result.text).toContain('Meno entrate')
+    expect(result.sentiment).toBe('warn')
+  })
+
+  it('delta=-10, kind=out → Spendi meno, sentiment good', () => {
+    const result = resolveTrendReading(-10, 2023, 'out')
+    expect(result.text).toContain('meno')
+    expect(result.sentiment).toBe('good')
+  })
+})
+
 describe('deriveNatureBreakdown (FRU-FIX-02)', () => {
   it('income has recurring=1000 with correct label and color', () => {
     const result = deriveNatureBreakdown(FIXTURE, new Set(INCOME_KEYS), new Set(OUT_KEYS))

@@ -15,7 +15,7 @@ function balanceReading(balance: number): Reading {
   return { text: 'Sei in pareggio', sentiment: 'neutral' }
 }
 
-function trendReading(delta: number, prevYear: number, kind: 'in' | 'out'): Reading {
+export function trendReading(delta: number, prevYear: number, kind: 'in' | 'out'): Reading {
   if (Math.abs(delta) <= 1) return { text: `In linea con il ${prevYear}`, sentiment: 'neutral' }
   if (kind === 'in') {
     return delta > 0
@@ -25,6 +25,25 @@ function trendReading(delta: number, prevYear: number, kind: 'in' | 'out'): Read
   return delta < 0
     ? { text: `Spendi meno del ${prevYear}`, sentiment: 'good' }
     : { text: `Spendi più del ${prevYear}`, sentiment: 'warn' }
+}
+
+/**
+ * Resolves the Entrate/Uscite KPI reading based on whether a real prior-year
+ * comparison exists.
+ *
+ * When delta is null (no prior-year data), returns a truthful neutral reading
+ * rather than a misleading "In linea con il {prevYear}".
+ * When delta is non-null, delegates to trendReading.
+ */
+export function resolveTrendReading(
+  delta: number | null,
+  prevYear: number,
+  kind: 'in' | 'out'
+): Reading {
+  if (delta === null) {
+    return { text: `Nessun confronto con il ${prevYear}`, sentiment: 'neutral' }
+  }
+  return trendReading(delta, prevYear, kind)
 }
 
 export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
@@ -40,11 +59,7 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         delta={data.deltas.totalIn}
         goodWhenPositive
         prevYear={prevYear}
-        reading={
-          data.deltas.totalIn !== null
-            ? trendReading(data.deltas.totalIn, prevYear, 'in')
-            : { text: `In linea con il ${prevYear}`, sentiment: 'neutral' }
-        }
+        reading={resolveTrendReading(data.deltas.totalIn, prevYear, 'in')}
         className="min-h-0"
       />
       <ReadingKpiCard
@@ -54,11 +69,7 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         delta={data.deltas.totalOut}
         goodWhenPositive={false}
         prevYear={prevYear}
-        reading={
-          data.deltas.totalOut !== null
-            ? trendReading(data.deltas.totalOut, prevYear, 'out')
-            : { text: `In linea con il ${prevYear}`, sentiment: 'neutral' }
-        }
+        reading={resolveTrendReading(data.deltas.totalOut, prevYear, 'out')}
         className="min-h-0"
       />
       <ReadingKpiCard
