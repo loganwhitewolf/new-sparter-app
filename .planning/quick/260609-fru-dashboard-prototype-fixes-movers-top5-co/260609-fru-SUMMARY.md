@@ -113,6 +113,14 @@ Six overview-dashboard discrepancies corrected between the shipped v1.16 impleme
 - **Files modified:** overview-movers-format.ts
 - **Commit:** 5ebd690
 
+## Post-Execution Refinements (user review, 2026-06-09)
+
+Three follow-up commits after manual review on `develop`. These supersede parts of FRU-FIX-05 and FRU-FIX-06 above:
+
+1. **Legend consolidated onto filter chips (c626d25)** — The standalone two-row `NatureLegend` below the chart duplicated the Entrate/Uscite filter chips, which already represent the nature flows. Removed `NatureLegend` (and its metadata/imports) and applied the colored-dot legend UI to the existing `FilterChip`s in `overview-chart-filters.tsx` instead. Dot is full opacity when included, 0.4 when excluded.
+
+2. **Green selection outline removed — real cause (162f4d7 → dd3f834)** — `cursor={false}` removed the Recharts tooltip cursor rectangle, but a green outline persisted on month selection. DOM inspection (throwaway proto page + Playwright) showed clicking a bar focuses Recharts' internal `<g class="recharts-zIndex-layer_*">`, and the global `* { outline-ring/50 }` base rule (ring hue is green) painted a 5px outline. Fix: suppress focus outlines on all elements inside the chart container (`[&_*:focus]:outline-none [&_*:focus-visible]:outline-none`). Filter chips use a ring (box-shadow), not an outline, so their focus indicator is unaffected. Verified: focused group computes `outline-style: none`.
+
 ## Known Stubs
 
 None — all data sources are wired to real DAL outputs.
