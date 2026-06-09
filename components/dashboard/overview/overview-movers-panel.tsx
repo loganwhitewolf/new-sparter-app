@@ -36,7 +36,7 @@ type Props = {
  * Layout: two-column table (increases left, savings right) with name and amount per row.
  */
 export function OverviewMoversPanel({ year, selectedMonth, movers, isPending }: Props) {
-  // Derive heading: e.g. "Spese di maggio rispetto a aprile" (D-02, year-crossing for January).
+  // Derive heading strings for D-02: current month vs previous month (year-crossing for January).
   const currentMonthName = MONTH_NAMES[selectedMonth]
   const prevMonthName = selectedMonth === 0 ? 'dicembre' : MONTH_NAMES[selectedMonth - 1]
   const prevYear = selectedMonth === 0 ? year - 1 : year

@@ -39,7 +39,7 @@ export function formatMoverLine(m: MonthOverMonthChange): string {
 /**
  * Formats the right-side amount+label for a table-layout mover row.
  *
- * Returns only the amount portion (e.g. "€55 spesa nuova", "€100 in meno").
+ * Returns only the amount+label portion (e.g. "€55 new-spend label", "€100 decrease label").
  * Use m.name separately for the left side of the row.
  * Always shows the absolute delta amount — including for isNew items.
  */
