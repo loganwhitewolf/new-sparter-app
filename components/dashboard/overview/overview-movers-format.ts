@@ -29,14 +29,6 @@ export function formatMoverLine(m: MonthOverMonthChange): string {
 }
 
 /**
- * Partitions a flat movers array into two sections (D-07):
- * - increases: items where delta > 0 OR isNew === true ("spent more" section)
- * - savings:   items where delta < 0 AND isNew === false ("saved more" section)
- *
- * isNew items are never suppressed — they always land in increases regardless of delta.
- * Input order is preserved within each section (the DAL already sorts by |delta| descending).
- */
-/**
  * Formats the right-side amount+label for a table-layout mover row.
  *
  * Returns only the amount+label portion (e.g. "€55 new-spend label", "€100 decrease label").
@@ -50,6 +42,14 @@ export function formatMoverAmount(m: MonthOverMonthChange): string {
   return Number(m.delta) > 0 ? `${absAmount} in più` : `${absAmount} in meno`
 }
 
+/**
+ * Partitions a flat movers array into two sections (D-07):
+ * - increases: items where delta > 0 OR isNew === true ("spent more" section)
+ * - savings:   items where delta < 0 AND isNew === false ("saved more" section)
+ *
+ * isNew items are never suppressed — they always land in increases regardless of delta.
+ * Input order is preserved within each section (the DAL already sorts by |delta| descending).
+ */
 export function splitMovers(movers: MonthOverMonthChange[]): {
   increases: MonthOverMonthChange[]
   savings: MonthOverMonthChange[]
