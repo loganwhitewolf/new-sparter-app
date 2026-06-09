@@ -16,7 +16,7 @@
  */
 
 import { useState, useRef } from 'react'
-import { SlidersHorizontal, ArrowUpDown } from 'lucide-react'
+import { SlidersHorizontal, ArrowUpDown, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -229,6 +229,7 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [sortSheetOpen, setSortSheetOpen] = useState(false)
+  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false)
 
   // Active filter count (excludes q/sort/dir)
   const activeCount = countActiveFilters(searchParams, config.filters)
@@ -327,9 +328,9 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions 
           />
         )}
 
-        {/* Desktop: Filtri Popover */}
+        {/* Desktop: Filtri Popover (controlled for explicit close button) */}
         <div className="hidden md:flex items-center gap-2">
-          <Popover>
+          <Popover open={filterPopoverOpen} onOpenChange={setFilterPopoverOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" disabled={isPending}>
                 <SlidersHorizontal className="h-4 w-4" />
@@ -337,6 +338,19 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions 
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-80">
+              {/* Popover header with title and explicit close button */}
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-sm font-semibold">Filtri</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground"
+                  onClick={() => setFilterPopoverOpen(false)}
+                  aria-label="Chiudi filtri"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
               <FilterPanel
                 config={config}
                 searchParams={searchParams}

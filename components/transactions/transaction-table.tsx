@@ -313,12 +313,27 @@ export function TransactionTable({ transactions, route, searchParams, categories
             const isSelected = selectedIds.includes(transaction.id)
             const rowLabel = transactionRowLabel(transaction)
 
+            const isTransfer = transaction.categoryType === 'transfer'
+
+            // Amount color driven by categoryType; fall back to amount sign for uncategorized rows.
+            // Red (text-total-out) is reserved for confirmed OUT — never applied to uncategorized.
+            const amountColorClass = transaction.categoryType === 'in'
+              ? 'text-total-in'
+              : transaction.categoryType === 'out'
+                ? 'text-total-out'
+                : transaction.categoryType === 'transfer'
+                  ? 'text-foreground'
+                  : transaction.amount.trim().startsWith('-')
+                    ? 'text-foreground'
+                    : 'text-total-in'
+
             return (
               <TableRow
                 key={transaction.id}
                 className={cn(
                   'group hover:bg-muted/50',
                   isSelected && 'bg-primary/5',
+                  isTransfer && 'opacity-60',
                 )}
               >
                 <TableCell className="w-10 text-center">
@@ -341,9 +356,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
                 <TableCell
                   className={cn(
                     'text-right font-mono tabular-nums',
-                    transaction.amount.trim().startsWith('-')
-                      ? 'text-foreground'
-                      : 'text-emerald-700',
+                    amountColorClass,
                   )}
                 >
                   {formatAmount(transaction.amount, transaction.currency)}
