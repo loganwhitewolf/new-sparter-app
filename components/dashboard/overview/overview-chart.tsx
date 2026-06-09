@@ -153,13 +153,16 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
         onReset={handleReset}
       />
 
-      {/* FRU-FIX-05: bar paths receive browser focus on click; the global
+      {/* FRU-FIX-05: clicking a bar focuses Recharts' internal z-index group
+          (<g class="recharts-zIndex-layer_*">), and the global
           `* { outline-ring/50 }` base rule (ring hue is green) paints a green
-          outline around the clicked month. Suppress it on the bar rectangles —
-          selection is already conveyed by per-Cell opacity. */}
+          5px outline around the clicked month. Suppress focus outlines on every
+          element inside the chart — month selection is already conveyed by
+          per-Cell opacity, and the filter chips use a ring (box-shadow), not an
+          outline, so their focus indicator is unaffected. */}
       <ChartContainer
         config={chartConfig}
-        className="aspect-auto h-[260px] w-full [&_.recharts-bar-rectangle]:outline-none [&_.recharts-rectangle:focus]:outline-none [&_.recharts-rectangle:focus-visible]:outline-none"
+        className="aspect-auto h-[260px] w-full [&_*:focus]:outline-none [&_*:focus-visible]:outline-none"
       >
         <BarChart data={rows} barGap={4} barCategoryGap="24%">
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
