@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 Phase: Milestone v1.16 complete
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-09 - Completed quick task 260609-fru: Dashboard overview prototype fixes
+Status: v1.17 released (tag on develop) — develop→main open as PR #16
+Last activity: 2026-06-09 - Shipped v1.17; opened/updated PR #16 (develop → main)
 
 ## Accumulated Context
 
