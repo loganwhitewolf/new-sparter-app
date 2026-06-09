@@ -58,6 +58,11 @@ export interface SubcategoryPickerProps {
   defaultType: 'in' | 'out' | 'transfer' | null
   /** Called with the string subCategoryId when the user taps a tile. */
   onChange: (subCategoryId: string) => void
+  /**
+   * When true, the picker body is in a pending state (server request in flight).
+   * Blocks further tile taps and shows a visual indicator. Default: false.
+   */
+  pending?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -83,6 +88,7 @@ export function SubcategoryPicker({
   allowedCategoryTypes,
   defaultType,
   onChange,
+  pending = false,
 }: SubcategoryPickerProps) {
   const options = React.useMemo(
     () => buildCategoryOptions(categories, allowedCategoryTypes),
@@ -114,7 +120,9 @@ export function SubcategoryPicker({
 
         {/* Sheet header */}
         <SheetHeader className="flex flex-row items-center justify-between border-b px-4 py-3 gap-1.5">
-          <SheetTitle className="text-sm font-semibold">Categorizza</SheetTitle>
+          <SheetTitle className="text-sm font-semibold">
+            {pending ? 'Categorizzazione…' : 'Categorizza'}
+          </SheetTitle>
           <Button
             variant="ghost"
             size="icon"
@@ -135,6 +143,7 @@ export function SubcategoryPicker({
           allowedCategoryTypes={allowedCategoryTypes}
           defaultType={defaultType}
           onSelect={handleSelect}
+          pending={pending}
         />
       </SheetContent>
     </Sheet>
@@ -152,6 +161,7 @@ interface PickerBodyProps {
   allowedCategoryTypes: Array<TypeKey>
   defaultType: FilterKey
   onSelect: (subCategoryId: string) => void
+  pending?: boolean
 }
 
 function PickerBody({
@@ -161,10 +171,20 @@ function PickerBody({
   allowedCategoryTypes,
   defaultType,
   onSelect,
+  pending = false,
 }: PickerBodyProps) {
   const [query, setQuery] = React.useState('')
   const [type, setType] = React.useState<FilterKey>(defaultType ?? null)
   const [active, setActive] = React.useState<'most' | number | null>('most')
+  const searchInputRef = React.useRef<HTMLInputElement>(null)
+
+  // Autofocus the search input on mount (deferred past Radix Sheet focus-trap setup)
+  React.useEffect(() => {
+    const id = window.setTimeout(() => {
+      searchInputRef.current?.focus()
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [])
 
   // Reset active rail item when type chip changes
   const handleTypeChange = (key: FilterKey) => {
@@ -220,10 +240,10 @@ function PickerBody({
   }, [active, usedFiltered, options, categories])
 
   return (
-    <div className="flex min-h-0 flex-col flex-1">
+    <div className={cn('flex min-h-0 flex-col flex-1', pending && 'pointer-events-none opacity-60')}>
       {/* Search + type chips */}
       <div className="flex flex-col gap-3 border-b p-3">
-        <SearchInput value={query} onChange={setQuery} />
+        <SearchInput ref={searchInputRef} value={query} onChange={setQuery} />
         <TypeChips active={type} onChange={handleTypeChange} />
       </div>
 
@@ -432,17 +452,15 @@ function Tile({
   )
 }
 
-function SearchInput({
-  value,
-  onChange,
-}: {
-  value: string
-  onChange: (v: string) => void
-}) {
+const SearchInput = React.forwardRef<
+  HTMLInputElement,
+  { value: string; onChange: (v: string) => void }
+>(function SearchInput({ value, onChange }, ref) {
   return (
     <div className="relative">
       <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
+        ref={ref}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Cerca sottocategoria…"
@@ -450,7 +468,7 @@ function SearchInput({
       />
     </div>
   )
-}
+})
 
 function Empty() {
   return (

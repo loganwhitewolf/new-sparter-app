@@ -63,6 +63,7 @@ vi.mock('drizzle-orm', () => ({
   gte: (left: unknown, right: unknown) => ({ op: 'gte', left, right }),
   ilike: (left: unknown, right: unknown) => ({ op: 'ilike', left, right }),
   inArray: (left: unknown, right: unknown) => ({ op: 'inArray', left, right }),
+  isNull: (column: unknown) => ({ op: 'isNull', column }),
   lte: (left: unknown, right: unknown) => ({ op: 'lte', left, right }),
   or: (...args: unknown[]) => ({ op: 'or', args }),
   sql: Object.assign(mockSql, {}),
@@ -72,6 +73,7 @@ vi.mock('@/lib/db/schema', () => ({
     id: 'category.id',
     name: 'category.name',
     slug: 'category.slug',
+    type: 'category.type',
   },
   expense: {
     id: 'expense.id',
@@ -103,6 +105,7 @@ vi.mock('@/lib/db/schema', () => ({
     id: 'subCategory.id',
     name: 'subCategory.name',
     categoryId: 'subCategory.categoryId',
+    nature: 'subCategory.nature',
   },
   userSubcategoryOverride: {
     customName: 'userSubcategoryOverride.customName',
@@ -256,5 +259,72 @@ describe('expense DAL list pagination', () => {
 
     expect(amountMaxCondition).toBeDefined()
     expect(amountMaxCondition!.values).toContain('500')
+  })
+
+  // ── lcp-01 Task 3: cascade filters (nature / type / subCategoryId) ─────────
+
+  it("nature 'unclassified' adds or(isNull(subCategoryId), isNull(nature)) condition", async () => {
+    await getExpenses({ nature: 'unclassified' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    const orCondition = where.args.find(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as { op?: string }).op === 'or',
+    ) as { op: string; args: unknown[] } | undefined
+
+    expect(orCondition).toBeDefined()
+    // or(...) should contain isNull conditions
+    const hasIsNull = orCondition!.args.some(
+      (a) =>
+        typeof a === 'object' &&
+        a !== null &&
+        (a as { op?: string }).op === 'isNull',
+    )
+    expect(hasIsNull).toBe(true)
+  })
+
+  it("nature with a specific value adds eq(subCategory.nature, value) condition", async () => {
+    await getExpenses({ nature: 'essential' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.args).toContainEqual({
+      op: 'eq',
+      left: 'subCategory.nature',
+      right: 'essential',
+    })
+  })
+
+  it("type 'unclassified' adds isNull(category.type) condition", async () => {
+    await getExpenses({ type: 'unclassified' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.args).toContainEqual({
+      op: 'isNull',
+      column: 'category.type',
+    })
+  })
+
+  it("type with a specific value adds eq(category.type, value) condition", async () => {
+    await getExpenses({ type: 'out' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.args).toContainEqual({
+      op: 'eq',
+      left: 'category.type',
+      right: 'out',
+    })
+  })
+
+  it('subCategoryId adds eq(subCategory.id, value) condition', async () => {
+    await getExpenses({ subCategoryId: 42 })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.args).toContainEqual({
+      op: 'eq',
+      left: 'subCategory.id',
+      right: 42,
+    })
   })
 })

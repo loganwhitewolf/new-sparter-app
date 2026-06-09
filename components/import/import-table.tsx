@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle } from "lucide-react";
+import { formatAbsoluteAmount } from "@/lib/utils/format-amount";
 import { toast } from "sonner";
 import { ImportDeleteDialog } from "@/components/import/import-delete-dialog";
 import { ImportRenameDialog } from "@/components/import/import-rename-dialog";
@@ -45,6 +46,7 @@ const dateFormatter = new Intl.DateTimeFormat("it-IT", {
   month: "short",
   year: "numeric",
 });
+
 
 const statusLabels: Record<ImportListRow["status"], string> = {
   pending_upload: "In attesa",
@@ -262,6 +264,12 @@ export function ImportTable({
                 onSort={onSort}
                 className="w-24 text-xs font-normal uppercase tracking-wide text-muted-foreground"
               />
+              <TableHead className="w-32 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground">
+                Totale entrate
+              </TableHead>
+              <TableHead className="w-32 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground">
+                Totale uscite
+              </TableHead>
               <TableHead className="min-w-[11rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
                 Periodo
               </TableHead>
@@ -315,6 +323,13 @@ export function ImportTable({
                         {row.importedCount} imp.
                       </span>
                     </div>
+                  </TableCell>
+                  {/* Display absolute values; color classes (text-total-in / text-total-out) convey direction */}
+                  <TableCell className="text-right font-mono text-sm tabular-nums text-total-in">
+                    {formatAbsoluteAmount(String(row.positiveTotal))}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm tabular-nums text-total-out">
+                    {formatAbsoluteAmount(String(row.negativeTotal))}
                   </TableCell>
                   <TableCell className="text-sm">
                     {formatDateRange(

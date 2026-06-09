@@ -10,6 +10,8 @@ import {
   parseTransactionFilters,
   type TransactionSearchParams,
 } from '@/lib/validations/transactions'
+import { NATURE_LABELS, NATURE_ORDER } from '@/lib/utils/nature-labels'
+import { buildTypeNatureMap, buildCategorySubcategoryMap } from '@/lib/utils/cascade-options'
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { TransactionFormDialog } from '@/components/transactions/transaction-form-dialog'
 import { TransactionTable } from '@/components/transactions/transaction-table'
@@ -18,7 +20,7 @@ import { APP_ROUTES } from '@/lib/routes'
 
 /** Returns true when any filter param that narrows results is active */
 function hasActiveTransactionFilters(params: TransactionSearchParams): boolean {
-  const keys = ['q', 'name', 'months', 'amountMin', 'amountMax', 'platform', 'category', 'status']
+  const keys = ['q', 'name', 'months', 'amountMin', 'amountMax', 'platform', 'category', 'subCategory', 'status', 'nature', 'type']
   return keys.some((k) => {
     const v = params[k]
     return Array.isArray(v) ? v.length > 0 : Boolean(v)
@@ -40,17 +42,20 @@ function buildTransactionTableKey(
     ].join(':'))
     .join('|')
 
-  // Include Wave 4 filter keys so the table remounts when filters change (D-04)
+  // Include Wave 4+ filter keys so the table remounts when filters change (D-04)
   const filterKey = [
     params.q ?? '',
     params.sort ?? '',
     params.dir ?? '',
     params.platform ?? '',
     params.category ?? '',
+    params.subCategory ?? '',
     params.months ?? '',
     params.amountMin ?? '',
     params.amountMax ?? '',
     params.status ?? '',
+    params.nature ?? '',
+    params.type ?? '',
   ].join(':')
 
   return `${filterKey}:${dataKey}`
@@ -76,6 +81,29 @@ export default async function TransactionsPage({
     .filter((c) => c.type !== 'system')
     .map((c) => ({ value: c.slug, label: c.name }))
 
+  // Nature filter options: nine FlowNature values in canonical order + 'Non classificato'
+  const natureOptions = [
+    ...NATURE_ORDER.filter((n): n is NonNullable<typeof n> => n !== null).map((n) => ({
+      value: n,
+      label: NATURE_LABELS[n],
+    })),
+    { value: 'unclassified', label: NATURE_LABELS.unclassified },
+  ]
+
+  // Type filter options: In/Out/Transfer + 'Non classificato'
+  const typeOptions = [
+    { value: 'in', label: 'Entrate' },
+    { value: 'out', label: 'Uscite' },
+    { value: 'transfer', label: 'Trasferimenti' },
+    { value: 'unclassified', label: 'Non classificato' },
+  ]
+
+  // Cascade-derived option maps: type→nature and category→subcategory
+  const dependentOptions = {
+    nature: buildTypeNatureMap(categories),
+    subCategory: buildCategorySubcategoryMap(categories),
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -98,7 +126,10 @@ export default async function TransactionsPage({
           filterOptions={{
             platform: platformOptions,
             category: categoryOptions,
+            nature: natureOptions,
+            type: typeOptions,
           }}
+          dependentOptions={dependentOptions}
         />
       </Suspense>
 

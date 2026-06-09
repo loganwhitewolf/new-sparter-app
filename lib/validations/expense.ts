@@ -66,9 +66,31 @@ export type ParsedExpenseFilters = {
   amountMax?: string
   sort?: 'createdAt' | 'totalAmount'
   dir?: 'asc' | 'desc'
+  /** FlowNature filter — nine enum members plus sentinel 'unclassified'. Mirrors transactions. */
+  nature?: string
+  /** Category type filter — in/out/transfer plus sentinel 'unclassified'. */
+  type?: string
+  /** Subcategory id derived from subCategory URL param (positive integer). */
+  subCategoryId?: number
 }
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+// Allowlists mirroring lib/validations/transactions.ts — local const to avoid coupling.
+const NATURE_ALLOWED = [
+  'essential',
+  'discretionary',
+  'operational',
+  'financial',
+  'income',
+  'income_extraordinary',
+  'debt',
+  'extraordinary',
+  'transfer',
+  'unclassified',
+] as const
+
+const TYPE_ALLOWED = ['in', 'out', 'transfer', 'unclassified'] as const
 
 function firstTrimmed(value: string | string[] | undefined): string | undefined {
   const raw = Array.isArray(value) ? value[0] : value
@@ -86,6 +108,7 @@ export function parseExpenseFilters(input: ExpenseSearchParams): ParsedExpenseFi
   const rawPlatform = firstTrimmed(input.platform)
   const rawSort = firstTrimmed(input.sort)
   const rawDir = firstTrimmed(input.dir)
+  const rawSubCategory = firstTrimmed(input.subCategory)
 
   const q = rawQ && rawQ.length <= 200 ? rawQ : undefined
   const categorySlug = rawCategory && SLUG_RE.test(rawCategory) ? rawCategory : undefined
@@ -99,6 +122,13 @@ export function parseExpenseFilters(input: ExpenseSearchParams): ParsedExpenseFi
   const sort: 'createdAt' | 'totalAmount' | undefined =
     rawSort === 'totalAmount' ? 'totalAmount' : rawSort === 'createdAt' ? 'createdAt' : undefined
   const dir: 'asc' | 'desc' | undefined = rawDir === 'asc' ? 'asc' : rawDir === 'desc' ? 'desc' : undefined
+  const nature = parseStatus(input.nature, NATURE_ALLOWED)
+  const type = parseStatus(input.type, TYPE_ALLOWED)
+  const parsedSubCategoryId = rawSubCategory ? Number(rawSubCategory) : NaN
+  const subCategoryId =
+    Number.isInteger(parsedSubCategoryId) && parsedSubCategoryId > 0
+      ? parsedSubCategoryId
+      : undefined
 
   return {
     ...(q ? { q } : {}),
@@ -109,5 +139,8 @@ export function parseExpenseFilters(input: ExpenseSearchParams): ParsedExpenseFi
     ...(amountMax ? { amountMax } : {}),
     ...(sort ? { sort } : {}),
     ...(dir ? { dir } : {}),
+    ...(nature ? { nature } : {}),
+    ...(type ? { type } : {}),
+    ...(subCategoryId ? { subCategoryId } : {}),
   }
 }

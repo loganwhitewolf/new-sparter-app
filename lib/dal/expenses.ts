@@ -2,7 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { db } from '@/lib/db'
 import { category, expense, file, importFormatVersion, platform, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
-import { eq, and, gte, ilike, inArray, lte, asc, desc, sql } from 'drizzle-orm'
+import { eq, and, gte, ilike, inArray, isNull, lte, or, asc, desc, sql } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { periodToDateRange } from '@/lib/utils/date'
 
@@ -36,6 +36,12 @@ export type ExpenseFilters = {
   amountMax?: string
   /** Platform slug filter — requires importedFromFileId join chain */
   platform?: string
+  /** FlowNature filter — nine enum members plus sentinel 'unclassified' (null nature). */
+  nature?: string
+  /** Category type filter — in/out/transfer plus sentinel 'unclassified' (null type). */
+  type?: string
+  /** Subcategory id filter — narrows to a specific subCategory.id. */
+  subCategoryId?: number
 }
 
 export type ExpensePagination = {
@@ -54,6 +60,7 @@ export type ExpenseRow = {
   subCategoryName: string | null
   categoryName: string | null
   categorySlug: string | null
+  platformName: string | null
 }
 
 export function getExpenseSortColumn(sort: ExpenseSort) {
@@ -127,6 +134,28 @@ export const getExpenses = cache(async (
     conditions.push(eq(platform.slug, filters.platform))
   }
 
+  // Cascade filters (lcp-01 Task 3): nature, type, subCategoryId.
+  // All use the existing subCategory + category left joins.
+  if (filters.nature === 'unclassified') {
+    // Unclassified: no subCategory linked, or subCategory has null nature
+    conditions.push(or(isNull(expense.subCategoryId), isNull(subCategory.nature)))
+  } else if (filters.nature) {
+    type NatureValue = NonNullable<(typeof subCategory.$inferSelect)['nature']>
+    conditions.push(eq(subCategory.nature, filters.nature as NatureValue))
+  }
+
+  if (filters.type === 'unclassified') {
+    // Unclassified type: no category linked (null category.type)
+    conditions.push(isNull(category.type))
+  } else if (filters.type) {
+    type CategoryTypeValue = (typeof category.$inferSelect)['type']
+    conditions.push(eq(category.type, filters.type as CategoryTypeValue))
+  }
+
+  if (filters.subCategoryId) {
+    conditions.push(eq(subCategory.id, filters.subCategoryId))
+  }
+
   return db
     .select({
       id: expense.id,
@@ -139,6 +168,7 @@ export const getExpenses = cache(async (
       subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
       categoryName: category.name,
       categorySlug: category.slug,
+      platformName: platform.name,
     })
     .from(expense)
     .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
@@ -174,6 +204,7 @@ export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | und
       subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
       categoryName: category.name,
       categorySlug: category.slug,
+      platformName: platform.name,
     })
     .from(expense)
     .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
@@ -185,6 +216,10 @@ export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | und
         eq(userSubcategoryOverride.userId, userId),
       ),
     )
+    // Platform join chain for getExpenseById — mirrors getExpenses join order
+    .leftJoin(file, eq(expense.importedFromFileId, file.id))
+    .leftJoin(importFormatVersion, eq(file.importFormatVersionId, importFormatVersion.id))
+    .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
     .where(and(eq(expense.id, id), eq(expense.userId, userId)))
     .limit(1)
   return rows[0]

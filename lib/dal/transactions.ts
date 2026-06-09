@@ -59,6 +59,9 @@ export type TransactionFilters = {
   amountMin?: string
   amountMax?: string
   status?: 'uncategorized' | 'categorized'
+  // Category-derived filters (Task 1):
+  nature?: string
+  type?: string
 }
 
 export const transactionListSelect = {
@@ -81,6 +84,7 @@ export const transactionListSelect = {
   platformId: platform.id,
   platformName: platform.name,
   platformSlug: platform.slug,
+  categoryType: category.type,
 }
 
 export const transactionPlatformSelect = {
@@ -108,6 +112,7 @@ export type TransactionListRow = {
   platformId: number | null
   platformName: string | null
   platformSlug: string | null
+  categoryType: (typeof category.$inferSelect)['type'] | null
 }
 
 export type TransactionPlatformOption = {
@@ -210,6 +215,24 @@ export const getTransactions = cache(
     }
     if (filters.status === 'categorized') {
       conditions.push(isNotNull(expense.subCategoryId))
+    }
+
+    // Category-derived filters (Task 1):
+    // nature filter — via subCategory.nature (already left-joined)
+    if (filters.nature === 'unclassified') {
+      conditions.push(or(isNull(expense.subCategoryId), isNull(subCategory.nature)))
+    } else if (filters.nature) {
+      // Cast excludes null — only non-null enum members are valid here
+      type NatureValue = NonNullable<(typeof subCategory.$inferSelect)['nature']>
+      conditions.push(eq(subCategory.nature, filters.nature as NatureValue))
+    }
+
+    // type filter — via category.type (already left-joined)
+    if (filters.type === 'unclassified') {
+      conditions.push(isNull(category.type))
+    } else if (filters.type) {
+      type CategoryTypeValue = (typeof category.$inferSelect)['type']
+      conditions.push(eq(category.type, filters.type as CategoryTypeValue))
     }
 
     return db

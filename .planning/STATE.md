@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 Phase: Milestone v1.16 complete
 Plan: —
-Status: v1.17 released (tag on develop) — develop→main open as PR #16
-Last activity: 2026-06-09 - Shipped v1.17; opened/updated PR #16 (develop → main)
+Status: v1.17 released; quick tasks 260609-k2d + 260609-lcp done (transaction/expense filters + cascade) — unreleased on develop
+Last activity: 2026-06-09 - Completed quick task 260609-lcp: cascading filters + amount sign + tx menu
 
 ## Accumulated Context
 
@@ -58,6 +58,8 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260609-fru | Dashboard overview prototype fixes (movers top-5 + colors, chart per-nature tooltip, nudge on title row, conditional KPI reading, remove highlight rect, two-row nature legend) | 2026-06-09 | 5ebd690 | [260609-fru-dashboard-prototype-fixes-movers-top5-co](./quick/260609-fru-dashboard-prototype-fixes-movers-top5-co/) |
+| 260609-k2d | Transactions nature + in/out/transfer filters; row colors; categorize-modal autofocus; filter popover close button; expenses platform column; import totals columns; categorize loaders | 2026-06-09 | cdc5997 | [260609-k2d-transactions-nature-filter-7-ui-fixes-mo](./quick/260609-k2d-transactions-nature-filter-7-ui-fixes-mo/) |
+| 260609-lcp | Cascading filters (type→nature, category→subcategory) on transactions + expenses (derived, no schema change); strip minus sign from amounts; categorized-tx menu → Ricategorizza only | 2026-06-09 | ffd4fc3 | [260609-lcp-filter-cascade-amount-sign-transaction-m](./quick/260609-lcp-filter-cascade-amount-sign-transaction-m/) |
 
 ## Deferred Items
 
@@ -70,6 +72,7 @@ None.
 | operator | R038/R039/R041 | live deploy operator-pending |
 | backlog | R029 | partial revalidation coverage |
 | backlog | REVAL-01 | parked |
+| phase | NATURE-TABLE-01 | dedicated `nature` table (FK in/out/transfer, category↔nature) — deferred from 260609-lcp; needs ADR + migration + seed strategy. Cascade currently derived from existing categories. |
 
 Items acknowledged and deferred at milestone close on 2026-06-09:
 

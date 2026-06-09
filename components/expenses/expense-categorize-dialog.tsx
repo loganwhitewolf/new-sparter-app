@@ -23,7 +23,7 @@ export function ExpenseCategorizeDialog({
   mostUsed,
   onSuccess,
 }: Props) {
-  const [, startTransition] = useTransition()
+  const [isPending, startTransition] = useTransition()
 
   function handleChange(subCategoryId: string) {
     const fd = new FormData()
@@ -51,6 +51,7 @@ export function ExpenseCategorizeDialog({
       allowedCategoryTypes={['in', 'out', 'transfer', 'system']}
       defaultType={null}
       onChange={handleChange}
+      pending={isPending}
     />
   )
 }

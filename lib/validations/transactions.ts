@@ -77,6 +77,10 @@ export type ParsedTransactionFilters = {
   amountMin?: string
   amountMax?: string
   status?: 'uncategorized' | 'categorized'
+  /** FlowNature filter — nine enum members plus sentinel 'unclassified' */
+  nature?: string
+  /** Category type filter — in/out/transfer plus sentinel 'unclassified' */
+  type?: string
   sort: TransactionSort
   dir: TransactionSortDirection
 }
@@ -88,6 +92,22 @@ const PLATFORM_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const CATEGORY_SLUG_RE = PLATFORM_SLUG_RE
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Allowlists for category-derived filters (Task 1)
+const NATURE_ALLOWED = [
+  'essential',
+  'discretionary',
+  'operational',
+  'financial',
+  'income',
+  'income_extraordinary',
+  'debt',
+  'extraordinary',
+  'transfer',
+  'unclassified',
+] as const
+
+const TYPE_ALLOWED = ['in', 'out', 'transfer', 'unclassified'] as const
 
 function firstTrimmed(value: string | string[] | undefined): string | undefined {
   const rawValue = Array.isArray(value) ? value[0] : value
@@ -175,6 +195,8 @@ export function parseTransactionFilters(
     | 'categorized'
     | 'uncategorized'
     | undefined
+  const nature = parseStatus(input.nature, NATURE_ALLOWED)
+  const type = parseStatus(input.type, TYPE_ALLOWED)
 
   return {
     ...(platform && PLATFORM_SLUG_RE.test(platform) ? { platform } : {}),
@@ -186,6 +208,8 @@ export function parseTransactionFilters(
     ...(amountMin ? { amountMin } : {}),
     ...(amountMax ? { amountMax } : {}),
     ...(status ? { status } : {}),
+    ...(nature ? { nature } : {}),
+    ...(type ? { type } : {}),
     sort: sort.success ? sort.data : DEFAULT_SORT,
     dir: dir.success ? dir.data : DEFAULT_DIR,
   }

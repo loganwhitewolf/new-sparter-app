@@ -1,0 +1,117 @@
+/**
+ * Cascade-options utility — derives dependent-select option maps from the taxonomy.
+ *
+ * Pure functions: no server-only imports, no side effects. Safe to import in tests
+ * and client components.
+ *
+ * Convention: the all-bucket (parent unset) is stored under the '' (empty-string) key.
+ * Pages pass dependentOptions[childKey][''] as the fallback when the parent param is absent.
+ */
+
+import type { CategoryWithSubCategories } from '@/lib/dal/categories'
+import { NATURE_ORDER, NATURE_LABELS } from '@/lib/utils/nature-labels'
+
+/** Shared filter option shape (value + display label). */
+export type FilterOption = { value: string; label: string }
+
+/**
+ * Derives, per category.type ('in' | 'out' | 'transfer'), the distinct natures used
+ * by that type's subcategories. Returns option arrays ordered by NATURE_ORDER, with
+ * 'unclassified' appended last. system-type categories are excluded.
+ *
+ * Also emits an all-bucket under the '' key containing natures from all non-system types.
+ *
+ * @param categories - Full taxonomy from getCategories()
+ * @returns Record<string, FilterOption[]> keyed by category.type + '' (all-bucket)
+ */
+export function buildTypeNatureMap(
+  categories: CategoryWithSubCategories[],
+): Record<string, FilterOption[]> {
+  if (categories.length === 0) return {}
+
+  // Collect distinct natures per type (excluding system)
+  const naturesPerType = new Map<string, Set<string>>()
+  const allNatures = new Set<string>()
+
+  for (const cat of categories) {
+    if (cat.type === 'system') continue
+
+    if (!naturesPerType.has(cat.type)) {
+      naturesPerType.set(cat.type, new Set())
+    }
+    const bucket = naturesPerType.get(cat.type)!
+
+    for (const sub of cat.subCategories) {
+      const nature = sub.effectiveNature
+      if (nature !== null) {
+        bucket.add(nature)
+        allNatures.add(nature)
+      }
+    }
+  }
+
+  if (naturesPerType.size === 0) return {}
+
+  // Build ordered option arrays per type
+  const result: Record<string, FilterOption[]> = {}
+
+  function buildOptions(natureSet: Set<string>): FilterOption[] {
+    const ordered: FilterOption[] = NATURE_ORDER
+      .filter((n): n is NonNullable<typeof n> => n !== null && natureSet.has(n))
+      .map((n) => ({
+        value: n,
+        label: NATURE_LABELS[n] ?? n,
+      }))
+    // Always append 'unclassified' as the last option
+    ordered.push({ value: 'unclassified', label: NATURE_LABELS.unclassified })
+    return ordered
+  }
+
+  // Per-type buckets
+  for (const [type, natureSet] of naturesPerType.entries()) {
+    result[type] = buildOptions(natureSet)
+  }
+
+  // All-bucket: union of all non-system natures
+  result[''] = buildOptions(allNatures)
+
+  return result
+}
+
+/**
+ * Derives, per category.slug, the subcategory options for that category.
+ * Each option has value = String(subCategory.id) and label = effective name.
+ * system-type categories are excluded.
+ *
+ * Also emits an all-bucket under the '' key containing all subcategories from
+ * non-system categories.
+ *
+ * @param categories - Full taxonomy from getCategories()
+ * @returns Record<string, FilterOption[]> keyed by category.slug + '' (all-bucket)
+ */
+export function buildCategorySubcategoryMap(
+  categories: CategoryWithSubCategories[],
+): Record<string, FilterOption[]> {
+  if (categories.length === 0) return {}
+
+  const result: Record<string, FilterOption[]> = {}
+  const allOptions: FilterOption[] = []
+
+  for (const cat of categories) {
+    if (cat.type === 'system') continue
+
+    const options: FilterOption[] = cat.subCategories.map((sub) => ({
+      value: String(sub.id),
+      label: sub.customName ?? sub.name,
+    }))
+
+    result[cat.slug] = options
+    allOptions.push(...options)
+  }
+
+  if (allOptions.length > 0) {
+    result[''] = allOptions
+  }
+
+  return result
+}

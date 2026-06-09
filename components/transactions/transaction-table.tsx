@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ExternalLink, MoreHorizontal, Tag } from 'lucide-react'
+import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 import { toast } from 'sonner'
 import { BulkDeleteTransactionsDialog } from '@/components/transactions/bulk-delete-transactions-dialog'
 import { TransactionBulkActionBar } from '@/components/transactions/transaction-bulk-action-bar'
@@ -78,14 +79,14 @@ function getAmountFormatter(currency: string) {
   return formatter
 }
 
+/**
+ * Local wrapper — delegates to the shared display-only formatter (display-only; never
+ * use for values written back to the DB).
+ * The amountFormatterCache and getAmountFormatter above are kept to avoid breaking
+ * any possible future references; this function is the only active call site.
+ */
 function formatAmount(amount: string, currency: string) {
-  const numericAmount = Number(amount)
-
-  if (!Number.isFinite(numericAmount)) {
-    return `${amount} ${currency || 'EUR'}`
-  }
-
-  return getAmountFormatter(currency).format(numericAmount)
+  return formatAbsoluteAmount(amount, currency)
 }
 
 function formatDate(date: Date) {
@@ -313,12 +314,27 @@ export function TransactionTable({ transactions, route, searchParams, categories
             const isSelected = selectedIds.includes(transaction.id)
             const rowLabel = transactionRowLabel(transaction)
 
+            const isTransfer = transaction.categoryType === 'transfer'
+
+            // Amount color driven by categoryType; fall back to amount sign for uncategorized rows.
+            // Red (text-total-out) is reserved for confirmed OUT — never applied to uncategorized.
+            const amountColorClass = transaction.categoryType === 'in'
+              ? 'text-total-in'
+              : transaction.categoryType === 'out'
+                ? 'text-total-out'
+                : transaction.categoryType === 'transfer'
+                  ? 'text-foreground'
+                  : transaction.amount.trim().startsWith('-')
+                    ? 'text-foreground'
+                    : 'text-total-in'
+
             return (
               <TableRow
                 key={transaction.id}
                 className={cn(
                   'group hover:bg-muted/50',
                   isSelected && 'bg-primary/5',
+                  isTransfer && 'opacity-60',
                 )}
               >
                 <TableCell className="w-10 text-center">
@@ -341,9 +357,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
                 <TableCell
                   className={cn(
                     'text-right font-mono tabular-nums',
-                    transaction.amount.trim().startsWith('-')
-                      ? 'text-foreground'
-                      : 'text-emerald-700',
+                    amountColorClass,
                   )}
                 >
                   {formatAmount(transaction.amount, transaction.currency)}
@@ -420,18 +434,8 @@ export function TransactionTable({ transactions, route, searchParams, categories
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <a
-                          href={`https://www.google.com/search?q=${encodeURIComponent(transaction.customTitle?.trim() || transaction.description)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          Cerca su Google
-                        </a>
-                      </DropdownMenuItem>
-                      {transaction.expenseId && transaction.expenseStatus === '1' && (
+                      {/* Categorized rows: show only Ricategorizza (no Google search) */}
+                      {isCategorized ? (
                         <DropdownMenuItem
                           onSelect={(e) => {
                             e.preventDefault()
@@ -444,8 +448,38 @@ export function TransactionTable({ transactions, route, searchParams, categories
                           className="flex items-center gap-2"
                         >
                           <Tag className="h-4 w-4" />
-                          Categorizza spesa
+                          Ricategorizza
                         </DropdownMenuItem>
+                      ) : (
+                        <>
+                          <DropdownMenuItem asChild>
+                            <a
+                              href={`https://www.google.com/search?q=${encodeURIComponent(transaction.customTitle?.trim() || transaction.description)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                              Cerca su Google
+                            </a>
+                          </DropdownMenuItem>
+                          {transaction.expenseId && transaction.expenseStatus === '1' && (
+                            <DropdownMenuItem
+                              onSelect={(e) => {
+                                e.preventDefault()
+                                setCategorizeTarget({
+                                  id: transaction.expenseId!,
+                                  title: transaction.expenseTitle ?? rowLabel,
+                                })
+                                setOpenDropdownId(null)
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <Tag className="h-4 w-4" />
+                              Categorizza spesa
+                            </DropdownMenuItem>
+                          )}
+                        </>
                       )}
                       <DropdownMenuSeparator />
                       <DeleteTransactionMenuItem
