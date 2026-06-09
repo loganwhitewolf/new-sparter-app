@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: Dashboard Overview Redesign
-status: executing
+status: Awaiting next milestone
 stopped_at: Phase 45 context gathered
-last_updated: "2026-06-09T07:59:30.720Z"
-last_activity: 2026-06-09
+last_updated: "2026-06-09T08:57:34.051Z"
+last_activity: 2026-06-09 — Milestone v1.16 completed and archived
 progress:
   total_phases: 4
   completed_phases: 4
@@ -25,13 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Phase: 45
-Plan: Not started
-Phase: 45 (overview-movers) — NEXT
-Status: Executing Phase 45
-Last activity: 2026-06-09
-
-Progress: [███████░░░] 75%
+Phase: Milestone v1.16 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-09 — Milestone v1.16 completed and archived
 
 ## Accumulated Context
 
@@ -68,6 +65,15 @@ None.
 | backlog | R029 | partial revalidation coverage |
 | backlog | REVAL-01 | parked |
 
+Items acknowledged and deferred at milestone close on 2026-06-09:
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat_gap | Phase 43 43-UAT.md — 4 pending scenarios | testing |
+| uat_gap | Phase 45 45-UAT.md — 6 pending scenarios | passed |
+| verification_gap | Phase 43 43-VERIFICATION.md | human_needed |
+| verification_gap | Phase 44 44-VERIFICATION.md | human_needed |
+
 ## Session Continuity
 
 Last session: 2026-06-08T15:28:53.161Z
@@ -75,3 +81,7 @@ Stopped at: Phase 45 context gathered
 Resume file: .planning/phases/45-overview-movers/45-CONTEXT.md
 
 **Next:** `/gsd-plan-phase 45`
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
