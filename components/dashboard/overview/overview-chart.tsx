@@ -4,16 +4,15 @@ import { useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from 'recharts'
 import {
   ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
   ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart'
 import type { OverviewChartPoint } from '@/lib/dal/overview'
+import { NATURE_COLORS, NATURE_LABELS } from '@/lib/utils/nature-labels'
 import { formatEur, formatEurCompact } from './format'
 import {
   deriveFilteredBarRow,
+  deriveNatureBreakdown,
   INCOME_KEYS,
   OUT_KEYS,
   type IncomeKey,
@@ -26,6 +25,134 @@ const chartConfig = {
   entrate: { label: 'Entrate', color: 'var(--total-in)' },
   uscite: { label: 'Uscite', color: 'var(--total-out)' },
 } satisfies ChartConfig
+
+// ─── Income legend metadata (display order: recurring, extraordinary) ────────
+const INCOME_LEGEND_ITEMS = [
+  { key: 'recurring', label: NATURE_LABELS['income'], color: NATURE_COLORS['income'] },
+  { key: 'extraordinary', label: NATURE_LABELS['income_extraordinary'], color: NATURE_COLORS['income_extraordinary'] },
+] as const
+
+// ─── Out legend metadata (display order follows OUT_KEYS) ────────────────────
+const OUT_LEGEND_ITEMS = OUT_KEYS.map((key) => ({
+  key,
+  label: NATURE_LABELS[key],
+  color: NATURE_COLORS[key],
+}))
+
+// ─── Custom per-nature tooltip ────────────────────────────────────────────────
+
+type NatureTooltipProps = {
+  active?: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  payload?: any[]
+  data: OverviewChartPoint[]
+  includedIncome: Set<IncomeKey>
+  includedOut: Set<OutKey>
+}
+
+function NatureTooltip({ active, payload, data, includedIncome, includedOut }: NatureTooltipProps) {
+  if (!active || !payload?.length) return null
+
+  // Resolve the hovered data point from the original (unfiltered) data array.
+  // payload[0].payload.label is the XAxis label; find by matching label.
+  const hoveredLabel = payload[0]?.payload?.label as string | undefined
+  const point = data.find((p) => p.label === hoveredLabel)
+  if (!point) return null
+
+  const breakdown = deriveNatureBreakdown(point, includedIncome, includedOut)
+
+  return (
+    <div className="rounded-md border bg-popover px-3 py-2 text-sm shadow-md min-w-[160px]">
+      <p className="mb-1.5 font-semibold text-foreground">{hoveredLabel}</p>
+
+      {/* Entrate section */}
+      {breakdown.income.length > 0 && (
+        <div className="mb-1.5">
+          <p className="text-xs font-medium text-muted-foreground mb-1">Entrate</p>
+          {breakdown.income.map((item) => (
+            <div key={item.key} className="flex items-center justify-between gap-3 py-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                <span className="text-xs text-muted-foreground">{item.label}</span>
+              </div>
+              <span className="font-mono text-xs tabular-nums">{formatEur(item.amount)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Uscite section */}
+      {breakdown.out.filter((i) => i.amount > 0).length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">Uscite</p>
+          {breakdown.out
+            .filter((item) => item.amount > 0)
+            .map((item) => (
+              <div key={item.key} className="flex items-center justify-between gap-3 py-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-xs text-muted-foreground">{item.label}</span>
+                </div>
+                <span className="font-mono text-xs tabular-nums">{formatEur(item.amount)}</span>
+              </div>
+            ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Custom two-row legend ────────────────────────────────────────────────────
+
+type NatureLegendProps = {
+  includedIncome: Set<IncomeKey>
+  includedOut: Set<OutKey>
+}
+
+function NatureLegend({ includedIncome, includedOut }: NatureLegendProps) {
+  return (
+    <div className="flex flex-col gap-1 mt-2 px-1">
+      {/* Row 1: income natures */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {INCOME_LEGEND_ITEMS.map((item) => {
+          const included = includedIncome.has(item.key as IncomeKey)
+          return (
+            <div
+              key={item.key}
+              className="flex items-center gap-1.5"
+              style={{ opacity: included ? 1 : 0.4 }}
+            >
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: item.color }}
+              />
+              <span className="text-xs text-muted-foreground">{item.label}</span>
+            </div>
+          )
+        })}
+      </div>
+      {/* Row 2: out natures */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {OUT_LEGEND_ITEMS.map((item) => {
+          const included = includedOut.has(item.key as OutKey)
+          return (
+            <div
+              key={item.key}
+              className="flex items-center gap-1.5"
+              style={{ opacity: included ? 1 : 0.4 }}
+            >
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: item.color }}
+              />
+              <span className="text-xs text-muted-foreground">{item.label}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 type OverviewChartProps = {
   data: OverviewChartPoint[]
@@ -103,8 +230,18 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
             tickFormatter={(v: number) => formatEur(v)}
             width={64}
           />
-          <ChartTooltip content={<ChartTooltipContent />} />
-          <ChartLegend content={<ChartLegendContent />} />
+          {/* FRU-FIX-02: per-nature tooltip instead of generic entrate/uscite totals */}
+          {/* FRU-FIX-05: cursor={false} removes the green/muted highlight rectangle on hover */}
+          <ChartTooltip
+            cursor={false}
+            content={
+              <NatureTooltip
+                data={data}
+                includedIncome={includedIncome}
+                includedOut={includedOut}
+              />
+            }
+          />
 
           {/* Entrate bar — green fill, grouped side-by-side (CHART-01 / CHART-03) */}
           <Bar
@@ -166,6 +303,9 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
           </Bar>
         </BarChart>
       </ChartContainer>
+
+      {/* FRU-FIX-06: two-row nature legend outside Recharts — income row + out row, each with colored dot */}
+      <NatureLegend includedIncome={includedIncome} includedOut={includedOut} />
     </div>
   )
 }

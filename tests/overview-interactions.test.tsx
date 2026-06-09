@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   deriveFilteredBarRow,
   sumSelected,
+  deriveNatureBreakdown,
   OUT_KEYS,
   INCOME_KEYS,
 } from '@/components/dashboard/overview/overview-chart-utils'
@@ -90,6 +91,60 @@ describe('overview chart filters (FILT-01, FILT-02, FILT-03)', () => {
     const values = { recurring: '500.00' }
     const result = sumSelected(values, ['recurring', 'extraordinary'])
     expect(result.toNumber()).toBe(500)
+  })
+})
+
+describe('deriveNatureBreakdown (FRU-FIX-02)', () => {
+  it('income has recurring=1000 with correct label and color', () => {
+    const result = deriveNatureBreakdown(FIXTURE, new Set(INCOME_KEYS), new Set(OUT_KEYS))
+    const recurring = result.income.find((item) => item.key === 'recurring')
+    expect(recurring).toBeDefined()
+    expect(recurring!.amount).toBe(1000)
+    expect(recurring!.label).toBe('Entrate ricorrenti')
+    expect(recurring!.color).toBe('#34d399')
+  })
+
+  it('income has extraordinary=200 with correct label and color', () => {
+    const result = deriveNatureBreakdown(FIXTURE, new Set(INCOME_KEYS), new Set(OUT_KEYS))
+    const extraordinary = result.income.find((item) => item.key === 'extraordinary')
+    expect(extraordinary).toBeDefined()
+    expect(extraordinary!.amount).toBe(200)
+    expect(extraordinary!.label).toBe('Straordinaria')
+    expect(extraordinary!.color).toBe('#a7f3d0')
+  })
+
+  it('out lists the six natures with correct fixture amounts', () => {
+    const result = deriveNatureBreakdown(FIXTURE, new Set(INCOME_KEYS), new Set(OUT_KEYS))
+    expect(result.out).toHaveLength(6)
+    const essential = result.out.find((item) => item.key === 'essential')
+    expect(essential!.amount).toBe(300)
+    const discretionary = result.out.find((item) => item.key === 'discretionary')
+    expect(discretionary!.amount).toBe(150)
+    const financial = result.out.find((item) => item.key === 'financial')
+    expect(financial!.amount).toBe(60)
+  })
+
+  it('excluding a key drops it from the returned array', () => {
+    const result = deriveNatureBreakdown(FIXTURE, new Set(['recurring'] as const), new Set(OUT_KEYS))
+    const extraordinary = result.income.find((item) => item.key === 'extraordinary')
+    expect(extraordinary).toBeUndefined()
+    expect(result.income).toHaveLength(1)
+  })
+
+  it('excluding an out key drops it from the out array', () => {
+    const reducedOut = new Set(OUT_KEYS.filter((k) => k !== 'debt'))
+    const result = deriveNatureBreakdown(FIXTURE, new Set(INCOME_KEYS), reducedOut)
+    const debt = result.out.find((item) => item.key === 'debt')
+    expect(debt).toBeUndefined()
+    expect(result.out).toHaveLength(5)
+  })
+
+  it('out items carry correct colors from NATURE_COLORS', () => {
+    const result = deriveNatureBreakdown(FIXTURE, new Set(INCOME_KEYS), new Set(OUT_KEYS))
+    const essential = result.out.find((item) => item.key === 'essential')
+    expect(essential!.color).toBe('#4ade80')
+    const debt = result.out.find((item) => item.key === 'debt')
+    expect(debt!.color).toBe('#f87171')
   })
 })
 
