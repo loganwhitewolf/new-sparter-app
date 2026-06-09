@@ -43,6 +43,42 @@ export function formatMoverAmount(m: MonthOverMonthChange): string {
 }
 
 /**
+ * Returns at most `limit` entries from an already-|delta|-desc-sorted array.
+ * Used to cap the movers panel at a maximum of 5 entries across both columns.
+ */
+export function takeTopMovers(
+  movers: MonthOverMonthChange[],
+  limit = 5
+): MonthOverMonthChange[] {
+  return movers.slice(0, limit)
+}
+
+/**
+ * Returns the display tone for a mover's amount:
+ * - 'increase' when m.isNew === true OR Number(m.delta) > 0
+ * - 'decrease' otherwise (negative or zero delta, not new)
+ *
+ * Display-only classification — not monetary arithmetic.
+ */
+export function moverAmountTone(m: MonthOverMonthChange): 'increase' | 'decrease' {
+  if (m.isNew || Number(m.delta) > 0) return 'increase'
+  return 'decrease'
+}
+
+/**
+ * Returns only the trailing qualifier text in Italian:
+ * - 'spesa nuova' when m.isNew
+ * - 'in più' when delta > 0
+ * - 'in meno' when delta <= 0
+ *
+ * isNew wins: always returns 'spesa nuova' for new spend items.
+ */
+export function moverQualifier(m: MonthOverMonthChange): string {
+  if (m.isNew) return 'spesa nuova'
+  return Number(m.delta) > 0 ? 'in più' : 'in meno'
+}
+
+/**
  * Partitions a flat movers array into two sections (D-07):
  * - increases: items where delta > 0 OR isNew === true ("spent more" section)
  * - savings:   items where delta < 0 AND isNew === false ("saved more" section)

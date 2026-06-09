@@ -1,7 +1,8 @@
 'use client'
 import { Loader2 } from 'lucide-react'
 import type { MonthOverMonthChange } from '@/lib/dal/overview'
-import { formatMoverAmount, splitMovers } from './overview-movers-format'
+import { takeTopMovers, moverAmountTone, moverQualifier, splitMovers } from './overview-movers-format'
+import { formatEur } from './format'
 
 // Italian month names indexed 0–11 (lowercase for use in running text).
 const MONTH_NAMES = [
@@ -39,7 +40,8 @@ export function OverviewMoversPanel({ year, selectedMonth, movers, isPending }: 
   const prevMonthName = selectedMonth === 0 ? 'dicembre' : MONTH_NAMES[selectedMonth - 1]
   const prevYear = selectedMonth === 0 ? year - 1 : year
 
-  const { increases, savings } = splitMovers(movers)
+  // FRU-FIX-01(a): cap to top 5 before partitioning (DAL already sorts by |delta| desc)
+  const { increases, savings } = splitMovers(takeTopMovers(movers))
 
   return (
     <section aria-labelledby="movers-heading" className="space-y-3">
@@ -62,11 +64,11 @@ export function OverviewMoversPanel({ year, selectedMonth, movers, isPending }: 
       ) : (
         /* Two-column table layout: increases left, savings right, no scrolling needed */
         <div className="grid grid-cols-2 divide-x divide-border">
-          {/* D-02: "Dove hai speso di più" — red header, hidden when empty (MOVE-02) */}
+          {/* D-02: "Dove hai speso di più" — white header (FRU-FIX-01d), hidden when empty (MOVE-02) */}
           <div className="pr-4">
             {increases.length > 0 && (
               <>
-                <p className="text-xs font-semibold text-[var(--total-out)] mb-2">
+                <p className="text-xs font-semibold text-foreground mb-2">
                   Dove hai speso di più
                 </p>
                 <ul className="divide-y divide-border/40">
@@ -76,8 +78,13 @@ export function OverviewMoversPanel({ year, selectedMonth, movers, isPending }: 
                       className="flex items-center justify-between py-1.5 odd:bg-muted/30 rounded-sm px-1"
                     >
                       <span className="text-sm truncate mr-2">{m.name}</span>
+                      {/* FRU-FIX-01(b): colored euro amount + FRU-FIX-01(c): muted qualifier */}
                       <span className="text-sm font-medium whitespace-nowrap text-right shrink-0">
-                        {formatMoverAmount(m)}
+                        <span className={moverAmountTone(m) === 'increase' ? 'text-[var(--total-out)]' : 'text-[var(--total-in)]'}>
+                          {formatEur(Math.abs(Number(m.delta)))}
+                        </span>
+                        {' '}
+                        <span className="text-xs text-muted-foreground">{moverQualifier(m)}</span>
                       </span>
                     </li>
                   ))}
@@ -86,11 +93,11 @@ export function OverviewMoversPanel({ year, selectedMonth, movers, isPending }: 
             )}
           </div>
 
-          {/* D-02: "Dove hai risparmiato" — green header, hidden when empty (MOVE-02) */}
+          {/* D-02: "Dove hai risparmiato" — white header (FRU-FIX-01d), hidden when empty (MOVE-02) */}
           <div className="pl-4">
             {savings.length > 0 && (
               <>
-                <p className="text-xs font-semibold text-[var(--total-in)] mb-2">
+                <p className="text-xs font-semibold text-foreground mb-2">
                   Dove hai risparmiato
                 </p>
                 <ul className="divide-y divide-border/40">
@@ -100,8 +107,13 @@ export function OverviewMoversPanel({ year, selectedMonth, movers, isPending }: 
                       className="flex items-center justify-between py-1.5 odd:bg-muted/30 rounded-sm px-1"
                     >
                       <span className="text-sm truncate mr-2">{m.name}</span>
+                      {/* FRU-FIX-01(b): colored euro amount + FRU-FIX-01(c): muted qualifier */}
                       <span className="text-sm font-medium whitespace-nowrap text-right shrink-0">
-                        {formatMoverAmount(m)}
+                        <span className={moverAmountTone(m) === 'increase' ? 'text-[var(--total-out)]' : 'text-[var(--total-in)]'}>
+                          {formatEur(Math.abs(Number(m.delta)))}
+                        </span>
+                        {' '}
+                        <span className="text-xs text-muted-foreground">{moverQualifier(m)}</span>
                       </span>
                     </li>
                   ))}
