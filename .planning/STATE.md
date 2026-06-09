@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 Phase: Milestone v1.16 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-06-09 — Milestone v1.16 completed and archived
+Last activity: 2026-06-09 - Completed quick task 260609-fru: Dashboard overview prototype fixes
 
 ## Accumulated Context
 
@@ -52,6 +52,12 @@ FILT-01 (income recurring/extraordinary split) is an open question that may touc
 ### Blockers/Concerns
 
 None.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260609-fru | Dashboard overview prototype fixes (movers top-5 + colors, chart per-nature tooltip, nudge on title row, conditional KPI reading, remove highlight rect, two-row nature legend) | 2026-06-09 | 5ebd690 | [260609-fru-dashboard-prototype-fixes-movers-top5-co](./quick/260609-fru-dashboard-prototype-fixes-movers-top5-co/) |
 
 ## Deferred Items
 
