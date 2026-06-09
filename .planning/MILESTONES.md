@@ -1,5 +1,55 @@
 # Milestones
 
+## v1.16 Dashboard Overview Redesign (Shipped: 2026-06-09)
+
+**Phases completed:** 4 phases, 13 plans, 19 tasks
+
+**Key accomplishments:**
+
+- FlowNature union extended to 9 members with income_extraordinary, standalone ADD VALUE migration generated, two dashboard helpers exported, and failing test scaffold created for overview DAL
+- PO confirmed candidata-base slug list — dividends (`dividendi-azionari`, `dividendi-fondi-comuni`, `dividendi-immobiliari`) stay as `income` (recurring). 22 slugs move to `income_extraordinary`.
+- Four year-scoped DAL functions implementing the overview data contract — getYearsWithData, getOverview, getMonthOverMonthCategoryChanges, getOverviewChart — plus CONTEXT.md glossary update
+- Ported PO-approved proto KPI row (ReadingKpiCard + reading helpers), production EUR formatters, and inline year-selector header into `components/dashboard/overview/` wired to real `OverviewData` DAL types.
+- `components/dashboard/overview/format.ts`
+- Year-scoped async Server Component wiring OverviewHeader + KpiRow + OverviewChart to Phase 42 DAL with D-04 resolution and D-06 empty states.
+- 1. [Rule 3 - Blocking] Cherry-pick Plan 43-03 prerequisite commits
+- execution start
+- `fetchMovers` server action + `formatMoverLine`/`splitMovers` pure functions with Vitest coverage — data and presentation contracts for the movers panel
+- Controlled OverviewChart + OverviewMoversSection shared-state parent + OverviewMoversPanel inline panel — interactive movers drill-down wired end-to-end
+- All five MOVE requirements verified end-to-end in the browser: bar click highlights + updates panel (MOVE-01), red/green sections hide when empty (MOVE-02), humanized Italian sentences with "spesa nuova" for new spend (MOVE-03), default to last month with data (MOVE-04), empty state for first month (MOVE-05)
+
+---
+
+## v1.15 — Collapsible Sidebar
+
+**Shipped:** 2026-06-07
+**Phases:** 41 (1 phase)
+**Plans:** 3
+**Tasks:** 7
+
+### Delivered
+
+Replaced the two-zone topbar+sidebar layout with a single collapsible icon-rail sidebar. The sidebar collapses to w-16 (icon-only with tooltips) and expands to w-60, persists state in localStorage key `sparter-sidebar-collapsed`, and contains all nav + user controls. Topbar deleted on all breakpoints. BottomNav gained a 5th "Impostazioni" entry. ThemeToggle moved to SettingsHub Aspetto section. ADR 0011 locked the decision.
+
+### Key Accomplishments
+
+1. `SidebarProvider` + `useSidebarCollapsed` hook: SSR-safe `useState(false)` default, `useEffect` restores from localStorage after mount — prevents hydration mismatch (D-14)
+2. `AppShell` client component drives `<aside>` width (`md:w-16`/`md:w-60`) from SidebarContext; RSC layout wraps `AppShell` in `SidebarProvider`; topbar import removed (D-01)
+3. Sidebar rewritten: chevron toggle with aria-labels, icon-only+tooltip collapsed nav (mounted guard), user Avatar dropdown at bottom with Profilo + Logout (D-03/D-04/D-06/D-07/D-08)
+4. BottomNav 5th entry `{ href: APP_ROUTES.settings, label: 'Impostazioni', icon: Settings }` (D-10); SettingsHub Aspetto section with ThemeToggle (D-11/D-12); topbar.tsx deleted
+5. Nyquist audit: `tests/sidebar-provider.test.tsx` (D-13/D-14) + `tests/settings-hub.test.tsx` (D-11/D-12) added; 836 tests green
+
+### Known Deferred Items
+
+- Quick-task tracking artifacts acknowledged at close (4) — same pre-existing items as v1.14: `260524-pha`, `260524-pnk`, `260525-ga2`, `260530-bib` (see STATE.md Deferred Items)
+- D-03/D-07/D-09 manual-only verification (see 41-VALIDATION.md)
+
+### Archive
+
+- `.planning/milestones/v1.15-ROADMAP.md`
+
+---
+
 ## v1.14 — Unified Table Filter & Sort
 
 **Shipped:** 2026-06-04

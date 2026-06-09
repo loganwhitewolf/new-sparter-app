@@ -53,6 +53,7 @@ vi.mock('@/lib/routes', () => ({
     onboarding: '/onboarding',
     settings: '/settings',
     dashboard: '/dashboard',
+    import: '/import',
   },
 }))
 
@@ -63,8 +64,12 @@ vi.mock('@/components/layout/bottom-nav', () => ({
 vi.mock('@/components/layout/sidebar', () => ({
   Sidebar: () => null,
 }))
-vi.mock('@/components/layout/topbar', () => ({
-  Topbar: () => null,
+vi.mock('@/components/layout/sidebar-provider', () => ({
+  SidebarProvider: ({ children }: { children: unknown }) => children,
+  useSidebarCollapsed: () => ({ collapsed: false, setCollapsed: () => {} }),
+}))
+vi.mock('@/components/layout/app-shell', () => ({
+  AppShell: ({ children }: { children: unknown }) => children,
 }))
 
 function mockPathname(pathname: string) {
@@ -115,6 +120,16 @@ describe('app/(app)/layout.tsx onboarding gate (R-OB-01)', () => {
   it('does NOT redirect when txCount > 0 on /dashboard (R-OB-01)', async () => {
     mockPathname('/dashboard')
     mocks.getTransactionCount.mockResolvedValue(5)
+
+    await expect(AppLayout({ children: null })).resolves.not.toThrow()
+
+    expect(mocks.redirect).not.toHaveBeenCalled()
+  })
+
+  it('does NOT redirect when txCount === 0 but onboarding was already completed (R-OB-01)', async () => {
+    mockPathname('/dashboard')
+    mocks.getTransactionCount.mockResolvedValue(0)
+    mocks.getOnboardingCompletedAt.mockResolvedValue(new Date('2026-01-01'))
 
     await expect(AppLayout({ children: null })).resolves.not.toThrow()
 

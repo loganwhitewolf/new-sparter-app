@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, List, Receipt, Upload } from 'lucide-react'
+import { LayoutDashboard, List, Receipt, Settings, Upload } from 'lucide-react'
 import { ClientMountIcon } from '@/components/ui/client-mount-icon'
 import { cn } from '@/lib/utils'
 import { APP_ROUTES } from '@/lib/routes'
@@ -12,6 +12,7 @@ const navItems = [
   { href: APP_ROUTES.expenses, label: 'Spese', icon: Receipt },
   { href: APP_ROUTES.transactions, label: 'Transazioni', icon: List },
   { href: APP_ROUTES.import, label: 'Importazioni', icon: Upload },
+  { href: APP_ROUTES.settings, label: 'Impostazioni', icon: Settings },
 ]
 
 interface BottomNavProps {
@@ -23,6 +24,7 @@ export function BottomNav({ className }: BottomNavProps) {
 
   return (
     <nav
+      aria-label="Navigazione mobile"
       data-bottom-nav
       className={cn(
         'fixed inset-x-0 bottom-0 z-50 flex h-16 items-center border-t border-border bg-background',

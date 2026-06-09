@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Sparter is a personal finance app for the Italian market. It supports email/password and Google/GitHub OAuth authentication with account linking, transaction and expense management, import history, CSV/Excel import flows backed by Cloudflare R2, user-managed categories, actionable dashboard insights with deviation analysis and flow-nature segmented charts, pattern suggestion detection and promotion, a guided first-import onboarding flow, a unified subcategory picker bottom sheet across all 7 selection surfaces, structured logging, and a health endpoint. The app is deployed on Vercel (operator action) or runnable locally with a Supabase/R2 stack.
+Sparter is a personal finance app for the Italian market. It supports email/password and Google/GitHub OAuth authentication with account linking, transaction and expense management, import history, CSV/Excel import flows backed by Cloudflare R2, user-managed categories, a year-scoped dashboard overview (grouped bar chart, 4 KPI cards, per-month movers drill-down, filter chips by income type and expense nature, FlowNature education popovers, uncategorized nudge), deviation analysis, pattern suggestion detection and promotion, a guided first-import onboarding flow, a unified subcategory picker bottom sheet across all 7 selection surfaces, a collapsible icon-rail sidebar, structured logging, and a health endpoint. The app is deployed on Vercel (operator action) or runnable locally with a Supabase/R2 stack.
 
 ## Core Value
 
@@ -15,27 +15,25 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v1.13 complete. The app now has:
+All milestones M001–v1.16 (Phases 1–45) complete. The app now has:
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
 - Import management, categorization (Tier 1 regex, Tier 2 history, Tier 3 AI gated)
 - Pattern suggestions: detect recurring uncategorized descriptions → review and promote during analysis → re-run post-import from `/import/[fileId]/suggestions`
-- Category settings with user-owned and system categories/subcategories, flow-nature segmented chart on dashboard
-- Dashboard overview with deviation badges on category pages, nature-segmented EntrateUsciteChart, BilancioBarsChart
+- Category settings with user-owned and system categories/subcategories, FlowNature per-subcategory (9-member enum incl. `income_extraordinary`)
+- Redesigned year-scoped `/dashboard/overview` (v1.16): grouped Entrate/Uscite bar chart with always-on compact labels, 4 KPI cards (Entrate/Uscite/Bilancio/Tasso risparmio) with YTD-vs-prior delta and sentiment reading lines, filter chips for income type and expense nature, FlowNature ⓘ education popovers, inline amber uncategorized nudge with localStorage dismiss, per-month movers drill-down (click bar → top movers panel, humanized Italian copy, "spesa nuova" for new spend, defaults to last month with data)
 - First-import onboarding (5-step flow: upload → overview → education → categorize → outro); routing gate via RSC layout
 - Unified subcategory picker (vaul bottom sheet, type chips, master-detail rail, most-used section) across all 7 selection surfaces; pattern form reduced to regex + description + picker
+- Collapsible icon-rail sidebar with localStorage-persisted state; Topbar removed; BottomNav 5th Impostazioni entry; ThemeToggle in SettingsHub
 - R2 upload services, Drizzle migrations, operational health diagnostics
 - Zero-cost deploy runbook at `docs/deploy/vercel-supabase-r2.md`
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Next Milestone: TBD
+## Current Milestone: v1.16 — SHIPPED 2026-06-09
 
-v1.13 Unified Categorization Picker shipped 2026-06-02. Planning next milestone.
+All v1.16 requirements delivered. See `.planning/milestones/v1.16-ROADMAP.md` for full details.
 
-**Likely candidates:**
-- REVAL-01: Apply newly created pattern to existing transactions from same import
-- R029: Complete categorization revalidation for all entrypoints
-- Operator deploy: Vercel/Supabase/R2 production activation (R038, R039, R041)
+**Deferred:** FlowNature taxonomy rename (EDU-FUT-01) → future quick task. REVAL-01/R029 parked. Operator deploy R038/R039/R041 operator-pending.
 
 ## Architecture / Key Patterns
 
@@ -53,7 +51,7 @@ v1.13 Unified Categorization Picker shipped 2026-06-02. Planning next milestone.
 
 ## Capability Contract
 
-### Validated (M001–v1.10)
+### Validated (M001–v1.15)
 
 - ✓ Pino structured logging, AsyncLocalStorage context, optional Better Stack — M002
 - ✓ Full import lifecycle (pending → uploaded → analyzing → analyzed → importing → imported → failed) — M004
@@ -73,8 +71,13 @@ v1.13 Unified Categorization Picker shipped 2026-06-02. Planning next milestone.
 - ✓ FlowNature: `nature` enum column on `sub_category`; stacked nature-segmented EntrateUsciteChart; URL-persisted legend toggles; nature editable in /settings/categories — v1.11
 - ✓ First-import onboarding: 5-step flow (upload → overview → education → categorize → outro); RSC layout routing gate (`count(transaction) === 0 → /onboarding`); progress dots; dark/light variant per step — v1.12
 - ✓ Unified subcategory picker: `SubcategoryPicker` (vaul bottom sheet, type chips, master-detail rail, search-collapse, most-used DAL query) adopted across all 7 surfaces; `CategoryCombobox` + cascading Selects deleted; pattern form reduced to regex + description + Categorizza picker; `amountSign` derived server-side from category type per ADR 0008 — v1.13
+- ✓ Unified table filter & sort: `DataTableToolbar` + `TableConfig` declarative system across Transactions, Expenses, Files; URL-first filtering, server-side WHERE, `id` tiebreaker on all DAL sorts; `MonthMultiPicker`, `AmountRangePicker`; Expenses no temporal filter (ADR 0009/0010) — v1.14
+- ✓ Collapsible icon-rail sidebar: `SidebarProvider` + `useSidebarCollapsed` (localStorage-backed, SSR-safe); `AppShell` drives `<aside>` width (w-16/w-60); chevron toggle + tooltips in collapsed mode; user Avatar dropdown at bottom; topbar deleted; BottomNav 5th Impostazioni entry; ThemeToggle in SettingsHub Aspetto section (ADR 0011) — v1.15
+- ✓ Dashboard overview redesign: year-scoped overview page with grouped Entrate/Uscite bar chart (variant A, always-on compact labels), 4 KPI cards with YTD delta + sentiment reading lines, FlowNature filter chips (income type + expense nature), ⓘ legend popovers + per-chip tooltips, inline amber uncategorized nudge (localStorage dismiss, lastSeenCount reappear), per-month movers drill-down (click bar → panel, humanized copy, "spesa nuova" for new spend, default = last month with data); `income_extraordinary` FlowNature member added (9 members total) — v1.16
 
-### Active (next milestone — planning)
+### Active (next milestone — TBD)
+
+### Parked backlog (not in v1.16)
 
 - [ ] REVAL-01: Apply newly created pattern to existing transactions from same import file.
 - [ ] R029: Complete categorization revalidation for all entrypoints.
@@ -112,6 +115,8 @@ v1.13 Unified Categorization Picker shipped 2026-06-02. Planning next milestone.
 - [x] v1.11: FlowNature & Segmented Chart — `nature` enum on subcategories, stacked nature chart with legend toggles, nature management in settings. Shipped 2026-05-26.
 - [x] v1.12: First-import Onboarding — 5-step guided flow for new users; RSC layout routing gate; categorization wizard with nature badges. Shipped 2026-05-28.
 - [x] v1.13: Unified Categorization Picker — Single `SubcategoryPicker` (vaul bottom sheet) across all 7 surfaces; pattern form rework; `amountSign` derived from subcategory type per ADR 0008. Shipped 2026-06-02.
+- [x] v1.15 Phase 41: Collapsible Sidebar — Icon-rail sidebar with localStorage-persisted collapse state, chevron toggle, tooltips in collapsed mode, user dropdown at bottom; Topbar removed; BottomNav 5th "Impostazioni" entry; ThemeToggle moved to SettingsHub Aspetto section. Shipped 2026-06-07.
+- [x] v1.16: Dashboard Overview Redesign — Year-scoped overview redesign: grouped bar chart (variant A), 4 KPI cards with delta + reading lines, filter chips, FlowNature education popovers, uncategorized nudge, per-month movers drill-down. Shipped 2026-06-09.
 
 ## Key Decisions
 
@@ -143,6 +148,12 @@ v1.13 Unified Categorization Picker shipped 2026-06-02. Planning next milestone.
 | `SubcategoryPicker` single output: `subCategoryId` | Uniform contract across commit-on-tap and fill-field surfaces | ✓ Good |
 | `amountSign` on patterns derived server-side from subcategory's category type (ADR 0008) | Removes manual error-prone UI field; confidence hardcoded to 1 | ✓ Good |
 | `getMostUsedSubcategories` DAL scoped per-user and by category type | Cold-start safe: section hidden when empty | ✓ Good |
+| Overview chart variant A (grouped bars, no stack-by-nature, no balance series) | PO-approved design; reintroducing nature-stacks would undo the redesign clarity goal | ✓ Good |
+| `income_extraordinary` mapped onto existing `nature` enum (in side) | Avoids schema change; income recurring = `income`, extraordinary = `income_extraordinary` | ✓ Good |
+| KPI totals ignore chart filter chips | Filter chips answer "where does the money go?"; KPIs answer "how much in total?" — mixing would confuse both | ✓ Good |
+| Uncategorized nudge in localStorage only (never DB) | Zero schema cost; per-session semantics acceptable for invitational nudge | ✓ Good |
+| Per-month movers via recharts `onClick` on bar | Drill-down stays within the page; no route change or modal required | ✓ Good |
+| `fetchMovers` server action (not DAL direct call from RSC) | Enables client-controlled month selection after initial SSR render | ✓ Good |
 
 ## Evolution
 
@@ -162,4 +173,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-02 after v1.13 milestone — Unified Categorization Picker shipped*
+*Last updated: 2026-06-09 after v1.16 milestone*

@@ -4,6 +4,83 @@ Living retrospective — one section per milestone, newest first.
 
 ---
 
+## Milestone: v1.16 — Dashboard Overview Redesign
+
+**Shipped:** 2026-06-09
+**Phases:** 4 (42, 43, 44, 45) | **Plans:** 13 | **Commits:** ~27 | **Timeline:** 3 days (2026-06-07 → 2026-06-09)
+
+### What Was Built
+
+- **Phase 42**: `income_extraordinary` FlowNature member (9-member enum); additive seed STEP for re-bucketing 22 subcategories; `getYearsWithData`, `getOverview`, `getMonthOverMonthCategoryChanges`, `getOverviewChart` DAL; CONTEXT.md glossary update (Reference Period, MonthOverMonthChange)
+- **Phase 43**: `OverviewHeader` (year-selector pill), `ReadingKpiCard`/`KpiRow` with sentiment reading lines, `OverviewChart` (grouped Entrate/Uscite bars, always-on compact labels), `resolveYear`, `OverviewEmptyState`; superseded charts/filters/proto deleted; `yarn build` green
+- **Phase 44**: `overview-chart-utils.ts` pure filter-reduction helpers; `OverviewNudge` client island with localStorage `lastSeenCount` dismiss; `OverviewChartFilters` chips (income type + expense nature) with ⓘ popovers + per-chip tooltips; filter-aware chart
+- **Phase 45**: `fetchMovers` server action (trust boundary + input validation); `formatMoverLine`/`splitMovers` pure humanizers with Vitest; controlled `OverviewChart` (D-03 bar highlight); `OverviewMoversSection`/`OverviewMoversPanel`; `deriveDefaultMonthIndex` + prefetch on page; all MOVE-01..05 verified browser-side
+
+### What Worked
+
+- **Prototype → grill-me → LOCKED decisions**: All major design choices (variant A, header H1, 4 KPIs, localStorage nudge, per-month movers via click) were locked before Phase 42 planning — zero design churn across 13 plans
+- **Server action for movers**: `fetchMovers` as server action (rather than DAL in RSC) was the right call — enabled client-controlled month selection after SSR initial load without full page re-render
+- **3-day timeline for a full redesign**: 4-phase pipeline with clear DAL → shell → interactions → movers sequence executed cleanly; wave structure within each phase prevented inter-plan conflicts
+- **income_extraordinary on existing enum**: Reusing `nature` on the `in` side avoided a schema change while still enabling the income type filter chip — decision confirmed correct at DAL + UI layers
+
+### What Was Inefficient
+
+- Phase 43 worktree had a Rule 3 violation (missing phase-42 files) that required a fix commit mid-execution — indicates the worktree base branch setup needs better pre-flight validation
+- UAT checkbox updates (phases 43/44) were not completed at execution time; required manual catch-up at milestone close — should update checkboxes as part of the plan completion flow
+
+### Patterns Established
+
+- `resolveYear(searchParam, availableYears)` — server-side year resolution helper; clamps to valid data range, defaults to current year
+- `fetchMovers` server action + `useTransition` client pattern — enables post-SSR month selection without page reload
+- `splitMovers(movers)` pure function — separates increases/decreases and hides empty sections; reusable for any "movers" drill-down
+- Filter-aware chart reduction via pure `reduceChartData(points, filters)` — no derived state in component; pure function testable in isolation
+
+### Key Lessons
+
+1. **Worktree Rule 3 pre-flight**: Before executing in a new worktree, check that phase N-1 files are present — `git log --oneline HEAD..main` or a fast `ls` of the key dal/component files from prior phases
+2. **Update UAT checkboxes at plan completion**: Add a `grep '- \[ \]' *-UAT.md` check to the plan completion template to catch pending scenario markers before marking a plan as done
+3. **Lock decisions in archive, not in REQUIREMENTS.md**: The LOCKED design decisions in `app/proto/overview/NOTES.md` were perfectly stable throughout; this is the right place for design decisions (prototype artifacts), not REQUIREMENTS.md checkboxes
+
+---
+
+## Milestone: v1.15 — Collapsible Sidebar
+
+**Shipped:** 2026-06-07
+**Phases:** 1 (41) | **Plans:** 3 | **Commits:** ~16
+
+### What Was Built
+
+- `SidebarProvider` + `useSidebarCollapsed`: SSR-safe `useState(false)`, `useEffect` restores from localStorage after mount; `STORAGE_KEY = 'sparter-sidebar-collapsed'`
+- `AppShell` client component driving `<aside>` width from SidebarContext; RSC layout simplified to `<SidebarProvider><AppShell>`
+- Sidebar rewritten: chevron toggle with alternating aria-labels, icon-only+tooltip collapsed nav (mounted guard for SSR safety), Avatar dropdown at bottom with Profilo + Logout
+- BottomNav 5th Impostazioni entry; SettingsHub Aspetto section with ThemeToggle; topbar.tsx deleted
+- Nyquist audit: 2 new unit test files, 836 tests green; 2 pre-existing onboarding test failures fixed (R-OB-07, R-OB-09)
+
+### What Worked
+
+- **ADR-first approach**: ADR 0011 locked all design decisions (widths, localStorage key, no topbar) before planning — zero design churn during execution
+- **Research phase identified Pitfall 6** (tooltip SSR mismatch) upfront — mounted guard implemented correctly on first try
+- **3-plan wave structure** was clean: foundation (provider+tooltip) → visible core (shell+sidebar) → cleanup (mobile+settings+tests); no dependencies reversed
+
+### What Was Inefficient
+
+- Two post-PR fixes needed (React 19 tooltip hydration, missing Impostazioni link) — these should have been caught by E2E before merge
+- Two onboarding test failures (`R-OB-07`, `R-OB-09`) were pre-existing but only fixed during this milestone's cleanup; they should have been caught at the time they regressed
+
+### Patterns Established
+
+- RSC layout + `SidebarProvider` + `AppShell` as the three-layer chrome pattern: server-fetches-in-layout, client-island-for-state, render-in-shell
+- `mounted && collapsed` guard for any client-only rendering (tooltips, hover states) to avoid SSR hydration mismatch
+- ADR as a PLAN.md context reference — executor reads `@docs/adr/NNNN-*.md` directly, no re-negotiation
+
+### Key Lessons
+
+1. **E2E smoke before merge**: The two post-PR fixes (hydration + Impostazioni) were visual/interactive regressions that unit tests won't catch — run `yarn playwright test tests/layout.spec.ts` before merging layout-touching PRs
+2. **Fix regressions in the phase that introduces them**: Pre-existing failures left in `in_progress` state add noise to future verification; address them in the phase that touches those files
+3. **localStorage booleans are safe without extra guards**: `stored === 'true'` coerces any tampered value to a safe boolean — no validation overhead needed for non-sensitive UI preferences
+
+---
+
 ## Milestone: v1.13 — Unified Categorization Picker
 
 **Shipped:** 2026-06-02

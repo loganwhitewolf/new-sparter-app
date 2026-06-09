@@ -10,6 +10,8 @@
 - ✅ **v1.12: First-import Onboarding** — Phase 38 (shipped 2026-05-28)
 - ✅ **v1.13: Unified Categorization Picker** — Phase 39 (shipped 2026-06-02)
 - ✅ **v1.14: Unified Table Filter & Sort** — Phase 40 (shipped 2026-06-04)
+- ✅ **v1.15: Collapsible Sidebar** — Phase 41 (shipped 2026-06-07)
+- ✅ **v1.16: Dashboard Overview Redesign** — Phases 42–45 (shipped 2026-06-09)
 
 ## Phases
 
@@ -73,48 +75,6 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 </details>
 
-## Progress
-
-| Phase | Milestone | Plans | Status | Completed |
-|-------|-----------|-------|--------|-----------|
-| 1–23 | M001–M006 | 87/87 | Complete | 2026-05 |
-| 24–28 | M007 | 20/20 | Complete | 2026-05-19 |
-| 29 | v1.8/M008 | 4/4 | Complete | 2026-05-20 |
-| 30 | v1.9 | 3/3 | Complete | 2026-05-21 |
-| 31 | v1.9 | 3/3 | Complete | 2026-05-21 |
-| 32 | v1.9 | 3/3 | Complete | 2026-05-22 |
-| 33 | v1.10 | 1/1 | Complete | 2026-05-22 |
-| 34 | v1.10 | 2/2 | Complete | 2026-05-23 |
-| 35 | v1.10 | 4/4 | Complete | 2026-05-23 |
-| 36 | v1.10 | 2/2 | Complete | 2026-05-23 |
-
-| 37 | v1.11 | 5/5 | Complete | 2026-05-26 |
-| 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
-| 39 | v1.13 | 6/6 | Complete    | 2026-06-02 |
-
-| 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
-
-**Total: 38 phases shipped · 146 plans complete**
-
-<details>
-<summary>✅ v1.14: Unified Table Filter & Sort (Phase 40) — SHIPPED 2026-06-04</summary>
-
-- [x] **Phase 40: table-filter-sort** — Unified filtering + sorting across Transactions, Expenses, Files tables; shared `DataTableToolbar`; month-multi picker; `id` sort tiebreaker; per-table declarative config (ADR 0009, ADR 0010) *(complete 2026-06-04)*
-  - Goal: Replace the three divergent table controls with one coherent system — same behaviour, same UI shape, only the declared fields differ per table.
-  - Depends on: Phase 39
-  - Constraints: No filter engine (ADR 0010); URL = single source of truth; server-side filtering; offset+infinite-scroll pagination unchanged; `id` tiebreaker on all DAL sorts; Expenses have NO temporal filter (ADR 0009).
-  - Plans: 5 plans (5 waves)
-
-Plans:
-
-- [x] 40-01-PLAN.md — Foundation: shared TableConfig types + URL param parsers + id tiebreaker on transactions/imports DAL *(complete 2026-06-04)*
-- [x] 40-02-PLAN.md — Shared UI: DataTableToolbar + HeaderSortButton + ChipsRow + URL-mutation hook (mock config) *(complete 2026-06-04)*
-- [x] 40-03-PLAN.md — New controls: getMonthsWithData DAL + MonthMultiPicker + AmountRangePicker, wired into toolbar *(complete 2026-06-04)*
-- [x] 40-04-PLAN.md — Wire per-table configs + DAL filters for Transactions, Expenses, Files *(complete 2026-06-04)*
-- [x] 40-05-PLAN.md — Polish: empty states, a11y pass, URL migration, prototype deletion, yarn build green *(complete 2026-06-04)*
-
-</details>
-
 <details>
 <summary>✅ v1.11: FlowNature & Segmented Chart (Phase 37) — SHIPPED 2026-05-26</summary>
 
@@ -155,3 +115,70 @@ Full details: `.planning/milestones/v1.13-ROADMAP.md`
 Full details: `.planning/milestones/v1.13-ROADMAP.md`
 
 </details>
+
+<details>
+<summary>✅ v1.14: Unified Table Filter & Sort (Phase 40) — SHIPPED 2026-06-04</summary>
+
+- [x] **Phase 40: table-filter-sort** — Unified filtering + sorting across Transactions, Expenses, Files tables; shared `DataTableToolbar`; month-multi picker; `id` sort tiebreaker; per-table declarative config (ADR 0009, ADR 0010) *(complete 2026-06-04)*
+  - Goal: Replace the three divergent table controls with one coherent system — same behaviour, same UI shape, only the declared fields differ per table.
+  - Depends on: Phase 39
+  - Constraints: No filter engine (ADR 0010); URL = single source of truth; server-side filtering; offset+infinite-scroll pagination unchanged; `id` tiebreaker on all DAL sorts; Expenses have NO temporal filter (ADR 0009).
+  - Plans: 5 plans (5 waves)
+
+Plans:
+
+- [x] 40-01-PLAN.md — Foundation: shared TableConfig types + URL param parsers + id tiebreaker on transactions/imports DAL *(complete 2026-06-04)*
+- [x] 40-02-PLAN.md — Shared UI: DataTableToolbar + HeaderSortButton + ChipsRow + URL-mutation hook (mock config) *(complete 2026-06-04)*
+- [x] 40-03-PLAN.md — New controls: getMonthsWithData DAL + MonthMultiPicker + AmountRangePicker, wired into toolbar *(complete 2026-06-04)*
+- [x] 40-04-PLAN.md — Wire per-table configs + DAL filters for Transactions, Expenses, Files *(complete 2026-06-04)*
+- [x] 40-05-PLAN.md — Polish: empty states, a11y pass, URL migration, prototype deletion, yarn build green *(complete 2026-06-04)*
+
+</details>
+
+<details>
+<summary>✅ v1.15: Collapsible Sidebar (Phase 41) — SHIPPED 2026-06-07</summary>
+
+- [x] **Phase 41: collapsible-sidebar** — Collapsible icon-rail sidebar; topbar removed on all breakpoints; app name + user controls (avatar, profile, logout) in sidebar; BottomNav gains Impostazioni entry; theme toggle moved to /settings page (ADR 0011) *(complete 2026-06-07)*
+  - [x] 41-01-PLAN.md — SidebarProvider context + localStorage hook + Tooltip wrapper (foundation)
+  - [x] 41-02-PLAN.md — AppShell + rewritten collapsible Sidebar (toggle, tooltips, bottom user controls); layout drops Topbar
+  - [x] 41-03-PLAN.md — BottomNav Impostazioni + SettingsHub Aspetto; delete topbar.tsx; update tests + build/a11y gate
+
+</details>
+
+<details>
+<summary>✅ v1.16: Dashboard Overview Redesign (Phases 42–45) — SHIPPED 2026-06-09</summary>
+
+- [x] **Phase 42: overview-data-layer** — DAL foundation: getOverview, getMonthOverMonthCategoryChanges, getYearsWithData, income-split resolution, CONTEXT.md glossary update (completed 2026-06-08)
+- [x] **Phase 43: overview-shell** — Redesigned overview tab: header H1 + year selector, hero chart variant A (grouped bars, always-on labels), 4 KPI cards with qualitative reading lines (completed 2026-06-08)
+- [x] **Phase 44: overview-interactions** — Uncategorized nudge (inline amber, localStorage dismiss), chart filter chips (income type + expense nature), FlowNature ⓘ education popovers (completed 2026-06-08)
+- [x] **Phase 45: overview-movers** — Per-month movers drill-down: recharts bar click → top movers panel, humanized copy, highlighted bar, default to last month with data (3 plans, 3 waves) (completed 2026-06-09)
+
+Full details: `.planning/milestones/v1.16-ROADMAP.md`
+
+</details>
+
+## Progress
+
+| Phase | Milestone | Plans | Status | Completed |
+|-------|-----------|-------|--------|-----------|
+| 1–23 | M001–M006 | 87/87 | Complete | 2026-05 |
+| 24–28 | M007 | 20/20 | Complete | 2026-05-19 |
+| 29 | v1.8/M008 | 4/4 | Complete | 2026-05-20 |
+| 30 | v1.9 | 3/3 | Complete | 2026-05-21 |
+| 31 | v1.9 | 3/3 | Complete | 2026-05-21 |
+| 32 | v1.9 | 3/3 | Complete | 2026-05-22 |
+| 33 | v1.10 | 1/1 | Complete | 2026-05-22 |
+| 34 | v1.10 | 2/2 | Complete | 2026-05-23 |
+| 35 | v1.10 | 4/4 | Complete | 2026-05-23 |
+| 36 | v1.10 | 2/2 | Complete | 2026-05-23 |
+| 37 | v1.11 | 5/5 | Complete | 2026-05-26 |
+| 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
+| 39 | v1.13 | 6/6 | Complete | 2026-06-02 |
+| 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
+| 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
+| 42 | v1.16 | 3/3 | Complete | 2026-06-08 |
+| 43 | v1.16 | 4/4 | Complete | 2026-06-08 |
+| 44 | v1.16 | 3/3 | Complete | 2026-06-08 |
+| 45 | v1.16 | 3/3 | Complete | 2026-06-09 |
+
+**Total shipped: 45 phases · 159 plans complete**

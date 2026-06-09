@@ -87,8 +87,8 @@ test.describe('Profile - PROF-03: read-only account fields', () => {
   })
 })
 
-test.describe('Profile - PROF-04: topbar navigation', () => {
-  test('PROF-04 topbar profile dropdown navigates to /profile', async ({ page }) => {
+test.describe('Profile - PROF-04: sidebar user controls', () => {
+  test('PROF-04 sidebar profile dropdown navigates to /profile', async ({ page }) => {
     await page.setExtraHTTPHeaders({
       'x-staging-key': requireStagingKey(),
     })

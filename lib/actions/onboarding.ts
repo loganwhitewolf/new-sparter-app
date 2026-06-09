@@ -1,9 +1,11 @@
 'use server'
 
 import { and, eq } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
 import { verifySession } from '@/lib/dal/auth'
 import { isSubCategoryVisibleToUser } from '@/lib/dal/categories'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
+import { revalidateCategorizationSurfaces } from '@/lib/actions/revalidation'
 import { db } from '@/lib/db'
 import { expense } from '@/lib/db/schema'
 import {
@@ -71,6 +73,9 @@ export async function onboardingCategorizeExpense(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
+
+  revalidateCategorizationSurfaces()
+  revalidatePath('/onboarding')
 
   return { error: null }
 }
