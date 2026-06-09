@@ -153,7 +153,14 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
         onReset={handleReset}
       />
 
-      <ChartContainer config={chartConfig} className="aspect-auto h-[260px] w-full">
+      {/* FRU-FIX-05: bar paths receive browser focus on click; the global
+          `* { outline-ring/50 }` base rule (ring hue is green) paints a green
+          outline around the clicked month. Suppress it on the bar rectangles —
+          selection is already conveyed by per-Cell opacity. */}
+      <ChartContainer
+        config={chartConfig}
+        className="aspect-auto h-[260px] w-full [&_.recharts-bar-rectangle]:outline-none [&_.recharts-rectangle:focus]:outline-none [&_.recharts-rectangle:focus-visible]:outline-none"
+      >
         <BarChart data={rows} barGap={4} barCategoryGap="24%">
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis dataKey="label" tickLine={false} axisLine={false} />
