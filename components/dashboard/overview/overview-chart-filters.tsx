@@ -13,7 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { NATURE_LABELS } from '@/lib/utils/nature-labels'
+import { NATURE_COLORS, NATURE_LABELS } from '@/lib/utils/nature-labels'
 import { INCOME_KEYS, OUT_KEYS, type IncomeKey, type OutKey } from './overview-chart-utils'
 
 // ─── Chip label helpers ───────────────────────────────────────────────────────
@@ -25,6 +25,15 @@ import { INCOME_KEYS, OUT_KEYS, type IncomeKey, type OutKey } from './overview-c
 const INCOME_CHIP_LABELS: Record<IncomeKey, string> = {
   recurring: 'Ricorrenti',
   extraordinary: 'Straordinarie',
+}
+
+/**
+ * Chart series color for each income chip — the dot doubles as the chart legend
+ * key, so the user recognises which bar segment a chip controls (FRU-FIX-06).
+ */
+const INCOME_CHIP_COLORS: Record<IncomeKey, string> = {
+  recurring: NATURE_COLORS['income'],
+  extraordinary: NATURE_COLORS['income_extraordinary'],
 }
 
 /**
@@ -81,11 +90,13 @@ type OverviewChartFiltersProps = {
 type ChipProps = {
   label: string
   tooltip: string
+  /** Chart series color shown as a leading dot — doubles as the legend key. */
+  color: string
   included: boolean
   onToggle: () => void
 }
 
-function FilterChip({ label, tooltip, included, onToggle }: ChipProps) {
+function FilterChip({ label, tooltip, color, included, onToggle }: ChipProps) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -94,12 +105,17 @@ function FilterChip({ label, tooltip, included, onToggle }: ChipProps) {
           aria-pressed={included}
           onClick={onToggle}
           className={cn(
-            'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
             included
               ? 'border-transparent bg-foreground/10 text-foreground hover:bg-foreground/20'
               : 'border-border bg-background text-muted-foreground line-through hover:bg-muted'
           )}
         >
+          <span
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{ backgroundColor: color, opacity: included ? 1 : 0.4 }}
+            aria-hidden="true"
+          />
           {label}
         </button>
       </TooltipTrigger>
@@ -165,6 +181,7 @@ export function OverviewChartFilters({
               key={key}
               label={INCOME_CHIP_LABELS[key]}
               tooltip={INCOME_CHIP_TOOLTIPS[key]}
+              color={INCOME_CHIP_COLORS[key]}
               included={includedIncome.has(key)}
               onToggle={() => onToggleIncome(key)}
             />
@@ -199,6 +216,7 @@ export function OverviewChartFilters({
               key={key}
               label={NATURE_LABELS[OUT_NATURE_KEY_MAP[key]]}
               tooltip={OUT_CHIP_TOOLTIPS[key]}
+              color={NATURE_COLORS[OUT_NATURE_KEY_MAP[key]]}
               included={includedOut.has(key)}
               onToggle={() => onToggleOut(key)}
             />

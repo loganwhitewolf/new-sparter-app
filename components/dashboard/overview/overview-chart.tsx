@@ -8,7 +8,6 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart'
 import type { OverviewChartPoint } from '@/lib/dal/overview'
-import { NATURE_COLORS, NATURE_LABELS } from '@/lib/utils/nature-labels'
 import { formatEur, formatEurCompact } from './format'
 import {
   deriveFilteredBarRow,
@@ -25,19 +24,6 @@ const chartConfig = {
   entrate: { label: 'Entrate', color: 'var(--total-in)' },
   uscite: { label: 'Uscite', color: 'var(--total-out)' },
 } satisfies ChartConfig
-
-// ─── Income legend metadata (display order: recurring, extraordinary) ────────
-const INCOME_LEGEND_ITEMS = [
-  { key: 'recurring', label: NATURE_LABELS['income'], color: NATURE_COLORS['income'] },
-  { key: 'extraordinary', label: NATURE_LABELS['income_extraordinary'], color: NATURE_COLORS['income_extraordinary'] },
-] as const
-
-// ─── Out legend metadata (display order follows OUT_KEYS) ────────────────────
-const OUT_LEGEND_ITEMS = OUT_KEYS.map((key) => ({
-  key,
-  label: NATURE_LABELS[key],
-  color: NATURE_COLORS[key],
-}))
 
 // ─── Custom per-nature tooltip ────────────────────────────────────────────────
 
@@ -98,58 +84,6 @@ function NatureTooltip({ active, payload, data, includedIncome, includedOut }: N
             ))}
         </div>
       )}
-    </div>
-  )
-}
-
-// ─── Custom two-row legend ────────────────────────────────────────────────────
-
-type NatureLegendProps = {
-  includedIncome: Set<IncomeKey>
-  includedOut: Set<OutKey>
-}
-
-function NatureLegend({ includedIncome, includedOut }: NatureLegendProps) {
-  return (
-    <div className="flex flex-col gap-1 mt-2 px-1">
-      {/* Row 1: income natures */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1">
-        {INCOME_LEGEND_ITEMS.map((item) => {
-          const included = includedIncome.has(item.key as IncomeKey)
-          return (
-            <div
-              key={item.key}
-              className="flex items-center gap-1.5"
-              style={{ opacity: included ? 1 : 0.4 }}
-            >
-              <span
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{ backgroundColor: item.color }}
-              />
-              <span className="text-xs text-muted-foreground">{item.label}</span>
-            </div>
-          )
-        })}
-      </div>
-      {/* Row 2: out natures */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1">
-        {OUT_LEGEND_ITEMS.map((item) => {
-          const included = includedOut.has(item.key as OutKey)
-          return (
-            <div
-              key={item.key}
-              className="flex items-center gap-1.5"
-              style={{ opacity: included ? 1 : 0.4 }}
-            >
-              <span
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{ backgroundColor: item.color }}
-              />
-              <span className="text-xs text-muted-foreground">{item.label}</span>
-            </div>
-          )
-        })}
-      </div>
     </div>
   )
 }
@@ -303,9 +237,6 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
           </Bar>
         </BarChart>
       </ChartContainer>
-
-      {/* FRU-FIX-06: two-row nature legend outside Recharts — income row + out row, each with colored dot */}
-      <NatureLegend includedIncome={includedIncome} includedOut={includedOut} />
     </div>
   )
 }
