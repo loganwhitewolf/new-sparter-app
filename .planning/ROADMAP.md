@@ -294,6 +294,6 @@ Plans:
 | 42 | v1.16 | 3/3 | Complete    | 2026-06-08 |
 | 43 | v1.16 | 4/4 | Complete   | 2026-06-08 |
 | 44 | v1.16 | 3/3 | Complete   | 2026-06-08 |
-| 45 | v1.16 | 3/3 | Complete   | 2026-06-09 |
+| 45 | v1.16 | 3/3 | Complete    | 2026-06-09 |
 
 **Total shipped: 38 phases · 146 plans complete**

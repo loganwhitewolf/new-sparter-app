@@ -37,11 +37,11 @@ Each requirement maps to exactly one roadmap phase. IDs continue the project's c
 
 ### Movers Drill-down
 
-- [ ] **MOVE-01**: User can click a month's bar to see that month's top spending movers versus the previous month.
-- [ ] **MOVE-02**: Movers are split into "Dove hai speso di più" (increases, red) and "Dove hai risparmiato" (decreases, green); an empty section is hidden.
-- [ ] **MOVE-03**: Each mover reads as a human sentence — "{categoria} · {importo} in più / in meno" — with "spesa nuova" when the previous month was zero; no percentages, no prev→curr notation.
-- [ ] **MOVE-04**: The drill-down defaults to the last month that has transactions, and the selected month's bars are visually highlighted.
-- [ ] **MOVE-05**: Selecting the first month (no prior month to compare) shows an empty state.
+- [x] **MOVE-01**: User can click a month's bar to see that month's top spending movers versus the previous month.
+- [x] **MOVE-02**: Movers are split into "Dove hai speso di più" (increases, red) and "Dove hai risparmiato" (decreases, green); an empty section is hidden.
+- [x] **MOVE-03**: Each mover reads as a human sentence — "{categoria} · {importo} in più / in meno" — with "spesa nuova" when the previous month was zero; no percentages, no prev→curr notation.
+- [x] **MOVE-04**: The drill-down defaults to the last month that has transactions, and the selected month's bars are visually highlighted.
+- [x] **MOVE-05**: Selecting the first month (no prior month to compare) shows an empty state.
 
 ### Chart Filters
 
@@ -100,8 +100,8 @@ Each requirement maps to exactly one roadmap phase. IDs continue the project's c
 | FILT-03 | Phase 44 | Pending |
 | EDU-01 | Phase 44 | Pending |
 | EDU-02 | Phase 44 | Pending |
-| MOVE-01 | Phase 45 | Pending |
-| MOVE-02 | Phase 45 | Pending |
-| MOVE-03 | Phase 45 | Pending |
-| MOVE-04 | Phase 45 | Pending |
-| MOVE-05 | Phase 45 | Pending |
+| MOVE-01 | Phase 45 | Complete |
+| MOVE-02 | Phase 45 | Complete |
+| MOVE-03 | Phase 45 | Complete |
+| MOVE-04 | Phase 45 | Complete |
+| MOVE-05 | Phase 45 | Complete |

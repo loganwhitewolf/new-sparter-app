@@ -1,5 +1,5 @@
 ---
-status: testing
+status: passed
 phase: 45-overview-movers
 source: [45-VERIFICATION.md]
 started: 2026-06-09T08:30:00Z
