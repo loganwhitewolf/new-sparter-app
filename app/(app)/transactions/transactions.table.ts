@@ -1,4 +1,12 @@
+import { NATURE_LABELS } from '@/lib/utils/nature-labels'
 import type { TableConfig } from '@/lib/utils/table-config'
+
+const TYPE_LABELS: Record<string, string> = {
+  in: 'Entrate',
+  out: 'Uscite',
+  transfer: 'Trasferimenti',
+  unclassified: 'Non classificato',
+}
 
 /**
  * Declarative table config for the Transactions table (Wave 4).
@@ -11,6 +19,8 @@ import type { TableConfig } from '@/lib/utils/table-config'
  *   - platform: select (via file join)
  *   - category: select (via subCategory → category join)
  *   - status: categorization — 2 states (D-21/D-23)
+ *   - nature: select (FlowNature via subCategory, Task 1)
+ *   - type: select (category type In/Out/Transfer, Task 1)
  *   - sortable: every displayed column (D-17); no status sort (not in display columns)
  */
 export const transactionsTableConfig: TableConfig = {
@@ -49,6 +59,20 @@ export const transactionsTableConfig: TableConfig = {
       type: 'status',
       toChip: (v) =>
         v === 'categorized' ? 'Solo categorizzate' : 'Solo da categorizzare',
+    },
+    {
+      key: 'nature',
+      label: 'Natura',
+      type: 'select',
+      options: [],
+      toChip: (v) => `Natura: ${NATURE_LABELS[v as keyof typeof NATURE_LABELS] ?? v}`,
+    },
+    {
+      key: 'type',
+      label: 'Tipo',
+      type: 'select',
+      options: [],
+      toChip: (v) => `Tipo: ${TYPE_LABELS[v] ?? v}`,
     },
   ],
   sortable: [
