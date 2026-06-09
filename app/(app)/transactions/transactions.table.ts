@@ -9,18 +9,19 @@ const TYPE_LABELS: Record<string, string> = {
 }
 
 /**
- * Declarative table config for the Transactions table (Wave 4).
+ * Declarative table config for the Transactions table (Wave 4, cascade extension lcp-01).
  * Consumed by DataTableToolbar — defines search, filters, sortable columns, and defaultSort.
  *
- * Field inventory (LOCKED per D-19..D-25):
+ * Field inventory (LOCKED per D-19..D-25; extended lcp-01):
  *   - search: q (description / customTitle)
  *   - months: month-multi (occurredAt)
  *   - amount: amount-range (absolute value, D-20)
  *   - platform: select (via file join)
- *   - category: select (via subCategory → category join)
- *   - status: categorization — 2 states (D-21/D-23)
- *   - nature: select (FlowNature via subCategory, Task 1)
  *   - type: select (category type In/Out/Transfer, Task 1)
+ *   - nature: select (FlowNature via subCategory, dependsOn:'type')
+ *   - category: select (via subCategory → category join)
+ *   - subCategory: select (dependsOn:'category')
+ *   - status: categorization — 2 states (D-21/D-23)
  *   - sortable: every displayed column (D-17); no status sort (not in display columns)
  */
 export const transactionsTableConfig: TableConfig = {
@@ -47,6 +48,21 @@ export const transactionsTableConfig: TableConfig = {
       toChip: (v) => `Piattaforma: ${v}`,
     },
     {
+      key: 'type',
+      label: 'Tipo',
+      type: 'select',
+      options: [],
+      toChip: (v) => `Tipo: ${TYPE_LABELS[v] ?? v}`,
+    },
+    {
+      key: 'nature',
+      label: 'Natura',
+      type: 'select',
+      dependsOn: 'type',
+      options: [],
+      toChip: (v) => `Natura: ${NATURE_LABELS[v as keyof typeof NATURE_LABELS] ?? v}`,
+    },
+    {
       key: 'category',
       label: 'Categoria',
       type: 'select',
@@ -54,25 +70,19 @@ export const transactionsTableConfig: TableConfig = {
       toChip: (v) => `Categoria: ${v}`,
     },
     {
+      key: 'subCategory',
+      label: 'Sottocategoria',
+      type: 'select',
+      dependsOn: 'category',
+      options: [],
+      toChip: (v) => `Sottocategoria: ${v}`,
+    },
+    {
       key: 'status',
       label: 'Categorizzazione',
       type: 'status',
       toChip: (v) =>
         v === 'categorized' ? 'Solo categorizzate' : 'Solo da categorizzare',
-    },
-    {
-      key: 'nature',
-      label: 'Natura',
-      type: 'select',
-      options: [],
-      toChip: (v) => `Natura: ${NATURE_LABELS[v as keyof typeof NATURE_LABELS] ?? v}`,
-    },
-    {
-      key: 'type',
-      label: 'Tipo',
-      type: 'select',
-      options: [],
-      toChip: (v) => `Tipo: ${TYPE_LABELS[v] ?? v}`,
     },
   ],
   sortable: [

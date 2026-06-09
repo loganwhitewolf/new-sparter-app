@@ -5,6 +5,8 @@ import { getTransactionPlatforms } from '@/lib/dal/transactions'
 import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
 import { parseExpenseFilters, type ExpenseSearchParams } from '@/lib/validations/expense'
 import type { ExpenseFilters as ExpenseListFilters } from '@/lib/dal/expenses'
+import { NATURE_LABELS, NATURE_ORDER } from '@/lib/utils/nature-labels'
+import { buildTypeNatureMap, buildCategorySubcategoryMap } from '@/lib/utils/cascade-options'
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { ExpenseTable } from '@/components/expenses/expense-table'
 import { ExpenseFormDialog } from '@/components/expenses/expense-form-dialog'
@@ -13,7 +15,7 @@ import { APP_ROUTES } from '@/lib/routes'
 
 /** Returns true when any filter param that narrows results is active */
 function hasActiveExpenseFilters(params: ExpenseSearchParams): boolean {
-  const keys = ['q', 'category', 'platform', 'status', 'amountMin', 'amountMax']
+  const keys = ['q', 'category', 'subCategory', 'platform', 'status', 'amountMin', 'amountMax', 'nature', 'type']
   return keys.some((k) => {
     const v = params[k]
     return Array.isArray(v) ? v.length > 0 : Boolean(v)
@@ -30,6 +32,9 @@ function buildExpenseTableKey(filters: ExpenseListFilters, expenses: Awaited<Ret
     filters.amountMax ?? '',
     filters.sort ?? '',
     filters.dir ?? '',
+    filters.nature ?? '',
+    filters.type ?? '',
+    filters.subCategoryId ?? '',
   ].join(':')
   const dataKey = expenses
     .map((expense) => [
@@ -51,7 +56,7 @@ export default async function ExpensesPage({
   const params = await searchParams
   const parsed = parseExpenseFilters(params)
 
-  // Map parsed filters to DAL ExpenseFilters shape
+  // Map parsed filters to DAL ExpenseFilters shape (including cascade filters lcp-01)
   const filters: ExpenseListFilters = {
     q: parsed.q,
     name: parsed.q,
@@ -63,6 +68,9 @@ export default async function ExpensesPage({
     sort: parsed.sort,
     dir: parsed.dir,
     // No period — D-05: default view is all-time
+    nature: parsed.nature,
+    type: parsed.type,
+    subCategoryId: parsed.subCategoryId,
   }
 
   const [expenses, categories, platforms, mostUsed] = await Promise.all([
@@ -76,6 +84,29 @@ export default async function ExpensesPage({
     .filter((c) => c.type !== 'system')
     .map((c) => ({ value: c.slug, label: c.name }))
   const platformOptions = platforms.map((p) => ({ value: p.slug, label: p.name }))
+
+  // Nature filter options: nine FlowNature values in canonical order + 'Non classificato'
+  const natureOptions = [
+    ...NATURE_ORDER.filter((n): n is NonNullable<typeof n> => n !== null).map((n) => ({
+      value: n,
+      label: NATURE_LABELS[n],
+    })),
+    { value: 'unclassified', label: NATURE_LABELS.unclassified },
+  ]
+
+  // Type filter options: In/Out/Transfer + 'Non classificato'
+  const typeOptions = [
+    { value: 'in', label: 'Entrate' },
+    { value: 'out', label: 'Uscite' },
+    { value: 'transfer', label: 'Trasferimenti' },
+    { value: 'unclassified', label: 'Non classificato' },
+  ]
+
+  // Cascade-derived option maps: type→nature and category→subcategory
+  const dependentOptions = {
+    nature: buildTypeNatureMap(categories),
+    subCategory: buildCategorySubcategoryMap(categories),
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -95,7 +126,10 @@ export default async function ExpensesPage({
           filterOptions={{
             category: categoryOptions,
             platform: platformOptions,
+            nature: natureOptions,
+            type: typeOptions,
           }}
+          dependentOptions={dependentOptions}
         />
       </Suspense>
 

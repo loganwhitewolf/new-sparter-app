@@ -11,6 +11,7 @@ import {
   type TransactionSearchParams,
 } from '@/lib/validations/transactions'
 import { NATURE_LABELS, NATURE_ORDER } from '@/lib/utils/nature-labels'
+import { buildTypeNatureMap, buildCategorySubcategoryMap } from '@/lib/utils/cascade-options'
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { TransactionFormDialog } from '@/components/transactions/transaction-form-dialog'
 import { TransactionTable } from '@/components/transactions/transaction-table'
@@ -19,7 +20,7 @@ import { APP_ROUTES } from '@/lib/routes'
 
 /** Returns true when any filter param that narrows results is active */
 function hasActiveTransactionFilters(params: TransactionSearchParams): boolean {
-  const keys = ['q', 'name', 'months', 'amountMin', 'amountMax', 'platform', 'category', 'status', 'nature', 'type']
+  const keys = ['q', 'name', 'months', 'amountMin', 'amountMax', 'platform', 'category', 'subCategory', 'status', 'nature', 'type']
   return keys.some((k) => {
     const v = params[k]
     return Array.isArray(v) ? v.length > 0 : Boolean(v)
@@ -48,6 +49,7 @@ function buildTransactionTableKey(
     params.dir ?? '',
     params.platform ?? '',
     params.category ?? '',
+    params.subCategory ?? '',
     params.months ?? '',
     params.amountMin ?? '',
     params.amountMax ?? '',
@@ -96,6 +98,12 @@ export default async function TransactionsPage({
     { value: 'unclassified', label: 'Non classificato' },
   ]
 
+  // Cascade-derived option maps: type→nature and category→subcategory
+  const dependentOptions = {
+    nature: buildTypeNatureMap(categories),
+    subCategory: buildCategorySubcategoryMap(categories),
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -121,6 +129,7 @@ export default async function TransactionsPage({
             nature: natureOptions,
             type: typeOptions,
           }}
+          dependentOptions={dependentOptions}
         />
       </Suspense>
 
