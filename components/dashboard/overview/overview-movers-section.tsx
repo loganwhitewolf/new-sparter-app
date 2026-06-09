@@ -30,7 +30,9 @@ export function OverviewMoversSection({ data, year, defaultMonthIndex, initialMo
 
     startTransition(async () => {
       const result = await fetchMovers(year, monthIndex)
-      if (!result.error) {
+      if (result.error) {
+        setMovers([]) // show empty-state rather than stale data from previous month
+      } else {
         setMovers(result.movers)
       }
     })
