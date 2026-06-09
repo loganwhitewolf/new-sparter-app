@@ -255,7 +255,7 @@ export const getMonthOverMonthCategoryChanges = cache(
       // Apply €15 noise floor on |Δ€|
       if (delta.abs().lt(NOISE_FLOOR)) continue
 
-      const isNew = prevAmount === ZERO_AMOUNT && toDecimal(curr.amount).gt(0)
+      const isNew = toDecimal(prevAmount).isZero() && toDecimal(curr.amount).gt(0)
       changes.push({
         categoryId: curr.id,
         name: curr.name,
