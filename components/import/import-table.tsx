@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle } from "lucide-react";
+import { formatAbsoluteAmount } from "@/lib/utils/format-amount";
 import { toast } from "sonner";
 import { ImportDeleteDialog } from "@/components/import/import-delete-dialog";
 import { ImportRenameDialog } from "@/components/import/import-rename-dialog";
@@ -46,10 +47,6 @@ const dateFormatter = new Intl.DateTimeFormat("it-IT", {
   year: "numeric",
 });
 
-const currencyFormatter = new Intl.NumberFormat("it-IT", {
-  style: "currency",
-  currency: "EUR",
-});
 
 const statusLabels: Record<ImportListRow["status"], string> = {
   pending_upload: "In attesa",
@@ -327,11 +324,12 @@ export function ImportTable({
                       </span>
                     </div>
                   </TableCell>
+                  {/* Display absolute values; color classes (text-total-in / text-total-out) convey direction */}
                   <TableCell className="text-right font-mono text-sm tabular-nums text-total-in">
-                    {currencyFormatter.format(Number(row.positiveTotal))}
+                    {formatAbsoluteAmount(String(row.positiveTotal))}
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm tabular-nums text-total-out">
-                    {currencyFormatter.format(Number(row.negativeTotal))}
+                    {formatAbsoluteAmount(String(row.negativeTotal))}
                   </TableCell>
                   <TableCell className="text-sm">
                     {formatDateRange(

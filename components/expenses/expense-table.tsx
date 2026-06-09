@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { MoreHorizontal } from 'lucide-react'
+import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 import { toast } from 'sonner'
 import {
   Table,
@@ -165,11 +166,9 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
     }).format(new Date(date))
   }
 
+  // Display-only; never use for values written back to the DB.
   function formatAmount(amount: string): string {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(Number(amount))
+    return formatAbsoluteAmount(amount)
   }
 
   if (loadedExpenses.length === 0) {
