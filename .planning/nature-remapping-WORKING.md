@@ -86,4 +86,38 @@ Minimise the number of categories/subcategories. Flag redundant/noise subcategor
 
 IN categories: 5 → 4 (Income da lavoro · Pensioni e sussidi · Rendite · Entrate straordinarie).
 
-_Next: DIRECTION OUT — essential / discretionary / debt._
+### ✅ DIRECTION OUT — FINAL (confirmed 2026-06-09)
+
+Dissolved categories: **Famiglia** (beneficiary-based), **Assicurazioni** (wrapper → distributed by object), **Abbonamenti** (wrapper → distributed by purpose), **Risparmio** (→ allocation), **Investimenti** (→ allocation), **Bonifici e rimborsi** (→ transfer / net). Nature `operational` dissolved into essential/discretionary.
+
+Nature legend: E=essential · D=discretionary · DEBT=debt
+
+1. **Trasporti** — `carburante-e-ricarica` (E) · `manutenzione-auto` (E) · `mezzi-pubblici` (E) · `taxi-e-ride-sharing` (E) · `pedaggi-e-parcheggi` (E) · `assicurazione-veicoli` (E)
+2. **Spesa** — `spesa-quotidiana` (E) · `casalinghi-e-non-alimentari` (E) · `bio-vino-e-gourmet` (D)
+3. **Salute** — `visite-mediche` (E) · `trattamenti-medici` (E) · `farmaci` (E) · `assicurazione-salute` (D)
+4. **Utenze** _(era Bollette e utilità)_ — `energia-elettrica` (E) · `gas` (E) · `acqua` (E) · `rifiuti` (E) · `telefono-e-internet` (E)
+5. **Casa** — `affitto` (E) · `spese-condominiali` (E) · `manutenzione-casa` (E, incl. idraulico/elettricista/giardiniere) · `servizi-domestici` (E, colf/badante/baby-sitter) · `assicurazione-casa` (E)
+6. **Imposte e oneri** _(era Tasse, imposte e commissioni)_ — `imposte` (E) · `bolli-auto` (E) · `multe-e-sanzioni` (E) · `commissioni-e-canone-conto` (E)
+7. **Servizi professionali** 🆕 — `spese-legali-notarili` (E)
+8. **Formazione** — `universita` (E) · `spese-scolastiche` (E) · `corsi` (D, incl. piattaforme-didattiche + attività-extra-scolastiche)
+9. **Vacanze** — `alloggio` (D) · `trasporto` (D) · `attivita-e-intrattenimento` (D) · `cibo-e-bevande` (D) · `assicurazione-viaggio` (D)
+10. **Regali e donazioni** — `regali` (D) · `donazioni-beneficenza` (D)
+11. **Ristorazione** — `ristoranti` (D) · `bar-caffe-e-snack` (D) · `take-away-e-delivery` (D)
+12. **Shopping** — `elettronica` (D) · `abbigliamento-e-accessori` (D) · `prodotti-per-la-casa` (D) · `giocattoli` (D)
+13. **Cultura e tempo libero** _(merge Tempo libero + Libri e media)_ — `cinema-ed-eventi` (D) · `libri-e-audiolibri` (D) · `streaming` (D) · `app-e-software` (D) · `videogiochi` (D)
+14. **Benessere** — `sport-e-fitness` (D) · `attrezzatura-e-abbigliamento-sportivo` (D) · `cura-della-persona` (D, estetista/parrucchiere/cosmetici/massaggi/spa/terme) · `psicologia` (D)
+15. **Animali** 🆕 — `cura-animali` (D, cibo+veterinario+toelettatura) · `assicurazione-animali` (D)
+16. **Rate e finanziamenti** — `mutuo-casa` (DEBT) · `finanziamenti-auto` (DEBT) · `altri-finanziamenti` (DEBT)
+
+OUT categories: 16 · ~50 subcategories · natures essential/discretionary/debt.
+
+**Dropped subcats:** overtime, altri-abbonamenti, spesa-online, all grocery store-type splits (discount/negozio-di-quartiere/mercato-rionale), all rimborso-* (net under expense). Merges: dividendi, cashback, vendita-beni-usati, imposte, farmaci, streaming, regali, ristoranti, abbigliamento-e-accessori, etc.
+
+### Categorization rules (the "regola madre")
+1. Categorize by **purpose / life-domain**, not by transaction-type, channel, merchant, or beneficiary.
+2. **Pragmatic exception:** an unsplittable mixed receipt → catch-all of the dominant purpose (e.g. weekly supermarket run incl. some household → `spesa-quotidiana`, essential).
+3. **Wrappers** (insurance, subscriptions) are distributed by object/purpose; **taxes and debt keep their own categories** (their essence is the obligation, not a consumption domain).
+4. **Gifting is a purpose** that prevails over the object (gifted TV → `regali`, not elettronica). Distinct from beneficiary: a family member's need is categorized by the need (kid's course → Formazione).
+   - Examples: book at a supermarket → Cultura (not Spesa); pet food → Animali (not Spesa); running suit → Benessere/sport (not Abbigliamento); gifted TV → Regali (not Shopping).
+
+_Next: DIRECTION ALLOCATION (savings/investment) + TRANSFER._

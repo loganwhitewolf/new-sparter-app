@@ -40,6 +40,14 @@ _Avoid_: tag, voce
 **Categorization** (Categorizzazione):
 L'atto di categorizzare una transazione assegnandole **una Subcategory**. La Category non viene mai assegnata in modo indipendente: è derivata dalla Subcategory scelta. L'unità di categorizzazione è quindi sempre la Subcategory, mai una Category "nuda". Può avvenire automaticamente (regex, storico) o manualmente. Tutti i punti di selezione sottocategoria nel prodotto richiedono obbligatoriamente una Subcategory.
 
+**Principi di categorizzazione** (la "regola madre", grill 2026-06-09):
+1. **Per scopo / dominio di vita**, non per tipo di transazione, canale, esercente o beneficiario. *Cosa serve quel denaro?*
+2. **Eccezione pragmatica:** uno scontrino che mescola scopi e **non è separabile** → catch-all dello scopo dominante (es. la spesa settimanale al supermercato con dentro anche detersivi → `spesa-quotidiana`, essential — non si insegue ciò che non è osservabile nello scontrino).
+3. **Wrapper distribuiti per oggetto:** le spese che sono solo un *tipo di prodotto finanziario/contratto* (assicurazioni, abbonamenti) non formano categorie proprie; si distribuiscono nel dominio che servono (assicurazione auto → Trasporti, streaming → Cultura). I totali "assicurazioni"/"abbonamenti" sono viste trasversali, non categorie. **Eccezione:** tasse e debiti restano categorie proprie perché la loro essenza È l'obbligo, non un dominio di consumo.
+4. **Il regalo/donazione è uno scopo** e prevale sull'oggetto: una TV regalata → `regali`, non `elettronica`. Diverso dal **beneficiario**: una spesa per il bisogno di un familiare si classifica per il bisogno (corso del figlio → Formazione, non "famiglia").
+
+Esempi-guida: libro comprato al supermercato → Cultura · cibo per animali → Animali · tuta da corsa → Benessere/sport · TV regalata → Regali.
+
 **Uncategorized** (Non categorizzato):
 Transazione senza categoria e sottocategoria assegnate. È un segnale d'azione, non uno stato definitivo.
 
@@ -102,6 +110,26 @@ _Avoid_: movimenti di liquidità (termine precedente, deprecato), ignore (termin
 
 **Rimborsi — non sono una categoria IN.** Le ex sottocategorie `rimborso-*` sono rimosse: un rimborso si categorizza sotto la sottocategoria della spesa e **netta** (vedi "Rimborso (refund)" sopra). Disinvestimenti (`vendita-investimenti`, `immobili-vendita`) → `allocation`; movimenti tra conti propri (`bonifico-in-entrata`, `ricariche-conti`) → `transfer`.
 _Avoid_: sconti, rimborsi e cashback (nome deprecato), movimenti di liquidità
+
+**Categorie OUT (uscite)** — definite nel grill 2026-06-09 (dettaglio + nature per sottocategoria in `.planning/nature-remapping-WORKING.md`). 16 categorie; nature `essential` (E), `discretionary` (D) o `debt`. Sciolte rispetto al modello storico: **Famiglia** (beneficiario), **Assicurazioni** e **Abbonamenti** (wrapper → distribuite per oggetto/scopo), **Risparmio**/**Investimenti** (→ allocation), **Bonifici e rimborsi** (→ transfer/netting). Nature `operational` sciolta in E/D.
+
+- **Trasporti** — carburante-e-ricarica, manutenzione-auto, mezzi-pubblici, taxi-e-ride-sharing, pedaggi-e-parcheggi, assicurazione-veicoli (tutte E)
+- **Spesa** — spesa-quotidiana (E), casalinghi-e-non-alimentari (E), bio-vino-e-gourmet (D)
+- **Salute** — visite-mediche (E), trattamenti-medici (E), farmaci (E), assicurazione-salute (D)
+- **Utenze** _(era Bollette e utilità)_ — energia-elettrica, gas, acqua, rifiuti, telefono-e-internet (tutte E)
+- **Casa** — affitto, spese-condominiali, manutenzione-casa (idraulico/elettricista/giardiniere), servizi-domestici (colf/badante/baby-sitter), assicurazione-casa (tutte E)
+- **Imposte e oneri** _(era Tasse, imposte e commissioni)_ — imposte, bolli-auto, multe-e-sanzioni, commissioni-e-canone-conto (tutte E)
+- **Servizi professionali** — spese-legali-notarili (E)
+- **Formazione** — universita (E), spese-scolastiche (E), corsi (D)
+- **Vacanze** — alloggio, trasporto, attivita-e-intrattenimento, cibo-e-bevande, assicurazione-viaggio (tutte D)
+- **Regali e donazioni** — regali (D), donazioni-beneficenza (D)
+- **Ristorazione** — ristoranti, bar-caffe-e-snack, take-away-e-delivery (tutte D)
+- **Shopping** — elettronica, abbigliamento-e-accessori, prodotti-per-la-casa, giocattoli (tutte D)
+- **Cultura e tempo libero** _(merge Tempo libero + Libri e media)_ — cinema-ed-eventi, libri-e-audiolibri, streaming, app-e-software, videogiochi (tutte D)
+- **Benessere** — sport-e-fitness, attrezzatura-e-abbigliamento-sportivo, cura-della-persona (estetista/parrucchiere/cosmetici/massaggi/spa/terme), psicologia (tutte D)
+- **Animali** — cura-animali (cibo+veterinario+toelettatura), assicurazione-animali (tutte D)
+- **Rate e finanziamenti** — mutuo-casa, finanziamenti-auto, altri-finanziamenti (tutte `debt`)
+_Avoid_: assicurazioni come categoria, abbonamenti come categoria, famiglia come categoria, spesa online (canale)
 
 **PatternSuggestion** (Suggerimento di pattern):
 Candidato regex rilevato automaticamente durante la fase di analisi dell'import, a partire da descrizioni di transazioni non coperte da pattern esistenti che condividono un prefisso comune (≥2 token, ≥2 occorrenze nel file). Campi: `pattern` (prefisso estratto), `matchCount` (occorrenze nel file/import), `detectedAmountSign`, `sampleDescriptions` (max 3 descrizioni originali). Non è un `CategorizationPattern` finché l'utente non assegna una sottocategoria e lo salva. Può essere prodotto sia pre-import (da righe parse) sia post-import su transazioni già persistite (per rianalisi per `fileId`). Al massimo 5 per analisi, ordinate per `matchCount` discendente.
