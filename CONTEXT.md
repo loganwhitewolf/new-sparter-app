@@ -131,6 +131,10 @@ _Avoid_: sconti, rimborsi e cashback (nome deprecato), movimenti di liquidità
 - **Rate e finanziamenti** — mutuo-casa, finanziamenti-auto, altri-finanziamenti (tutte `debt`)
 _Avoid_: assicurazioni come categoria, abbonamenti come categoria, famiglia come categoria, spesa online (canale)
 
+**Categorie ALLOCATION** — definite nel grill 2026-06-09. Direzione `allocation` (neutro al patrimonio ma tracciato). Versamenti (+) e disinvestimenti (−) nettano sotto la stessa sottocategoria; il reddito generato (dividendi/cedole/interessi) non è allocation ma IN/Rendite.
+- **Risparmio** → nature `savings`: `conto-risparmio` (liquidità/deposito/libretti/buoni postali), `fondo-emergenze`, `accantonamenti-obiettivi`.
+- **Investimenti** → nature `investment`: `titoli-e-fondi` (azioni/obbligazioni/ETF/BTP/fondi/PAC), `criptovalute`, `immobili` (acquisto e vendita nettano qui), `previdenza-complementare` (fondo pensione + PIP), `polizze-vita` (ramo I/III), `oro-e-beni-rifugio`.
+
 **PatternSuggestion** (Suggerimento di pattern):
 Candidato regex rilevato automaticamente durante la fase di analisi dell'import, a partire da descrizioni di transazioni non coperte da pattern esistenti che condividono un prefisso comune (≥2 token, ≥2 occorrenze nel file). Campi: `pattern` (prefisso estratto), `matchCount` (occorrenze nel file/import), `detectedAmountSign`, `sampleDescriptions` (max 3 descrizioni originali). Non è un `CategorizationPattern` finché l'utente non assegna una sottocategoria e lo salva. Può essere prodotto sia pre-import (da righe parse) sia post-import su transazioni già persistite (per rianalisi per `fileId`). Al massimo 5 per analisi, ordinate per `matchCount` discendente.
 _Avoid_: pattern suggerito, candidato, hint

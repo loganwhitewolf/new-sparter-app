@@ -120,4 +120,25 @@ OUT categories: 16 · ~50 subcategories · natures essential/discretionary/debt.
 4. **Gifting is a purpose** that prevails over the object (gifted TV → `regali`, not elettronica). Distinct from beneficiary: a family member's need is categorized by the need (kid's course → Formazione).
    - Examples: book at a supermarket → Cultura (not Spesa); pet food → Animali (not Spesa); running suit → Benessere/sport (not Abbigliamento); gifted TV → Regali (not Shopping).
 
-_Next: DIRECTION ALLOCATION (savings/investment) + TRANSFER._
+### ✅ DIRECTION ALLOCATION — FINAL (confirmed 2026-06-09)
+
+Neutro al patrimonio ma tracciato. Versamenti (+) e disinvestimenti (−) nettano sotto la **stessa** sottocategoria (no `vendita-*` separate). Reddito generato (dividendi/cedole/interessi) NON è allocation → è IN/Rendite.
+
+**Category: Risparmio** → nature `savings` _(ex cat 1, era `extraordinary`)_
+- `conto-risparmio` (liquidità da parte, conto deposito, libretto/buoni postali)
+- `fondo-emergenze` (riserva 3–6 mesi)
+- `accantonamenti-obiettivi` _(merge risparmio-per-progetti + obiettivi-a-lungo-termine + risparmio-per-salute + risparmio-per-investimenti)_
+
+**Category: Investimenti** → nature `investment` _(ex cat 12, era `financial`)_
+- `titoli-e-fondi` _(merge azioni + obbligazioni + fondi-comuni; include ETF, BTP/BOT, PAC)_
+- `criptovalute`
+- `immobili` (acquisto e vendita nettano qui)
+- `previdenza-complementare` _(rinom. da fondo-pensione; fondo pensione + PIP)_
+- `polizze-vita` 🆕 (assicurazioni vita d'investimento, ramo I/III)
+- `oro-e-beni-rifugio` 🆕 (oro fisico, metalli preziosi)
+
+Skip (nicchia, l'utente le crea): crowdfunding/P2P, equity in startup, arte/collezionismo, forex.
+
+ALLOCATION: 2 categorie · 9 sottocategorie.
+
+_Next: DIRECTION TRANSFER._
