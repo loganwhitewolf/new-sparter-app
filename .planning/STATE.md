@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.16
-milestone_name: Dashboard Overview Redesign
-status: Awaiting next milestone
-stopped_at: Phase 45 context gathered
-last_updated: "2026-06-09T08:57:34.051Z"
-last_activity: 2026-06-09 — Milestone v1.16 completed and archived
+milestone: v2.0
+milestone_name: Nature/Direction Model Realignment
+status: planning
+last_updated: "2026-06-10T19:25:27.716Z"
+last_activity: 2026-06-10
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Phase: Milestone v1.16 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: v1.17 released; quick tasks 260609-k2d + 260609-lcp done (transaction/expense filters + cascade) — unreleased on develop
-Last activity: 2026-06-09 - Completed quick task 260609-lcp: cascading filters + amount sign + tx menu
+Status: Defining requirements
+Last activity: 2026-06-10 — Milestone v2.0 started
 
 ## Accumulated Context
 
