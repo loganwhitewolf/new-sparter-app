@@ -33,6 +33,25 @@ And, separately, for savings/investments:
 - Amends ADR 0003 (nature on subcategory — still valid) and builds on ADR 0004 (algebraic sum — now also governs allocation netting).
 - The dashboard moves from a 2-way (entrate/uscite) split to a 4-direction view; `transfer` remains excluded and hidden, `allocation` becomes visible-but-separate.
 
+## Data model (NATURE-TABLE-01)
+
+Direction and nature become **lookup tables**, not pgEnums — chosen because (a) we are renaming nature values anyway and Postgres enum migrations are painful, (b) per-direction analytical treatment becomes data in one place, (c) clean FK chain with referential integrity.
+
+- `direction` (4 static rows): `code` (in|out|allocation|transfer), `label_it`, `net_worth_effect` (increase|decrease|neutral), `included_in_totals` (bool), `shown_separately` (bool), `hidden` (bool), `display_order`, `color`.
+- `nature` (9 rows): `code`, `direction_id` FK → direction, `label_it`, `color`, `display_order`.
+- `sub_category.nature_id` FK → nature, replacing the `flow_nature` enum column (same for `user_subcategory_override`).
+- **Direction is not stored on the transaction** — derived via join `transaction → sub_category → nature → direction`.
+
+## Deprecations (removed by this ADR)
+
+- **`category.type` (`category_type` enum)** — direction now derives from nature; remove the column and all ~18 call sites that branch on it.
+- **`flow_nature` enum** — replaced by the `nature` table + FK.
+- **`amountSign` / `amount_sign` enum + ADR 0008** — the sign-gating (derive `amountSign` from category.type so an OUT pattern matches only negatives) **actively blocks refund netting**: a `+` refund must reach the same subcategory to net. Patterns become sign-agnostic (`any`); the derived-sign logic is removed. **Supersedes ADR 0008.**
+- **Sign-split aggregation** (`totalIn = sum(amount>0)`, `totalOut = abs(sum(amount<0))`) in dashboard/KPI/category DAL and components — migrate to direction-grouped algebraic sum (generalises ADR 0004 beyond the overview chart).
+- **`sub_category.exclude_from_totals`** — candidate to drop; the truth becomes `direction.included_in_totals` (transfer/allocation excluded from spending totals).
+
+Not deprecated (different concern): `platform.amount_type` / `positive_amount_column` / `negative_amount_column` are import-parsing config (how to read amounts from a bank CSV), unrelated to classification — they stay.
+
 ## Status
 
-accepted — implementation deferred to a dedicated phase (`NATURE-TABLE-01` / nature-direction realignment). Until then, direction is derived in application code from the existing nature→direction mapping.
+accepted — implementation deferred to a dedicated phase (`NATURE-TABLE-01` / nature-direction realignment). Until then, direction is derived in application code from the nature→direction mapping. **Supersedes ADR 0008.**

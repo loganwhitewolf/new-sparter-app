@@ -168,5 +168,22 @@ TRANSFER: 1 categoria · 3 sottocategorie.
 
 Totale: 23 categorie · ~65 sottocategorie · 9 nature. Contratto modello: ADR 0012. Implementazione: phase NATURE-TABLE-01.
 
+## Data model & deprecations (NATURE-TABLE-01)
+
+**Nuove tabelle (lookup, non enum):**
+- `direction` (4 righe statiche): code (in|out|allocation|transfer), label_it, net_worth_effect (increase|decrease|neutral), included_in_totals, shown_separately, hidden, display_order, color.
+- `nature` (9 righe): code, direction_id FK → direction, label_it, color, display_order.
+- `sub_category.nature_id` FK → nature (sostituisce la colonna enum `flow_nature`; idem `user_subcategory_override`).
+- Direzione **derivata via join** (transaction → sub_category → nature → direction), mai salvata sulla transazione.
+
+**Da rimuovere/deprecare:**
+- `category.type` (`category_type` enum) → direzione da nature; rimuovere colonna + ~18 call site.
+- `flow_nature` enum → tabella `nature`.
+- `amountSign` / `amount_sign` enum + logica derive-from-subcategory (ADR 0008) → **conflitto col netting**, rendere pattern sign-agnostic (`any`); ADR 0008 SUPERSEDED da 0012.
+- Sign-split aggregation (`sum(>0)` / `abs(sum(<0))`) in dashboard/KPI/category DAL e componenti → somma algebrica per direzione (generalizza ADR 0004).
+- `sub_category.exclude_from_totals` → candidato a rimozione; verità = `direction.included_in_totals`.
+
+**NON deprecati (parsing import, concern diverso):** `platform.amount_type` / `positive_amount_column` / `negative_amount_column`.
+
 ## Future milestone — pairing esplicito di transazioni (ordine ↔ reso)
 Oltre al netting **implicito** per sottocategoria (somma algebrica, ADR 0004) — che resta il baseline — la **prossima milestone** deve permettere di **collegare esplicitamente** una transazione alla sua opposta che la netta (es. ordine → reso, spesa → rimborso). Feature additiva: link 1:1 (o 1:N) tra transazioni che si annullano, con display dedicato nell'elenco transazioni. NON sostituisce il netting implicito; lo affianca per chi vuole il match preciso. Da pianificare come requisito della prossima milestone (non in NATURE-TABLE-01).
