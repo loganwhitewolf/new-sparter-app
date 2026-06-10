@@ -141,4 +141,29 @@ Skip (nicchia, l'utente le crea): crowdfunding/P2P, equity in startup, arte/coll
 
 ALLOCATION: 2 categorie · 9 sottocategorie.
 
-_Next: DIRECTION TRANSFER._
+### ✅ DIRECTION TRANSFER — FINAL (confirmed 2026-06-09)
+
+Neutro al patrimonio, **rumore analitico → escluso e nascosto** (`excludeFromTotals=true`). Una categoria, nature `transfer`. **Agnostico al segno.**
+
+**Category: Trasferimenti** → nature `transfer`
+- `trasferimento-tra-conti` _(merge: trasferimento + bonifico-in-uscita + bonifico-in-entrata + ricariche-conti; include ricariche wallet propri Revolut/PayPal/Satispay e cambio valuta tra conti propri)_
+- `addebito-carta-di-credito` (pagamento saldo CC — critico escluderlo per non doppio-contare le spese carta)
+- `contante` (prelievi e versamenti ATM/cassa; le spese cash si tracciano come transazioni manuali separate)
+
+**Discriminante (regola):** la controparte determina la categoria, non lo strumento.
+- Controparte = **te stesso** (tuo conto/wallet) → `transfer`, qualsiasi segno.
+- Controparte = **altri** → categorizza per scopo (affitto → income; pagare una persona → quel servizio; regalo inviato → regali; rimborso da persona → netta sotto la spesa).
+
+**Storno/reversal bancario** NON è transfer: è una correzione che netta sotto la transazione originale (come un rimborso).
+
+TRANSFER: 1 categoria · 3 sottocategorie.
+
+---
+
+## 🎉 REMAP COMPLETO — 4 direzioni, riepilogo
+- **IN**: 4 cat (Income da lavoro, Pensioni e sussidi, Rendite, Entrate straordinarie) · nature income / income_extraordinary
+- **OUT**: 16 cat · nature essential / discretionary / debt
+- **ALLOCATION**: 2 cat (Risparmio, Investimenti) · nature savings / investment
+- **TRANSFER**: 1 cat (Trasferimenti) · nature transfer
+
+Totale: 23 categorie · ~65 sottocategorie · 9 nature. Contratto modello: ADR 0012. Implementazione: phase NATURE-TABLE-01.

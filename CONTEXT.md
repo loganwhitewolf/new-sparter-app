@@ -135,6 +135,14 @@ _Avoid_: assicurazioni come categoria, abbonamenti come categoria, famiglia come
 - **Risparmio** → nature `savings`: `conto-risparmio` (liquidità/deposito/libretti/buoni postali), `fondo-emergenze`, `accantonamenti-obiettivi`.
 - **Investimenti** → nature `investment`: `titoli-e-fondi` (azioni/obbligazioni/ETF/BTP/fondi/PAC), `criptovalute`, `immobili` (acquisto e vendita nettano qui), `previdenza-complementare` (fondo pensione + PIP), `polizze-vita` (ramo I/III), `oro-e-beni-rifugio`.
 
+**Categoria TRANSFER** — definita nel grill 2026-06-09. Direzione `transfer` (neutro al patrimonio, rumore → escluso e nascosto, `excludeFromTotals`). Una categoria **Trasferimenti**, nature `transfer`, **agnostica al segno**:
+- `trasferimento-tra-conti` (giroconti, bonifici tra conti propri in/out, ricariche wallet propri, cambio valuta tra conti propri)
+- `addebito-carta-di-credito` (pagamento saldo CC — escluso per non doppio-contare le spese carta)
+- `contante` (prelievi e versamenti)
+
+Discriminante: **la controparte, non lo strumento**. Controparte = te stesso → `transfer` (qualsiasi segno). Controparte = altri → categorizza per scopo (un bonifico in uscita verso un altro è la spesa sottostante; un accredito da un altro è income o rimborso). Lo **storno bancario** non è transfer: netta sotto la transazione originale.
+_Avoid_: movimenti di liquidità, ignore
+
 **PatternSuggestion** (Suggerimento di pattern):
 Candidato regex rilevato automaticamente durante la fase di analisi dell'import, a partire da descrizioni di transazioni non coperte da pattern esistenti che condividono un prefisso comune (≥2 token, ≥2 occorrenze nel file). Campi: `pattern` (prefisso estratto), `matchCount` (occorrenze nel file/import), `detectedAmountSign`, `sampleDescriptions` (max 3 descrizioni originali). Non è un `CategorizationPattern` finché l'utente non assegna una sottocategoria e lo salva. Può essere prodotto sia pre-import (da righe parse) sia post-import su transazioni già persistite (per rianalisi per `fileId`). Al massimo 5 per analisi, ordinate per `matchCount` discendente.
 _Avoid_: pattern suggerito, candidato, hint
