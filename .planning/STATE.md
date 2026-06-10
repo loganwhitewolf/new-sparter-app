@@ -3,8 +3,9 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: planning
-last_updated: "2026-06-10"
-last_activity: 2026-06-10
+stopped_at: Phase 46 context gathered
+last_updated: "2026-06-10T19:45:45.879Z"
+last_activity: 2026-06-10 — v2.0 roadmap created (Phases 46–50)
 progress:
   total_phases: 5
   completed_phases: 0
@@ -36,11 +37,13 @@ Progress: [░░░░░░░░░░] 0%
 ### Decisions
 
 Design contract is LOCKED. Do not re-open or re-derive the data model:
+
 - ADR 0012: direction derived from nature; 4th direction `allocation`; `category.type` removed
 - CONTEXT.md: canonical nature/direction vocabulary + categorization rules
 - `.planning/nature-remapping-WORKING.md`: 23 categories / ~65 subcats / 9 natures — final remap confirmed 2026-06-09
 
 Key constraints active for v2.0:
+
 - Migrations: `drizzle-kit generate` + `scripts/migrate.ts` only — never `drizzle-kit push`
 - Seeds: additive model — append steps to `seed-extras.ts`, never edit shipped `seed-data.ts` shapes
 - Monetary arithmetic: Decimal.js throughout
@@ -72,8 +75,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-10
-Stopped at: Roadmap created for v2.0 (Phases 46–50)
-Resume file: None
+Last session: 2026-06-10T19:45:45.875Z
+Stopped at: Phase 46 context gathered
+Resume file: .planning/phases/46-direction-nature-schema/46-CONTEXT.md
 
 **Next:** `/gsd-plan-phase 46`
