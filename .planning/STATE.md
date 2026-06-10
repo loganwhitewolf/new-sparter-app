@@ -72,6 +72,7 @@ None.
 | operator | R038/R039/R041 | live deploy operator-pending |
 | backlog | R029 | partial revalidation coverage |
 | backlog | REVAL-01 | parked |
+| milestone | TX-PAIRING-01 | next milestone: collegare esplicitamente una transazione alla sua opposta che la netta (ordine↔reso, spesa↔rimborso) — feature additiva sopra il netting implicito ADR 0004. Vedi .planning/nature-remapping-WORKING.md |
 | phase | NATURE-TABLE-01 | Nature/direction realignment — **model now defined in ADR 0012 + CONTEXT.md** (grill 2026-06-09): direction derived from nature; 4th direction `allocation`; renames `financial`→`investment`, `extraordinary`→`savings`; deprecate/remove `category.type`; divestment nets, windfall=income_extraordinary. Needs migration + seed-extras rework + overview/KPI/cascade/filters update. |
 
 Items acknowledged and deferred at milestone close on 2026-06-09:

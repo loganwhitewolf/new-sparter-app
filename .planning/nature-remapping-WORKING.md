@@ -167,3 +167,6 @@ TRANSFER: 1 categoria · 3 sottocategorie.
 - **TRANSFER**: 1 cat (Trasferimenti) · nature transfer
 
 Totale: 23 categorie · ~65 sottocategorie · 9 nature. Contratto modello: ADR 0012. Implementazione: phase NATURE-TABLE-01.
+
+## Future milestone — pairing esplicito di transazioni (ordine ↔ reso)
+Oltre al netting **implicito** per sottocategoria (somma algebrica, ADR 0004) — che resta il baseline — la **prossima milestone** deve permettere di **collegare esplicitamente** una transazione alla sua opposta che la netta (es. ordine → reso, spesa → rimborso). Feature additiva: link 1:1 (o 1:N) tra transazioni che si annullano, con display dedicato nell'elenco transazioni. NON sostituisce il netting implicito; lo affianca per chi vuole il match preciso. Da pianificare come requisito della prossima milestone (non in NATURE-TABLE-01).
