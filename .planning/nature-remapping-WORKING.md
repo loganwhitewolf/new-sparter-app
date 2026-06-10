@@ -185,5 +185,14 @@ Totale: 23 categorie · ~65 sottocategorie · 9 nature. Contratto modello: ADR 0
 
 **NON deprecati (parsing import, concern diverso):** `platform.amount_type` / `positive_amount_column` / `negative_amount_column`.
 
+### DB certification (full schema review, 2026-06-09)
+Riletto tutto `lib/db/schema.ts`. Il set di deprecazione è **esattamente** quello sopra — nessun altro campo fantasma. Oggetti DB precisi da toccare:
+- `category_type` enum + `category.type` + index `category_type_idx` → rimuovere
+- `flow_nature` enum + `sub_category.nature` + `user_subcategory_override.nature` → tabella `nature` + `nature_id` FK
+- `amount_sign` enum + `categorization_pattern.amount_sign` + unique `(pattern, subCategoryId, amountSign)` → unique `(pattern, subCategoryId)`, pattern sign-agnostic
+- `sub_category.exclude_from_totals` → candidato a rimozione (verità = `direction.included_in_totals`)
+
+Certificati KEEP (non correlati): `subscription_plan`, `user_role`, `expense_status` (workflow), `file_status` (import), `amount_type` + `platform.*_amount_column` (parsing import), `classification_source` + tabella storico classificazione (provenienza/audit), `header_signature` (import).
+
 ## Future milestone — pairing esplicito di transazioni (ordine ↔ reso)
 Oltre al netting **implicito** per sottocategoria (somma algebrica, ADR 0004) — che resta il baseline — la **prossima milestone** deve permettere di **collegare esplicitamente** una transazione alla sua opposta che la netta (es. ordine → reso, spesa → rimborso). Feature additiva: link 1:1 (o 1:N) tra transazioni che si annullano, con display dedicato nell'elenco transazioni. NON sostituisce il netting implicito; lo affianca per chi vuole il match preciso. Da pianificare come requisito della prossima milestone (non in NATURE-TABLE-01).
