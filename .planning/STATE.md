@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: planning
-last_updated: "2026-06-10T19:25:27.716Z"
+last_updated: "2026-06-10"
 last_activity: 2026-06-10
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,80 +17,63 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-07)
+See: .planning/PROJECT.md (updated 2026-06-10)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 45 — overview-movers
+**Current focus:** Phase 46 — direction-nature-schema
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 0 of 5 (roadmap created, ready to plan Phase 46)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-10 — Milestone v2.0 started
+Status: Ready to plan
+Last activity: 2026-06-10 — v2.0 roadmap created (Phases 46–50)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Accumulated Context
 
 ### Decisions
 
-All milestones M001–v1.15 complete. Full decision log in PROJECT.md.
+Design contract is LOCKED. Do not re-open or re-derive the data model:
+- ADR 0012: direction derived from nature; 4th direction `allocation`; `category.type` removed
+- CONTEXT.md: canonical nature/direction vocabulary + categorization rules
+- `.planning/nature-remapping-WORKING.md`: 23 categories / ~65 subcats / 9 natures — final remap confirmed 2026-06-09
 
-v1.16 design decisions (LOCKED — do not re-open):
-
-- Chart variant A: side-by-side Entrate/Uscite bars, no stack-by-nature, no balance series
-- Header H1: year-selector pill inline on same row as title
-- KPIs: 4 cards only (drop "Da categorizzare"); qualitative reading line per card
-- Nudge: inline amber on title row, localStorage dismiss, lastSeenCount reappear logic, OUT-only count
-- Movers: per-month drill-down via recharts bar click (not static last-two-months block)
-- FlowNature taxonomy rename deferred to future quick task (EDU-FUT-01)
+Key constraints active for v2.0:
+- Migrations: `drizzle-kit generate` + `scripts/migrate.ts` only — never `drizzle-kit push`
+- Seeds: additive model — append steps to `seed-extras.ts`, never edit shipped `seed-data.ts` shapes
+- Monetary arithmetic: Decimal.js throughout
+- Layering: dal / services / actions
 
 ### Planning Risk
 
-FILT-01 (income recurring/extraordinary split) is an open question that may touch the schema: does it map to existing `nature` on the `in` side (`income` vs `extraordinary`) or require a dedicated field? Resolve in Phase 42 planning before writing DAL code.
+**8-vs-9 nature row count:** ADR 0012 "Consequences" enumerates 8 natures; the ADR data-model section and the working-doc summary both say 9. DATA-02 is written against the enumerated 8. Resolve in Phase 46 planning before building the `nature` table. Options: (a) 8 is correct and "9" references are stale; (b) a 9th row such as `uncategorized`/null-sentinel nature is intended.
 
 ### Blockers/Concerns
 
 None.
 
-### Quick Tasks Completed
+### Quick Tasks Completed (carried from v1.16)
 
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260609-fru | Dashboard overview prototype fixes (movers top-5 + colors, chart per-nature tooltip, nudge on title row, conditional KPI reading, remove highlight rect, two-row nature legend) | 2026-06-09 | 5ebd690 | [260609-fru-dashboard-prototype-fixes-movers-top5-co](./quick/260609-fru-dashboard-prototype-fixes-movers-top5-co/) |
-| 260609-k2d | Transactions nature + in/out/transfer filters; row colors; categorize-modal autofocus; filter popover close button; expenses platform column; import totals columns; categorize loaders | 2026-06-09 | cdc5997 | [260609-k2d-transactions-nature-filter-7-ui-fixes-mo](./quick/260609-k2d-transactions-nature-filter-7-ui-fixes-mo/) |
-| 260609-lcp | Cascading filters (type→nature, category→subcategory) on transactions + expenses (derived, no schema change); strip minus sign from amounts; categorized-tx menu → Ricategorizza only | 2026-06-09 | ffd4fc3 | [260609-lcp-filter-cascade-amount-sign-transaction-m](./quick/260609-lcp-filter-cascade-amount-sign-transaction-m/) |
+| # | Description | Date | Commit |
+|---|-------------|------|--------|
+| 260609-fru | Dashboard overview prototype fixes | 2026-06-09 | 5ebd690 |
+| 260609-k2d | Transactions nature + in/out/transfer filters; 7 UI fixes | 2026-06-09 | cdc5997 |
+| 260609-lcp | Cascading filters (type→nature, category→subcat); amount sign strip | 2026-06-09 | ffd4fc3 |
 
 ## Deferred Items
 
 | Category | Item | Status |
 |----------|------|--------|
-| quick_task | 260524-pha | empty dir — dup of pnk variant |
-| quick_task | 260524-pnk | shipped (889ae56) |
-| quick_task | 260525-ga2 | shipped (4a722f2) |
-| quick_task | 260530-bib-description-strip-pattern | shipped migration 0015 |
 | operator | R038/R039/R041 | live deploy operator-pending |
 | backlog | R029 | partial revalidation coverage |
 | backlog | REVAL-01 | parked |
-| milestone | TX-PAIRING-01 | next milestone: collegare esplicitamente una transazione alla sua opposta che la netta (ordine↔reso, spesa↔rimborso) — feature additiva sopra il netting implicito ADR 0004. Vedi .planning/nature-remapping-WORKING.md |
-| phase | NATURE-TABLE-01 | Nature/direction realignment — **model now defined in ADR 0012 + CONTEXT.md** (grill 2026-06-09): direction derived from nature; 4th direction `allocation`; renames `financial`→`investment`, `extraordinary`→`savings`; deprecate/remove `category.type`; divestment nets, windfall=income_extraordinary. Needs migration + seed-extras rework + overview/KPI/cascade/filters update. |
-
-Items acknowledged and deferred at milestone close on 2026-06-09:
-
-| Category | Item | Status |
-|----------|------|--------|
-| uat_gap | Phase 43 43-UAT.md — 4 pending scenarios | testing |
-| uat_gap | Phase 45 45-UAT.md — 6 pending scenarios | passed |
-| verification_gap | Phase 43 43-VERIFICATION.md | human_needed |
-| verification_gap | Phase 44 44-VERIFICATION.md | human_needed |
 
 ## Session Continuity
 
-Last session: 2026-06-08T15:28:53.161Z
-Stopped at: Phase 45 context gathered
-Resume file: .planning/phases/45-overview-movers/45-CONTEXT.md
+Last session: 2026-06-10
+Stopped at: Roadmap created for v2.0 (Phases 46–50)
+Resume file: None
 
-**Next:** `/gsd-plan-phase 45`
-
-## Operator Next Steps
-
-- Start the next milestone with /gsd-new-milestone
+**Next:** `/gsd-plan-phase 46`

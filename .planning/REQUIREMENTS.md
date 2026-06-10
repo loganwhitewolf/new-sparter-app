@@ -76,37 +76,35 @@
 
 ## Traceability
 
-Populated during roadmap creation (phases start at 46, continuing from v1.16).
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | TBD | Pending |
-| DATA-02 | TBD | Pending |
-| DATA-03 | TBD | Pending |
-| DATA-04 | TBD | Pending |
-| DATA-05 | TBD | Pending |
-| DATA-06 | TBD | Pending |
-| TAX-01 | TBD | Pending |
-| TAX-02 | TBD | Pending |
-| TAX-03 | TBD | Pending |
-| MIG-01 | TBD | Pending |
-| MIG-02 | TBD | Pending |
-| MIG-03 | TBD | Pending |
-| DASH-01 | TBD | Pending |
-| DASH-02 | TBD | Pending |
-| DASH-03 | TBD | Pending |
-| DASH-04 | TBD | Pending |
-| CAT-01 | TBD | Pending |
-| CAT-02 | TBD | Pending |
-| PAIR-01 | TBD | Pending |
-| PAIR-02 | TBD | Pending |
-| PAIR-03 | TBD | Pending |
+| DATA-01 | Phase 46 | Pending |
+| DATA-02 | Phase 46 | Pending |
+| DATA-03 | Phase 46 | Pending |
+| DATA-04 | Phase 46 | Pending |
+| DATA-05 | Phase 46 | Pending |
+| DATA-06 | Phase 46 | Pending |
+| TAX-01 | Phase 47 | Pending |
+| TAX-02 | Phase 47 | Pending |
+| TAX-03 | Phase 47 | Pending |
+| MIG-01 | Phase 48 | Pending |
+| MIG-02 | Phase 48 | Pending |
+| MIG-03 | Phase 48 | Pending |
+| DASH-01 | Phase 49 | Pending |
+| DASH-02 | Phase 49 | Pending |
+| DASH-03 | Phase 49 | Pending |
+| DASH-04 | Phase 49 | Pending |
+| CAT-01 | Phase 49 | Pending |
+| CAT-02 | Phase 49 | Pending |
+| PAIR-01 | Phase 50 | Pending |
+| PAIR-02 | Phase 50 | Pending |
+| PAIR-03 | Phase 50 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 21 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 21 ⚠️
+- Mapped to phases: 21/21 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-10*
-*Last updated: 2026-06-10 after initial v2.0 definition*
+*Last updated: 2026-06-10 — traceability populated after roadmap creation*

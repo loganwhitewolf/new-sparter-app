@@ -12,6 +12,7 @@
 - ✅ **v1.14: Unified Table Filter & Sort** — Phase 40 (shipped 2026-06-04)
 - ✅ **v1.15: Collapsible Sidebar** — Phase 41 (shipped 2026-06-07)
 - ✅ **v1.16: Dashboard Overview Redesign** — Phases 42–45 (shipped 2026-06-09)
+- 🚧 **v2.0: Nature/Direction Model Realignment** — Phases 46–50 (in progress)
 
 ## Phases
 
@@ -120,18 +121,8 @@ Full details: `.planning/milestones/v1.13-ROADMAP.md`
 <summary>✅ v1.14: Unified Table Filter & Sort (Phase 40) — SHIPPED 2026-06-04</summary>
 
 - [x] **Phase 40: table-filter-sort** — Unified filtering + sorting across Transactions, Expenses, Files tables; shared `DataTableToolbar`; month-multi picker; `id` sort tiebreaker; per-table declarative config (ADR 0009, ADR 0010) *(complete 2026-06-04)*
-  - Goal: Replace the three divergent table controls with one coherent system — same behaviour, same UI shape, only the declared fields differ per table.
-  - Depends on: Phase 39
-  - Constraints: No filter engine (ADR 0010); URL = single source of truth; server-side filtering; offset+infinite-scroll pagination unchanged; `id` tiebreaker on all DAL sorts; Expenses have NO temporal filter (ADR 0009).
-  - Plans: 5 plans (5 waves)
 
-Plans:
-
-- [x] 40-01-PLAN.md — Foundation: shared TableConfig types + URL param parsers + id tiebreaker on transactions/imports DAL *(complete 2026-06-04)*
-- [x] 40-02-PLAN.md — Shared UI: DataTableToolbar + HeaderSortButton + ChipsRow + URL-mutation hook (mock config) *(complete 2026-06-04)*
-- [x] 40-03-PLAN.md — New controls: getMonthsWithData DAL + MonthMultiPicker + AmountRangePicker, wired into toolbar *(complete 2026-06-04)*
-- [x] 40-04-PLAN.md — Wire per-table configs + DAL filters for Transactions, Expenses, Files *(complete 2026-06-04)*
-- [x] 40-05-PLAN.md — Polish: empty states, a11y pass, URL migration, prototype deletion, yarn build green *(complete 2026-06-04)*
+Full details: `.planning/milestones/v1.14-ROADMAP.md`
 
 </details>
 
@@ -139,9 +130,8 @@ Plans:
 <summary>✅ v1.15: Collapsible Sidebar (Phase 41) — SHIPPED 2026-06-07</summary>
 
 - [x] **Phase 41: collapsible-sidebar** — Collapsible icon-rail sidebar; topbar removed on all breakpoints; app name + user controls (avatar, profile, logout) in sidebar; BottomNav gains Impostazioni entry; theme toggle moved to /settings page (ADR 0011) *(complete 2026-06-07)*
-  - [x] 41-01-PLAN.md — SidebarProvider context + localStorage hook + Tooltip wrapper (foundation)
-  - [x] 41-02-PLAN.md — AppShell + rewritten collapsible Sidebar (toggle, tooltips, bottom user controls); layout drops Topbar
-  - [x] 41-03-PLAN.md — BottomNav Impostazioni + SettingsHub Aspetto; delete topbar.tsx; update tests + build/a11y gate
+
+Full details: `.planning/milestones/v1.15-ROADMAP.md`
 
 </details>
 
@@ -156,6 +146,79 @@ Plans:
 Full details: `.planning/milestones/v1.16-ROADMAP.md`
 
 </details>
+
+### 🚧 v2.0: Nature/Direction Model Realignment (Phases 46–50)
+
+**Milestone Goal:** Replace the dual-axis `category.type` + `nature` classification with a single nature→direction model backed by lookup tables, migrate and recategorize all existing data, and add explicit transaction pairing on top of the implicit netting. Design is LOCKED; contract lives in `docs/adr/0012`, `CONTEXT.md`, and `.planning/nature-remapping-WORKING.md`.
+
+- [ ] **Phase 46: direction-nature-schema** — `direction` (4 rows) + `nature` (9 rows) lookup tables; `sub_category.nature_id` FK; remove `category.type`, `flow_nature` enum, `amount_sign`, `exclude_from_totals` — full schema cleanup
+- [ ] **Phase 47: taxonomy-seed-rework** — New 23-category / ~65-subcategory taxonomy in `seed-data.ts`; `seed-extras.ts` additive steps to populate `nature_id` and `direction_id` on existing rows
+- [ ] **Phase 48: sql-migration-recategorization** — Generated SQL migration (drizzle-kit generate + scripts/migrate.ts); backfill `nature_id` on all subcategories and overrides; recategorize misclassified transactions; convert patterns to sign-agnostic
+- [ ] **Phase 49: dashboard-and-surfaces** — 4-direction dashboard view (IN/OUT/ALLOCATION block, TRANSFER hidden); algebraic-sum aggregation replacing sign-split logic everywhere; `cascade-options.ts` and table filters re-pointed to the new model
+- [ ] **Phase 50: transaction-pairing** — Explicit 1:1 transaction↔opposite linking (order↔refund); paired display in transaction list; unlink flow; implicit netting baseline unchanged
+
+## Phase Details
+
+### Phase 46: direction-nature-schema
+**Goal**: The schema has `direction` and `nature` as FK-backed lookup tables, `sub_category.nature_id` replaces the `flow_nature` enum, and all deprecated columns (`category.type`, `amount_sign`, `exclude_from_totals`) are removed — establishing the single source of truth the rest of the milestone builds on.
+**Depends on**: Phase 45
+**Requirements**: DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06
+**Success Criteria** (what must be TRUE):
+  1. A `direction` table with 4 rows (`in`, `out`, `allocation`, `transfer`) exists with analytical attributes including `included_in_totals`, `net_worth_effect`, `color`, `label_it`
+  2. A `nature` table with 9 rows exists, each carrying a `direction_id` FK and the attributes from ADR 0012 (`income`, `income_extraordinary`, `essential`, `discretionary`, `debt`, `transfer`, `savings`, `investment`, plus the 9th row resolved from the planning risk)
+  3. `sub_category.nature_id` and `user_subcategory_override.nature_id` are FK columns to `nature`; the `flow_nature` enum column is gone
+  4. `category.type` column, `category_type` enum, and `category_type_idx` index are absent from the schema
+  5. `categorization_pattern.amount_sign` and the `amount_sign` enum are absent; the unique constraint is `(pattern, subCategoryId)`
+  6. `sub_category.exclude_from_totals` is absent from the schema
+**Plans**: TBD
+
+_Planning risk: resolve the 8-vs-9 nature row count (ADR 0012 "Consequences" says 8; the data-model section and working-doc summary say 9) before building the `nature` table. Determine whether a 9th row such as an `uncategorized`/null-sentinel nature is intended or the "9" references are stale._
+
+### Phase 47: taxonomy-seed-rework
+**Goal**: The seeded taxonomy reflects the final remap from `.planning/nature-remapping-WORKING.md` — 23 categories, ~65 subcategories across all 4 directions — and the additive seed machinery is in place so existing deployed rows can be brought up to date without overwriting shipped seed shapes.
+**Depends on**: Phase 46
+**Requirements**: TAX-01, TAX-02, TAX-03
+**Success Criteria** (what must be TRUE):
+  1. `scripts/seed-data.ts` contains 23 categories and ~65 subcategories matching the working-doc remap (4 IN, 16 OUT, 2 ALLOCATION, 1 TRANSFER)
+  2. Dissolved categories (`operational` nature, `Famiglia`, `Assicurazioni`, `Abbonamenti` wrappers) are gone from the seed; `financial`→`investment` and `extraordinary`→`savings` renames are applied
+  3. `scripts/seed-extras.ts` gains an additive step (or steps) that populates `nature_id` on all existing `sub_category` and `user_subcategory_override` rows using slug-based lookups — no edits to previously shipped seed shapes
+  4. Running `yarn db:seed` followed by `yarn db:seed-extras` on a fresh schema produces a fully populated taxonomy with every subcategory assigned a `nature_id`
+**Plans**: TBD
+
+### Phase 48: sql-migration-recategorization
+**Goal**: A generated SQL migration safely transforms the live database — creating the new tables, backfilling all FKs, recategorizing misclassified transactions to their correct nature, and removing deprecated columns — leaving no orphaned data and no references to the removed schema objects.
+**Depends on**: Phase 47
+**Requirements**: MIG-01, MIG-02, MIG-03
+**Success Criteria** (what must be TRUE):
+  1. `yarn db:migrate` runs to completion with no errors; the migration was generated by `drizzle-kit generate` (never `drizzle-kit push`)
+  2. Every existing `sub_category` row has a non-null `nature_id` FK after the migration; no subcategory is left pointing at the removed `flow_nature` enum column
+  3. Transactions previously misclassified (e.g. `vendita-investimenti` incorrectly under `in`) now carry a subcategory whose nature maps to the correct direction (`allocation`)
+  4. All `categorization_pattern` rows are sign-agnostic after migration: no row has a non-null `amount_sign`; the unique constraint is `(pattern, subCategoryId)`; existing patterns still target the correct subcategory
+**Plans**: TBD
+
+### Phase 49: dashboard-and-surfaces
+**Goal**: Every consumer of the old type/nature model — dashboard, KPI cards, aggregation queries, cascade options, and table filters — has been rewritten to derive direction from the `nature → direction` FK chain and to use algebraic-sum aggregation, making the 4-direction view fully functional for the user.
+**Depends on**: Phase 48
+**Requirements**: DASH-01, DASH-02, DASH-03, DASH-04, CAT-01, CAT-02
+**Success Criteria** (what must be TRUE):
+  1. The dashboard shows IN and OUT totals alongside a visible ALLOCATION block ("Accantonato / Investito"); TRANSFER is excluded and hidden
+  2. KPI cards reflect the 4-direction model: spending totals exclude allocation and transfer; an allocation measure ("quanto ho accantonato/investito") is surfaced
+  3. A transaction with a `+` amount under an OUT subcategory (e.g. a refund/reso) appears with its real positive amount in the transaction list and nets correctly within the OUT segment in the chart and KPIs
+  4. `cascade-options.ts` and the subcategory picker derive their type chip options from the `nature → direction` FK; no reference to `category.type` remains
+  5. Direction and nature filters in the Transactions and Expenses tables remain functional, now operating on the lookup-table-backed values
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 50: transaction-pairing
+**Goal**: A user can explicitly link two transactions that cancel each other (order↔refund, expense↔reimbursement), see the pairing and its netting effect in the transaction list, and unlink them — without changing the implicit algebraic-sum baseline behaviour for unpaired transactions.
+**Depends on**: Phase 49
+**Requirements**: PAIR-01, PAIR-02, PAIR-03
+**Success Criteria** (what must be TRUE):
+  1. A user can open a transaction and link it to another transaction as its explicit opposite; the link is persisted as a 1:1 (or 1:N) relationship
+  2. Paired transactions have a dedicated visual indicator in the transaction list that shows both the link and the net amount effect
+  3. A user can remove an explicit pairing; after unlinking, both transactions behave identically to never-paired transactions (algebraic-sum netting only)
+**Plans**: TBD
+**UI hint**: yes
 
 ## Progress
 
@@ -180,5 +243,10 @@ Full details: `.planning/milestones/v1.16-ROADMAP.md`
 | 43 | v1.16 | 4/4 | Complete | 2026-06-08 |
 | 44 | v1.16 | 3/3 | Complete | 2026-06-08 |
 | 45 | v1.16 | 3/3 | Complete | 2026-06-09 |
+| 46 | v2.0 | 0/TBD | Not started | - |
+| 47 | v2.0 | 0/TBD | Not started | - |
+| 48 | v2.0 | 0/TBD | Not started | - |
+| 49 | v2.0 | 0/TBD | Not started | - |
+| 50 | v2.0 | 0/TBD | Not started | - |
 
 **Total shipped: 45 phases · 159 plans complete**
