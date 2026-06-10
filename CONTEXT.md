@@ -29,7 +29,8 @@ _Avoid_: regex di normalizzazione, filtro descrizione
 ### Categorizzazione
 
 **Category** (Categoria):
-Raggruppamento di primo livello per classificare le transazioni, di tipo `in` o `out` (es. "Alimentari", "Stipendio").
+Raggruppamento di primo livello per classificare le transazioni (es. "Alimentari", "Stipendio").
+> ⚠️ Il campo `category.type` (`in`/`out`/`transfer`/`system`) è **deprecato** (grill 2026-06-09): la direzione si deriva dalla **FlowNature** della sottocategoria, non dal type della categoria. `type` verrà rimosso al termine della feature di riallineamento nature.
 _Avoid_: gruppo, tipo
 
 **Subcategory** (Sottocategoria):
@@ -42,15 +43,44 @@ L'atto di categorizzare una transazione assegnandole **una Subcategory**. La Cat
 **Uncategorized** (Non categorizzato):
 Transazione senza categoria e sottocategoria assegnate. È un segnale d'azione, non uno stato definitivo.
 
+**Direction** (Direzione): `in` | `out` | `transfer` | `investment`
+La direzione economica di un flusso. **È una proprietà della FlowNature, non un asse indipendente:** ogni nature appartiene a esattamente una direzione. La direzione di una transazione si deriva dalla nature della sua sottocategoria, non da un campo separato. Le quattro direzioni:
+- `in` — entrata: aumenta il patrimonio netto (stipendio, dividendi, entrate one-off).
+- `out` — uscita/consumo: riduce il patrimonio netto (spesa reale).
+- `transfer` — movimentazione interna neutra al patrimonio e **analiticamente rumore** (giroconto tra conti correnti, prelievo ATM, pagamento saldo carta): esclusa dai totali e nascosta dalla dashboard.
+- `investment` — allocazione verso il patrimonio: **neutra al patrimonio netto** (sposti denaro da liquido ad accantonato/asset) ma **comportamento che si vuole misurare** (conto deposito, fondo pensione, ETF, azioni). Non è una spesa: **non entra nelle uscite**, ma è mostrata come blocco proprio ("Accantonato / Investito"), a differenza del transfer che resta nascosto.
+
+Distinzione chiave `transfer` vs `investment`: stesso effetto contabile (neutro), valore analitico opposto — il transfer è rumore da escludere, l'investment è segnale da tracciare.
+_Avoid_: tipo, segno
+
 **FlowNature** (Natura del flusso):
-Classificazione economica applicata a ogni sottocategoria. Ogni sottocategoria ha esattamente una natura (o è non classificata). Valori canonici:
-- `essential` — spesa necessaria e ricorrente (affitto, bollette, spesa alimentare, salute)
-- `discretionary` — consumo opzionale (ristoranti, intrattenimento, shopping)
-- `operational` — reddito da lavoro ordinario (stipendio, freelance)
-- `financial` — risparmio e investimenti, e le relative entrate (ETF, dividendi, conto deposito)
-- `debt` — rimborso di debiti (rate mutuo quota capitale, finanziamenti)
-- `extraordinary` — eventi non ricorrenti (bonus, rimborso fiscale, eredità, vendita beni usati)
-- `transfer` — movimentazione interna tra conti propri; non modifica il patrimonio netto (trasferimenti, ricariche, prelievi ATM, addebiti carta di credito)
+Classificazione economica applicata a ogni sottocategoria. Ogni sottocategoria ha esattamente una natura (o è non classificata). Ogni nature ha esattamente una **Direction**: la nature è la fonte di verità della direzione. Valori canonici (9), raggruppati per direzione:
+
+**IN** (aumenta il patrimonio netto)
+- `income` — reddito ricorrente da lavoro o rendita (stipendio, freelance ricorrente, dividendi, canoni di locazione).
+- `income_extraordinary` — **denaro nuovo** dall'esterno, non ricorrente, che aumenta il patrimonio: bonus, **eredità e donazioni ricevute**, vincite, premi (cashback, fedeltà), bonus promozionali, entrate una-tantum. _Non_ include il disinvestimento di asset propri (→ `investment`) né il rimborso di una spesa specifica (→ netting, vedi sotto).
+
+**OUT** (riduce il patrimonio netto — consumo reale). Asse unico: **bisogno vs voglia**.
+- `essential` — consumo necessario/non-negoziabile (affitto, bollette, spesa alimentare, salute, telecom, RC-auto, imposte, bolli, commissioni bancarie).
+- `discretionary` — consumo opzionale (ristoranti, intrattenimento, shopping, streaming, assicurazioni non obbligatorie, formazione facoltativa).
+- `debt` — rimborso di prestiti (mutuo, finanziamenti). L'intera rata è OUT: capitale e interessi non sono separabili dall'import bancario, e la rata è un impegno fisso da budgetare come uscita.
+
+> `operational` è stato **sciolto** (grill 2026-06-09): mescolava due assi (bisogno/voglia + ricorrente/fisso) accorpando abbonamenti, assicurazioni, imposte e formazione in un catch-all — l'anti-pattern che l'ADR 0003 voleva evitare. Ogni sua sottocategoria va riassegnata a `essential` o `discretionary`. L'eventuale insight "spese ricorrenti/abbonamenti" è un taglio ortogonale (flag/vista), non una nature.
+
+**TRANSFER** (neutro al patrimonio, rumore analitico — escluso e nascosto)
+- `transfer` — movimentazione interna tra conti propri liquidi (giroconto, ricarica, prelievo ATM, pagamento saldo carta). Non dice nulla sull'andamento finanziario.
+
+**ALLOCATION** (neutro al patrimonio, ma comportamento tracciato — vedi Direction `allocation`)
+- `savings` — accantonamento liquido a basso rischio (conto deposito, fondo emergenze, accantonamenti per obiettivi).
+- `investment` — allocazione in asset a rischio/rendimento (azioni, obbligazioni, ETF, fondi comuni, criptovalute, immobili, fondo pensione).
+
+**Disinvestimento e netting.** Vendere un proprio asset o prelevare da un risparmio **non è un'entrata**: è un'allocazione al contrario. Si registra con la stessa nature (`investment`/`savings`) ma contribuisce in negativo, e **netta** dentro il segmento allocation (coerente con ADR 0004, somma algebrica). Esempio: investi 800 e disinvesti 300 nello stesso periodo → allocation netta +500. Solo il denaro nuovo dall'esterno (eredità, vincite) è `income_extraordinary`.
+
+**Rimborso (refund) — netting per sottocategoria, senza correlazione.** Un accredito che **annulla una spesa specifica** (reso ordine online, rimborso da persona per una spesa condivisa, rimborso sanitario/viaggio di una spesa tracciata) **non è un'entrata**: si categorizza sotto la **stessa sottocategoria della spesa** e **netta per somma algebrica** dentro quel segmento OUT (ADR 0004). **Non esiste alcuna correlazione transazione↔transazione** né un modello di linking: una sottocategoria contiene semplicemente transazioni di entrambi i segni e il totale netta. Esempio: 10 ordini −1000 + 4 resi +300 sotto "shopping online" → −700. Distinzione decidibile: _"annulla una mia spesa specifica → netta; è denaro nuovo non legato a una spesa → `income_extraordinary`"_. Conseguenza display: una transazione può avere segno opposto alla direzione della sua nature (un reso `+` sotto una sottocategoria OUT) — in lista si mostra per l'importo reale, nel grafico netta.
+
+> ⚠️ **Limite noto (postilla, grill 2026-06-09):** il **rimborso spese lavorative incluso nello stipendio** non è separabile dall'accredito stipendio. Quel mese risulteranno uno stipendio più alto (`income`) e spese extra non nettate. Non gestito per ora — da affrontare in futuro (eventuale split manuale o sottocategoria dedicata).
+
+> Rinominazioni rispetto al modello storico (grill 2026-06-09): `financial` → `investment`; `extraordinary` (che il seed applicava ai risparmi) → `savings`. I valori `income`/`income_extraordinary` (split Phase 42) sono ora documentati. Non esiste una nature "spesa straordinaria" lato OUT: le uscite one-off ricadono nella loro nature di consumo.
 
 Le sottocategorie di sistema escono dal seed con una natura predefinita ragionevole. L'utente può sovrascrivere la natura dalle impostazioni. Una sottocategoria senza natura assegnata è visibile nel grafico come segmento "non classificato".
 _Avoid_: tipo di spesa, carattere, tag economico
