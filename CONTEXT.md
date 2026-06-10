@@ -94,19 +94,14 @@ Categoria di sistema per movimenti interni tra conti propri dell'utente. Non è 
 Migrazione: cat 32 "ignore" viene rinominata e riproposta come "Trasferimenti" (type `system` → `transfer`). Cat 28 "movimenti di liquidità" viene disattivata; le sue transazioni vanno ricategorizzate manualmente.
 _Avoid_: movimenti di liquidità (termine precedente, deprecato), ignore (termine tecnico dismesso)
 
-**Rimborsi, cashback e bonus** (categoria, type: `in`):
-Rinominata da "sconti, rimborsi e cashback". Copre accrediti derivanti da rimborsi istituzionali o personali, cashback e bonus commerciali. Sottocategorie canoniche:
-- **rimborso spese lavorative** — rimborso spese da datore di lavoro
-- **rimborso spese sanitarie** — rimborso da assicurazione o SSN
-- **rimborso spese viaggi** — rimborso trasferte
-- **rimborso ordine online** — reso/rimborso da merchant e-commerce
-- **rimborso da persona** — rimborso per spesa condivisa da amici, familiari, partner
-- **cashback carta di credito** — cashback da carta
-- **cashback acquisti online** — cashback da piattaforme e-commerce
-- **cashback programmi fedeltà** — punti/cashback da programmi fedeltà
-- **rimborso abbonamento e canoni** — accredito su subscription o canone (es. rimborso canone banca, credito Netflix)
-- **bonus promozionale** — bonus una-tantum da promozioni commerciali (es. €50 di benvenuto da Revolut)
-_Avoid_: sconti, rimborsi e cashback (nome precedente, deprecato)
+**Categorie IN (entrate)** — definite nel grill 2026-06-09 (dettaglio sottocategorie in `.planning/nature-remapping-WORKING.md`). Quattro categorie:
+- **Income da lavoro** — reddito da attività lavorativa: `stipendio-base`, `indennita` (nature `income`); `bonus`, `freelance`, `consulenze`, `progetti-occasionali`, `commissioni` (nature `income_extraordinary`, variabili). Rimossa `overtime` (rumore, di solito dentro l'accredito stipendio).
+- **Pensioni e sussidi** — prestazioni ricorrenti non da lavoro attivo: `pensione`, `sussidi-statali` (assegno unico, NASpI, bonus statali). Nature `income`.
+- **Rendite** _(era "Income finanziari")_ — reddito passivo ricorrente da asset posseduti: `dividendi`, `interessi-attivi`, `canone-di-locazione`. Nature `income`. Il canone di locazione è income (rendita), non transfer: un bonifico in entrata si classifica per la sua origine, non per il mezzo.
+- **Entrate straordinarie** _(merge di "sconti, rimborsi e cashback" + "vendite e dismissioni")_ — denaro nuovo dall'esterno non legato a una spesa: `cashback`, `bonus-promozionale`, `vendita-beni-usati`, `eredita-e-donazioni`. Nature `income_extraordinary`.
+
+**Rimborsi — non sono una categoria IN.** Le ex sottocategorie `rimborso-*` sono rimosse: un rimborso si categorizza sotto la sottocategoria della spesa e **netta** (vedi "Rimborso (refund)" sopra). Disinvestimenti (`vendita-investimenti`, `immobili-vendita`) → `allocation`; movimenti tra conti propri (`bonifico-in-entrata`, `ricariche-conti`) → `transfer`.
+_Avoid_: sconti, rimborsi e cashback (nome deprecato), movimenti di liquidità
 
 **PatternSuggestion** (Suggerimento di pattern):
 Candidato regex rilevato automaticamente durante la fase di analisi dell'import, a partire da descrizioni di transazioni non coperte da pattern esistenti che condividono un prefisso comune (≥2 token, ≥2 occorrenze nel file). Campi: `pattern` (prefisso estratto), `matchCount` (occorrenze nel file/import), `detectedAmountSign`, `sampleDescriptions` (max 3 descrizioni originali). Non è un `CategorizationPattern` finché l'utente non assegna una sottocategoria e lo salva. Può essere prodotto sia pre-import (da righe parse) sia post-import su transazioni già persistite (per rianalisi per `fileId`). Al massimo 5 per analisi, ordinate per `matchCount` discendente.
