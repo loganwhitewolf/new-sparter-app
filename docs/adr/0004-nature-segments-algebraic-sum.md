@@ -14,4 +14,4 @@ The redesigned EntrateUsciteChart computes each FlowNature segment by summing tr
 - No `refund` nature value is needed in the enum.
 - The category breakdown view already uses `abs(sum(amount))` and handles netting correctly. The chart now aligns with that behavior.
 - DAL queries for the new chart must group by nature (joining through `sub_category.nature`) and sum amounts without pre-filtering by sign.
-- Existing KPI cards and the current chart are unaffected — they retain the sign-split model.
+- Existing KPI cards and the current chart are unaffected — they retain the sign-split model. _(Update 2026-06-09: ADR 0012 generalises algebraic-sum-by-direction to the KPI cards and category views as well — the sign-split model is being retired there.)_

@@ -108,13 +108,10 @@ Le sottocategorie di sistema escono dal seed con una natura predefinita ragionev
 _Avoid_: tipo di spesa, carattere, tag economico
 _Avoid_: da classificare
 
-**Trasferimenti** (categoria, type: `transfer`):
-Categoria di sistema per movimenti interni tra conti propri dell'utente. Non è né entrata né uscita: non modifica il patrimonio netto dell'utente se tutti i conti sono importati. Tutte le sottocategorie hanno `excludeFromTotals = true` e `nature = transfer`. Non compare nei totali della dashboard né nei grafici di analisi. Sottocategorie canoniche:
-- **Trasferimento tra conti** — bonifici interni, ricariche, giroconti; direction-agnostic (copre sia in che out tramite `categorizationPattern.amountSign`)
-- **Addebito carta di credito** — pagamento mensile CC dal conto corrente
-- **Prelievo contante** — prelievo ATM; le spese cash vengono tracciate come transazioni manuali separate
-Migrazione: cat 32 "ignore" viene rinominata e riproposta come "Trasferimenti" (type `system` → `transfer`). Cat 28 "movimenti di liquidità" viene disattivata; le sue transazioni vanno ricategorizzate manualmente.
-_Avoid_: movimenti di liquidità (termine precedente, deprecato), ignore (termine tecnico dismesso)
+**Trasferimenti** (categoria, direzione `transfer`):
+Categoria per movimenti interni tra conti/strumenti propri dell'utente. Non è né entrata né uscita: non modifica il patrimonio netto (se tutti i conti sono importati i due lati nettano). Esclusa dai totali e nascosta dalla dashboard (direzione `transfer`, vedi "Categoria TRANSFER" sotto per le sottocategorie canoniche `trasferimento-tra-conti`, `addebito-carta-di-credito`, `contante`).
+> Nota storica: nasce dalla cat 32 "ignore"; la cat 28 "movimenti di liquidità" è deprecata. La direzione si deriva dalla nature `transfer`, non dal vecchio `category.type` (deprecato).
+_Avoid_: movimenti di liquidità (deprecato), ignore (dismesso)
 
 **Categorie IN (entrate)** — definite nel grill 2026-06-09 (dettaglio sottocategorie in `.planning/nature-remapping-WORKING.md`). Quattro categorie:
 - **Income da lavoro** — reddito da attività lavorativa: `stipendio-base`, `indennita` (nature `income`); `bonus`, `freelance`, `consulenze`, `progetti-occasionali`, `commissioni` (nature `income_extraordinary`, variabili). Rimossa `overtime` (rumore, di solito dentro l'accredito stipendio).
