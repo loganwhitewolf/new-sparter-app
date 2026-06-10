@@ -51,15 +51,29 @@ Esempi-guida: libro comprato al supermercato → Cultura · cibo per animali →
 **Uncategorized** (Non categorizzato):
 Transazione senza categoria e sottocategoria assegnate. È un segnale d'azione, non uno stato definitivo.
 
-**Direction** (Direzione): `in` | `out` | `transfer` | `investment`
-La direzione economica di un flusso. **È una proprietà della FlowNature, non un asse indipendente:** ogni nature appartiene a esattamente una direzione. La direzione di una transazione si deriva dalla nature della sua sottocategoria, non da un campo separato. Le quattro direzioni:
-- `in` — entrata: aumenta il patrimonio netto (stipendio, dividendi, entrate one-off).
-- `out` — uscita/consumo: riduce il patrimonio netto (spesa reale).
-- `transfer` — movimentazione interna neutra al patrimonio e **analiticamente rumore** (giroconto tra conti correnti, prelievo ATM, pagamento saldo carta): esclusa dai totali e nascosta dalla dashboard.
-- `investment` — allocazione verso il patrimonio: **neutra al patrimonio netto** (sposti denaro da liquido ad accantonato/asset) ma **comportamento che si vuole misurare** (conto deposito, fondo pensione, ETF, azioni). Non è una spesa: **non entra nelle uscite**, ma è mostrata come blocco proprio ("Accantonato / Investito"), a differenza del transfer che resta nascosto.
+**Direction** (Direzione): `in` | `out` | `allocation` | `transfer`
 
-Distinzione chiave `transfer` vs `investment`: stesso effetto contabile (neutro), valore analitico opposto — il transfer è rumore da escludere, l'investment è segnale da tracciare.
-_Avoid_: tipo, segno
+Concetto chiave. La direzione risponde a: **"che effetto ha questo movimento sul patrimonio, e come va trattato nell'analisi?"**. Non è il verso del denaro sul conto (quello è il *segno*); è il **ruolo economico** del movimento. **Si deriva dalla FlowNature** della sottocategoria — non è un campo separato, non è il deprecato `category.type`. Ogni nature appartiene a esattamente una direzione.
+
+Le quattro direzioni, per **effetto sul patrimonio netto**:
+- `in` — lo **aumenta** (guadagni). → Entrate.
+- `out` — lo **diminuisce** (consumo reale). → Uscite.
+- `allocation` — **non lo cambia** (sposti denaro da liquido ad accantonato/asset) ma è un **comportamento da misurare** (risparmio, investimenti). → mostrato a parte ("Accantonato/Investito"), fuori dalle uscite.
+- `transfer` — **non lo cambia** (movimenti tra conti propri) ed è **rumore analitico**. → escluso e nascosto.
+
+Distinzione `allocation` vs `transfer`: stesso effetto contabile (neutro), valore analitico opposto — l'allocation è segnale da tracciare, il transfer è rumore da nascondere.
+
+**Direzione ≠ segno (due assi indipendenti).** Il **segno** dice se il cash entra (+) o esce (−) dal conto (dato grezzo della banca). La **direzione** dice cosa significa per le finanze. Sono disaccoppiati: lo stesso segno può avere direzioni diverse.
+
+| Movimento | Segno | Direzione | Perché |
+|---|---|---|---|
+| Stipendio | + | `in` | denaro nuovo |
+| Reso di una spesa | + | `out` | spesa annullata, non guadagno (netta in OUT) |
+| Vendita di un proprio ETF | + | `allocation` | asset → liquidità, neutro |
+| Accredito da un proprio conto | + | `transfer` | era già tuo, rumore |
+
+Conseguenza: i totali si calcolano per **somma algebrica** dentro ogni direzione (ADR 0004), non splittando per segno. Una transazione non categorizzata non ha nature → non ha direzione: lì il segno è l'unico fallback.
+_Avoid_: tipo, segno (come sinonimo di direzione)
 
 **FlowNature** (Natura del flusso):
 Classificazione economica applicata a ogni sottocategoria. Ogni sottocategoria ha esattamente una natura (o è non classificata). Ogni nature ha esattamente una **Direction**: la nature è la fonte di verità della direzione. Valori canonici (9), raggruppati per direzione:
