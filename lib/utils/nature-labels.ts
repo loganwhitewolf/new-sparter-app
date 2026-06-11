@@ -18,7 +18,7 @@ export const NATURE_LABELS: Record<FlowNature | 'unclassified', string> = {
   debt: 'Debiti',
   transfer: 'Trasferimento',
   savings: 'Risparmio',        // renamed from extraordinary (same label family)
-  investment: 'Finanziario',   // renamed from financial (same label retained)
+  investment: 'Investimento',
   unclassified: 'Non classificato',
 }
 

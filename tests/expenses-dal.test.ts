@@ -73,7 +73,6 @@ vi.mock('@/lib/db/schema', () => ({
     id: 'category.id',
     name: 'category.name',
     slug: 'category.slug',
-    type: 'category.type',
   },
   expense: {
     id: 'expense.id',
@@ -96,6 +95,11 @@ vi.mock('@/lib/db/schema', () => ({
     id: 'importFormatVersion.id',
     platformId: 'importFormatVersion.platformId',
   },
+  nature: {
+    id: 'nature.id',
+    code: 'nature.code',
+    directionId: 'nature.directionId',
+  },
   platform: {
     id: 'platform.id',
     name: 'platform.name',
@@ -105,7 +109,7 @@ vi.mock('@/lib/db/schema', () => ({
     id: 'subCategory.id',
     name: 'subCategory.name',
     categoryId: 'subCategory.categoryId',
-    nature: 'subCategory.nature',
+    natureId: 'subCategory.natureId',
   },
   userSubcategoryOverride: {
     customName: 'userSubcategoryOverride.customName',
@@ -285,34 +289,34 @@ describe('expense DAL list pagination', () => {
     expect(hasIsNull).toBe(true)
   })
 
-  it("nature with a specific value adds eq(subCategory.nature, value) condition", async () => {
+  it("nature with a specific value adds eq(nature.code, value) condition", async () => {
     await getExpenses({ nature: 'essential' })
 
     const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
     expect(where.args).toContainEqual({
       op: 'eq',
-      left: 'subCategory.nature',
+      left: 'nature.code',
       right: 'essential',
     })
   })
 
-  it("type 'unclassified' adds isNull(category.type) condition", async () => {
+  it("type 'unclassified' adds isNull(subCategory.natureId) condition (Phase 46 — category.type removed)", async () => {
     await getExpenses({ type: 'unclassified' })
 
     const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
     expect(where.args).toContainEqual({
       op: 'isNull',
-      column: 'category.type',
+      column: 'subCategory.natureId',
     })
   })
 
-  it("type with a specific value adds eq(category.type, value) condition", async () => {
+  it("type with a specific value adds eq(nature.code, value) condition (Phase 46 — category.type removed)", async () => {
     await getExpenses({ type: 'out' })
 
     const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
     expect(where.args).toContainEqual({
       op: 'eq',
-      left: 'category.type',
+      left: 'nature.code',
       right: 'out',
     })
   })

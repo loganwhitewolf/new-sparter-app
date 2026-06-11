@@ -503,11 +503,10 @@ describe('applyTier1Regex', () => {
     })
   })
 
-  it('respects amount sign constraint — rejects positive amounts for negative-only patterns', () => {
-    // The coffee pattern requires a negative amount
+  it('matches positive amounts (Phase 46: patterns are sign-agnostic, ADR 0012)', () => {
+    // Phase 46: amountSign constraint removed — patterns match regardless of sign
     const result = applyTier1Regex('Caffè Nero rimborso', '5.00', patterns)
-    // The positive amount should skip the coffee pattern, and no other patterns should match
-    expect(result).toBeNull()
+    expect(result).toMatchObject({ subCategoryId: 20, patternId: 2 })
   })
 
   it('accepts negative amounts for negative-only patterns', () => {

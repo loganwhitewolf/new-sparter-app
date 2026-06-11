@@ -82,15 +82,12 @@ describe('getMostUsedSubcategories', () => {
     expect(userIdClause).toBeDefined()
   })
 
-  it('filters by allowedTypes on category.type', async () => {
+  // Phase 46: category.type removed — allowedTypes is accepted but not applied until Phase 49 restores direction filter
+  it('allowedTypes is accepted without error (category.type filter deferred to Phase 49)', async () => {
     vi.resetModules()
     mocks.verifySession.mockResolvedValue({ userId: 'u1' })
     const { getMostUsedSubcategories } = await import('@/lib/dal/subcategory-usage')
-    await getMostUsedSubcategories(['out', 'transfer'])
-    const whereArg = mocks.whereArgs[0] as { op: string; args: unknown[] }
-    const inArrayClause = (whereArg.args as Array<{ op: string; col: unknown; vals: unknown }>)
-      .find((c) => c.op === 'inArray')
-    expect(inArrayClause?.vals).toEqual(['out', 'transfer'])
+    await expect(getMostUsedSubcategories(['out', 'transfer'])).resolves.not.toThrow()
   })
 
   it('returns empty array when no categorized expenses', async () => {

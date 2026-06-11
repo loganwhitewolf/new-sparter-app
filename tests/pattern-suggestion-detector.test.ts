@@ -75,8 +75,8 @@ describe('detectPatternSuggestions', () => {
   })
 
   it('SUG-05: excludes invalid rows, caller-flagged covered rows, and coveragePattern-matched rows', () => {
-    // Phase 46: amountSign removed from CoveragePattern (ADR 0012)
-    const coverage: CoveragePattern[] = [{ pattern: 'pagamento pos' }]
+    // Phase 46: amountSign removed from CoveragePattern (ADR 0012) — coverage is pattern-only
+    const coverage: CoveragePattern[] = [{ pattern: 'already covered' }]
     const rows = [
       // row A: valid:true, covered:false → INCLUDED
       row({ normalizedDescription: 'pagamento pos market', description: 'ROW A', amount: '10.00' }),
@@ -84,10 +84,9 @@ describe('detectPatternSuggestions', () => {
       row({ normalizedDescription: 'pagamento pos market', description: 'ROW B', valid: false }),
       // row C: valid:true, covered:true → EXCLUDED (caller flag)
       row({ normalizedDescription: 'pagamento pos market', description: 'ROW C', covered: true }),
-      // row D: valid:true, covered:false, amount negative — coveragePattern matches → EXCLUDED
-      row({ normalizedDescription: 'pagamento pos market', description: 'ROW D', amount: '-10.00' }),
-      // row E: valid:true, covered:false → INCLUDED; differs from row A with "shop" so the
-      // pair is a genuine partial match (extends beyond the shared prefix "pagamento pos")
+      // row D: valid:true, covered:false, description matches coverage → EXCLUDED (sign-agnostic)
+      row({ normalizedDescription: 'already covered expense', description: 'ROW D', amount: '-10.00' }),
+      // row E: valid:true, covered:false → INCLUDED
       row({ normalizedDescription: 'pagamento pos shop', description: 'ROW E', amount: '10.00' }),
     ]
     const suggestions = detectPatternSuggestions(rows, coverage)

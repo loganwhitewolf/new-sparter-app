@@ -120,13 +120,15 @@ describe('category Server Actions', () => {
     )
 
     expect(result).toEqual({ error: null })
-    expect(mocks.createUserSubcategory).toHaveBeenCalledWith({
-      userId: 'user-1',
-      categoryId: 2,
-      name: 'Affitto',
-      slug: 'affitto',
-      nature: 'essential',
-    })
+    // Phase 46: natureId deferred to Phase 49 — not passed to DAL
+    expect(mocks.createUserSubcategory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        categoryId: 2,
+        name: 'Affitto',
+        slug: 'affitto',
+      })
+    )
     expectExactCategoryRevalidationRoutes()
   })
 
@@ -255,20 +257,22 @@ describe('setSubcategoryNatureAction (R-FN-07)', () => {
   it('returns ok:true and calls upsertSubcategoryNatureOverride with the given nature', async () => {
     const result = await setSubcategoryNatureAction({ subCategoryId: 10, nature: 'debt' })
     expect(result).toEqual({ ok: true })
+    // Phase 46: natureId resolution deferred to Phase 49 — action passes natureId: null for compile
     expect(mocks.upsertSubcategoryNatureOverride).toHaveBeenCalledWith({
       userId: 'user-1',
       subCategoryId: 10,
-      nature: 'debt',
+      natureId: null,
     })
   })
 
   it('accepts null nature to reset override to seed default', async () => {
     const result = await setSubcategoryNatureAction({ subCategoryId: 10, nature: null })
     expect(result).toEqual({ ok: true })
+    // Phase 46: natureId resolution deferred to Phase 49
     expect(mocks.upsertSubcategoryNatureOverride).toHaveBeenCalledWith({
       userId: 'user-1',
       subCategoryId: 10,
-      nature: null,
+      natureId: null,
     })
   })
 
@@ -304,17 +308,15 @@ describe('createSubcategoryAction nature requirement (R-FN-09 action layer)', ()
     }
   })
 
-  it('createSubcategoryAction returns validation error when nature is missing (R-FN-09) — RED until Plan 37-05 extends schema', async () => {
+  it('createSubcategoryAction succeeds without nature (Phase 46: natureId deferred to Phase 49)', async () => {
     const fd = new FormData()
     fd.append('name', 'Test Sub')
     fd.append('categoryId', '1')
-    // intentionally omit nature field
+    // intentionally omit nature field — Phase 46 defers nature requirement to Phase 49
 
     const { createSubcategoryAction } = await import('../lib/actions/categories')
     const result = await createSubcategoryAction({ error: null }, fd)
-    // After Plan 37-05, nature becomes required and this should return a validation error
-    // Currently passes without nature — so we assert the OPPOSITE to keep it RED
-    expect(result).toHaveProperty('error')
-    expect(result.error).not.toBeNull()
+    // Phase 46: nature is no longer required at action layer; natureId defaults to null
+    expect(result.error).toBeNull()
   })
 })

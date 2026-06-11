@@ -25,14 +25,15 @@ type CategoryRowFixture = {
   categoryId: number
   categoryName: string
   categorySlug: string
-  categoryType: 'in' | 'out' | 'system'
   categoryUserId: string | null
   subCategoryId: number | null
   subCategoryName: string | null
   subCategorySlug: string | null
   subCategoryUserId: string | null
   overrideCustomName: string | null
-  effectiveNature: FlowNature | null
+  overrideNatureId: number | null
+  subCategoryNatureId: number | null
+  effectiveNatureCode: FlowNature | null
 }
 
 function nextSelectResult() {
@@ -104,14 +105,15 @@ function systemCategoryRow(overrides: Partial<CategoryRowFixture> = {}): Categor
     categoryId: 1,
     categoryName: 'Home',
     categorySlug: 'home',
-    categoryType: 'out',
     categoryUserId: null,
     subCategoryId: 10,
     subCategoryName: 'Rent',
     subCategorySlug: 'rent',
     subCategoryUserId: null,
     overrideCustomName: null,
-    effectiveNature: null,
+    overrideNatureId: null,
+    subCategoryNatureId: null,
+    effectiveNatureCode: null,
     ...overrides,
   }
 }
@@ -185,7 +187,7 @@ vi.mock('@/lib/db/schema', () => ({
     categoryId: 'subCategory.categoryId',
     displayOrder: 'subCategory.displayOrder',
     isActive: 'subCategory.isActive',
-    nature: 'subCategory.nature',
+    natureId: 'subCategory.natureId',
   },
   userSubcategoryOverride: {
     id: 'userSubcategoryOverride.id',
@@ -193,7 +195,7 @@ vi.mock('@/lib/db/schema', () => ({
     subCategoryId: 'userSubcategoryOverride.subCategoryId',
     userId: 'userSubcategoryOverride.userId',
     updatedAt: 'userSubcategoryOverride.updatedAt',
-    nature: 'userSubcategoryOverride.nature',
+    natureId: 'userSubcategoryOverride.natureId',
   },
   expense: {
     id: 'expense.id',
@@ -241,7 +243,7 @@ describe('categories DAL merged tree', () => {
         id: 1,
         name: 'Home',
         slug: 'home',
-        type: 'out',
+        type: null,
         userId: null,
         isOwned: false,
         subCategories: [
@@ -268,7 +270,6 @@ describe('categories DAL merged tree', () => {
         categoryId: 2,
         categoryName: 'Side projects',
         categorySlug: 'side-projects',
-        categoryType: 'in',
         categoryUserId: 'user-1',
         subCategoryId: 20,
         subCategoryName: 'Consulting',
@@ -329,7 +330,7 @@ describe('categories DAL merged tree', () => {
         id: 3,
         name: 'Unassigned',
         slug: 'unassigned',
-        type: 'out',
+        type: null,
         userId: null,
         isOwned: false,
         subCategories: [],
@@ -530,7 +531,7 @@ describe('effectiveNature resolution on subcategories (D-09)', () => {
   })
 
   it('exposes seed nature when no user override exists', async () => {
-    mocks.queryResult = [systemCategoryRow({ effectiveNature: 'essential' })]
+    mocks.queryResult = [systemCategoryRow({ effectiveNatureCode: 'essential' })]
 
     const categories = await getCategories()
 
@@ -538,7 +539,7 @@ describe('effectiveNature resolution on subcategories (D-09)', () => {
   })
 
   it('uses override nature over seed nature when override is set (D-09)', async () => {
-    mocks.queryResult = [systemCategoryRow({ effectiveNature: 'debt' })]
+    mocks.queryResult = [systemCategoryRow({ effectiveNatureCode: 'debt' })]
 
     const categories = await getCategories()
 
@@ -546,7 +547,7 @@ describe('effectiveNature resolution on subcategories (D-09)', () => {
   })
 
   it('falls back to seed nature when override row exists but override nature is null', async () => {
-    mocks.queryResult = [systemCategoryRow({ effectiveNature: 'operational' })]
+    mocks.queryResult = [systemCategoryRow({ effectiveNatureCode: 'operational' })]
 
     const categories = await getCategories()
 
@@ -557,8 +558,7 @@ describe('effectiveNature resolution on subcategories (D-09)', () => {
     mocks.queryResult = [
       systemCategoryRow({
         categorySlug: 'ignore',
-        categoryType: 'system',
-        effectiveNature: null,
+        effectiveNatureCode: null,
       }),
     ]
 

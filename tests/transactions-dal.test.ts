@@ -127,6 +127,11 @@ vi.mock('@/lib/db/schema', () => ({
     name: 'subCategory.name',
     categoryId: 'subCategory.categoryId',
   },
+  nature: {
+    id: 'nature.id',
+    code: 'nature.code',
+    directionId: 'nature.directionId',
+  },
   userSubcategoryOverride: {
     customName: 'userSubcategoryOverride.customName',
     subCategoryId: 'userSubcategoryOverride.subCategoryId',

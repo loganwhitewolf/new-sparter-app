@@ -658,16 +658,16 @@ describe('buildMonthlyNatureTrendData (R-FN-04, R-FN-08, R-FN-09)', () => {
 
     expect(result).toHaveLength(2)
     for (const point of result) {
+      // Phase 46: FlowNature v2.0 — 8 natures (extraordinary→savings, financial→investment, operational dissolved)
       expect(Object.keys(point.segments).sort()).toEqual(
         [
           'debt',
           'discretionary',
           'essential',
-          'extraordinary',
-          'financial',
           'income',
           'income_extraordinary',
-          'operational',
+          'investment',
+          'savings',
           'transfer',
           'unclassified',
         ].sort()

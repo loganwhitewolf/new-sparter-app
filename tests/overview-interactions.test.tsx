@@ -68,11 +68,11 @@ describe('overview chart filters (FILT-01, FILT-02, FILT-03)', () => {
     expect(row.uscite).toBe(0)
   })
 
-  // Full selection
+  // Full selection — Phase 46 v2.0 natures: 300+150+40+20+60+0 = 570
   it('all-selected income and expense: totals match expected sums', () => {
     const row = deriveFilteredBarRow(FIXTURE, INCOME_KEYS, OUT_KEYS)
     expect(row.entrate).toBe(1200)
-    expect(row.uscite).toBe(650)
+    expect(row.uscite).toBe(570)
   })
 
   // sumSelected unit tests
@@ -166,8 +166,8 @@ describe('deriveNatureBreakdown (FRU-FIX-02)', () => {
     expect(essential!.amount).toBe(300)
     const discretionary = result.out.find((item) => item.key === 'discretionary')
     expect(discretionary!.amount).toBe(150)
-    const financial = result.out.find((item) => item.key === 'financial')
-    expect(financial!.amount).toBe(60)
+    const investment = result.out.find((item) => item.key === 'investment')
+    expect(investment!.amount).toBe(60)
   })
 
   it('excluding a key drops it from the returned array', () => {

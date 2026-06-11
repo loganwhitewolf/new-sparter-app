@@ -129,7 +129,6 @@ describe('pattern Server Actions', () => {
         userId: 'user-abc',
         pattern: 'netflix',
         subCategoryId: 42,
-        amountSign: 'negative',
         confidence: 0.95,
         description: 'Streaming subscriptions',
       })
@@ -207,7 +206,6 @@ describe('pattern Server Actions', () => {
       expect(mocks.updatePattern).toHaveBeenCalledWith(7, 'user-abc', {
         pattern: 'netflix',
         subCategoryId: 42,
-        amountSign: 'negative',
         confidence: 0.95,
         description: 'Streaming subscriptions',
       })
@@ -342,7 +340,6 @@ describe('pattern Server Actions', () => {
         userId: 'user-abc',          // from session, NOT 'attacker-id' from FormData
         pattern: 'netflix',
         subCategoryId: 42,
-        amountSign: 'negative',
         confidence: 0.85,            // hardcoded — never read from FormData
         description: undefined,
       })
