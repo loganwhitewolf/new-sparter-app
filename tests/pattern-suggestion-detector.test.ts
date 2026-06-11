@@ -75,7 +75,8 @@ describe('detectPatternSuggestions', () => {
   })
 
   it('SUG-05: excludes invalid rows, caller-flagged covered rows, and coveragePattern-matched rows', () => {
-    const coverage: CoveragePattern[] = [{ pattern: 'pagamento pos', amountSign: 'negative' }]
+    // Phase 46: amountSign removed from CoveragePattern (ADR 0012)
+    const coverage: CoveragePattern[] = [{ pattern: 'pagamento pos' }]
     const rows = [
       // row A: valid:true, covered:false → INCLUDED
       row({ normalizedDescription: 'pagamento pos market', description: 'ROW A', amount: '10.00' }),
@@ -233,9 +234,9 @@ describe('detectPatternSuggestions', () => {
     // New import rows still carry the numeric reference between non-numeric tokens, so a
     // naive regex test against the full normalizedDescription fails. The fix: also test
     // against the stripped form of the description, matching applyTier1Regex behavior.
+    // Phase 46: amountSign removed from CoveragePattern (ADR 0012)
     const coverage: CoveragePattern[] = [{
       pattern: 'revolut\\*\\*5920\\* dublin ie carta n\\. \\*\\*\\*\\*\\* data operazione',
-      amountSign: 'negative',
     }]
     const rows = [
       row({

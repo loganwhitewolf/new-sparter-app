@@ -123,10 +123,10 @@ export async function createSubcategoryAction(
   formData: FormData,
 ): Promise<ActionState> {
   const { userId } = await verifySession()
+  // TODO(Phase 49): re-add natureId once nature picker wired to lookup table
   const parsed = CreateSubcategorySchema.safeParse({
     categoryId: formData.get('categoryId'),
     name: formData.get('name'),
-    nature: formData.get('nature'),
   })
 
   if (!parsed.success) return { error: firstValidationError(parsed.error) }
@@ -154,7 +154,8 @@ export async function setSubcategoryNatureAction(input: {
     return { ok: false, error: NOT_FOUND_ERROR }
   }
   try {
-    await upsertSubcategoryNatureOverride({ userId, subCategoryId: parsed.data.subCategoryId, nature: parsed.data.nature })
+    // TODO(Phase 49): resolve nature code → natureId via lookup table; passing null for compile-only
+    await upsertSubcategoryNatureOverride({ userId, subCategoryId: parsed.data.subCategoryId, natureId: null })
   } catch {
     return { ok: false, error: GENERIC_ERROR }
   }

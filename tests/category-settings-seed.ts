@@ -169,13 +169,13 @@ export async function prepareCategorySettingsSeed(seed: CategorySettingsSeed) {
 
     seed.systemSubcategoryOriginalName = systemTarget.name
 
+    // Phase 46: category.type column removed (ADR 0012)
     const [linkedCategory] = await database.db
       .insert(category)
       .values({
         userId: seed.userId,
         name: seed.linkedCategoryName,
         slug: slugify(seed.linkedCategoryName),
-        type: 'out',
         isActive: true,
       })
       .returning({ id: category.id })
@@ -191,13 +191,13 @@ export async function prepareCategorySettingsSeed(seed: CategorySettingsSeed) {
       })
       .returning({ id: subCategory.id })
 
+    // Phase 46: category.type column removed (ADR 0012)
     const [unlinkedCategory] = await database.db
       .insert(category)
       .values({
         userId: seed.userId,
         name: seed.unlinkedCategoryName,
         slug: slugify(seed.unlinkedCategoryName),
-        type: 'out',
         isActive: true,
       })
       .returning({ id: category.id })
@@ -240,9 +240,10 @@ import { describe, it, expect } from 'vitest'
 import { FlowNature } from '@/lib/utils/nature-labels'
 
 describe('seed nature assignment (R-FN-03)', () => {
+  // Phase 46: FlowNature v2.0 — 8 codes (operational dissolved, financial→investment, extraordinary→savings)
   it('FlowNature import from @/lib/utils/nature-labels succeeds (regression guard)', () => {
-    const validNatures: FlowNature[] = ['essential', 'discretionary', 'operational', 'financial', 'debt', 'extraordinary']
-    expect(validNatures).toHaveLength(6)
+    const validNatures: FlowNature[] = ['essential', 'discretionary', 'income', 'income_extraordinary', 'debt', 'transfer', 'savings', 'investment']
+    expect(validNatures).toHaveLength(8)
   })
 
   it.todo('at least 1 system subcategory has nature: essential (R-FN-03) — enable after Plan 37-02 adds nature to subCategories seed')

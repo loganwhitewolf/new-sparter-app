@@ -54,8 +54,9 @@ describe('SidebarProvider (D-13, D-14)', () => {
     )
 
     expect(capturedCtx).not.toBeNull()
-    expect(typeof (capturedCtx as NonNullable<typeof capturedCtx>).collapsed).toBe('boolean')
-    expect(typeof (capturedCtx as NonNullable<typeof capturedCtx>).setCollapsed).toBe('function')
+    const ctx = capturedCtx as unknown as { collapsed: boolean; setCollapsed: (v: boolean) => void }
+    expect(typeof ctx.collapsed).toBe('boolean')
+    expect(typeof ctx.setCollapsed).toBe('function')
   })
 
   it('useSidebarCollapsed throws with correct message when used outside SidebarProvider', () => {

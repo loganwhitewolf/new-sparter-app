@@ -47,27 +47,28 @@ const INCOME_CHIP_TOOLTIPS: Record<IncomeKey, string> = {
 
 /**
  * Mapping from OutKey to the NATURE_LABELS key.
- * The `extraordinary` OUT key maps to NATURE_LABELS['extraordinary'] (not income_extraordinary).
+ * Phase 46: FlowNature v2.0 — 6 OUT codes (operational dissolved, financial→investment, extraordinary→savings)
  */
 const OUT_NATURE_KEY_MAP: Record<OutKey, keyof typeof NATURE_LABELS> = {
   essential: 'essential',
   discretionary: 'discretionary',
-  operational: 'operational',
-  financial: 'financial',
   debt: 'debt',
-  extraordinary: 'extraordinary',
+  savings: 'savings',
+  investment: 'investment',
+  transfer: 'transfer',
 }
 
 /**
  * One-line Italian tooltip definition for each out chip (EDU-02).
+ * Phase 46: FlowNature v2.0 codes
  */
 const OUT_CHIP_TOOLTIPS: Record<OutKey, string> = {
   essential: NATURE_LABELS['essential'] + ' — spese necessarie come affitto, cibo, bollette',
   discretionary: NATURE_LABELS['discretionary'] + ' — acquisti facoltativi e svago',
-  operational: NATURE_LABELS['operational'] + ' — abbonamenti, commissioni, costi operativi',
-  financial: NATURE_LABELS['financial'] + ' — investimenti, tasse, spese finanziarie',
   debt: NATURE_LABELS['debt'] + ' — rate, mutui, rimborsi di prestiti',
-  extraordinary: NATURE_LABELS['extraordinary'] + ' — spese una-tantum non ricorrenti',
+  savings: NATURE_LABELS['savings'] + ' — risparmi accantonati',
+  investment: NATURE_LABELS['investment'] + ' — investimenti, azioni, fondi comuni',
+  transfer: NATURE_LABELS['transfer'] + ' — trasferimenti tra conti',
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────

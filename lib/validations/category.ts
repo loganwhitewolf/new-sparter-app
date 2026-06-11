@@ -54,13 +54,16 @@ export const DeleteCategorySchema = z.object({
   id: IdSchema,
 })
 
+// Phase 46: FlowNature v2.0 — 8 codes (operational→dissolved, financial→investment, extraordinary→savings)
 export const NatureSchema = z.enum([
   'essential',
   'discretionary',
-  'operational',
-  'financial',
+  'income',
+  'income_extraordinary',
   'debt',
-  'extraordinary',
+  'transfer',
+  'savings',
+  'investment',
 ])
 
 export const SetSubcategoryNatureSchema = z.object({
@@ -68,10 +71,10 @@ export const SetSubcategoryNatureSchema = z.object({
   nature: NatureSchema.nullable(),
 })
 
+// TODO(Phase 49): re-add natureId (number) once nature picker wired to lookup table
 export const CreateSubcategorySchema = z.object({
   categoryId: IdSchema,
   name: NameSchema,
-  nature: NatureSchema,
 }).transform((input) => ({
   ...input,
   slug: deriveCategorySlug(input.name),

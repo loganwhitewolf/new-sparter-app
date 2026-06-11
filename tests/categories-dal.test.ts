@@ -415,14 +415,14 @@ describe('categories DAL mutations', () => {
   })
 
   it('creates user-owned categories with owner metadata', async () => {
-    await createUserCategory({ userId: 'user-1', name: 'Casa', slug: 'casa', type: 'out' })
+    // Phase 46: category.type removed (ADR 0012)
+    await createUserCategory({ userId: 'user-1', name: 'Casa', slug: 'casa' })
 
     expect(mocks.insertArgs[0]).toMatchObject({ id: 'category.id' })
     expect(mocks.insertValues[0]).toEqual({
       userId: 'user-1',
       name: 'Casa',
       slug: 'casa',
-      type: 'out',
       isActive: true,
     })
   })
@@ -450,7 +450,8 @@ describe('categories DAL mutations', () => {
   it('creates subcategories only under categories visible to the user', async () => {
     mocks.selectResults.push([{ id: 2 }])
 
-    await createUserSubcategory({ userId: 'user-1', categoryId: 2, name: 'Affitto', slug: 'affitto', nature: 'essential' })
+    // Phase 46: nature field replaced by natureId (FK to nature table)
+    await createUserSubcategory({ userId: 'user-1', categoryId: 2, name: 'Affitto', slug: 'affitto', natureId: null })
 
     expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.id', right: 2 })
     expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.isActive', right: true })

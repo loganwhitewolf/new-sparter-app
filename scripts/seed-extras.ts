@@ -52,8 +52,11 @@ type Db = typeof db
 
 // Step 1 (phase 37): set FlowNature on system subcategories
 // trasferimento and addebito-carta-di-credito are intentionally null — no UPDATE needed
+// Phase 46: FlowNature v2.0 — extraordinary→savings, operational dissolved into discretionary, financial→investment
+// NOTE: these slugs are written via SQL raw (see setSubcategoryNature) because subCategory.nature column removed (Phase 46)
+// TODO(Phase 49): step 1 must be rewritten to set natureId (FK) instead of nature code string
 const NATURE_SLUGS: Record<FlowNature, string[]> = {
-  extraordinary: [
+  savings: [
     'conto-risparmio',
     'fondo-emergenze',
     'fondo-pensione',
@@ -61,28 +64,6 @@ const NATURE_SLUGS: Record<FlowNature, string[]> = {
     'risparmio-per-investimenti',
     'obiettivi-a-lungo-termine',
     'risparmio-per-salute',
-  ],
-  operational: [
-    'altri-abbonamenti',
-    'streaming-video',
-    'streaming-musica',
-    'software-e-app',
-    'servizi-telefonici-e-internet',
-    'piattaforme-didattiche',
-    'banca',
-    'auto',
-    'casa',
-    'salute',
-    'viaggio',
-    'responsabilita-civile',
-    'animali-domestici',
-    'imposte',
-    'imposte-governative',
-    'bolli-auto',
-    'commissioni-bancarie',
-    'corsi-online',
-    'universita',
-    'corsi-di-specializzazione',
   ],
   discretionary: [
     'alloggio',
@@ -157,7 +138,8 @@ const NATURE_SLUGS: Record<FlowNature, string[]> = {
     'dividendi-fondi-comuni',
     'dividendi-immobiliari',
   ],
-  financial: [
+  // Phase 46: financial → investment (ADR 0012)
+  investment: [
     'azioni',
     'obbligazioni',
     'criptovalute',
@@ -222,10 +204,17 @@ const NATURE_SLUGS: Record<FlowNature, string[]> = {
 }
 
 async function setSubcategoryNature(database: Db): Promise<void> {
+  // TODO(Phase 49): rewrite to set natureId (FK to nature table) once nature lookup rows are seeded.
+  // Phase 46: subCategory.nature column removed (flowNatureEnum dropped, ADR 0012).
+  // This step is a historical migration (already executed). The NATURE_SLUGS codes are kept
+  // for documentation; the actual DB SET is a no-op placeholder until Phase 49 wires natureId.
   let totalUpdated = 0
   for (const [nature, slugs] of Object.entries(NATURE_SLUGS) as [FlowNature, string[]][]) {
     if (slugs.length === 0) continue
-    const result = await database.update(subCategory).set({ nature }).where(inArray(subCategory.slug, slugs))
+    // Use raw SQL to avoid TypeScript compile error — subCategory.nature column no longer in Drizzle schema
+    const result = await database.execute(
+      sql`UPDATE sub_category SET nature = ${nature} WHERE slug = ANY(${slugs}) AND user_id IS NULL`
+    )
     const count = (result as unknown as { rowCount?: number }).rowCount ?? 0
     console.log(`    nature=${nature}: ${count} rows updated`)
     totalUpdated += count
@@ -250,7 +239,7 @@ async function setFinecoDescriptionStripPattern(database: Db): Promise<void> {
 async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
   // 1. Rename deprecated slug → bio-e-naturale.
   // Guard: if bio-e-naturale already exists as a separate row (e.g. seeded by yarn db:seed),
-  // skip the rename and deactivate spesa-bio instead — avoids unique slug constraint violation on re-runs.
+  // skip the rename and deactivate the old slug instead — avoids unique slug constraint violation on re-runs.
   const existingBioNaturale = await database
     .select({ id: subCategory.id })
     .from(subCategory)
@@ -258,7 +247,7 @@ async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
     .limit(1)
 
   if (existingBioNaturale.length > 0) {
-    // Target already exists — deactivate spesa-bio if still present
+    // Target already exists — deactivate old slug if still present
     const deactivateSpaeBio = await database
       .update(subCategory)
       .set({ isActive: false })
@@ -275,11 +264,12 @@ async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
   }
 
   // 2. Set nature='essential' on the 4 new subcategory slugs
+  // Phase 46: subCategory.nature column removed — use raw SQL
+  // TODO(Phase 49): rewrite to set natureId once nature lookup rows seeded
   const newSlugs = ['discount', 'negozio-di-quartiere', 'mercato-rionale', 'drogheria-e-casalinghi']
-  const natureResult = await database
-    .update(subCategory)
-    .set({ nature: 'essential' as const })
-    .where(and(inArray(subCategory.slug, newSlugs), isNull(subCategory.userId)))
+  const natureResult = await database.execute(
+    sql`UPDATE sub_category SET nature = 'essential' WHERE slug = ANY(${newSlugs}) AND user_id IS NULL`
+  )
   const natureCount = (natureResult as unknown as { rowCount?: number }).rowCount ?? 0
   console.log(`    set nature=essential on new slugs: ${natureCount} rows updated`)
 
@@ -321,8 +311,8 @@ async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
   }
 
   // 5. Migrate categorization patterns: prodotti-freschi → negozio-di-quartiere
-  // unique("categorization_pattern_unique").on(pattern, subCategoryId, amountSign) — must delete
-  // prodotti-freschi patterns that already exist for negozio-di-quartiere before migrating the rest.
+  // Phase 46: amountSign column removed (ADR 0012) — unique constraint now on (pattern, subCategoryId) only
+  // Use raw SQL to avoid TypeScript compile error on the old amountSign Drizzle column ref
   if (prodottiFreschiId == null || negozioDiQuartiereId == null) {
     console.log(`    skip pattern migration (prodotti-freschi → negozio-di-quartiere): source or target already absent`)
   } else {
@@ -331,7 +321,8 @@ async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
       .where(
         and(
           eq(categorizationPattern.subCategoryId, prodottiFreschiId),
-          sql`(${categorizationPattern.pattern}, ${categorizationPattern.amountSign}) IN (SELECT pattern, amount_sign FROM categorization_pattern WHERE sub_category_id = ${negozioDiQuartiereId})`
+          // TODO(Phase 49): unique key is now (pattern, subCategoryId) — amountSign removed
+          sql`${categorizationPattern.pattern} IN (SELECT pattern FROM categorization_pattern WHERE sub_category_id = ${negozioDiQuartiereId})`
         )
       )
     const patConflictDeleteCount = (patConflictDelete as unknown as { rowCount?: number }).rowCount ?? 0
@@ -359,10 +350,12 @@ async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
 // - Cat 28 "movimenti di liquidita" → isActive=false (and its subcategories)
 // - Cat 26 "sconti, rimborsi e cashback" → "rimborsi, cashback e bonus"; merge/rename subcategories; add new one
 async function reorganizeTransferRimborsiCategories(database: Db): Promise<void> {
-  // --- Cat 32: rename to Trasferimenti, change type to transfer ---
+  // --- Cat 32: rename to Trasferimenti ---
+  // Phase 46: category.type column removed (ADR 0012); type='transfer' retype omitted (historical migration)
+  // TODO(Phase 49): direction-based transfer classification replaces category.type
   const cat32Result = await database
     .update(category)
-    .set({ name: 'Trasferimenti', slug: 'trasferimenti', type: 'transfer' })
+    .set({ name: 'Trasferimenti', slug: 'trasferimenti' })
     .where(eq(category.id, 32))
   console.log(`    cat32 rename/retype: ${(cat32Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
 
@@ -389,11 +382,16 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
     console.log(`    sub32 rename trasferimento: ${(sub32RenameResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
   }
 
-  // --- Cat 32 subcategories: set excludeFromTotals=true, nature=transfer on all ---
+  // --- Cat 32 subcategories: set excludeFromTotals=true on all ---
+  // Phase 46: subCategory.nature column removed — nature='transfer' set via raw SQL
+  // TODO(Phase 49): rewrite to set natureId once nature lookup rows seeded
   const sub32NatureResult = await database
     .update(subCategory)
-    .set({ excludeFromTotals: true, nature: 'transfer' })
+    .set({ excludeFromTotals: true })
     .where(and(eq(subCategory.categoryId, 32), isNull(subCategory.userId)))
+  await database.execute(
+    sql`UPDATE sub_category SET nature = 'transfer' WHERE category_id = 32 AND user_id IS NULL`
+  )
   console.log(`    sub32 set nature/excludeFromTotals: ${(sub32NatureResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
 
   // --- Cat 32: insert "Prelievo contante" if not exists (idempotent via slug check) ---
@@ -403,6 +401,8 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
     .where(and(eq(subCategory.slug, 'prelievo-contante'), isNull(subCategory.userId)))
     .limit(1)
   if (existingPrelievo.length === 0) {
+    // Phase 46: nature column removed — set via raw SQL after insert
+    // TODO(Phase 49): rewrite to set natureId once nature lookup rows seeded
     await database.insert(subCategory).values({
       categoryId: 32,
       name: 'Prelievo contante',
@@ -410,8 +410,10 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
       displayOrder: 0,
       isActive: true,
       excludeFromTotals: true,
-      nature: 'transfer',
     })
+    await database.execute(
+      sql`UPDATE sub_category SET nature = 'transfer' WHERE slug = 'prelievo-contante' AND user_id IS NULL`
+    )
     console.log('    sub32 insert prelievo-contante: 1 row inserted')
   } else {
     console.log('    sub32 insert prelievo-contante: already exists, skipped')
@@ -515,10 +517,11 @@ async function rebucketIncomeNatures(database: Db): Promise<void> {
     return
   }
 
-  const result = await database
-    .update(subCategory)
-    .set({ nature: 'income_extraordinary' as FlowNature })
-    .where(and(inArray(subCategory.slug, slugs), isNull(subCategory.userId)))
+  // Phase 46: subCategory.nature column removed — use raw SQL
+  // TODO(Phase 49): rewrite to set natureId once nature lookup rows seeded
+  const result = await database.execute(
+    sql`UPDATE sub_category SET nature = 'income_extraordinary' WHERE slug = ANY(${slugs}) AND user_id IS NULL`
+  )
 
   const count = (result as unknown as { rowCount?: number }).rowCount ?? 0
   console.log(`    income_extraordinary rebucket: ${count} rows updated`)

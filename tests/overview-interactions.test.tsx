@@ -26,13 +26,14 @@ const FIXTURE: OverviewChartPoint = {
     recurring: '1000.00',
     extraordinary: '200.00',
   },
+  // Phase 46: FlowNature v2.0 OUT codes (operational dissolved, financial→investment, extraordinary→savings)
   out: {
     essential: '300.00',
     discretionary: '150.00',
-    operational: '80.00',
-    financial: '60.00',
     debt: '40.00',
-    extraordinary: '20.00',
+    savings: '20.00',
+    investment: '60.00',
+    transfer: '0.00',
   },
 }
 
