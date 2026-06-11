@@ -9,7 +9,14 @@ import { fileURLToPath } from 'node:url'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
-import { categorizationPattern, category, expense, platform, subCategory } from '../lib/db/schema'
+import {
+  categorizationPattern,
+  category,
+  expense,
+  nature,
+  platform,
+  subCategory,
+} from '../lib/db/schema'
 import type { FlowNature } from '../lib/utils/nature-labels'
 import {
   DISSOLVED_CATEGORY_SLUGS,
@@ -388,35 +395,31 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
     .where(and(eq(subCategory.categoryId, 28), isNull(subCategory.userId)))
   console.log(`    sub28 deactivate: ${(sub28Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
 
-  // --- Cat 26: rename category ---
-  const cat26Result = await database
-    .update(category)
-    .set({ name: 'rimborsi, cashback e bonus', slug: 'rimborsi-cashback-e-bonus' })
+  // --- Cat 26: rename category (skip when v2 baseline already applied) ---
+  const [cat26Row] = await database
+    .select({ slug: category.slug })
+    .from(category)
     .where(eq(category.id, 26))
-  console.log(`    cat26 rename: ${(cat26Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
-
-  // --- Cat 26: rename sconto-abbonamento → rimborso-abbonamento-e-canoni ---
-  // Guard: if target already exists, deactivate old slug instead of renaming.
-  const existingRimborsoAbbonamento = await database
-    .select({ id: subCategory.id })
-    .from(subCategory)
-    .where(and(eq(subCategory.slug, 'rimborso-abbonamento-e-canoni'), isNull(subCategory.userId)))
     .limit(1)
-  if (existingRimborsoAbbonamento.length > 0) {
-    const deactivateScontoAbbona = await database
-      .update(subCategory)
-      .set({ isActive: false })
-      .where(and(eq(subCategory.slug, 'sconto-abbonamento'), isNull(subCategory.userId)))
-    console.log(`    sub26 rename sconto-abbonamento: skipped (target exists), deactivated: ${(deactivateScontoAbbona as unknown as { rowCount?: number }).rowCount ?? 0} rows`)
+  if (cat26Row?.slug === 'entrate-straordinarie') {
+    console.log('    cat26 rename: skipped (already v2 entrate-straordinarie)')
   } else {
-    const sub26AbbonaResult = await database
-      .update(subCategory)
-      .set({ name: 'rimborso abbonamento e canoni', slug: 'rimborso-abbonamento-e-canoni' })
-      .where(and(eq(subCategory.slug, 'sconto-abbonamento'), isNull(subCategory.userId)))
-    console.log(`    sub26 rename sconto-abbonamento: ${(sub26AbbonaResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+    const cat26Result = await database
+      .update(category)
+      .set({ name: 'rimborsi, cashback e bonus', slug: 'rimborsi-cashback-e-bonus' })
+      .where(eq(category.id, 26))
+    console.log(`    cat26 rename: ${(cat26Result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
   }
 
-  // --- Cat 26: deactivate sconto-canone (merged into rimborso-abbonamento-e-canoni) ---
+  // --- Cat 26: deactivate sconto-abbonamento / sconto-canone (v2 step 8 merges into bonus-promozionale) ---
+  const sub26AbbonaResult = await database
+    .update(subCategory)
+    .set({ isActive: false })
+    .where(and(eq(subCategory.slug, 'sconto-abbonamento'), isNull(subCategory.userId)))
+  console.log(
+    `    sub26 deactivate sconto-abbonamento: ${(sub26AbbonaResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`,
+  )
+
   const sub26CanoneResult = await database
     .update(subCategory)
     .set({ isActive: false })
@@ -444,37 +447,24 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
     console.log(`    sub26 rename sconto-promozionale: ${(sub26PromoResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
   }
 
-  // --- Cat 26: insert "rimborso da persona" if not exists ---
-  const existingRimborsoPersona = await database
-    .select({ id: subCategory.id })
-    .from(subCategory)
+  // --- Cat 26: deactivate historical rimborso-da-persona (v2: nets under original expense) ---
+  const sub26PersonaResult = await database
+    .update(subCategory)
+    .set({ isActive: false })
     .where(and(eq(subCategory.slug, 'rimborso-da-persona'), isNull(subCategory.userId)))
-    .limit(1)
-  if (existingRimborsoPersona.length === 0) {
-    await database.insert(subCategory).values({
-      categoryId: 26,
-      name: 'rimborso da persona',
-      slug: 'rimborso-da-persona',
-      displayOrder: 0,
-      isActive: true,
-    })
-    console.log('    sub26 insert rimborso-da-persona: 1 row inserted')
-  } else {
-    console.log('    sub26 insert rimborso-da-persona: already exists, skipped')
-  }
+  console.log(
+    `    sub26 deactivate rimborso-da-persona: ${(sub26PersonaResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`,
+  )
 }
 
-// Step 5 (phase 42: income split): re-bucket income_extraordinary subcategories
-// Guard: isNull(subCategory.userId) ensures only system subcategories are updated.
-async function rebucketIncomeNatures(database: Db): Promise<void> {
-  const slugs = NATURE_SLUGS['income_extraordinary']
-  if (slugs.length === 0) {
-    console.log('    income_extraordinary rebucket: slug list empty, skipping (PO confirmation pending)')
-    return
-  }
-
-  // Nature assignment deferred to v2-backfill-nature-id (D-12; nature column removed Phase 46)
-  console.log(`    income_extraordinary rebucket: skipped ${slugs.length} slugs (deferred to v2-backfill-nature-id)`)
+// Step 5 (phase 42: income split): re-bucket income_extraordinary subcategories.
+// D-16: income_extraordinary slug list is PO-confirmed and final for Phase 48.
+// The stale skip guard (which checked for an empty slug list) has been removed per D-16.
+// Nature assignment is owned by step 11 v2-backfill-nature-id, which reads NATURE_SLUG_MAP
+// built from V2_SUBCATEGORY_MANIFEST — the authoritative source. This step is a no-op
+// retained in the registry to preserve append-only ordering (steps are never deleted).
+async function rebucketIncomeNatures(_database: Db): Promise<void> {
+  console.log('    income_extraordinary rebucket: no-op (D-16 — nature assignment owned by v2-backfill-nature-id)')
 }
 
 // ---------------------------------------------------------------------------
@@ -753,6 +743,10 @@ const IN_ALLOCATION_TRANSFER_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ['commercio-online', 'vendita-beni-usati'],
   ['vendita-investimenti', 'immobili'],
   ['immobili-vendita', 'immobili'],
+  // step-4 historical orphans → v2 income_extraordinary targets (CR-01)
+  ['sconto-abbonamento', 'bonus-promozionale'],
+  ['rimborso-abbonamento-e-canoni', 'bonus-promozionale'],
+  ['rimborso-da-persona', 'cashback'],
 ]
 
 // Step 8: IN / ALLOCATION / TRANSFER merges (extends step 4 idempotently)
@@ -828,7 +822,6 @@ const SUB_RENAMES: ReadonlyArray<{ source: string; target: string; name: string 
   { source: 'amici-e-conoscenti', target: 'regali', name: 'regali' },
   { source: 'fondo-pensione', target: 'previdenza-complementare', name: 'previdenza complementare' },
   { source: 'sconto-promozionale', target: 'bonus-promozionale', name: 'bonus promozionale' },
-  { source: 'sconto-abbonamento', target: 'rimborso-abbonamento-e-canoni', name: 'rimborso abbonamento e canoni' },
 ]
 
 // Step 9: category and subcategory renames with idempotent guards
@@ -876,9 +869,12 @@ async function v2BackfillNatureId(database: Db): Promise<void> {
   let totalUpdated = 0
   for (const [natureCode, slugs] of Object.entries(NATURE_SLUG_MAP)) {
     if (slugs.length === 0) continue
-    const result = await database.execute(
-      sql`UPDATE sub_category SET nature_id = (SELECT id FROM nature WHERE code = ${natureCode}) WHERE slug = ANY(${slugs}) AND user_id IS NULL`,
-    )
+    const result = await database
+      .update(subCategory)
+      .set({
+        natureId: sql`(SELECT id FROM ${nature} WHERE ${nature.code} = ${natureCode})`,
+      })
+      .where(and(inArray(subCategory.slug, slugs), isNull(subCategory.userId)))
     const count = (result as unknown as { rowCount?: number }).rowCount ?? 0
     console.log(`    nature_id backfill code=${natureCode}: ${count} rows`)
     totalUpdated += count
