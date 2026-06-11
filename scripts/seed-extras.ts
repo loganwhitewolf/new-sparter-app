@@ -4,11 +4,19 @@
 //   yarn db:seed-extras              → DATABASE_URL
 //   yarn db:seed-extras:staging      → STAGING_DATABASE_URL
 //   yarn db:seed-extras:production   → PRODUCTION_DATABASE_URL + PRODUCTION_MIGRATION_CONFIRM
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { categorizationPattern, category, expense, platform, subCategory } from '../lib/db/schema'
 import type { FlowNature } from '../lib/utils/nature-labels'
+import {
+  DISSOLVED_CATEGORY_SLUGS,
+  DROPPED_SUBCATEGORY_SLUGS,
+  V2_SUBCATEGORY_MANIFEST,
+} from '../tests/fixtures/v2-taxonomy-manifest'
+import { categories as v2Categories, subCategories as v2SubCategories } from './seed-data'
 import {
   getOperatorDatabaseConfig,
   isDirectSupabaseHost,
@@ -18,33 +26,7 @@ import {
   resolveOperatorDatabaseTarget,
 } from './db-config'
 
-loadOperatorEnv()
-
-const seedTarget = resolveOperatorDatabaseTarget()
-const seedConfigResult = getOperatorDatabaseConfig({ target: seedTarget })
-
-if (!seedConfigResult.ok) {
-  console.error(JSON.stringify({ event: 'seed_extras_failed', target: seedTarget, error: seedConfigResult.error }))
-  process.exit(1)
-}
-
-const { config: seedConfig, diagnostics: seedDiagnostics } = seedConfigResult
-
-console.log(JSON.stringify({
-  event: 'seed_extras_connection',
-  target: seedDiagnostics.target,
-  host: seedDiagnostics.host,
-}))
-
-if (isDirectSupabaseHost(seedDiagnostics.host)) {
-  const hint = operatorConnectionFailureHint(seedDiagnostics.host, seedDiagnostics.target)
-  if (hint) console.warn(JSON.stringify({ event: 'seed_extras_connection_warning', message: hint }))
-}
-
-const pool = new Pool(pgPoolConfigFromOperatorConfig(seedConfig))
-const db = drizzle(pool)
-
-type Db = typeof db
+type Db = ReturnType<typeof drizzle>
 
 // ---------------------------------------------------------------------------
 // Step definitions
@@ -203,23 +185,10 @@ const NATURE_SLUGS: Record<FlowNature, string[]> = {
   ],
 }
 
-async function setSubcategoryNature(database: Db): Promise<void> {
-  // TODO(Phase 49): rewrite to set natureId (FK to nature table) once nature lookup rows are seeded.
-  // Phase 46: subCategory.nature column removed (flowNatureEnum dropped, ADR 0012).
-  // This step is a historical migration (already executed). The NATURE_SLUGS codes are kept
-  // for documentation; the actual DB SET is a no-op placeholder until Phase 49 wires natureId.
-  let totalUpdated = 0
-  for (const [nature, slugs] of Object.entries(NATURE_SLUGS) as [FlowNature, string[]][]) {
-    if (slugs.length === 0) continue
-    // Use raw SQL to avoid TypeScript compile error — subCategory.nature column no longer in Drizzle schema
-    const result = await database.execute(
-      sql`UPDATE sub_category SET nature = ${nature} WHERE slug = ANY(${slugs}) AND user_id IS NULL`
-    )
-    const count = (result as unknown as { rowCount?: number }).rowCount ?? 0
-    console.log(`    nature=${nature}: ${count} rows updated`)
-    totalUpdated += count
-  }
-  console.log(`    total: ${totalUpdated} rows updated`)
+async function setSubcategoryNature(_database: Db): Promise<void> {
+  // D-06: sub_category.nature column removed in Phase 46 — superseded by v2-backfill-nature-id.
+  // NATURE_SLUGS above is documentation-only for historical slug→nature mapping.
+  console.log('    set-subcategory-nature: no-op (Phase 47 — superseded by v2-backfill-nature-id)')
 }
 
 // Step 2 (phase description-strip-pattern): set descriptionStripPattern on Fineco platform
@@ -263,15 +232,8 @@ async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
     console.log(`    rename spesa-bio → bio-e-naturale: ${renameCount} rows updated`)
   }
 
-  // 2. Set nature='essential' on the 4 new subcategory slugs
-  // Phase 46: subCategory.nature column removed — use raw SQL
-  // TODO(Phase 49): rewrite to set natureId once nature lookup rows seeded
-  const newSlugs = ['discount', 'negozio-di-quartiere', 'mercato-rionale', 'drogheria-e-casalinghi']
-  const natureResult = await database.execute(
-    sql`UPDATE sub_category SET nature = 'essential' WHERE slug = ANY(${newSlugs}) AND user_id IS NULL`
-  )
-  const natureCount = (natureResult as unknown as { rowCount?: number }).rowCount ?? 0
-  console.log(`    set nature=essential on new slugs: ${natureCount} rows updated`)
+  // 2. Nature assignment deferred to v2-backfill-nature-id (D-12; nature column removed Phase 46)
+  console.log('    set nature on new slugs: skipped (deferred to v2-backfill-nature-id)')
 
   // 3. Resolve system subcategory IDs by slug for migration
   const sourceRows = await database
@@ -389,10 +351,7 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
     .update(subCategory)
     .set({ excludeFromTotals: true })
     .where(and(eq(subCategory.categoryId, 32), isNull(subCategory.userId)))
-  await database.execute(
-    sql`UPDATE sub_category SET nature = 'transfer' WHERE category_id = 32 AND user_id IS NULL`
-  )
-  console.log(`    sub32 set nature/excludeFromTotals: ${(sub32NatureResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
+  console.log(`    sub32 set excludeFromTotals: ${(sub32NatureResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated (nature deferred to v2-backfill-nature-id)`)
 
   // --- Cat 32: insert "Prelievo contante" if not exists (idempotent via slug check) ---
   const existingPrelievo = await database
@@ -411,10 +370,7 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
       isActive: true,
       excludeFromTotals: true,
     })
-    await database.execute(
-      sql`UPDATE sub_category SET nature = 'transfer' WHERE slug = 'prelievo-contante' AND user_id IS NULL`
-    )
-    console.log('    sub32 insert prelievo-contante: 1 row inserted')
+    console.log('    sub32 insert prelievo-contante: 1 row inserted (nature deferred to v2-backfill-nature-id)')
   } else {
     console.log('    sub32 insert prelievo-contante: already exists, skipped')
   }
@@ -517,14 +473,433 @@ async function rebucketIncomeNatures(database: Db): Promise<void> {
     return
   }
 
-  // Phase 46: subCategory.nature column removed — use raw SQL
-  // TODO(Phase 49): rewrite to set natureId once nature lookup rows seeded
-  const result = await database.execute(
-    sql`UPDATE sub_category SET nature = 'income_extraordinary' WHERE slug = ANY(${slugs}) AND user_id IS NULL`
+  // Nature assignment deferred to v2-backfill-nature-id (D-12; nature column removed Phase 46)
+  console.log(`    income_extraordinary rebucket: skipped ${slugs.length} slugs (deferred to v2-backfill-nature-id)`)
+}
+
+// ---------------------------------------------------------------------------
+// v2 taxonomy migration helpers (Phase 47 — deployed DB transforms, D-08)
+// ---------------------------------------------------------------------------
+
+const TRANSFER_EXCLUDE_SLUGS = ['trasferimento-tra-conti', 'addebito-carta-di-credito', 'contante'] as const
+
+async function resolveSystemSubIds(
+  database: Db,
+  slugs: string[],
+): Promise<Record<string, number | undefined>> {
+  if (slugs.length === 0) return {}
+  const rows = await database
+    .select({ id: subCategory.id, slug: subCategory.slug })
+    .from(subCategory)
+    .where(and(inArray(subCategory.slug, slugs), isNull(subCategory.userId)))
+  return Object.fromEntries(rows.map((row) => [row.slug, row.id]))
+}
+
+async function migrateSubcategoryMerge(
+  database: Db,
+  sourceSlug: string,
+  targetSlug: string,
+): Promise<void> {
+  const idBySlug = await resolveSystemSubIds(database, [sourceSlug, targetSlug])
+  const sourceId = idBySlug[sourceSlug]
+  const targetId = idBySlug[targetSlug]
+
+  if (sourceId == null || targetId == null) {
+    console.log(`    skip merge ${sourceSlug} → ${targetSlug}: source or target absent`)
+    return
+  }
+
+  const expMigrate = await database
+    .update(expense)
+    .set({ subCategoryId: targetId })
+    .where(eq(expense.subCategoryId, sourceId))
+  console.log(
+    `    migrate expenses ${sourceSlug} → ${targetSlug}: ${(expMigrate as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
   )
 
-  const count = (result as unknown as { rowCount?: number }).rowCount ?? 0
-  console.log(`    income_extraordinary rebucket: ${count} rows updated`)
+  const patConflictDelete = await database
+    .delete(categorizationPattern)
+    .where(
+      and(
+        eq(categorizationPattern.subCategoryId, sourceId),
+        sql`${categorizationPattern.pattern} IN (SELECT pattern FROM categorization_pattern WHERE sub_category_id = ${targetId})`,
+      ),
+    )
+  console.log(
+    `    delete conflicting patterns ${sourceSlug}: ${(patConflictDelete as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+
+  const patMigrate = await database
+    .update(categorizationPattern)
+    .set({ subCategoryId: targetId })
+    .where(eq(categorizationPattern.subCategoryId, sourceId))
+  console.log(
+    `    migrate patterns ${sourceSlug} → ${targetSlug}: ${(patMigrate as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+
+  const deactivate = await database
+    .update(subCategory)
+    .set({ isActive: false })
+    .where(and(eq(subCategory.slug, sourceSlug), isNull(subCategory.userId)))
+  console.log(
+    `    deactivate source ${sourceSlug}: ${(deactivate as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+}
+
+async function renameSubcategoryGuarded(
+  database: Db,
+  sourceSlug: string,
+  targetSlug: string,
+  targetName: string,
+): Promise<void> {
+  const existingTarget = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, targetSlug), isNull(subCategory.userId)))
+    .limit(1)
+
+  if (existingTarget.length > 0) {
+    const deactivate = await database
+      .update(subCategory)
+      .set({ isActive: false })
+      .where(and(eq(subCategory.slug, sourceSlug), isNull(subCategory.userId)))
+    console.log(
+      `    rename ${sourceSlug} → ${targetSlug}: skipped (target exists), deactivated source: ${(deactivate as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+    )
+    return
+  }
+
+  const rename = await database
+    .update(subCategory)
+    .set({ name: targetName, slug: targetSlug })
+    .where(and(eq(subCategory.slug, sourceSlug), isNull(subCategory.userId)))
+  console.log(
+    `    rename ${sourceSlug} → ${targetSlug}: ${(rename as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+}
+
+async function renameCategoryGuarded(
+  database: Db,
+  sourceSlug: string,
+  targetSlug: string,
+  targetName: string,
+): Promise<void> {
+  const existingTarget = await database
+    .select({ id: category.id })
+    .from(category)
+    .where(and(eq(category.slug, targetSlug), isNull(category.userId)))
+    .limit(1)
+
+  if (existingTarget.length > 0) {
+    const deactivate = await database
+      .update(category)
+      .set({ isActive: false })
+      .where(and(eq(category.slug, sourceSlug), isNull(category.userId)))
+    console.log(
+      `    rename category ${sourceSlug} → ${targetSlug}: skipped (target exists), deactivated source: ${(deactivate as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+    )
+    return
+  }
+
+  const rename = await database
+    .update(category)
+    .set({ name: targetName, slug: targetSlug })
+    .where(and(eq(category.slug, sourceSlug), isNull(category.userId)))
+  console.log(
+    `    rename category ${sourceSlug} → ${targetSlug}: ${(rename as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+}
+
+// Step 6: INSERT net-new v2 categories and subcategories absent from v1 baseline
+async function v2InsertCategoriesSubcategories(database: Db): Promise<void> {
+  let categoriesInserted = 0
+  for (const cat of v2Categories) {
+    const existing = await database
+      .select({ id: category.id })
+      .from(category)
+      .where(and(eq(category.slug, cat.slug), isNull(category.userId)))
+      .limit(1)
+    if (existing.length > 0) continue
+
+    await database.insert(category).values({
+      id: cat.id,
+      name: cat.name,
+      slug: cat.slug,
+      displayOrder: cat.displayOrder,
+      isActive: cat.isActive,
+    })
+    categoriesInserted += 1
+    console.log(`    insert category ${cat.slug}: 1 row`)
+  }
+  console.log(`    categories inserted: ${categoriesInserted}`)
+
+  let subsInserted = 0
+  for (const sub of v2SubCategories) {
+    const existing = await database
+      .select({ id: subCategory.id })
+      .from(subCategory)
+      .where(and(eq(subCategory.slug, sub.slug), isNull(subCategory.userId)))
+      .limit(1)
+    if (existing.length > 0) continue
+
+    const excludeFromTotals = (TRANSFER_EXCLUDE_SLUGS as readonly string[]).includes(sub.slug)
+    await database.insert(subCategory).values({
+      categoryId: sub.categoryId,
+      name: sub.name,
+      slug: sub.slug,
+      displayOrder: sub.displayOrder,
+      isActive: sub.isActive,
+      excludeFromTotals,
+    })
+    subsInserted += 1
+  }
+  console.log(`    subcategories inserted: ${subsInserted} (nature_id deferred to v2-backfill-nature-id)`)
+}
+
+const OUT_MERGE_PAIRS: ReadonlyArray<readonly [string, string]> = [
+  ['supermercato', 'spesa-quotidiana'],
+  ['spesa-online', 'spesa-quotidiana'],
+  ['prodotti-freschi', 'spesa-quotidiana'],
+  ['prodotti-non-alimentari', 'casalinghi-e-non-alimentari'],
+  ['negozio-di-quartiere', 'spesa-quotidiana'],
+  ['drogheria-e-casalinghi', 'casalinghi-e-non-alimentari'],
+  ['discount', 'spesa-quotidiana'],
+  ['mercato-rionale', 'spesa-quotidiana'],
+  ['spesa-bio', 'bio-vino-e-gourmet'],
+  ['bio-e-naturale', 'bio-vino-e-gourmet'],
+  ['cene-fuori', 'ristoranti'],
+  ['pranzi', 'ristoranti'],
+  ['colazioni-e-snack', 'bar-caffe-e-snack'],
+  ['take-away', 'take-away-e-delivery'],
+  ['carburante', 'carburante-e-ricarica'],
+  ['elettricita-per-auto', 'carburante-e-ricarica'],
+  ['pedaggi-autostradali', 'pedaggi-e-parcheggi'],
+  ['spese-telepass', 'pedaggi-e-parcheggi'],
+  ['ztl-e-parcheggi', 'pedaggi-e-parcheggi'],
+  ['treno', 'mezzi-pubblici'],
+  ['farmaci-e-medicinali', 'farmaci'],
+  ['farmaci-generici', 'farmaci'],
+  ['parafarmaceutici', 'farmaci'],
+  ['manutenzione-ordinaria', 'manutenzione-casa'],
+  ['badante', 'servizi-domestici'],
+  ['baby-sitter', 'servizi-domestici'],
+  ['servizi-di-pulizia', 'servizi-domestici'],
+  ['servizi-telefonici-e-internet', 'telefono-e-internet'],
+  ['imposte-governative', 'imposte'],
+  ['commissioni-bancarie', 'commissioni-e-canone-conto'],
+  ['corsi-online', 'corsi'],
+  ['corsi-di-specializzazione', 'corsi'],
+  ['piattaforme-didattiche', 'corsi'],
+  ['attivita-extra-scolastiche', 'corsi'],
+  ['abbigliamento', 'abbigliamento-e-accessori'],
+  ['scarpe', 'abbigliamento-e-accessori'],
+  ['accessori', 'abbigliamento-e-accessori'],
+  ['attrezzatura-sportiva', 'attrezzatura-e-abbigliamento-sportivo'],
+  ['streaming-video', 'streaming'],
+  ['streaming-musica', 'streaming'],
+  ['libri-cartacei', 'libri-e-audiolibri'],
+  ['e-book', 'libri-e-audiolibri'],
+  ['audiolibri', 'libri-e-audiolibri'],
+  ['cinema', 'cinema-ed-eventi'],
+  ['eventi', 'cinema-ed-eventi'],
+  ['software-e-app', 'app-e-software'],
+  ['altri-abbonamenti', 'app-e-software'],
+  ['banca', 'commissioni-e-canone-conto'],
+  ['sport', 'sport-e-fitness'],
+  ['cure-estetiche', 'cura-della-persona'],
+  ['massaggi', 'cura-della-persona'],
+  ['corsi-fitness', 'sport-e-fitness'],
+  ['compleanni', 'regali'],
+  ['festivita', 'regali'],
+  ['anniversari', 'regali'],
+  ['amici-e-conoscenti', 'regali'],
+  ['auto', 'assicurazione-veicoli'],
+  ['viaggio', 'assicurazione-viaggio'],
+  ['animali-domestici', 'assicurazione-animali'],
+  ['responsabilita-civile', 'assicurazione-veicoli'],
+]
+
+// Step 7: OUT merges and wrapper dissolutions (expense → pattern → deactivate)
+async function v2MigrateMergesOut(database: Db): Promise<void> {
+  for (const [sourceSlug, targetSlug] of OUT_MERGE_PAIRS) {
+    await migrateSubcategoryMerge(database, sourceSlug, targetSlug)
+  }
+
+  // Assicurazioni wrapper subs with slug collisions — migrate by resolved IDs
+  await migrateSubcategoryMerge(database, 'casa', 'assicurazione-casa')
+  await migrateSubcategoryMerge(database, 'salute', 'assicurazione-salute')
+}
+
+const IN_ALLOCATION_TRANSFER_PAIRS: ReadonlyArray<readonly [string, string]> = [
+  ['dividendi-azionari', 'dividendi'],
+  ['dividendi-fondi-comuni', 'dividendi'],
+  ['dividendi-immobiliari', 'dividendi'],
+  ['azioni', 'titoli-e-fondi'],
+  ['obbligazioni', 'titoli-e-fondi'],
+  ['fondi-comuni', 'titoli-e-fondi'],
+  ['bonifico-in-uscita', 'trasferimento-tra-conti'],
+  ['bonifico-in-entrata', 'trasferimento-tra-conti'],
+  ['ricariche-conti', 'trasferimento-tra-conti'],
+  ['trasferimento', 'trasferimento-tra-conti'],
+  ['risparmio-per-progetti', 'accantonamenti-obiettivi'],
+  ['obiettivi-a-lungo-termine', 'accantonamenti-obiettivi'],
+  ['risparmio-per-salute', 'accantonamenti-obiettivi'],
+  ['risparmio-per-investimenti', 'accantonamenti-obiettivi'],
+  ['fondo-pensione', 'previdenza-complementare'],
+  ['cashback-carta-di-credito', 'cashback'],
+  ['cashback-acquisti-online', 'cashback'],
+  ['cashback-programmi-fedelta', 'cashback'],
+  ['vendita-di-beni-usati', 'vendita-beni-usati'],
+  ['commercio-online', 'vendita-beni-usati'],
+  ['vendita-investimenti', 'immobili'],
+  ['immobili-vendita', 'immobili'],
+]
+
+// Step 8: IN / ALLOCATION / TRANSFER merges (extends step 4 idempotently)
+async function v2MigrateMergesInAllocationTransfer(database: Db): Promise<void> {
+  for (const [sourceSlug, targetSlug] of IN_ALLOCATION_TRANSFER_PAIRS) {
+    await migrateSubcategoryMerge(database, sourceSlug, targetSlug)
+  }
+
+  // prelievo-contante → contante: rename if target absent, else merge
+  const contanteExists = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'contante'), isNull(subCategory.userId)))
+    .limit(1)
+  if (contanteExists.length > 0) {
+    await migrateSubcategoryMerge(database, 'prelievo-contante', 'contante')
+  } else {
+    await renameSubcategoryGuarded(database, 'prelievo-contante', 'contante', 'contante')
+    const contanteUpdate = await database
+      .update(subCategory)
+      .set({ excludeFromTotals: true })
+      .where(and(eq(subCategory.slug, 'contante'), isNull(subCategory.userId)))
+    console.log(
+      `    set excludeFromTotals on contante: ${(contanteUpdate as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+    )
+  }
+}
+
+const CATEGORY_RENAMES: ReadonlyArray<{ source: string; target: string; name: string }> = [
+  { source: 'bollette-e-utilita', target: 'utenze', name: 'utenze' },
+  { source: 'income-finanziari', target: 'rendite', name: 'rendite' },
+  { source: 'tasse-imposte-e-commissioni', target: 'imposte-e-oneri', name: 'imposte e oneri' },
+  { source: 'regali', target: 'regali-e-donazioni', name: 'regali e donazioni' },
+  { source: 'ignore', target: 'trasferimenti', name: 'Trasferimenti' },
+  { source: 'libri-e-media', target: 'cultura-e-tempo-libero', name: 'cultura e tempo libero' },
+  { source: 'tempo-libero', target: 'cultura-e-tempo-libero', name: 'cultura e tempo libero' },
+  { source: 'sconti-rimborsi-e-cashback', target: 'entrate-straordinarie', name: 'entrate straordinarie' },
+  { source: 'rimborsi-cashback-e-bonus', target: 'entrate-straordinarie', name: 'entrate straordinarie' },
+  { source: 'vendite-e-dismissioni', target: 'entrate-straordinarie', name: 'entrate straordinarie' },
+]
+
+const SUB_RENAMES: ReadonlyArray<{ source: string; target: string; name: string }> = [
+  { source: 'carburante', target: 'carburante-e-ricarica', name: 'carburante e ricarica' },
+  { source: 'take-away', target: 'take-away-e-delivery', name: 'take-away e delivery' },
+  { source: 'sport', target: 'sport-e-fitness', name: 'sport e fitness' },
+  { source: 'commissioni-bancarie', target: 'commissioni-e-canone-conto', name: 'commissioni e canone conto' },
+  { source: 'bio-e-naturale', target: 'bio-vino-e-gourmet', name: 'bio vino e gourmet' },
+  { source: 'spesa-bio', target: 'bio-vino-e-gourmet', name: 'bio vino e gourmet' },
+  { source: 'pedaggi-autostradali', target: 'pedaggi-e-parcheggi', name: 'pedaggi e parcheggi' },
+  { source: 'spese-telepass', target: 'pedaggi-e-parcheggi', name: 'pedaggi e parcheggi' },
+  { source: 'ztl-e-parcheggi', target: 'pedaggi-e-parcheggi', name: 'pedaggi e parcheggi' },
+  { source: 'manutenzione-ordinaria', target: 'manutenzione-casa', name: 'manutenzione casa' },
+  { source: 'cene-fuori', target: 'ristoranti', name: 'ristoranti' },
+  { source: 'pranzi', target: 'ristoranti', name: 'ristoranti' },
+  { source: 'colazioni-e-snack', target: 'bar-caffe-e-snack', name: 'bar caffè e snack' },
+  { source: 'abbigliamento', target: 'abbigliamento-e-accessori', name: 'abbigliamento e accessori' },
+  { source: 'scarpe', target: 'abbigliamento-e-accessori', name: 'abbigliamento e accessori' },
+  { source: 'accessori', target: 'abbigliamento-e-accessori', name: 'abbigliamento e accessori' },
+  { source: 'attrezzatura-sportiva', target: 'attrezzatura-e-abbigliamento-sportivo', name: 'attrezzatura e abbigliamento sportivo' },
+  { source: 'cinema', target: 'cinema-ed-eventi', name: 'cinema ed eventi' },
+  { source: 'eventi', target: 'cinema-ed-eventi', name: 'cinema ed eventi' },
+  { source: 'libri-cartacei', target: 'libri-e-audiolibri', name: 'libri e audiolibri' },
+  { source: 'e-book', target: 'libri-e-audiolibri', name: 'libri e audiolibri' },
+  { source: 'audiolibri', target: 'libri-e-audiolibri', name: 'libri e audiolibri' },
+  { source: 'streaming-video', target: 'streaming', name: 'streaming' },
+  { source: 'streaming-musica', target: 'streaming', name: 'streaming' },
+  { source: 'cure-estetiche', target: 'cura-della-persona', name: 'cura della persona' },
+  { source: 'massaggi', target: 'cura-della-persona', name: 'cura della persona' },
+  { source: 'corsi-fitness', target: 'sport-e-fitness', name: 'sport e fitness' },
+  { source: 'compleanni', target: 'regali', name: 'regali' },
+  { source: 'festivita', target: 'regali', name: 'regali' },
+  { source: 'anniversari', target: 'regali', name: 'regali' },
+  { source: 'amici-e-conoscenti', target: 'regali', name: 'regali' },
+  { source: 'fondo-pensione', target: 'previdenza-complementare', name: 'previdenza complementare' },
+  { source: 'sconto-promozionale', target: 'bonus-promozionale', name: 'bonus promozionale' },
+  { source: 'sconto-abbonamento', target: 'rimborso-abbonamento-e-canoni', name: 'rimborso abbonamento e canoni' },
+]
+
+// Step 9: category and subcategory renames with idempotent guards
+async function v2RenameCategoriesSubcategories(database: Db): Promise<void> {
+  for (const { source, target, name } of CATEGORY_RENAMES) {
+    await renameCategoryGuarded(database, source, target, name)
+  }
+  for (const { source, target, name } of SUB_RENAMES) {
+    await renameSubcategoryGuarded(database, source, target, name)
+  }
+}
+
+// Step 10: deactivate dissolved categories and pruned subcategories AFTER migrations
+async function v2DeactivatePruned(database: Db): Promise<void> {
+  const catResult = await database
+    .update(category)
+    .set({ isActive: false })
+    .where(and(inArray(category.slug, [...DISSOLVED_CATEGORY_SLUGS]), isNull(category.userId)))
+  console.log(
+    `    deactivate dissolved categories: ${(catResult as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+
+  const subResult = await database
+    .update(subCategory)
+    .set({ isActive: false })
+    .where(and(inArray(subCategory.slug, [...DROPPED_SUBCATEGORY_SLUGS]), isNull(subCategory.userId)))
+  console.log(
+    `    deactivate dropped subcategories: ${(subResult as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+}
+
+function buildNatureSlugMap(): Record<string, string[]> {
+  const map: Record<string, string[]> = {}
+  for (const entry of V2_SUBCATEGORY_MANIFEST) {
+    if (!map[entry.natureCode]) map[entry.natureCode] = []
+    map[entry.natureCode].push(entry.slug)
+  }
+  return map
+}
+
+const NATURE_SLUG_MAP = buildNatureSlugMap()
+
+// Step 11: backfill nature_id via nature.code lookup (D-12)
+async function v2BackfillNatureId(database: Db): Promise<void> {
+  let totalUpdated = 0
+  for (const [natureCode, slugs] of Object.entries(NATURE_SLUG_MAP)) {
+    if (slugs.length === 0) continue
+    const result = await database.execute(
+      sql`UPDATE sub_category SET nature_id = (SELECT id FROM nature WHERE code = ${natureCode}) WHERE slug = ANY(${slugs}) AND user_id IS NULL`,
+    )
+    const count = (result as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`    nature_id backfill code=${natureCode}: ${count} rows`)
+    totalUpdated += count
+  }
+  console.log(`    nature_id backfill total: ${totalUpdated} rows`)
+}
+
+// Step 12: backfill user_subcategory_override.nature_id from linked system sub
+async function v2BackfillOverrideNatureId(database: Db): Promise<void> {
+  const result = await database.execute(sql`
+    UPDATE user_subcategory_override uso
+    SET nature_id = sc.nature_id
+    FROM sub_category sc
+    WHERE uso.sub_category_id = sc.id
+      AND sc.user_id IS NULL
+      AND uso.nature_id IS NULL
+      AND sc.nature_id IS NOT NULL
+  `)
+  console.log(
+    `    override nature_id backfill: ${(result as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -537,27 +912,70 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'reorganize-spesa-subcategories', run: reorganizeSpesaSubcategories },
   { name: 'reorganize-transfer-rimborsi-categories', run: reorganizeTransferRimborsiCategories },
   { name: 'rebucket-income-natures', run: rebucketIncomeNatures },
+  { name: 'v2-insert-categories-subcategories', run: v2InsertCategoriesSubcategories },
+  { name: 'v2-migrate-merges-out', run: v2MigrateMergesOut },
+  { name: 'v2-migrate-merges-in-allocation-transfer', run: v2MigrateMergesInAllocationTransfer },
+  { name: 'v2-rename-categories-subcategories', run: v2RenameCategoriesSubcategories },
+  { name: 'v2-deactivate-pruned', run: v2DeactivatePruned },
+  { name: 'v2-backfill-nature-id', run: v2BackfillNatureId },
+  { name: 'v2-backfill-override-nature-id', run: v2BackfillOverrideNatureId },
 ]
 
+export const STEP_NAMES = STEPS.map((step) => step.name)
+
 // ---------------------------------------------------------------------------
-// Runner
+// Runner (only when executed directly — tests import STEP_NAMES without DB)
 // ---------------------------------------------------------------------------
 
-async function runExtras() {
-  console.log(JSON.stringify({ event: 'seed_extras_started', target: seedDiagnostics.target, steps: STEPS.length }))
+const executedDirectly =
+  typeof process.argv[1] === 'string' &&
+  resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])
+
+async function runExtras(database: Db, target: string) {
+  console.log(JSON.stringify({ event: 'seed_extras_started', target, steps: STEPS.length }))
 
   for (const step of STEPS) {
     console.log(`  [${step.name}] running...`)
-    await step.run(db)
+    await step.run(database)
     console.log(`  [${step.name}] done`)
   }
 
-  console.log(JSON.stringify({ event: 'seed_extras_succeeded', target: seedDiagnostics.target }))
+  console.log(JSON.stringify({ event: 'seed_extras_succeeded', target }))
 }
 
-runExtras()
-  .catch((error: unknown) => {
-    console.error(JSON.stringify({ event: 'seed_extras_failed', error: String(error) }))
+if (executedDirectly) {
+  loadOperatorEnv()
+
+  const seedTarget = resolveOperatorDatabaseTarget()
+  const seedConfigResult = getOperatorDatabaseConfig({ target: seedTarget })
+
+  if (!seedConfigResult.ok) {
+    console.error(JSON.stringify({ event: 'seed_extras_failed', target: seedTarget, error: seedConfigResult.error }))
     process.exit(1)
-  })
-  .finally(() => pool.end())
+  }
+
+  const { config: seedConfig, diagnostics: seedDiagnostics } = seedConfigResult
+
+  console.log(
+    JSON.stringify({
+      event: 'seed_extras_connection',
+      target: seedDiagnostics.target,
+      host: seedDiagnostics.host,
+    }),
+  )
+
+  if (isDirectSupabaseHost(seedDiagnostics.host)) {
+    const hint = operatorConnectionFailureHint(seedDiagnostics.host, seedDiagnostics.target)
+    if (hint) console.warn(JSON.stringify({ event: 'seed_extras_connection_warning', message: hint }))
+  }
+
+  const pool = new Pool(pgPoolConfigFromOperatorConfig(seedConfig))
+  const db = drizzle(pool)
+
+  runExtras(db, seedDiagnostics.target)
+    .catch((error: unknown) => {
+      console.error(JSON.stringify({ event: 'seed_extras_failed', error: String(error) }))
+      process.exit(1)
+    })
+    .finally(() => pool.end())
+}
