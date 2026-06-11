@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: executing
-stopped_at: context exhaustion at 75% (2026-06-11)
-last_updated: "2026-06-11T09:36:18.651Z"
-last_activity: 2026-06-11 -- Phase 46 execution started
+last_updated: "2026-06-11T10:23:09.184Z"
+last_activity: 2026-06-11 -- Phase 47 execution started
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 3
+  total_plans: 8
   completed_plans: 3
   percent: 20
+stopped_at: Phase 47 planning complete — ready for /gsd-execute-phase 47
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-10)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 46 — direction-nature-schema
+**Current focus:** Phase 47 — taxonomy-seed-rework
 
 ## Current Position
 
-Phase: 46 (direction-nature-schema) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 46
-Last activity: 2026-06-11 -- Phase 46 execution started
+Phase: 47 (taxonomy-seed-rework) — EXECUTING
+Plan: 1 of 5
+Status: Executing Phase 47
+Last activity: 2026-06-11 -- Phase 47 execution started
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [████░░░░░░░░░░░░░░░░] 20% milestone (1/5 phases)
 
 ## Accumulated Context
 
@@ -40,7 +40,17 @@ Design contract is LOCKED. Do not re-open or re-derive the data model:
 
 - ADR 0012: direction derived from nature; 4th direction `allocation`; `category.type` removed
 - CONTEXT.md: canonical nature/direction vocabulary + categorization rules
-- `.planning/nature-remapping-WORKING.md`: 23 categories / ~65 subcats / 9 natures — final remap confirmed 2026-06-09
+- `.planning/nature-remapping-WORKING.md`: 23 categories / ~65 subcats — final remap confirmed 2026-06-09
+
+v2.0 / Phase 46 decisions (shipped 2026-06-11):
+
+- **8 nature rows** (not 9): `income`, `income_extraordinary`, `essential`, `discretionary`, `debt`, `transfer`, `savings`, `investment` — stale "9" references in docs; uncategorized = `null` `nature_id` on subcategory (D-02)
+- `direction` + `nature` lookup tables in `schema.ts` (varchar codes, not pgEnum); FK chain `sub_category.nature_id → nature → direction`
+- `category.type`, `flow_nature` enum, `amount_sign` removed from schema; pattern unique constraint `(pattern, subCategoryId)`
+- **D-06:** no `drizzle-kit generate` / DB apply in Phase 46 — migration deferred to Phase 48
+- **D-10:** `sub_category.exclude_from_totals` retained in schema — removal + `direction.included_in_totals` consumption deferred to Phase 49
+- **46-02 minimum-compile:** DAL/actions/components/tests compile green; semantic aggregation/filter rewrite marked `TODO(Phase 49)` — not a Phase 46 deliverable
+- **46-03 seed baseline:** `directions` (4) + `natures` (8) in `seed-data.ts`; `seed.ts` FK-order insert; `seed-extras` pattern-dedupe sign-agnostic repair only (no new STEPS yet — Phase 47 adds nature_id backfill)
 
 Key constraints active for v2.0:
 
@@ -51,7 +61,9 @@ Key constraints active for v2.0:
 
 ### Planning Risk
 
-**8-vs-9 nature row count:** ADR 0012 "Consequences" enumerates 8 natures; the ADR data-model section and the working-doc summary both say 9. DATA-02 is written against the enumerated 8. Resolve in Phase 46 planning before building the `nature` table. Options: (a) 8 is correct and "9" references are stale; (b) a 9th row such as `uncategorized`/null-sentinel nature is intended.
+**Resolved (Phase 46):** 8-vs-9 nature row count — **8 is correct**; implemented in schema + seed (46-01, 46-03).
+
+**Open for Phase 47:** full taxonomy remap in `seed-data.ts` is a large additive/replacement exercise — must follow working doc slug-by-slug without breaking idempotent baseline insert contract.
 
 ### Blockers/Concerns
 
@@ -69,14 +81,22 @@ None.
 
 | Category | Item | Status |
 |----------|------|--------|
+| phase_46 | 46-VERIFICATION.md | not generated — run `/gsd-verify-work 46` if process gap matters |
+| phase_49 | DATA-06 `exclude_from_totals` removal | D-10 — deferred from Phase 46 |
+| phase_49 | Semantic DAL/dashboard/filter rewrite | `TODO(Phase 49)` stubs from 46-02 |
 | operator | R038/R039/R041 | live deploy operator-pending |
 | backlog | R029 | partial revalidation coverage |
 | backlog | REVAL-01 | parked |
 
 ## Session Continuity
 
-Last session: 2026-06-11T09:36:18.646Z
-Stopped at: context exhaustion at 75% (2026-06-11)
-Resume file: .planning/phases/46-direction-nature-schema/46-CONTEXT.md
+Last session: 2026-06-11 (Claude) — stopped at context exhaustion during Phase 46 wave 2
+Handoff synced: 2026-06-03 (Cursor) — Phase 46 closed in STATE + REQUIREMENTS
+Resume file: none (Phase 47 directory not created yet)
 
-**Next:** `/gsd-plan-phase 46`
+**Next:** `/gsd-execute-phase 47`
+
+## Operator Next Steps
+
+- Plan Phase 47: taxonomy remap per `nature-remapping-WORKING.md`
+- `develop` is 26 commits ahead of `origin/develop` — push when ready

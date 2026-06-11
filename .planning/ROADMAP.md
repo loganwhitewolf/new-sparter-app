@@ -189,7 +189,24 @@ _Planning risk: resolve the 8-vs-9 nature row count (ADR 0012 "Consequences" say
   3. `scripts/seed-extras.ts` gains an additive step (or steps) that populates `nature_id` on all existing `sub_category` and `user_subcategory_override` rows using slug-based lookups — no edits to previously shipped seed shapes
   4. Running `yarn db:seed` followed by `yarn db:seed-extras` on a fresh schema produces a fully populated taxonomy with every subcategory assigned a `nature_id`
 
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+**Wave 1**
+
+- [x] 47-01-PLAN.md — Wave 0: RED Vitest taxonomy contract + v2 slug manifest fixture
+- [ ] 47-02-PLAN.md — Wave 1: wholesale replace categories/subCategories with natureId (seed-data v2)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 47-03-PLAN.md — Wave 2: sign-agnostic categorizationPatterns retarget + seed.ts wiring
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 47-04-PLAN.md — Wave 3: seed-extras step 1 no-op + STEPS 6+ remap/backfill
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 47-05-PLAN.md — Wave 4: enable R-FN-03 tests + full test/build gate
 
 ### Phase 48: sql-migration-recategorization
 
@@ -259,7 +276,7 @@ _Planning risk: resolve the 8-vs-9 nature row count (ADR 0012 "Consequences" say
 | 44 | v1.16 | 3/3 | Complete | 2026-06-08 |
 | 45 | v1.16 | 3/3 | Complete | 2026-06-09 |
 | 46 | v2.0 | 3/3 | Complete   | 2026-06-11 |
-| 47 | v2.0 | 0/TBD | Not started | - |
+| 47 | v2.0 | 1/5 | In Progress|  |
 | 48 | v2.0 | 0/TBD | Not started | - |
 | 49 | v2.0 | 0/TBD | Not started | - |
 | 50 | v2.0 | 0/TBD | Not started | - |
