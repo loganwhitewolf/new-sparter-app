@@ -6,7 +6,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { inArray, sql } from 'drizzle-orm'
-import { category, subCategory, platform, importFormatVersion, categorizationPattern } from '../lib/db/schema'
+import { category, direction, nature, subCategory, platform, importFormatVersion, categorizationPattern } from '../lib/db/schema'
 import {
   getOperatorDatabaseConfig,
   isDirectSupabaseHost,
@@ -18,6 +18,8 @@ import {
 import {
   categories,
   categorizationPatterns as seedCategorizationPatterns,
+  directions,
+  natures,
   platforms as seedPlatforms,
   subCategories,
 } from './seed-data'
@@ -68,8 +70,20 @@ function headerSignatureFor(platformSeed: (typeof seedPlatforms)[number]) {
 
 async function seed() {
   console.log(JSON.stringify({ event: 'seed_started', target: seedDiagnostics.target }))
+
+  console.log('Seeding directions...')
+  await db.insert(direction).values(directions as Array<typeof direction.$inferInsert>).onConflictDoNothing()
+  await db.execute(sql`select setval('direction_id_seq', coalesce((select max(${direction.id}) from ${direction}), 0) + 1, false)`)
+  console.log(`  ${directions.length} directions inserted (or already present).`)
+
+  console.log('Seeding natures...')
+  await db.insert(nature).values(natures as Array<typeof nature.$inferInsert>).onConflictDoNothing()
+  await db.execute(sql`select setval('nature_id_seq', coalesce((select max(${nature.id}) from ${nature}), 0) + 1, false)`)
+  console.log(`  ${natures.length} natures inserted (or already present).`)
+
   console.log('Seeding categories...')
-  await db.insert(category).values(categories as Array<typeof category.$inferInsert>).onConflictDoNothing()
+  // Phase 46: category.type column removed (ADR 0012 — direction is now derived from nature, not category)
+  await db.insert(category).values(categories.map(({ type: _type, ...rest }) => rest) as Array<typeof category.$inferInsert>).onConflictDoNothing()
   console.log(`  ${categories.length} categories inserted (or already present).`)
 
   console.log('Seeding subcategories...')
@@ -129,7 +143,7 @@ async function seed() {
         userId: null,
         pattern: patternSeed.pattern,
         subCategoryId: subCategoryIdBySlug.get(patternSeed.subCategorySlug)!,
-        amountSign: patternSeed.amountSign,
+        // Phase 46: patterns are sign-agnostic (amount_sign column removed, ADR 0012)
         confidence: patternSeed.confidence.toFixed(2),
         priority: patternSeed.priority,
         description: patternSeed.description,
