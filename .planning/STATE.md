@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: executing
-last_updated: "2026-06-11T14:58:37Z"
-last_activity: 2026-06-11 -- Phase 48 Plan 01 complete
+last_updated: "2026-06-11T17:05:00Z"
+last_activity: 2026-06-11 -- Phase 48 Plan 02 complete
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 11
-  completed_plans: 9
-  percent: 40
-stopped_at: Completed 48-01-PLAN.md
+  completed_plans: 10
+  percent: 45
+stopped_at: Completed 48-02-PLAN.md
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 ## Current Position
 
 Phase: 48 (sql-migration-recategorization) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Executing Phase 48
-Last activity: 2026-06-11 -- Phase 48 Plan 01 complete (0018 migration + D-16 guard removal)
+Last activity: 2026-06-11 -- Phase 48 Plan 02 complete (verify-migration.ts + db:verify* scripts)
 
 Progress: [█████████████████░░░] 88% milestone (7/8 plans)
 
@@ -57,6 +57,7 @@ v2.0 / Phase 46 decisions (shipped 2026-06-11):
 
 - **48-01 migration**: 0018 hand-crafted from 0017 snapshot diff (drizzle-kit TTY limitation, D-07 sanction); MIG-03 pre-dedup DELETE guards against sign-only duplicate constraint failures
 - **48-01 D-16**: rebucketIncomeNatures guard removed; step is no-op retained for append-only registry invariant; nature assignment delegated to v2-backfill-nature-id
+- **48-02 verify-migration**: classifyResults (pure, exported) + runVerification (4 read-only SQL assertions); fatal on activeSystemNullNatureCount>0 (D-04) or patternDuplicateCount>0 (MIG-03); informational for user-owned null nature_id (D-03); db:verify* scripts mirror db:seed-extras* triplet
 - Migrations: `drizzle-kit generate` + `scripts/migrate.ts` only — never `drizzle-kit push`
 - Seeds: additive model — append steps to `seed-extras.ts`, never edit shipped `seed-data.ts` shapes
 - Monetary arithmetic: Decimal.js throughout
@@ -93,11 +94,11 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-11T14:58:37Z
-Handoff synced: 2026-06-11 — 0018 migration generated + D-16 guard removed; tests GREEN
+Last session: 2026-06-11T17:05:00Z
+Handoff synced: 2026-06-11 — verify-migration.ts + db:verify* scripts; 4 tests GREEN
 Resume file: .planning/phases/48-sql-migration-recategorization/48-CONTEXT.md
 
-**Next:** `/gsd-execute-phase 48` (Plan 02 — operator runbook + verification script)
+**Next:** `/gsd-execute-phase 48` (Plan 03 — staging-first gate + production apply runbook)
 
 ## Operator Next Steps
 
