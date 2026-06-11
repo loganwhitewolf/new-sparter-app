@@ -151,7 +151,7 @@ Full details: `.planning/milestones/v1.16-ROADMAP.md`
 
 **Milestone Goal:** Replace the dual-axis `category.type` + `nature` classification with a single nature→direction model backed by lookup tables, migrate and recategorize all existing data, and add explicit transaction pairing on top of the implicit netting. Design is LOCKED; contract lives in `docs/adr/0012`, `CONTEXT.md`, and `.planning/nature-remapping-WORKING.md`.
 
-- [ ] **Phase 46: direction-nature-schema** — `direction` (4 rows) + `nature` (9 rows) lookup tables; `sub_category.nature_id` FK; remove `category.type`, `flow_nature` enum, `amount_sign`, `exclude_from_totals` — full schema cleanup
+- [x] **Phase 46: direction-nature-schema** — `direction` (4 rows) + `nature` (9 rows) lookup tables; `sub_category.nature_id` FK; remove `category.type`, `flow_nature` enum, `amount_sign`, `exclude_from_totals` — full schema cleanup (completed 2026-06-11)
 - [ ] **Phase 47: taxonomy-seed-rework** — New 23-category / ~65-subcategory taxonomy in `seed-data.ts`; `seed-extras.ts` additive steps to populate `nature_id` and `direction_id` on existing rows
 - [ ] **Phase 48: sql-migration-recategorization** — Generated SQL migration (drizzle-kit generate + scripts/migrate.ts); backfill `nature_id` on all subcategories and overrides; recategorize misclassified transactions; convert patterns to sign-agnostic
 - [ ] **Phase 49: dashboard-and-surfaces** — 4-direction dashboard view (IN/OUT/ALLOCATION block, TRANSFER hidden); algebraic-sum aggregation replacing sign-split logic everywhere; `cascade-options.ts` and table filters re-pointed to the new model
@@ -258,7 +258,7 @@ _Planning risk: resolve the 8-vs-9 nature row count (ADR 0012 "Consequences" say
 | 43 | v1.16 | 4/4 | Complete | 2026-06-08 |
 | 44 | v1.16 | 3/3 | Complete | 2026-06-08 |
 | 45 | v1.16 | 3/3 | Complete | 2026-06-09 |
-| 46 | v2.0 | 1/3 | In Progress|  |
+| 46 | v2.0 | 3/3 | Complete   | 2026-06-11 |
 | 47 | v2.0 | 0/TBD | Not started | - |
 | 48 | v2.0 | 0/TBD | Not started | - |
 | 49 | v2.0 | 0/TBD | Not started | - |
