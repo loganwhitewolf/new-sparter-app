@@ -220,7 +220,16 @@ Plans:
   3. Transactions previously misclassified (e.g. `vendita-investimenti` incorrectly under `in`) now carry a subcategory whose nature maps to the correct direction (`allocation`)
   4. All `categorization_pattern` rows are sign-agnostic after migration: no row has a non-null `amount_sign`; the unique constraint is `(pattern, subCategoryId)`; existing patterns still target the correct subcategory
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+**Wave 1**
+
+- [ ] 48-01-PLAN.md — Generate + review/patch 0018 v2 schema migration (lookup tables, nature_id FKs, drop deprecated objects, sign-agnostic pattern constraint); remove D-16 stale guard
+- [ ] 48-02-PLAN.md — verify-migration.ts D-04 + MIG-03 assertion harness + db:verify scripts
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 48-03-PLAN.md — MIGRATION-RUNBOOK.md (pg_dump, staging-first gate, rollback) + guarded staging→production apply checkpoints
 
 ### Phase 49: dashboard-and-surfaces
 
@@ -277,7 +286,7 @@ Plans:
 | 45 | v1.16 | 3/3 | Complete | 2026-06-09 |
 | 46 | v2.0 | 3/3 | Complete   | 2026-06-11 |
 | 47 | v2.0 | 5/5 | Complete    | 2026-06-11 |
-| 48 | v2.0 | 0/TBD | Not started | - |
+| 48 | v2.0 | 0/3 | Planned | - |
 | 49 | v2.0 | 0/TBD | Not started | - |
 | 50 | v2.0 | 0/TBD | Not started | - |
 
