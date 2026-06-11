@@ -198,7 +198,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 47-03-PLAN.md — Wave 2: sign-agnostic categorizationPatterns retarget + seed.ts wiring
+- [x] 47-03-PLAN.md — Wave 2: sign-agnostic categorizationPatterns retarget + seed.ts wiring
 
 **Wave 3** *(blocked on Wave 2 completion)*
 

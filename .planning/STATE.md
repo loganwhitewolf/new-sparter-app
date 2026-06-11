@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: executing
-last_updated: "2026-06-11T10:29:14Z"
-last_activity: 2026-06-11 -- Completed 47-02-PLAN.md
+last_updated: "2026-06-11T10:32:19Z"
+last_activity: 2026-06-11 -- Completed 47-03-PLAN.md
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 8
-  completed_plans: 4
-  percent: 50
-stopped_at: Completed 47-02-PLAN.md
+  completed_plans: 5
+  percent: 63
+stopped_at: Completed 47-03-PLAN.md
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 ## Current Position
 
 Phase: 47 (taxonomy-seed-rework) — EXECUTING
-Plan: 2 of 5 complete — next 47-03
+Plan: 3 of 5 complete — next 47-04
 Status: Executing Phase 47
-Last activity: 2026-06-11 -- Completed 47-02-PLAN.md
+Last activity: 2026-06-11 -- Completed 47-03-PLAN.md
 
-Progress: [██████████░░░░░░░░░░] 50% milestone (4/8 plans)
+Progress: [█████████████░░░░░░░] 63% milestone (5/8 plans)
 
 ## Accumulated Context
 
@@ -52,6 +52,7 @@ v2.0 / Phase 46 decisions (shipped 2026-06-11):
 - **46-02 minimum-compile:** DAL/actions/components/tests compile green; semantic aggregation/filter rewrite marked `TODO(Phase 49)` — not a Phase 46 deliverable
 - **46-03 seed baseline:** `directions` (4) + `natures` (8) in `seed-data.ts`; `seed.ts` FK-order insert; `seed-extras` pattern-dedupe sign-agnostic repair only (no new STEPS yet — Phase 47 adds nature_id backfill)
 - **47-02 seed-data v2:** wholesale replace `categories` (23 active) + `subCategories` (87 with `natureId` 1-8); dissolved wrappers omitted from fresh baseline; Wave 0 tests GREEN (TAX-01/TAX-02 baseline)
+- **47-03 patterns + seed wiring:** sign-agnostic `categorizationPatterns` (28 rows) retargeted to v2 slugs; bonifico deduped to `trasferimento-tra-conti`; `seed.ts` excludeFromTotals triple + natureId pass-through (D-10, D-13)
 
 Key constraints active for v2.0:
 
@@ -64,7 +65,7 @@ Key constraints active for v2.0:
 
 **Resolved (Phase 46):** 8-vs-9 nature row count — **8 is correct**; implemented in schema + seed (46-01, 46-03).
 
-**Open for Phase 47:** seed-extras STEPS 6+ and categorizationPatterns retarget (Plans 03–04) remain; deployed DB remap deferred to Phase 48 apply.
+**Open for Phase 47:** seed-extras STEPS 6+ (Plan 04) remain; deployed DB remap deferred to Phase 48 apply.
 
 ### Blockers/Concerns
 
@@ -91,11 +92,11 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-11 — Completed 47-02-PLAN.md (seed-data v2 wholesale replace)
-Handoff synced: 2026-06-11 — Wave 0 tests GREEN after categories/subCategories replace
+Last session: 2026-06-11 — Completed 47-03-PLAN.md (sign-agnostic patterns + seed.ts wiring)
+Handoff synced: 2026-06-11 — 28 patterns retargeted; excludeFromTotals v2 TRANSFER triple; tests GREEN
 Resume file: None
 
-**Next:** `/gsd-execute-phase 47` (Plan 03 — categorizationPatterns + seed.ts wiring)
+**Next:** `/gsd-execute-phase 47` (Plan 04 — seed-extras STEPS 6+ remap/backfill)
 
 ## Operator Next Steps
 
