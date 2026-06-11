@@ -235,9 +235,22 @@ export async function cleanupCategorySettingsSeed(seed: CategorySettingsSeed) {
   }
 }
 
-// RED scaffold for R-FN-03 — turns GREEN in Plan 37-02 when seed-data gains nature fields
+// R-FN-03 — static seed nature assignment assertions (Phase 47)
 import { describe, it, expect } from 'vitest'
+import { subCategories, natures } from '../scripts/seed-data'
 import { FlowNature } from '@/lib/utils/nature-labels'
+
+const NATURE_BY_ID = Object.fromEntries(natures.map((n) => [n.id, n.code]))
+
+const TRANSFER_SUBCATEGORY_SLUGS = [
+  'trasferimento-tra-conti',
+  'addebito-carta-di-credito',
+  'contante',
+] as const
+
+function activeSystemSubcategories() {
+  return subCategories.filter((s) => s.isActive !== false)
+}
 
 describe('seed nature assignment (R-FN-03)', () => {
   // Phase 46: FlowNature v2.0 — 8 codes (operational dissolved, financial→investment, extraordinary→savings)
@@ -246,9 +259,30 @@ describe('seed nature assignment (R-FN-03)', () => {
     expect(validNatures).toHaveLength(8)
   })
 
-  it.todo('at least 1 system subcategory has nature: essential (R-FN-03) — enable after Plan 37-02 adds nature to subCategories seed')
+  it('at least 1 system subcategory has nature essential', () => {
+    const essentialSubs = activeSystemSubcategories().filter(
+      (s) => s.natureId !== undefined && NATURE_BY_ID[s.natureId] === 'essential',
+    )
+    expect(essentialSubs.length).toBeGreaterThanOrEqual(1)
+  })
 
-  it.todo('at least 1 system subcategory has nature: discretionary (R-FN-03) — enable after Plan 37-02')
+  it('at least 1 system subcategory has nature discretionary', () => {
+    const discretionarySubs = activeSystemSubcategories().filter(
+      (s) => s.natureId !== undefined && NATURE_BY_ID[s.natureId] === 'discretionary',
+    )
+    expect(discretionarySubs.length).toBeGreaterThanOrEqual(1)
+  })
 
-  it.todo('ignore-category subcategories have nature null (R-FN-03) — enable after Plan 37-02')
+  it('transfer subcategories have nature transfer', () => {
+    const transferSubs = activeSystemSubcategories().filter((s) =>
+      TRANSFER_SUBCATEGORY_SLUGS.includes(s.slug as (typeof TRANSFER_SUBCATEGORY_SLUGS)[number]),
+    )
+
+    expect(transferSubs).toHaveLength(TRANSFER_SUBCATEGORY_SLUGS.length)
+
+    for (const sub of transferSubs) {
+      expect(sub.natureId, sub.slug).toBe(6)
+      expect(NATURE_BY_ID[sub.natureId!], sub.slug).toBe('transfer')
+    }
+  })
 })
