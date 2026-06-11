@@ -127,6 +127,13 @@
       "when": 1780854925846,
       "tag": "0017_tearful_the_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1781007600000,
+      "tag": "0018_v2_direction_nature",
+      "breakpoints": true
     }
   ]
 }
