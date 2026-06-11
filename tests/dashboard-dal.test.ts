@@ -709,6 +709,7 @@ describe('buildMonthlyNatureTrendData (R-FN-04, R-FN-08, R-FN-09)', () => {
     expect(result[0]?.totalIgn).toBe(1)
   })
 
+  // Phase 46: FlowNature v2.0 — financial → investment
   it('segments across different natures accumulate independently per month', () => {
     const result = buildMonthlyNatureTrendData({
       from: new Date(2026, 0, 1),
@@ -716,14 +717,14 @@ describe('buildMonthlyNatureTrendData (R-FN-04, R-FN-08, R-FN-09)', () => {
       rows: [
         { month: '2026-01', nature: 'essential', amount: '300.00', totalNc: 0, totalIgn: 0 },
         { month: '2026-01', nature: 'discretionary', amount: '100.00', totalNc: 0, totalIgn: 0 },
-        { month: '2026-02', nature: 'financial', amount: '50.00', totalNc: 1, totalIgn: 0 },
+        { month: '2026-02', nature: 'investment', amount: '50.00', totalNc: 1, totalIgn: 0 },
       ],
     })
 
     expect(result[0]?.segments.essential).toBe('300.00')
     expect(result[0]?.segments.discretionary).toBe('100.00')
-    expect(result[0]?.segments.financial).toBe('0.00')
-    expect(result[1]?.segments.financial).toBe('50.00')
+    expect(result[0]?.segments.investment).toBe('0.00')
+    expect(result[1]?.segments.investment).toBe('50.00')
     expect(result[1]?.segments.essential).toBe('0.00')
     expect(result[1]?.totalNc).toBe(1)
   })

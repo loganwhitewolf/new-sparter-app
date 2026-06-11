@@ -1,9 +1,8 @@
 import 'server-only'
-import { and, count, desc, eq, inArray, isNotNull } from 'drizzle-orm'
+import { and, count, desc, eq, isNotNull } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import { category, expense, subCategory } from '@/lib/db/schema'
-import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 
 export type MostUsedSubcategory = {
   subCategoryId: number
@@ -13,15 +12,16 @@ export type MostUsedSubcategory = {
 
 /**
  * Returns up to 6 subcategories most frequently assigned to the current user's
- * expenses, scoped to the given category types. Returns [] when the user has no
- * categorized expenses matching the allowed types (cold-start / onboarding).
+ * expenses. Category type filtering removed — category.type column no longer exists
+ * (Phase 46). Direction-aware filtering deferred to Phase 49.
+ * TODO(Phase 49): re-add direction filter via nature→direction join when direction semantics land
  */
 export async function getMostUsedSubcategories(
-  allowedTypes: Array<CategoryWithSubCategories['type']>,
+  // TODO(Phase 49): restore allowedTypes filter via direction.code once direction join is available
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _allowedTypes?: string[],
 ): Promise<MostUsedSubcategory[]> {
   const { userId } = await verifySession()
-
-  if (allowedTypes.length === 0) return []
 
   const rows = await db
     .select({
@@ -37,7 +37,7 @@ export async function getMostUsedSubcategories(
       and(
         eq(expense.userId, userId),
         isNotNull(expense.subCategoryId),
-        inArray(category.type, allowedTypes),
+        // TODO(Phase 49): inArray(direction.code, allowedDirections) once direction join lands
       ),
     )
     .groupBy(subCategory.id, subCategory.name, category.name)

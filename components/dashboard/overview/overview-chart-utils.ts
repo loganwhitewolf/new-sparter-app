@@ -7,15 +7,16 @@ import { NATURE_COLORS, NATURE_LABELS } from '@/lib/utils/nature-labels'
 
 /**
  * All OUT nature keys in display order.
+ * Phase 46: FlowNature v2.0 — operational dissolved, financial→investment, extraordinary→savings
  * Use as the default includedOut argument to select all expense buckets.
  */
 export const OUT_KEYS = [
   'essential',
   'discretionary',
-  'operational',
-  'financial',
   'debt',
-  'extraordinary',
+  'savings',
+  'investment',
+  'transfer',
 ] as const
 
 /**

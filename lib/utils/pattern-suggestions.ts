@@ -8,14 +8,15 @@ export interface PatternDetectorRow {
   covered: boolean
 }
 
+// Phase 46: patterns are sign-agnostic (ADR 0012) — amountSign removed from CoveragePattern
 export interface CoveragePattern {
   pattern: string
-  amountSign: 'positive' | 'negative' | 'any'
 }
 
 export interface PatternSuggestion {
   pattern: string
   matchCount: number
+  // TODO(Phase 49): drop detected-sign display, patterns are sign-agnostic (ADR 0012)
   detectedAmountSign: 'positive' | 'negative' | 'any'
   sampleDescriptions: string[]
 }
@@ -28,21 +29,8 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
 }
 
-function amountSignMatches(
-  amountSign: 'positive' | 'negative' | 'any',
-  amount: string | null,
-): boolean {
-  if (amountSign === 'any') return true
-  if (amount === null) return false
-  try {
-    const d = new Decimal(amount)
-    if (amountSign === 'positive') return d.greaterThanOrEqualTo(0)
-    if (amountSign === 'negative') return d.lessThan(0)
-  } catch {
-    // unparseable amount — cannot confirm sign, do not claim coverage
-  }
-  return false
-}
+// amountSignMatches removed — Phase 46: patterns are sign-agnostic (ADR 0012)
+// Coverage is now determined by regex match alone.
 
 function isCoveredByPatterns(
   row: PatternDetectorRow,
@@ -56,10 +44,8 @@ function isCoveredByPatterns(
   for (const p of coveragePatterns) {
     try {
       const regex = new RegExp(p.pattern, 'i')
-      if (
-        (regex.test(row.normalizedDescription) || regex.test(strippedDescription)) &&
-        amountSignMatches(p.amountSign, row.amount)
-      ) {
+      // Phase 46: patterns are sign-agnostic (ADR 0012) — coverage is regex-match only
+      if (regex.test(row.normalizedDescription) || regex.test(strippedDescription)) {
         return true
       }
     } catch {
@@ -149,6 +135,7 @@ export function detectPatternSuggestions(
     suggestions.push({
       pattern: escaped,
       matchCount: group.length,
+      // TODO(Phase 49): drop detected-sign display, patterns are sign-agnostic (ADR 0012)
       detectedAmountSign: inferAmountSign(amounts),
       sampleDescriptions,
     })

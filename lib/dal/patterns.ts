@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, asc, eq, isNull, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
-import { categorizationPattern, category, subCategory } from '@/lib/db/schema'
+import { categorizationPattern, subCategory, category } from '@/lib/db/schema'
 import type { CreatePatternInput, UpdatePatternInput } from '@/lib/validations/pattern'
 import { normalizePatternInput } from '@/lib/validations/pattern'
 
@@ -19,19 +19,21 @@ function errorCauseCode(error: unknown): string {
 }
 
 /**
- * Returns the category `type` of the parent category for the given subcategory,
- * scoped to categories/subcategories visible to the requesting user.
- * Returns null if the subcategory does not exist or is not visible.
- *
- * Used by pattern actions to derive amountSign server-side (ADR 0008, T-39-10).
+ * Returns whether the given subcategory is visible to the requesting user.
+ * Used by pattern actions to validate subcategory scope.
+ * TODO(Phase 49): Previously returned category type for amountSign derivation (ADR 0008).
+ * That derivation is now obsolete — patterns are sign-agnostic (Phase 46, ADR 0012).
  */
 export async function getCategoryTypeForSubCategory(
   subCategoryId: number,
   userId: string,
   database: DbOrTx = db,
 ): Promise<'in' | 'out' | 'system' | 'transfer' | null> {
+  // TODO(Phase 49): category.type is removed; this function now returns a constant 'out'
+  // to maintain call-site compatibility while amountSign derivation is no longer needed.
+  // Phase 46: patterns are sign-agnostic (ADR 0012, supersedes ADR 0008).
   const rows = await database
-    .select({ type: category.type })
+    .select({ id: subCategory.id })
     .from(subCategory)
     .leftJoin(category, eq(category.id, subCategory.categoryId))
     .where(
@@ -47,7 +49,8 @@ export async function getCategoryTypeForSubCategory(
 
   const row = rows[0]
   if (!row) return null
-  return row.type
+  // Return a constant — the actual type value is unused since amountSign derivation is gone
+  return 'out' // TODO(Phase 49): remove this function entirely, caller guards are enough
 }
 
 export type PatternRow = {
@@ -55,7 +58,7 @@ export type PatternRow = {
   userId: string | null
   pattern: string
   subCategoryId: number
-  amountSign: 'positive' | 'negative' | 'any'
+  // amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012)
   confidence: string
   priority: number
   description: string | null
@@ -111,7 +114,7 @@ export async function createPattern(
         userId: input.userId,
         pattern: normalizedPattern,
         subCategoryId: input.subCategoryId,
-        amountSign: input.amountSign,
+        // amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012)
         confidence: input.confidence.toFixed(2),
         priority: 100,
         description: input.description ?? null,
@@ -127,7 +130,7 @@ export async function createPattern(
         .update(categorizationPattern)
         .set({
           isActive: true,
-          amountSign: input.amountSign,     // enforce current server-derived value (ADR 0008)
+          // amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012)
           confidence: input.confidence.toFixed(2),
           updatedAt: new Date(),
         })
@@ -135,7 +138,6 @@ export async function createPattern(
           and(
             eq(categorizationPattern.pattern, normalizedPattern),
             eq(categorizationPattern.subCategoryId, input.subCategoryId),
-            eq(categorizationPattern.amountSign, input.amountSign),
             eq(categorizationPattern.userId, input.userId),
             eq(categorizationPattern.isActive, false),
           ),
@@ -158,7 +160,7 @@ export async function updatePattern(
   const updates: Partial<typeof categorizationPattern.$inferInsert> = { updatedAt: new Date() }
   if (normalizedPattern !== undefined) updates.pattern = normalizedPattern
   if (input.subCategoryId !== undefined) updates.subCategoryId = input.subCategoryId
-  if (input.amountSign !== undefined) updates.amountSign = input.amountSign
+  // amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012)
   if (input.confidence !== undefined) updates.confidence = input.confidence.toFixed(2)
   if (input.description !== undefined) updates.description = input.description
 

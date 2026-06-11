@@ -8,6 +8,7 @@ import {
   expense,
   file as importFile,
   importFormatVersion,
+  nature,
   platform,
   subCategory,
   transaction,
@@ -84,7 +85,8 @@ export const transactionListSelect = {
   platformId: platform.id,
   platformName: platform.name,
   platformSlug: platform.slug,
-  categoryType: category.type,
+  // TODO(Phase 49): replace with direction.code once direction join lands in aggregation rewrite
+  categoryType: category.id, // category.type removed (Phase 46); direction semantics deferred to Phase 49
 }
 
 export const transactionPlatformSelect = {
@@ -112,7 +114,8 @@ export type TransactionListRow = {
   platformId: number | null
   platformName: string | null
   platformSlug: string | null
-  categoryType: (typeof category.$inferSelect)['type'] | null
+  // TODO(Phase 49): restore direction-based type field once direction join lands
+  categoryType: number | null
 }
 
 export type TransactionPlatformOption = {
@@ -217,22 +220,21 @@ export const getTransactions = cache(
       conditions.push(isNotNull(expense.subCategoryId))
     }
 
-    // Category-derived filters (Task 1):
-    // nature filter — via subCategory.nature (already left-joined)
+    // Category-derived filters — nature via subCategory.natureId → nature.code join
+    // TODO(Phase 49): direction-aware filtering replaces this simple nature.code match
     if (filters.nature === 'unclassified') {
-      conditions.push(or(isNull(expense.subCategoryId), isNull(subCategory.nature)))
+      conditions.push(or(isNull(expense.subCategoryId), isNull(subCategory.natureId)))
     } else if (filters.nature) {
-      // Cast excludes null — only non-null enum members are valid here
-      type NatureValue = NonNullable<(typeof subCategory.$inferSelect)['nature']>
-      conditions.push(eq(subCategory.nature, filters.nature as NatureValue))
+      conditions.push(eq(nature.code, filters.nature))
     }
 
-    // type filter — via category.type (already left-joined)
+    // type filter — category.type removed; direction semantics deferred to Phase 49
+    // TODO(Phase 49): replace with direction.code filter once direction join is available
     if (filters.type === 'unclassified') {
-      conditions.push(isNull(category.type))
+      conditions.push(isNull(subCategory.natureId))
     } else if (filters.type) {
-      type CategoryTypeValue = (typeof category.$inferSelect)['type']
-      conditions.push(eq(category.type, filters.type as CategoryTypeValue))
+      // Phase 46: type filter now maps to nature.code for compile; full direction semantics Phase 49
+      conditions.push(eq(nature.code, filters.type))
     }
 
     return db
@@ -247,6 +249,7 @@ export const getTransactions = cache(
       .leftJoin(expense, eq(transaction.expenseId, expense.id))
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
+      .leftJoin(nature, eq(subCategory.natureId, nature.id)) // TODO(Phase 49): direction-aware filtering
       .leftJoin(
         userSubcategoryOverride,
         and(

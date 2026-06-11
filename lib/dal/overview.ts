@@ -6,6 +6,7 @@ import { verifySession } from '@/lib/dal/auth'
 import {
   category,
   expense,
+  nature as natureTable,
   subCategory,
   transaction as transactionTable,
   userSubcategoryOverride,
@@ -31,15 +32,17 @@ export type MonthOverMonthChange = {
   isNew: boolean
 }
 
-type OutNature = 'essential' | 'discretionary' | 'operational' | 'financial' | 'debt' | 'extraordinary'
+// TODO(Phase 49): replace with direction-grouped algebraic sum
+// v2.0 OUT nature codes — operational/financial/extraordinary renamed (Phase 46, ADR 0012)
+type OutNature = 'essential' | 'discretionary' | 'debt' | 'savings' | 'investment' | 'transfer'
 
 const OUT_NATURES: OutNature[] = [
   'essential',
   'discretionary',
-  'operational',
-  'financial',
   'debt',
-  'extraordinary',
+  'savings',
+  'investment',
+  'transfer',
 ]
 
 const ZERO_AMOUNT = '0.00'
@@ -48,13 +51,16 @@ export type OverviewChartPoint = {
   month: string
   label: string
   income: { recurring: string; extraordinary: string }
+  // TODO(Phase 49): out segments will be replaced by direction-grouped algebraic sum
   out: Record<OutNature, string>
 }
 
 // ─── Private helpers (mirrors dashboard.ts private helpers) ──────────────────
 
+// TODO(Phase 49): replace with direction.code != 'transfer' filter via nature→direction join
 function notTransferCategory() {
-  return or(isNull(category.type), ne(category.type, 'transfer'))
+  // category.type removed (Phase 46); use nature.code != 'transfer' as minimum-compile proxy
+  return or(isNull(natureTable.code), ne(natureTable.code, 'transfer'))
 }
 
 function dateScopedTransactions(userId: string, from: Date, to: Date) {
@@ -70,13 +76,14 @@ function expenseStatusIncludedInDashboardTotals() {
 }
 
 function emptyOutSegments(): Record<OutNature, string> {
+  // TODO(Phase 49): segments replaced by direction-grouped algebraic sum
   return {
     essential: ZERO_AMOUNT,
     discretionary: ZERO_AMOUNT,
-    operational: ZERO_AMOUNT,
-    financial: ZERO_AMOUNT,
     debt: ZERO_AMOUNT,
-    extraordinary: ZERO_AMOUNT,
+    savings: ZERO_AMOUNT,
+    investment: ZERO_AMOUNT,
+    transfer: ZERO_AMOUNT,
   }
 }
 
@@ -200,13 +207,15 @@ export const getMonthOverMonthCategoryChanges = cache(
           .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
           .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .leftJoin(category, eq(subCategory.categoryId, category.id))
+          .leftJoin(natureTable, eq(subCategory.natureId, natureTable.id)) // TODO(Phase 49): direction-aware filtering
           .where(
             and(
               dateScopedTransactions(userId, currFrom, currTo),
               expenseStatusIncludedInDashboardTotals(),
               notTransferCategory(),
               notExcludedFromTotals(),
-              eq(category.type, 'out')
+              // TODO(Phase 49): replace with direction.code = 'out' filter
+              isNull(subCategory.natureId) // placeholder: include all while direction semantics land
             )
           )
           .groupBy(category.id, category.name),
@@ -220,13 +229,15 @@ export const getMonthOverMonthCategoryChanges = cache(
           .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
           .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .leftJoin(category, eq(subCategory.categoryId, category.id))
+          .leftJoin(natureTable, eq(subCategory.natureId, natureTable.id)) // TODO(Phase 49): direction-aware filtering
           .where(
             and(
               dateScopedTransactions(userId, prevFrom, prevTo),
               expenseStatusIncludedInDashboardTotals(),
               notTransferCategory(),
               notExcludedFromTotals(),
-              eq(category.type, 'out')
+              // TODO(Phase 49): replace with direction.code = 'out' filter
+              isNull(subCategory.natureId) // placeholder: include all while direction semantics land
             )
           )
           .groupBy(category.id, category.name),
@@ -310,7 +321,14 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
   const to = new Date(year, 11, 31, 23, 59, 59, 999)
 
   const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
-  const natureSql = sql<FlowNature | null>`coalesce(${userSubcategoryOverride.nature}, ${subCategory.nature})`
+  // TODO(Phase 49): replace with direction-aware nature grouping via nature→direction join
+  // Phase 46: use nature.code (from natureId FK) instead of removed flowNatureEnum column
+  // The effective nature resolves via override.natureId or subCategory.natureId → nature.code
+  const natureSql = sql<FlowNature | null>`(
+    SELECT n.code FROM nature n
+    WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
+    LIMIT 1
+  )`
 
   type NatureAggRow = { month: string; nature: FlowNature | null; amount: string }
   let rows: NatureAggRow[] = []
@@ -326,6 +344,7 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
       .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
+      .leftJoin(natureTable, eq(subCategory.natureId, natureTable.id)) // TODO(Phase 49): direction-aware filtering
       .leftJoin(
         userSubcategoryOverride,
         and(

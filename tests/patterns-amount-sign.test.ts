@@ -69,7 +69,8 @@ vi.mock('@/lib/db/schema', () => ({
 // ---------------------------------------------------------------------------
 
 const { getCategoryTypeForSubCategory } = await import('@/lib/dal/patterns')
-const { deriveAmountSign } = await import('@/lib/validations/pattern')
+// Phase 46: deriveAmountSign removed (ADR 0012) — patterns are sign-agnostic
+// const { deriveAmountSign } = await import('@/lib/validations/pattern')
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -100,24 +101,14 @@ function expectContainsPredicate(node: unknown, expected: unknown) {
 }
 
 // ---------------------------------------------------------------------------
-// deriveAmountSign tests
+// deriveAmountSign — removed in Phase 46 (ADR 0012)
 // ---------------------------------------------------------------------------
 
-describe('deriveAmountSign — ADR 0008 derivation table', () => {
-  it('maps out -> negative', () => {
-    expect(deriveAmountSign('out')).toBe('negative')
-  })
-
-  it('maps in -> positive', () => {
-    expect(deriveAmountSign('in')).toBe('positive')
-  })
-
-  it('maps transfer -> any', () => {
-    expect(deriveAmountSign('transfer')).toBe('any')
-  })
-
-  it('maps system -> any', () => {
-    expect(deriveAmountSign('system')).toBe('any')
+describe('deriveAmountSign — removed in Phase 46 (ADR 0012)', () => {
+  it('deriveAmountSign is no longer exported from lib/validations/pattern (patterns are sign-agnostic)', async () => {
+    const patternModule = await import('@/lib/validations/pattern')
+    // ADR 0012: amountSign removed — deriveAmountSign must not exist
+    expect((patternModule as Record<string, unknown>)['deriveAmountSign']).toBeUndefined()
   })
 })
 

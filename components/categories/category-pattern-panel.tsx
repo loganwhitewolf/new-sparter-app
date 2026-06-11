@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -73,11 +72,11 @@ export function CategoryPatternPanel({
         </div>
       ) : (
         <Table>
+          {/* Phase 46: amountSign column removed (ADR 0012) — patterns are sign-agnostic */}
           <TableHeader>
             <TableRow>
               <TableHead>Pattern (regex)</TableHead>
               <TableHead>Destinazione</TableHead>
-              <TableHead>Segno</TableHead>
               <TableHead>Confidenza</TableHead>
               <TableHead>Descrizione</TableHead>
               <TableHead className="w-[80px]" />
@@ -90,9 +89,6 @@ export function CategoryPatternPanel({
                 <TableCell className="text-sm">
                   {getDestinationLabel(destinationLabels, pattern.subCategoryId)}
                 </TableCell>
-                <TableCell>
-                  <Badge variant="outline">{pattern.amountSign}</Badge>
-                </TableCell>
                 <TableCell>{(parseFloat(pattern.confidence) * 100).toFixed(0)}%</TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {pattern.description ?? '—'}
@@ -102,7 +98,6 @@ export function CategoryPatternPanel({
                     id={pattern.id}
                     pattern={pattern.pattern}
                     subCategoryId={pattern.subCategoryId}
-                    amountSign={pattern.amountSign}
                     confidence={pattern.confidence}
                     description={pattern.description}
                     categories={categories}

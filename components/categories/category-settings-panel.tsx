@@ -25,14 +25,16 @@ type CategorySettingsPanelProps = {
   categories: CategoryWithSubCategories[];
 };
 
-const TYPE_LABELS: Record<CategoryWithSubCategories["type"], string> = {
+// Phase 46: category.type removed (ADR 0012); type field is now string | null
+// TODO(Phase 49): restore direction-based grouping once direction join is available
+const TYPE_LABELS: Record<string, string> = {
   in: "Entrate",
   out: "Uscite",
   system: "Sistema",
   transfer: "Trasferimenti",
 };
 
-const TYPE_ORDER: CategoryWithSubCategories["type"][] = ["out", "in", "transfer", "system"];
+const TYPE_ORDER: (string | null)[] = ["out", "in", "transfer", "system"];
 
 function CategorySidebar({
   categories,
@@ -45,7 +47,8 @@ function CategorySidebar({
 }) {
   const grouped = TYPE_ORDER.map((type) => ({
     type,
-    label: TYPE_LABELS[type],
+    // Phase 46: type is string | null — fallback to empty string for indexing
+    label: type !== null ? (TYPE_LABELS[type] ?? type) : '—',
     items: categories.filter((c) => c.type === type),
   })).filter((g) => g.items.length > 0);
 
