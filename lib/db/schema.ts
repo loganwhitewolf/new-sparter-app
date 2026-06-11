@@ -23,8 +23,6 @@ export const subscriptionPlanEnum = pgEnum("subscription_plan", [
 
 export const roleEnum = pgEnum("user_role", ["user", "admin"]);
 
-export const categoryTypeEnum = pgEnum("category_type", ["in", "out", "system", "transfer"]);
-
 export const expenseStatusEnum = pgEnum("expense_status", ["1", "2", "3", "4"]);
 
 export const fileStatusEnum = pgEnum("file_status", [
@@ -39,26 +37,12 @@ export const fileStatusEnum = pgEnum("file_status", [
 
 export const amountTypeEnum = pgEnum("amount_type", ["single", "separate"]);
 
-export const amountSignEnum = pgEnum("amount_sign", ["positive", "negative", "any"]);
-
 export const classificationSourceEnum = pgEnum("classification_source", [
   "system_pattern",
   "user_pattern",
   "manual",
   "override",
   "import_default",
-]);
-
-export const flowNatureEnum = pgEnum("flow_nature", [
-  "essential",
-  "discretionary",
-  "operational",
-  "financial",
-  "income",
-  "income_extraordinary",
-  "debt",
-  "extraordinary",
-  "transfer",
 ]);
 
 export const user = pgTable("user", {
@@ -162,14 +146,12 @@ export const category = pgTable(
     userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 100 }).notNull(),
     slug: varchar("slug", { length: 100 }).notNull(),
-    type: categoryTypeEnum("type").notNull(),
     displayOrder: integer("display_order").default(0),
     isActive: boolean("is_active").default(true).notNull(),
   },
   (table) => [
     index("category_userId_idx").on(table.userId),
     index("category_slug_idx").on(table.slug),
-    index("category_type_idx").on(table.type),
     uniqueIndex("category_system_slug_unique")
       .on(table.slug)
       .where(sql`${table.userId} IS NULL`),
@@ -191,12 +173,13 @@ export const subCategory = pgTable(
     slug: varchar("slug", { length: 100 }).notNull(),
     displayOrder: integer("display_order").default(0),
     isActive: boolean("is_active").default(true).notNull(),
-    excludeFromTotals: boolean("exclude_from_totals").default(false).notNull(),
-    nature: flowNatureEnum("nature"),
+    excludeFromTotals: boolean("exclude_from_totals").default(false).notNull(), // Phase 49: removed once aggregation reads direction.included_in_totals
+    natureId: integer("nature_id").references(() => nature.id, { onDelete: "set null" }),
   },
   (table) => [
     index("sub_category_userId_idx").on(table.userId),
     index("sub_category_categoryId_idx").on(table.categoryId),
+    index("sub_category_natureId_idx").on(table.natureId),
     uniqueIndex("sub_category_system_category_slug_unique")
       .on(table.categoryId, table.slug)
       .where(sql`${table.userId} IS NULL`),
@@ -217,7 +200,7 @@ export const userSubcategoryOverride = pgTable(
       .notNull()
       .references(() => subCategory.id, { onDelete: "cascade" }),
     customName: varchar("custom_name", { length: 100 }),
-    nature: flowNatureEnum("nature"),
+    natureId: integer("nature_id").references(() => nature.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
@@ -227,11 +210,45 @@ export const userSubcategoryOverride = pgTable(
   (table) => [
     index("user_subcategory_override_userId_idx").on(table.userId),
     index("user_subcategory_override_subCategoryId_idx").on(table.subCategoryId),
+    index("user_subcategory_override_natureId_idx").on(table.natureId),
     unique("user_subcategory_override_user_subcategory_unique").on(
       table.userId,
       table.subCategoryId,
     ),
   ],
+);
+
+// direction lookup table — 4 static rows: in | out | allocation | transfer
+export const direction = pgTable(
+  "direction",
+  {
+    id: serial("id").primaryKey(),
+    code: varchar("code", { length: 24 }).notNull().unique(),
+    labelIt: varchar("label_it", { length: 100 }).notNull(),
+    netWorthEffect: varchar("net_worth_effect", { length: 16 }).notNull(), // increase|decrease|neutral — varchar, NOT a pgEnum (lookup-not-enum contract)
+    includedInTotals: boolean("included_in_totals").default(false).notNull(),
+    shownSeparately: boolean("shown_separately").default(false).notNull(),
+    hidden: boolean("hidden").default(false).notNull(),
+    displayOrder: integer("display_order").default(0).notNull(),
+    color: varchar("color", { length: 16 }),
+  },
+  (table) => [index("direction_code_idx").on(table.code)],
+);
+
+// nature lookup table — 8 rows (D-01); direction_id NOT NULL FK (D-02)
+export const nature = pgTable(
+  "nature",
+  {
+    id: serial("id").primaryKey(),
+    code: varchar("code", { length: 32 }).notNull().unique(),
+    directionId: integer("direction_id")
+      .notNull()
+      .references(() => direction.id, { onDelete: "restrict" }),
+    labelIt: varchar("label_it", { length: 100 }).notNull(),
+    color: varchar("color", { length: 16 }),
+    displayOrder: integer("display_order").default(0).notNull(),
+  },
+  (table) => [index("nature_directionId_idx").on(table.directionId)],
 );
 
 export const platform = pgTable(
@@ -428,7 +445,6 @@ export const categorizationPattern = pgTable(
     subCategoryId: integer("sub_category_id")
       .notNull()
       .references(() => subCategory.id, { onDelete: "cascade" }),
-    amountSign: amountSignEnum("amount_sign").default("any").notNull(),
     confidence: numeric("confidence", { precision: 4, scale: 2 }).default("0.80").notNull(),
     priority: integer("priority").default(100).notNull(),
     description: text("description"),
@@ -443,11 +459,7 @@ export const categorizationPattern = pgTable(
     index("categorization_pattern_userId_idx").on(table.userId),
     index("categorization_pattern_subCategoryId_idx").on(table.subCategoryId),
     index("categorization_pattern_priority_idx").on(table.priority),
-    unique("categorization_pattern_unique").on(
-      table.pattern,
-      table.subCategoryId,
-      table.amountSign,
-    ),
+    unique("categorization_pattern_unique").on(table.pattern, table.subCategoryId),
   ],
 );
 
@@ -530,6 +542,10 @@ export const subCategoryRelations = relations(subCategory, ({ one, many }) => ({
     fields: [subCategory.categoryId],
     references: [category.id],
   }),
+  nature: one(nature, {
+    fields: [subCategory.natureId],
+    references: [nature.id],
+  }),
   overrides: many(userSubcategoryOverride),
   expenses: many(expense),
   categorizationPatterns: many(categorizationPattern),
@@ -546,8 +562,25 @@ export const userSubcategoryOverrideRelations = relations(
       fields: [userSubcategoryOverride.subCategoryId],
       references: [subCategory.id],
     }),
+    nature: one(nature, {
+      fields: [userSubcategoryOverride.natureId],
+      references: [nature.id],
+    }),
   }),
 );
+
+export const directionRelations = relations(direction, ({ many }) => ({
+  natures: many(nature),
+}));
+
+export const natureRelations = relations(nature, ({ one, many }) => ({
+  direction: one(direction, {
+    fields: [nature.directionId],
+    references: [direction.id],
+  }),
+  subCategories: many(subCategory),
+  overrides: many(userSubcategoryOverride),
+}));
 
 export const platformRelations = relations(platform, ({ one, many }) => ({
   owner: one(user, {
