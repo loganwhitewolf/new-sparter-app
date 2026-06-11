@@ -321,8 +321,9 @@ async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
   }
 
   // 5. Migrate categorization patterns: prodotti-freschi → negozio-di-quartiere
-  // unique("categorization_pattern_unique").on(pattern, subCategoryId, amountSign) — must delete
+  // unique("categorization_pattern_unique").on(pattern, subCategoryId) — must delete
   // prodotti-freschi patterns that already exist for negozio-di-quartiere before migrating the rest.
+  // Phase 46: patterns are sign-agnostic (sign column removed, ADR 0012)
   if (prodottiFreschiId == null || negozioDiQuartiereId == null) {
     console.log(`    skip pattern migration (prodotti-freschi → negozio-di-quartiere): source or target already absent`)
   } else {
@@ -331,7 +332,7 @@ async function reorganizeSpesaSubcategories(database: Db): Promise<void> {
       .where(
         and(
           eq(categorizationPattern.subCategoryId, prodottiFreschiId),
-          sql`(${categorizationPattern.pattern}, ${categorizationPattern.amountSign}) IN (SELECT pattern, amount_sign FROM categorization_pattern WHERE sub_category_id = ${negozioDiQuartiereId})`
+          sql`${categorizationPattern.pattern} IN (SELECT pattern FROM categorization_pattern WHERE sub_category_id = ${negozioDiQuartiereId})`
         )
       )
     const patConflictDeleteCount = (patConflictDelete as unknown as { rowCount?: number }).rowCount ?? 0
