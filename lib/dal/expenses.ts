@@ -1,7 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { db } from '@/lib/db'
-import { category, expense, file, importFormatVersion, platform, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
+import { category, expense, file, importFormatVersion, nature, platform, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
 import { eq, and, gte, ilike, inArray, isNull, lte, or, asc, desc, sql } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { periodToDateRange } from '@/lib/utils/date'
@@ -134,22 +134,22 @@ export const getExpenses = cache(async (
     conditions.push(eq(platform.slug, filters.platform))
   }
 
-  // Cascade filters (lcp-01 Task 3): nature, type, subCategoryId.
-  // All use the existing subCategory + category left joins.
+  // Cascade filters: nature via subCategory.natureId → nature.code join
+  // TODO(Phase 49): direction-aware filtering replaces this simple nature.code match
   if (filters.nature === 'unclassified') {
-    // Unclassified: no subCategory linked, or subCategory has null nature
-    conditions.push(or(isNull(expense.subCategoryId), isNull(subCategory.nature)))
+    // Unclassified: no subCategory linked, or subCategory has null natureId
+    conditions.push(or(isNull(expense.subCategoryId), isNull(subCategory.natureId)))
   } else if (filters.nature) {
-    type NatureValue = NonNullable<(typeof subCategory.$inferSelect)['nature']>
-    conditions.push(eq(subCategory.nature, filters.nature as NatureValue))
+    conditions.push(eq(nature.code, filters.nature))
   }
 
+  // type filter — category.type removed; direction semantics deferred to Phase 49
+  // TODO(Phase 49): replace with direction.code filter once direction join is available
   if (filters.type === 'unclassified') {
-    // Unclassified type: no category linked (null category.type)
-    conditions.push(isNull(category.type))
+    conditions.push(isNull(subCategory.natureId))
   } else if (filters.type) {
-    type CategoryTypeValue = (typeof category.$inferSelect)['type']
-    conditions.push(eq(category.type, filters.type as CategoryTypeValue))
+    // Phase 46: type filter now maps to nature.code for compile; full direction semantics Phase 49
+    conditions.push(eq(nature.code, filters.type))
   }
 
   if (filters.subCategoryId) {
@@ -173,6 +173,7 @@ export const getExpenses = cache(async (
     .from(expense)
     .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
     .leftJoin(category, eq(subCategory.categoryId, category.id))
+    .leftJoin(nature, eq(subCategory.natureId, nature.id)) // TODO(Phase 49): direction-aware filtering
     .leftJoin(
       userSubcategoryOverride,
       and(
