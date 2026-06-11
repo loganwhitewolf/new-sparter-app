@@ -234,6 +234,39 @@ export const userSubcategoryOverride = pgTable(
   ],
 );
 
+// direction lookup table — 4 static rows: in | out | allocation | transfer
+export const direction = pgTable(
+  "direction",
+  {
+    id: serial("id").primaryKey(),
+    code: varchar("code", { length: 24 }).notNull().unique(),
+    labelIt: varchar("label_it", { length: 100 }).notNull(),
+    netWorthEffect: varchar("net_worth_effect", { length: 16 }).notNull(), // increase|decrease|neutral — varchar, NOT a pgEnum (lookup-not-enum contract)
+    includedInTotals: boolean("included_in_totals").default(false).notNull(),
+    shownSeparately: boolean("shown_separately").default(false).notNull(),
+    hidden: boolean("hidden").default(false).notNull(),
+    displayOrder: integer("display_order").default(0).notNull(),
+    color: varchar("color", { length: 16 }),
+  },
+  (table) => [index("direction_code_idx").on(table.code)],
+);
+
+// nature lookup table — 8 rows (D-01); direction_id NOT NULL FK (D-02)
+export const nature = pgTable(
+  "nature",
+  {
+    id: serial("id").primaryKey(),
+    code: varchar("code", { length: 32 }).notNull().unique(),
+    directionId: integer("direction_id")
+      .notNull()
+      .references(() => direction.id, { onDelete: "restrict" }),
+    labelIt: varchar("label_it", { length: 100 }).notNull(),
+    color: varchar("color", { length: 16 }),
+    displayOrder: integer("display_order").default(0).notNull(),
+  },
+  (table) => [index("nature_directionId_idx").on(table.directionId)],
+);
+
 export const platform = pgTable(
   "platform",
   {
@@ -548,6 +581,19 @@ export const userSubcategoryOverrideRelations = relations(
     }),
   }),
 );
+
+export const directionRelations = relations(direction, ({ many }) => ({
+  natures: many(nature),
+}));
+
+export const natureRelations = relations(nature, ({ one, many }) => ({
+  direction: one(direction, {
+    fields: [nature.directionId],
+    references: [direction.id],
+  }),
+  subCategories: many(subCategory),
+  overrides: many(userSubcategoryOverride),
+}));
 
 export const platformRelations = relations(platform, ({ one, many }) => ({
   owner: one(user, {
