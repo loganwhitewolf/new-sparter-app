@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
-status: verifying
-last_updated: "2026-06-11T14:42:29.723Z"
-last_activity: 2026-06-11 -- Phase 48 planning complete
+status: executing
+last_updated: "2026-06-11T14:58:37Z"
+last_activity: 2026-06-11 -- Phase 48 Plan 01 complete
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 11
+  completed_plans: 9
   percent: 40
-stopped_at: Completed 47-05-PLAN.md
+stopped_at: Completed 48-01-PLAN.md
 ---
 
 # Project State
@@ -21,14 +21,14 @@ stopped_at: Completed 47-05-PLAN.md
 See: .planning/PROJECT.md (updated 2026-06-10)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 47 — taxonomy-seed-rework
+**Current focus:** Phase 48 — sql-migration-recategorization
 
 ## Current Position
 
-Phase: 48
-Plan: Not started
-Status: Phase 47 gate green — ready for verify-work / Phase 48
-Last activity: 2026-06-11 -- Phase 48 planning complete
+Phase: 48 (sql-migration-recategorization) — EXECUTING
+Plan: 2 of 3
+Status: Executing Phase 48
+Last activity: 2026-06-11 -- Phase 48 Plan 01 complete (0018 migration + D-16 guard removal)
 
 Progress: [█████████████████░░░] 88% milestone (7/8 plans)
 
@@ -55,6 +55,8 @@ v2.0 / Phase 46 decisions (shipped 2026-06-11):
 - **47-03 patterns + seed wiring:** sign-agnostic `categorizationPatterns` (28 rows) retargeted to v2 slugs; bonifico deduped to `trasferimento-tra-conti`; `seed.ts` excludeFromTotals triple + natureId pass-through (D-10, D-13)
 - **47-05 R-FN-03 + phase gate:** R-FN-03 todos enabled; transfer subs assert natureId 6 (D-13); 949 tests + build green; 47-VALIDATION.md Nyquist sign-off; no DB apply (D-05)
 
+- **48-01 migration**: 0018 hand-crafted from 0017 snapshot diff (drizzle-kit TTY limitation, D-07 sanction); MIG-03 pre-dedup DELETE guards against sign-only duplicate constraint failures
+- **48-01 D-16**: rebucketIncomeNatures guard removed; step is no-op retained for append-only registry invariant; nature assignment delegated to v2-backfill-nature-id
 - Migrations: `drizzle-kit generate` + `scripts/migrate.ts` only — never `drizzle-kit push`
 - Seeds: additive model — append steps to `seed-extras.ts`, never edit shipped `seed-data.ts` shapes
 - Monetary arithmetic: Decimal.js throughout
@@ -91,11 +93,11 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-11T14:22:34.765Z
-Handoff synced: 2026-06-11 — 28 patterns retargeted; excludeFromTotals v2 TRANSFER triple; tests GREEN
+Last session: 2026-06-11T14:58:37Z
+Handoff synced: 2026-06-11 — 0018 migration generated + D-16 guard removed; tests GREEN
 Resume file: .planning/phases/48-sql-migration-recategorization/48-CONTEXT.md
 
-**Next:** `/gsd-execute-phase 47` (Plan 04 — seed-extras STEPS 6+ remap/backfill)
+**Next:** `/gsd-execute-phase 48` (Plan 02 — operator runbook + verification script)
 
 ## Operator Next Steps
 

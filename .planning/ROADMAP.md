@@ -224,7 +224,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 48-01-PLAN.md — Generate + review/patch 0018 v2 schema migration (lookup tables, nature_id FKs, drop deprecated objects, sign-agnostic pattern constraint); remove D-16 stale guard
+- [x] 48-01-PLAN.md — Generate + review/patch 0018 v2 schema migration (lookup tables, nature_id FKs, drop deprecated objects, sign-agnostic pattern constraint); remove D-16 stale guard
 - [ ] 48-02-PLAN.md — verify-migration.ts D-04 + MIG-03 assertion harness + db:verify scripts
 
 **Wave 2** *(blocked on Wave 1 completion)*
