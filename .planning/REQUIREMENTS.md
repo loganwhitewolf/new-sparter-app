@@ -24,7 +24,7 @@
 
 - [x] **TAX-01**: The seeded taxonomy matches the working-doc final remap: 23 categories / ~65 subcategories across IN (4 categories), OUT (16), ALLOCATION (2), TRANSFER (1), each subcategory assigned its correct nature. _(47-02: seed-data baseline — 87 subs with natureId; contract tests GREEN)_
 - [x] **TAX-02**: Category/nature dissolutions and renames are applied per the working doc: `operational` dissolved into essential/discretionary; `financial`→`investment`, `extraordinary`→`savings`; wrapper categories (Assicurazioni, Abbonamenti, Famiglia) distributed by object/purpose; Risparmio + Investimenti moved to ALLOCATION; Bonifici/movimenti-liquidità folded into TRANSFER. _(47-02: fresh baseline — dissolved wrappers absent from active set)_
-- [ ] **TAX-03**: `scripts/seed-data.ts` reflects the new baseline taxonomy and `scripts/seed-extras.ts` gains the additive step(s) needed to populate `nature_id` / direction data on existing rows, following the additive seed model (no edits to already-shipped seed shapes).
+- [x] **TAX-03**: `scripts/seed-data.ts` reflects the new baseline taxonomy and `scripts/seed-extras.ts` gains the additive step(s) needed to populate `nature_id` / direction data on existing rows, following the additive seed model (no edits to already-shipped seed shapes). _(47-04: STEPS 6-12 authored — v2-backfill-nature-id + override backfill; DB apply Phase 48)_
 
 ### Migration & Recategorization — existing data
 
@@ -86,7 +86,7 @@
 | DATA-06 | Phase 49 | Pending (D-10 deferral) |
 | TAX-01 | Phase 47 | Complete (47-02 seed-data baseline) |
 | TAX-02 | Phase 47 | Complete (47-02 seed-data baseline) |
-| TAX-03 | Phase 47 | Pending |
+| TAX-03 | Phase 47 | Complete (47-04 seed-extras backfill STEPS) |
 | MIG-01 | Phase 48 | Pending |
 | MIG-02 | Phase 48 | Pending |
 | MIG-03 | Phase 48 | Pending |

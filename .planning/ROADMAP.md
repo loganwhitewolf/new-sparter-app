@@ -202,7 +202,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 47-04-PLAN.md — Wave 3: seed-extras step 1 no-op + STEPS 6+ remap/backfill
+- [x] 47-04-PLAN.md — Wave 3: seed-extras step 1 no-op + STEPS 6+ remap/backfill
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
