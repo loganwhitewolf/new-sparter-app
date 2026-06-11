@@ -1518,3 +1518,129 @@ export const categorizationPatterns = [
     description: "Delivery app orders",
   },
 ];
+
+// ---------------------------------------------------------------------------
+// DIRECTIONS (lookup table — 4 static rows: in | out | allocation | transfer)
+// ---------------------------------------------------------------------------
+
+export type NetWorthEffect = "increase" | "decrease" | "neutral";
+
+export const directions = [
+  {
+    id: 1,
+    code: "in",
+    labelIt: "Entrate",
+    netWorthEffect: "increase" as NetWorthEffect,
+    includedInTotals: true,
+    shownSeparately: false,
+    hidden: false,
+    displayOrder: 0,
+    color: "#34d399",
+  },
+  {
+    id: 2,
+    code: "out",
+    labelIt: "Uscite",
+    netWorthEffect: "decrease" as NetWorthEffect,
+    includedInTotals: true,
+    shownSeparately: false,
+    hidden: false,
+    displayOrder: 1,
+    color: "#f97316",
+  },
+  {
+    id: 3,
+    code: "allocation",
+    labelIt: "Accantonamenti",
+    netWorthEffect: "neutral" as NetWorthEffect,
+    includedInTotals: false,
+    shownSeparately: true,
+    hidden: false,
+    displayOrder: 2,
+    color: "#a78bfa",
+  },
+  {
+    id: 4,
+    code: "transfer",
+    labelIt: "Trasferimenti",
+    netWorthEffect: "neutral" as NetWorthEffect,
+    includedInTotals: false,
+    shownSeparately: false,
+    hidden: true,
+    displayOrder: 3,
+    color: "#94a3b8",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// NATURES (lookup table — 8 rows per D-01; each row references a direction id)
+// ---------------------------------------------------------------------------
+
+export const natures = [
+  {
+    id: 1,
+    code: "income",
+    directionId: 1,
+    labelIt: "Entrate ricorrenti",
+    color: "#34d399",
+    displayOrder: 0,
+  },
+  {
+    id: 2,
+    code: "income_extraordinary",
+    directionId: 1,
+    labelIt: "Straordinaria",
+    color: "#a7f3d0",
+    displayOrder: 1,
+  },
+  {
+    id: 3,
+    code: "essential",
+    directionId: 2,
+    labelIt: "Essenziale",
+    color: "#4ade80",
+    displayOrder: 2,
+  },
+  {
+    id: 4,
+    code: "discretionary",
+    directionId: 2,
+    labelIt: "Discrezionale",
+    color: "#f97316",
+    displayOrder: 3,
+  },
+  {
+    id: 5,
+    code: "debt",
+    directionId: 2,
+    labelIt: "Debiti",
+    color: "#f87171",
+    displayOrder: 4,
+  },
+  {
+    id: 6,
+    code: "transfer",
+    directionId: 4,
+    labelIt: "Trasferimento",
+    color: "#94a3b8",
+    displayOrder: 5,
+  },
+  {
+    id: 7,
+    code: "savings",
+    // Phase 46: "savings" replaces "extraordinary" — label/color sourced from NATURE_LABELS/NATURE_COLORS[extraordinary]
+    directionId: 3,
+    labelIt: "Straordinario",
+    color: "#fbbf24",
+    displayOrder: 6,
+  },
+  {
+    id: 8,
+    code: "investment",
+    // Phase 46: "investment" replaces "financial" — label/color sourced from NATURE_LABELS/NATURE_COLORS[financial]
+    directionId: 3,
+    labelIt: "Finanziario",
+    color: "#a78bfa",
+    displayOrder: 7,
+  },
+];
