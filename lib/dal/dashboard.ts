@@ -380,8 +380,13 @@ function rowMatchesCategory(
   )
 }
 
+// TODO(Phase 49): replace with direction.code != 'transfer' filter via nature→direction join
 function notTransferCategory() {
-  return or(isNull(category.type), ne(category.type, 'transfer'))
+  // category.type removed (Phase 46); using nature.code != 'transfer' as minimum-compile proxy
+  // For minimum compile, exclude rows where nature code = 'transfer' (via natureId join)
+  return sql<boolean>`(${subCategory.natureId} IS NULL OR NOT EXISTS (
+    SELECT 1 FROM nature _n WHERE _n.id = ${subCategory.natureId} AND _n.code = 'transfer'
+  ))`
 }
 
 export function notExcludedFromTotals() {
@@ -661,16 +666,17 @@ export function buildMonthlyNatureTrendData(input: {
   to: Date
   rows: NatureTrendAggregateRow[]
 }): MonthlyNatureTrendPoint[] {
+  // TODO(Phase 49): segments will be replaced by direction-grouped algebraic sum
+  // Phase 46: FlowNature v2.0 — operational/financial/extraordinary renamed; 8 codes
   const emptySegments = (): Record<FlowNature | 'unclassified', string> => ({
     essential: ZERO_AMOUNT,
     discretionary: ZERO_AMOUNT,
-    operational: ZERO_AMOUNT,
-    financial: ZERO_AMOUNT,
     income: ZERO_AMOUNT,
     income_extraordinary: ZERO_AMOUNT,
     debt: ZERO_AMOUNT,
-    extraordinary: ZERO_AMOUNT,
     transfer: ZERO_AMOUNT,
+    savings: ZERO_AMOUNT,
+    investment: ZERO_AMOUNT,
     unclassified: ZERO_AMOUNT,
   })
 
@@ -870,7 +876,9 @@ export const getCategoriesBreakdown = cache(
   async (filters: DashboardFilters): Promise<BreakdownCategory[]> => {
     const { userId } = await verifySession()
     const { from, to } = dashboardPresetToDateRange(filters.preset)
-    const typeFilter = filters.type === 'all' ? undefined : eq(category.type, filters.type)
+    // TODO(Phase 49): replace category.type filter with direction.code filter
+    // category.type removed (Phase 46); type filter temporarily no-op
+    const typeFilter = filters.type === 'all' ? undefined : sql<boolean>`true` // TODO(Phase 49)
 
     let rows: BreakdownAggregateRow[] = []
 
@@ -880,7 +888,8 @@ export const getCategoriesBreakdown = cache(
           categoryId: category.id,
           categoryName: category.name,
           categorySlug: category.slug,
-          categoryType: category.type,
+          // TODO(Phase 49): restore categoryType via direction.code join
+          categoryType: sql<'in' | 'out' | 'system' | 'transfer' | null>`null`,
           subCategoryId: subCategory.id,
           subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
           subCategorySlug: subCategory.slug,
@@ -902,7 +911,7 @@ export const getCategoriesBreakdown = cache(
           and(
             dateScopedTransactions(userId, from, to),
             expenseStatusIncludedInDashboardTotals(),
-            ne(category.type, 'transfer'),
+            // TODO(Phase 49): replace with direction.code != 'transfer'
             notExcludedFromTotals(),
             typeFilter
           )
@@ -922,7 +931,8 @@ export const getCategoryRanking = cache(
     const { userId } = await verifySession()
     const { from, to } = dashboardPresetToDateRange(filters.preset)
     const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
-    const typeFilter = filters.type === 'all' ? undefined : eq(category.type, filters.type)
+    // TODO(Phase 49): replace category.type filter with direction.code filter
+    const typeFilter = filters.type === 'all' ? undefined : sql<boolean>`true` // TODO(Phase 49)
 
     let rows: CategoryRankingAggregateRow[] = []
 
@@ -932,7 +942,8 @@ export const getCategoryRanking = cache(
           categoryId: category.id,
           categoryName: category.name,
           categorySlug: category.slug,
-          categoryType: category.type,
+          // TODO(Phase 49): restore categoryType via direction.code join
+          categoryType: sql<'in' | 'out' | 'system' | 'transfer' | null>`null`,
           month: monthSql,
           count: countDistinct(expense.id),
           amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
@@ -952,7 +963,7 @@ export const getCategoryRanking = cache(
           and(
             dateScopedTransactions(userId, from, to),
             expenseStatusIncludedInDashboardTotals(),
-            ne(category.type, 'transfer'),
+            // TODO(Phase 49): replace with direction.code != 'transfer'
             notExcludedFromTotals(),
             typeFilter
           )
@@ -971,7 +982,8 @@ export const getCategoryDeviations = cache(
   async (input: CategoryDeviationsInput): Promise<Map<number, DeviationData>> => {
     const { userId } = await verifySession()
     const { reference, baseline } = getDeviationDateRanges()
-    const typeFilter = input.type === 'all' ? undefined : eq(category.type, input.type)
+    // TODO(Phase 49): replace category.type filter with direction.code filter
+    const typeFilter = input.type === 'all' ? undefined : sql<boolean>`true` // TODO(Phase 49)
     const groupColumn = input.categoryId !== undefined ? subCategory.id : category.id
     const categoryScope =
       input.categoryId !== undefined ? eq(category.id, input.categoryId) : undefined
@@ -996,7 +1008,7 @@ export const getCategoryDeviations = cache(
             and(
               dateScopedTransactions(userId, reference.from, reference.to),
               expenseStatusIncludedInDashboardTotals(),
-              ne(category.type, 'transfer'),
+              // TODO(Phase 49): replace with direction.code != 'transfer'
               notExcludedFromTotals(),
               typeFilter,
               categoryScope
@@ -1017,7 +1029,7 @@ export const getCategoryDeviations = cache(
             and(
               dateScopedTransactions(userId, baseline.from, baseline.to),
               expenseStatusIncludedInDashboardTotals(),
-              ne(category.type, 'transfer'),
+              // TODO(Phase 49): replace with direction.code != 'transfer'
               notExcludedFromTotals(),
               typeFilter,
               categoryScope
@@ -1059,14 +1071,14 @@ export const getCategoryDetail = cache(
           id: category.id,
           name: category.name,
           slug: category.slug,
-          type: category.type,
+          // TODO(Phase 49): restore type via direction.code join — category.type removed (Phase 46)
+          type: sql<'in' | 'out' | null>`null`,
         })
         .from(category)
         .where(
           and(
             eq(category.id, categoryId),
-            eq(category.type, selectedType),
-            ne(category.type, 'transfer'),
+            // TODO(Phase 49): replace with direction.code filter
             eq(category.isActive, true),
             or(isNull(category.userId), eq(category.userId, userId))
           )
@@ -1075,12 +1087,13 @@ export const getCategoryDetail = cache(
 
       const row = categoryRows[0]
 
-      if (row && row.type !== 'transfer') {
+      if (row) {
         categoryData = {
           id: row.id,
           name: row.name,
           slug: row.slug,
-          type: row.type as 'in' | 'out',
+          // TODO(Phase 49): derive type from direction.code
+          type: selectedType as 'in' | 'out',
         }
       }
     } catch {
@@ -1092,10 +1105,9 @@ export const getCategoryDetail = cache(
     }
 
     const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
+    // TODO(Phase 49): restore category.type conditions via direction.code join
     const activeScopedCategory = and(
       eq(category.id, categoryId),
-      eq(category.type, selectedType),
-      ne(category.type, 'transfer'),
       eq(category.isActive, true),
       or(isNull(category.userId), eq(category.userId, userId))
     )
@@ -1110,7 +1122,8 @@ export const getCategoryDetail = cache(
           .select({
             categoryId: category.id,
             categorySlug: category.slug,
-            categoryType: category.type,
+            // TODO(Phase 49): restore categoryType via direction.code join
+            categoryType: sql<'in' | 'out' | 'system' | 'transfer' | null>`null`,
             month: monthSql,
             count: countDistinct(expense.id),
             amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
@@ -1141,7 +1154,8 @@ export const getCategoryDetail = cache(
           .select({
             categoryId: category.id,
             categorySlug: category.slug,
-            categoryType: category.type,
+            // TODO(Phase 49): restore categoryType via direction.code join
+            categoryType: sql<'in' | 'out' | 'system' | 'transfer' | null>`null`,
             subCategoryId: subCategory.id,
             subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
             subCategorySlug: subCategory.slug,
@@ -1175,7 +1189,8 @@ export const getCategoryDetail = cache(
             id: transactionTable.id,
             categoryId: category.id,
             categorySlug: category.slug,
-            categoryType: category.type,
+            // TODO(Phase 49): restore categoryType via direction.code join
+            categoryType: sql<'in' | 'out' | 'system' | 'transfer' | null>`null`,
             description: transactionTable.description,
             customTitle: transactionTable.customTitle,
             amount: transactionTable.amount,
@@ -1229,13 +1244,15 @@ export const getAggregatedTransactionsData = cache(
     let rows: TrendAggregateRow[] = []
 
     try {
+      // TODO(Phase 49): category.type removed (Phase 46); non-transfer check uses natureId subquery
       rows = await db
         .select({
           month: monthSql,
-          totalIn: sql<string>`coalesce(sum(case when ${transactionTable.amount} > 0 and (${category.type} is null or ${category.type} <> 'transfer') and (${subCategory.excludeFromTotals} is null or ${subCategory.excludeFromTotals} = false) then ${transactionTable.amount} else 0 end), 0)::text`,
-          totalOut: sql<string>`coalesce(abs(sum(case when ${transactionTable.amount} < 0 and (${category.type} is null or ${category.type} <> 'transfer') and (${subCategory.excludeFromTotals} is null or ${subCategory.excludeFromTotals} = false) then ${transactionTable.amount} else 0 end)), 0)::text`,
+          totalIn: sql<string>`coalesce(sum(case when ${transactionTable.amount} > 0 and (${subCategory.natureId} is null or not exists (select 1 from nature _n where _n.id = ${subCategory.natureId} and _n.code = 'transfer')) and (${subCategory.excludeFromTotals} is null or ${subCategory.excludeFromTotals} = false) then ${transactionTable.amount} else 0 end), 0)::text`,
+          totalOut: sql<string>`coalesce(abs(sum(case when ${transactionTable.amount} < 0 and (${subCategory.natureId} is null or not exists (select 1 from nature _n where _n.id = ${subCategory.natureId} and _n.code = 'transfer')) and (${subCategory.excludeFromTotals} is null or ${subCategory.excludeFromTotals} = false) then ${transactionTable.amount} else 0 end)), 0)::text`,
           totalNc: sql<number>`count(distinct case when ${expense.status} = '1' and ${expense.subCategoryId} is null then ${expense.id} end)`,
-          totalIgn: sql<number>`count(distinct case when ${category.type} = 'transfer' then ${expense.id} end)`,
+          // TODO(Phase 49): totalIgn — transfer detection via natureId subquery (category.type removed)
+          totalIgn: sql<number>`count(distinct case when exists (select 1 from nature _n where _n.id = ${subCategory.natureId} and _n.code = 'transfer') then ${expense.id} end)`,
         })
         .from(transactionTable)
         .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -1255,7 +1272,14 @@ export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Pr
   const { userId } = await verifySession()
   const { from, to } = dashboardPresetToDateRange(preset)
   const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
-  const natureSql = sql<FlowNature | null>`coalesce(${userSubcategoryOverride.nature}, ${subCategory.nature})`
+  // TODO(Phase 49): replace with direction-aware nature grouping via nature→direction join
+  // Phase 46: subCategory.nature / userSubcategoryOverride.nature removed (flowNatureEnum dropped);
+  // resolve effective nature via natureId FK — coalesce override.natureId then sub.natureId → nature.code
+  const natureSql = sql<FlowNature | null>`(
+    SELECT n.code FROM nature n
+    WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
+    LIMIT 1
+  )`
 
   let rows: NatureTrendAggregateRow[] = []
 
@@ -1266,7 +1290,8 @@ export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Pr
         nature: natureSql,
         amount: sql<string>`coalesce(sum(${transactionTable.amount}), 0)::text`,
         totalNc: sql<number>`count(distinct case when ${expense.status} = '1' and ${expense.subCategoryId} is null then ${expense.id} end)`,
-        totalIgn: sql<number>`count(distinct case when ${category.type} = 'transfer' then ${expense.id} end)`,
+        // TODO(Phase 49): category.type removed (Phase 46); transfer detection via natureId subquery
+        totalIgn: sql<number>`count(distinct case when exists (select 1 from nature _n where _n.id = ${subCategory.natureId} and _n.code = 'transfer') then ${expense.id} end)`,
       })
       .from(transactionTable)
       .leftJoin(expense, eq(transactionTable.expenseId, expense.id))

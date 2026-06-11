@@ -1,5 +1,4 @@
 import 'server-only'
-import Decimal from 'decimal.js'
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm'
 import type { DbOrTx } from '@/lib/db'
 import { expense } from '@/lib/db/schema'
@@ -12,20 +11,7 @@ function errorCause(error: unknown): unknown {
     : undefined
 }
 
-function totalAmountMatchesSign(
-  sign: 'positive' | 'negative' | 'any',
-  totalAmount: string,
-): boolean {
-  if (sign === 'any') return true
-  try {
-    const d = new Decimal(totalAmount)
-    if (sign === 'positive') return d.greaterThanOrEqualTo(0)
-    if (sign === 'negative') return d.lessThan(0)
-  } catch {
-    return false
-  }
-  return false
-}
+// totalAmountMatchesSign removed — Phase 46: patterns are sign-agnostic (amount_sign removed, ADR 0012, supersedes ADR 0008)
 
 export async function applyNewPatternToExpenses(
   database: DbOrTx,
@@ -33,10 +19,10 @@ export async function applyNewPatternToExpenses(
   patternId: number,
   patternString: string,
   subCategoryId: number,
-  amountSign: 'positive' | 'negative' | 'any',
+  // amountSign parameter removed — Phase 46: patterns are sign-agnostic (ADR 0012)
   confidence: number,
 ): Promise<number> {
-  console.info('[applyNewPatternToExpenses] start', { userId, patternId, patternString, amountSign, confidence })
+  console.info('[applyNewPatternToExpenses] start', { userId, patternId, patternString, confidence })
 
   let regex: RegExp
   try {
@@ -70,7 +56,8 @@ export async function applyNewPatternToExpenses(
       // "***** 114 data operazione"). Test against both the full normalized title and
       // the stripped form so suggestion-generated patterns still match.
       const stripped = normalized.split(/\s+/).filter(t => t.length > 0 && !/^\d+$/.test(t)).join(' ')
-      return (regex.test(normalized) || regex.test(stripped)) && totalAmountMatchesSign(amountSign, e.totalAmount)
+      // Phase 46: patterns are sign-agnostic (ADR 0012) — totalAmountMatchesSign check removed
+      return regex.test(normalized) || regex.test(stripped)
     })
     .map((e) => e.id)
 

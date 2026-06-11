@@ -6,7 +6,6 @@ import {
   expense,
   expenseClassificationHistory,
 } from '@/lib/db/schema'
-import Decimal from 'decimal.js'
 import {
   canUseHistoryCategorization,
   canUseRegexCategorization,
@@ -17,7 +16,7 @@ export type ActivePattern = {
   userId: string | null
   pattern: string
   subCategoryId: number
-  amountSign: 'positive' | 'negative' | 'any'
+  // amountSign removed — Phase 46: patterns are sign-agnostic (amount_sign removed, ADR 0012, supersedes ADR 0008)
   confidence: string
   priority: number
 }
@@ -39,7 +38,7 @@ export async function loadActivePatterns(
       userId: categorizationPattern.userId,
       pattern: categorizationPattern.pattern,
       subCategoryId: categorizationPattern.subCategoryId,
-      amountSign: categorizationPattern.amountSign,
+      // amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012)
       confidence: categorizationPattern.confidence,
       priority: categorizationPattern.priority,
     })
@@ -61,20 +60,7 @@ export async function loadActivePatterns(
   return rows as ActivePattern[]
 }
 
-function amountSignMatches(
-  amountSign: 'positive' | 'negative' | 'any',
-  amount: string,
-): boolean {
-  if (amountSign === 'any') return true
-  try {
-    const d = new Decimal(amount)
-    if (amountSign === 'positive') return d.greaterThanOrEqualTo(0)
-    if (amountSign === 'negative') return d.lessThan(0)
-  } catch {
-    // unparseable amount — skip sign check
-  }
-  return true
-}
+// amountSignMatches removed — Phase 46: patterns are sign-agnostic (amount_sign removed, ADR 0012, supersedes ADR 0008)
 
 export function applyTier1Regex(
   description: string,
@@ -85,7 +71,8 @@ export function applyTier1Regex(
     try {
       const regex = new RegExp(p.pattern, 'i')
       const stripped = description.split(/\s+/).filter(t => t.length > 0 && !/^\d+$/.test(t)).join(' ')
-      if ((regex.test(description) || regex.test(stripped)) && amountSignMatches(p.amountSign, amount)) {
+      // Phase 46: patterns are sign-agnostic (ADR 0012) — amountSignMatches check removed
+      if (regex.test(description) || regex.test(stripped)) {
         const source = p.userId === null ? 'system_pattern' : 'user_pattern'
         return {
           subCategoryId: p.subCategoryId,
