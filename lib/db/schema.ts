@@ -23,8 +23,6 @@ export const subscriptionPlanEnum = pgEnum("subscription_plan", [
 
 export const roleEnum = pgEnum("user_role", ["user", "admin"]);
 
-export const categoryTypeEnum = pgEnum("category_type", ["in", "out", "system", "transfer"]);
-
 export const expenseStatusEnum = pgEnum("expense_status", ["1", "2", "3", "4"]);
 
 export const fileStatusEnum = pgEnum("file_status", [
@@ -39,26 +37,12 @@ export const fileStatusEnum = pgEnum("file_status", [
 
 export const amountTypeEnum = pgEnum("amount_type", ["single", "separate"]);
 
-export const amountSignEnum = pgEnum("amount_sign", ["positive", "negative", "any"]);
-
 export const classificationSourceEnum = pgEnum("classification_source", [
   "system_pattern",
   "user_pattern",
   "manual",
   "override",
   "import_default",
-]);
-
-export const flowNatureEnum = pgEnum("flow_nature", [
-  "essential",
-  "discretionary",
-  "operational",
-  "financial",
-  "income",
-  "income_extraordinary",
-  "debt",
-  "extraordinary",
-  "transfer",
 ]);
 
 export const user = pgTable("user", {
@@ -162,14 +146,12 @@ export const category = pgTable(
     userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 100 }).notNull(),
     slug: varchar("slug", { length: 100 }).notNull(),
-    type: categoryTypeEnum("type").notNull(),
     displayOrder: integer("display_order").default(0),
     isActive: boolean("is_active").default(true).notNull(),
   },
   (table) => [
     index("category_userId_idx").on(table.userId),
     index("category_slug_idx").on(table.slug),
-    index("category_type_idx").on(table.type),
     uniqueIndex("category_system_slug_unique")
       .on(table.slug)
       .where(sql`${table.userId} IS NULL`),
@@ -463,7 +445,6 @@ export const categorizationPattern = pgTable(
     subCategoryId: integer("sub_category_id")
       .notNull()
       .references(() => subCategory.id, { onDelete: "cascade" }),
-    amountSign: amountSignEnum("amount_sign").default("any").notNull(),
     confidence: numeric("confidence", { precision: 4, scale: 2 }).default("0.80").notNull(),
     priority: integer("priority").default(100).notNull(),
     description: text("description"),
@@ -478,11 +459,7 @@ export const categorizationPattern = pgTable(
     index("categorization_pattern_userId_idx").on(table.userId),
     index("categorization_pattern_subCategoryId_idx").on(table.subCategoryId),
     index("categorization_pattern_priority_idx").on(table.priority),
-    unique("categorization_pattern_unique").on(
-      table.pattern,
-      table.subCategoryId,
-      table.amountSign,
-    ),
+    unique("categorization_pattern_unique").on(table.pattern, table.subCategoryId),
   ],
 );
 
