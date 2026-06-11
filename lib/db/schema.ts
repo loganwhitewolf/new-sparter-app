@@ -191,12 +191,13 @@ export const subCategory = pgTable(
     slug: varchar("slug", { length: 100 }).notNull(),
     displayOrder: integer("display_order").default(0),
     isActive: boolean("is_active").default(true).notNull(),
-    excludeFromTotals: boolean("exclude_from_totals").default(false).notNull(),
-    nature: flowNatureEnum("nature"),
+    excludeFromTotals: boolean("exclude_from_totals").default(false).notNull(), // Phase 49: removed once aggregation reads direction.included_in_totals
+    natureId: integer("nature_id").references(() => nature.id, { onDelete: "set null" }),
   },
   (table) => [
     index("sub_category_userId_idx").on(table.userId),
     index("sub_category_categoryId_idx").on(table.categoryId),
+    index("sub_category_natureId_idx").on(table.natureId),
     uniqueIndex("sub_category_system_category_slug_unique")
       .on(table.categoryId, table.slug)
       .where(sql`${table.userId} IS NULL`),
@@ -217,7 +218,7 @@ export const userSubcategoryOverride = pgTable(
       .notNull()
       .references(() => subCategory.id, { onDelete: "cascade" }),
     customName: varchar("custom_name", { length: 100 }),
-    nature: flowNatureEnum("nature"),
+    natureId: integer("nature_id").references(() => nature.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
@@ -227,6 +228,7 @@ export const userSubcategoryOverride = pgTable(
   (table) => [
     index("user_subcategory_override_userId_idx").on(table.userId),
     index("user_subcategory_override_subCategoryId_idx").on(table.subCategoryId),
+    index("user_subcategory_override_natureId_idx").on(table.natureId),
     unique("user_subcategory_override_user_subcategory_unique").on(
       table.userId,
       table.subCategoryId,
@@ -563,6 +565,10 @@ export const subCategoryRelations = relations(subCategory, ({ one, many }) => ({
     fields: [subCategory.categoryId],
     references: [category.id],
   }),
+  nature: one(nature, {
+    fields: [subCategory.natureId],
+    references: [nature.id],
+  }),
   overrides: many(userSubcategoryOverride),
   expenses: many(expense),
   categorizationPatterns: many(categorizationPattern),
@@ -578,6 +584,10 @@ export const userSubcategoryOverrideRelations = relations(
     subCategory: one(subCategory, {
       fields: [userSubcategoryOverride.subCategoryId],
       references: [subCategory.id],
+    }),
+    nature: one(nature, {
+      fields: [userSubcategoryOverride.natureId],
+      references: [nature.id],
     }),
   }),
 );
