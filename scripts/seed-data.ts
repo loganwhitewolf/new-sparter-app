@@ -1020,14 +1020,11 @@ export const platforms = [
 // CATEGORIZATION PATTERNS (regex sistema, userId = null)
 // ---------------------------------------------------------------------------
 
-export type AmountSign = "positive" | "negative" | "any";
-
 export const categorizationPatterns = [
   {
     pattern:
       "(?:\\bcoop\\b|\\bnova coop\\b|\\bmercato big\\b|\\bmercatò\\b|mercato.*local|\\besselunga\\b|\\bcarrefour\\b|\\bconad\\b|\\bpam\\b|\\btigre\\b|\\biper\\b|\\bsupermercato\\b|\\bsuper\\b|\\bmarket\\b|\\bcrai\\b|\\blidl\\b|\\beurospin\\b|\\bmd\\b|\\baldi\\b|\\bdespar\\b|\\beurospar\\b|\\binterspar\\b|\\bipercoop\\b|\\bbennet\\b|\\bil gigante\\b|\\bunes\\b|\\bu2\\b|\\bu!\\b|\\bfamila\\b|\\bsisa\\b|\\bsigma\\b|\\btodis\\b|\\bpewex\\b|\\biperal\\b)",
-    subCategorySlug: "supermercato",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "spesa-quotidiana",
     confidence: 0.95,
     priority: 10,
     description: "Supermarkets and grocery stores",
@@ -1035,8 +1032,7 @@ export const categorizationPatterns = [
   {
     pattern:
       "(?:\\bmacelleria\\b|\\bmacellaio\\b|\\bpescheria\\b|\\bpescivendolo\\b|\\bittic[oa]\\b|\\bortofrutta\\b|\\bortofrutt[ai]\\b|\\bfrutta e verdura\\b|\\bfruttivendolo\\b|\\bpanificio\\b|\\bpanetteria\\b|\\bforno\\b|\\bfornaio\\b|\\bgastronomia\\b|\\brosticceria\\b|\\bsalumeria\\b|\\bsalumiere\\b|\\bcaseificio\\b|\\blatticin[io]\\b|\\blatticini\\b|\\bformaggi\\b)",
-    subCategorySlug: "negozio-di-quartiere",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "spesa-quotidiana",
     confidence: 0.9,
     priority: 15,
     description: "Negozi specializzati in prodotti freschi",
@@ -1044,7 +1040,6 @@ export const categorizationPatterns = [
   {
     pattern: "(?:\\bamazon\\b|\\bamzn\\b)",
     subCategorySlug: "elettronica",
-    amountSign: "negative" as AmountSign,
     confidence: 0.9,
     priority: 20,
     description: "Amazon purchases",
@@ -1052,8 +1047,7 @@ export const categorizationPatterns = [
   {
     pattern:
       "(?:\\bmcdonald\\b|\\bburger king\\b|\\bkfc\\b|\\bpizza\\b|\\bristorante\\b|\\btrattoria\\b|\\bosteria\\b|\\bpizzeria\\b)",
-    subCategorySlug: "cene-fuori",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "ristoranti",
     confidence: 0.9,
     priority: 30,
     description: "Restaurants and fast food",
@@ -1061,16 +1055,14 @@ export const categorizationPatterns = [
   {
     pattern:
       "(?:\\bstarbucks\\b|\\bbar\\b|(?:^|[^a-zA-Z])caff(?:e|è|é|e[''`])(?:[^a-zA-Z]|$)|\\bcaffetteria\\b|\\bcoffee\\b|\\bespresso\\b)",
-    subCategorySlug: "colazioni-e-snack",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "bar-caffe-e-snack",
     confidence: 0.85,
     priority: 40,
     description: "Bars and coffee shops",
   },
   {
     pattern: "(?:\\bpasticceria\\b|\\bpasticcerie\\b)",
-    subCategorySlug: "colazioni-e-snack",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "bar-caffe-e-snack",
     confidence: 0.9,
     priority: 35,
     description: "Pasticcerie e dolci",
@@ -1078,7 +1070,6 @@ export const categorizationPatterns = [
   {
     pattern: "(?:\\beni\\b.*\\bplenitude\\b|\\bplenitude\\b)",
     subCategorySlug: "energia-elettrica",
-    amountSign: "negative" as AmountSign,
     confidence: 0.95,
     priority: 5,
     description: "Eni Plenitude - Electricity",
@@ -1087,7 +1078,6 @@ export const categorizationPatterns = [
     pattern:
       "(?:\\benel\\b|\\benel energia\\b|\\ba2a\\b|\\bedison\\b|\\bluce\\b|\\belettricità\\b|\\bgas\\b|\\bacqua\\b)",
     subCategorySlug: "energia-elettrica",
-    amountSign: "negative" as AmountSign,
     confidence: 0.9,
     priority: 10,
     description: "Energy and utility providers",
@@ -1095,8 +1085,7 @@ export const categorizationPatterns = [
   {
     pattern:
       "(?:\\beni\\b(?!.*plenitude)|\\besso\\b|\\bshell\\b|\\bq8\\b|\\btamoil\\b|\\bcarburante\\b|\\bbenzina\\b|\\bdiesel\\b|\\bgasolio\\b)",
-    subCategorySlug: "carburante",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "carburante-e-ricarica",
     confidence: 0.95,
     priority: 10,
     description: "Gas stations and fuel",
@@ -1104,8 +1093,7 @@ export const categorizationPatterns = [
   {
     pattern:
       "(?:\\btrenitalia\\b|\\bitalo\\b|\\bfrecciarossa\\b|\\bfrecciargento\\b|\\bfrecciabianca\\b|\\btreno\\b|\\bferrovie\\b)",
-    subCategorySlug: "treno",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "mezzi-pubblici",
     confidence: 0.95,
     priority: 5,
     description: "Railway services and trains",
@@ -1113,8 +1101,7 @@ export const categorizationPatterns = [
   {
     pattern:
       "(?:\\batm\\b|\\bautostrada\\b|\\btelepass\\b|\\bpedaggio\\b|\\bviacard\\b)",
-    subCategorySlug: "pedaggi-autostradali",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "pedaggi-e-parcheggi",
     confidence: 0.9,
     priority: 20,
     description: "Highway tolls and telepass",
@@ -1122,7 +1109,6 @@ export const categorizationPatterns = [
   {
     pattern: "(?:\\buber\\b|\\btaxi\\b|\\bbolt\\b|\\bfreenow\\b)",
     subCategorySlug: "taxi-e-ride-sharing",
-    amountSign: "negative" as AmountSign,
     confidence: 0.9,
     priority: 30,
     description: "Shared transport services",
@@ -1130,8 +1116,7 @@ export const categorizationPatterns = [
   {
     pattern:
       "(?:\\bnetflix\\b|\\bdisney\\+?\\b|\\bprime video\\b|\\bamazon prime video\\b|\\bnow tv\\b|\\bnow\\b|\\bapple tv\\+?\\b|\\braiplay\\b|\\bmediaset infinity\\b|\\bdazn\\b|\\bparamount\\+?\\b|\\bsky go\\b|\\bdiscovery\\+?\\b|\\byoutube premium\\b)",
-    subCategorySlug: "streaming-video",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "streaming",
     confidence: 0.95,
     priority: 10,
     description: "Video streaming services",
@@ -1139,16 +1124,14 @@ export const categorizationPatterns = [
   {
     pattern:
       "(?:\\bspotify\\b|\\bapple music\\b|\\bamazon music\\b|\\bdeezer\\b|\\btidal\\b|\\byoutube music\\b)",
-    subCategorySlug: "streaming-musica",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "streaming",
     confidence: 0.95,
     priority: 10,
     description: "Music streaming services",
   },
   {
     pattern: "(?:\\bfarmacia\\b|\\bpharmacy\\b|\\bparafarmacia\\b)",
-    subCategorySlug: "farmaci-generici",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "farmaci",
     confidence: 0.9,
     priority: 20,
     description: "Pharmacies and parapharmacies",
@@ -1157,7 +1140,6 @@ export const categorizationPatterns = [
     pattern:
       "(?:\\bospedale\\b|\\bclinica\\b|\\bmedico\\b|\\bdottore\\b|\\bvisita\\b|\\banalisi\\b)",
     subCategorySlug: "visite-mediche",
-    amountSign: "negative" as AmountSign,
     confidence: 0.85,
     priority: 30,
     description: "Medical visits and healthcare facilities",
@@ -1165,16 +1147,14 @@ export const categorizationPatterns = [
   {
     pattern:
       "(?:\\bpalestra\\b|\\bgym\\b|\\bfitness\\b|\\bpiscina\\b|\\bsport\\b|\\bpadel\\b|\\btennis\\b)",
-    subCategorySlug: "sport",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "sport-e-fitness",
     confidence: 0.9,
     priority: 35,
     description: "Sport: palestre, padel, tennis, fitness, piscine",
   },
   {
     pattern: "canone mensile",
-    subCategorySlug: "altri-abbonamenti",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "app-e-software",
     confidence: 0.9,
     priority: 10,
     description: "Canoni mensili vari",
@@ -1182,33 +1162,22 @@ export const categorizationPatterns = [
   {
     pattern:
       "(?:\\bvodafone\\b|\\btim\\b|\\bwind\\b|\\bwindtre\\b|\\biliad\\b|\\bfastweb\\b|\\bposte ?mobile\\b|\\bcoop ?voce\\b|\\bho ?mobile\\b|\\bho\\.\\b|\\bvery ?mobile\\b|\\bkena\\b|\\btiscali\\b|\\bsky wifi\\b|\\bsky mobile\\b|\\bspusu\\b|\\blycamobile\\b)",
-    subCategorySlug: "servizi-telefonici-e-internet",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "telefono-e-internet",
     confidence: 0.95,
     priority: 5,
     description: "Operatori telefonici in Italia",
   },
   {
     pattern: "bonifico",
-    subCategorySlug: "bonifico-in-uscita",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "trasferimento-tra-conti",
     confidence: 0.95,
     priority: 10,
-    description: "Bonifici in uscita",
-  },
-  {
-    pattern: "bonifico",
-    subCategorySlug: "bonifico-in-entrata",
-    amountSign: "positive" as AmountSign,
-    confidence: 0.95,
-    priority: 10,
-    description: "Bonifici in entrata",
+    description: "Bonifici tra conti",
   },
   {
     pattern:
       "(?:commissioni?.*spese.*adue|commissione.*disposizione.*bonifico|commissione.*bonifico)",
-    subCategorySlug: "commissioni-bancarie",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "commissioni-e-canone-conto",
     confidence: 0.95,
     priority: 10,
     description: "Commissioni bancarie",
@@ -1216,7 +1185,6 @@ export const categorizationPatterns = [
   {
     pattern: "addebito diretto.*volkswagen",
     subCategorySlug: "finanziamenti-auto",
-    amountSign: "negative" as AmountSign,
     confidence: 0.95,
     priority: 5,
     description: "Rate Volkswagen Bank",
@@ -1224,7 +1192,6 @@ export const categorizationPatterns = [
   {
     pattern: "addebito diretto.*fca bank",
     subCategorySlug: "finanziamenti-auto",
-    amountSign: "negative" as AmountSign,
     confidence: 0.95,
     priority: 5,
     description: "Rate FCA Bank",
@@ -1232,7 +1199,6 @@ export const categorizationPatterns = [
   {
     pattern: "addebito diretto.*disposto.*favore",
     subCategorySlug: "altri-finanziamenti",
-    amountSign: "negative" as AmountSign,
     confidence: 0.8,
     priority: 20,
     description: "Addebiti diretti per finanziamenti vari",
@@ -1240,7 +1206,6 @@ export const categorizationPatterns = [
   {
     pattern: "(?:stipendio.*pensione|^stipendio$|^pensione$)",
     subCategorySlug: "stipendio-base",
-    amountSign: "positive" as AmountSign,
     confidence: 0.95,
     priority: 5,
     description: "Stipendi e pensioni",
@@ -1248,7 +1213,6 @@ export const categorizationPatterns = [
   {
     pattern: "(?:^|[^a-z0-9])pago\\s*pa(?:[^a-z0-9]|$)",
     subCategorySlug: "imposte",
-    amountSign: "any" as AmountSign,
     confidence: 0.75,
     priority: 90,
     description: "PagoPA - da classificare manualmente",
@@ -1256,8 +1220,7 @@ export const categorizationPatterns = [
   {
     pattern:
       "(?:\\bfocacceria\\b|\\bpizza\\s*al\\s*taglio\\b|\\brosticceria\\b|\\btavola\\s*calda\\b|\\bpaninoteca\\b|\\bgastronomia\\b)",
-    subCategorySlug: "take-away",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "take-away-e-delivery",
     confidence: 0.9,
     priority: 35,
     description: "Take away: focaccerie, pizza al taglio, rosticcerie",
@@ -1265,8 +1228,7 @@ export const categorizationPatterns = [
   {
     pattern:
       "(?:\\bdeliveroo\\b|\\bjust\\s*eat\\b|\\bglovo\\b|\\bwolt\\b)",
-    subCategorySlug: "take-away",
-    amountSign: "negative" as AmountSign,
+    subCategorySlug: "take-away-e-delivery",
     confidence: 0.95,
     priority: 25,
     description: "Delivery app orders",
