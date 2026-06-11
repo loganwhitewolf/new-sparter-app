@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
-status: executing
-last_updated: "2026-06-11T12:34:00Z"
-last_activity: 2026-06-11 -- Completed 47-04-PLAN.md
+status: complete
+last_updated: "2026-06-11T10:38:08Z"
+last_activity: 2026-06-11 -- Completed 47-05-PLAN.md
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 8
-  completed_plans: 6
-  percent: 75
-stopped_at: Completed 47-04-PLAN.md
+  completed_plans: 7
+  percent: 88
+stopped_at: Completed 47-05-PLAN.md
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 
 ## Current Position
 
-Phase: 47 (taxonomy-seed-rework) — EXECUTING
-Plan: 4 of 5 complete — next 47-05
-Status: Executing Phase 47
-Last activity: 2026-06-11 -- Completed 47-04-PLAN.md
+Phase: 47 (taxonomy-seed-rework) — COMPLETE
+Plan: 5 of 5 complete
+Status: Phase 47 gate green — ready for verify-work / Phase 48
+Last activity: 2026-06-11 -- Completed 47-05-PLAN.md
 
-Progress: [███████████████░░░░░] 75% milestone (6/8 plans)
+Progress: [█████████████████░░░] 88% milestone (7/8 plans)
 
 ## Accumulated Context
 
@@ -53,9 +53,7 @@ v2.0 / Phase 46 decisions (shipped 2026-06-11):
 - **46-03 seed baseline:** `directions` (4) + `natures` (8) in `seed-data.ts`; `seed.ts` FK-order insert; `seed-extras` pattern-dedupe sign-agnostic repair only (no new STEPS yet — Phase 47 adds nature_id backfill)
 - **47-02 seed-data v2:** wholesale replace `categories` (23 active) + `subCategories` (87 with `natureId` 1-8); dissolved wrappers omitted from fresh baseline; Wave 0 tests GREEN (TAX-01/TAX-02 baseline)
 - **47-03 patterns + seed wiring:** sign-agnostic `categorizationPatterns` (28 rows) retargeted to v2 slugs; bonifico deduped to `trasferimento-tra-conti`; `seed.ts` excludeFromTotals triple + natureId pass-through (D-10, D-13)
-- **47-04 seed-extras v2 STEPS:** step 1 no-op (D-06); STEPS 6-12 for deployed DB insert/merge/rename/deactivate + nature_id backfill by code (D-08, D-12); A2 build-survival on steps 3-5
-
-Key constraints active for v2.0:
+- **47-05 R-FN-03 + phase gate:** R-FN-03 todos enabled; transfer subs assert natureId 6 (D-13); 949 tests + build green; 47-VALIDATION.md Nyquist sign-off; no DB apply (D-05)
 
 - Migrations: `drizzle-kit generate` + `scripts/migrate.ts` only — never `drizzle-kit push`
 - Seeds: additive model — append steps to `seed-extras.ts`, never edit shipped `seed-data.ts` shapes
@@ -66,7 +64,7 @@ Key constraints active for v2.0:
 
 **Resolved (Phase 46):** 8-vs-9 nature row count — **8 is correct**; implemented in schema + seed (46-01, 46-03).
 
-**Open for Phase 47:** Plan 05 (R-FN-03 + full gate) remains; deployed DB apply deferred to Phase 48 (D-05).
+**Open for Phase 47:** None — Phase 47 complete. Deployed DB apply deferred to Phase 48 (D-05).
 
 ### Blockers/Concerns
 

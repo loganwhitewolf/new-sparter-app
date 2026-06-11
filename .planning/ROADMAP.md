@@ -206,7 +206,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 47-05-PLAN.md — Wave 4: enable R-FN-03 tests + full test/build gate
+- [x] 47-05-PLAN.md — Wave 4: enable R-FN-03 tests + full test/build gate
 
 ### Phase 48: sql-migration-recategorization
 
