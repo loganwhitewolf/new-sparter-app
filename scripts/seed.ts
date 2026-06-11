@@ -87,14 +87,23 @@ async function seed() {
   console.log(`  ${categories.length} categories inserted (or already present).`)
 
   console.log('Seeding subcategories...')
+  // v2 literals include natureId; cast passes it through to sub_category.nature_id (D-11, D-13)
   await db.insert(subCategory).values(subCategories as Array<typeof subCategory.$inferInsert>).onConflictDoNothing()
   console.log(`  ${subCategories.length} sottocategories inserted (or already present).`)
 
   await db
     .update(subCategory)
     .set({ excludeFromTotals: true })
-    .where(inArray(subCategory.slug, ['ricariche-conti', 'addebito-carta-di-credito']))
-  console.log('  excludeFromTotals=true set for ricariche-conti and addebito-carta-di-credito.')
+    .where(
+      inArray(subCategory.slug, [
+        'trasferimento-tra-conti',
+        'addebito-carta-di-credito',
+        'contante',
+      ]),
+    )
+  console.log(
+    '  excludeFromTotals=true set for trasferimento-tra-conti, addebito-carta-di-credito, and contante.',
+  )
 
   console.log('Seeding import platforms...')
   await db
