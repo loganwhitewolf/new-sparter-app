@@ -1,6 +1,7 @@
 # Phase 48: sql-migration-recategorization - Context
 
 **Gathered:** 2026-06-11
+**Updated:** 2026-06-11 (added migration safety/rollback protocol; clarified MIG-02 as nature-level only)
 **Status:** Ready for planning
 
 <domain>
@@ -48,10 +49,13 @@ UI rewrite. It also does not add transaction pairing; that remains Phase 50.
 - **D-06:** Canonical operator order is:
   1. `yarn db:generate`
   2. review and, if needed, manually patch the generated migration
-  3. `yarn db:migrate`
-  4. `yarn db:seed`
-  5. `yarn db:seed-extras`
-  6. targeted verification queries
+  3. `pg_dump` snapshot of the target DB (mandatory pre-migrate — see D-13)
+  4. `yarn db:migrate`
+  5. `yarn db:seed`
+  6. `yarn db:seed-extras`
+  7. targeted verification queries
+  Run the full sequence on **staging first** and only proceed to production after
+  staging verification passes (see D-14).
 - **D-07:** The migration file can be manually patched after `drizzle-kit
   generate` if Drizzle emits unsafe ordering, incomplete enum/constraint drops,
   or SQL that needs review-hardening. The base is generated; correctness wins
@@ -78,6 +82,34 @@ UI rewrite. It also does not add transaction pairing; that remains Phase 50.
 - **D-12:** Do not create `expense_classification_history` rows for these moves.
   This is a technical model migration, not a manual user decision or runtime
   categorization event.
+- **D-15:** MIG-02 misclassification fixes are **nature-level only**. Misclassified
+  rows are corrected by assigning the right `nature_id` to their *subcategory*
+  via `v2-backfill-nature-id` + the `NATURE_SLUGS` maps. Expenses are NOT
+  rebucketed between subcategories. Examples: `vendita-investimenti` → nature
+  `investment` (positive amount = divestment under the `allocation` direction by
+  the algebraic rule); one-off income slugs → nature `income_extraordinary`. No
+  `migrateSubcategoryMerge` move is introduced for MIG-02 beyond the existing v2
+  taxonomy merges already in `seed-extras`.
+- **D-16:** The `income_extraordinary` slug list in `NATURE_SLUGS` is **PO-confirmed
+  and final** for Phase 48 (no longer "pending"). The planner must ensure
+  `v2-backfill-nature-id` assigns the `income_extraordinary` nature to that
+  confirmed slug set, and must remove/update the stale "PO confirmation pending"
+  skip guard in the `income_extraordinary rebucket` step
+  (`scripts/seed-extras.ts`). This is still nature assignment, not expense moving
+  (consistent with D-15).
+
+### D - Migration safety & operator protocol
+- **D-13:** A `pg_dump` snapshot is **mandatory** immediately before
+  `yarn db:migrate` on both staging and production. Rollback strategy = restore
+  from that dump. Do NOT hand-write down-migrations: Drizzle column/enum drops are
+  destructive and a reverse SQL cannot recover dropped data, so reversibility
+  comes from the dump, not from a down script. The runbook must state the dump
+  command and the restore path explicitly.
+- **D-14:** Staging-first is a **blocking gate**. The full sequence
+  (`db:migrate` → `db:seed` → `db:seed-extras` → verification assertions) must run
+  clean on staging before production is touched. Production apply is allowed only
+  after staging verification passes. This extends the existing
+  `apply-to-production` confirm gate — it does not replace it.
 
 ### the agent's Discretion
 - Exact plan slicing, SQL assertion filenames/scripts, and whether verification
@@ -179,6 +211,12 @@ UI rewrite. It also does not add transaction pairing; that remains Phase 50.
   generated SQL migration.
 - Semantic data movement is slug-map driven. Do not run freeform description
   matching as part of migration.
+- Migration safety: a `pg_dump` snapshot precedes every `db:migrate` and is the
+  sole rollback path (no down-migrations). The whole sequence is rehearsed on
+  staging before production — staging-first is a hard gate, not advice.
+- MIG-02 is corrected at the subcategory `nature_id` level only; the `+` refund /
+  divestment cases net correctly because direction derives from nature (ADR
+  0012), without moving the underlying expense rows.
 
 </specifics>
 
