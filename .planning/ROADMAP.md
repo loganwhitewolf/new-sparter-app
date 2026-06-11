@@ -276,7 +276,7 @@ Plans:
 | 44 | v1.16 | 3/3 | Complete | 2026-06-08 |
 | 45 | v1.16 | 3/3 | Complete | 2026-06-09 |
 | 46 | v2.0 | 3/3 | Complete   | 2026-06-11 |
-| 47 | v2.0 | 5/5 | Complete   | 2026-06-11 |
+| 47 | v2.0 | 5/5 | Complete    | 2026-06-11 |
 | 48 | v2.0 | 0/TBD | Not started | - |
 | 49 | v2.0 | 0/TBD | Not started | - |
 | 50 | v2.0 | 0/TBD | Not started | - |
