@@ -13,17 +13,17 @@
 
 ### Data Model — lookup tables & schema cleanup (NATURE-TABLE-01)
 
-- [ ] **DATA-01**: A `direction` lookup table exists with the 4 static rows (`in`, `out`, `allocation`, `transfer`) carrying analytical attributes: `net_worth_effect` (increase|decrease|neutral), `included_in_totals`, `shown_separately`, `hidden`, `display_order`, `color`, `label_it`.
-- [ ] **DATA-02**: A `nature` lookup table exists with one row per nature in the ADR 0012 set, each with a `direction_id` FK to `direction`, `code`, `label_it`, `color`, `display_order`. Enumerated set: `income`, `income_extraordinary` (IN); `essential`, `discretionary`, `debt` (OUT); `transfer` (TRANSFER); `savings`, `investment` (ALLOCATION). _(See Planning Risk: 8-vs-9 row-count discrepancy to resolve before schema build.)_
-- [ ] **DATA-03**: `sub_category.nature_id` and `user_subcategory_override.nature_id` are FK columns to `nature`, replacing the `flow_nature` enum column. Direction is **never stored** on the transaction — it is derived via join `transaction → sub_category → nature → direction`.
-- [ ] **DATA-04**: `category.type` (`category_type` enum) and its index `category_type_idx` are removed, and all ~18 call sites that branch on `category.type` are migrated to nature-derived direction (supersedes ADR 0008).
-- [ ] **DATA-05**: `amount_sign` (`amount_sign` enum) is removed from `categorization_pattern`, the derive-sign-from-category logic is deleted, patterns become sign-agnostic, and the unique constraint becomes `(pattern, subCategoryId)`.
-- [ ] **DATA-06**: `sub_category.exclude_from_totals` is removed; "excluded from spending totals" is now sourced from `direction.included_in_totals` (transfer + allocation excluded from spending totals).
+- [x] **DATA-01**: A `direction` lookup table exists with the 4 static rows (`in`, `out`, `allocation`, `transfer`) carrying analytical attributes: `net_worth_effect` (increase|decrease|neutral), `included_in_totals`, `shown_separately`, `hidden`, `display_order`, `color`, `label_it`. _(Phase 46 — schema + seed baseline)_
+- [x] **DATA-02**: A `nature` lookup table exists with one row per nature in the ADR 0012 set, each with a `direction_id` FK to `direction`, `code`, `label_it`, `color`, `display_order`. Enumerated set: `income`, `income_extraordinary` (IN); `essential`, `discretionary`, `debt` (OUT); `transfer` (TRANSFER); `savings`, `investment` (ALLOCATION). _(Phase 46 — **8 rows**; uncategorized = null `nature_id`)_
+- [x] **DATA-03**: `sub_category.nature_id` and `user_subcategory_override.nature_id` are FK columns to `nature`, replacing the `flow_nature` enum column. Direction is **never stored** on the transaction — it is derived via join `transaction → sub_category → nature → direction`. _(Phase 46 — schema; DB migration Phase 48)_
+- [ ] **DATA-04**: `category.type` (`category_type` enum) and its index `category_type_idx` are removed, and all ~18 call sites that branch on `category.type` are migrated to nature-derived direction (supersedes ADR 0008). _(Phase 46: schema removed + compile-only stubs; **semantic migration Phase 49**)_
+- [x] **DATA-05**: `amount_sign` (`amount_sign` enum) is removed from `categorization_pattern`, the derive-sign-from-category logic is deleted, patterns become sign-agnostic, and the unique constraint becomes `(pattern, subCategoryId)`. _(Phase 46)_
+- [ ] **DATA-06**: `sub_category.exclude_from_totals` is removed; "excluded from spending totals" is now sourced from `direction.included_in_totals` (transfer + allocation excluded from spending totals). _(D-10: column retained in Phase 46; **Phase 49**)_
 
 ### Taxonomy & Seeds — category/subcategory remap
 
-- [ ] **TAX-01**: The seeded taxonomy matches the working-doc final remap: 23 categories / ~65 subcategories across IN (4 categories), OUT (16), ALLOCATION (2), TRANSFER (1), each subcategory assigned its correct nature.
-- [ ] **TAX-02**: Category/nature dissolutions and renames are applied per the working doc: `operational` dissolved into essential/discretionary; `financial`→`investment`, `extraordinary`→`savings`; wrapper categories (Assicurazioni, Abbonamenti, Famiglia) distributed by object/purpose; Risparmio + Investimenti moved to ALLOCATION; Bonifici/movimenti-liquidità folded into TRANSFER.
+- [x] **TAX-01**: The seeded taxonomy matches the working-doc final remap: 23 categories / ~65 subcategories across IN (4 categories), OUT (16), ALLOCATION (2), TRANSFER (1), each subcategory assigned its correct nature. _(47-02: seed-data baseline — 87 subs with natureId; contract tests GREEN)_
+- [x] **TAX-02**: Category/nature dissolutions and renames are applied per the working doc: `operational` dissolved into essential/discretionary; `financial`→`investment`, `extraordinary`→`savings`; wrapper categories (Assicurazioni, Abbonamenti, Famiglia) distributed by object/purpose; Risparmio + Investimenti moved to ALLOCATION; Bonifici/movimenti-liquidità folded into TRANSFER. _(47-02: fresh baseline — dissolved wrappers absent from active set)_
 - [ ] **TAX-03**: `scripts/seed-data.ts` reflects the new baseline taxonomy and `scripts/seed-extras.ts` gains the additive step(s) needed to populate `nature_id` / direction data on existing rows, following the additive seed model (no edits to already-shipped seed shapes).
 
 ### Migration & Recategorization — existing data
@@ -72,20 +72,20 @@
 
 ## Planning Risk
 
-- **Nature row-count (8 vs 9):** ADR 0012's "Consequences" enumerates a **final set of 8** natures; the ADR data-model section and the working-doc summary both say **`nature` (9 rows)**. DATA-02 is written against the enumerated 8. Resolve the intended count (stale "9", or a deliberate 9th row such as an `uncategorized`/null-sentinel nature) before building the `nature` table and seed. _(Carried from the source contract; not a re-opening of the locked design.)_
+- **Nature row-count (8 vs 9):** **Resolved in Phase 46** — 8 nature rows in schema + seed; uncategorized transactions use `null` `nature_id` (D-02). Stale "9" references in PROJECT.md/ROADMAP can be cleaned up opportunistically.
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 46 | Pending |
-| DATA-02 | Phase 46 | Pending |
-| DATA-03 | Phase 46 | Pending |
-| DATA-04 | Phase 46 | Pending |
-| DATA-05 | Phase 46 | Pending |
-| DATA-06 | Phase 46 | Pending |
-| TAX-01 | Phase 47 | Pending |
-| TAX-02 | Phase 47 | Pending |
+| DATA-01 | Phase 46 | Complete |
+| DATA-02 | Phase 46 | Complete |
+| DATA-03 | Phase 46 | Complete |
+| DATA-04 | Phases 46+49 | Partial (schema + compile; semantic in 49) |
+| DATA-05 | Phase 46 | Complete |
+| DATA-06 | Phase 49 | Pending (D-10 deferral) |
+| TAX-01 | Phase 47 | Complete (47-02 seed-data baseline) |
+| TAX-02 | Phase 47 | Complete (47-02 seed-data baseline) |
 | TAX-03 | Phase 47 | Pending |
 | MIG-01 | Phase 48 | Pending |
 | MIG-02 | Phase 48 | Pending |
@@ -107,4 +107,4 @@
 
 ---
 *Requirements defined: 2026-06-10*
-*Last updated: 2026-06-10 — traceability populated after roadmap creation*
+*Last updated: 2026-06-03 — Phase 46 requirements traceability synced after execution handoff*

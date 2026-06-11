@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: executing
-last_updated: "2026-06-11T10:23:09.184Z"
-last_activity: 2026-06-11 -- Phase 47 execution started
+last_updated: "2026-06-11T10:29:14Z"
+last_activity: 2026-06-11 -- Completed 47-02-PLAN.md
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 8
-  completed_plans: 3
-  percent: 20
-stopped_at: Phase 47 planning complete — ready for /gsd-execute-phase 47
+  completed_plans: 4
+  percent: 50
+stopped_at: Completed 47-02-PLAN.md
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 ## Current Position
 
 Phase: 47 (taxonomy-seed-rework) — EXECUTING
-Plan: 1 of 5
+Plan: 2 of 5 complete — next 47-03
 Status: Executing Phase 47
-Last activity: 2026-06-11 -- Phase 47 execution started
+Last activity: 2026-06-11 -- Completed 47-02-PLAN.md
 
-Progress: [████░░░░░░░░░░░░░░░░] 20% milestone (1/5 phases)
+Progress: [██████████░░░░░░░░░░] 50% milestone (4/8 plans)
 
 ## Accumulated Context
 
@@ -51,6 +51,7 @@ v2.0 / Phase 46 decisions (shipped 2026-06-11):
 - **D-10:** `sub_category.exclude_from_totals` retained in schema — removal + `direction.included_in_totals` consumption deferred to Phase 49
 - **46-02 minimum-compile:** DAL/actions/components/tests compile green; semantic aggregation/filter rewrite marked `TODO(Phase 49)` — not a Phase 46 deliverable
 - **46-03 seed baseline:** `directions` (4) + `natures` (8) in `seed-data.ts`; `seed.ts` FK-order insert; `seed-extras` pattern-dedupe sign-agnostic repair only (no new STEPS yet — Phase 47 adds nature_id backfill)
+- **47-02 seed-data v2:** wholesale replace `categories` (23 active) + `subCategories` (87 with `natureId` 1-8); dissolved wrappers omitted from fresh baseline; Wave 0 tests GREEN (TAX-01/TAX-02 baseline)
 
 Key constraints active for v2.0:
 
@@ -63,7 +64,7 @@ Key constraints active for v2.0:
 
 **Resolved (Phase 46):** 8-vs-9 nature row count — **8 is correct**; implemented in schema + seed (46-01, 46-03).
 
-**Open for Phase 47:** full taxonomy remap in `seed-data.ts` is a large additive/replacement exercise — must follow working doc slug-by-slug without breaking idempotent baseline insert contract.
+**Open for Phase 47:** seed-extras STEPS 6+ and categorizationPatterns retarget (Plans 03–04) remain; deployed DB remap deferred to Phase 48 apply.
 
 ### Blockers/Concerns
 
@@ -90,11 +91,11 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-11 (Claude) — stopped at context exhaustion during Phase 46 wave 2
-Handoff synced: 2026-06-03 (Cursor) — Phase 46 closed in STATE + REQUIREMENTS
-Resume file: none (Phase 47 directory not created yet)
+Last session: 2026-06-11 — Completed 47-02-PLAN.md (seed-data v2 wholesale replace)
+Handoff synced: 2026-06-11 — Wave 0 tests GREEN after categories/subCategories replace
+Resume file: None
 
-**Next:** `/gsd-execute-phase 47`
+**Next:** `/gsd-execute-phase 47` (Plan 03 — categorizationPatterns + seed.ts wiring)
 
 ## Operator Next Steps
 

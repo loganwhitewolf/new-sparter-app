@@ -194,7 +194,7 @@ Plans:
 **Wave 1**
 
 - [x] 47-01-PLAN.md — Wave 0: RED Vitest taxonomy contract + v2 slug manifest fixture
-- [ ] 47-02-PLAN.md — Wave 1: wholesale replace categories/subCategories with natureId (seed-data v2)
+- [x] 47-02-PLAN.md — Wave 1: wholesale replace categories/subCategories with natureId (seed-data v2)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
