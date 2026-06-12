@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: executing
-last_updated: "2026-06-12T16:10:32.000Z"
-last_activity: 2026-06-12 -- Phase 49 Plan 05 complete (categorization surfaces direction realignment; buildDirectionNatureMap; picker/table filters; nature write-path fix)
+last_updated: "2026-06-12T00:00:00.000Z"
+last_activity: 2026-06-12 -- Phase 49 Plan 06 Task 1 complete (schema drop excludeFromTotals, migration 0019 generated); paused at Task 2 checkpoint (operator pg_dump + db:migrate)
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 17
   completed_plans: 15
   percent: 65
-stopped_at: None
+stopped_at: Phase 49 Plan 06 — Task 2 checkpoint:human-action (operator must run pg_dump + yarn db:migrate + yarn db:verify)
 ---
 
 # Project State
@@ -100,11 +100,11 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-12 — Phase 49 Plan 05 complete (categorization surfaces direction realignment)
-Handoff synced: 2026-06-12 — Phase 49 Plan 05 signed off
+Last session: 2026-06-12 — Phase 49 Plan 06 Task 1 complete; paused at operator checkpoint Task 2
+Handoff synced: 2026-06-12 — 49-06 Task 1 committed (2aed322)
 Resume file: None
 
-**Next:** Execute Plan 06 (49-06).
+**Next:** Operator runs pg_dump + yarn db:migrate + yarn db:verify, then signals "applied" to resume Plan 06 Task 2.
 
 ## Operator Next Steps
 
