@@ -57,7 +57,7 @@ Exceptions:
 | Role | Size | Weight | Line Height | Font | Usage |
 |------|------|--------|-------------|------|-------|
 | Body | 14px (text-sm) | 400 (regular) | 1.5 | Geist Sans | Table rows, mover names, reading lines, filter chips |
-| Label | 12px (text-xs) | 400 regular / 500 medium | 1.4 | Geist Sans | KPI card label, chart axis ticks, mover qualifiers, section subheadings |
+| Label | 12px (text-xs) | 400 (regular) | 1.4 | Geist Sans | KPI card label, chart axis ticks, mover qualifiers, section subheadings |
 | Heading | 16px (text-base) | 600 (semibold) | 1.4 | Geist Sans | Movers panel section headers, KPI card value label on empty state |
 | Display | 24px (text-2xl) | 600 (semibold) | 1.2 | Geist Mono | KPI card monetary values (tabular-nums, font-mono) |
 
