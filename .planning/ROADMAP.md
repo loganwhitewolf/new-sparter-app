@@ -248,7 +248,7 @@ Plans:
 Plans:
 **Wave 0** *(test-first)*
 
-- [ ] 49-01-PLAN.md — RED money-correctness tests (algebraic-sum netting, allocation bucket, transfer exclusion, savings rate) + cascade-options direction-keying contract
+- [x] 49-01-PLAN.md — RED money-correctness tests (algebraic-sum netting, allocation bucket, transfer exclusion, savings rate) + cascade-options direction-keying contract *(complete 2026-06-12)*
 
 **Wave 1** *(DAL foundation — parallel, disjoint files)*
 
