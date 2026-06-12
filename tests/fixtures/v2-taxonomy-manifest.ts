@@ -192,6 +192,10 @@ export const DROPPED_SUBCATEGORY_SLUGS = [
   'sconto-abbonamento',
   'sconto-promozionale',
   'sconto-canone',
+  // step-4 historical orphans (not in v2 manifest — merge then deactivate)
+  'rimborso-abbonamento-e-canoni',
+  'rimborso-da-persona',
+  'rimborsi-cashback-e-bonus', // renamed by step 4; step 8 merge target is a category not sub — deactivate via step 10
   // moved to allocation or merged
   'vendita-di-beni-usati',
   'commercio-online',
