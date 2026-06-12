@@ -1,7 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { db } from '@/lib/db'
-import { category, expense, file, importFormatVersion, nature, platform, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
+import { category, direction, expense, file, importFormatVersion, nature, platform, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
 import { eq, and, gte, ilike, inArray, isNull, lte, or, asc, desc, sql } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { periodToDateRange } from '@/lib/utils/date'
@@ -36,10 +36,10 @@ export type ExpenseFilters = {
   amountMax?: string
   /** Platform slug filter — requires importedFromFileId join chain */
   platform?: string
-  /** FlowNature filter — nine enum members plus sentinel 'unclassified' (null nature). */
+  /** FlowNature filter — eight nature codes plus sentinel 'unclassified' (null natureId). */
   nature?: string
-  /** Category type filter — in/out/transfer plus sentinel 'unclassified' (null type). */
-  type?: string
+  /** Direction filter — in/out/allocation/transfer plus sentinel 'unclassified' (null natureId). */
+  direction?: string
   /** Subcategory id filter — narrows to a specific subCategory.id. */
   subCategoryId?: number
 }
@@ -134,8 +134,7 @@ export const getExpenses = cache(async (
     conditions.push(eq(platform.slug, filters.platform))
   }
 
-  // Cascade filters: nature via subCategory.natureId → nature.code join
-  // TODO(Phase 49): direction-aware filtering replaces this simple nature.code match
+  // Nature filter — cascade child via subCategory.natureId → nature.code join
   if (filters.nature === 'unclassified') {
     // Unclassified: no subCategory linked, or subCategory has null natureId
     conditions.push(or(isNull(expense.subCategoryId), isNull(subCategory.natureId)))
@@ -143,13 +142,11 @@ export const getExpenses = cache(async (
     conditions.push(eq(nature.code, filters.nature))
   }
 
-  // type filter — category.type removed; direction semantics deferred to Phase 49
-  // TODO(Phase 49): replace with direction.code filter once direction join is available
-  if (filters.type === 'unclassified') {
+  // Direction filter — via nature→direction join; 'unclassified' matches null natureId rows
+  if (filters.direction === 'unclassified') {
     conditions.push(isNull(subCategory.natureId))
-  } else if (filters.type) {
-    // Phase 46: type filter now maps to nature.code for compile; full direction semantics Phase 49
-    conditions.push(eq(nature.code, filters.type))
+  } else if (filters.direction) {
+    conditions.push(eq(direction.code, filters.direction))
   }
 
   if (filters.subCategoryId) {
@@ -173,7 +170,8 @@ export const getExpenses = cache(async (
     .from(expense)
     .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
     .leftJoin(category, eq(subCategory.categoryId, category.id))
-    .leftJoin(nature, eq(subCategory.natureId, nature.id)) // TODO(Phase 49): direction-aware filtering
+    .leftJoin(nature, eq(subCategory.natureId, nature.id))
+    .leftJoin(direction, eq(nature.directionId, direction.id))
     .leftJoin(
       userSubcategoryOverride,
       and(

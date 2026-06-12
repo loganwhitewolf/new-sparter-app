@@ -5,6 +5,7 @@ import { db, type DbOrTx } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import {
   category,
+  direction,
   expense,
   file as importFile,
   importFormatVersion,
@@ -60,9 +61,9 @@ export type TransactionFilters = {
   amountMin?: string
   amountMax?: string
   status?: 'uncategorized' | 'categorized'
-  // Category-derived filters (Task 1):
+  // Category-derived filters: nature via nature.code, direction via direction.code
   nature?: string
-  type?: string
+  direction?: string
 }
 
 export const transactionListSelect = {
@@ -85,8 +86,8 @@ export const transactionListSelect = {
   platformId: platform.id,
   platformName: platform.name,
   platformSlug: platform.slug,
-  // TODO(Phase 49): replace with direction.code once direction join lands in aggregation rewrite
-  categoryType: category.id, // category.type removed (Phase 46); direction semantics deferred to Phase 49
+  // Direction code from the nature→direction join (replaces the category.id placeholder)
+  categoryType: direction.code,
 }
 
 export const transactionPlatformSelect = {
@@ -114,8 +115,8 @@ export type TransactionListRow = {
   platformId: number | null
   platformName: string | null
   platformSlug: string | null
-  // TODO(Phase 49): restore direction-based type field once direction join lands
-  categoryType: number | null
+  // Direction code from the nature→direction join
+  categoryType: string | null
 }
 
 export type TransactionPlatformOption = {
@@ -220,21 +221,18 @@ export const getTransactions = cache(
       conditions.push(isNotNull(expense.subCategoryId))
     }
 
-    // Category-derived filters — nature via subCategory.natureId → nature.code join
-    // TODO(Phase 49): direction-aware filtering replaces this simple nature.code match
+    // Nature filter — cascade child via subCategory.natureId → nature.code join
     if (filters.nature === 'unclassified') {
       conditions.push(or(isNull(expense.subCategoryId), isNull(subCategory.natureId)))
     } else if (filters.nature) {
       conditions.push(eq(nature.code, filters.nature))
     }
 
-    // type filter — category.type removed; direction semantics deferred to Phase 49
-    // TODO(Phase 49): replace with direction.code filter once direction join is available
-    if (filters.type === 'unclassified') {
+    // Direction filter — via nature→direction join; 'unclassified' matches null natureId rows
+    if (filters.direction === 'unclassified') {
       conditions.push(isNull(subCategory.natureId))
-    } else if (filters.type) {
-      // Phase 46: type filter now maps to nature.code for compile; full direction semantics Phase 49
-      conditions.push(eq(nature.code, filters.type))
+    } else if (filters.direction) {
+      conditions.push(eq(direction.code, filters.direction))
     }
 
     return db
@@ -249,7 +247,8 @@ export const getTransactions = cache(
       .leftJoin(expense, eq(transaction.expenseId, expense.id))
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
-      .leftJoin(nature, eq(subCategory.natureId, nature.id)) // TODO(Phase 49): direction-aware filtering
+      .leftJoin(nature, eq(subCategory.natureId, nature.id))
+      .leftJoin(direction, eq(nature.directionId, direction.id))
       .leftJoin(
         userSubcategoryOverride,
         and(

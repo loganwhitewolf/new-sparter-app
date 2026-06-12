@@ -33,7 +33,7 @@ function buildExpenseTableKey(filters: ExpenseListFilters, expenses: Awaited<Ret
     filters.sort ?? '',
     filters.dir ?? '',
     filters.nature ?? '',
-    filters.type ?? '',
+    filters.direction ?? '',
     filters.subCategoryId ?? '',
   ].join(':')
   const dataKey = expenses
@@ -69,7 +69,7 @@ export default async function ExpensesPage({
     dir: parsed.dir,
     // No period — D-05: default view is all-time
     nature: parsed.nature,
-    type: parsed.type,
+    direction: parsed.type,
     subCategoryId: parsed.subCategoryId,
   }
 
