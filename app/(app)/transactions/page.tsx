@@ -11,7 +11,7 @@ import {
   type TransactionSearchParams,
 } from '@/lib/validations/transactions'
 import { NATURE_LABELS, NATURE_ORDER } from '@/lib/utils/nature-labels'
-import { buildTypeNatureMap, buildCategorySubcategoryMap } from '@/lib/utils/cascade-options'
+import { buildDirectionNatureMap, buildCategorySubcategoryMap } from '@/lib/utils/cascade-options'
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { TransactionFormDialog } from '@/components/transactions/transaction-form-dialog'
 import { TransactionTable } from '@/components/transactions/transaction-table'
@@ -102,7 +102,7 @@ export default async function TransactionsPage({
 
   // Cascade-derived option maps: type→nature and category→subcategory
   const dependentOptions = {
-    nature: buildTypeNatureMap(categories),
+    nature: buildDirectionNatureMap(categories),
     subCategory: buildCategorySubcategoryMap(categories),
   }
 

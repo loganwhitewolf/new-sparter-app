@@ -1,15 +1,11 @@
 /**
  * Tests for cascade-options utility — buildTypeNatureMap, buildCategorySubcategoryMap,
  * and the Phase 49 buildDirectionNatureMap (direction-keyed variant).
- *
- * Phase 49 RED: buildDirectionNatureMap is not yet exported from cascade-options.ts.
- * The import below will fail until Plan 05 renames/adds the export.
  */
 import { describe, it, expect } from 'vitest'
 import {
   buildTypeNatureMap,
   buildCategorySubcategoryMap,
-  // @ts-expect-error buildDirectionNatureMap does not exist yet — RED until Plan 05
   buildDirectionNatureMap,
 } from '@/lib/utils/cascade-options'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
@@ -365,7 +361,6 @@ const directionFixture: CategoryWithSubCategories[] = [
 describe('buildDirectionNatureMap (Phase 49 — CAT-01)', () => {
   // CAT-01: basic shape — returns record keyed by direction code with non-empty option arrays
   it('CAT-01: returns a record keyed by direction code with non-empty option arrays', () => {
-    // @ts-expect-error buildDirectionNatureMap is not exported yet — RED until Plan 05
     const result = buildDirectionNatureMap(directionFixture)
     expect(typeof result).toBe('object')
     expect(result).not.toBeNull()
@@ -373,7 +368,6 @@ describe('buildDirectionNatureMap (Phase 49 — CAT-01)', () => {
 
   // CAT-01: allocation bucket contains savings and investment options
   it("CAT-01: result['allocation'] is a non-empty array containing savings and investment options", () => {
-    // @ts-expect-error buildDirectionNatureMap is not exported yet — RED until Plan 05
     const result = buildDirectionNatureMap(directionFixture)
     const allocationOptions = result['allocation'] as Array<{ value: string; label: string }> | undefined
     expect(allocationOptions).toBeDefined()
@@ -385,7 +379,6 @@ describe('buildDirectionNatureMap (Phase 49 — CAT-01)', () => {
 
   // CAT-01: out bucket contains essential and discretionary (spending natures, not savings/investment)
   it("CAT-01: result['out'] contains essential and discretionary (not savings or investment)", () => {
-    // @ts-expect-error buildDirectionNatureMap is not exported yet — RED until Plan 05
     const result = buildDirectionNatureMap(directionFixture)
     const outOptions = result['out'] as Array<{ value: string }> | undefined
     expect(outOptions).toBeDefined()
@@ -398,7 +391,6 @@ describe('buildDirectionNatureMap (Phase 49 — CAT-01)', () => {
 
   // CAT-01 regression guard: type===null skipped without crash; valid direction codes still produce buckets
   it("CAT-01: categories with type===null are skipped without crashing; valid direction codes still produce non-empty buckets", () => {
-    // @ts-expect-error buildDirectionNatureMap is not exported yet — RED until Plan 05
     const result = buildDirectionNatureMap(directionFixture)
     // The null-type category (id=50) must not produce a 'null' key
     expect('null' in result).toBe(false)
@@ -410,7 +402,6 @@ describe('buildDirectionNatureMap (Phase 49 — CAT-01)', () => {
 
   // system-type category is excluded from all buckets
   it("CAT-01: type==='system' category is excluded from all direction buckets", () => {
-    // @ts-expect-error buildDirectionNatureMap is not exported yet — RED until Plan 05
     const result = buildDirectionNatureMap(directionFixture)
     // No 'system' key in result
     expect('system' in result).toBe(false)
@@ -425,7 +416,6 @@ describe('buildDirectionNatureMap (Phase 49 — CAT-01)', () => {
 
   // empty input returns empty object
   it('returns empty object for empty input', () => {
-    // @ts-expect-error buildDirectionNatureMap is not exported yet — RED until Plan 05
     const result = buildDirectionNatureMap([])
     expect(result).toEqual({})
   })

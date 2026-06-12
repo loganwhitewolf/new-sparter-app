@@ -14,22 +14,91 @@ import { NATURE_ORDER, NATURE_LABELS } from '@/lib/utils/nature-labels'
 /** Shared filter option shape (value + display label). */
 export type FilterOption = { value: string; label: string }
 
+/** Shared inner helper — builds ordered FilterOption array from a set of nature codes. */
+function buildNatureOptions(natureSet: Set<string>): FilterOption[] {
+  const ordered: FilterOption[] = NATURE_ORDER
+    .filter((n): n is NonNullable<typeof n> => n !== null && natureSet.has(n))
+    .map((n) => ({
+      value: n,
+      label: NATURE_LABELS[n] ?? n,
+    }))
+  // Always append 'unclassified' as the last option
+  ordered.push({ value: 'unclassified', label: NATURE_LABELS.unclassified })
+  return ordered
+}
+
+/**
+ * Derives, per direction code ('in' | 'out' | 'allocation' | 'transfer'), the distinct
+ * natures used by that direction's subcategories. Returns option arrays ordered by
+ * NATURE_ORDER, with 'unclassified' appended last. system-type categories are excluded;
+ * null-type categories (no direction assigned yet) are skipped without error.
+ *
+ * Also emits an all-bucket under the '' key containing natures from all non-system directions.
+ *
+ * @param categories - Full taxonomy from getCategories()
+ * @returns Record<string, FilterOption[]> keyed by direction code + '' (all-bucket)
+ */
+export function buildDirectionNatureMap(
+  categories: CategoryWithSubCategories[],
+): Record<string, FilterOption[]> {
+  if (categories.length === 0) return {}
+
+  // Collect distinct natures per direction code (excluding system; skipping null)
+  const naturesPerDirection = new Map<string, Set<string>>()
+  const allNatures = new Set<string>()
+
+  for (const cat of categories) {
+    // Skip system categories and unassigned (null) direction
+    if (cat.type === 'system' || cat.type === null) continue
+
+    if (!naturesPerDirection.has(cat.type)) {
+      naturesPerDirection.set(cat.type, new Set())
+    }
+    const bucket = naturesPerDirection.get(cat.type)!
+
+    for (const sub of cat.subCategories) {
+      const nature = sub.effectiveNature
+      if (nature !== null) {
+        bucket.add(nature)
+        allNatures.add(nature)
+      }
+    }
+  }
+
+  if (naturesPerDirection.size === 0) return {}
+
+  // Build ordered option arrays per direction
+  const result: Record<string, FilterOption[]> = {}
+
+  // Per-direction buckets
+  for (const [direction, natureSet] of naturesPerDirection.entries()) {
+    result[direction] = buildNatureOptions(natureSet)
+  }
+
+  // All-bucket: union of all non-system direction natures
+  result[''] = buildNatureOptions(allNatures)
+
+  return result
+}
+
 /**
  * Derives, per category.type ('in' | 'out' | 'transfer'), the distinct natures used
  * by that type's subcategories. Returns option arrays ordered by NATURE_ORDER, with
- * 'unclassified' appended last. system-type categories are excluded.
+ * 'unclassified' appended last. null-type categories (no direction assigned yet) are excluded.
  *
- * Also emits an all-bucket under the '' key containing natures from all non-system types.
+ * Also emits an all-bucket under the '' key containing natures from all non-null types.
  *
  * @param categories - Full taxonomy from getCategories()
  * @returns Record<string, FilterOption[]> keyed by category.type + '' (all-bucket)
+ *
+ * @deprecated Use buildDirectionNatureMap instead (direction codes replace category.type).
  */
 export function buildTypeNatureMap(
   categories: CategoryWithSubCategories[],
 ): Record<string, FilterOption[]> {
   if (categories.length === 0) return {}
 
-  // Collect distinct natures per type (excluding system)
+  // Collect distinct natures per type (excluding null)
   const naturesPerType = new Map<string, Set<string>>()
   const allNatures = new Set<string>()
 
@@ -56,25 +125,13 @@ export function buildTypeNatureMap(
   // Build ordered option arrays per type
   const result: Record<string, FilterOption[]> = {}
 
-  function buildOptions(natureSet: Set<string>): FilterOption[] {
-    const ordered: FilterOption[] = NATURE_ORDER
-      .filter((n): n is NonNullable<typeof n> => n !== null && natureSet.has(n))
-      .map((n) => ({
-        value: n,
-        label: NATURE_LABELS[n] ?? n,
-      }))
-    // Always append 'unclassified' as the last option
-    ordered.push({ value: 'unclassified', label: NATURE_LABELS.unclassified })
-    return ordered
-  }
-
   // Per-type buckets
   for (const [type, natureSet] of naturesPerType.entries()) {
-    result[type] = buildOptions(natureSet)
+    result[type] = buildNatureOptions(natureSet)
   }
 
-  // All-bucket: union of all non-system natures
-  result[''] = buildOptions(allNatures)
+  // All-bucket: union of all non-null types natures
+  result[''] = buildNatureOptions(allNatures)
 
   return result
 }
@@ -82,7 +139,7 @@ export function buildTypeNatureMap(
 /**
  * Derives, per category.slug, the subcategory options for that category.
  * Each option has value = String(subCategory.id) and label = effective name.
- * system-type categories are excluded.
+ * system-type and null-type categories are excluded.
  *
  * Also emits an all-bucket under the '' key containing all subcategories from
  * non-system categories.
@@ -99,8 +156,8 @@ export function buildCategorySubcategoryMap(
   const allOptions: FilterOption[] = []
 
   for (const cat of categories) {
-    // Skip uncategorized (type null means no direction assigned yet)
-    if (cat.type === null) continue
+    // Skip system and unassigned (null) direction categories
+    if (cat.type === 'system' || cat.type === null) continue
 
     const options: FilterOption[] = cat.subCategories.map((sub) => ({
       value: String(sub.id),

@@ -45,7 +45,7 @@ import type { FilterField, TableConfig } from '@/lib/utils/table-config'
 /**
  * dependentOptions: childFieldKey → parentUrlValue → option list.
  * The '' key is the all-bucket (used when the parent param is absent).
- * Built server-side (e.g. from buildTypeNatureMap / buildCategorySubcategoryMap)
+ * Built server-side (e.g. from buildDirectionNatureMap / buildCategorySubcategoryMap)
  * and passed through to FilterPanel → FilterField.
  */
 type DependentOptions = Record<string, Record<string, { value: string; label: string }[]>>
