@@ -520,6 +520,7 @@ export function buildBreakdownData(rows: BreakdownAggregateRow[]): BreakdownCate
       row.categorySlug === null ||
       row.categoryType === null ||
       row.categoryType === 'transfer' ||
+      row.categoryType === 'allocation' ||
       row.subCategoryId === null ||
       row.subCategoryName === null ||
       row.subCategorySlug === null
@@ -596,6 +597,7 @@ export function buildCategoryRankingData(input: {
       row.categorySlug === null ||
       row.categoryType === null ||
       row.categoryType === 'transfer' ||
+      row.categoryType === 'allocation' ||
       row.month === null ||
       !monthKeySet.has(row.month)
     ) {
