@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: executing
-last_updated: "2026-06-12T09:36:55.622Z"
-last_activity: "2026-06-12 -- Phase 48 complete (Plan 03 runbook + guarded apply to deployed DB)"
+last_updated: "2026-06-12T15:13:00.000Z"
+last_activity: 2026-06-12 -- Phase 49 Plan 01 complete (RED tests)
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 11
+  total_plans: 17
   completed_plans: 11
   percent: 60
-stopped_at: Completed 48-03-PLAN.md (Phase 48 done)
+stopped_at: Completed 49-01-PLAN.md (Wave 0 RED tests)
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 
 ## Current Position
 
-Phase: 49 (dashboard-and-surfaces) — PLANNING (interrupted plan-phase loop; 6 PLAN.md drafted, 49-VALIDATION.md not yet nyquist_compliant)
-Plan: 0 of 6 executed
-Status: Phase 48 complete; Phase 49 planning needs finishing
-Last activity: 2026-06-12 -- Phase 48 complete (Plan 03 runbook + guarded apply: migration 0018 + seed + seed-extras applied to deployed DB)
+Phase: 49 (dashboard-and-surfaces) — EXECUTING
+Plan: 2 of 6
+Status: Executing Phase 49
+Last activity: 2026-06-12 -- Phase 49 Plan 01 complete (RED tests — Wave 0)
 
 Progress: [████████████░░░░░░░░] 60% milestone (3/5 phases)
 
@@ -37,6 +37,8 @@ Progress: [████████████░░░░░░░░] 60% mil
 ### Decisions
 
 Design contract is LOCKED. Do not re-open or re-derive the data model:
+
+- **49-01 D-01:** savingsRate expected value in test is 33.3 (not 33) — computeSavingsRate uses toDecimalPlaces(1); RESEARCH.md had a rounding error in the example value.
 
 - ADR 0012: direction derived from nature; 4th direction `allocation`; `category.type` removed
 - CONTEXT.md: canonical nature/direction vocabulary + categorization rules
