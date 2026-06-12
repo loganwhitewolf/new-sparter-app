@@ -1,6 +1,6 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, eq, gte, inArray, lte, ne, or, sql } from 'drizzle-orm'
+import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import {
