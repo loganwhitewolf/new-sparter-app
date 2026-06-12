@@ -173,7 +173,6 @@ export const subCategory = pgTable(
     slug: varchar("slug", { length: 100 }).notNull(),
     displayOrder: integer("display_order").default(0),
     isActive: boolean("is_active").default(true).notNull(),
-    excludeFromTotals: boolean("exclude_from_totals").default(false).notNull(), // Phase 49: removed once aggregation reads direction.included_in_totals
     natureId: integer("nature_id").references(() => nature.id, { onDelete: "set null" }),
   },
   (table) => [

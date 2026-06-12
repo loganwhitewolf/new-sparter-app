@@ -91,20 +91,7 @@ async function seed() {
   await db.insert(subCategory).values(subCategories as Array<typeof subCategory.$inferInsert>).onConflictDoNothing()
   console.log(`  ${subCategories.length} sottocategories inserted (or already present).`)
 
-  await db
-    .update(subCategory)
-    .set({ excludeFromTotals: true })
-    .where(
-      inArray(subCategory.slug, [
-        'trasferimento-tra-conti',
-        'addebito-carta-di-credito',
-        'contante',
-      ]),
-    )
-  console.log(
-    '  excludeFromTotals=true set for trasferimento-tra-conti, addebito-carta-di-credito, and contante.',
-  )
-
+  // Phase 49: exclude_from_totals column dropped (D-10); transfer exclusion now via direction.included_in_totals
   console.log('Seeding import platforms...')
   await db
     .insert(platform)

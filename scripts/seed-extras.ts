@@ -196,15 +196,6 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
     console.log(`    sub32 rename trasferimento: ${(sub32RenameResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
   }
 
-  // --- Cat 32 subcategories: set excludeFromTotals=true on all ---
-  // Phase 46: subCategory.nature column removed — nature='transfer' set via raw SQL
-  // TODO(Phase 49): rewrite to set natureId once nature lookup rows seeded
-  const sub32NatureResult = await database
-    .update(subCategory)
-    .set({ excludeFromTotals: true })
-    .where(and(eq(subCategory.categoryId, 32), isNull(subCategory.userId)))
-  console.log(`    sub32 set excludeFromTotals: ${(sub32NatureResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated (nature deferred to v2-backfill-nature-id)`)
-
   // --- Cat 32: insert "Prelievo contante" if not exists (idempotent via slug check) ---
   const existingPrelievo = await database
     .select({ id: subCategory.id })
@@ -220,7 +211,6 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
       slug: 'prelievo-contante',
       displayOrder: 0,
       isActive: true,
-      excludeFromTotals: true,
     })
     console.log('    sub32 insert prelievo-contante: 1 row inserted (nature deferred to v2-backfill-nature-id)')
   } else {
@@ -315,8 +305,6 @@ async function rebucketIncomeNatures(_database: Db): Promise<void> {
 // ---------------------------------------------------------------------------
 // v2 taxonomy migration helpers (Phase 47 — deployed DB transforms, D-08)
 // ---------------------------------------------------------------------------
-
-const TRANSFER_EXCLUDE_SLUGS = ['trasferimento-tra-conti', 'addebito-carta-di-credito', 'contante'] as const
 
 async function resolveSystemSubIds(
   database: Db,
@@ -488,14 +476,12 @@ async function v2InsertCategoriesSubcategories(database: Db): Promise<void> {
       .limit(1)
     if (existing.length > 0) continue
 
-    const excludeFromTotals = (TRANSFER_EXCLUDE_SLUGS as readonly string[]).includes(sub.slug)
     await database.insert(subCategory).values({
       categoryId: sub.categoryId,
       name: sub.name,
       slug: sub.slug,
       displayOrder: sub.displayOrder,
       isActive: sub.isActive,
-      excludeFromTotals,
     })
     subsInserted += 1
   }
@@ -621,13 +607,6 @@ async function v2MigrateMergesInAllocationTransfer(database: Db): Promise<void> 
     await migrateSubcategoryMerge(database, 'prelievo-contante', 'contante')
   } else {
     await renameSubcategoryGuarded(database, 'prelievo-contante', 'contante', 'contante')
-    const contanteUpdate = await database
-      .update(subCategory)
-      .set({ excludeFromTotals: true })
-      .where(and(eq(subCategory.slug, 'contante'), isNull(subCategory.userId)))
-    console.log(
-      `    set excludeFromTotals on contante: ${(contanteUpdate as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
-    )
   }
 }
 

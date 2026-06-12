@@ -1,0 +1,1 @@
+ALTER TABLE "sub_category" DROP COLUMN "exclude_from_totals";
