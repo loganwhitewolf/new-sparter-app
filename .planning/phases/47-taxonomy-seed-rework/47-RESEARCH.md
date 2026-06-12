@@ -445,20 +445,11 @@ it('TAX-01: every system subcategory has natureId 1-8', () => {
 | A3 | Reuse category explicit IDs where possible reduces extras complexity | STEP design | FK conflicts if ID repurposed for different semantic cat |
 | A4 | `prelievo-contante` slug becomes `contante` per working doc TRANSFER section | Pattern map | step 4 already inserted `prelievo-contante`; v2 rename needed |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Exact subcategory count for TAX-01**
-   - What we know: Summary says ~65; enumerated OUT list alone is ~50–59; full enum ~75+.
-   - What's unclear: Whether to prune further during implementation.
-   - Recommendation: Planner locks **explicit slug manifest** from working doc bullets as acceptance list; count is derived, not gated on "~65" alone.
-
-2. **STEPS 3–5 post-migrate survivability**
-   - What we know: D-09 says don't edit unless compile failure; A2 flags runtime SQL failure on fresh DB.
-   - Recommendation: Planner adds build-survival task: replace `SET nature` in steps 3–5 with no-op OR `SET nature_id` if Phase 48 runs full chain on empty DB — classify as compile/runtime survival exception to D-09.
-
-3. **Optional taxonomy validation script**
-   - Discretion item: `scripts/validate-seed-taxonomy.ts` vs Vitest-only.
-   - Recommendation: Vitest sufficient for Phase 47; script only if planner wants operator CLI check pre-Phase 48.
+1. **Exact subcategory count for TAX-01** — RESOLVED: Plan 01 locks explicit `V2_SUBCATEGORY_MANIFEST` in `tests/fixtures/v2-taxonomy-manifest.ts`; acceptance is manifest-driven, not "~65" round number.
+2. **STEPS 3–5 post-migrate survivability** — RESOLVED: Plan 04 adds build-survival no-op for step 1 + STEPS 6+; STEPS 3–5 bodies unchanged per D-09; Phase 48 dry-run validates runtime on fresh DB.
+3. **Vitest-only vs DB integration validation** — RESOLVED: Phase 47 gate is static Vitest + `yarn build`; live seed-extras apply deferred to Phase 48 (D-05).
 
 ## Environment Availability
 

@@ -216,6 +216,7 @@ export const DROPPED_SUBCATEGORY_SLUGS = [
   'prodotti-non-alimentari',
   // other pruned OUT subs
   'treno',
+  'ristrutturazione', // casa — not in v2 remap; no expenses/patterns; deactivated via v2-deactivate-pruned
 ] as const
 
 /** Maps nature codes to seed-data natures array IDs (Phase 46 — do not modify) */
