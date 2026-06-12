@@ -453,9 +453,9 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
         amount: sql<string>`coalesce(sum(${transactionTable.amount}), 0)::text`,
       })
       .from(transactionTable)
-      .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
-      .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
-      .leftJoin(category, eq(subCategory.categoryId, category.id))
+      .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+      .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+      .innerJoin(category, eq(subCategory.categoryId, category.id))
       .leftJoin(
         userSubcategoryOverride,
         and(
@@ -467,7 +467,7 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
         and(
           dateScopedTransactions(userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
-          // Exclude transfer via correlated direction subquery
+          // Exclude transfer via correlated direction subquery (INNER JOINs above ensure subCategoryId is set)
           sql`(
             SELECT d.code FROM direction d
             INNER JOIN nature n ON n.direction_id = d.id
