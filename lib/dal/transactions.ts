@@ -2,6 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
+import { toDecimal } from '@/lib/utils/decimal'
 import { verifySession } from '@/lib/dal/auth'
 import {
   category,
@@ -545,7 +546,7 @@ export const getTopUncategorizedExpenses = cache(
 
     // JS-side sort by |totalAmount| DESC because DISTINCT ON orders by description_hash
     return rows.sort(
-      (a, b) => Math.abs(parseFloat(b.totalAmount)) - Math.abs(parseFloat(a.totalAmount)),
+      (a, b) => toDecimal(b.totalAmount).abs().comparedTo(toDecimal(a.totalAmount).abs()),
     )
   },
 )
