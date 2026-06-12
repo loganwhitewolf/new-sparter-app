@@ -19,10 +19,11 @@ import {
 } from './overview-chart-utils'
 import { OverviewChartFilters } from './overview-chart-filters'
 
-// Chart config: Entrate = green (--total-in), Uscite = red (--total-out).
+// Chart config: Entrate = green (--total-in), Uscite = orange (--total-out), Accantonato = purple (--total-allocation).
 const chartConfig = {
   entrate: { label: 'Entrate', color: 'var(--total-in)' },
   uscite: { label: 'Uscite', color: 'var(--total-out)' },
+  accantonato: { label: 'Accantonato', color: 'var(--total-allocation)' },
 } satisfies ChartConfig
 
 // ─── Custom per-nature tooltip ────────────────────────────────────────────────
@@ -69,9 +70,27 @@ function NatureTooltip({ active, payload, data, includedIncome, includedOut }: N
 
       {/* Uscite section */}
       {breakdown.out.filter((i) => i.amount > 0).length > 0 && (
-        <div>
+        <div className="mb-1.5">
           <p className="text-xs font-medium text-muted-foreground mb-1">Uscite</p>
           {breakdown.out
+            .filter((item) => item.amount > 0)
+            .map((item) => (
+              <div key={item.key} className="flex items-center justify-between gap-3 py-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-xs text-muted-foreground">{item.label}</span>
+                </div>
+                <span className="font-mono text-xs tabular-nums">{formatEur(item.amount)}</span>
+              </div>
+            ))}
+        </div>
+      )}
+
+      {/* Accantonamenti section — always shown if allocation data exists */}
+      {breakdown.allocation.some((i) => i.amount > 0) && (
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">Accantonamenti</p>
+          {breakdown.allocation
             .filter((item) => item.amount > 0)
             .map((item) => (
               <div key={item.key} className="flex items-center justify-between gap-3 py-0.5">
@@ -92,7 +111,8 @@ type OverviewChartProps = {
   data: OverviewChartPoint[]
   // D-03 / P45: controlled by parent — single source of truth shared with movers panel.
   selectedMonth: number
-  onMonthSelect: (monthIndex: number) => void
+  // D-02: direction-aware click — passes month index AND the clicked bar's direction.
+  onMonthSelect: (monthIndex: number, direction: 'in' | 'out' | 'allocation') => void
 }
 
 export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewChartProps) {
@@ -194,8 +214,8 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
             radius={[4, 4, 0, 0]}
             cursor="default"
             activeBar={false}
-            // D-03: clicks are forwarded to the shared-state parent via controlled prop
-            onClick={(_, index) => onMonthSelect(index)}
+            // D-02: direction-aware click — Entrate bar maps to 'in' direction
+            onClick={(_, index) => onMonthSelect(index, 'in')}
           >
             {/* CHART-02: always-on compact k-notation labels above each bar */}
             <LabelList
@@ -217,14 +237,14 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
             ))}
           </Bar>
 
-          {/* Uscite bar — red fill via per-bar Cell, grouped side-by-side (CHART-01 / CHART-03) */}
+          {/* Uscite bar — orange fill via per-bar Cell, grouped side-by-side (CHART-01 / CHART-03) */}
           <Bar
             dataKey="uscite"
             radius={[4, 4, 0, 0]}
             cursor="default"
             activeBar={false}
-            // D-03: clicks are forwarded to the shared-state parent via controlled prop
-            onClick={(_, index) => onMonthSelect(index)}
+            // D-02: direction-aware click — Uscite bar maps to 'out' direction
+            onClick={(_, index) => onMonthSelect(index, 'out')}
           >
             {/* CHART-02: always-on compact k-notation labels above each bar */}
             <LabelList
@@ -240,6 +260,37 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
               <Cell
                 key={i}
                 fill="var(--color-uscite)"
+                fillOpacity={i === selectedMonth ? 1 : 0.4}
+                cursor="pointer"
+              />
+            ))}
+          </Bar>
+
+          {/* Accantonato bar — purple fill, always rendered even at zero (D-01) */}
+          <Bar
+            dataKey="accantonato"
+            fill="var(--color-accantonato)"
+            radius={[4, 4, 0, 0]}
+            cursor="default"
+            activeBar={false}
+            // D-02: direction-aware click — Accantonato bar maps to 'allocation' direction.
+            // D-04: zero-height bar is still clickable (cursor pointer applied per-Cell).
+            onClick={(_, index) => onMonthSelect(index, 'allocation')}
+          >
+            {/* CHART-02: always-on compact k-notation labels above each bar */}
+            <LabelList
+              dataKey="accantonato"
+              position="top"
+              offset={6}
+              className="fill-muted-foreground"
+              fontSize={10}
+              formatter={(v: unknown) => formatEurCompact(Number(v))}
+            />
+            {/* D-03: per-Cell opacity — selected month at full opacity, others dimmed (D-06) */}
+            {rows.map((_, i) => (
+              <Cell
+                key={i}
+                fill="var(--color-accantonato)"
                 fillOpacity={i === selectedMonth ? 1 : 0.4}
                 cursor="pointer"
               />

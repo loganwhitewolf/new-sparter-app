@@ -47,29 +47,42 @@ const INCOME_CHIP_TOOLTIPS: Record<IncomeKey, string> = {
 
 /**
  * Mapping from OutKey to the NATURE_LABELS key.
- * Phase 46: FlowNature v2.0 — 6 OUT codes (operational dissolved, financial→investment, extraordinary→savings)
+ * Phase 49: OUT_KEYS is now essential/discretionary/debt only.
  */
 const OUT_NATURE_KEY_MAP: Record<OutKey, keyof typeof NATURE_LABELS> = {
   essential: 'essential',
   discretionary: 'discretionary',
   debt: 'debt',
-  savings: 'savings',
-  investment: 'investment',
-  transfer: 'transfer',
 }
 
 /**
  * One-line Italian tooltip definition for each out chip (EDU-02).
- * Phase 46: FlowNature v2.0 codes
+ * Phase 49: spending natures only (savings/investment/transfer moved to their own bar).
  */
 const OUT_CHIP_TOOLTIPS: Record<OutKey, string> = {
   essential: NATURE_LABELS['essential'] + ' — spese necessarie come affitto, cibo, bollette',
   discretionary: NATURE_LABELS['discretionary'] + ' — acquisti facoltativi e svago',
   debt: NATURE_LABELS['debt'] + ' — rate, mutui, rimborsi di prestiti',
-  savings: NATURE_LABELS['savings'] + ' — risparmi accantonati',
-  investment: NATURE_LABELS['investment'] + ' — investimenti, azioni, fondi comuni',
-  transfer: NATURE_LABELS['transfer'] + ' — trasferimenti tra conti',
 }
+
+// ─── Allocation chip definitions ─────────────────────────────────────────────
+
+type AllocationChipKey = 'savings' | 'investment'
+
+const ALLOCATION_CHIPS: Array<{ key: AllocationChipKey; label: string; tooltip: string; color: string }> = [
+  {
+    key: 'savings',
+    label: 'Risparmio',
+    tooltip: NATURE_LABELS['savings'] + ' — risparmi accantonati',
+    color: NATURE_COLORS['savings'],
+  },
+  {
+    key: 'investment',
+    label: 'Investimento',
+    tooltip: NATURE_LABELS['investment'] + ' — investimenti, azioni, fondi comuni',
+    color: NATURE_COLORS['investment'],
+  },
+]
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -132,9 +145,10 @@ function FilterChip({ label, tooltip, color, included, onToggle }: ChipProps) {
 /**
  * OverviewChartFilters — controlled chip groups for slicing the OverviewChart bars.
  *
- * Renders two labelled groups:
+ * Renders three labelled groups:
  * - Entrate: income chips (Ricorrenti / Straordinarie) + group info popover (EDU-01)
- * - Uscite: six expense-nature chips from OUT_KEYS + group info popover (EDU-01)
+ * - Uscite: spending-nature chips (Essenziale / Discrezionale / Debiti) + group info popover
+ * - Accantonamento: allocation chips (Risparmio / Investimento) — display-only, no toggle
  *
  * Each chip is an aria-pressed toggle button with a one-line tooltip (EDU-02).
  * Chip state is owned by the parent; this is a purely controlled component.
@@ -189,7 +203,7 @@ export function OverviewChartFilters({
           ))}
         </div>
 
-        {/* Uscite group */}
+        {/* Uscite group — spending natures only (essential/discretionary/debt) */}
         <div className="flex flex-wrap items-center gap-1.5">
           <div className="flex items-center gap-1">
             <span className="text-xs font-medium text-muted-foreground">Uscite</span>
@@ -206,7 +220,7 @@ export function OverviewChartFilters({
               <PopoverContent className="w-64 text-sm">
                 <p className="font-medium">Uscite</p>
                 <p className="mt-1 text-muted-foreground">
-                  Filtra la barra rossa per natura della spesa. Ogni chip include o esclude
+                  Filtra la barra arancione per natura della spesa. Ogni chip include o esclude
                   quel tipo di uscita dal totale mensile del grafico.
                 </p>
               </PopoverContent>
@@ -221,6 +235,50 @@ export function OverviewChartFilters({
               included={includedOut.has(key)}
               onToggle={() => onToggleOut(key)}
             />
+          ))}
+        </div>
+
+        {/* Accantonamento group — Risparmio / Investimento (display-only, always present) */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex items-center gap-1">
+            <span className="text-xs font-medium text-muted-foreground">Accantonamento</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Informazioni sul gruppo Accantonamento"
+                  className="inline-flex items-center justify-center rounded-full p-0.5 text-muted-foreground/60 transition-colors hover:bg-muted hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Info className="size-3" aria-hidden="true" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 text-sm">
+                <p className="font-medium">Accantonamento</p>
+                <p className="mt-1 text-muted-foreground">
+                  La barra viola mostra il totale accantonato nel mese (risparmio + investimento).
+                  È sempre visibile anche quando il valore è zero.
+                </p>
+              </PopoverContent>
+            </Popover>
+          </div>
+          {ALLOCATION_CHIPS.map((chip) => (
+            <Tooltip key={chip.key}>
+              <TooltipTrigger asChild>
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full border border-transparent bg-foreground/10 px-2.5 py-0.5 text-xs font-medium text-foreground"
+                >
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: chip.color }}
+                    aria-hidden="true"
+                  />
+                  {chip.label}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>{chip.tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
           ))}
         </div>
 

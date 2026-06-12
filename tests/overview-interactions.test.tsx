@@ -19,6 +19,7 @@ const { OverviewChartFilters } = await import(
 
 // Fixture: a single OverviewChartPoint with distinct amounts per bucket
 // so that exclusion is clearly observable in assertions.
+// Phase 49: out = spending only (essential/discretionary/debt); allocation = savings/investment.
 const FIXTURE: OverviewChartPoint = {
   month: '2024-01',
   label: 'Gen',
@@ -26,14 +27,14 @@ const FIXTURE: OverviewChartPoint = {
     recurring: '1000.00',
     extraordinary: '200.00',
   },
-  // Phase 46: FlowNature v2.0 OUT codes (operational dissolved, financial→investment, extraordinary→savings)
   out: {
     essential: '300.00',
     discretionary: '150.00',
     debt: '40.00',
+  },
+  allocation: {
     savings: '20.00',
     investment: '60.00',
-    transfer: '0.00',
   },
 }
 
@@ -54,25 +55,29 @@ describe('overview chart filters (FILT-01, FILT-02, FILT-03)', () => {
   })
 
   // FILT-03: KPI independence
-  it('KPI independence: returned row has exactly the keys label, entrate, uscite', () => {
+  it('KPI independence: returned row has exactly the keys label, entrate, uscite, accantonato', () => {
     const row = deriveFilteredBarRow(FIXTURE, INCOME_KEYS, OUT_KEYS)
     const keys = Object.keys(row).sort()
-    expect(keys).toEqual(['entrate', 'label', 'uscite'])
+    expect(keys).toEqual(['accantonato', 'entrate', 'label', 'uscite'])
   })
 
   // All-off case
-  it('all-off: empty selections return { label, entrate: 0, uscite: 0 }', () => {
+  it('all-off: empty selections return { label, entrate: 0, uscite: 0, accantonato: 80 }', () => {
     const row = deriveFilteredBarRow(FIXTURE, [], [])
     expect(row.label).toBe('Gen')
     expect(row.entrate).toBe(0)
     expect(row.uscite).toBe(0)
+    // accantonato is always totalled in full (savings 20 + investment 60 = 80)
+    expect(row.accantonato).toBe(80)
   })
 
-  // Full selection — Phase 46 v2.0 natures: 300+150+40+20+60+0 = 570
+  // Full selection — Phase 49: out = essential+discretionary+debt = 300+150+40 = 490
   it('all-selected income and expense: totals match expected sums', () => {
     const row = deriveFilteredBarRow(FIXTURE, INCOME_KEYS, OUT_KEYS)
     expect(row.entrate).toBe(1200)
-    expect(row.uscite).toBe(570)
+    expect(row.uscite).toBe(490)
+    // accantonato = savings + investment = 20 + 60 = 80
+    expect(row.accantonato).toBe(80)
   })
 
   // sumSelected unit tests
@@ -159,14 +164,23 @@ describe('deriveNatureBreakdown (FRU-FIX-02)', () => {
     expect(extraordinary!.color).toBe('#a7f3d0')
   })
 
-  it('out lists the six natures with correct fixture amounts', () => {
+  it('out lists the three spending natures (essential/discretionary/debt) with correct fixture amounts', () => {
     const result = deriveNatureBreakdown(FIXTURE, new Set(INCOME_KEYS), new Set(OUT_KEYS))
-    expect(result.out).toHaveLength(6)
+    expect(result.out).toHaveLength(3)
     const essential = result.out.find((item) => item.key === 'essential')
     expect(essential!.amount).toBe(300)
     const discretionary = result.out.find((item) => item.key === 'discretionary')
     expect(discretionary!.amount).toBe(150)
-    const investment = result.out.find((item) => item.key === 'investment')
+    const debt = result.out.find((item) => item.key === 'debt')
+    expect(debt!.amount).toBe(40)
+  })
+
+  it('allocation section lists savings and investment from the allocation bucket', () => {
+    const result = deriveNatureBreakdown(FIXTURE, new Set(INCOME_KEYS), new Set(OUT_KEYS))
+    expect(result.allocation).toHaveLength(2)
+    const savings = result.allocation.find((item) => item.key === 'savings')
+    expect(savings!.amount).toBe(20)
+    const investment = result.allocation.find((item) => item.key === 'investment')
     expect(investment!.amount).toBe(60)
   })
 
@@ -182,7 +196,7 @@ describe('deriveNatureBreakdown (FRU-FIX-02)', () => {
     const result = deriveNatureBreakdown(FIXTURE, new Set(INCOME_KEYS), reducedOut)
     const debt = result.out.find((item) => item.key === 'debt')
     expect(debt).toBeUndefined()
-    expect(result.out).toHaveLength(5)
+    expect(result.out).toHaveLength(2)
   })
 
   it('out items carry correct colors from NATURE_COLORS', () => {
