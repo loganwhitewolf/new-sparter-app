@@ -17,7 +17,6 @@ import {
   platform,
   subCategory,
 } from '../lib/db/schema'
-import type { FlowNature } from '../lib/utils/nature-labels'
 import {
   DISSOLVED_CATEGORY_SLUGS,
   DROPPED_SUBCATEGORY_SLUGS,
@@ -39,162 +38,8 @@ type Db = ReturnType<typeof drizzle>
 // Step definitions
 // ---------------------------------------------------------------------------
 
-// Step 1 (phase 37): set FlowNature on system subcategories
-// trasferimento and addebito-carta-di-credito are intentionally null — no UPDATE needed
-// Phase 46: FlowNature v2.0 — extraordinary→savings, operational dissolved into discretionary, financial→investment
-// NOTE: these slugs are written via SQL raw (see setSubcategoryNature) because subCategory.nature column removed (Phase 46)
-// TODO(Phase 49): step 1 must be rewritten to set natureId (FK) instead of nature code string
-const NATURE_SLUGS: Record<FlowNature, string[]> = {
-  savings: [
-    'conto-risparmio',
-    'fondo-emergenze',
-    'fondo-pensione',
-    'risparmio-per-progetti',
-    'risparmio-per-investimenti',
-    'obiettivi-a-lungo-termine',
-    'risparmio-per-salute',
-  ],
-  discretionary: [
-    'alloggio',
-    'trasporto',
-    'attivita-e-intrattenimento',
-    'cibo-e-bevande',
-    'assicurazione-viaggio',
-    'compleanni',
-    'festivita',
-    'anniversari',
-    'amici-e-conoscenti',
-    'cene-fuori',
-    'pranzi',
-    'colazioni-e-snack',
-    'take-away',
-    'elettronica',
-    'abbigliamento',
-    'prodotti-per-la-casa',
-    'giocattoli',
-    'scarpe',
-    'accessori',
-    'attrezzatura-sportiva',
-    'libri-cartacei',
-    'e-book',
-    'audiolibri',
-    'cinema',
-    'eventi',
-    'cure-estetiche',
-    'sport',
-    'psicologia',
-    'massaggi',
-    'corsi-fitness',
-  ],
-  essential: [
-    'carburante',
-    'elettricita-per-auto',
-    'mezzi-pubblici',
-    'taxi-e-ride-sharing',
-    'treno',
-    'pedaggi-autostradali',
-    'spese-telepass',
-    'ztl-e-parcheggi',
-    'supermercato',
-    'spesa-online',
-    'prodotti-freschi',
-    'prodotti-non-alimentari',
-    'spesa-bio',
-    'visite-mediche',
-    'farmaci-e-medicinali',
-    'trattamenti-medici',
-    'farmaci-generici',
-    'parafarmaceutici',
-    'spese-scolastiche',
-    'attivita-extra-scolastiche',
-    'baby-sitter',
-    'manutenzione-ordinaria',
-    'ristrutturazione',
-    'affitto',
-    'badante',
-    'servizi-di-pulizia',
-    'energia-elettrica',
-    'gas',
-    'acqua',
-    'rifiuti',
-  ],
-  income: [
-    // Recurring income only — one-off slugs moved to income_extraordinary (phase 42)
-    'stipendio-base',
-    'indennita',
-    'overtime',
-    'dividendi-azionari',
-    'dividendi-fondi-comuni',
-    'dividendi-immobiliari',
-  ],
-  // Phase 46: financial → investment (ADR 0012)
-  investment: [
-    'azioni',
-    'obbligazioni',
-    'criptovalute',
-    'fondi-comuni',
-    'immobili',
-    'rimborso-spese-lavorative',
-    'rimborso-spese-sanitarie',
-    'rimborso-spese-viaggi',
-    'rimborso-ordine-online',
-    'cashback-carta-di-credito',
-    'cashback-acquisti-online',
-    'cashback-programmi-fedelta',
-    'sconto-abbonamento',
-    'sconto-promozionale',
-    'sconto-canone',
-    'vendita-di-beni-usati',
-    'commercio-online',
-    'immobili-vendita',
-    'vendita-investimenti',
-    'bonifico-in-entrata',
-    'ricariche-conti',
-    'bonifico-in-uscita',
-    'rimborsi',
-  ],
-  debt: [
-    'mutuo-casa',
-    'finanziamenti-auto',
-    'altri-finanziamenti',
-  ],
-  transfer: [],
-  // Phase 42: income split — extraordinary (one-off / non-recurring) income subcategories.
-  // Candidata base confirmed: dividends (dividendi-*) stay in `income` (recurring).
-  // Slugs from `income` that move here: one-off/variable earnings.
-  // Slugs from `financial` that move here: all IN-side money flows (D-03).
-  // Post-step-4 renamed slugs included: rimborso-abbonamento-e-canoni, bonus-promozionale, rimborso-da-persona.
-  income_extraordinary: [
-    // From income nature: one-off / variable earnings
-    'bonus',
-    'freelance',
-    'consulenze',
-    'progetti-occasionali',
-    'commissioni',
-    // From financial nature: IN-side money flows (per D-03, financial stays OUT/investment only)
-    'rimborso-spese-lavorative',
-    'rimborso-spese-sanitarie',
-    'rimborso-spese-viaggi',
-    'rimborso-ordine-online',
-    'cashback-carta-di-credito',
-    'cashback-acquisti-online',
-    'cashback-programmi-fedelta',
-    'rimborso-abbonamento-e-canoni',   // renamed from sconto-abbonamento by step 4
-    'bonus-promozionale',               // renamed from sconto-promozionale by step 4
-    'rimborso-da-persona',              // inserted by step 4
-    'vendita-di-beni-usati',
-    'commercio-online',
-    'immobili-vendita',
-    'vendita-investimenti',
-    'bonifico-in-entrata',
-    'ricariche-conti',
-    'rimborsi',
-  ],
-}
-
+// Step 1 (phase 37): sub_category.nature column removed in Phase 46 — no-op, superseded by v2-backfill-nature-id.
 async function setSubcategoryNature(_database: Db): Promise<void> {
-  // D-06: sub_category.nature column removed in Phase 46 — superseded by v2-backfill-nature-id.
-  // NATURE_SLUGS above is documentation-only for historical slug→nature mapping.
   console.log('    set-subcategory-nature: no-op (Phase 47 — superseded by v2-backfill-nature-id)')
 }
 
@@ -604,12 +449,23 @@ async function renameCategoryGuarded(
 async function v2InsertCategoriesSubcategories(database: Db): Promise<void> {
   let categoriesInserted = 0
   for (const cat of v2Categories) {
-    const existing = await database
+    const existingBySlug = await database
       .select({ id: category.id })
       .from(category)
       .where(and(eq(category.slug, cat.slug), isNull(category.userId)))
       .limit(1)
-    if (existing.length > 0) continue
+    if (existingBySlug.length > 0) continue
+
+    // Also guard by ID: a category seeded under a different (pre-rename) slug already occupies
+    // this PK and will be renamed by the v2-rename-categories-subcategories step — skip insertion.
+    if (cat.id !== undefined) {
+      const existingById = await database
+        .select({ id: category.id })
+        .from(category)
+        .where(and(eq(category.id, cat.id), isNull(category.userId)))
+        .limit(1)
+      if (existingById.length > 0) continue
+    }
 
     await database.insert(category).values({
       id: cat.id,
