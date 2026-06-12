@@ -1136,12 +1136,16 @@ export const getCategoryDetail = cache(
           id: category.id,
           name: category.name,
           slug: category.slug,
-          // Derive type from the first subcategory's direction (all subcategories of a category share direction)
+          // Derive type from the first subcategory's direction, honouring userSubcategoryOverride
           type: sql<'in' | 'out' | null>`(
             SELECT d.code FROM direction d
             INNER JOIN nature n ON n.direction_id = d.id
-            INNER JOIN sub_category sc ON sc.nature_id = n.id
-            WHERE sc.category_id = ${category.id}
+            INNER JOIN sub_category sc ON sc.id IN (
+              SELECT sc2.id FROM sub_category sc2 WHERE sc2.category_id = ${category.id}
+            )
+            LEFT JOIN user_subcategory_override uso
+              ON uso.sub_category_id = sc.id AND uso.user_id = ${userId}
+            WHERE n.id = COALESCE(uso.nature_id, sc.nature_id)
             LIMIT 1
           )`,
         })
