@@ -1,4 +1,5 @@
 import type { OverviewData } from '@/lib/dal/dashboard'
+import { toDecimal } from '@/lib/utils/decimal'
 import { formatEur } from './format'
 import { ReadingKpiCard, type Reading } from './kpi-card-reading'
 
@@ -106,7 +107,7 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
       />
       <ReadingKpiCard
         label="Accantonato"
-        value={formatEur(data.totalAllocation)}
+        value={formatEur(toDecimal(data.totalAllocation).abs().toNumber())}
         tone="allocation"
         delta={data.deltas.totalAllocation}
         goodWhenPositive

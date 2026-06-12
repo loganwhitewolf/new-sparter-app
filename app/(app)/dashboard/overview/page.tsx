@@ -66,8 +66,12 @@ async function OverviewDataSection({ year, years }: { year: number; years: strin
 
   // D-04: compute the real last-month-with-data index (not naively the last index).
   const defaultMonthIndex = deriveDefaultMonthIndex(chart)
-  // D-03: pre-fetch that month's movers server-side so the panel is populated on first paint.
-  const initialMovers = await getMonthOverMonthCategoryChanges(year, defaultMonthIndex)
+  // Pre-fetch all 3 directions in parallel so the panel is fully populated on first paint.
+  const [initialMoversIn, initialMoversOut, initialMoversAllocation] = await Promise.all([
+    getMonthOverMonthCategoryChanges(year, defaultMonthIndex, 'in'),
+    getMonthOverMonthCategoryChanges(year, defaultMonthIndex, 'out'),
+    getMonthOverMonthCategoryChanges(year, defaultMonthIndex, 'allocation'),
+  ])
 
   return (
     <div className="flex flex-col gap-6">
@@ -79,12 +83,15 @@ async function OverviewDataSection({ year, years }: { year: number; years: strin
         nudge={<OverviewNudge uncategorizedCount={overview.uncategorizedCount} year={year} />}
       />
       <KpiRow data={overview} year={year} />
-      {/* OverviewMoversSection owns the shared selectedMonth — chart + movers panel never drift. */}
+      {/* OverviewMoversSection owns the shared selectedMonth — chart + movers panel never drift.
+          All 3 directions are pre-fetched server-side and shown simultaneously in 3 columns. */}
       <OverviewMoversSection
         data={chart}
         year={year}
         defaultMonthIndex={defaultMonthIndex}
-        initialMovers={initialMovers}
+        initialMoversIn={initialMoversIn}
+        initialMoversOut={initialMoversOut}
+        initialMoversAllocation={initialMoversAllocation}
       />
     </div>
   )

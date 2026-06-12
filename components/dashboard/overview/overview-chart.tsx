@@ -111,8 +111,8 @@ type OverviewChartProps = {
   data: OverviewChartPoint[]
   // D-03 / P45: controlled by parent — single source of truth shared with movers panel.
   selectedMonth: number
-  // D-02: direction-aware click — passes month index AND the clicked bar's direction.
-  onMonthSelect: (monthIndex: number, direction: 'in' | 'out' | 'allocation') => void
+  // Month selection: clicking any bar selects the month and shows all 3 directions at once.
+  onMonthSelect: (monthIndex: number) => void
 }
 
 export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewChartProps) {
@@ -214,8 +214,8 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
             radius={[4, 4, 0, 0]}
             cursor="default"
             activeBar={false}
-            // D-02: direction-aware click — Entrate bar maps to 'in' direction
-            onClick={(_, index) => onMonthSelect(index, 'in')}
+            // Month selection: any bar click selects the month, all 3 directions shown at once.
+            onClick={(_, index) => onMonthSelect(index)}
           >
             {/* CHART-02: always-on compact k-notation labels above each bar */}
             <LabelList
@@ -243,8 +243,8 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
             radius={[4, 4, 0, 0]}
             cursor="default"
             activeBar={false}
-            // D-02: direction-aware click — Uscite bar maps to 'out' direction
-            onClick={(_, index) => onMonthSelect(index, 'out')}
+            // Month selection: any bar click selects the month, all 3 directions shown at once.
+            onClick={(_, index) => onMonthSelect(index)}
           >
             {/* CHART-02: always-on compact k-notation labels above each bar */}
             <LabelList
@@ -273,9 +273,9 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
             radius={[4, 4, 0, 0]}
             cursor="default"
             activeBar={false}
-            // D-02: direction-aware click — Accantonato bar maps to 'allocation' direction.
+            // Month selection: any bar click selects the month, all 3 directions shown at once.
             // D-04: zero-height bar is still clickable (cursor pointer applied per-Cell).
-            onClick={(_, index) => onMonthSelect(index, 'allocation')}
+            onClick={(_, index) => onMonthSelect(index)}
           >
             {/* CHART-02: always-on compact k-notation labels above each bar */}
             <LabelList
