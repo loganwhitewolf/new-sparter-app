@@ -81,7 +81,6 @@ const {
   buildOverviewData,
   getDeviationDateRanges,
   getOverviewComparisonRanges,
-  notExcludedFromTotals,
 } = await import('../lib/dal/dashboard')
 
 describe('dashboard DAL amount mapping', () => {
@@ -123,8 +122,8 @@ describe('dashboard DAL amount mapping', () => {
 
   it('builds overview KPI strings from Decimal aggregate rows', () => {
     const overview = buildOverviewData({
-      current: { totalIn: '2500.125', totalOut: '1500.115' },
-      previous: { totalIn: '2000.00', totalOut: '1000.00' },
+      current: { totalIn: '2500.125', totalOut: '1500.115', totalAllocation: null },
+      previous: { totalIn: '2000.00', totalOut: '1000.00', totalAllocation: null },
       currentUncategorizedCount: 3,
       previousUncategorizedCount: 2,
     })
@@ -142,8 +141,8 @@ describe('dashboard DAL amount mapping', () => {
 
   it('returns zero overview data when aggregates are nullable empty-state rows', () => {
     const overview = buildOverviewData({
-      current: { totalIn: null, totalOut: null },
-      previous: { totalIn: null, totalOut: null },
+      current: { totalIn: null, totalOut: null, totalAllocation: null },
+      previous: { totalIn: null, totalOut: null, totalAllocation: null },
       currentUncategorizedCount: 0,
       previousUncategorizedCount: 0,
     })
@@ -372,12 +371,6 @@ describe('dashboard DAL amount mapping', () => {
   it('DASHBOARD_TOTAL_EXPENSE_STATUSES excludes status=4 (ignored expenses)', () => {
     expect(DASHBOARD_TOTAL_EXPENSE_STATUSES).toEqual(['1', '2', '3'])
     expect(DASHBOARD_TOTAL_EXPENSE_STATUSES).not.toContain('4')
-  })
-
-  it('notExcludedFromTotals() helper builds correct OR predicate', () => {
-    const predicate = notExcludedFromTotals()
-    expect(predicate).not.toBeNull()
-    expect(predicate).not.toBeUndefined()
   })
 
   it('zero-fills monthly trend buckets while preserving imported transaction amounts and counts', () => {
@@ -774,17 +767,15 @@ describe('DASH money-correctness (Phase 49 — ADR 0012)', () => {
       current: {
         totalIn: '0.00',
         totalOut: '70.00',
-        // @ts-expect-error totalAllocation does not exist yet — RED assertion
         totalAllocation: '0.00',
       },
-      previous: { totalIn: '0.00', totalOut: '0.00' },
+      previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00' },
       currentUncategorizedCount: 0,
       previousUncategorizedCount: 0,
     })
 
     // The critical assertion: algebraic-sum refund netting
     expect(overview.totalOut).toBe('70.00')
-    // @ts-expect-error totalAllocation does not exist on OverviewData yet — RED until Plan 02
     expect(overview.totalAllocation).toBe('0.00')
   })
 
@@ -795,16 +786,14 @@ describe('DASH money-correctness (Phase 49 — ADR 0012)', () => {
       current: {
         totalIn: '0.00',
         totalOut: '0.00',
-        // @ts-expect-error totalAllocation does not exist yet — RED assertion
         totalAllocation: '500.00',
       },
-      previous: { totalIn: '0.00', totalOut: '0.00' },
+      previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00' },
       currentUncategorizedCount: 0,
       previousUncategorizedCount: 0,
     })
 
     expect(overview.totalOut).toBe('0.00')
-    // @ts-expect-error totalAllocation does not exist on OverviewData yet — RED until Plan 02
     expect(overview.totalAllocation).toBe('500.00')
   })
 
@@ -815,19 +804,16 @@ describe('DASH money-correctness (Phase 49 — ADR 0012)', () => {
       current: {
         totalIn: '0.00',
         totalOut: '0.00',
-        // @ts-expect-error totalAllocation does not exist yet — RED assertion
         // Algebraic sum for allocation: (-800) + (+300) = -500 → abs for display = 500
         totalAllocation: '500.00',
       },
-      previous: { totalIn: '0.00', totalOut: '0.00' },
+      previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00' },
       currentUncategorizedCount: 0,
       previousUncategorizedCount: 0,
     })
 
     // Assert netted value, NOT double-counted 800+300=1100
-    // @ts-expect-error totalAllocation does not exist on OverviewData yet — RED until Plan 02
     expect(overview.totalAllocation).toBe('500.00')
-    // @ts-expect-error
     expect(overview.totalAllocation).not.toBe('1100.00')
   })
 
@@ -838,17 +824,15 @@ describe('DASH money-correctness (Phase 49 — ADR 0012)', () => {
       current: {
         totalIn: '0.00',
         totalOut: '0.00',
-        // @ts-expect-error totalAllocation does not exist yet — RED assertion
         totalAllocation: '0.00',
       },
-      previous: { totalIn: '0.00', totalOut: '0.00' },
+      previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00' },
       currentUncategorizedCount: 0,
       previousUncategorizedCount: 0,
     })
 
     expect(overview.totalIn).toBe('0.00')
     expect(overview.totalOut).toBe('0.00')
-    // @ts-expect-error totalAllocation does not exist on OverviewData yet — RED until Plan 02
     expect(overview.totalAllocation).toBe('0.00')
   })
 
@@ -860,10 +844,9 @@ describe('DASH money-correctness (Phase 49 — ADR 0012)', () => {
       current: {
         totalIn: '3000.00',
         totalOut: '2000.00',
-        // @ts-expect-error totalAllocation does not exist yet — RED assertion
         totalAllocation: '500.00',
       },
-      previous: { totalIn: '0.00', totalOut: '0.00' },
+      previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00' },
       currentUncategorizedCount: 0,
       previousUncategorizedCount: 0,
     })
@@ -872,8 +855,7 @@ describe('DASH money-correctness (Phase 49 — ADR 0012)', () => {
     // totalAllocation (500) must NOT enter the savings rate denominator
     // If allocation were included: (3000 - 2000 - 500) / 3000 * 100 = 16.7 — wrong
     expect(overview.savingsRate).toBe(33.3)
-    // totalAllocation must also be returned on OverviewData — RED until Plan 02 adds the field
-    // @ts-expect-error totalAllocation does not exist on OverviewData yet — RED until Plan 02
+    // totalAllocation is surfaced on OverviewData (Phase 49 — plan 02)
     expect(overview.totalAllocation).toBe('500.00')
   })
 })
