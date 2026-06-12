@@ -312,12 +312,12 @@ const directionFixture: CategoryWithSubCategories[] = [
       },
     ],
   },
-  // SYSTEM category: must be excluded from all direction buckets
+  // NULL type (v2 — no 'system' direction code): must be excluded from all direction buckets
   {
     id: 40,
     name: 'Sistema',
     slug: 'sistema',
-    type: 'system',
+    type: null,
     userId: null,
     isOwned: false,
     subCategories: [
@@ -400,16 +400,15 @@ describe('buildDirectionNatureMap (Phase 49 — CAT-01)', () => {
     expect((result['out'] as unknown[])?.length).toBeGreaterThan(0)
   })
 
-  // system-type category is excluded from all buckets
-  it("CAT-01: type==='system' category is excluded from all direction buckets", () => {
+  // null-type category (v2 — 'system' direction code removed) is excluded from all buckets
+  it("CAT-01: type===null category is excluded from all direction buckets", () => {
     const result = buildDirectionNatureMap(directionFixture)
-    // No 'system' key in result
+    // No 'null' or 'system' key in result
     expect('system' in result).toBe(false)
-    // System subcategory nature (null effectiveNature) must not appear under any bucket
-    // as a non-unclassified option
+    expect(null in result).toBe(false)
+    // null-type subcategory (effectiveNature null) must not pollute any bucket
     for (const bucket of Object.values(result as Record<string, Array<{ value: string }>>)) {
-      // The system sub's effectiveNature is null — it should not pollute any bucket with a real option
-      // (unclassified sentinel is allowed; but no 'null' value)
+      // effectiveNature is null — it should not produce a real option (only 'unclassified' sentinel is allowed)
       expect(bucket.some((o) => o.value === 'null')).toBe(false)
     }
   })

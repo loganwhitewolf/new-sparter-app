@@ -92,10 +92,11 @@ export default async function TransactionsPage({
     { value: 'unclassified', label: NATURE_LABELS.unclassified },
   ]
 
-  // Type filter options: In/Out/Transfer + 'Non classificato'
-  const typeOptions = [
+  // Direction filter options: In/Out/Accantonamenti/Trasferimenti + 'Non classificato' (D-08)
+  const directionOptions = [
     { value: 'in', label: 'Entrate' },
     { value: 'out', label: 'Uscite' },
+    { value: 'allocation', label: 'Accantonamenti' },
     { value: 'transfer', label: 'Trasferimenti' },
     { value: 'unclassified', label: 'Non classificato' },
   ]
@@ -129,7 +130,7 @@ export default async function TransactionsPage({
             platform: platformOptions,
             category: categoryOptions,
             nature: natureOptions,
-            type: typeOptions,
+            direction: directionOptions,
           }}
           dependentOptions={dependentOptions}
         />

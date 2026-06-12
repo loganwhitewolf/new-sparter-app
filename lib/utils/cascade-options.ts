@@ -48,8 +48,8 @@ export function buildDirectionNatureMap(
   const allNatures = new Set<string>()
 
   for (const cat of categories) {
-    // Skip system categories and unassigned (null) direction
-    if (cat.type === 'system' || cat.type === null) continue
+    // Skip unassigned (null) direction — 'system' was removed from the type union in Plan 03
+    if (cat.type === null) continue
 
     if (!naturesPerDirection.has(cat.type)) {
       naturesPerDirection.set(cat.type, new Set())
@@ -139,7 +139,7 @@ export function buildTypeNatureMap(
 /**
  * Derives, per category.slug, the subcategory options for that category.
  * Each option has value = String(subCategory.id) and label = effective name.
- * system-type and null-type categories are excluded.
+ * null-type categories (no direction assigned) are excluded.
  *
  * Also emits an all-bucket under the '' key containing all subcategories from
  * non-system categories.
@@ -156,8 +156,8 @@ export function buildCategorySubcategoryMap(
   const allOptions: FilterOption[] = []
 
   for (const cat of categories) {
-    // Skip system and unassigned (null) direction categories
-    if (cat.type === 'system' || cat.type === null) continue
+    // Skip unassigned (null) direction — 'system' was removed from the type union in Plan 03
+    if (cat.type === null) continue
 
     const options: FilterOption[] = cat.subCategories.map((sub) => ({
       value: String(sub.id),
