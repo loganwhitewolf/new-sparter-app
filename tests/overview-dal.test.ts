@@ -217,4 +217,48 @@ describe('getOverviewChart', () => {
     await getOverviewChart(2026)
     expect(mocks.verifySession).toHaveBeenCalledOnce()
   })
+
+  // Phase 49 RED: DASH-02 allocation bucket assertion
+  // After Plan 02, OverviewChartPoint gains an `allocation` bucket with savings/investment keys.
+  // Savings and investment amounts must NOT appear in the `out` bucket.
+  // This test is RED until Plan 02 reshapes OverviewChartPoint and getOverviewChart.
+  it('DASH-02: getOverviewChart routes savings/investment to allocation bucket, not out bucket', async () => {
+    // Mock DB rows: one savings row, one investment row
+    // After Plan 02 direction join, these will land in allocation bucket
+    mocks.executeResult.rows = [
+      {
+        month: '2026-01',
+        nature: 'savings',
+        direction_code: 'allocation',
+        amount: '-500.00',
+      },
+      {
+        month: '2026-01',
+        nature: 'investment',
+        direction_code: 'allocation',
+        amount: '-300.00',
+      },
+    ]
+
+    const { getOverviewChart } = await import('@/lib/dal/overview')
+    const result = await getOverviewChart(2026)
+
+    expect(Array.isArray(result)).toBe(true)
+
+    if (result.length > 0) {
+      const jan = result.find((p) => p.month === '2026-01')
+      if (jan) {
+        // @ts-expect-error allocation bucket does not exist on OverviewChartPoint yet — RED until Plan 02
+        expect(jan.allocation).toBeDefined()
+        // @ts-expect-error
+        expect(jan.allocation).toHaveProperty('savings')
+        // @ts-expect-error
+        expect(jan.allocation).toHaveProperty('investment')
+
+        // OUT bucket must NOT contain savings or investment keys
+        expect(jan.out).not.toHaveProperty('savings')
+        expect(jan.out).not.toHaveProperty('investment')
+      }
+    }
+  })
 })

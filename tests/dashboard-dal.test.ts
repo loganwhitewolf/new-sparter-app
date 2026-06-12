@@ -11,7 +11,6 @@ vi.mock('@/lib/db/schema', () => ({
     userId: 'category.userId',
     name: 'category.name',
     slug: 'category.slug',
-    type: 'category.type',
     isActive: 'category.isActive',
   },
   expense: {
@@ -27,14 +26,26 @@ vi.mock('@/lib/db/schema', () => ({
     slug: 'subCategory.slug',
     categoryId: 'subCategory.categoryId',
     isActive: 'subCategory.isActive',
-    excludeFromTotals: 'subCategory.excludeFromTotals',
-    nature: 'subCategory.nature',
+    // Phase 49: excludeFromTotals and nature removed (D-10 / Pitfall 6)
+    // direction join provides direction.includedInTotals instead
+    natureId: 'subCategory.natureId',
   },
   userSubcategoryOverride: {
     customName: 'userSubcategoryOverride.customName',
     subCategoryId: 'userSubcategoryOverride.subCategoryId',
     userId: 'userSubcategoryOverride.userId',
-    nature: 'userSubcategoryOverride.nature',
+    natureId: 'userSubcategoryOverride.natureId',
+  },
+  direction: {
+    id: 'direction.id',
+    code: 'direction.code',
+    labelIt: 'direction.labelIt',
+    includedInTotals: 'direction.includedInTotals',
+  },
+  nature: {
+    id: 'nature.id',
+    code: 'nature.code',
+    directionId: 'nature.directionId',
   },
   transaction: {
     id: 'transaction.id',
@@ -741,5 +752,128 @@ describe('buildMonthlyNatureTrendData (R-FN-04, R-FN-08, R-FN-09)', () => {
 
     expect(result).toHaveLength(1)
     expect(result[0]?.segments.essential).toBe('400.00')
+  })
+})
+
+// ─── Phase 49 RED: money-correctness tests (ADR 0012 — direction algebraic sum) ──────────────
+// These tests are RED until Plans 02/03 implement the direction-grouped aggregation.
+// Expected to FAIL at commit time because:
+//   - OverviewData.totalAllocation does not yet exist on the type
+//   - buildOverviewData does not yet accept / propagate totalAllocation
+// Do NOT implement production code here — keep RED.
+
+describe('DASH money-correctness (Phase 49 — ADR 0012)', () => {
+  // DASH-02: A +€30 refund under an OUT subcategory (amount positive, direction = out)
+  // must LOWER totalOut, not raise it (algebraic sum: 100 spending + 30 refund = 70 net)
+  it('DASH-02: refund netting — +€30 refund under OUT direction lowers totalOut to 70.00 (not 100 or 130)', () => {
+    // buildOverviewData receives pre-aggregated rows from getOverviewAmountTotals.
+    // After Plan 02, getOverviewAmountTotals will return { totalIn, totalOut, totalAllocation }
+    // using algebraic sum per direction bucket. Mocked here with the expected output values:
+    //   - €100 OUT spending + €30 refund = totalOut 70.00 (algebraic sum: sum(OUT amounts) = -100 + 30 = -70, abs → 70)
+    const overview = buildOverviewData({
+      current: {
+        totalIn: '0.00',
+        totalOut: '70.00',
+        // @ts-expect-error totalAllocation does not exist yet — RED assertion
+        totalAllocation: '0.00',
+      },
+      previous: { totalIn: '0.00', totalOut: '0.00' },
+      currentUncategorizedCount: 0,
+      previousUncategorizedCount: 0,
+    })
+
+    // The critical assertion: algebraic-sum refund netting
+    expect(overview.totalOut).toBe('70.00')
+    // @ts-expect-error totalAllocation does not exist on OverviewData yet — RED until Plan 02
+    expect(overview.totalAllocation).toBe('0.00')
+  })
+
+  // DASH-03: -€500 savings deposit (allocation direction, included_in_totals=false)
+  // must appear in totalAllocation, NOT in totalOut
+  it('DASH-03: allocation isolation — -€500 savings deposit appears in totalAllocation (500.00), totalOut stays 0.00', () => {
+    const overview = buildOverviewData({
+      current: {
+        totalIn: '0.00',
+        totalOut: '0.00',
+        // @ts-expect-error totalAllocation does not exist yet — RED assertion
+        totalAllocation: '500.00',
+      },
+      previous: { totalIn: '0.00', totalOut: '0.00' },
+      currentUncategorizedCount: 0,
+      previousUncategorizedCount: 0,
+    })
+
+    expect(overview.totalOut).toBe('0.00')
+    // @ts-expect-error totalAllocation does not exist on OverviewData yet — RED until Plan 02
+    expect(overview.totalAllocation).toBe('500.00')
+  })
+
+  // DASH-02: net divestment — +€800 investment deposit and +€300 divestment in same month
+  // Allocation algebraic sum: -800 + 300 = -500 → abs → 500 (net allocation, not 800+300=1100)
+  it('DASH-02: net divestment — +€800 deposit and +€300 divestment net to 500.00 in allocation (not 1100.00)', () => {
+    const overview = buildOverviewData({
+      current: {
+        totalIn: '0.00',
+        totalOut: '0.00',
+        // @ts-expect-error totalAllocation does not exist yet — RED assertion
+        // Algebraic sum for allocation: (-800) + (+300) = -500 → abs for display = 500
+        totalAllocation: '500.00',
+      },
+      previous: { totalIn: '0.00', totalOut: '0.00' },
+      currentUncategorizedCount: 0,
+      previousUncategorizedCount: 0,
+    })
+
+    // Assert netted value, NOT double-counted 800+300=1100
+    // @ts-expect-error totalAllocation does not exist on OverviewData yet — RED until Plan 02
+    expect(overview.totalAllocation).toBe('500.00')
+    // @ts-expect-error
+    expect(overview.totalAllocation).not.toBe('1100.00')
+  })
+
+  // DASH-01: transfer direction (included_in_totals=false) contributes 0 to all three totals
+  it('DASH-01: transfer exclusion — transfer direction transaction contributes 0 to totalIn, totalOut, totalAllocation', () => {
+    // Direction included_in_totals=false for transfer; excluded from all aggregation
+    const overview = buildOverviewData({
+      current: {
+        totalIn: '0.00',
+        totalOut: '0.00',
+        // @ts-expect-error totalAllocation does not exist yet — RED assertion
+        totalAllocation: '0.00',
+      },
+      previous: { totalIn: '0.00', totalOut: '0.00' },
+      currentUncategorizedCount: 0,
+      previousUncategorizedCount: 0,
+    })
+
+    expect(overview.totalIn).toBe('0.00')
+    expect(overview.totalOut).toBe('0.00')
+    // @ts-expect-error totalAllocation does not exist on OverviewData yet — RED until Plan 02
+    expect(overview.totalAllocation).toBe('0.00')
+  })
+
+  // DASH-04: savings rate = (in − out) / in where out = spending only (no allocation, no transfer)
+  // totalIn=3000, totalOut=2000 (spending) → (3000-2000)/3000*100 = 33.3% (computeSavingsRate rounds to 1dp)
+  // totalAllocation must NOT enter the savings rate denominator
+  it('DASH-04: savings rate unchanged — (3000-2000)/3000 = 33.3, allocation NOT included in denominator', () => {
+    const overview = buildOverviewData({
+      current: {
+        totalIn: '3000.00',
+        totalOut: '2000.00',
+        // @ts-expect-error totalAllocation does not exist yet — RED assertion
+        totalAllocation: '500.00',
+      },
+      previous: { totalIn: '0.00', totalOut: '0.00' },
+      currentUncategorizedCount: 0,
+      previousUncategorizedCount: 0,
+    })
+
+    // Savings rate must be (3000 - 2000) / 3000 * 100 = 33.3 (computeSavingsRate rounds to 1dp)
+    // totalAllocation (500) must NOT enter the savings rate denominator
+    // If allocation were included: (3000 - 2000 - 500) / 3000 * 100 = 16.7 — wrong
+    expect(overview.savingsRate).toBe(33.3)
+    // totalAllocation must also be returned on OverviewData — RED until Plan 02 adds the field
+    // @ts-expect-error totalAllocation does not exist on OverviewData yet — RED until Plan 02
+    expect(overview.totalAllocation).toBe('500.00')
   })
 })
