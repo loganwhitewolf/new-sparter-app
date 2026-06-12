@@ -108,7 +108,7 @@ function SubcategoryList({
             )}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            {category.type === "system"
+            {!category.isOwned
               ? "Categoria condivisa: puoi personalizzare solo il nome delle sottocategorie."
               : "Categoria personale: puoi rinominare, aggiungere sottocategorie e, se non ci sono spese collegate, eliminarla."}
           </p>

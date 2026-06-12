@@ -48,7 +48,7 @@ export function BulkCategorizeDialog({
       onOpenChange={onOpenChange}
       categories={categories}
       mostUsed={mostUsed}
-      allowedCategoryTypes={['in', 'out', 'transfer', 'system']}
+      allowedCategoryTypes={['in', 'out', 'transfer', 'allocation']}
       defaultType={null}
       onChange={handleChange}
       pending={isPending}

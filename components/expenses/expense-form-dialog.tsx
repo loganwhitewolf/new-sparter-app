@@ -245,7 +245,7 @@ export function ExpenseFormDialog({
         onOpenChange={setPickerOpen}
         categories={categories}
         mostUsed={mostUsed}
-        allowedCategoryTypes={['in', 'out', 'transfer', 'system']}
+        allowedCategoryTypes={['in', 'out', 'transfer', 'allocation']}
         defaultType={null}
         onChange={handlePickerChange}
       />

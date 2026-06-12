@@ -77,11 +77,10 @@ export default async function ExpensesPage({
     getExpenses(filters),
     getCategories(),
     getTransactionPlatforms(),
-    getMostUsedSubcategories(['in', 'out', 'transfer', 'system']),
+    getMostUsedSubcategories(['in', 'out', 'transfer', 'allocation']),
   ])
 
   const categoryOptions = categories
-    .filter((c) => c.type !== 'system')
     .map((c) => ({ value: c.slug, label: c.name }))
   const platformOptions = platforms.map((p) => ({ value: p.slug, label: p.name }))
 

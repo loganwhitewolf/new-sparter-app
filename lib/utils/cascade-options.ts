@@ -34,8 +34,8 @@ export function buildTypeNatureMap(
   const allNatures = new Set<string>()
 
   for (const cat of categories) {
-    // Phase 46: category.type is string | null (ADR 0012) — skip null and system rows
-    if (cat.type === null || cat.type === 'system') continue
+    // Skip uncategorized (type null means no direction assigned yet)
+    if (cat.type === null) continue
 
     if (!naturesPerType.has(cat.type)) {
       naturesPerType.set(cat.type, new Set())
@@ -99,8 +99,8 @@ export function buildCategorySubcategoryMap(
   const allOptions: FilterOption[] = []
 
   for (const cat of categories) {
-    // Phase 46: category.type is string | null (ADR 0012) — skip null and system rows
-    if (cat.type === null || cat.type === 'system') continue
+    // Skip uncategorized (type null means no direction assigned yet)
+    if (cat.type === null) continue
 
     const options: FilterOption[] = cat.subCategories.map((sub) => ({
       value: String(sub.id),

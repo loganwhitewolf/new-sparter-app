@@ -72,13 +72,12 @@ export default async function TransactionsPage({
     getTransactions(filters),
     getTransactionPlatforms(),
     getCategories(),
-    getMostUsedSubcategories(['in', 'out', 'transfer', 'system']),
+    getMostUsedSubcategories(['in', 'out', 'transfer', 'allocation']),
     getMonthsWithData('transactions'),
   ])
 
   const platformOptions = platforms.map((p) => ({ value: p.slug, label: p.name }))
   const categoryOptions = categories
-    .filter((c) => c.type !== 'system')
     .map((c) => ({ value: c.slug, label: c.name }))
 
   // Nature filter options: nine FlowNature values in canonical order + 'Non classificato'

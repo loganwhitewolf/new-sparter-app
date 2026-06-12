@@ -10,8 +10,7 @@ export type CategoryWithSubCategories = {
   id: number
   name: string
   slug: string
-  // TODO(Phase 49): restore direction-based type field once direction join is available
-  type: string | null
+  type: 'in' | 'out' | 'allocation' | 'transfer' | null
   userId: string | null
   isOwned: boolean
   subCategories: Array<{
@@ -70,20 +69,24 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
       categoryId: category.id,
       categoryName: category.name,
       categorySlug: category.slug,
-      // TODO(Phase 49): restore category type via direction join once direction semantics land
       categoryUserId: category.userId,
       subCategoryId: subCategory.id,
       subCategoryName: subCategory.name,
       subCategorySlug: subCategory.slug,
       subCategoryUserId: subCategory.userId,
       overrideCustomName: userSubcategoryOverride.customName,
-      // effectiveNature: resolve via natureId → nature.code (override takes precedence)
-      // TODO(Phase 49): direction-aware nature resolution via join
       overrideNatureId: userSubcategoryOverride.natureId,
       subCategoryNatureId: subCategory.natureId,
       // Resolved nature.code — coalesce override natureId → sub natureId, then join nature
       effectiveNatureCode: sql<FlowNature | null>`(
         SELECT n.code FROM nature n
+        WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
+        LIMIT 1
+      )`,
+      // Direction code derived from the effective nature via the nature→direction FK chain
+      categoryType: sql<'in' | 'out' | 'allocation' | 'transfer' | null>`(
+        SELECT d.code FROM direction d
+        INNER JOIN nature n ON n.direction_id = d.id
         WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
         LIMIT 1
       )`,
@@ -124,8 +127,7 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
         id: row.categoryId,
         name: row.categoryName,
         slug: row.categorySlug,
-        // TODO(Phase 49): restore direction-based type field
-        type: null,
+        type: row.categoryType,
         userId: row.categoryUserId,
         isOwned: row.categoryUserId === userId,
         subCategories: [],

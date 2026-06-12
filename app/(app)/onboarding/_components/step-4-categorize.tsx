@@ -15,7 +15,7 @@ export async function Step4Categorize({ userId }: Step4CategorizeProps) {
   const [expenses, categories, mostUsed] = await Promise.all([
     getTopUncategorizedExpenses(userId, 15),
     getCategories(),
-    getMostUsedSubcategories(['in', 'out', 'transfer', 'system']),
+    getMostUsedSubcategories(['in', 'out', 'transfer', 'allocation']),
   ])
 
   return (
