@@ -71,10 +71,13 @@ export const SetSubcategoryNatureSchema = z.object({
   nature: NatureSchema.nullable(),
 })
 
-// TODO(Phase 49): re-add natureId (number) once nature picker wired to lookup table
 export const CreateSubcategorySchema = z.object({
   categoryId: IdSchema,
   name: NameSchema,
+  natureId: z.preprocess(
+    (v) => (v === null || v === undefined || v === '' ? null : Number(v)),
+    z.number().int().positive().nullable().optional(),
+  ).default(null),
 }).transform((input) => ({
   ...input,
   slug: deriveCategorySlug(input.name),

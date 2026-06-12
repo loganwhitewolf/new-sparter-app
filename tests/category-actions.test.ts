@@ -254,21 +254,20 @@ describe('setSubcategoryNatureAction (R-FN-07)', () => {
     mocks.isSubCategoryVisibleToUser.mockResolvedValue(true)
   })
 
-  it('returns ok:true and calls upsertSubcategoryNatureOverride with the given nature', async () => {
+  it('returns ok:true and resolves nature code to natureId via NATURE_ID_BY_CODE', async () => {
     const result = await setSubcategoryNatureAction({ subCategoryId: 10, nature: 'debt' })
     expect(result).toEqual({ ok: true })
-    // Phase 46: natureId resolution deferred to Phase 49 — action passes natureId: null for compile
+    // 'debt' maps to NATURE_ID_BY_CODE['debt'] = 5
     expect(mocks.upsertSubcategoryNatureOverride).toHaveBeenCalledWith({
       userId: 'user-1',
       subCategoryId: 10,
-      natureId: null,
+      natureId: 5,
     })
   })
 
-  it('accepts null nature to reset override to seed default', async () => {
+  it('accepts null nature to reset override (natureId: null)', async () => {
     const result = await setSubcategoryNatureAction({ subCategoryId: 10, nature: null })
     expect(result).toEqual({ ok: true })
-    // Phase 46: natureId resolution deferred to Phase 49
     expect(mocks.upsertSubcategoryNatureOverride).toHaveBeenCalledWith({
       userId: 'user-1',
       subCategoryId: 10,

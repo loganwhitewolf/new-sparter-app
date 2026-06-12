@@ -1508,12 +1508,12 @@ describe('analyzeFile — pattern suggestions', () => {
   // ANL-03: sorted by matchCount desc, capped at 5
   it('returns at most 5 suggestions sorted by matchCount descending', async () => {
     const raw = [
-      { pattern: 'b', matchCount: 2, detectedAmountSign: 'any' as const, sampleDescriptions: [] },
-      { pattern: 'a', matchCount: 10, detectedAmountSign: 'negative' as const, sampleDescriptions: [] },
-      { pattern: 'c', matchCount: 7, detectedAmountSign: 'any' as const, sampleDescriptions: [] },
-      { pattern: 'd', matchCount: 3, detectedAmountSign: 'any' as const, sampleDescriptions: [] },
-      { pattern: 'e', matchCount: 5, detectedAmountSign: 'any' as const, sampleDescriptions: [] },
-      { pattern: 'f', matchCount: 1, detectedAmountSign: 'any' as const, sampleDescriptions: [] },
+      { pattern: 'b', matchCount: 2, sampleDescriptions: [] },
+      { pattern: 'a', matchCount: 10, sampleDescriptions: [] },
+      { pattern: 'c', matchCount: 7, sampleDescriptions: [] },
+      { pattern: 'd', matchCount: 3, sampleDescriptions: [] },
+      { pattern: 'e', matchCount: 5, sampleDescriptions: [] },
+      { pattern: 'f', matchCount: 1, sampleDescriptions: [] },
     ]
     mocks.detectPatternSuggestions.mockReturnValue(raw)
     mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))

@@ -17,7 +17,6 @@ const { SuggestionPromoteForm } = await import('../components/import/suggestion-
 const suggestion = {
   pattern: 'netflix',
   matchCount: 3,
-  detectedAmountSign: 'negative' as const,
   sampleDescriptions: ['NETFLIX 10/01', 'NETFLIX 11/01'],
 }
 

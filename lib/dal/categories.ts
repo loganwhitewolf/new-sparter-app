@@ -258,7 +258,6 @@ export async function createUserSubcategory(
 }
 
 export async function upsertSubcategoryNatureOverride(
-  // TODO(Phase 49): accept natureId (number) instead of nature (FlowNature string) once lookup resolve UI is wired
   { userId, subCategoryId, natureId }: { userId: string; subCategoryId: number; natureId: number | null },
   database: DbOrTx = db,
 ) {

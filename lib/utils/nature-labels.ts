@@ -45,3 +45,18 @@ export const NATURE_COLORS: Record<FlowNature | 'unclassified', string> = {
   investment: '#a78bfa',  // reuse old financial color
   unclassified: '#a1a1aa',
 }
+
+/**
+ * Maps FlowNature codes to their seed-data nature.id values (stable — seeded once in Phase 46).
+ * Used to resolve a nature code to its DB id for write operations.
+ */
+export const NATURE_ID_BY_CODE: Record<FlowNature, number> = {
+  income: 1,
+  income_extraordinary: 2,
+  essential: 3,
+  discretionary: 4,
+  debt: 5,
+  transfer: 6,
+  savings: 7,
+  investment: 8,
+}

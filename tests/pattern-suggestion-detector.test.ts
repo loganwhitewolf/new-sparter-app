@@ -108,7 +108,7 @@ describe('detectPatternSuggestions', () => {
     expect(new RegExp(suggestions[0].pattern, 'i').test('addebito sXpXaX roma')).toBe(false)
   })
 
-  it('ANL-02: each PatternSuggestion exposes pattern, matchCount, detectedAmountSign, sampleDescriptions (max 3 from raw description)', () => {
+  it('ANL-02: each PatternSuggestion exposes pattern, matchCount, sampleDescriptions (max 3 from raw description)', () => {
     const rows = [
       { description: 'PAGAMENTO POS A', normalizedDescription: 'pagamento pos a', amount: '-10.00', valid: true, covered: false },
       { description: 'PAGAMENTO POS B', normalizedDescription: 'pagamento pos b', amount: '-10.00', valid: true, covered: false },
@@ -119,11 +119,11 @@ describe('detectPatternSuggestions', () => {
     const suggestions = detectPatternSuggestions(rows, [])
     expect(suggestions).toHaveLength(1)
     const s = suggestions[0]
-    // Has exactly the four required keys
+    // Has exactly the three required keys (detectedAmountSign removed — ADR 0012: sign-agnostic)
     expect(s).toHaveProperty('pattern')
     expect(s).toHaveProperty('matchCount')
-    expect(s).toHaveProperty('detectedAmountSign')
     expect(s).toHaveProperty('sampleDescriptions')
+    expect(s).not.toHaveProperty('detectedAmountSign')
     // matchCount includes all 5 rows
     expect(s.matchCount).toBe(5)
     // sampleDescriptions capped at 3, from raw description (uppercase)
@@ -137,35 +137,7 @@ describe('detectPatternSuggestions', () => {
     expect(new Set(s.sampleDescriptions).size).toBe(s.sampleDescriptions.length)
   })
 
-  it('ANL-04: detectedAmountSign is positive when all amounts >=0, negative when all <0, any when mixed or all-null', () => {
-    // Use non-numeric letter suffixes so each pair is a genuine partial match after
-    // numeric stripping (one row extends the shared prefix ["pagamento", "pos"]).
-    const suffixes = ['alfa', 'beta', 'gamma', 'delta']
-    const makeRows = (amounts: (string | null)[]) =>
-      amounts.map((amount, i) =>
-        ({ description: `ROW ${suffixes[i]}`, normalizedDescription: `pagamento pos ${suffixes[i]}`, amount, valid: true, covered: false })
-      )
-
-    // (a) All negative
-    const negRows = makeRows(['-10.00', '-20.00'])
-    const negSuggestions = detectPatternSuggestions(negRows, [])
-    expect(negSuggestions[0].detectedAmountSign).toBe('negative')
-
-    // (b) All positive
-    const posRows = makeRows(['10.00', '20.00'])
-    const posSuggestions = detectPatternSuggestions(posRows, [])
-    expect(posSuggestions[0].detectedAmountSign).toBe('positive')
-
-    // (c) Mixed
-    const mixRows = makeRows(['-10.00', '20.00'])
-    const mixSuggestions = detectPatternSuggestions(mixRows, [])
-    expect(mixSuggestions[0].detectedAmountSign).toBe('any')
-
-    // (d) All null
-    const nullRows = makeRows([null, null])
-    const nullSuggestions = detectPatternSuggestions(nullRows, [])
-    expect(nullSuggestions[0].detectedAmountSign).toBe('any')
-  })
+  // ANL-04 removed — detectedAmountSign dropped per ADR 0012 (patterns are sign-agnostic)
 
   it('SUG-07a: fully identical normalized descriptions emit one suggestion', () => {
     // Even identical descriptions deserve a pattern suggestion: useful for first-import

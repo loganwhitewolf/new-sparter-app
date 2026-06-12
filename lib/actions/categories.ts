@@ -24,7 +24,7 @@ import {
   SetSubcategoryNatureSchema,
   type ActionState,
 } from '@/lib/validations/category'
-import type { FlowNature } from '@/lib/utils/nature-labels'
+import { NATURE_ID_BY_CODE, type FlowNature } from '@/lib/utils/nature-labels'
 
 const GENERIC_ERROR = 'Si è verificato un errore. Riprova tra qualche secondo.'
 const NOT_FOUND_ERROR = 'Elemento non trovato o accesso negato.'
@@ -123,10 +123,10 @@ export async function createSubcategoryAction(
   formData: FormData,
 ): Promise<ActionState> {
   const { userId } = await verifySession()
-  // TODO(Phase 49): re-add natureId once nature picker wired to lookup table
   const parsed = CreateSubcategorySchema.safeParse({
     categoryId: formData.get('categoryId'),
     name: formData.get('name'),
+    natureId: formData.get('natureId'),
   })
 
   if (!parsed.success) return { error: firstValidationError(parsed.error) }
@@ -153,9 +153,10 @@ export async function setSubcategoryNatureAction(input: {
   if (!visible) {
     return { ok: false, error: NOT_FOUND_ERROR }
   }
+  // Resolve nature code → natureId via the closed lookup map (T-49-05-01: unknown code = null, no write)
+  const natureId = parsed.data.nature !== null ? (NATURE_ID_BY_CODE[parsed.data.nature] ?? null) : null
   try {
-    // TODO(Phase 49): resolve nature code → natureId via lookup table; passing null for compile-only
-    await upsertSubcategoryNatureOverride({ userId, subCategoryId: parsed.data.subCategoryId, natureId: null })
+    await upsertSubcategoryNatureOverride({ userId, subCategoryId: parsed.data.subCategoryId, natureId })
   } catch {
     return { ok: false, error: GENERIC_ERROR }
   }

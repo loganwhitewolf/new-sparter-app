@@ -314,14 +314,20 @@ export function TransactionTable({ transactions, route, searchParams, categories
             const isSelected = selectedIds.includes(transaction.id)
             const rowLabel = transactionRowLabel(transaction)
 
-            // TODO(Phase 49): categoryType is a placeholder (number | null) — direction semantics not yet wired
-            // Phase 46: categoryType comparison against string literals removed; use amount sign fallback
-            const isTransfer = false // TODO(Phase 49): restore transfer detection via nature→direction join
+            // categoryType is a direction code from the nature→direction join (Plan 03)
+            const isTransfer = transaction.categoryType === 'transfer'
 
-            // Amount color: fall back to amount sign until direction join is available (Phase 49)
-            const amountColorClass = transaction.amount.trim().startsWith('-')
-              ? 'text-total-out'
-              : 'text-total-in'
+            // Amount color derived from direction code; fall back to sign for uncategorized rows
+            const amountColorClass =
+              transaction.categoryType === 'in'
+                ? 'text-total-in'
+                : transaction.categoryType === 'out' ||
+                    transaction.categoryType === 'allocation' ||
+                    transaction.categoryType === 'transfer'
+                  ? 'text-total-out'
+                  : transaction.amount.trim().startsWith('-')
+                    ? 'text-total-out'
+                    : 'text-total-in'
 
             return (
               <TableRow
