@@ -60,7 +60,6 @@ export async function createCategoryAction(
   const { userId } = await verifySession()
   const parsed = CreateCategorySchema.safeParse({
     name: formData.get('name'),
-    type: formData.get('type'),
   })
 
   if (!parsed.success) return { error: firstValidationError(parsed.error) }

@@ -36,7 +36,6 @@ const IdSchema = z.preprocess(
 
 export const CreateCategorySchema = z.object({
   name: NameSchema,
-  type: z.enum(['in', 'out'], { message: 'Tipo categoria non valido.' }),
 }).transform((input) => ({
   ...input,
   slug: deriveCategorySlug(input.name),
