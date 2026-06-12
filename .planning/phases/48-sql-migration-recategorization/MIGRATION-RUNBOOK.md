@@ -13,6 +13,8 @@
 - **Staging-first is a hard gate (D-14).** The full sequence (steps 3–7) must pass `db:verify` on staging before production is touched. This document enforces this as an explicit human checkpoint.
 - **Seed data is not in the SQL.** The generated migration owns schema shape only. Lookup rows (`direction`, `nature`), taxonomy transforms, and `nature_id` backfills live in `yarn db:seed` and `yarn db:seed-extras` (D-05). Running only `yarn db:migrate` leaves the data model incomplete.
 
+> **Environment note — Phase 48 actual apply (2026-06-12):** No dedicated staging environment exists; local was used as the rehearsal (full sequence passed locally). The Supabase free tier does not expose a manual `pg_dump` endpoint; the rollback path for this apply relies on Supabase's automatic daily backup (1-day retention). This is a conscious deviation from D-13/D-14 accepted for the initial apply. Future milestones should provision a staging environment.
+
 ---
 
 ## Canonical Operator Order (D-06)
