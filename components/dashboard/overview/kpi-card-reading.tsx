@@ -11,7 +11,7 @@ const sentimentColor: Record<Reading['sentiment'], string> = {
   neutral: 'text-muted-foreground',
 }
 
-type Tone = 'in' | 'out' | 'balance' | 'savings' | 'neutral'
+type Tone = 'in' | 'out' | 'balance' | 'savings' | 'allocation' | 'neutral'
 
 function formatDelta(delta: number): string {
   if (delta === 0) return '0%'
@@ -24,6 +24,7 @@ function valueColor(tone: Tone, value: string): string {
   if (tone === 'out') return 'text-total-out'
   if (tone === 'balance') return 'text-balance text-[color:var(--balance)]'
   if (tone === 'savings') return value.trim().startsWith('-') ? 'text-total-out' : 'text-total-in'
+  if (tone === 'allocation') return 'text-[var(--total-allocation)]'
   return 'text-foreground'
 }
 

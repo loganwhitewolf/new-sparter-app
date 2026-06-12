@@ -35,10 +35,15 @@ function isYearWithNoData(totalIn: string, totalOut: string): boolean {
 function deriveDefaultMonthIndex(chart: OverviewChartPoint[]): number {
   for (let i = chart.length - 1; i >= 0; i--) {
     const p = chart[i]
-    const total = Object.values(p.out).reduce(
-      (acc, v) => acc.plus(toDecimal(v)),
-      toDecimal(p.income.recurring).plus(toDecimal(p.income.extraordinary))
-    )
+    // Phase 49: include allocation bucket (savings + investment) in the activity check.
+    const total = Object.values(p.out)
+      .reduce(
+        (acc, v) => acc.plus(toDecimal(v)),
+        toDecimal(p.income.recurring)
+          .plus(toDecimal(p.income.extraordinary))
+          .plus(toDecimal(p.allocation.savings))
+          .plus(toDecimal(p.allocation.investment))
+      )
     if (!total.isZero()) return i
   }
   return 0

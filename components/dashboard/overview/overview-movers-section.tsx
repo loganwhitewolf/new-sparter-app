@@ -16,20 +16,26 @@ type Props = {
  * Shared-state parent for the chart + movers panel (D-03 architecture).
  *
  * Owns the single selectedMonth so chart highlight and panel month never drift.
- * On month change: updates selectedMonth immediately (instant highlight) then
- * fetches new movers inside useTransition (non-blocking, shows loading state).
+ * D-02: also owns selectedDirection so movers panel heading and content switch per
+ * the bar that was clicked (Entrate→IN, Uscite→OUT, Accantonato→allocation).
+ *
+ * On month/direction change: updates selectedMonth/selectedDirection immediately
+ * (instant highlight) then fetches new movers inside useTransition (non-blocking,
+ * shows loading state).
  */
 export function OverviewMoversSection({ data, year, defaultMonthIndex, initialMovers }: Props) {
   const [selectedMonth, setSelectedMonth] = useState(defaultMonthIndex)
+  const [selectedDirection, setSelectedDirection] = useState<'in' | 'out' | 'allocation'>('out')
   const [movers, setMovers] = useState<MonthOverMonthChange[]>(initialMovers)
   const [isPending, startTransition] = useTransition()
 
-  function handleMonthSelect(monthIndex: number) {
-    // Update highlight immediately — no waiting for the fetch.
+  function handleMonthSelect(monthIndex: number, direction: 'in' | 'out' | 'allocation') {
+    // Update highlight and direction immediately — no waiting for the fetch.
     setSelectedMonth(monthIndex)
+    setSelectedDirection(direction)
 
     startTransition(async () => {
-      const result = await fetchMovers(year, monthIndex)
+      const result = await fetchMovers(year, monthIndex, direction)
       if (result.error) {
         setMovers([]) // show empty-state rather than stale data from previous month
       } else {
@@ -53,6 +59,7 @@ export function OverviewMoversSection({ data, year, defaultMonthIndex, initialMo
         selectedMonth={selectedMonth}
         movers={movers}
         isPending={isPending}
+        direction={selectedDirection}
       />
     </section>
   )
