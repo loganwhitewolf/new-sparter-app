@@ -244,7 +244,25 @@ Plans:
   4. `cascade-options.ts` and the subcategory picker derive their type chip options from the `nature → direction` FK; no reference to `category.type` remains
   5. Direction and nature filters in the Transactions and Expenses tables remain functional, now operating on the lookup-table-backed values
 
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+**Wave 0** *(test-first)*
+
+- [ ] 49-01-PLAN.md — RED money-correctness tests (algebraic-sum netting, allocation bucket, transfer exclusion, savings rate) + cascade-options direction-keying contract
+
+**Wave 1** *(DAL foundation — parallel, disjoint files)*
+
+- [ ] 49-02-PLAN.md — Direction-grouped algebraic-sum rewrite in dashboard.ts/overview.ts; totalAllocation; OverviewChartPoint reshape; direction-aware movers + fetchMovers
+- [ ] 49-03-PLAN.md — Restore category type from direction join (categories.ts); transactions/expenses filters type→direction; subcategory-usage/patterns stubs
+
+**Wave 2** *(UI surfaces — parallel, disjoint files; blocked on Wave 1)*
+
+- [ ] 49-04-PLAN.md — 3rd Accantonato bar + 5th KPI card + direction-aware movers panel + allocation CSS tokens (depends 49-02)
+- [ ] 49-05-PLAN.md — cascade-options buildDirectionNatureMap; 4th direction chip; table direction filters; settings grouping; nature write-path fix (depends 49-03)
+
+**Wave 3** *(schema migration — blocked on Waves 1+2)*
+
+- [ ] 49-06-PLAN.md — [BLOCKING] drop sub_category.exclude_from_totals; generated migration + operator-guarded apply (depends 49-02, 49-03)
 **UI hint**: yes
 
 ### Phase 50: transaction-pairing
@@ -287,7 +305,7 @@ Plans:
 | 46 | v2.0 | 3/3 | Complete   | 2026-06-11 |
 | 47 | v2.0 | 5/5 | Complete    | 2026-06-11 |
 | 48 | v2.0 | 2/3 | In Progress|  |
-| 49 | v2.0 | 0/TBD | Not started | - |
+| 49 | v2.0 | 0/6 | Planned | - |
 | 50 | v2.0 | 0/TBD | Not started | - |
 
 **Total shipped: 45 phases · 159 plans complete**
