@@ -1376,7 +1376,7 @@ export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Pr
         and(
           dateScopedTransactions(userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
-          ne(direction.code, 'transfer'),
+          or(isNull(direction.code), ne(direction.code, 'transfer')),
         )
       )
       .groupBy(monthSql, natureSql)
