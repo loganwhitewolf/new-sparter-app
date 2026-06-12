@@ -1,10 +1,11 @@
 ---
 phase: 49
 slug: dashboard-and-surfaces
-status: draft
+status: approved
 shadcn_initialized: true
 preset: "new-york / zinc / css-variables"
 created: 2026-06-12
+reviewed_at: 2026-06-12
 ---
 
 # Phase 49 — UI Design Contract
