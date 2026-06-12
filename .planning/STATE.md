@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: executing
-last_updated: "2026-06-12T15:54:00.000Z"
-last_activity: 2026-06-12 -- Phase 49 Plan 04 complete (3-bar chart + 5th KPI + 3-column movers; abs fix post-checkpoint)
+last_updated: "2026-06-12T16:10:32.000Z"
+last_activity: 2026-06-12 -- Phase 49 Plan 05 complete (categorization surfaces direction realignment; buildDirectionNatureMap; picker/table filters; nature write-path fix)
 progress:
   total_phases: 5
   completed_phases: 3
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 ## Current Position
 
 Phase: 49 (dashboard-and-surfaces) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
-Last activity: 2026-06-12 -- Phase 49 Plan 04 complete (4-direction dashboard presentation)
+Last activity: 2026-06-12 -- Phase 49 Plan 05 complete (categorization surfaces direction realignment)
 
 Progress: [████████████░░░░░░░░] 60% milestone (3/5 phases)
 
@@ -67,6 +67,7 @@ v2.0 / Phase 46 decisions (shipped 2026-06-11):
 - [Phase ?]: 49-02 D-01: categoryType fields use sql<union> cast for direction.code to satisfy TypeScript strict mode in dashboard.ts
 - [49-04]: OUT_KEYS narrowed to essential/discretionary/debt only; savings/investment in allocation bucket; onMonthSelect carries direction param; allocationReading uses "piu/meno del {prevYear}" copy from UI-SPEC
 - [49-04 post-checkpoint]: totalAllocation display wrapped in abs() — DAL algebraic value unchanged; movers changed to 3-column simultaneous layout (removed per-direction routing)
+- [49-05]: buildDirectionNatureMap replaces buildTypeNatureMap (direction-keyed, allocation bucket); SubcategoryPicker 4 direction chips; table filters key=direction + dependsOn=direction; setSubcategoryNatureAction resolves real natureId via NATURE_ID_BY_CODE; detectedAmountSign removed (ADR 0012)
 
 ### Planning Risk
 
@@ -99,11 +100,11 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-12 — Phase 49 Plan 04 complete (post-checkpoint fixes + SUMMARY)
-Handoff synced: 2026-06-12 — Phase 49 Plan 04 signed off
+Last session: 2026-06-12 — Phase 49 Plan 05 complete (categorization surfaces direction realignment)
+Handoff synced: 2026-06-12 — Phase 49 Plan 05 signed off
 Resume file: None
 
-**Next:** Execute Plan 05 (49-05).
+**Next:** Execute Plan 06 (49-06).
 
 ## Operator Next Steps
 

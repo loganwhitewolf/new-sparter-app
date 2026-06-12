@@ -94,8 +94,8 @@
 | DASH-02 | Phase 49 | Complete |
 | DASH-03 | Phase 49 | Complete |
 | DASH-04 | Phase 49 | Complete |
-| CAT-01 | Phase 49 | Pending |
-| CAT-02 | Phase 49 | Pending |
+| CAT-01 | Phase 49 | Complete |
+| CAT-02 | Phase 49 | Complete |
 | PAIR-01 | Phase 50 | Pending |
 | PAIR-02 | Phase 50 | Pending |
 | PAIR-03 | Phase 50 | Pending |
