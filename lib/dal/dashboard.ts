@@ -910,7 +910,7 @@ export const getCategoriesBreakdown = cache(
           categoryName: category.name,
           categorySlug: category.slug,
           // Restored from direction join (Phase 49 — replaces sql`null` stub)
-          categoryType: direction.code,
+          categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
           subCategoryId: subCategory.id,
           subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
           subCategorySlug: subCategory.slug,
@@ -971,7 +971,7 @@ export const getCategoryRanking = cache(
           categoryName: category.name,
           categorySlug: category.slug,
           // Restored from direction join (Phase 49 — replaces sql`null` stub)
-          categoryType: direction.code,
+          categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
           month: monthSql,
           count: countDistinct(expense.id),
           amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
@@ -1189,7 +1189,7 @@ export const getCategoryDetail = cache(
             categoryId: category.id,
             categorySlug: category.slug,
             // Restored from direction join (Phase 49 — replaces sql`null` stub)
-            categoryType: direction.code,
+            categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
             month: monthSql,
             count: countDistinct(expense.id),
             amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
@@ -1229,7 +1229,7 @@ export const getCategoryDetail = cache(
             categoryId: category.id,
             categorySlug: category.slug,
             // Restored from direction join (Phase 49 — replaces sql`null` stub)
-            categoryType: direction.code,
+            categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
             subCategoryId: subCategory.id,
             subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
             subCategorySlug: subCategory.slug,
@@ -1272,7 +1272,7 @@ export const getCategoryDetail = cache(
             categoryId: category.id,
             categorySlug: category.slug,
             // Restored from direction join (Phase 49 — replaces sql`null` stub)
-            categoryType: direction.code,
+            categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
             description: transactionTable.description,
             customTitle: transactionTable.customTitle,
             amount: transactionTable.amount,

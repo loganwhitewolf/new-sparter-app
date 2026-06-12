@@ -248,11 +248,9 @@ describe('getOverviewChart', () => {
     if (result.length > 0) {
       const jan = result.find((p) => p.month === '2026-01')
       if (jan) {
-        // @ts-expect-error allocation bucket does not exist on OverviewChartPoint yet — RED until Plan 02
+        // allocation bucket is now defined on OverviewChartPoint (Phase 49 Plan 02)
         expect(jan.allocation).toBeDefined()
-        // @ts-expect-error
         expect(jan.allocation).toHaveProperty('savings')
-        // @ts-expect-error
         expect(jan.allocation).toHaveProperty('investment')
 
         // OUT bucket must NOT contain savings or investment keys

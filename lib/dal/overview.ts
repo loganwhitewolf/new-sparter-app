@@ -1,10 +1,11 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, eq, gte, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm'
+import { and, eq, gte, inArray, lte, ne, or, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import {
   category,
+  direction as directionTable,
   expense,
   nature as natureTable,
   subCategory,
@@ -19,49 +20,32 @@ import {
   getOverviewAmountTotals,
   getUncategorizedCount,
   DASHBOARD_TOTAL_EXPENSE_STATUSES,
-  notExcludedFromTotals,
 } from '@/lib/dal/dashboard'
 import type { OverviewData } from '@/lib/dal/dashboard'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type MonthOverMonthChange = {
-  categoryId: number
+  categoryId: number | null
   name: string
   delta: string // signed Decimal string; negative = spent less (saved money)
   isNew: boolean
+  natureCode?: string | null // populated for allocation grain (directionParam=allocation)
 }
-
-// TODO(Phase 49): replace with direction-grouped algebraic sum
-// v2.0 OUT nature codes — operational/financial/extraordinary renamed (Phase 46, ADR 0012)
-type OutNature = 'essential' | 'discretionary' | 'debt' | 'savings' | 'investment' | 'transfer'
-
-const OUT_NATURES: OutNature[] = [
-  'essential',
-  'discretionary',
-  'debt',
-  'savings',
-  'investment',
-  'transfer',
-]
 
 const ZERO_AMOUNT = '0.00'
 
+// Phase 49: OverviewChartPoint reshaped to 3-bucket layout (direction-aware: in/out/allocation).
+// Transfer is excluded via WHERE clause; savings/investment routed to allocation bucket.
 export type OverviewChartPoint = {
   month: string
   label: string
   income: { recurring: string; extraordinary: string }
-  // TODO(Phase 49): out segments will be replaced by direction-grouped algebraic sum
-  out: Record<OutNature, string>
+  out: { essential: string; discretionary: string; debt: string }
+  allocation: { savings: string; investment: string }
 }
 
-// ─── Private helpers (mirrors dashboard.ts private helpers) ──────────────────
-
-// TODO(Phase 49): replace with direction.code != 'transfer' filter via nature→direction join
-function notTransferCategory() {
-  // category.type removed (Phase 46); use nature.code != 'transfer' as minimum-compile proxy
-  return or(isNull(natureTable.code), ne(natureTable.code, 'transfer'))
-}
+// ─── Private helpers ──────────────────────────────────────────────────────────
 
 function dateScopedTransactions(userId: string, from: Date, to: Date) {
   return and(
@@ -75,15 +59,18 @@ function expenseStatusIncludedInDashboardTotals() {
   return inArray(expense.status, [...DASHBOARD_TOTAL_EXPENSE_STATUSES])
 }
 
-function emptyOutSegments(): Record<OutNature, string> {
-  // TODO(Phase 49): segments replaced by direction-grouped algebraic sum
+function emptyOutSegments(): { essential: string; discretionary: string; debt: string } {
   return {
     essential: ZERO_AMOUNT,
     discretionary: ZERO_AMOUNT,
     debt: ZERO_AMOUNT,
+  }
+}
+
+function emptyAllocationSegments(): { savings: string; investment: string } {
+  return {
     savings: ZERO_AMOUNT,
     investment: ZERO_AMOUNT,
-    transfer: ZERO_AMOUNT,
   }
 }
 
@@ -113,7 +100,7 @@ export const getYearsWithData = cache(async (): Promise<string[]> => {
 })
 
 /**
- * Returns the four KPI totals (totalIn, totalOut, balance, savingsRate) plus
+ * Returns the five KPI totals (totalIn, totalOut, totalAllocation, balance, savingsRate) plus
  * YTD-vs-prior-YTD deltas for the given year.
  *
  * YTD upper bound = last month with data in the year (D-11: avoids comparing a
@@ -157,8 +144,8 @@ export const getOverview = cache(async (year: number): Promise<OverviewData> => 
     })
   } catch {
     return buildOverviewData({
-      current: { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT },
-      previous: { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT },
+      current: { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT, totalAllocation: ZERO_AMOUNT },
+      previous: { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT, totalAllocation: ZERO_AMOUNT },
       currentUncategorizedCount: 0,
       previousUncategorizedCount: 0,
     })
@@ -166,10 +153,13 @@ export const getOverview = cache(async (year: number): Promise<OverviewData> => 
 })
 
 /**
- * Returns OUT-category month-over-month changes for a given month.
+ * Returns direction-scoped month-over-month changes for a given month.
  *
  * Compares the given month against the previous calendar month (with year-crossing
  * support: January compares against December of the prior year — D-06).
+ *
+ * For directionParam 'allocation': groups by nature (savings/investment) instead of category.
+ * For directionParam 'in'/'out': groups by category (per-category grain).
  *
  * Applies the €15 noise floor on |Δ€| (D-07).
  * Sets isNew = true when previous spend is zero and current is positive (D-08).
@@ -178,7 +168,12 @@ export const getOverview = cache(async (year: number): Promise<OverviewData> => 
  * T-42-05 mitigated: verifySession() scopes all sub-queries to authenticated userId.
  */
 export const getMonthOverMonthCategoryChanges = cache(
-  async (year: number, monthIndex = 0, limit = 10): Promise<MonthOverMonthChange[]> => {
+  async (
+    year: number,
+    monthIndex = 0,
+    directionParam: 'in' | 'out' | 'allocation' = 'out',
+    limit = 10
+  ): Promise<MonthOverMonthChange[]> => {
     const { userId } = await verifySession()
 
     // Year-crossing guard (D-06): January (monthIndex=0) compares against December of prior year
@@ -190,65 +185,169 @@ export const getMonthOverMonthCategoryChanges = cache(
     const prevFrom = new Date(prevYear, prevMonthIndex, 1)
     const prevTo = new Date(prevYear, prevMonthIndex + 1, 0, 23, 59, 59, 999)
 
-    type CategoryAmountRow = { id: number; name: string; amount: string }
+    const isAllocation = directionParam === 'allocation'
 
-    let currRows: CategoryAmountRow[] = []
-    let prevRows: CategoryAmountRow[] = []
+    type AmountRow = { id: number; name: string; amount: string; natureCode?: string | null }
+
+    let currRows: AmountRow[] = []
+    let prevRows: AmountRow[] = []
 
     try {
-      const [rawCurr, rawPrev] = await Promise.all([
-        db
-          .select({
-            id: category.id,
-            name: category.name,
-            amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
-          })
-          .from(transactionTable)
-          .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
-          .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
-          .leftJoin(category, eq(subCategory.categoryId, category.id))
-          .leftJoin(natureTable, eq(subCategory.natureId, natureTable.id)) // TODO(Phase 49): direction-aware filtering
-          .where(
-            and(
-              dateScopedTransactions(userId, currFrom, currTo),
-              expenseStatusIncludedInDashboardTotals(),
-              notTransferCategory(),
-              notExcludedFromTotals(),
-              // TODO(Phase 49): replace with direction.code = 'out' filter
-              isNull(subCategory.natureId) // placeholder: include all while direction semantics land
+      if (isAllocation) {
+        // Allocation grain: group by nature (max 2 rows: savings, investment)
+        const [rawCurr, rawPrev] = await Promise.all([
+          db
+            .select({
+              id: natureTable.id,
+              name: natureTable.labelIt,
+              natureCode: natureTable.code,
+              amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+            })
+            .from(transactionTable)
+            .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+            .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+            .leftJoin(
+              userSubcategoryOverride,
+              and(
+                eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+                eq(userSubcategoryOverride.userId, userId),
+              ),
             )
-          )
-          .groupBy(category.id, category.name),
-        db
-          .select({
-            id: category.id,
-            name: category.name,
-            amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
-          })
-          .from(transactionTable)
-          .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
-          .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
-          .leftJoin(category, eq(subCategory.categoryId, category.id))
-          .leftJoin(natureTable, eq(subCategory.natureId, natureTable.id)) // TODO(Phase 49): direction-aware filtering
-          .where(
-            and(
-              dateScopedTransactions(userId, prevFrom, prevTo),
-              expenseStatusIncludedInDashboardTotals(),
-              notTransferCategory(),
-              notExcludedFromTotals(),
-              // TODO(Phase 49): replace with direction.code = 'out' filter
-              isNull(subCategory.natureId) // placeholder: include all while direction semantics land
+            .innerJoin(
+              natureTable,
+              eq(
+                natureTable.id,
+                sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
+              )
             )
-          )
-          .groupBy(category.id, category.name),
-      ])
+            .innerJoin(directionTable, eq(natureTable.directionId, directionTable.id))
+            .where(
+              and(
+                dateScopedTransactions(userId, currFrom, currTo),
+                expenseStatusIncludedInDashboardTotals(),
+                eq(directionTable.code, 'allocation')
+              )
+            )
+            .groupBy(natureTable.id, natureTable.labelIt, natureTable.code),
+          db
+            .select({
+              id: natureTable.id,
+              name: natureTable.labelIt,
+              natureCode: natureTable.code,
+              amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+            })
+            .from(transactionTable)
+            .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+            .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+            .leftJoin(
+              userSubcategoryOverride,
+              and(
+                eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+                eq(userSubcategoryOverride.userId, userId),
+              ),
+            )
+            .innerJoin(
+              natureTable,
+              eq(
+                natureTable.id,
+                sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
+              )
+            )
+            .innerJoin(directionTable, eq(natureTable.directionId, directionTable.id))
+            .where(
+              and(
+                dateScopedTransactions(userId, prevFrom, prevTo),
+                expenseStatusIncludedInDashboardTotals(),
+                eq(directionTable.code, 'allocation')
+              )
+            )
+            .groupBy(natureTable.id, natureTable.labelIt, natureTable.code),
+        ])
 
-      currRows = Array.isArray(rawCurr)
-        ? rawCurr.map((r) => ({ id: Number(r.id), name: String(r.name), amount: String(r.amount) }))
-        : []
-      prevRows = Array.isArray(rawPrev)
-        ? rawPrev.map((r) => ({ id: Number(r.id), name: String(r.name), amount: String(r.amount) }))
-        : []
+        currRows = Array.isArray(rawCurr)
+          ? rawCurr.map((r) => ({ id: Number(r.id), name: String(r.name), amount: String(r.amount), natureCode: r.natureCode ?? null }))
+          : []
+        prevRows = Array.isArray(rawPrev)
+          ? rawPrev.map((r) => ({ id: Number(r.id), name: String(r.name), amount: String(r.amount), natureCode: r.natureCode ?? null }))
+          : []
+      } else {
+        // In/out grain: group by category
+        const [rawCurr, rawPrev] = await Promise.all([
+          db
+            .select({
+              id: category.id,
+              name: category.name,
+              amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+            })
+            .from(transactionTable)
+            .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+            .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+            .innerJoin(category, eq(subCategory.categoryId, category.id))
+            .leftJoin(
+              userSubcategoryOverride,
+              and(
+                eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+                eq(userSubcategoryOverride.userId, userId),
+              ),
+            )
+            .innerJoin(
+              natureTable,
+              eq(
+                natureTable.id,
+                sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
+              )
+            )
+            .innerJoin(directionTable, eq(natureTable.directionId, directionTable.id))
+            .where(
+              and(
+                dateScopedTransactions(userId, currFrom, currTo),
+                expenseStatusIncludedInDashboardTotals(),
+                eq(directionTable.code, directionParam)
+              )
+            )
+            .groupBy(category.id, category.name),
+          db
+            .select({
+              id: category.id,
+              name: category.name,
+              amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+            })
+            .from(transactionTable)
+            .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+            .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+            .innerJoin(category, eq(subCategory.categoryId, category.id))
+            .leftJoin(
+              userSubcategoryOverride,
+              and(
+                eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+                eq(userSubcategoryOverride.userId, userId),
+              ),
+            )
+            .innerJoin(
+              natureTable,
+              eq(
+                natureTable.id,
+                sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
+              )
+            )
+            .innerJoin(directionTable, eq(natureTable.directionId, directionTable.id))
+            .where(
+              and(
+                dateScopedTransactions(userId, prevFrom, prevTo),
+                expenseStatusIncludedInDashboardTotals(),
+                eq(directionTable.code, directionParam)
+              )
+            )
+            .groupBy(category.id, category.name),
+        ])
+
+        currRows = Array.isArray(rawCurr)
+          ? rawCurr.map((r) => ({ id: Number(r.id), name: String(r.name), amount: String(r.amount) }))
+          : []
+        prevRows = Array.isArray(rawPrev)
+          ? rawPrev.map((r) => ({ id: Number(r.id), name: String(r.name), amount: String(r.amount) }))
+          : []
+      }
     } catch {
       return []
     }
@@ -268,14 +367,15 @@ export const getMonthOverMonthCategoryChanges = cache(
 
       const isNew = toDecimal(prevAmount).isZero() && toDecimal(curr.amount).gt(0)
       changes.push({
-        categoryId: curr.id,
+        categoryId: isAllocation ? null : curr.id,
         name: curr.name,
         delta: delta.toFixed(2),
         isNew,
+        natureCode: curr.natureCode ?? null,
       })
     }
 
-    // Also include categories that were in prev but not in curr (savings/disappearances)
+    // Also include categories/natures that were in prev but not in curr (savings/disappearances)
     for (const prev of prevRows) {
       if (changes.some((c) => c.categoryId === prev.id)) continue
 
@@ -288,10 +388,11 @@ export const getMonthOverMonthCategoryChanges = cache(
       if (delta.abs().lt(NOISE_FLOOR)) continue
 
       changes.push({
-        categoryId: prev.id,
+        categoryId: isAllocation ? null : prev.id,
         name: prev.name,
         delta: delta.toFixed(2),
         isNew: false,
+        natureCode: prev.natureCode ?? null,
       })
     }
 
@@ -305,12 +406,17 @@ export const getMonthOverMonthCategoryChanges = cache(
 )
 
 /**
- * Returns per-month income (recurring + extraordinary) and per-nature OUT amounts
- * for the given year. Missing months are zero-filled (12 buckets total).
+ * Returns per-month income (recurring + extraordinary), per-nature OUT amounts,
+ * and allocation amounts for the given year. Missing months are zero-filled (12 buckets total).
  *
- * income.recurring  → nature 'income'
+ * income.recurring    → nature 'income'
  * income.extraordinary → nature 'income_extraordinary'
- * out → 6 OUT natures (essential, discretionary, operational, financial, debt, extraordinary)
+ * out.essential       → nature 'essential'
+ * out.discretionary   → nature 'discretionary'
+ * out.debt            → nature 'debt'
+ * allocation.savings  → nature 'savings'
+ * allocation.investment → nature 'investment'
+ * transfer            → excluded (direction.code = 'transfer' filtered out)
  *
  * T-42-05 mitigated: verifySession() scopes all sub-queries to authenticated userId.
  */
@@ -321,16 +427,21 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
   const to = new Date(year, 11, 31, 23, 59, 59, 999)
 
   const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
-  // TODO(Phase 49): replace with direction-aware nature grouping via nature→direction join
-  // Phase 46: use nature.code (from natureId FK) instead of removed flowNatureEnum column
-  // The effective nature resolves via override.natureId or subCategory.natureId → nature.code
+  // Effective nature: resolves via override.natureId or subCategory.natureId → nature.code
   const natureSql = sql<FlowNature | null>`(
     SELECT n.code FROM nature n
     WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
     LIMIT 1
   )`
+  // Direction code via the same FK chain
+  const directionCodeSql = sql<string | null>`(
+    SELECT d.code FROM direction d
+    INNER JOIN nature n ON n.direction_id = d.id
+    WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
+    LIMIT 1
+  )`
 
-  type NatureAggRow = { month: string; nature: FlowNature | null; amount: string }
+  type NatureAggRow = { month: string; nature: FlowNature | null; directionCode: string | null; amount: string }
   let rows: NatureAggRow[] = []
 
   try {
@@ -338,13 +449,13 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
       .select({
         month: monthSql,
         nature: natureSql,
+        directionCode: directionCodeSql,
         amount: sql<string>`coalesce(sum(${transactionTable.amount}), 0)::text`,
       })
       .from(transactionTable)
       .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
-      .leftJoin(natureTable, eq(subCategory.natureId, natureTable.id)) // TODO(Phase 49): direction-aware filtering
       .leftJoin(
         userSubcategoryOverride,
         and(
@@ -356,16 +467,22 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
         and(
           dateScopedTransactions(userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
-          notExcludedFromTotals(),
-          notTransferCategory()
+          // Exclude transfer via correlated direction subquery
+          sql`(
+            SELECT d.code FROM direction d
+            INNER JOIN nature n ON n.direction_id = d.id
+            WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
+            LIMIT 1
+          ) != 'transfer'`
         )
       )
-      .groupBy(monthSql, natureSql)
+      .groupBy(monthSql, natureSql, directionCodeSql)
 
     rows = Array.isArray(rawRows)
       ? rawRows.map((r) => ({
           month: String(r.month),
           nature: r.nature ?? null,
+          directionCode: r.directionCode ?? null,
           amount: String(r.amount),
         }))
       : []
@@ -382,6 +499,7 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
         label: monthLabel(month),
         income: { recurring: ZERO_AMOUNT, extraordinary: ZERO_AMOUNT },
         out: emptyOutSegments(),
+        allocation: emptyAllocationSegments(),
       },
     ])
   )
@@ -391,21 +509,40 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
     if (!bucket) continue
 
     const nature = row.nature
+    const directionCode = row.directionCode
     const rawAmount = row.amount
 
-    if (nature === 'income') {
-      bucket.income.recurring = toDecimal(bucket.income.recurring)
-        .plus(toDecimal(rawAmount))
-        .toFixed(2)
-    } else if (nature === 'income_extraordinary') {
-      bucket.income.extraordinary = toDecimal(bucket.income.extraordinary)
-        .plus(toDecimal(rawAmount))
-        .toFixed(2)
-    } else if (nature !== null && OUT_NATURES.includes(nature as OutNature)) {
-      const outKey = nature as OutNature
+    if (directionCode === 'in') {
+      // IN direction: route by nature to income buckets
+      if (nature === 'income') {
+        bucket.income.recurring = toDecimal(bucket.income.recurring)
+          .plus(toDecimal(rawAmount))
+          .toFixed(2)
+      } else if (nature === 'income_extraordinary') {
+        bucket.income.extraordinary = toDecimal(bucket.income.extraordinary)
+          .plus(toDecimal(rawAmount))
+          .toFixed(2)
+      }
+    } else if (directionCode === 'out') {
+      // OUT direction: route by nature to out buckets (essential/discretionary/debt only)
       const absAmount = toDecimal(rawAmount).abs().toFixed(2)
-      bucket.out[outKey] = toDecimal(bucket.out[outKey]).plus(toDecimal(absAmount)).toFixed(2)
+      if (nature === 'essential') {
+        bucket.out.essential = toDecimal(bucket.out.essential).plus(toDecimal(absAmount)).toFixed(2)
+      } else if (nature === 'discretionary') {
+        bucket.out.discretionary = toDecimal(bucket.out.discretionary).plus(toDecimal(absAmount)).toFixed(2)
+      } else if (nature === 'debt') {
+        bucket.out.debt = toDecimal(bucket.out.debt).plus(toDecimal(absAmount)).toFixed(2)
+      }
+    } else if (directionCode === 'allocation') {
+      // ALLOCATION direction: route by nature to allocation buckets (savings/investment)
+      const absAmount = toDecimal(rawAmount).abs().toFixed(2)
+      if (nature === 'savings') {
+        bucket.allocation.savings = toDecimal(bucket.allocation.savings).plus(toDecimal(absAmount)).toFixed(2)
+      } else if (nature === 'investment') {
+        bucket.allocation.investment = toDecimal(bucket.allocation.investment).plus(toDecimal(absAmount)).toFixed(2)
+      }
     }
+    // transfer direction is excluded via WHERE clause
   }
 
   return Array.from(buckets.values())
