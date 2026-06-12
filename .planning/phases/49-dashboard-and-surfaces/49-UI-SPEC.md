@@ -117,6 +117,8 @@ Accent reserved-for list (complete):
 
 ## Component Inventory
 
+**Primary focal point:** `OverviewChart` (3-bar grouped chart) — the first element the eye should land on and the main interaction surface. Visual hierarchy flows: KPI row (big monetary readings) → `OverviewChart` (focal point) → `OverviewMoversPanel` (supporting detail).
+
 ### Existing — extend, do not duplicate
 
 | Component | File | Phase 49 change |
