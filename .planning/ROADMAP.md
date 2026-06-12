@@ -253,11 +253,11 @@ Plans:
 **Wave 1** *(DAL foundation — parallel, disjoint files)*
 
 - [x] 49-02-PLAN.md — Direction-grouped algebraic-sum rewrite in dashboard.ts/overview.ts; totalAllocation; OverviewChartPoint reshape; direction-aware movers + fetchMovers
-- [ ] 49-03-PLAN.md — Restore category type from direction join (categories.ts); transactions/expenses filters type→direction; subcategory-usage/patterns stubs
+- [x] 49-03-PLAN.md — Restore category type from direction join (categories.ts); transactions/expenses filters type→direction; subcategory-usage/patterns stubs
 
 **Wave 2** *(UI surfaces — parallel, disjoint files; blocked on Wave 1)*
 
-- [ ] 49-04-PLAN.md — 3rd Accantonato bar + 5th KPI card + direction-aware movers panel + allocation CSS tokens (depends 49-02)
+- [x] 49-04-PLAN.md — 3rd Accantonato bar + 5th KPI card + 3-column movers panel + allocation CSS tokens (depends 49-02)
 - [ ] 49-05-PLAN.md — cascade-options buildDirectionNatureMap; 4th direction chip; table direction filters; settings grouping; nature write-path fix (depends 49-03)
 
 **Wave 3** *(schema migration — blocked on Waves 1+2)*

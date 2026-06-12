@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: executing
-last_updated: "2026-06-12T15:48:00.000Z"
-last_activity: 2026-06-12 -- Phase 49 Plan 03 complete (DAL direction rewrite — categories, transactions, expenses)
+last_updated: "2026-06-12T15:54:00.000Z"
+last_activity: 2026-06-12 -- Phase 49 Plan 04 complete (3-bar chart + 5th KPI + 3-column movers; abs fix post-checkpoint)
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 17
-  completed_plans: 14
-  percent: 62
-stopped_at: Completed 49-03-PLAN.md (DAL direction rewrite)
+  completed_plans: 15
+  percent: 65
+stopped_at: None
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 ## Current Position
 
 Phase: 49 (dashboard-and-surfaces) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
-Last activity: 2026-06-12 -- Phase 49 Plan 03 complete (DAL direction rewrite)
+Last activity: 2026-06-12 -- Phase 49 Plan 04 complete (4-direction dashboard presentation)
 
 Progress: [████████████░░░░░░░░] 60% milestone (3/5 phases)
 
@@ -65,6 +65,8 @@ v2.0 / Phase 46 decisions (shipped 2026-06-11):
 - Monetary arithmetic: Decimal.js throughout
 - Layering: dal / services / actions
 - [Phase ?]: 49-02 D-01: categoryType fields use sql<union> cast for direction.code to satisfy TypeScript strict mode in dashboard.ts
+- [49-04]: OUT_KEYS narrowed to essential/discretionary/debt only; savings/investment in allocation bucket; onMonthSelect carries direction param; allocationReading uses "piu/meno del {prevYear}" copy from UI-SPEC
+- [49-04 post-checkpoint]: totalAllocation display wrapped in abs() — DAL algebraic value unchanged; movers changed to 3-column simultaneous layout (removed per-direction routing)
 
 ### Planning Risk
 
@@ -97,11 +99,11 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-12T13:29:02.643Z
-Handoff synced: 2026-06-12 — Phase 48 closed; deployed DB on v2.0 model
+Last session: 2026-06-12 — Phase 49 Plan 04 complete (post-checkpoint fixes + SUMMARY)
+Handoff synced: 2026-06-12 — Phase 49 Plan 04 signed off
 Resume file: None
 
-**Next:** `/gsd-plan-phase 49` — finish the interrupted planning loop (populate 49-VALIDATION.md, resolve 2 blockers + 3 warnings, set nyquist_compliant: true). Then `/gsd-execute-phase 49`.
+**Next:** Execute Plan 05 (49-05).
 
 ## Operator Next Steps
 
