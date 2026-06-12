@@ -21,6 +21,8 @@ const mocks = vi.hoisted(() => ({
 
 type FlowNature = 'essential' | 'discretionary' | 'operational' | 'financial' | 'debt' | 'extraordinary'
 
+type DirectionCode = 'in' | 'out' | 'allocation' | 'transfer' | null
+
 type CategoryRowFixture = {
   categoryId: number
   categoryName: string
@@ -34,6 +36,7 @@ type CategoryRowFixture = {
   overrideNatureId: number | null
   subCategoryNatureId: number | null
   effectiveNatureCode: FlowNature | null
+  categoryType: DirectionCode
 }
 
 function nextSelectResult() {
@@ -114,6 +117,7 @@ function systemCategoryRow(overrides: Partial<CategoryRowFixture> = {}): Categor
     overrideNatureId: null,
     subCategoryNatureId: null,
     effectiveNatureCode: null,
+    categoryType: null,
     ...overrides,
   }
 }

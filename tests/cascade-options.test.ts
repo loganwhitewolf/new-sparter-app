@@ -73,7 +73,7 @@ const fixture: CategoryWithSubCategories[] = [
     id: 3,
     name: 'Sistema',
     slug: 'sistema',
-    type: 'system',
+    type: null,
     userId: null,
     isOwned: false,
     subCategories: [
@@ -121,9 +121,12 @@ describe('buildTypeNatureMap', () => {
     expect(result).toEqual({})
   })
 
-  it('excludes system-type categories from the map', () => {
+  it('excludes null-type (unassigned direction) categories from the map', () => {
     const result = buildTypeNatureMap(fixture)
-    expect('system' in result).toBe(false)
+    // The 'sistema' fixture has type: null — it should not create any bucket
+    expect('sistema' in result).toBe(false)
+    // The value null is never a key in the result record
+    expect(null in result).toBe(false)
   })
 
   it("includes 'unclassified' option for every type bucket", () => {
@@ -156,11 +159,11 @@ describe('buildTypeNatureMap', () => {
     expect(allValues).toContain('unclassified')
   })
 
-  it('does not include natures from system categories in the all-bucket', () => {
+  it('does not create a null/system bucket in the all-bucket', () => {
     const result = buildTypeNatureMap(fixture)
-    // system subcategory has effectiveNature null — only shows up as 'unclassified' sentinel
-    // but we shouldn't have a separate 'system' bucket
-    expect('system' in result).toBe(false)
+    // null-type (unassigned direction) subcategory has effectiveNature null
+    // it should not produce a separate bucket
+    expect(null in result).toBe(false)
   })
 })
 
@@ -172,8 +175,9 @@ describe('buildCategorySubcategoryMap', () => {
     expect(result).toEqual({})
   })
 
-  it('excludes system-type categories', () => {
+  it('excludes null-type (unassigned direction) categories', () => {
     const result = buildCategorySubcategoryMap(fixture)
+    // 'sistema' has type: null — it should not appear in the subcategory map
     expect('sistema' in result).toBe(false)
   })
 

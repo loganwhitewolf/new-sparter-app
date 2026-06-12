@@ -100,6 +100,10 @@ vi.mock('@/lib/db/schema', () => ({
     code: 'nature.code',
     directionId: 'nature.directionId',
   },
+  direction: {
+    id: 'direction.id',
+    code: 'direction.code',
+  },
   platform: {
     id: 'platform.id',
     name: 'platform.name',
@@ -300,8 +304,8 @@ describe('expense DAL list pagination', () => {
     })
   })
 
-  it("type 'unclassified' adds isNull(subCategory.natureId) condition (Phase 46 — category.type removed)", async () => {
-    await getExpenses({ type: 'unclassified' })
+  it("direction 'unclassified' adds isNull(subCategory.natureId) condition", async () => {
+    await getExpenses({ direction: 'unclassified' })
 
     const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
     expect(where.args).toContainEqual({
@@ -310,13 +314,13 @@ describe('expense DAL list pagination', () => {
     })
   })
 
-  it("type with a specific value adds eq(nature.code, value) condition (Phase 46 — category.type removed)", async () => {
-    await getExpenses({ type: 'out' })
+  it("direction with a specific value adds eq(direction.code, value) condition", async () => {
+    await getExpenses({ direction: 'out' })
 
     const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
     expect(where.args).toContainEqual({
       op: 'eq',
-      left: 'nature.code',
+      left: 'direction.code',
       right: 'out',
     })
   })

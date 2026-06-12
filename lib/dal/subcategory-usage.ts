@@ -1,8 +1,8 @@
 import 'server-only'
-import { and, count, desc, eq, isNotNull } from 'drizzle-orm'
+import { and, count, desc, eq, inArray, isNotNull } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
-import { category, expense, subCategory } from '@/lib/db/schema'
+import { category, direction, expense, nature, subCategory } from '@/lib/db/schema'
 
 export type MostUsedSubcategory = {
   subCategoryId: number
@@ -11,25 +11,56 @@ export type MostUsedSubcategory = {
 }
 
 /**
- * Returns up to 6 subcategories most frequently assigned to the current user's
- * expenses. Category type filtering removed — category.type column no longer exists
- * (Phase 46). Direction-aware filtering deferred to Phase 49.
- * TODO(Phase 49): re-add direction filter via nature→direction join when direction semantics land
+ * Returns up to 6 subcategories most frequently assigned to the current user's expenses.
+ * When `allowedDirections` is provided, restricts results to subcategories whose
+ * effective nature resolves to one of the given direction codes via the nature→direction join.
  */
 export async function getMostUsedSubcategories(
-  // TODO(Phase 49): restore allowedTypes filter via direction.code once direction join is available
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _allowedTypes?: string[],
+  allowedDirections?: string[],
 ): Promise<MostUsedSubcategory[]> {
   const { userId } = await verifySession()
 
+  const baseSelect = {
+    subCategoryId: subCategory.id,
+    name: subCategory.name,
+    categoryName: category.name,
+    useCount: count(expense.id),
+  }
+
+  const groupOrder = {
+    groupBy: [subCategory.id, subCategory.name, category.name] as const,
+    orderBy: desc(count(expense.id)),
+    limit: 6,
+  }
+
+  if (allowedDirections && allowedDirections.length > 0) {
+    const rows = await db
+      .select(baseSelect)
+      .from(expense)
+      .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+      .innerJoin(category, eq(subCategory.categoryId, category.id))
+      .innerJoin(nature, eq(subCategory.natureId, nature.id))
+      .innerJoin(direction, eq(nature.directionId, direction.id))
+      .where(
+        and(
+          eq(expense.userId, userId),
+          isNotNull(expense.subCategoryId),
+          inArray(direction.code, allowedDirections),
+        ),
+      )
+      .groupBy(subCategory.id, subCategory.name, category.name)
+      .orderBy(groupOrder.orderBy)
+      .limit(groupOrder.limit)
+
+    return rows.map((r) => ({
+      subCategoryId: r.subCategoryId,
+      name: r.name,
+      categoryName: r.categoryName,
+    }))
+  }
+
   const rows = await db
-    .select({
-      subCategoryId: subCategory.id,
-      name: subCategory.name,
-      categoryName: category.name,
-      useCount: count(expense.id),
-    })
+    .select(baseSelect)
     .from(expense)
     .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
     .innerJoin(category, eq(subCategory.categoryId, category.id))
@@ -37,12 +68,11 @@ export async function getMostUsedSubcategories(
       and(
         eq(expense.userId, userId),
         isNotNull(expense.subCategoryId),
-        // TODO(Phase 49): inArray(direction.code, allowedDirections) once direction join lands
       ),
     )
     .groupBy(subCategory.id, subCategory.name, category.name)
-    .orderBy(desc(count(expense.id)))
-    .limit(6)
+    .orderBy(groupOrder.orderBy)
+    .limit(groupOrder.limit)
 
   return rows.map((r) => ({
     subCategoryId: r.subCategoryId,

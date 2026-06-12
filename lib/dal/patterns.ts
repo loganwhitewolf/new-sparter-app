@@ -20,18 +20,18 @@ function errorCauseCode(error: unknown): string {
 
 /**
  * Returns whether the given subcategory is visible to the requesting user.
- * Used by pattern actions to validate subcategory scope.
- * TODO(Phase 49): Previously returned category type for amountSign derivation (ADR 0008).
- * That derivation is now obsolete — patterns are sign-agnostic (Phase 46, ADR 0012).
+ * Callers use the non-null return as a visibility gate (null = not visible / access denied).
+ *
+ * Pattern actions (ADR 0012): amountSign derivation is removed. The returned value is
+ * treated as a boolean — callers only check `if (!result)` to detect invisible subcategories.
+ * The literal `'out'` is a stable sentinel that satisfies the truthy check without carrying
+ * semantic meaning. Category.type no longer exists in the schema (Phase 46).
  */
 export async function getCategoryTypeForSubCategory(
   subCategoryId: number,
   userId: string,
   database: DbOrTx = db,
-): Promise<'in' | 'out' | 'system' | 'transfer' | null> {
-  // TODO(Phase 49): category.type is removed; this function now returns a constant 'out'
-  // to maintain call-site compatibility while amountSign derivation is no longer needed.
-  // Phase 46: patterns are sign-agnostic (ADR 0012, supersedes ADR 0008).
+): Promise<'out' | null> {
   const rows = await database
     .select({ id: subCategory.id })
     .from(subCategory)
@@ -47,10 +47,7 @@ export async function getCategoryTypeForSubCategory(
     )
     .limit(1)
 
-  const row = rows[0]
-  if (!row) return null
-  // Return a constant — the actual type value is unused since amountSign derivation is gone
-  return 'out' // TODO(Phase 49): remove this function entirely, caller guards are enough
+  return rows[0] ? 'out' : null
 }
 
 export type PatternRow = {
