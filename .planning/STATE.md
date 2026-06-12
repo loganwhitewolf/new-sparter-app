@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: executing
-last_updated: "2026-06-12T09:23:12.318Z"
-last_activity: "2026-06-11 -- Phase 48 Plan 02 complete (verify-migration.ts + db:verify* scripts)"
+last_updated: "2026-06-12T09:36:55.622Z"
+last_activity: "2026-06-12 -- Phase 48 complete (Plan 03 runbook + guarded apply to deployed DB)"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 11
-  completed_plans: 10
-  percent: 40
-stopped_at: Completed 48-02-PLAN.md
+  completed_plans: 11
+  percent: 60
+stopped_at: Completed 48-03-PLAN.md (Phase 48 done)
 ---
 
 # Project State
@@ -21,16 +21,16 @@ stopped_at: Completed 48-02-PLAN.md
 See: .planning/PROJECT.md (updated 2026-06-10)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 48 — sql-migration-recategorization
+**Current focus:** Phase 49 — dashboard-and-surfaces
 
 ## Current Position
 
-Phase: 48 (sql-migration-recategorization) — EXECUTING
-Plan: 3 of 3
-Status: Executing Phase 48
-Last activity: 2026-06-11 -- Phase 48 Plan 02 complete (verify-migration.ts + db:verify* scripts)
+Phase: 49 (dashboard-and-surfaces) — PLANNING (interrupted plan-phase loop; 6 PLAN.md drafted, 49-VALIDATION.md not yet nyquist_compliant)
+Plan: 0 of 6 executed
+Status: Phase 48 complete; Phase 49 planning needs finishing
+Last activity: 2026-06-12 -- Phase 48 complete (Plan 03 runbook + guarded apply: migration 0018 + seed + seed-extras applied to deployed DB)
 
-Progress: [█████████████████░░░] 88% milestone (7/8 plans)
+Progress: [████████████░░░░░░░░] 60% milestone (3/5 phases)
 
 ## Accumulated Context
 
@@ -94,11 +94,11 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-12T09:23:12.314Z
-Handoff synced: 2026-06-11 — verify-migration.ts + db:verify* scripts; 4 tests GREEN
-Resume file: .planning/phases/49-dashboard-and-surfaces/49-CONTEXT.md
+Last session: 2026-06-12 — reconciled Phase 48 (wrote 48-03-SUMMARY.md; apply was done manually, only the artifact was missing)
+Handoff synced: 2026-06-12 — Phase 48 closed; deployed DB on v2.0 model
+Resume file: .planning/phases/49-dashboard-and-surfaces/49-VALIDATION.md (still nyquist_compliant: false — finish plan-phase loop)
 
-**Next:** `/gsd-execute-phase 48` (Plan 03 — staging-first gate + production apply runbook)
+**Next:** `/gsd-plan-phase 49` — finish the interrupted planning loop (populate 49-VALIDATION.md, resolve 2 blockers + 3 warnings, set nyquist_compliant: true). Then `/gsd-execute-phase 49`.
 
 ## Operator Next Steps
 
