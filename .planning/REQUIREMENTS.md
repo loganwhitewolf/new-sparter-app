@@ -34,10 +34,10 @@
 
 ### Dashboard & Aggregation — 4-direction algebraic sum
 
-- [ ] **DASH-01**: The dashboard presents a 4-direction view: IN and OUT as today, a visible-but-separate ALLOCATION block ("Accantonato / Investito"), and TRANSFER excluded and hidden.
-- [ ] **DASH-02**: All dashboard/KPI/category aggregations use direction-grouped **algebraic sum** (generalising ADR 0004), replacing the sign-split `sum(amount>0)` / `abs(sum(amount<0))` logic everywhere it appears (overview, KPI, category DAL, components).
-- [ ] **DASH-03**: Divestments and refunds net within their own direction/subcategory segment — a transaction's amount sign may oppose its nature's direction (a `+` refund under an OUT subcategory): shown by real amount in the list, netted in the chart/KPIs.
-- [ ] **DASH-04**: KPI cards and reading lines reflect the new direction model (spending totals exclude allocation + transfer; allocation surfaced as its own measure such as "quanto ho accantonato/investito").
+- [x] **DASH-01**: The dashboard presents a 4-direction view: IN and OUT as today, a visible-but-separate ALLOCATION block ("Accantonato / Investito"), and TRANSFER excluded and hidden.
+- [x] **DASH-02**: All dashboard/KPI/category aggregations use direction-grouped **algebraic sum** (generalising ADR 0004), replacing the sign-split `sum(amount>0)` / `abs(sum(amount<0))` logic everywhere it appears (overview, KPI, category DAL, components).
+- [x] **DASH-03**: Divestments and refunds net within their own direction/subcategory segment — a transaction's amount sign may oppose its nature's direction (a `+` refund under an OUT subcategory): shown by real amount in the list, netted in the chart/KPIs.
+- [x] **DASH-04**: KPI cards and reading lines reflect the new direction model (spending totals exclude allocation + transfer; allocation surfaced as its own measure such as "quanto ho accantonato/investito").
 
 ### Categorization Surfaces — cascade, filters, pickers
 
@@ -90,10 +90,10 @@
 | MIG-01 | Phase 48 | Pending |
 | MIG-02 | Phase 48 | Pending |
 | MIG-03 | Phase 48 | Pending |
-| DASH-01 | Phase 49 | Pending |
-| DASH-02 | Phase 49 | Pending |
-| DASH-03 | Phase 49 | Pending |
-| DASH-04 | Phase 49 | Pending |
+| DASH-01 | Phase 49 | Complete |
+| DASH-02 | Phase 49 | Complete |
+| DASH-03 | Phase 49 | Complete |
+| DASH-04 | Phase 49 | Complete |
 | CAT-01 | Phase 49 | Pending |
 | CAT-02 | Phase 49 | Pending |
 | PAIR-01 | Phase 50 | Pending |
@@ -101,6 +101,7 @@
 | PAIR-03 | Phase 50 | Pending |
 
 **Coverage:**
+
 - v2.0 requirements: 21 total
 - Mapped to phases: 21/21 ✓
 - Unmapped: 0

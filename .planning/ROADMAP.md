@@ -252,7 +252,7 @@ Plans:
 
 **Wave 1** *(DAL foundation — parallel, disjoint files)*
 
-- [ ] 49-02-PLAN.md — Direction-grouped algebraic-sum rewrite in dashboard.ts/overview.ts; totalAllocation; OverviewChartPoint reshape; direction-aware movers + fetchMovers
+- [x] 49-02-PLAN.md — Direction-grouped algebraic-sum rewrite in dashboard.ts/overview.ts; totalAllocation; OverviewChartPoint reshape; direction-aware movers + fetchMovers
 - [ ] 49-03-PLAN.md — Restore category type from direction join (categories.ts); transactions/expenses filters type→direction; subcategory-usage/patterns stubs
 
 **Wave 2** *(UI surfaces — parallel, disjoint files; blocked on Wave 1)*
@@ -263,6 +263,7 @@ Plans:
 **Wave 3** *(schema migration — blocked on Waves 1+2)*
 
 - [ ] 49-06-PLAN.md — [BLOCKING] drop sub_category.exclude_from_totals; generated migration + operator-guarded apply (depends 49-02, 49-03)
+
 **UI hint**: yes
 
 ### Phase 50: transaction-pairing
@@ -305,7 +306,7 @@ Plans:
 | 46 | v2.0 | 3/3 | Complete   | 2026-06-11 |
 | 47 | v2.0 | 5/5 | Complete    | 2026-06-11 |
 | 48 | v2.0 | 2/3 | In Progress|  |
-| 49 | v2.0 | 0/6 | Planned | - |
+| 49 | v2.0 | 2/6 | In Progress|  |
 | 50 | v2.0 | 0/TBD | Not started | - |
 
 **Total shipped: 45 phases · 159 plans complete**

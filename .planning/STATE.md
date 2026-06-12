@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: executing
-last_updated: "2026-06-12T15:13:00.000Z"
-last_activity: 2026-06-12 -- Phase 49 Plan 01 complete (RED tests)
+last_updated: "2026-06-12T13:29:02.648Z"
+last_activity: 2026-06-12 -- Phase 49 Plan 01 complete (RED tests — Wave 0)
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 17
-  completed_plans: 11
+  completed_plans: 13
   percent: 60
 stopped_at: Completed 49-01-PLAN.md (Wave 0 RED tests)
 ---
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 ## Current Position
 
 Phase: 49 (dashboard-and-surfaces) — EXECUTING
-Plan: 2 of 6
-Status: Executing Phase 49
+Plan: 3 of 6
+Status: Ready to execute
 Last activity: 2026-06-12 -- Phase 49 Plan 01 complete (RED tests — Wave 0)
 
 Progress: [████████████░░░░░░░░] 60% milestone (3/5 phases)
@@ -64,6 +64,7 @@ v2.0 / Phase 46 decisions (shipped 2026-06-11):
 - Seeds: additive model — append steps to `seed-extras.ts`, never edit shipped `seed-data.ts` shapes
 - Monetary arithmetic: Decimal.js throughout
 - Layering: dal / services / actions
+- [Phase ?]: 49-02 D-01: categoryType fields use sql<union> cast for direction.code to satisfy TypeScript strict mode in dashboard.ts
 
 ### Planning Risk
 
@@ -96,9 +97,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-12 — reconciled Phase 48 (wrote 48-03-SUMMARY.md; apply was done manually, only the artifact was missing)
+Last session: 2026-06-12T13:29:02.643Z
 Handoff synced: 2026-06-12 — Phase 48 closed; deployed DB on v2.0 model
-Resume file: .planning/phases/49-dashboard-and-surfaces/49-VALIDATION.md (still nyquist_compliant: false — finish plan-phase loop)
+Resume file: None
 
 **Next:** `/gsd-plan-phase 49` — finish the interrupted planning loop (populate 49-VALIDATION.md, resolve 2 blockers + 3 warnings, set nyquist_compliant: true). Then `/gsd-execute-phase 49`.
 
@@ -106,3 +107,9 @@ Resume file: .planning/phases/49-dashboard-and-surfaces/49-VALIDATION.md (still 
 
 - Plan Phase 47: taxonomy remap per `nature-remapping-WORKING.md`
 - `develop` is 26 commits ahead of `origin/develop` — push when ready
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Notes |
+|-------|------|----------|-------|
+| Phase 49 P02 | 30m | 2 tasks | 5 files |
