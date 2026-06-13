@@ -66,17 +66,25 @@ skipped: 0
 ## Gaps
 
 - truth: "Direction filter in transactions table filters rows to show only the selected direction (Entrate/Uscite/Accantonamenti/Trasferimenti)"
-  status: failed
+  status: fixed
   reason: "User reported: i filtri per direction non sembrano funzionare"
   severity: major
   test: 5
-  artifacts: []
-  missing: []
+  root_cause: "parseTransactionFilters read input.type but toolbar writes ?direction= to URL (key renamed in Plan 03). Also 'allocation' missing from TYPE_ALLOWED."
+  artifacts:
+    - path: "lib/validations/transactions.ts"
+      issue: "reads input.type instead of input.direction; TYPE_ALLOWED missing 'allocation'"
+    - path: "app/(app)/transactions/page.tsx"
+      issue: "cache key used params.type instead of params.direction"
+  fix_commit: "fix(49): direction filter reads input.direction, adds allocation to TYPE_ALLOWED"
 
 - truth: "Direction filter in expenses table filters rows to show only the selected direction"
-  status: failed
+  status: fixed
   reason: "User reported: i filtri per direction non sembrano funzionare"
   severity: major
   test: 6
-  artifacts: []
-  missing: []
+  root_cause: "parseExpenseFilters same issue — reads input.type, TYPE_ALLOWED missing 'allocation'"
+  artifacts:
+    - path: "lib/validations/expense.ts"
+      issue: "reads input.type instead of input.direction; TYPE_ALLOWED missing 'allocation'"
+  fix_commit: "fix(49): direction filter reads input.direction, adds allocation to TYPE_ALLOWED"
