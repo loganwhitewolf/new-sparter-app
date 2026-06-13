@@ -55,7 +55,7 @@ function buildTransactionTableKey(
     params.amountMax ?? '',
     params.status ?? '',
     params.nature ?? '',
-    params.type ?? '',
+    params.direction ?? params.type ?? '',
   ].join(':')
 
   return `${filterKey}:${dataKey}`

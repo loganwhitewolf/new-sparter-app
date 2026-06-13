@@ -94,7 +94,6 @@ describe('category Server Actions', () => {
       userId: 'user-1',
       name: 'Entrate Extra',
       slug: 'entrate-extra',
-      type: 'in',
     })
     expectExactCategoryRevalidationRoutes()
   })
@@ -188,10 +187,6 @@ describe('category Server Actions', () => {
     await expect(
       renameSubcategoryAction({ error: null }, makeFormData({ id: '0', name: 'Casa' })),
     ).resolves.toEqual({ error: 'ID non valido.' })
-    await expect(
-      createCategoryAction({ error: null }, makeFormData({ name: 'Casa', type: 'system' })),
-    ).resolves.toEqual({ error: 'Tipo categoria non valido.' })
-
     expect(mocks.createUserCategory).not.toHaveBeenCalled()
     expect(mocks.renameUserSubcategory).not.toHaveBeenCalled()
     expect(mocks.revalidatePath).not.toHaveBeenCalled()

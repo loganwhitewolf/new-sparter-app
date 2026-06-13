@@ -90,7 +90,7 @@ const NATURE_ALLOWED = [
   'unclassified',
 ] as const
 
-const TYPE_ALLOWED = ['in', 'out', 'transfer', 'unclassified'] as const
+const TYPE_ALLOWED = ['in', 'out', 'allocation', 'transfer', 'unclassified'] as const
 
 function firstTrimmed(value: string | string[] | undefined): string | undefined {
   const raw = Array.isArray(value) ? value[0] : value
@@ -123,7 +123,7 @@ export function parseExpenseFilters(input: ExpenseSearchParams): ParsedExpenseFi
     rawSort === 'totalAmount' ? 'totalAmount' : rawSort === 'createdAt' ? 'createdAt' : undefined
   const dir: 'asc' | 'desc' | undefined = rawDir === 'asc' ? 'asc' : rawDir === 'desc' ? 'desc' : undefined
   const nature = parseStatus(input.nature, NATURE_ALLOWED)
-  const type = parseStatus(input.type, TYPE_ALLOWED)
+  const type = parseStatus(input.direction ?? input.type, TYPE_ALLOWED)
   const parsedSubCategoryId = rawSubCategory ? Number(rawSubCategory) : NaN
   const subCategoryId =
     Number.isInteger(parsedSubCategoryId) && parsedSubCategoryId > 0
