@@ -67,6 +67,7 @@ export const transactionsTableConfig: TableConfig = {
       key: 'category',
       label: 'Categoria',
       type: 'select',
+      dependsOn: 'direction',
       options: [],
       toChip: (v) => `Categoria: ${v}`,
     },

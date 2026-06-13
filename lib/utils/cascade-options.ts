@@ -147,6 +147,41 @@ export function buildTypeNatureMap(
  * @param categories - Full taxonomy from getCategories()
  * @returns Record<string, FilterOption[]> keyed by category.slug + '' (all-bucket)
  */
+/**
+ * Derives, per direction code, the category options for that direction.
+ * Each option has value = category.slug and label = category.name.
+ * null-type categories (no direction assigned) are excluded.
+ *
+ * Also emits an all-bucket under the '' key containing all non-null categories.
+ *
+ * @param categories - Full taxonomy from getCategories()
+ * @returns Record<string, FilterOption[]> keyed by direction code + '' (all-bucket)
+ */
+export function buildDirectionCategoryMap(
+  categories: CategoryWithSubCategories[],
+): Record<string, FilterOption[]> {
+  if (categories.length === 0) return {}
+
+  const perDirection = new Map<string, FilterOption[]>()
+  const allOptions: FilterOption[] = []
+
+  for (const cat of categories) {
+    if (cat.type === null) continue
+    const option: FilterOption = { value: cat.slug, label: cat.name }
+    if (!perDirection.has(cat.type)) perDirection.set(cat.type, [])
+    perDirection.get(cat.type)!.push(option)
+    allOptions.push(option)
+  }
+
+  const result: Record<string, FilterOption[]> = {}
+  for (const [direction, opts] of perDirection.entries()) {
+    result[direction] = opts
+  }
+  if (allOptions.length > 0) result[''] = allOptions
+
+  return result
+}
+
 export function buildCategorySubcategoryMap(
   categories: CategoryWithSubCategories[],
 ): Record<string, FilterOption[]> {

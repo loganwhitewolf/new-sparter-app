@@ -6,7 +6,7 @@ import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
 import { parseExpenseFilters, type ExpenseSearchParams } from '@/lib/validations/expense'
 import type { ExpenseFilters as ExpenseListFilters } from '@/lib/dal/expenses'
 import { NATURE_LABELS, NATURE_ORDER } from '@/lib/utils/nature-labels'
-import { buildDirectionNatureMap, buildCategorySubcategoryMap } from '@/lib/utils/cascade-options'
+import { buildDirectionNatureMap, buildCategorySubcategoryMap, buildDirectionCategoryMap } from '@/lib/utils/cascade-options'
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { ExpenseTable } from '@/components/expenses/expense-table'
 import { ExpenseFormDialog } from '@/components/expenses/expense-form-dialog'
@@ -102,9 +102,10 @@ export default async function ExpensesPage({
     { value: 'unclassified', label: 'Non classificato' },
   ]
 
-  // Cascade-derived option maps: type→nature and category→subcategory
+  // Cascade-derived option maps: direction→nature, direction→category, category→subcategory
   const dependentOptions = {
     nature: buildDirectionNatureMap(categories),
+    category: buildDirectionCategoryMap(categories),
     subCategory: buildCategorySubcategoryMap(categories),
   }
 
