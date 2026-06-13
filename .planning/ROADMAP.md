@@ -277,7 +277,25 @@ Plans:
   2. Paired transactions have a dedicated visual indicator in the transaction list that shows both the link and the net amount effect
   3. A user can remove an explicit pairing; after unlinking, both transactions behave identically to never-paired transactions (algebraic-sum netting only)
 
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+**Wave 0** *(test-first)*
+
+- [ ] 50-01-PLAN.md — RED test scaffolds: service ownership/primary/double-link, picker filter, dashboard netting, list select-shape (Nyquist Dimension 8)
+
+**Wave 1** *(data foundation)*
+
+- [ ] 50-02-PLAN.md — [BLOCKING] transaction_pair table + relations + generated/applied 0020 migration + shared isNotSecondary()/effectiveAmount() helpers
+
+**Wave 2** *(backend + DAL — parallel, disjoint files; blocked on Wave 1)*
+
+- [ ] 50-03-PLAN.md — Validations + ownership-validating service + thin actions + verifySession-scoped counterpart-picker DAL
+- [ ] 50-04-PLAN.md — Netting across 8 aggregation sites (dashboard.ts ×6, overview.ts ×2) + pairedWith/pairedNet fields on transactionListSelect
+
+**Wave 3** *(UI; blocked on Wave 2)*
+
+- [ ] 50-05-PLAN.md — CounterpartPickerDialog + pair badge/popover + Collega/Scollega row actions + page wiring (operator checkpoint)
+
 **UI hint**: yes
 
 ## Progress
@@ -307,6 +325,6 @@ Plans:
 | 47 | v2.0 | 5/5 | Complete    | 2026-06-11 |
 | 48 | v2.0 | 2/3 | In Progress|  |
 | 49 | v2.0 | 2/6 | In Progress|  |
-| 50 | v2.0 | 0/TBD | Not started | - |
+| 50 | v2.0 | 0/5 | Planned | - |
 
 **Total shipped: 45 phases · 159 plans complete**
