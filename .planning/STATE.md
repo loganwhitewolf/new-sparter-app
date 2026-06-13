@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
-status: executing
-last_updated: "2026-06-12T00:00:00.000Z"
-last_activity: 2026-06-12 -- Phase 49 Plan 06 Task 1 complete (schema drop excludeFromTotals, migration 0019 generated); paused at Task 2 checkpoint (operator pg_dump + db:migrate)
+status: completed
+last_updated: "2026-06-13T19:07:00.669Z"
+last_activity: "2026-06-12 -- Phase 49 Plan 06 complete (exclude_from_totals dropped; migration 0019 applied; db:verify ok; DATA-06/D-10/D-11 closed)"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 17
-  completed_plans: 15
-  percent: 65
-stopped_at: Phase 49 Plan 06 — Task 2 checkpoint:human-action (operator must run pg_dump + yarn db:migrate + yarn db:verify)
+  completed_plans: 17
+  percent: 80
+stopped_at: Phase 49 Plan 06 — COMPLETE
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 
 Phase: 49 (dashboard-and-surfaces) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
-Last activity: 2026-06-12 -- Phase 49 Plan 05 complete (categorization surfaces direction realignment)
+Status: COMPLETE
+Last activity: 2026-06-12 -- Phase 49 Plan 06 complete (exclude_from_totals dropped; migration 0019 applied; db:verify ok; DATA-06/D-10/D-11 closed)
 
-Progress: [████████████░░░░░░░░] 60% milestone (3/5 phases)
+Progress: [██████████████░░░░░░] 70% milestone (3/5 phases, 16/17 plans)
 
 ## Accumulated Context
 
@@ -100,11 +100,11 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-12 — Phase 49 Plan 06 Task 1 complete; paused at operator checkpoint Task 2
-Handoff synced: 2026-06-12 — 49-06 Task 1 committed (2aed322)
-Resume file: None
+Last session: 2026-06-13T19:07:00.665Z
+Handoff synced: 2026-06-12 — 49-06 SUMMARY committed (e3a430b)
+Resume file: .planning/phases/50-transaction-pairing/50-CONTEXT.md
 
-**Next:** Operator runs pg_dump + yarn db:migrate + yarn db:verify, then signals "applied" to resume Plan 06 Task 2.
+**Next:** Phase 49 complete (6/6 plans). Proceed to Phase 50 (transaction-pairing) or Phase 48-03 (MIGRATION-RUNBOOK.md) — check ROADMAP.md.
 
 ## Operator Next Steps
 
