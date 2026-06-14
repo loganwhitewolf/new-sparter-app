@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifySession } from '@/lib/dal/auth'
-import { CreatePairSchema, DeletePairSchema } from '@/lib/validations/transaction-pairs'
+import { CreatePairSchema, DeletePairSchema, LoadCounterpartsSchema } from '@/lib/validations/transaction-pairs'
 import { createPair, deletePairByTransactionId } from '@/lib/services/transaction-pairs'
 import { getEligibleCounterparts, type CounterpartRow } from '@/lib/dal/transaction-pairs'
 import type { ActionState } from '@/lib/validations/expense'
@@ -56,6 +56,8 @@ export async function createTransactionPairAction(
  * from the client; this thin action bridges that boundary.
  *
  * Security: verifySession() is embedded inside getEligibleCounterparts (T-50-01).
+ * Input is validated with LoadCounterpartsSchema before reaching the DAL (WR-02);
+ * the candidate list is `userId`-scoped, so referenceAmount only drives the sign filter.
  */
 export async function loadEligibleCounterpartsAction(params: {
   referenceId: string
@@ -63,8 +65,13 @@ export async function loadEligibleCounterpartsAction(params: {
   dateFrom: Date
   dateTo: Date
 }): Promise<{ counterparts: CounterpartRow[] } | { error: string }> {
+  const parsed = LoadCounterpartsSchema.safeParse(params)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Dati non validi.' }
+  }
+
   try {
-    const counterparts = await getEligibleCounterparts(params)
+    const counterparts = await getEligibleCounterparts(parsed.data)
     return { counterparts }
   } catch (err) {
     if (err instanceof Error) return { error: err.message }
