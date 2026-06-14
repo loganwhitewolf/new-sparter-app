@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: executing
-last_updated: "2026-06-14T06:54:35.290Z"
-last_activity: 2026-06-14 -- Phase 50 execution started
+last_updated: "2026-06-14T07:07:04Z"
+last_activity: 2026-06-14 -- Phase 50 Plan 04 complete (dashboard + overview netting + paired list fields)
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 22
-  completed_plans: 19
-  percent: 80
-stopped_at: Phase 49 Plan 06 — COMPLETE
+  completed_plans: 20
+  percent: 82
+stopped_at: Phase 50 Plan 04 — COMPLETE
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 ## Current Position
 
 Phase: 50 (transaction-pairing) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
-Last activity: 2026-06-14 -- Phase 50 Plan 03 complete (service + DAL + actions)
+Last activity: 2026-06-14 -- Phase 50 Plan 04 complete (dashboard + overview netting + paired list fields)
 
 Progress: [██████████████░░░░░░] 72% milestone (3/5 phases, 17/22 plans)
 
@@ -71,6 +71,7 @@ v2.0 / Phase 46 decisions (shipped 2026-06-11):
 - [Phase ?]: 50-02 D-07: yarn db:generate --name transaction_pair bypasses drizzle-kit TTY prompt; --name flag is standard workaround for headless migration generation contexts
 - [Phase ?]: 50-02: transaction_pair table LIVE in local dev DB (0020 migration applied); no userId column on pair table (D-01/T-50-01) — ownership enforced in Plan 03 service layer
 - [50-03]: createPair verifies both tx.userId === sessionUserId before insert (IDOR gate, D-01); primary resolution via Decimal.js abs(), tie-break by occurredAt (D-10); getEligibleCounterparts verifySession-scoped + NOT EXISTS already-paired (D-14); actions revalidate /transactions + /overview
+- [50-04]: PAIR-03 netting via shared helpers at all 8 aggregation sites; getOverview (overview.ts) untouched to avoid double-count; transactionListSelect uses correlated subqueries (not LEFT JOIN) for 4 paired fields
 
 ### Planning Risk
 
@@ -103,9 +104,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-14T09:00:00.000Z
-Handoff synced: 2026-06-14 — 50-03 SUMMARY committed
-Resume file: .planning/phases/50-transaction-pairing/50-04-PLAN.md
+Last session: 2026-06-14T07:07:04Z
+Handoff synced: 2026-06-14 — 50-04 SUMMARY committed
+Resume file: .planning/phases/50-transaction-pairing/50-05-PLAN.md
 
 **Next:** Phase 49 complete (6/6 plans). Proceed to Phase 50 (transaction-pairing) or Phase 48-03 (MIGRATION-RUNBOOK.md) — check ROADMAP.md.
 
@@ -122,3 +123,4 @@ Resume file: .planning/phases/50-transaction-pairing/50-04-PLAN.md
 | Phase 50 P01 | 20m | 2 tasks | 4 files |
 | Phase 50-transaction-pairing P50-02 | 35min | 2 tasks | 5 files |
 | Phase 50-transaction-pairing P50-03 | 10min | 2 tasks | 4 files |
+| Phase 50-transaction-pairing P50-04 | 25min | 2 tasks | 3 files |
