@@ -248,12 +248,12 @@ export function CounterpartPickerDialog({
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="truncate">{label}</span>
+                            <span className="min-w-0 flex-1 truncate">{label}</span>
                             <span className="shrink-0 font-mono tabular-nums text-xs">
                               {formatCounterpartAmount(cp.amount, isNegCp)}
                             </span>
                           </div>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="block truncate text-xs text-muted-foreground">
                             {formatDate(cp.occurredAt)}
                           </span>
                         </button>
