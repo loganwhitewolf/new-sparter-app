@@ -1,12 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ExternalLink, MoreHorizontal, Tag } from 'lucide-react'
+import { ExternalLink, MoreHorizontal, Tag, Unlink } from 'lucide-react'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 import { toast } from 'sonner'
 import { BulkDeleteTransactionsDialog } from '@/components/transactions/bulk-delete-transactions-dialog'
 import { TransactionBulkActionBar } from '@/components/transactions/transaction-bulk-action-bar'
 import { TransactionTitleEdit } from '@/components/transactions/transaction-title-edit'
+import { CounterpartPickerDialog } from '@/components/transactions/counterpart-picker-dialog'
+import { TransactionPairPopover } from '@/components/transactions/transaction-pair-popover'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -40,6 +42,7 @@ import {
 import { useToolbarSort } from '@/components/data-table/DataTableToolbar'
 import { HeaderSortButton } from '@/components/data-table/HeaderSortButton'
 import { deleteTransaction, loadMoreTransactions } from '@/lib/actions/transactions'
+import { deleteTransactionPairAction } from '@/lib/actions/transaction-pairs'
 import type { TransactionListRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
@@ -122,6 +125,8 @@ export function TransactionTable({ transactions, route, searchParams, categories
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const [categorizeTarget, setCategorizeTarget] = useState<{ id: string; title: string } | null>(null)
+  // Pair target: set when "Collega rimborso" is selected (D-09, PAIR-01)
+  const [pairTarget, setPairTarget] = useState<{ id: string; amount: string; occurredAt: Date } | null>(null)
 
   const { activeSort, activeDir, onSort } = useToolbarSort(route)
 
@@ -204,6 +209,36 @@ export function TransactionTable({ transactions, route, searchParams, categories
     setLoadedTransactions((prev) =>
       prev.map((t) => (t.id === id ? { ...t, customTitle: newTitle || null } : t))
     )
+  }
+
+  /**
+   * Unlink a pair by calling deleteTransactionPairAction for the given transaction.
+   * On success, clears pairedWithId/pairedNetAmount/pairedDescription/pairedOccurredAt
+   * on BOTH legs of the pair in the local list so the badge disappears immediately
+   * without waiting for a server re-render (optimistic UI, PAIR-03 D-11).
+   */
+  async function handleUnpair(transactionId: string) {
+    const tx = loadedTransactions.find((t) => t.id === transactionId)
+    const partnerId = tx?.pairedWithId ?? null
+
+    const fd = new FormData()
+    fd.set('transactionId', transactionId)
+    const result = await deleteTransactionPairAction({ error: null }, fd)
+
+    if (result.error) {
+      toast.error(result.error)
+    } else {
+      toast.success('Collegamento rimosso.')
+      // Optimistically clear pair fields on both legs of the pair.
+      const idsToUnpair = new Set([transactionId, ...(partnerId ? [partnerId] : [])])
+      setLoadedTransactions((prev) =>
+        prev.map((t) =>
+          idsToUnpair.has(t.id)
+            ? { ...t, pairedWithId: null, pairedNetAmount: null, pairedDescription: null, pairedOccurredAt: null }
+            : t,
+        ),
+      )
+    }
   }
 
   function markExpenseCategorized(transactionId: string, subCategoryId?: string) {
@@ -348,12 +383,25 @@ export function TransactionTable({ transactions, route, searchParams, categories
                   />
                 </TableCell>
                 <TableCell className="overflow-hidden">
-                  <TransactionTitleEdit
-                    id={transaction.id}
-                    description={transaction.description}
-                    customTitle={transaction.customTitle}
-                    onSuccess={(newTitle) => updateTransactionTitle(transaction.id, newTitle)}
-                  />
+                  <div className="flex flex-col gap-1">
+                    <TransactionTitleEdit
+                      id={transaction.id}
+                      description={transaction.description}
+                      customTitle={transaction.customTitle}
+                      onSuccess={(newTitle) => updateTransactionTitle(transaction.id, newTitle)}
+                    />
+                    {/* Inline pair badge — shown when the row is paired (D-15, PAIR-02).
+                        Rows stay in natural chronological order (no re-sort/grouping). */}
+                    {transaction.pairedWithId && transaction.pairedNetAmount && (
+                      <TransactionPairPopover
+                        pairedWithId={transaction.pairedWithId}
+                        netAmount={transaction.pairedNetAmount}
+                        pairedDescription={transaction.pairedDescription ?? ''}
+                        pairedAmount={transaction.pairedNetAmount}
+                        pairedOccurredAt={transaction.pairedOccurredAt ?? new Date()}
+                      />
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell
                   className={cn(
@@ -482,6 +530,36 @@ export function TransactionTable({ transactions, route, searchParams, categories
                           )}
                         </>
                       )}
+                      {/* Pair actions (D-09, D-11, PAIR-01, PAIR-03) */}
+                      {transaction.pairedWithId ? (
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault()
+                            setOpenDropdownId(null)
+                            void handleUnpair(transaction.id)
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <Unlink className="h-4 w-4" />
+                          Scollega
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault()
+                            setPairTarget({
+                              id: transaction.id,
+                              amount: transaction.amount,
+                              occurredAt: transaction.occurredAt,
+                            })
+                            setOpenDropdownId(null)
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <Unlink className="h-4 w-4 rotate-45" />
+                          Collega rimborso
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       <DeleteTransactionMenuItem
                         transactionId={transaction.id}
@@ -552,6 +630,15 @@ export function TransactionTable({ transactions, route, searchParams, categories
         }}
       />
     )}
+
+    {/* Counterpart picker dialog — opened by "Collega rimborso" row action (PAIR-01, D-09) */}
+    <CounterpartPickerDialog
+      open={pairTarget !== null}
+      onOpenChange={(o) => { if (!o) setPairTarget(null) }}
+      transactionId={pairTarget?.id ?? ''}
+      transactionAmount={pairTarget?.amount ?? ''}
+      transactionOccurredAt={pairTarget?.occurredAt ?? new Date()}
+    />
     </>
   )
 }
