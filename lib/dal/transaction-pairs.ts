@@ -43,11 +43,16 @@ export const getEligibleCounterparts = cache(
     const { userId } = await verifySession()
 
     // Determine sign filter via Decimal.js (project hard rule — never native comparison
-    // on DECIMAL string values returned by Drizzle).
+    // on DECIMAL string values returned by Drizzle). A pair must net against the
+    // reference, so a positive reference wants negative counterparts and vice versa.
+    // A zero reference (CR-03) has no opposite-sign counterpart — return no rows
+    // rather than falling through to a binary else-branch that treats 0 as positive.
     const refDecimal = toDecimal(params.referenceAmount)
-    const signFilter = refDecimal.isNegative()
-      ? gt(transaction.amount, '0')
-      : lt(transaction.amount, '0')
+    const signFilter = refDecimal.gt(0)
+      ? lt(transaction.amount, '0')
+      : refDecimal.lt(0)
+        ? gt(transaction.amount, '0')
+        : sql`false`
 
     // Already-paired exclusion (D-14): exclude any transaction already in a pair
     // as either the primary (A) or secondary (B).

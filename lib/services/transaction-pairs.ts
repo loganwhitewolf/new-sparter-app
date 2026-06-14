@@ -22,76 +22,102 @@ export async function createPair(input: {
   transactionId: string
   counterpartId: string
 }): Promise<void> {
-  // 1. Load both transaction rows — select only the columns needed for ownership
-  //    check and primary resolution.
-  const [rowsA, rowsB] = await Promise.all([
-    db
-      .select({
-        id: transaction.id,
-        amount: transaction.amount,
-        occurredAt: transaction.occurredAt,
-        userId: transaction.userId,
-      })
-      .from(transaction)
-      .where(eq(transaction.id, input.transactionId))
-      .limit(1),
-    db
-      .select({
-        id: transaction.id,
-        amount: transaction.amount,
-        occurredAt: transaction.occurredAt,
-        userId: transaction.userId,
-      })
-      .from(transaction)
-      .where(eq(transaction.id, input.counterpartId))
-      .limit(1),
-  ])
-
-  const t1 = rowsA[0]
-  const t2 = rowsB[0]
-
-  if (!t1 || !t2) {
-    throw new Error('Transazione non trovata.')
+  // 0. Self-pair guard (CR-01): a transaction cannot be paired with itself.
+  //    The picker UI excludes self, but the action reads counterpartId from raw
+  //    FormData, so the only reliable enforcement point is here. A (X, X) pair
+  //    would pass both unique constraints and then double X's own amount in
+  //    every netting aggregation.
+  if (input.transactionId === input.counterpartId) {
+    throw new Error('Non puoi collegare una transazione a se stessa.')
   }
 
-  // 2. Ownership check — IDOR block (T-50-01).
-  //    Both transactions must belong to the session user.
-  if (t1.userId !== input.userId || t2.userId !== input.userId) {
-    throw new Error('Non sei autorizzato a collegare queste transazioni.')
-  }
+  // The full read-then-write must be atomic (project hard rule: ownership-validating
+  // writes run inside db.transaction). transaction_pair has no userId column, so the
+  // delete/insert relies on the ownership read — that read and the write must not be
+  // separated by a window in which another request mutates the rows (CR-02).
+  await db.transaction(async (tx) => {
+    // 1. Load both transaction rows — select only the columns needed for ownership
+    //    check, sign validation, and primary resolution.
+    const [rowsA, rowsB] = await Promise.all([
+      tx
+        .select({
+          id: transaction.id,
+          amount: transaction.amount,
+          occurredAt: transaction.occurredAt,
+          userId: transaction.userId,
+        })
+        .from(transaction)
+        .where(eq(transaction.id, input.transactionId))
+        .limit(1),
+      tx
+        .select({
+          id: transaction.id,
+          amount: transaction.amount,
+          occurredAt: transaction.occurredAt,
+          userId: transaction.userId,
+        })
+        .from(transaction)
+        .where(eq(transaction.id, input.counterpartId))
+        .limit(1),
+    ])
 
-  // 3. Determine primary by |amount| via Decimal.js — never native arithmetic.
-  //    Larger |amount| = primary. Tie-break: earlier occurredAt = primary.
-  const abs1 = toDecimal(t1.amount).abs()
-  const abs2 = toDecimal(t2.amount).abs()
+    const t1 = rowsA[0]
+    const t2 = rowsB[0]
 
-  let primaryId: string
-  let secondaryId: string
+    if (!t1 || !t2) {
+      throw new Error('Transazione non trovata.')
+    }
 
-  if (abs1.gt(abs2)) {
-    primaryId = t1.id
-    secondaryId = t2.id
-  } else if (abs2.gt(abs1)) {
-    primaryId = t2.id
-    secondaryId = t1.id
-  } else {
-    // Equal |amounts|: earlier occurredAt is primary (the order precedes the refund).
-    const date1 = new Date(t1.occurredAt)
-    const date2 = new Date(t2.occurredAt)
-    if (date1 <= date2) {
+    // 2. Ownership check — IDOR block (T-50-01).
+    //    Both transactions must belong to the session user.
+    if (t1.userId !== input.userId || t2.userId !== input.userId) {
+      throw new Error('Non sei autorizzato a collegare queste transazioni.')
+    }
+
+    // 3. Opposite-sign enforcement (CR-03): a pair only makes economic sense when the
+    //    two legs net against each other (e.g. expense ↔ reimbursement). Same-sign or
+    //    zero-amount legs would inflate totals instead of netting. Decimal.js comparison
+    //    (gt/lt 0) treats 0 as neither positive nor negative, so a €0 leg is rejected.
+    const d1 = toDecimal(t1.amount)
+    const d2 = toDecimal(t2.amount)
+    const oppositeSign = (d1.gt(0) && d2.lt(0)) || (d1.lt(0) && d2.gt(0))
+    if (!oppositeSign) {
+      throw new Error('Le transazioni da collegare devono avere segno opposto.')
+    }
+
+    // 4. Determine primary by |amount| via Decimal.js — never native arithmetic.
+    //    Larger |amount| = primary. Tie-break: earlier occurredAt = primary.
+    const abs1 = d1.abs()
+    const abs2 = d2.abs()
+
+    let primaryId: string
+    let secondaryId: string
+
+    if (abs1.gt(abs2)) {
       primaryId = t1.id
       secondaryId = t2.id
-    } else {
+    } else if (abs2.gt(abs1)) {
       primaryId = t2.id
       secondaryId = t1.id
+    } else {
+      // Equal |amounts|: earlier occurredAt is primary (the order precedes the refund).
+      const date1 = new Date(t1.occurredAt)
+      const date2 = new Date(t2.occurredAt)
+      if (date1 <= date2) {
+        primaryId = t1.id
+        secondaryId = t2.id
+      } else {
+        primaryId = t2.id
+        secondaryId = t1.id
+      }
     }
-  }
 
-  // 4. Insert pair. Unique constraints on transactionAId and transactionBId
-  //    enforce D-02 (1:1 cardinality) and surface a thrown error for T-50-02.
-  await db.insert(transactionPair).values({
-    transactionAId: primaryId,
-    transactionBId: secondaryId,
+    // 5. Insert pair. Unique constraints on transactionAId and transactionBId
+    //    enforce D-02 (1:1 cardinality) and surface a thrown error for T-50-02.
+    await tx.insert(transactionPair).values({
+      transactionAId: primaryId,
+      transactionBId: secondaryId,
+    })
   })
 }
 
@@ -106,25 +132,29 @@ export async function deletePairByTransactionId(input: {
   userId: string
   transactionId: string
 }): Promise<void> {
-  // Ownership check before delete.
-  const rows = await db
-    .select({ userId: transaction.userId })
-    .from(transaction)
-    .where(eq(transaction.id, input.transactionId))
-    .limit(1)
+  // Ownership read and the delete must be atomic (CR-02): transaction_pair has no
+  // userId column, so the unscoped delete is only safe when no other request can
+  // mutate the row between the ownership check and the delete.
+  await db.transaction(async (tx) => {
+    const rows = await tx
+      .select({ userId: transaction.userId })
+      .from(transaction)
+      .where(eq(transaction.id, input.transactionId))
+      .limit(1)
 
-  const tx = rows[0]
-  if (!tx || tx.userId !== input.userId) {
-    throw new Error('Non sei autorizzato a scollegare questa transazione.')
-  }
+    const row = rows[0]
+    if (!row || row.userId !== input.userId) {
+      throw new Error('Non sei autorizzato a scollegare questa transazione.')
+    }
 
-  // Delete the pair on whichever FK side this transaction appears.
-  await db
-    .delete(transactionPair)
-    .where(
-      or(
-        eq(transactionPair.transactionAId, input.transactionId),
-        eq(transactionPair.transactionBId, input.transactionId),
-      ),
-    )
+    // Delete the pair on whichever FK side this transaction appears.
+    await tx
+      .delete(transactionPair)
+      .where(
+        or(
+          eq(transactionPair.transactionAId, input.transactionId),
+          eq(transactionPair.transactionBId, input.transactionId),
+        ),
+      )
+  })
 }

@@ -62,13 +62,18 @@ function makeDeleteChain() {
   return chain
 }
 
-vi.mock('@/lib/db', () => ({
-  db: {
-    select: vi.fn((..._args: unknown[]) => mocks.dbSelectChain()),
-    insert: vi.fn((..._args: unknown[]) => mocks.dbInsertChain()),
-    delete: vi.fn((..._args: unknown[]) => mocks.dbDeleteChain()),
-  },
-}))
+// db.transaction(cb) invokes cb with the same db object as the tx handle, so the
+// existing select/insert/delete chain mocks (and assertions on db.delete etc.) work
+// unchanged inside the transaction (CR-02 atomicity).
+vi.mock('@/lib/db', () => {
+  const db: Record<string, unknown> = {
+    select: vi.fn(() => mocks.dbSelectChain()),
+    insert: vi.fn(() => mocks.dbInsertChain()),
+    delete: vi.fn(() => mocks.dbDeleteChain()),
+  }
+  db.transaction = vi.fn(async (cb: (tx: unknown) => unknown) => cb(db))
+  return { db }
+})
 
 // ---------------------------------------------------------------------------
 // Helpers: build transaction-row fixtures with Decimal-string amounts (PAIR-01)
@@ -312,6 +317,90 @@ describe('createPair', () => {
       ).rejects.toThrow()
     })
   })
+
+  // ── (g) Self-pair guard (CR-01) ───────────────────────────────────────────
+  describe('self-pair rejection', () => {
+    it('throws when transactionId === counterpartId, before any DB read or insert', async () => {
+      const { db } = await import('@/lib/db')
+      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([]))
+
+      await expect(
+        createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-1' }),
+      ).rejects.toThrow('a se stessa')
+
+      // Must short-circuit before touching the DB.
+      expect(db.select).not.toHaveBeenCalled()
+      expect(db.insert).not.toHaveBeenCalled()
+      expect(db.transaction).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── (h) Opposite-sign enforcement + zero-amount hazard (CR-03) ────────────
+  describe('opposite-sign enforcement', () => {
+    it('throws when both transactions have the same sign (two expenses)', async () => {
+      const tx1 = makeTx('tx-1', '-100.00', new Date('2026-01-10'), 'user-1')
+      const tx2 = makeTx('tx-2', '-40.00', new Date('2026-01-15'), 'user-1')
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        return makeSelectChain([callCount === 1 ? tx1 : tx2])
+      })
+
+      await expect(
+        createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+      ).rejects.toThrow('segno opposto')
+    })
+
+    it('throws when one leg is exactly zero (no opposite sign)', async () => {
+      const tx1 = makeTx('tx-1', '-100.00', new Date('2026-01-10'), 'user-1')
+      const tx2 = makeTx('tx-2', '0.00', new Date('2026-01-15'), 'user-1')
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        return makeSelectChain([callCount === 1 ? tx1 : tx2])
+      })
+
+      await expect(
+        createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+      ).rejects.toThrow('segno opposto')
+    })
+
+    it('does NOT insert a pair when the sign check fails', async () => {
+      const tx1 = makeTx('tx-1', '+30.00', new Date('2026-01-10'), 'user-1')
+      const tx2 = makeTx('tx-2', '+30.00', new Date('2026-01-15'), 'user-1')
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        return makeSelectChain([callCount === 1 ? tx1 : tx2])
+      })
+      const insertChain = { values: vi.fn(() => Promise.resolve([])) }
+      mocks.dbInsertChain.mockReturnValue(insertChain)
+
+      await expect(
+        createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+      ).rejects.toThrow('segno opposto')
+      expect(insertChain.values).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── (i) Atomicity — read-then-write runs inside db.transaction (CR-02) ────
+  describe('atomic write path', () => {
+    it('performs the ownership read and insert inside db.transaction', async () => {
+      const { db } = await import('@/lib/db')
+      const tx1 = makeTx('tx-1', '-100.00', new Date('2026-01-10'), 'user-1')
+      const tx2 = makeTx('tx-2', '+50.00', new Date('2026-01-15'), 'user-1')
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        return makeSelectChain([callCount === 1 ? tx1 : tx2])
+      })
+      mocks.dbInsertChain.mockReturnValue(makeInsertChain())
+
+      await createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' })
+
+      expect(db.transaction).toHaveBeenCalledTimes(1)
+    })
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -400,6 +489,17 @@ describe('deletePairByTransactionId', () => {
       await expect(
         deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-1' }),
       ).resolves.toBeUndefined()
+    })
+
+    it('performs the ownership read and delete inside db.transaction (CR-02)', async () => {
+      const { db } = await import('@/lib/db')
+      const tx = makeTx('tx-1', '-100.00', new Date('2026-01-10'), 'user-1')
+      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([tx]))
+      mocks.dbDeleteChain.mockReturnValue(makeDeleteChain())
+
+      await deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-1' })
+
+      expect(db.transaction).toHaveBeenCalledTimes(1)
     })
   })
 })
