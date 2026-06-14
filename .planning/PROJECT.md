@@ -37,6 +37,8 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 - **NATURE-TABLE-01** — `direction`(4) + `nature`(9) lookup tables, `sub_category.nature_id` FK; remove `category.type` / `flow_nature` / `amount_sign` (supersedes ADR 0008); dissolve & rename categories and subcategories per `.planning/nature-remapping-WORKING.md` (23 categories · ~65 subcategories · 9 natures); rework `seed-data`/`seed-extras`; migrate + recategorize existing transactions; update dashboard/KPI/cascade/filters to direction + algebraic sum (4-direction view incl. `allocation`); deprecate `exclude_from_totals` in favour of `direction.included_in_totals`.
 - **TX-PAIRING-01** — explicit transaction↔opposite linking (order↔refund), additive over the implicit subcategory netting (ADR 0004); ships as the final phase.
 
+**Status:** all 5 phases complete (2026-06-14). Phase 50 (transaction-pairing, TX-PAIRING-01) shipped the explicit 1:1 order↔refund linking — `transaction_pair` table (migration 0020, applied), ownership-validating service (atomic, opposite-sign-enforced), shared `isNotSecondary()`/`effectiveAmount()` netting across all 8 dashboard aggregation sites, and the picker/badge/popover UI. Milestone v2.0 is ready for `/gsd-complete-milestone`.
+
 **Design status:** LOCKED & certified. Contract: `docs/adr/0012-direction-derived-from-nature-allocation.md`, `CONTEXT.md`, `.planning/nature-remapping-WORKING.md`. No discovery to redo.
 
 **Prior milestone:** v1.16 (Dashboard Overview Redesign) shipped 2026-06-09; see `.planning/milestones/v1.16-ROADMAP.md`. EDU-FUT-01 (FlowNature taxonomy rename) is absorbed into NATURE-TABLE-01. Operator deploy R038/R039/R041 remain operator-pending.
@@ -182,4 +184,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-10 — v2.0 milestone started*
+*Last updated: 2026-06-14 — v2.0 all 5 phases complete (Phase 50 transaction-pairing shipped)*
