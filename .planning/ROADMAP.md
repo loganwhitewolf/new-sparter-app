@@ -325,6 +325,6 @@ Plans:
 | 47 | v2.0 | 5/5 | Complete    | 2026-06-11 |
 | 48 | v2.0 | 2/3 | In Progress|  |
 | 49 | v2.0 | 2/6 | In Progress|  |
-| 50 | v2.0 | 5/5 | Complete   | 2026-06-14 |
+| 50 | v2.0 | 5/5 | Complete    | 2026-06-14 |
 
 **Total shipped: 46 phases · 164 plans complete**

@@ -1,9 +1,13 @@
 ---
 phase: 50-transaction-pairing
 verified: 2026-06-14T17:00:00Z
-status: human_needed
+status: passed
 score: 10/10 must-haves verified
 overrides_applied: 0
+human_verification_outcome:
+  confirmed_by: operator (live, during the Wave 3 checkpoint in this execute-phase session)
+  date: 2026-06-14
+  result: all 5 items confirmed working; 5 UI defects surfaced and fixed during verification (e253535, fa3f45e, bc052f6, 9940cfd, 75d1f3a); popover Importo vs Netto fix confirmed
 human_verification:
   - test: "Link two opposite transactions via 'Collega rimborso', confirm badge appears and dashboard nets correctly"
     expected: "Badge shows signed net (e.g. €-50); dashboard OUT total for the primary's month reflects the algebraic net; secondary no longer counts independently"
