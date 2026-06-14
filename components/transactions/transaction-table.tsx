@@ -397,7 +397,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
                         pairedWithId={transaction.pairedWithId}
                         netAmount={transaction.pairedNetAmount}
                         pairedDescription={transaction.pairedDescription ?? ''}
-                        pairedAmount={transaction.pairedNetAmount}
+                        pairedAmount={transaction.pairedAmount ?? transaction.pairedNetAmount}
                         pairedOccurredAt={transaction.pairedOccurredAt ?? new Date()}
                       />
                     )}

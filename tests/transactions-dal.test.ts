@@ -809,6 +809,19 @@ describe('transaction pairing select-shape contract (Phase 50 — PAIR-02)', () 
     expect(sqlText).toContain('::numeric')
   })
 
+  it('transactionListSelect includes pairedAmount (counterpart original amount, not the net) as a sql fragment (PAIR-02)', () => {
+    expect(transactionListSelect).toHaveProperty('pairedAmount')
+    const fragment = (transactionListSelect as Record<string, unknown>).pairedAmount as {
+      op: string
+      strings?: string[]
+    }
+    expect(fragment).toMatchObject({ op: 'sql' })
+    // It must select the counterpart's own amount (t2.amount), NOT a summed net.
+    const sqlText = (fragment.strings ?? []).join('')
+    expect(sqlText).toContain('t2.amount')
+    expect(sqlText).not.toContain('+')
+  })
+
   it('transactionListSelect includes pairedDescription as a sql fragment (PAIR-02)', () => {
     expect(transactionListSelect).toHaveProperty('pairedDescription')
     expect((transactionListSelect as Record<string, unknown>).pairedDescription).toMatchObject({ op: 'sql' })

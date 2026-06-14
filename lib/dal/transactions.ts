@@ -111,6 +111,18 @@ export const transactionListSelect = {
        OR tp.transaction_b_id = ${transaction.id}
     LIMIT 1
   )`,
+  // Counterpart's OWN original amount (not the net) — shown as "Importo" in the pair popover.
+  pairedAmount: sql<string | null>`(
+    SELECT t2.amount::text
+    FROM transaction_pair tp
+    JOIN transaction t2 ON t2.id = CASE
+      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
+      ELSE tp.transaction_a_id
+    END
+    WHERE tp.transaction_a_id = ${transaction.id}
+       OR tp.transaction_b_id = ${transaction.id}
+    LIMIT 1
+  )`,
   pairedDescription: sql<string | null>`(
     SELECT t2.description
     FROM transaction_pair tp
@@ -165,6 +177,7 @@ export type TransactionListRow = {
   // Phase 50: pairing fields (nullable — null when transaction is unpaired)
   pairedWithId: string | null
   pairedNetAmount: string | null
+  pairedAmount: string | null
   pairedDescription: string | null
   pairedOccurredAt: Date | null
 }
