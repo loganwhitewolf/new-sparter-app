@@ -48,10 +48,22 @@ function formatDate(date: Date): string {
   return dateFormatter.format(new Date(date))
 }
 
-/** Compute a date string offset by the given number of days from the reference. */
+/**
+ * Compute a `YYYY-MM-DD` string offset by the given number of days from the
+ * reference date.
+ *
+ * WR-07: operate entirely in UTC. The earlier implementation mutated the date
+ * with local-time `setDate` and then read it back with UTC `toISOString()`,
+ * so for users in a positive UTC offset (Italy is UTC+1/+2) a transaction
+ * timestamped near local midnight could shift the window boundary by a day.
+ * `fetchCounterparts` later re-parses this string with `new Date(...)`, which
+ * interprets a bare `YYYY-MM-DD` as UTC midnight — so computing the offset in
+ * UTC here keeps the produced string and the re-parsed Date on the same day.
+ */
 function offsetDateISO(base: Date, days: number): string {
-  const d = new Date(base)
-  d.setDate(d.getDate() + days)
+  const d = new Date(
+    Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate() + days),
+  )
   return d.toISOString().slice(0, 10)
 }
 
