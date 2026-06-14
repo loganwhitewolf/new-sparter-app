@@ -363,6 +363,12 @@ export const getMonthOverMonthCategoryChanges = cache(
     const NOISE_FLOOR = toDecimal('15.00')
     const changes: MonthOverMonthChange[] = []
 
+    // Track which raw row ids have been emitted. WR-06: de-dup must key on the raw
+    // `id`, never on the `categoryId` projection — for the allocation grain every
+    // pushed change has `categoryId: null`, so a `categoryId === id` guard never
+    // matches a real id (dead/misleading code that would mis-dedupe future edits).
+    const processedIds = new Set<number>()
+
     for (const curr of currRows) {
       const prevAmount = prevMap.get(curr.id) ?? ZERO_AMOUNT
       const delta = toDecimal(curr.amount).minus(toDecimal(prevAmount))
@@ -371,6 +377,7 @@ export const getMonthOverMonthCategoryChanges = cache(
       if (delta.abs().lt(NOISE_FLOOR)) continue
 
       const isNew = toDecimal(prevAmount).isZero() && toDecimal(curr.amount).gt(0)
+      processedIds.add(curr.id)
       changes.push({
         categoryId: isAllocation ? null : curr.id,
         name: curr.name,
@@ -382,10 +389,11 @@ export const getMonthOverMonthCategoryChanges = cache(
 
     // Also include categories/natures that were in prev but not in curr (savings/disappearances)
     for (const prev of prevRows) {
-      if (changes.some((c) => c.categoryId === prev.id)) continue
+      // Skip rows already represented by a current-month change, keyed on raw id.
+      if (processedIds.has(prev.id)) continue
 
       const hasCurrRow = currRows.some((r) => r.id === prev.id)
-      if (hasCurrRow) continue // already processed above
+      if (hasCurrRow) continue // present in curr but below the noise floor — skip
 
       const delta = toDecimal(ZERO_AMOUNT).minus(toDecimal(prev.amount))
 
