@@ -391,16 +391,22 @@ export function TransactionTable({ transactions, route, searchParams, categories
                       onSuccess={(newTitle) => updateTransactionTitle(transaction.id, newTitle)}
                     />
                     {/* Inline pair badge — shown when the row is paired (D-15, PAIR-02).
-                        Rows stay in natural chronological order (no re-sort/grouping). */}
-                    {transaction.pairedWithId && transaction.pairedNetAmount && (
-                      <TransactionPairPopover
-                        pairedWithId={transaction.pairedWithId}
-                        netAmount={transaction.pairedNetAmount}
-                        pairedDescription={transaction.pairedDescription ?? ''}
-                        pairedAmount={transaction.pairedAmount ?? transaction.pairedNetAmount}
-                        pairedOccurredAt={transaction.pairedOccurredAt ?? new Date()}
-                      />
-                    )}
+                        Rows stay in natural chronological order (no re-sort/grouping).
+                        WR-05: gate on ALL required fields being non-null. Substituting
+                        a fallback amount/date would render plausible-but-wrong financial
+                        data; if any field is missing, hide the badge instead. */}
+                    {transaction.pairedWithId &&
+                      transaction.pairedNetAmount &&
+                      transaction.pairedAmount &&
+                      transaction.pairedOccurredAt && (
+                        <TransactionPairPopover
+                          pairedWithId={transaction.pairedWithId}
+                          netAmount={transaction.pairedNetAmount}
+                          pairedDescription={transaction.pairedDescription ?? ''}
+                          pairedAmount={transaction.pairedAmount}
+                          pairedOccurredAt={transaction.pairedOccurredAt}
+                        />
+                      )}
                   </div>
                 </TableCell>
                 <TableCell
