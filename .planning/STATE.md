@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 ## Current Position
 
 Phase: 50 (transaction-pairing) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
-Last activity: 2026-06-14 -- Phase 50 execution started
+Last activity: 2026-06-14 -- Phase 50 Plan 03 complete (service + DAL + actions)
 
-Progress: [██████████████░░░░░░] 70% milestone (3/5 phases, 16/17 plans)
+Progress: [██████████████░░░░░░] 72% milestone (3/5 phases, 17/22 plans)
 
 ## Accumulated Context
 
@@ -70,6 +70,7 @@ v2.0 / Phase 46 decisions (shipped 2026-06-11):
 - [49-05]: buildDirectionNatureMap replaces buildTypeNatureMap (direction-keyed, allocation bucket); SubcategoryPicker 4 direction chips; table filters key=direction + dependsOn=direction; setSubcategoryNatureAction resolves real natureId via NATURE_ID_BY_CODE; detectedAmountSign removed (ADR 0012)
 - [Phase ?]: 50-02 D-07: yarn db:generate --name transaction_pair bypasses drizzle-kit TTY prompt; --name flag is standard workaround for headless migration generation contexts
 - [Phase ?]: 50-02: transaction_pair table LIVE in local dev DB (0020 migration applied); no userId column on pair table (D-01/T-50-01) — ownership enforced in Plan 03 service layer
+- [50-03]: createPair verifies both tx.userId === sessionUserId before insert (IDOR gate, D-01); primary resolution via Decimal.js abs(), tie-break by occurredAt (D-10); getEligibleCounterparts verifySession-scoped + NOT EXISTS already-paired (D-14); actions revalidate /transactions + /overview
 
 ### Planning Risk
 
@@ -102,9 +103,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-14T06:54:35.286Z
-Handoff synced: 2026-06-12 — 49-06 SUMMARY committed (e3a430b)
-Resume file: .planning/phases/50-transaction-pairing/50-CONTEXT.md
+Last session: 2026-06-14T09:00:00.000Z
+Handoff synced: 2026-06-14 — 50-03 SUMMARY committed
+Resume file: .planning/phases/50-transaction-pairing/50-04-PLAN.md
 
 **Next:** Phase 49 complete (6/6 plans). Proceed to Phase 50 (transaction-pairing) or Phase 48-03 (MIGRATION-RUNBOOK.md) — check ROADMAP.md.
 
@@ -120,3 +121,4 @@ Resume file: .planning/phases/50-transaction-pairing/50-CONTEXT.md
 | Phase 49 P02 | 30m | 2 tasks | 5 files |
 | Phase 50 P01 | 20m | 2 tasks | 4 files |
 | Phase 50-transaction-pairing P50-02 | 35min | 2 tasks | 5 files |
+| Phase 50-transaction-pairing P50-03 | 10min | 2 tasks | 4 files |

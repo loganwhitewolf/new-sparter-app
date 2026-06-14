@@ -289,7 +289,7 @@ Plans:
 
 **Wave 2** *(backend + DAL — parallel, disjoint files; blocked on Wave 1)*
 
-- [ ] 50-03-PLAN.md — Validations + ownership-validating service + thin actions + verifySession-scoped counterpart-picker DAL
+- [x] 50-03-PLAN.md — Validations + ownership-validating service + thin actions + verifySession-scoped counterpart-picker DAL
 - [ ] 50-04-PLAN.md — Netting across 8 aggregation sites (dashboard.ts ×6, overview.ts ×2) + pairedWith/pairedNet fields on transactionListSelect
 
 **Wave 3** *(UI; blocked on Wave 2)*
@@ -325,6 +325,6 @@ Plans:
 | 47 | v2.0 | 5/5 | Complete    | 2026-06-11 |
 | 48 | v2.0 | 2/3 | In Progress|  |
 | 49 | v2.0 | 2/6 | In Progress|  |
-| 50 | v2.0 | 2/5 | In Progress|  |
+| 50 | v2.0 | 3/5 | In Progress|  |
 
 **Total shipped: 45 phases · 159 plans complete**
