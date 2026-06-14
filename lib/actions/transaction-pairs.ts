@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { verifySession } from '@/lib/dal/auth'
 import { CreatePairSchema, DeletePairSchema } from '@/lib/validations/transaction-pairs'
 import { createPair, deletePairByTransactionId } from '@/lib/services/transaction-pairs'
+import { getEligibleCounterparts, type CounterpartRow } from '@/lib/dal/transaction-pairs'
 import type { ActionState } from '@/lib/validations/expense'
 
 /**
@@ -45,6 +46,30 @@ export async function createTransactionPairAction(
   revalidatePath('/overview')
 
   return { error: null }
+}
+
+/**
+ * Server action: load eligible counterparts for a given reference transaction.
+ *
+ * Called from the client-side CounterpartPickerDialog to re-fetch the list when the
+ * date range changes. The DAL function is `server-only` so it cannot be called directly
+ * from the client; this thin action bridges that boundary.
+ *
+ * Security: verifySession() is embedded inside getEligibleCounterparts (T-50-01).
+ */
+export async function loadEligibleCounterpartsAction(params: {
+  referenceId: string
+  referenceAmount: string
+  dateFrom: Date
+  dateTo: Date
+}): Promise<{ counterparts: CounterpartRow[] } | { error: string }> {
+  try {
+    const counterparts = await getEligibleCounterparts(params)
+    return { counterparts }
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message }
+    return { error: 'Si è verificato un errore nel caricamento delle transazioni disponibili.' }
+  }
 }
 
 /**
