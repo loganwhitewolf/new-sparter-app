@@ -435,6 +435,34 @@ export const transaction = pgTable(
   ],
 );
 
+// Transaction pair table — 1:1 explicit pairing (Phase 50, D-01/D-02/D-03)
+// transactionAId = PRIMARY (larger |amount|), transactionBId = SECONDARY.
+// Primary/secondary invariant is enforced in the service layer, not at DB level.
+// No userId column: ownership is validated via transaction.userId in the service (D-01, T-50-01).
+export const transactionPair = pgTable(
+  "transaction_pair",
+  {
+    id: serial("id").primaryKey(),
+    // Symmetric FKs — both reference transaction.id with ON DELETE CASCADE (D-01, D-03)
+    transactionAId: text("transaction_a_id")
+      .notNull()
+      .references(() => transaction.id, { onDelete: "cascade" }),
+    transactionBId: text("transaction_b_id")
+      .notNull()
+      .references(() => transaction.id, { onDelete: "cascade" }),
+    // Audit field (Claude's Discretion, per CONTEXT.md)
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    // Prevents double-linking: each transaction may appear as A or B in at most one pair (D-02, T-50-02)
+    unique("transaction_pair_a_unique").on(table.transactionAId),
+    unique("transaction_pair_b_unique").on(table.transactionBId),
+    // Lookup indexes for JOIN in aggregation queries (both directions)
+    index("transaction_pair_a_idx").on(table.transactionAId),
+    index("transaction_pair_b_idx").on(table.transactionBId),
+  ],
+);
+
 export const categorizationPattern = pgTable(
   "categorization_pattern",
   {
@@ -631,7 +659,7 @@ export const expenseRelations = relations(expense, ({ one, many }) => ({
   classificationHistory: many(expenseClassificationHistory),
 }));
 
-export const transactionRelations = relations(transaction, ({ one }) => ({
+export const transactionRelations = relations(transaction, ({ one, many }) => ({
   user: one(user, {
     fields: [transaction.userId],
     references: [user.id],
@@ -643,6 +671,22 @@ export const transactionRelations = relations(transaction, ({ one }) => ({
   expense: one(expense, {
     fields: [transaction.expenseId],
     references: [expense.id],
+  }),
+  // Phase 50: pairing relations (a transaction can be the primary or secondary in a pair)
+  pairAsA: many(transactionPair, { relationName: "primaryTransaction" }),
+  pairAsB: many(transactionPair, { relationName: "secondaryTransaction" }),
+}));
+
+export const transactionPairRelations = relations(transactionPair, ({ one }) => ({
+  transactionA: one(transaction, {
+    fields: [transactionPair.transactionAId],
+    references: [transaction.id],
+    relationName: "primaryTransaction",
+  }),
+  transactionB: one(transaction, {
+    fields: [transactionPair.transactionBId],
+    references: [transaction.id],
+    relationName: "secondaryTransaction",
   }),
 }));
 
