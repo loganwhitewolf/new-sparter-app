@@ -1,4 +1,5 @@
 ---
+status: complete
 phase: 260609-fru
 plan: "01"
 subsystem: dashboard-overview

@@ -1,4 +1,5 @@
 ---
+status: complete
 quick_id: 260609-k2d
 phase: quick
 subsystem: transactions/expenses/import/data-table
