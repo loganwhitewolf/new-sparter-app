@@ -631,8 +631,12 @@ export function TransactionTable({ transactions, route, searchParams, categories
       />
     )}
 
-    {/* Counterpart picker dialog — opened by "Collega rimborso" row action (PAIR-01, D-09) */}
+    {/* Counterpart picker dialog — opened by "Collega rimborso" row action (PAIR-01, D-09).
+        key={pairTarget.id} remounts the dialog per transaction so its date-range state is
+        re-initialised from this transaction's occurredAt — avoids a stale window carried
+        over from a previously-opened row. */}
     <CounterpartPickerDialog
+      key={pairTarget?.id ?? 'none'}
       open={pairTarget !== null}
       onOpenChange={(o) => { if (!o) setPairTarget(null) }}
       transactionId={pairTarget?.id ?? ''}
