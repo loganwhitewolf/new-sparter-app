@@ -15,6 +15,7 @@ import {
 import { monthLabel, monthsBetween } from '@/lib/utils/date'
 import type { FlowNature } from '@/lib/utils/nature-labels'
 import { toDecimal } from '@/lib/utils/decimal'
+import { effectiveAmount, isNotSecondary } from '@/lib/dal/transaction-pairs-sql'
 import {
   buildOverviewData,
   getOverviewAmountTotals,
@@ -201,7 +202,7 @@ export const getMonthOverMonthCategoryChanges = cache(
               id: natureTable.id,
               name: natureTable.labelIt,
               natureCode: natureTable.code,
-              amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+              amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
             })
             .from(transactionTable)
             .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -225,7 +226,8 @@ export const getMonthOverMonthCategoryChanges = cache(
               and(
                 dateScopedTransactions(userId, currFrom, currTo),
                 expenseStatusIncludedInDashboardTotals(),
-                eq(directionTable.code, 'allocation')
+                eq(directionTable.code, 'allocation'),
+                isNotSecondary()
               )
             )
             .groupBy(natureTable.id, natureTable.labelIt, natureTable.code),
@@ -234,7 +236,7 @@ export const getMonthOverMonthCategoryChanges = cache(
               id: natureTable.id,
               name: natureTable.labelIt,
               natureCode: natureTable.code,
-              amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+              amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
             })
             .from(transactionTable)
             .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -258,7 +260,8 @@ export const getMonthOverMonthCategoryChanges = cache(
               and(
                 dateScopedTransactions(userId, prevFrom, prevTo),
                 expenseStatusIncludedInDashboardTotals(),
-                eq(directionTable.code, 'allocation')
+                eq(directionTable.code, 'allocation'),
+                isNotSecondary()
               )
             )
             .groupBy(natureTable.id, natureTable.labelIt, natureTable.code),
@@ -277,7 +280,7 @@ export const getMonthOverMonthCategoryChanges = cache(
             .select({
               id: category.id,
               name: category.name,
-              amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+              amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
             })
             .from(transactionTable)
             .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -302,7 +305,8 @@ export const getMonthOverMonthCategoryChanges = cache(
               and(
                 dateScopedTransactions(userId, currFrom, currTo),
                 expenseStatusIncludedInDashboardTotals(),
-                eq(directionTable.code, directionParam)
+                eq(directionTable.code, directionParam),
+                isNotSecondary()
               )
             )
             .groupBy(category.id, category.name),
@@ -310,7 +314,7 @@ export const getMonthOverMonthCategoryChanges = cache(
             .select({
               id: category.id,
               name: category.name,
-              amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+              amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
             })
             .from(transactionTable)
             .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -335,7 +339,8 @@ export const getMonthOverMonthCategoryChanges = cache(
               and(
                 dateScopedTransactions(userId, prevFrom, prevTo),
                 expenseStatusIncludedInDashboardTotals(),
-                eq(directionTable.code, directionParam)
+                eq(directionTable.code, directionParam),
+                isNotSecondary()
               )
             )
             .groupBy(category.id, category.name),
@@ -450,7 +455,7 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
         month: monthSql,
         nature: natureSql,
         directionCode: directionCodeSql,
-        amount: sql<string>`coalesce(sum(${transactionTable.amount}), 0)::text`,
+        amount: sql<string>`coalesce(sum(${effectiveAmount()}), 0)::text`,
       })
       .from(transactionTable)
       .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -473,7 +478,8 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
             INNER JOIN nature n ON n.direction_id = d.id
             WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
             LIMIT 1
-          ) != 'transfer'`
+          ) != 'transfer'`,
+          isNotSecondary()
         )
       )
       .groupBy(monthSql, natureSql, directionCodeSql)

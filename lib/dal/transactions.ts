@@ -89,6 +89,50 @@ export const transactionListSelect = {
   platformSlug: platform.slug,
   // Direction code from the nature→direction join (replaces the category.id placeholder)
   categoryType: direction.code,
+  // Phase 50: pairing fields — correlated subqueries (no LEFT JOIN to preserve buildTransactionOrderBy)
+  pairedWithId: sql<string | null>`(
+    SELECT CASE
+      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
+      ELSE tp.transaction_a_id
+    END
+    FROM transaction_pair tp
+    WHERE tp.transaction_a_id = ${transaction.id}
+       OR tp.transaction_b_id = ${transaction.id}
+    LIMIT 1
+  )`,
+  pairedNetAmount: sql<string | null>`(
+    SELECT (${transaction.amount}::numeric + t2.amount::numeric)::text
+    FROM transaction_pair tp
+    JOIN transaction t2 ON t2.id = CASE
+      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
+      ELSE tp.transaction_a_id
+    END
+    WHERE tp.transaction_a_id = ${transaction.id}
+       OR tp.transaction_b_id = ${transaction.id}
+    LIMIT 1
+  )`,
+  pairedDescription: sql<string | null>`(
+    SELECT t2.description
+    FROM transaction_pair tp
+    JOIN transaction t2 ON t2.id = CASE
+      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
+      ELSE tp.transaction_a_id
+    END
+    WHERE tp.transaction_a_id = ${transaction.id}
+       OR tp.transaction_b_id = ${transaction.id}
+    LIMIT 1
+  )`,
+  pairedOccurredAt: sql<Date | null>`(
+    SELECT t2.occurred_at
+    FROM transaction_pair tp
+    JOIN transaction t2 ON t2.id = CASE
+      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
+      ELSE tp.transaction_a_id
+    END
+    WHERE tp.transaction_a_id = ${transaction.id}
+       OR tp.transaction_b_id = ${transaction.id}
+    LIMIT 1
+  )`,
 }
 
 export const transactionPlatformSelect = {
@@ -118,6 +162,11 @@ export type TransactionListRow = {
   platformSlug: string | null
   // Direction code from the nature→direction join
   categoryType: string | null
+  // Phase 50: pairing fields (nullable — null when transaction is unpaired)
+  pairedWithId: string | null
+  pairedNetAmount: string | null
+  pairedDescription: string | null
+  pairedOccurredAt: Date | null
 }
 
 export type TransactionPlatformOption = {
