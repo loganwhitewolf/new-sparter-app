@@ -168,7 +168,7 @@ export function CounterpartPickerDialog({
             submittedRef.current = true
             formAction(fd)
           }}
-          className="flex flex-col gap-4"
+          className="flex min-w-0 flex-col gap-4"
         >
           {/* Hidden fields required by createTransactionPairAction */}
           <input type="hidden" name="transactionId" value={transactionId} />
@@ -190,24 +190,26 @@ export function CounterpartPickerDialog({
 
           {/* Date range (D-13 — user can widen, defaulted to ±90 days) */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex min-w-0 flex-col gap-1.5">
               <label className="text-sm font-medium" htmlFor="cp-date-from">
                 Da data
               </label>
               <Input
                 id="cp-date-from"
                 type="date"
+                className="min-w-0"
                 value={dateFrom}
                 onChange={(e) => handleDateFromChange(e.target.value)}
               />
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex min-w-0 flex-col gap-1.5">
               <label className="text-sm font-medium" htmlFor="cp-date-to">
                 A data
               </label>
               <Input
                 id="cp-date-to"
                 type="date"
+                className="min-w-0"
                 value={dateTo}
                 onChange={(e) => handleDateToChange(e.target.value)}
               />
