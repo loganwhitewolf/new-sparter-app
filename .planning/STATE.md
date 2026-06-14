@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: executing
-last_updated: "2026-06-14T07:07:04Z"
-last_activity: 2026-06-14 -- Phase 50 Plan 04 complete (dashboard + overview netting + paired list fields)
+last_updated: "2026-06-14T10:00:00Z"
+last_activity: 2026-06-14 -- Phase 50 Plan 05 complete (transaction-pairing UI — picker dialog, badge/popover, row actions, operator-verified)
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 22
-  completed_plans: 20
-  percent: 82
-stopped_at: Phase 50 Plan 04 — COMPLETE
+  completed_plans: 21
+  percent: 91
+stopped_at: Phase 50 Plan 05 — COMPLETE (Phase 50 fully complete)
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 
 ## Current Position
 
-Phase: 50 (transaction-pairing) — EXECUTING
-Plan: 5 of 5
-Status: Ready to execute
-Last activity: 2026-06-14 -- Phase 50 Plan 04 complete (dashboard + overview netting + paired list fields)
+Phase: 50 (transaction-pairing) — COMPLETE
+Plan: 5 of 5 (ALL DONE)
+Status: Complete — all 5 plans shipped
+Last activity: 2026-06-14 -- Phase 50 Plan 05 complete (transaction-pairing UI — operator-verified)
 
-Progress: [██████████████░░░░░░] 72% milestone (3/5 phases, 17/22 plans)
+Progress: [████████████████████] 91% milestone (5/5 phases Phase 50 done; 21/22 plans)
 
 ## Accumulated Context
 
@@ -72,6 +72,9 @@ v2.0 / Phase 46 decisions (shipped 2026-06-11):
 - [Phase ?]: 50-02: transaction_pair table LIVE in local dev DB (0020 migration applied); no userId column on pair table (D-01/T-50-01) — ownership enforced in Plan 03 service layer
 - [50-03]: createPair verifies both tx.userId === sessionUserId before insert (IDOR gate, D-01); primary resolution via Decimal.js abs(), tie-break by occurredAt (D-10); getEligibleCounterparts verifySession-scoped + NOT EXISTS already-paired (D-14); actions revalidate /transactions + /overview
 - [50-04]: PAIR-03 netting via shared helpers at all 8 aggregation sites; getOverview (overview.ts) untouched to avoid double-count; transactionListSelect uses correlated subqueries (not LEFT JOIN) for 4 paired fields
+- [50-05]: TransactionTable key-based remount — pairedWithId + pairedNetAmount included in buildTransactionTableKey; table copies props into local state so prop updates are invisible without remount
+- [50-05]: CounterpartPickerDialog mounted with key={pairTarget.id} — re-anchors ±90-day date window to the reference transaction's occurredAt on every open; prevents stale date range from reused dialog instance
+- [50-05]: Popover Importo uses pairedAmount (= t2.amount correlated subquery, counterpart's original amount); Netto uses pairedNetAmount — two distinct values; pairedAmount added to transactionListSelect in Plan 04 field set
 
 ### Planning Risk
 
@@ -104,11 +107,11 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-14T07:07:04Z
-Handoff synced: 2026-06-14 — 50-04 SUMMARY committed
-Resume file: .planning/phases/50-transaction-pairing/50-05-PLAN.md
+Last session: 2026-06-14T10:00:00Z
+Handoff synced: 2026-06-14 — 50-05 SUMMARY committed (Phase 50 fully complete)
+Resume file: None — Phase 50 complete. Remaining v2.0 work: 48-03-PLAN.md (MIGRATION-RUNBOOK) or 49-06-PLAN.md (drop exclude_from_totals).
 
-**Next:** Phase 49 complete (6/6 plans). Proceed to Phase 50 (transaction-pairing) or Phase 48-03 (MIGRATION-RUNBOOK.md) — check ROADMAP.md.
+**Next:** Phase 50 complete (5/5 plans). Remaining open v2.0 plans: 48-03 (MIGRATION-RUNBOOK + operator-guarded apply) and 49-06 (BLOCKING — drop sub_category.exclude_from_totals migration).
 
 ## Operator Next Steps
 
@@ -124,3 +127,4 @@ Resume file: .planning/phases/50-transaction-pairing/50-05-PLAN.md
 | Phase 50-transaction-pairing P50-02 | 35min | 2 tasks | 5 files |
 | Phase 50-transaction-pairing P50-03 | 10min | 2 tasks | 4 files |
 | Phase 50-transaction-pairing P50-04 | 25min | 2 tasks | 3 files |
+| Phase 50-transaction-pairing P50-05 | 90min | 2 tasks + operator checkpoint + 5 fixes | 5 files |

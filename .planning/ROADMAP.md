@@ -155,7 +155,7 @@ Full details: `.planning/milestones/v1.16-ROADMAP.md`
 - [x] **Phase 47: taxonomy-seed-rework** — New 23-category / ~65-subcategory taxonomy in `seed-data.ts`; `seed-extras.ts` additive steps to populate `nature_id` and `direction_id` on existing rows (completed 2026-06-11)
 - [ ] **Phase 48: sql-migration-recategorization** — Generated SQL migration (drizzle-kit generate + scripts/migrate.ts); backfill `nature_id` on all subcategories and overrides; recategorize misclassified transactions; convert patterns to sign-agnostic
 - [ ] **Phase 49: dashboard-and-surfaces** — 4-direction dashboard view (IN/OUT/ALLOCATION block, TRANSFER hidden); algebraic-sum aggregation replacing sign-split logic everywhere; `cascade-options.ts` and table filters re-pointed to the new model
-- [ ] **Phase 50: transaction-pairing** — Explicit 1:1 transaction↔opposite linking (order↔refund); paired display in transaction list; unlink flow; implicit netting baseline unchanged
+- [x] **Phase 50: transaction-pairing** — Explicit 1:1 transaction↔opposite linking (order↔refund); paired display in transaction list; unlink flow; implicit netting baseline unchanged *(complete 2026-06-14)*
 
 ## Phase Details
 
@@ -294,7 +294,7 @@ Plans:
 
 **Wave 3** *(UI; blocked on Wave 2)*
 
-- [ ] 50-05-PLAN.md — CounterpartPickerDialog + pair badge/popover + Collega/Scollega row actions + page wiring (operator checkpoint)
+- [x] 50-05-PLAN.md — CounterpartPickerDialog + pair badge/popover + Collega/Scollega row actions + page wiring (operator checkpoint) *(complete 2026-06-14)*
 
 **UI hint**: yes
 
@@ -325,6 +325,6 @@ Plans:
 | 47 | v2.0 | 5/5 | Complete    | 2026-06-11 |
 | 48 | v2.0 | 2/3 | In Progress|  |
 | 49 | v2.0 | 2/6 | In Progress|  |
-| 50 | v2.0 | 4/5 | In Progress|  |
+| 50 | v2.0 | 5/5 | Complete   | 2026-06-14 |
 
-**Total shipped: 45 phases · 159 plans complete**
+**Total shipped: 46 phases · 164 plans complete**
