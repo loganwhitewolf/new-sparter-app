@@ -23,11 +23,15 @@ files_reviewed_list:
   - tests/dashboard-dal.test.ts
   - tests/transactions-dal.test.ts
 findings:
-  critical: 3
+  critical: 0
+  critical_resolved: 3
   warning: 7
   info: 4
   total: 14
 status: issues_found
+resolution:
+  blockers_fixed_commit: 221382b
+  note: "CR-01 (self-pair guard), CR-02 (db.transaction atomicity), CR-03 (opposite-sign + zero-amount) fixed with test coverage. 7 warnings + 4 info remain open (tracked for a follow-up)."
 ---
 
 # Phase 50: Code Review Report
@@ -43,7 +47,16 @@ Transaction-pairing feature for the Sparter Italian finance app. The architectur
 
 However, the review surfaced three blockers. The most serious is a **self-pairing bug** in `createPair`: nothing prevents `transactionId === counterpartId`, which inserts a `(X, X)` row that passes both unique constraints and then poisons every netting query (`effectiveAmount` doubles X's own amount). The second is a **concurrency / non-atomicity gap** in `createPair` — ownership read and pair insert run on the autocommit `db` handle outside any transaction, and `deletePairByTransactionId`'s delete is unscoped to the verified transaction. The third is a **non-opposite-sign / equal-amount netting hazard** combined with the zero-amount sign filter that can silently pick a same-sign or self counterpart. Several warnings concern swallowed errors masking real failures and missing input validation on a server action.
 
-## Critical Issues
+## Resolution (2026-06-14)
+
+All 3 blockers fixed in commit `221382b` with test coverage (full suite 1011 passed):
+- **CR-01** — self-pair guard added (`transactionId === counterpartId` throws before any DB access).
+- **CR-02** — `createPair` and `deletePairByTransactionId` now wrap the read-then-write in `db.transaction`.
+- **CR-03** — `createPair` enforces opposite-sign legs (Decimal `gt/lt 0`, so a zero leg is rejected); the picker DAL sign filter returns no rows for a zero reference.
+
+The 7 warnings and 4 info findings below remain open and are tracked for a follow-up.
+
+## Critical Issues (RESOLVED — see Resolution above)
 
 ### CR-01: `createPair` allows self-pairing (transactionId === counterpartId), corrupting all netting
 
