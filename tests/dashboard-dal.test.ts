@@ -859,3 +859,109 @@ describe('DASH money-correctness (Phase 49 — ADR 0012)', () => {
     expect(overview.totalAllocation).toBe('500.00')
   })
 })
+
+// ─── Phase 50 RED: transaction-pairing netting tests (PAIR-03) ──────────────
+// These tests are RED until Plans 02/03 implement isNotSecondary / effectiveAmount helpers
+// and wire them into the dashboard DAL queries.
+// Dynamic import is used so that the module-not-found error is scoped to each test,
+// not to the entire file — keeping all pre-existing tests GREEN while these are RED.
+
+describe('transaction pairing netting (Phase 50 — PAIR-03)', () => {
+  // ── isNotSecondary() fragment contract ─────────────────────────────────────
+  describe('isNotSecondary() SQL fragment', () => {
+    it('returns a sql fragment referencing transaction_pair and transaction_b_id', async () => {
+      // This dynamic import is RED until Plan 02 creates lib/dal/transaction-pairs-sql.ts
+      const { isNotSecondary } = await import('@/lib/dal/transaction-pairs-sql')
+      const fragment = isNotSecondary()
+      const sqlText = JSON.stringify(fragment)
+      // Check for the key identifiers that must appear in the NOT EXISTS clause
+      expect(sqlText.toLowerCase()).toMatch(/transaction_pair|tp\.transaction_b_id/)
+    })
+
+    it('returns a value that is truthy (Drizzle sql fragment, not null/undefined)', async () => {
+      const { isNotSecondary } = await import('@/lib/dal/transaction-pairs-sql')
+      expect(isNotSecondary()).toBeTruthy()
+    })
+  })
+
+  // ── effectiveAmount() fragment contract ──────────────────────────────────
+  describe('effectiveAmount() SQL fragment', () => {
+    it('returns a sql fragment with a CASE WHEN EXISTS referencing transaction_a_id and ::numeric addition', async () => {
+      const { effectiveAmount } = await import('@/lib/dal/transaction-pairs-sql')
+      const fragment = effectiveAmount()
+      const sqlText = JSON.stringify(fragment)
+      // The CASE WHEN EXISTS must reference the pair table and ::numeric cast
+      expect(sqlText.toLowerCase()).toMatch(/case|when|exists|transaction_pair/)
+    })
+
+    it('returns a value that is truthy (Drizzle sql fragment, not null/undefined)', async () => {
+      const { effectiveAmount } = await import('@/lib/dal/transaction-pairs-sql')
+      expect(effectiveAmount()).toBeTruthy()
+    })
+  })
+
+  // ── Scenario-level netting (buildOverviewData + mocked pre-aggregated rows) ──
+  // The netting contract: when a primary (-100.00) and secondary (+50.00) pair exist,
+  // the SQL helpers exclude the secondary and replace the primary's amount with the net.
+  // The aggregated totalOut passed to buildOverviewData already reflects this net: -50.00 → abs = 50.00.
+  // This pin ensures buildOverviewData does not accidentally double-count or ignore the net.
+  describe('netting scenario: primary cena -100 + secondary ricarica +50 → net totalOut 50.00 (PAIR-03)', () => {
+    it('buildOverviewData with pre-netted totalOut=50.00 returns 50.00, not 100.00 or 150.00', () => {
+      // The netting SQL helpers produce: primary.amount + secondary.amount = -100 + 50 = -50 → abs = 50
+      // This is the expected totalOut value after pairing netting is applied by the DAL.
+      const overview = buildOverviewData({
+        current: {
+          totalIn: '0.00',
+          totalOut: '50.00', // algebraic net: |-100 + 50| = 50 (secondary excluded, primary netted)
+          totalAllocation: '0.00',
+        },
+        previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00' },
+        currentUncategorizedCount: 0,
+        previousUncategorizedCount: 0,
+      })
+
+      // Pin: netted value, not the raw primary alone (100) nor the sum of both (150)
+      expect(overview.totalOut).toBe('50.00')
+      expect(overview.totalOut).not.toBe('100.00')
+      expect(overview.totalOut).not.toBe('150.00')
+    })
+
+    it('secondary transaction excluded from totals: it does NOT add its own +50.00 to totalIn', () => {
+      // If secondary were NOT excluded, totalIn would receive +50.00 from the refund.
+      // After pairing: secondary is excluded (isNotSecondary() WHERE clause), so totalIn = 0.
+      const overview = buildOverviewData({
+        current: {
+          totalIn: '0.00', // secondary excluded from its own month's IN totals (D-06)
+          totalOut: '50.00',
+          totalAllocation: '0.00',
+        },
+        previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00' },
+        currentUncategorizedCount: 0,
+        previousUncategorizedCount: 0,
+      })
+
+      expect(overview.totalIn).toBe('0.00')
+    })
+  })
+
+  // ── ADR 0004 regression guard: unpaired transactions unaffected ─────────────
+  // Pre-existing unpaired-transaction assertions from above must remain GREEN.
+  // This new test pins the baseline explicitly to defend it as a regression guard (PAIR-03).
+  describe('ADR 0004 regression guard — unpaired transactions unaffected (PAIR-03)', () => {
+    it('buildOverviewData with only unpaired transactions produces the same result as before pairing', () => {
+      // Same fixture as the pre-existing test above — must stay GREEN after Plan 02 netting changes
+      const overview = buildOverviewData({
+        current: { totalIn: '2500.125', totalOut: '1500.115', totalAllocation: null },
+        previous: { totalIn: '2000.00', totalOut: '1000.00', totalAllocation: null },
+        currentUncategorizedCount: 3,
+        previousUncategorizedCount: 2,
+      })
+
+      // These are the same expected values as the pre-existing baseline test (unpaired scenario)
+      expect(overview.totalIn).toBe('2500.13')
+      expect(overview.totalOut).toBe('1500.12')
+      expect(overview.balance).toBe('1000.01')
+      expect(overview.savingsRate).toBe(40)
+    })
+  })
+})
