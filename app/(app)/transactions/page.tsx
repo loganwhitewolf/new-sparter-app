@@ -39,6 +39,11 @@ function buildTransactionTableKey(
       transaction.expenseStatus ?? '',
       transaction.expenseCategoryName ?? '',
       transaction.expenseSubCategoryName ?? '',
+      // Pairing fields (PAIR-02): remount the table when a pair is created/removed
+      // so the badge appears/disappears without a manual reload — the table copies
+      // `transactions` into local state, so prop updates only land on remount.
+      transaction.pairedWithId ?? '',
+      transaction.pairedNetAmount ?? '',
     ].join(':'))
     .join('|')
 
