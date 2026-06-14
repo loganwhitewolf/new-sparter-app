@@ -281,7 +281,7 @@ Plans:
 Plans:
 **Wave 0** *(test-first)*
 
-- [ ] 50-01-PLAN.md — RED test scaffolds: service ownership/primary/double-link, picker filter, dashboard netting, list select-shape (Nyquist Dimension 8)
+- [x] 50-01-PLAN.md — RED test scaffolds: service ownership/primary/double-link, picker filter, dashboard netting, list select-shape (Nyquist Dimension 8)
 
 **Wave 1** *(data foundation)*
 
@@ -325,6 +325,6 @@ Plans:
 | 47 | v2.0 | 5/5 | Complete    | 2026-06-11 |
 | 48 | v2.0 | 2/3 | In Progress|  |
 | 49 | v2.0 | 2/6 | In Progress|  |
-| 50 | v2.0 | 0/5 | Planned | - |
+| 50 | v2.0 | 1/5 | In Progress|  |
 
 **Total shipped: 45 phases · 159 plans complete**

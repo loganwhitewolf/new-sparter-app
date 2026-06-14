@@ -46,9 +46,9 @@
 
 ### Transaction Pairing (TX-PAIRING-01) — final phase
 
-- [ ] **PAIR-01**: A user can explicitly link a transaction to the opposite transaction that cancels it (order↔refund, expense↔reimbursement) as a 1:1 (or 1:N) relationship, additive over — not replacing — the implicit subcategory netting (ADR 0004).
-- [ ] **PAIR-02**: Paired transactions have a dedicated display in the transaction list that makes the link and its netting effect visible.
-- [ ] **PAIR-03**: Unlinking is possible, and the implicit-netting baseline behaviour is unchanged for transactions that are not explicitly paired.
+- [x] **PAIR-01**: A user can explicitly link a transaction to the opposite transaction that cancels it (order↔refund, expense↔reimbursement) as a 1:1 (or 1:N) relationship, additive over — not replacing — the implicit subcategory netting (ADR 0004).
+- [x] **PAIR-02**: Paired transactions have a dedicated display in the transaction list that makes the link and its netting effect visible.
+- [x] **PAIR-03**: Unlinking is possible, and the implicit-netting baseline behaviour is unchanged for transactions that are not explicitly paired.
 
 ---
 
@@ -96,9 +96,9 @@
 | DASH-04 | Phase 49 | Complete |
 | CAT-01 | Phase 49 | Complete |
 | CAT-02 | Phase 49 | Complete |
-| PAIR-01 | Phase 50 | Pending |
-| PAIR-02 | Phase 50 | Pending |
-| PAIR-03 | Phase 50 | Pending |
+| PAIR-01 | Phase 50 | Complete |
+| PAIR-02 | Phase 50 | Complete |
+| PAIR-03 | Phase 50 | Complete |
 
 **Coverage:**
 
