@@ -15,11 +15,13 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v1.16 (Phases 1–45) complete. The app now has:
+All milestones M001–v2.0 (Phases 1–50) complete. The app now has:
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
 - Import management, categorization (Tier 1 regex, Tier 2 history, Tier 3 AI gated)
 - Pattern suggestions: detect recurring uncategorized descriptions → review and promote during analysis → re-run post-import from `/import/[fileId]/suggestions`
-- Category settings with user-owned and system categories/subcategories, FlowNature per-subcategory (9-member enum incl. `income_extraordinary`)
+- Category settings with user-owned and system categories/subcategories on the v2.0 nature→direction model: `direction`(4) + `nature`(8) FK-backed lookup tables, `sub_category.nature_id` FK, `direction.included_in_totals` as the single totals-exclusion source (`category.type`/`flow_nature`/`amount_sign`/`exclude_from_totals` removed)
+- Direction-based dashboard/surfaces (v2.0): 4-direction view with allocation bucket, algebraic-sum aggregation, cascade options + table filters keyed by direction
+- Explicit transaction pairing (v2.0): 1:1 order↔refund linking with algebraic netting across all 8 dashboard aggregation sites, searchable counterpart picker, inline signed-net badge + popover, and unlink-restores-baseline
 - Redesigned year-scoped `/dashboard/overview` (v1.16): grouped Entrate/Uscite bar chart with always-on compact labels, 4 KPI cards (Entrate/Uscite/Bilancio/Tasso risparmio) with YTD-vs-prior delta and sentiment reading lines, filter chips for income type and expense nature, FlowNature ⓘ education popovers, inline amber uncategorized nudge with localStorage dismiss, per-month movers drill-down (click bar → top movers panel, humanized Italian copy, "spesa nuova" for new spend, defaults to last month with data)
 - First-import onboarding (5-step flow: upload → overview → education → categorize → outro); routing gate via RSC layout
 - Unified subcategory picker (vaul bottom sheet, type chips, master-detail rail, most-used section) across all 7 selection surfaces; pattern form reduced to regex + description + picker
@@ -29,7 +31,11 @@ All milestones M001–v1.16 (Phases 1–45) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Current Milestone: v2.0 — Nature/Direction Model Realignment
+## Next Milestone
+
+TBD — run `/gsd-new-milestone` to scope the next milestone. Operator deploy (R038/R039/R041 — live Vercel/Supabase/R2) remains operator-pending and is the most likely near-term candidate.
+
+## Last Shipped Milestone: v2.0 — Nature/Direction Model Realignment (shipped 2026-06-14)
 
 **Goal:** Replace the dual-axis `category.type` + `nature` classification with a single nature→direction model backed by lookup tables, migrate and recategorize all existing data, and add explicit transaction pairing on top of the implicit netting.
 
@@ -184,4 +190,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-14 — v2.0 all 5 phases complete (Phase 50 transaction-pairing shipped)*
+*Last updated: 2026-06-14 — after v2.0 milestone (Nature/Direction Model Realignment shipped)*

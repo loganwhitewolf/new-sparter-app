@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
-status: completed
-last_updated: "2026-06-14T15:25:10.533Z"
-last_activity: 2026-06-14
+status: Awaiting next milestone
+last_updated: "2026-06-14T15:47:51.121Z"
+last_activity: 2026-06-14 — Milestone v2.0 completed and archived
 progress:
   total_phases: 5
   completed_phases: 5
@@ -25,12 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 
 ## Current Position
 
-Phase: 50
-Plan: Not started
-Status: Complete — all 5 plans shipped
-Last activity: 2026-06-14
-
-Progress: [████████████████████] 91% milestone (5/5 phases Phase 50 done; 21/22 plans)
+Phase: Milestone v2.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-14 — Milestone v2.0 completed and archived
 
 ## Accumulated Context
 
@@ -115,8 +113,7 @@ Resume file: None — Phase 50 complete. Remaining v2.0 work: 48-03-PLAN.md (MIG
 
 ## Operator Next Steps
 
-- Plan Phase 47: taxonomy remap per `nature-remapping-WORKING.md`
-- `develop` is 26 commits ahead of `origin/develop` — push when ready
+- Start the next milestone with /gsd-new-milestone
 
 ## Performance Metrics
 
