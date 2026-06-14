@@ -101,10 +101,18 @@ export function CounterpartPickerDialog({
     [transactionId, transactionAmount],
   )
 
-  // Fetch counterparts whenever the dialog first opens.
+  // Fetch counterparts whenever the dialog opens. The dialog instance is reused
+  // across rows (open is toggled, not remounted), so the date-range state can be
+  // stale from a previously-opened transaction. Re-anchor the window to the current
+  // transaction's occurredAt on every open and fetch with those fresh values —
+  // never the stale state — so the counterpart is always inside the window.
   useEffect(() => {
     if (open) {
-      fetchCounterparts(dateFrom, dateTo)
+      const from = offsetDateISO(transactionOccurredAt, -90)
+      const to = offsetDateISO(transactionOccurredAt, 90)
+      setDateFrom(from)
+      setDateTo(to)
+      fetchCounterparts(from, to)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
