@@ -35,6 +35,7 @@ import {
   computeSavingsRate,
 } from '@/lib/utils/dashboard'
 import { toDecimal } from '@/lib/utils/decimal'
+import { effectiveAmount, isNotSecondary } from '@/lib/dal/transaction-pairs-sql'
 
 export type OverviewData = {
   totalIn: string
@@ -433,9 +434,9 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
   try {
     const rows = await db
       .select({
-        totalIn: sql<string>`coalesce(sum(case when ${direction.code} = 'in' then ${transactionTable.amount} else 0 end), 0)::text`,
-        totalOut: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' then ${transactionTable.amount} else 0 end)), 0)::text`,
-        totalAllocation: sql<string>`coalesce(sum(case when ${direction.code} = 'allocation' then ${transactionTable.amount} else 0 end), 0)::text`,
+        totalIn: sql<string>`coalesce(sum(case when ${direction.code} = 'in' then ${effectiveAmount()} else 0 end), 0)::text`,
+        totalOut: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' then ${effectiveAmount()} else 0 end)), 0)::text`,
+        totalAllocation: sql<string>`coalesce(sum(case when ${direction.code} = 'allocation' then ${effectiveAmount()} else 0 end), 0)::text`,
       })
       .from(transactionTable)
       .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -460,7 +461,8 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
         and(
           dateScopedTransactions(userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
-          ne(direction.code, 'transfer')
+          ne(direction.code, 'transfer'),
+          isNotSecondary()
         )
       )
 
@@ -917,7 +919,7 @@ export const getCategoriesBreakdown = cache(
           subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
           subCategorySlug: subCategory.slug,
           count: countDistinct(expense.id),
-          amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+          amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
         })
         .from(transactionTable)
         .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -943,6 +945,7 @@ export const getCategoriesBreakdown = cache(
             dateScopedTransactions(userId, from, to),
             expenseStatusIncludedInDashboardTotals(),
             eq(direction.includedInTotals, true),
+            isNotSecondary(),
             typeFilter
           )
         )
@@ -976,7 +979,7 @@ export const getCategoryRanking = cache(
           categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
           month: monthSql,
           count: countDistinct(expense.id),
-          amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+          amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
         })
         .from(transactionTable)
         .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -1002,11 +1005,12 @@ export const getCategoryRanking = cache(
             dateScopedTransactions(userId, from, to),
             expenseStatusIncludedInDashboardTotals(),
             eq(direction.includedInTotals, true),
+            isNotSecondary(),
             typeFilter
           )
         )
         .groupBy(category.id, monthSql, direction.code)
-        .orderBy(desc(sql`coalesce(abs(sum(${transactionTable.amount})), 0)`), category.id, monthSql)
+        .orderBy(desc(sql`coalesce(abs(sum(${effectiveAmount()})), 0)`), category.id, monthSql)
     } catch {
       rows = []
     }
@@ -1035,7 +1039,7 @@ export const getCategoryDeviations = cache(
         db
           .select({
             id: groupColumn,
-            amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
           })
           .from(transactionTable)
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -1061,6 +1065,7 @@ export const getCategoryDeviations = cache(
               dateScopedTransactions(userId, reference.from, reference.to),
               expenseStatusIncludedInDashboardTotals(),
               eq(direction.includedInTotals, true),
+              isNotSecondary(),
               typeFilter,
               categoryScope
             )
@@ -1070,7 +1075,7 @@ export const getCategoryDeviations = cache(
           .select({
             id: groupColumn,
             month: monthSql,
-            amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
           })
           .from(transactionTable)
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -1096,6 +1101,7 @@ export const getCategoryDeviations = cache(
               dateScopedTransactions(userId, baseline.from, baseline.to),
               expenseStatusIncludedInDashboardTotals(),
               eq(direction.includedInTotals, true),
+              isNotSecondary(),
               typeFilter,
               categoryScope
             )
@@ -1198,7 +1204,7 @@ export const getCategoryDetail = cache(
             categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
             month: monthSql,
             count: countDistinct(expense.id),
-            amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
           })
           .from(transactionTable)
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -1225,7 +1231,8 @@ export const getCategoryDetail = cache(
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
-              eq(direction.includedInTotals, true)
+              eq(direction.includedInTotals, true),
+              isNotSecondary()
             )
           )
           .groupBy(category.id, monthSql, direction.code)
@@ -1240,7 +1247,7 @@ export const getCategoryDetail = cache(
             subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
             subCategorySlug: subCategory.slug,
             count: countDistinct(expense.id),
-            amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
           })
           .from(transactionTable)
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -1267,11 +1274,12 @@ export const getCategoryDetail = cache(
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
-              eq(direction.includedInTotals, true)
+              eq(direction.includedInTotals, true),
+              isNotSecondary()
             )
           )
           .groupBy(category.id, subCategory.id, userSubcategoryOverride.customName, direction.code)
-          .orderBy(desc(sql`coalesce(abs(sum(${transactionTable.amount})), 0)`), sql`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`, subCategory.id),
+          .orderBy(desc(sql`coalesce(abs(sum(${effectiveAmount()})), 0)`), sql`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`, subCategory.id),
         db
           .select({
             id: transactionTable.id,
@@ -1309,10 +1317,11 @@ export const getCategoryDetail = cache(
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
-              eq(direction.includedInTotals, true)
+              eq(direction.includedInTotals, true),
+              isNotSecondary()
             )
           )
-          .orderBy(desc(sql`abs(${transactionTable.amount})`), desc(transactionTable.occurredAt), transactionTable.id)
+          .orderBy(desc(sql`abs(${effectiveAmount()})`), desc(transactionTable.occurredAt), transactionTable.id)
           .limit(5),
       ])
 
@@ -1355,7 +1364,7 @@ export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Pr
       .select({
         month: monthSql,
         nature: natureSql,
-        amount: sql<string>`coalesce(sum(${transactionTable.amount}), 0)::text`,
+        amount: sql<string>`coalesce(sum(${effectiveAmount()}), 0)::text`,
         totalNc: sql<number>`count(distinct case when ${expense.status} = '1' and ${expense.subCategoryId} is null then ${expense.id} end)`,
         totalIgn: sql<number>`count(distinct case when ${direction.code} = 'transfer' then ${expense.id} end)`,
       })
@@ -1383,6 +1392,7 @@ export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Pr
           dateScopedTransactions(userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
           or(isNull(direction.code), ne(direction.code, 'transfer')),
+          isNotSecondary()
         )
       )
       .groupBy(monthSql, natureSql)
