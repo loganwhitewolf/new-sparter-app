@@ -6,6 +6,25 @@ import { transaction, transactionPair } from '@/lib/db/schema'
 import { toDecimal } from '@/lib/utils/decimal'
 
 /**
+ * Extract the Postgres SQLSTATE error code from a Drizzle/pg error's `cause`.
+ * Returns '' when no code is present. Used to detect unique-constraint
+ * violations (23505) and surface a localized message (WR-03).
+ */
+function errorCauseCode(error: unknown): string {
+  const cause =
+    typeof error === 'object' && error !== null && 'cause' in error
+      ? (error as { cause?: unknown }).cause
+      : undefined
+
+  if (typeof cause !== 'object' || cause === null || !('code' in cause)) {
+    return ''
+  }
+
+  const code = (cause as { code?: unknown }).code
+  return typeof code === 'string' ? code : ''
+}
+
+/**
  * Create a 1:1 transaction pair (e.g. expense ↔ reimbursement).
  *
  * Security (D-01 / T-50-01): transaction_pair has no userId column.
@@ -114,10 +133,20 @@ export async function createPair(input: {
 
     // 5. Insert pair. Unique constraints on transactionAId and transactionBId
     //    enforce D-02 (1:1 cardinality) and surface a thrown error for T-50-02.
-    await tx.insert(transactionPair).values({
-      transactionAId: primaryId,
-      transactionBId: secondaryId,
-    })
+    //    The raw Postgres unique-violation (code 23505) leaks internal constraint
+    //    names in English; translate it to a localized message (WR-03) so the
+    //    Italian UI never shows DB internals.
+    try {
+      await tx.insert(transactionPair).values({
+        transactionAId: primaryId,
+        transactionBId: secondaryId,
+      })
+    } catch (e) {
+      if (errorCauseCode(e) === '23505') {
+        throw new Error('Una delle transazioni è già collegata a un’altra.')
+      }
+      throw e
+    }
   })
 }
 

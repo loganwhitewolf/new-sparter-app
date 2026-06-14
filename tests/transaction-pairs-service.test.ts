@@ -316,6 +316,55 @@ describe('createPair', () => {
         createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
       ).rejects.toThrow()
     })
+
+    it('translates a Postgres unique violation (23505) into a localized message (WR-03)', async () => {
+      const tx1 = makeTx('tx-1', '-100.00', new Date('2026-01-10'), 'user-1')
+      const tx2 = makeTx('tx-2', '+50.00', new Date('2026-01-15'), 'user-1')
+
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        const row = callCount === 1 ? tx1 : tx2
+        return makeSelectChain([row])
+      })
+
+      // Drizzle/pg surface the SQLSTATE on error.cause.code
+      const pgError = new Error('duplicate key value violates unique constraint "transaction_pair_a_unique"')
+      ;(pgError as unknown as { cause: { code: string } }).cause = { code: '23505' }
+      const insertChain = { values: vi.fn(() => Promise.reject(pgError)) }
+      mocks.dbInsertChain.mockReturnValue(insertChain)
+
+      let errorMsg = ''
+      try {
+        await createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' })
+      } catch (e) {
+        if (e instanceof Error) errorMsg = e.message
+      }
+
+      // No DB internals leak; the user sees the localized message.
+      expect(errorMsg).toContain('già collegata')
+      expect(errorMsg).not.toContain('unique constraint')
+      expect(errorMsg).not.toContain('transaction_pair_a_unique')
+    })
+
+    it('re-throws a non-unique-violation insert error unchanged (WR-03)', async () => {
+      const tx1 = makeTx('tx-1', '-100.00', new Date('2026-01-10'), 'user-1')
+      const tx2 = makeTx('tx-2', '+50.00', new Date('2026-01-15'), 'user-1')
+
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        const row = callCount === 1 ? tx1 : tx2
+        return makeSelectChain([row])
+      })
+
+      const insertChain = { values: vi.fn(() => Promise.reject(new Error('connection reset'))) }
+      mocks.dbInsertChain.mockReturnValue(insertChain)
+
+      await expect(
+        createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+      ).rejects.toThrow('connection reset')
+    })
   })
 
   // ── (g) Self-pair guard (CR-01) ───────────────────────────────────────────
