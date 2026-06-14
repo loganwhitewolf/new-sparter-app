@@ -285,7 +285,7 @@ Plans:
 
 **Wave 1** *(data foundation)*
 
-- [ ] 50-02-PLAN.md — [BLOCKING] transaction_pair table + relations + generated/applied 0020 migration + shared isNotSecondary()/effectiveAmount() helpers
+- [x] 50-02-PLAN.md — [BLOCKING] transaction_pair table + relations + generated/applied 0020 migration + shared isNotSecondary()/effectiveAmount() helpers
 
 **Wave 2** *(backend + DAL — parallel, disjoint files; blocked on Wave 1)*
 
@@ -325,6 +325,6 @@ Plans:
 | 47 | v2.0 | 5/5 | Complete    | 2026-06-11 |
 | 48 | v2.0 | 2/3 | In Progress|  |
 | 49 | v2.0 | 2/6 | In Progress|  |
-| 50 | v2.0 | 1/5 | In Progress|  |
+| 50 | v2.0 | 2/5 | In Progress|  |
 
 **Total shipped: 45 phases · 159 plans complete**

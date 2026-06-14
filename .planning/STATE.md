@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: executing
-last_updated: "2026-06-14T06:31:08.444Z"
+last_updated: "2026-06-14T06:54:35.290Z"
 last_activity: 2026-06-14 -- Phase 50 execution started
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 22
-  completed_plans: 18
+  completed_plans: 19
   percent: 80
 stopped_at: Phase 49 Plan 06 — COMPLETE
 ---
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 ## Current Position
 
 Phase: 50 (transaction-pairing) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-06-14 -- Phase 50 execution started
 
@@ -68,6 +68,8 @@ v2.0 / Phase 46 decisions (shipped 2026-06-11):
 - [49-04]: OUT_KEYS narrowed to essential/discretionary/debt only; savings/investment in allocation bucket; onMonthSelect carries direction param; allocationReading uses "piu/meno del {prevYear}" copy from UI-SPEC
 - [49-04 post-checkpoint]: totalAllocation display wrapped in abs() — DAL algebraic value unchanged; movers changed to 3-column simultaneous layout (removed per-direction routing)
 - [49-05]: buildDirectionNatureMap replaces buildTypeNatureMap (direction-keyed, allocation bucket); SubcategoryPicker 4 direction chips; table filters key=direction + dependsOn=direction; setSubcategoryNatureAction resolves real natureId via NATURE_ID_BY_CODE; detectedAmountSign removed (ADR 0012)
+- [Phase ?]: 50-02 D-07: yarn db:generate --name transaction_pair bypasses drizzle-kit TTY prompt; --name flag is standard workaround for headless migration generation contexts
+- [Phase ?]: 50-02: transaction_pair table LIVE in local dev DB (0020 migration applied); no userId column on pair table (D-01/T-50-01) — ownership enforced in Plan 03 service layer
 
 ### Planning Risk
 
@@ -100,7 +102,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-14T06:31:08.440Z
+Last session: 2026-06-14T06:54:35.286Z
 Handoff synced: 2026-06-12 — 49-06 SUMMARY committed (e3a430b)
 Resume file: .planning/phases/50-transaction-pairing/50-CONTEXT.md
 
@@ -117,3 +119,4 @@ Resume file: .planning/phases/50-transaction-pairing/50-CONTEXT.md
 |-------|------|----------|-------|
 | Phase 49 P02 | 30m | 2 tasks | 5 files |
 | Phase 50 P01 | 20m | 2 tasks | 4 files |
+| Phase 50-transaction-pairing P50-02 | 35min | 2 tasks | 5 files |
