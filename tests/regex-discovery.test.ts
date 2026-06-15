@@ -12,9 +12,15 @@ describe('normalizeToken', () => {
     expect(normalizeToken('#ref')).toBe('ref')
   })
 
-  it('preserves internal dots/apostrophes (e.g. claude.ai)', () => {
+  it('preserves internal dots/apostrophes (e.g. claude.ai, ced.su)', () => {
     expect(normalizeToken('claude.ai')).toBe('claude.ai')
+    expect(normalizeToken('ced.su')).toBe('ced.su')
     expect(normalizeToken("l'ape")).toBe("l'ape")
+  })
+
+  it('strips trailing separators so bank prefixes collapse (Ord:, Beneficiario:)', () => {
+    expect(normalizeToken('ord:')).toBe('ord')
+    expect(normalizeToken('beneficiario:')).toBe('beneficiario')
   })
 })
 
@@ -26,6 +32,8 @@ describe('isSignificantToken', () => {
     expect(isSignificantToken('eur')).toBe(false) // currency stopword
     expect(isSignificantToken('srl')).toBe(false) // legal form
     expect(isSignificantToken('paypal')).toBe(false) // payment processor
+    expect(isSignificantToken('beneficiario')).toBe(false) // bank-structural prefix
+    expect(isSignificantToken('ord')).toBe(false) // bank-structural prefix
   })
 
   it('accepts real merchant tokens', () => {

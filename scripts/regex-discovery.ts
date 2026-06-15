@@ -65,6 +65,10 @@ const STOPWORDS = new Set<string>([
   'una', 'uno', 'gli', 'che', 'non', 'sul', 'sulla',
   // payment processors (the merchant is the token after the `*`)
   'paypal', 'sumup', 'satispay', 'nexi', 'stripe', 'klarna', 'scalapay', 'izettle',
+  // structured bank-statement prefixes (Italian bonifico / dossier text) — the merchant
+  // or real signal is elsewhere in the line, not in these wrappers
+  'ord', 'ordinante', 'ben', 'beneficiario', 'banca', 'causale', 'canale', 'trn',
+  'iban', 'dossier', 'mand', 'sdd', 'accredito',
 ])
 
 type UncoveredRow = { description: string; amount: string }
@@ -178,10 +182,12 @@ async function loadAllActiveFormats(database: Db): Promise<ImportFormatCandidate
 // Clustering + proposal helpers
 // ---------------------------------------------------------------------------
 
-// Strip leading processor/marker punctuation so "*Vodafoneita" tokenizes as "vodafoneita".
-// Internal dots/apostrophes/hyphens are preserved (e.g. "claude.ai", "www.generali.it").
+// Strip leading processor/marker punctuation so "*Vodafoneita" tokenizes as "vodafoneita",
+// and trailing separators so "Ord:" / "Beneficiario:" tokenize as "ord" / "beneficiario"
+// (then caught by stopwords). Internal dots/apostrophes are preserved (e.g. "claude.ai",
+// "ced.su", "www.generali.it").
 export function normalizeToken(token: string): string {
-  return token.replace(/^[*#@]+/, '')
+  return token.replace(/^[*#@]+/, '').replace(/[:;,]+$/, '')
 }
 
 export function isSignificantToken(token: string): boolean {
