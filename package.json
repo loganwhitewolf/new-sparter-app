@@ -21,6 +21,7 @@
     "db:seed-extras": "tsx scripts/seed-extras.ts",
     "db:seed-extras:staging": "tsx scripts/seed-extras.ts --staging",
     "db:seed-extras:production": "tsx scripts/seed-extras.ts --production",
+    "regex:discover": "tsx scripts/regex-discovery.ts",
     "db:verify": "tsx scripts/verify-migration.ts",
     "db:verify:staging": "tsx scripts/verify-migration.ts --staging",
     "db:verify:production": "tsx scripts/verify-migration.ts --production",

@@ -69,3 +69,6 @@ vendor/
 coverage/
 .cache/
 tmp/
+
+# Real bank exports + regex-discovery reports — personal financial PII, never commit (quick-260615-dtm)
+.data/
