@@ -29,7 +29,7 @@ export default async function OnboardingPage({
 
   const { userId } = await verifySession();
 
-  // Theme is resolved by the documented onboardingThemeForStep invariant (step 4 = light).
+  // Theme is resolved by the documented onboardingThemeForStep invariant (all steps dark).
   // Do not re-derive it inline — see lib/validations/onboarding.ts for the source of truth.
   const theme = onboardingThemeForStep(step);
 

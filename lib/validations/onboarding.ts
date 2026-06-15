@@ -18,15 +18,16 @@ export const STEP_NAMES: Record<1 | 2 | 3 | 4 | 5, string> = {
 /**
  * Maps an onboarding step to its visual theme. This is the single documented source of
  * truth for the step→theme decision — page.tsx MUST call this instead of re-deriving the
- * theme inline, so a future refactor cannot silently drop the step-4 light theme.
+ * theme inline.
  *
- * INVARIANT: step 4 (Categorizzazione) is the ONLY light step; every other step is dark.
- * WHY: step 4's card UI (expense list + subcategory pickers) is designed against the
- * onboarding-light token palette; the other four steps render the dark hero layout.
- * A regression test asserts step 4 → 'light' and steps 1,2,3,5 → 'dark'.
+ * INVARIANT: EVERY onboarding step is dark, including step 4 (Categorizzazione).
+ * WHY: the whole onboarding flow uses the onboarding-dark palette for visual consistency.
+ * Step 4 was historically (and repeatedly) set to 'light' by mistake — a recurring
+ * regression. The regression test asserts ALL steps (incl. 4) → 'dark' so light cannot
+ * sneak back in. Do not special-case step 4 to 'light' again.
  */
-export function onboardingThemeForStep(step: 1 | 2 | 3 | 4 | 5): 'light' | 'dark' {
-  return step === 4 ? 'light' : 'dark'
+export function onboardingThemeForStep(_step: 1 | 2 | 3 | 4 | 5): 'light' | 'dark' {
+  return 'dark'
 }
 
 /**

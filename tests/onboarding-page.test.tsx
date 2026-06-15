@@ -185,9 +185,9 @@ describe('OnboardingPage routing (R-OB-03, R-OB-04, R-OB-06, R-OB-09)', () => {
     expect(html).toContain('Vai alla dashboard')
   })
 
-  it("uses 'light' theme on step 4, 'dark' otherwise (R-OB-09)", async () => {
+  it("uses 'dark' theme on step 4 like every other step (R-OB-09)", async () => {
     const html = await renderPageHtml('4')
-    expect(html).toContain('data-theme="light"')
+    expect(html).toContain('data-theme="dark"')
   })
 
   it("uses 'dark' theme on step 1 (R-OB-09)", async () => {

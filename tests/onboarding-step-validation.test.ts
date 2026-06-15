@@ -47,9 +47,9 @@ describe('parseOnboardingStep (R-OB-03)', () => {
   })
 })
 
-describe('onboardingThemeForStep (R-OB-09 — step-4 light-theme invariant)', () => {
-  it('resolves step 4 to the light theme', () => {
-    expect(onboardingThemeForStep(4)).toBe('light')
+describe('onboardingThemeForStep (R-OB-09 — all steps dark invariant)', () => {
+  it('resolves step 4 to the dark theme (regression guard — must NOT be light)', () => {
+    expect(onboardingThemeForStep(4)).toBe('dark')
   })
 
   it('resolves step 1 to the dark theme', () => {
