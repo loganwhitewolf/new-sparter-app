@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import { verifySession } from "@/lib/dal/auth";
 import { markOnboardingCompleted } from "@/lib/dal/users";
-import { parseOnboardingStep } from "@/lib/validations/onboarding";
+import {
+  onboardingThemeForStep,
+  parseOnboardingStep,
+} from "@/lib/validations/onboarding";
 import { OnboardingShell } from "@/app/(app)/onboarding/_components/onboarding-shell";
 import { Step1Upload } from "@/app/(app)/onboarding/_components/step-1-upload";
 import { Step2Overview } from "@/app/(app)/onboarding/_components/step-2-overview";
@@ -26,7 +29,9 @@ export default async function OnboardingPage({
 
   const { userId } = await verifySession();
 
-  const theme = step === 4 ? "light" : "dark";
+  // Theme is resolved by the documented onboardingThemeForStep invariant (step 4 = light).
+  // Do not re-derive it inline — see lib/validations/onboarding.ts for the source of truth.
+  const theme = onboardingThemeForStep(step);
 
   // Show sticky CTA on steps 2-4; step 1 auto-advances on upload and step 5 has final CTAs.
   const footer = step >= 2 && step <= 4 ? <StickyCta step={step} /> : undefined;
