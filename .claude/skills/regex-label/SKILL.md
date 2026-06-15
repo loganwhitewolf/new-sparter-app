@@ -29,14 +29,41 @@ This is **judgment work** — prefer running it on Opus. Each chosen pattern sil
 Read the report at the resolved path. Extract, per ranked cluster: merchant token, tx count, EUR total, sample descriptions, the tool's proposed regex, and any collision notes. Also note the **Unmatched files** section (layouts the import layer didn't recognize) — surface those to the user separately; they are a format-coverage problem, not a pattern problem.
 
 ### 2. Load the valid target taxonomy
-Query the operator DB for active subcategories so proposals map to real slugs (same env resolution as `yarn db:seed-extras`):
+Query the operator DB for active subcategories so proposals map to real slugs. Use the project's `db-config` env resolution (same as `yarn db:seed-extras`) — NOT a raw `process.env.DATABASE_URL`, which is not loaded automatically. Write a throwaway script in the project root (an inline `tsx -e` fails: top-level await is unsupported under the cjs target, and `/tmp` can't resolve `node_modules`):
 
 ```bash
-# active subcategories with their parent category, as JSON
-yarn tsx -e "import {drizzle} from 'drizzle-orm/node-postgres';import {Pool} from 'pg';import {eq} from 'drizzle-orm';import {subCategory,category} from './lib/db/schema';const p=new Pool({connectionString:process.env.DATABASE_URL});const db=drizzle(p);const rows=await db.select({slug:subCategory.slug,name:subCategory.name,cat:category.slug}).from(subCategory).innerJoin(category,eq(subCategory.categoryId,category.id)).where(eq(subCategory.isActive,true));console.log(JSON.stringify(rows,null,0));await p.end();"
+cat > .regex-taxonomy.ts <<'EOF'
+import { drizzle } from 'drizzle-orm/node-postgres'
+import { Pool } from 'pg'
+import { eq } from 'drizzle-orm'
+import { subCategory, category } from './lib/db/schema'
+import {
+  getOperatorDatabaseConfig,
+  loadOperatorEnv,
+  pgPoolConfigFromOperatorConfig,
+  resolveOperatorDatabaseTarget,
+} from './scripts/db-config'
+
+async function main() {
+  loadOperatorEnv()
+  const r = getOperatorDatabaseConfig({ target: resolveOperatorDatabaseTarget() })
+  if (!r.ok) { console.error('config error:', r.error); process.exit(1) }
+  const pool = new Pool(pgPoolConfigFromOperatorConfig(r.config))
+  const db = drizzle(pool)
+  const rows = await db
+    .select({ slug: subCategory.slug, name: subCategory.name, cat: category.slug })
+    .from(subCategory)
+    .innerJoin(category, eq(subCategory.categoryId, category.id))
+    .where(eq(subCategory.isActive, true))
+  console.log(JSON.stringify(rows))
+  await pool.end()
+}
+main().catch((e) => { console.error(e); process.exit(1) })
+EOF
+yarn tsx .regex-taxonomy.ts; rm -f .regex-taxonomy.ts
 ```
 
-If the DB is unreachable, fall back to the slugs in `scripts/seed-data.ts` (the `subCategories` shapes), but flag that they may be stale relative to `seed-extras.ts` renames.
+The `getOperatorDatabaseConfig` result shape is `{ ok, config, diagnostics }` (use `r.config`, not `r.value`). If the DB is unreachable, fall back to the slugs in `scripts/seed-data.ts` (the `subCategories` shapes), but flag that they may be stale relative to `seed-extras.ts` renames.
 
 ### 3. Propose mappings (interactive)
 Walk clusters in rank order (highest tx count / EUR impact first). For each, propose:
