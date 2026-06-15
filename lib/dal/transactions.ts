@@ -640,19 +640,20 @@ export const getTopExpensesForOnboarding = cache(
     // Hard cap to prevent DoS from large limit values
     const safeLimitValue = Math.min(limit, 100)
 
-    // Columns are unqualified where unambiguous (description_hash/total_amount/title/user_id
-    // live only on expense); only expense.id is qualified to disambiguate from sub_category.id.
+    // sub_category ALSO has a user_id column, so user_id (and id) are ambiguous after the
+    // JOIN and MUST be qualified with expense. description_hash/total_amount/title live only
+    // on expense; sub_category.name is the only column taken from the joined table.
     const result = await db.execute(sql`
       SELECT DISTINCT ON (description_hash)
         expense.id AS "id",
         title,
         description_hash AS "descriptionHash",
         total_amount AS "totalAmount",
-        sub_category_id AS "subCategoryId",
+        expense.sub_category_id AS "subCategoryId",
         sub_category.name AS "subCategoryName"
       FROM expense
       LEFT JOIN sub_category ON sub_category.id = expense.sub_category_id
-      WHERE user_id = ${userId}
+      WHERE expense.user_id = ${userId}
         AND total_amount::numeric < 0
       ORDER BY description_hash, ABS(total_amount::numeric) DESC
       LIMIT ${safeLimitValue}
