@@ -170,6 +170,7 @@ const {
   updateTransactionCustomTitle,
   getTransactionCount,
   getTopUncategorizedExpenses,
+  getTopExpensesForOnboarding,
 } = await import('../lib/dal/transactions')
 
 describe('transaction DAL query helpers', () => {
@@ -779,6 +780,106 @@ describe('getTopUncategorizedExpenses (R-OB-07 query)', () => {
     expect(result[0].id).toBe('e2') // -99.00 largest absolute value
     expect(result[1].id).toBe('e3') // -12.50
     expect(result[2].id).toBe('e1') // -5.00
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getTopExpensesForOnboarding — stable top-15 incl. categorized rows (260615-n3t)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('getTopExpensesForOnboarding (260615-n3t — stable list)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.selectedShapes.length = 0
+    mocks.whereArgs.length = 0
+    mocks.executeArgs.length = 0
+    mocks.executeResult = null
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+  })
+
+  it('executes parameterized SQL with DISTINCT ON, total_amount < 0, ORDER BY ABS DESC, LIMIT', async () => {
+    const { db } = await import('@/lib/db')
+
+    mocks.executeResult = { rows: [] }
+
+    await getTopExpensesForOnboarding('user-1')
+
+    expect(db.execute).toHaveBeenCalledTimes(1)
+    const sqlArg = mocks.executeArgs[0] as { strings: string[]; values: unknown[] }
+    const fullSql = sqlArg.strings.join('?')
+    expect(fullSql).toContain('DISTINCT ON (description_hash)')
+    expect(fullSql).toContain('total_amount::numeric < 0')
+    expect(fullSql).toContain('ORDER BY description_hash, ABS(total_amount::numeric) DESC')
+    expect(fullSql).toContain('LIMIT')
+  })
+
+  it('does NOT filter sub_category_id IS NULL — the list is stable across categorization (regression guard)', async () => {
+    mocks.executeResult = { rows: [] }
+
+    await getTopExpensesForOnboarding('user-1')
+
+    const sqlArg = mocks.executeArgs[0] as { strings: string[]; values: unknown[] }
+    const fullSql = sqlArg.strings.join('?')
+    expect(fullSql).not.toContain('sub_category_id IS NULL')
+  })
+
+  it('LEFT JOINs sub_category and selects the subcategory id + name per row', async () => {
+    mocks.executeResult = { rows: [] }
+
+    await getTopExpensesForOnboarding('user-1')
+
+    const sqlArg = mocks.executeArgs[0] as { strings: string[]; values: unknown[] }
+    const fullSql = sqlArg.strings.join('?')
+    expect(fullSql).toContain('LEFT JOIN sub_category')
+    expect(fullSql).toContain('subCategoryName')
+    expect(fullSql).toContain('subCategoryId')
+  })
+
+  it('defaults limit to 15 when not provided', async () => {
+    mocks.executeResult = { rows: [] }
+
+    await getTopExpensesForOnboarding('user-1')
+
+    const sqlArg = mocks.executeArgs[0] as { strings: string[]; values: unknown[] }
+    expect(sqlArg.values).toContain(15)
+  })
+
+  it('passes through a custom limit', async () => {
+    mocks.executeResult = { rows: [] }
+
+    await getTopExpensesForOnboarding('user-1', 5)
+
+    const sqlArg = mocks.executeArgs[0] as { strings: string[]; values: unknown[] }
+    expect(sqlArg.values).toContain(5)
+  })
+
+  it('hard-caps the limit at 100', async () => {
+    mocks.executeResult = { rows: [] }
+
+    await getTopExpensesForOnboarding('user-1', 9999)
+
+    const sqlArg = mocks.executeArgs[0] as { strings: string[]; values: unknown[] }
+    expect(sqlArg.values).toContain(100)
+    expect(sqlArg.values).not.toContain(9999)
+  })
+
+  it('returns rows sorted by |totalAmount| DESC after JS-side reorder (incl. categorized rows)', async () => {
+    mocks.executeResult = {
+      rows: [
+        { id: 'e1', title: 'AMAZON', descriptionHash: 'aaa', totalAmount: '-5.00', subCategoryId: null, subCategoryName: null },
+        { id: 'e2', title: 'NETFLIX', descriptionHash: 'bbb', totalAmount: '-99.00', subCategoryId: 7, subCategoryName: 'Streaming' },
+        { id: 'e3', title: 'GAS', descriptionHash: 'ccc', totalAmount: '-12.50', subCategoryId: null, subCategoryName: null },
+      ],
+    }
+
+    const result = await getTopExpensesForOnboarding('user-1')
+
+    expect(result[0].id).toBe('e2') // -99.00 largest absolute value
+    expect(result[1].id).toBe('e3') // -12.50
+    expect(result[2].id).toBe('e1') // -5.00
+    // categorized row is retained with its subcategory metadata
+    expect(result[0].subCategoryId).toBe(7)
+    expect(result[0].subCategoryName).toBe('Streaming')
   })
 })
 
