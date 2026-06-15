@@ -26,7 +26,7 @@ This is **judgment work** — prefer running it on Opus. Each chosen pattern sil
 ## Procedure
 
 ### 1. Read the report
-Read the report at the resolved path. Extract, per ranked cluster: merchant token, tx count, EUR total, sample descriptions, the tool's proposed regex, and any collision notes. Also note the **Unmatched files** section (layouts the import layer didn't recognize) — surface those to the user separately; they are a format-coverage problem, not a pattern problem.
+First make sure the report is fresh: if `.data/regex-discovery/` contains input files newer than the report (or the user references a file that the report does not reflect — the user may point at the report path while meaning "analyze the new file I just dropped"), run `yarn regex:discover` to regenerate it before reading. Then read the report at the resolved path. Extract, per ranked cluster: merchant token, tx count, EUR total, sample descriptions, the tool's proposed regex, and any collision notes. Also note the **Unmatched files** section (layouts the import layer didn't recognize) — surface those to the user separately; they are a format-coverage problem, not a pattern problem.
 
 ### 2. Load the valid target taxonomy
 Query the operator DB for active subcategories so proposals map to real slugs. Use the project's `db-config` env resolution (same as `yarn db:seed-extras`) — NOT a raw `process.env.DATABASE_URL`, which is not loaded automatically. Write a throwaway script in the project root (an inline `tsx -e` fails: top-level await is unsupported under the cjs target, and `/tmp` can't resolve `node_modules`):
