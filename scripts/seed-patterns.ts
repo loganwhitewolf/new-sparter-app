@@ -75,25 +75,30 @@ async function seedPatterns() {
     throw new Error(`Invalid regex in seed-patterns-data: ${validation.invalidRegex.join('; ')}`)
   }
 
-  const deleted = await db.delete(categorizationPattern).where(isNull(categorizationPattern.userId))
-  const deletedCount = (deleted as unknown as { rowCount?: number }).rowCount ?? 0
-  console.log(`  deleted ${deletedCount} existing system pattern(s)`)
+  // Atomic full replace: if the insert fails mid-flight the delete must roll back too,
+  // otherwise a transient error would leave production with zero system patterns until
+  // an operator re-runs the seed (Tier-1 categorization silently disabled meanwhile).
+  await db.transaction(async (tx) => {
+    const deleted = await tx.delete(categorizationPattern).where(isNull(categorizationPattern.userId))
+    const deletedCount = (deleted as unknown as { rowCount?: number }).rowCount ?? 0
+    console.log(`  deleted ${deletedCount} existing system pattern(s)`)
 
-  await db.insert(categorizationPattern).values(
-    systemCategorizationPatterns.map((row) => ({
-      userId: null,
-      pattern: row.pattern,
-      subCategoryId: subCategoryIdBySlug.get(row.subCategorySlug)!,
-      confidence: row.confidence.toFixed(2),
-      priority: row.priority,
-      description: row.description,
-      isActive: true,
-    })),
-  )
+    await tx.insert(categorizationPattern).values(
+      systemCategorizationPatterns.map((row) => ({
+        userId: null,
+        pattern: row.pattern,
+        subCategoryId: subCategoryIdBySlug.get(row.subCategorySlug)!,
+        confidence: row.confidence.toFixed(2),
+        priority: row.priority,
+        description: row.description,
+        isActive: true,
+      })),
+    )
 
-  await db.execute(
-    sql`select setval(pg_get_serial_sequence('categorization_pattern', 'id'), coalesce((select max(id) from categorization_pattern), 0) + 1, false)`,
-  )
+    await tx.execute(
+      sql`select setval(pg_get_serial_sequence('categorization_pattern', 'id'), coalesce((select max(id) from categorization_pattern), 0) + 1, false)`,
+    )
+  })
 
   console.log(`  inserted ${systemCategorizationPatterns.length} system pattern(s)`)
   console.log(JSON.stringify({ event: 'seed_patterns_succeeded', target: seedDiagnostics.target }))
