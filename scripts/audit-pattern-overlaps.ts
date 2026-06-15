@@ -2,21 +2,19 @@
  * One-off overlap audit for systemCategorizationPatterns.
  * Run: yarn tsx scripts/audit-pattern-overlaps.ts
  */
+import { applyTier1Regex } from '../lib/services/categorization-match'
 import { systemCategorizationPatterns } from './seed-patterns-data'
 
 type Row = (typeof systemCategorizationPatterns)[number] & { index: number }
 
+// Use the production matcher (single source of truth) instead of re-implementing the
+// strip+regex rule, so this audit can never drift from how coverage actually behaves.
 function matches(pattern: string, description: string): boolean {
-  try {
-    const regex = new RegExp(pattern, 'i')
-    const stripped = description
-      .split(/\s+/)
-      .filter((t) => t.length > 0 && !/^\d+$/.test(t))
-      .join(' ')
-    return regex.test(description) || regex.test(stripped)
-  } catch {
-    return false
-  }
+  return (
+    applyTier1Regex(description, '0', [
+      { id: 0, userId: null, pattern, subCategoryId: 0, confidence: '1', priority: 0 },
+    ]) !== null
+  )
 }
 
 /** Pull \b...\b and other literal chunks useful as witness seeds. */

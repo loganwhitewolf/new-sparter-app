@@ -750,7 +750,9 @@ async function insertCartoleriaOggettistica(database: Db): Promise<void> {
     categoryId: 11,
     name: 'cartoleria e oggettistica',
     slug: 'cartoleria-e-oggettistica',
-    natureId: 4,
+    // Resolve nature by code (like v2BackfillNatureId) rather than hardcoding the id —
+    // robust to nature lookup-table reordering. Shopping subcategories are discretionary.
+    natureId: sql`(SELECT id FROM ${nature} WHERE ${nature.code} = 'discretionary')`,
     displayOrder: 0,
     isActive: true,
   })
