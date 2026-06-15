@@ -1574,4 +1574,24 @@ describe('analyzeFile — pattern suggestions', () => {
     expect(mocks.loadActivePatterns).not.toHaveBeenCalled()
     expect(result.patternSuggestions).toEqual([])
   })
+
+  it('skips pattern suggestion detection when requested by onboarding platform creation', async () => {
+    mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
+
+    const result = await analyzeFile({
+      userId: USER_ID,
+      fileId: FILE_ID,
+      selectedFormatVersionId: 77,
+      skipPatternSuggestions: true,
+    })
+
+    expect(result.errors).toEqual([])
+    expect(result.patternSuggestions).toEqual([])
+    expect(mocks.loadActivePatterns).not.toHaveBeenCalled()
+    expect(mocks.detectPatternSuggestions).not.toHaveBeenCalled()
+    expect(latestFileAnalysisUpdate()).toMatchObject({
+      status: 'analyzed',
+    })
+  })
 })

@@ -238,6 +238,7 @@ export async function analyzeFile(input: {
   userId: string
   fileId: string
   selectedFormatVersionId?: number
+  skipPatternSuggestions?: boolean
 }): Promise<ImportAnalysisResult> {
   const fileRow = await getFileForUser({ userId: input.userId, fileId: input.fileId })
   if (!fileRow) throw new Error('File not found or access denied.')
@@ -295,7 +296,7 @@ export async function analyzeFile(input: {
     : { ...EMPTY_IMPORT_STATS, rowCount: parsed.rowCount }
 
   let patternSuggestions: PatternSuggestion[] = []
-  if (best) {
+  if (best && !input.skipPatternSuggestions) {
     try {
       const activePatterns = await loadActivePatterns(db, input.userId)
       const detectorRows: PatternDetectorRow[] = provisionalStats.normalizedRows.map((r) => ({

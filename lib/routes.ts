@@ -14,6 +14,10 @@ export const APP_ROUTES = {
   profileSettings: '/settings/profile', // canonical (D-03)
 } as const
 
+export const ONBOARDING_STEP_AFTER_PRIVATE_PLATFORM_CREATION = 2
+export const ONBOARDING_AFTER_PRIVATE_PLATFORM_CREATION_ROUTE =
+  `${APP_ROUTES.onboarding}?step=${ONBOARDING_STEP_AFTER_PRIVATE_PLATFORM_CREATION}` as const
+
 type DashboardCategoryFilters = {
   preset?: DashboardPreset
   type?: 'in' | 'out'

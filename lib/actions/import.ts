@@ -39,11 +39,18 @@ import { getFileForUser } from "@/lib/dal/files";
 import { db } from "@/lib/db";
 import { file as fileTable } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
-import { APP_ROUTES } from "@/lib/routes";
+import {
+  APP_ROUTES,
+  ONBOARDING_AFTER_PRIVATE_PLATFORM_CREATION_ROUTE,
+} from "@/lib/routes";
 
 export type ImportActionState<T = null> = {
   error: string | null;
   data?: T;
+};
+
+export type CompleteOnboardingPrivateImportResult = ImportFileResult & {
+  nextRoute: string;
 };
 
 type LoadMoreImportsInput = {
@@ -330,6 +337,70 @@ export async function confirmImportAction(
     revalidatePath(APP_ROUTES.expenses);
 
     return { error: null, data: result };
+  } catch (error) {
+    return { error: mapConfirmError(error) };
+  }
+}
+
+export async function completeOnboardingPrivateImportAction(
+  formData: FormData,
+): Promise<ImportActionState<CompleteOnboardingPrivateImportResult>> {
+  const raw = {
+    fileId: formData.get("fileId"),
+    selectedFormatVersionId: optionalPositiveInteger(
+      formData,
+      "selectedFormatVersionId",
+    ),
+  };
+
+  const parsed = AnalyzeImportSchema.safeParse(raw);
+  if (!parsed.success || parsed.data.selectedFormatVersionId === undefined) {
+    return invalidImportError();
+  }
+
+  const { userId, subscriptionPlan } = await verifySession();
+  const { fileId, selectedFormatVersionId } = parsed.data;
+
+  let analysis: ImportAnalysisResult;
+  try {
+    analysis = await analyzeFile({
+      userId,
+      fileId,
+      selectedFormatVersionId,
+      skipPatternSuggestions: true,
+    });
+  } catch (error) {
+    return { error: mapAnalyzeError(error) };
+  }
+
+  if (analysis.errors.length > 0) {
+    return {
+      error:
+        analysis.errors[0] ??
+        "Impossibile analizzare il file. Riprova tra qualche secondo.",
+    };
+  }
+
+  try {
+    const result = await importFile({
+      userId,
+      fileId,
+      selectedFormatVersionId,
+      overrideWarnings: true,
+      subscriptionPlan,
+    });
+
+    revalidatePath(APP_ROUTES.import);
+    revalidatePath(APP_ROUTES.expenses);
+    revalidatePath(APP_ROUTES.onboarding);
+
+    return {
+      error: null,
+      data: {
+        ...result,
+        nextRoute: ONBOARDING_AFTER_PRIVATE_PLATFORM_CREATION_ROUTE,
+      },
+    };
   } catch (error) {
     return { error: mapConfirmError(error) };
   }
