@@ -733,6 +733,51 @@ async function v2BackfillOverrideNatureId(database: Db): Promise<void> {
   )
 }
 
+// Patterns discovered via `yarn regex:discover` (report 2026-06-15) and labeled manually.
+// Global system patterns (userId null). Platform-ambiguous tokens are intentionally
+// excluded — e.g. "deposit" means an internal transfer only on Crypto.com but could mean
+// other things elsewhere, so it waits for per-platform pattern scoping.
+async function insertRegexDiscovery20260615(database: Db): Promise<void> {
+  const discovered: Array<{ slug: string; pattern: string; confidence: string; description: string }> = [
+    { slug: 'pedaggi-e-parcheggi', pattern: '(?:\\badf\\b|\\bcdt\\b)', confidence: '0.80', description: 'Highway tolls (ADF, CDT)' },
+    { slug: 'app-e-software', pattern: '(?:\\bclaude\\.ai\\b|\\bitunes)', confidence: '0.85', description: 'Software/app subscriptions (Claude.ai, Apple iTunes/App Store)' },
+    { slug: 'ristoranti', pattern: '(?:\\bautogrill\\b|\\brestaurant\\b|\\bramen\\b|\\bpiadineria\\b|\\bbirreria\\b|\\bpinsa\\b|\\bbistrot\\b)', confidence: '0.80', description: 'Restaurants and food venue types' },
+    { slug: 'manutenzione-auto', pattern: '(?:\\bautolavaggio\\b)', confidence: '0.90', description: 'Car wash' },
+    { slug: 'casalinghi-e-non-alimentari', pattern: '(?:\\bferramenta\\b)', confidence: '0.85', description: 'Hardware store' },
+    { slug: 'abbigliamento-e-accessori', pattern: '(?:\\bgeox\\b|\\bmarlboro\\b)', confidence: '0.85', description: 'Clothing/footwear (Geox, Marlboro Classics)' },
+    { slug: 'spesa-quotidiana', pattern: '(?:\\bbilla\\b|\\bpastificio\\b)', confidence: '0.85', description: 'Grocery (Billa supermarket, pasta shop)' },
+    { slug: 'alloggio', pattern: '(?:\\bhotel\\b)', confidence: '0.80', description: 'Hotels / lodging' },
+    { slug: 'assicurazione-veicoli', pattern: '(?:\\bgenerali\\b)', confidence: '0.80', description: 'Generali vehicle insurance' },
+  ]
+
+  let inserted = 0
+  for (const d of discovered) {
+    const sub = await database
+      .select({ id: subCategory.id })
+      .from(subCategory)
+      .where(and(eq(subCategory.slug, d.slug), isNull(subCategory.userId)))
+      .limit(1)
+    const subId = sub[0]?.id
+    if (!subId) {
+      console.log(`    regex-discovery: subcategory '${d.slug}' not found, skipped`)
+      continue
+    }
+    const res = await database
+      .insert(categorizationPattern)
+      .values({
+        userId: null,
+        pattern: d.pattern,
+        subCategoryId: subId,
+        confidence: d.confidence,
+        priority: 100,
+        description: d.description,
+      })
+      .onConflictDoNothing()
+    inserted += (res as unknown as { rowCount?: number }).rowCount ?? 0
+  }
+  console.log(`    regex-discovery 2026-06-15: ${inserted} pattern(s) inserted`)
+}
+
 // ---------------------------------------------------------------------------
 // Registry — append new steps here
 // ---------------------------------------------------------------------------
@@ -750,6 +795,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'v2-deactivate-pruned', run: v2DeactivatePruned },
   { name: 'v2-backfill-nature-id', run: v2BackfillNatureId },
   { name: 'v2-backfill-override-nature-id', run: v2BackfillOverrideNatureId },
+  { name: 'regex-discovery-2026-06-15', run: insertRegexDiscovery20260615 },
 ]
 
 export const STEP_NAMES = STEPS.map((step) => step.name)
