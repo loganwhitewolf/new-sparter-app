@@ -135,7 +135,7 @@ _Avoid_: sconti, rimborsi e cashback (nome deprecato), movimenti di liquidità
 - **Vacanze** — alloggio, trasporto, attivita-e-intrattenimento, cibo-e-bevande, assicurazione-viaggio (tutte D)
 - **Regali e donazioni** — regali (D), donazioni-beneficenza (D)
 - **Ristorazione** — ristoranti, bar-caffe-e-snack, take-away-e-delivery (tutte D)
-- **Shopping** — elettronica, abbigliamento-e-accessori, prodotti-per-la-casa, giocattoli (tutte D)
+- **Shopping** — elettronica, abbigliamento-e-accessori, prodotti-per-la-casa, giocattoli, cartoleria-e-oggettistica (tutte D). `cartoleria-e-oggettistica` _(agg. 2026-06-15)_ è la casa dei negozi "tuttofare" — cartolerie, cancelleria, oggettistica/regalistica varia (Tiger, Flying Tiger, Søstrene Grene). `abbigliamento-e-accessori` resta solo capi + accessori d'abbigliamento (cinture/scarpe/sciarpe); i variety-store multi-scopo non hanno un pattern Tier-1 "corretto" e di norma vanno qui di default o categorizzati a mano per acquisto.
 - **Cultura e tempo libero** _(merge Tempo libero + Libri e media)_ — cinema-ed-eventi, libri-e-audiolibri, streaming, app-e-software, videogiochi (tutte D)
 - **Benessere** — sport-e-fitness, attrezzatura-e-abbigliamento-sportivo, cura-della-persona (estetista/parrucchiere/cosmetici/massaggi/spa/terme), psicologia (tutte D)
 - **Animali** — cura-animali (cibo+veterinario+toelettatura), assicurazione-animali (tutte D)

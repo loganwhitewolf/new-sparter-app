@@ -733,136 +733,32 @@ async function v2BackfillOverrideNatureId(database: Db): Promise<void> {
   )
 }
 
-// Patterns discovered via `yarn regex:discover` (report 2026-06-15) and labeled manually.
-// Global system patterns (userId null). Platform-ambiguous tokens are intentionally
-// excluded — e.g. "deposit" means an internal transfer only on Crypto.com but could mean
-// other things elsewhere, so it waits for per-platform pattern scoping.
-async function insertRegexDiscovery20260615(database: Db): Promise<void> {
-  const discovered: Array<{ slug: string; pattern: string; confidence: string; description: string }> = [
-    { slug: 'pedaggi-e-parcheggi', pattern: '(?:\\badf\\b|\\bcdt\\b)', confidence: '0.80', description: 'Highway tolls (ADF, CDT)' },
-    { slug: 'app-e-software', pattern: '(?:\\bclaude\\.ai\\b|\\bitunes)', confidence: '0.85', description: 'Software/app subscriptions (Claude.ai, Apple iTunes/App Store)' },
-    { slug: 'ristoranti', pattern: '(?:\\bautogrill\\b|\\brestaurant\\b|\\bramen\\b|\\bpiadineria\\b|\\bbirreria\\b|\\bpinsa\\b|\\bbistrot\\b)', confidence: '0.80', description: 'Restaurants and food venue types' },
-    { slug: 'manutenzione-auto', pattern: '(?:\\bautolavaggio\\b)', confidence: '0.90', description: 'Car wash' },
-    { slug: 'casalinghi-e-non-alimentari', pattern: '(?:\\bferramenta\\b)', confidence: '0.85', description: 'Hardware store' },
-    { slug: 'abbigliamento-e-accessori', pattern: '(?:\\bgeox\\b|\\bmarlboro\\b)', confidence: '0.85', description: 'Clothing/footwear (Geox, Marlboro Classics)' },
-    { slug: 'spesa-quotidiana', pattern: '(?:\\bbilla\\b|\\bpastificio\\b)', confidence: '0.85', description: 'Grocery (Billa supermarket, pasta shop)' },
-    { slug: 'alloggio', pattern: '(?:\\bhotel\\b)', confidence: '0.80', description: 'Hotels / lodging' },
-    { slug: 'assicurazione-veicoli', pattern: '(?:\\bgenerali\\b)', confidence: '0.80', description: 'Generali vehicle insurance' },
-  ]
-
-  let inserted = 0
-  for (const d of discovered) {
-    const sub = await database
-      .select({ id: subCategory.id })
-      .from(subCategory)
-      .where(and(eq(subCategory.slug, d.slug), isNull(subCategory.userId)))
-      .limit(1)
-    const subId = sub[0]?.id
-    if (!subId) {
-      console.log(`    regex-discovery: subcategory '${d.slug}' not found, skipped`)
-      continue
-    }
-    const res = await database
-      .insert(categorizationPattern)
-      .values({
-        userId: null,
-        pattern: d.pattern,
-        subCategoryId: subId,
-        confidence: d.confidence,
-        priority: 100,
-        description: d.description,
-      })
-      .onConflictDoNothing()
-    inserted += (res as unknown as { rowCount?: number }).rowCount ?? 0
+// New subcategory under Shopping (categoryId 11), nature discretionary (natureId 4):
+// "cartoleria e oggettistica" — the home for variety/stationery/gift stores (Tiger,
+// cartolerie, oggettistica) whose purchases don't fit clothing/home/toys. Idempotent by slug.
+async function insertCartoleriaOggettistica(database: Db): Promise<void> {
+  const existing = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'cartoleria-e-oggettistica'), isNull(subCategory.userId)))
+    .limit(1)
+  if (existing.length > 0) {
+    console.log('    insert cartoleria-e-oggettistica: already exists, skipped')
+    return
   }
-  console.log(`    regex-discovery 2026-06-15: ${inserted} pattern(s) inserted`)
-}
-
-// Patterns labeled from the Satispay export (report 2026-06-15). Satispay is a P2P payment
-// app, so most rows are person-to-person transfers (un-patternable names) or Satispay-internal
-// operations. Excluded on purpose: "ricarica" (wallet top-up — platform-ambiguous, collides
-// with phone/fuel recharge elsewhere) and all person-name P2P clusters. "salvadanaio" is the
-// Satispay savings feature → accantonamenti-obiettivi.
-async function insertRegexDiscovery20260615Satispay(database: Db): Promise<void> {
-  const discovered: Array<{ slug: string; pattern: string; confidence: string; description: string }> = [
-    { slug: 'accantonamenti-obiettivi', pattern: '(?:\\bsalvadanaio\\b)', confidence: '0.85', description: 'Satispay salvadanaio (savings allocation)' },
-    { slug: 'pedaggi-e-parcheggi', pattern: '(?:\\bfree flow\\b)', confidence: '0.85', description: 'Highway free-flow toll (e.g. A33)' },
-    { slug: 'sport-e-fitness', pattern: '(?:\\bgpadel\\b)', confidence: '0.90', description: 'Padel court' },
-    { slug: 'spesa-quotidiana', pattern: '(?:\\beataly\\b)', confidence: '0.90', description: 'Eataly grocery' },
-    { slug: 'ristoranti', pattern: '(?:\\bbaita\\b)', confidence: '0.80', description: 'Mountain eatery (baita)' },
-    { slug: 'bar-caffe-e-snack', pattern: '(?:\\bcaf[eèé])', confidence: '0.80', description: 'Cafe (single-f; complements the existing caff- pattern)' },
-  ]
-
-  let inserted = 0
-  for (const d of discovered) {
-    const sub = await database
-      .select({ id: subCategory.id })
-      .from(subCategory)
-      .where(and(eq(subCategory.slug, d.slug), isNull(subCategory.userId)))
-      .limit(1)
-    const subId = sub[0]?.id
-    if (!subId) {
-      console.log(`    regex-discovery satispay: subcategory '${d.slug}' not found, skipped`)
-      continue
-    }
-    const res = await database
-      .insert(categorizationPattern)
-      .values({
-        userId: null,
-        pattern: d.pattern,
-        subCategoryId: subId,
-        confidence: d.confidence,
-        priority: 100,
-        description: d.description,
-      })
-      .onConflictDoNothing()
-    inserted += (res as unknown as { rowCount?: number }).rowCount ?? 0
-  }
-  console.log(`    regex-discovery 2026-06-15 satispay: ${inserted} pattern(s) inserted`)
-}
-
-// Patterns labeled from a Fineco current-account export (report 2026-06-15). This file is
-// structured banking text (bonifici, cedole BTP, imposte). Only unambiguous, globally-safe
-// signals are taken here; internal transfers (Revolut/Satispay wallet top-ups) and
-// heterogeneous outgoing "Beneficiario:" bonifici are excluded (platform/causale-dependent).
-async function insertRegexDiscovery20260615Fineco(database: Db): Promise<void> {
-  const discovered: Array<{ slug: string; pattern: string; confidence: string; description: string }> = [
-    { slug: 'imposte', pattern: '(?:\\bimposta di bollo\\b)', confidence: '0.90', description: 'Stamp duty (imposta di bollo, account/dossier)' },
-    { slug: 'imposte', pattern: '(?:\\brit\\.ced)', confidence: '0.85', description: 'Withholding tax on bond coupons (ritenuta cedole)' },
-    { slug: 'interessi-attivi', pattern: '(?:\\bced\\.su\\b)', confidence: '0.85', description: 'Bond coupon income (cedole BTP)' },
-    { slug: 'stipendio-base', pattern: '(?:\\baccredito stipendio\\b)', confidence: '0.90', description: 'Salary credit' },
-  ]
-
-  let inserted = 0
-  for (const d of discovered) {
-    const sub = await database
-      .select({ id: subCategory.id })
-      .from(subCategory)
-      .where(and(eq(subCategory.slug, d.slug), isNull(subCategory.userId)))
-      .limit(1)
-    const subId = sub[0]?.id
-    if (!subId) {
-      console.log(`    regex-discovery fineco: subcategory '${d.slug}' not found, skipped`)
-      continue
-    }
-    const res = await database
-      .insert(categorizationPattern)
-      .values({
-        userId: null,
-        pattern: d.pattern,
-        subCategoryId: subId,
-        confidence: d.confidence,
-        priority: 100,
-        description: d.description,
-      })
-      .onConflictDoNothing()
-    inserted += (res as unknown as { rowCount?: number }).rowCount ?? 0
-  }
-  console.log(`    regex-discovery 2026-06-15 fineco: ${inserted} pattern(s) inserted`)
+  await database.insert(subCategory).values({
+    categoryId: 11,
+    name: 'cartoleria e oggettistica',
+    slug: 'cartoleria-e-oggettistica',
+    natureId: 4,
+    displayOrder: 0,
+    isActive: true,
+  })
+  console.log('    insert cartoleria-e-oggettistica: 1 row inserted')
 }
 
 // ---------------------------------------------------------------------------
-// Registry — append new steps here
+// Registry — append new taxonomy migration steps here (not regex patterns — see seed-patterns.ts)
 // ---------------------------------------------------------------------------
 
 const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
@@ -878,9 +774,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'v2-deactivate-pruned', run: v2DeactivatePruned },
   { name: 'v2-backfill-nature-id', run: v2BackfillNatureId },
   { name: 'v2-backfill-override-nature-id', run: v2BackfillOverrideNatureId },
-  { name: 'regex-discovery-2026-06-15', run: insertRegexDiscovery20260615 },
-  { name: 'regex-discovery-2026-06-15-satispay', run: insertRegexDiscovery20260615Satispay },
-  { name: 'regex-discovery-2026-06-15-fineco', run: insertRegexDiscovery20260615Fineco },
+  { name: 'insert-cartoleria-oggettistica', run: insertCartoleriaOggettistica },
 ]
 
 export const STEP_NAMES = STEPS.map((step) => step.name)

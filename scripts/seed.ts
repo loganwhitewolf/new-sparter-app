@@ -6,7 +6,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { inArray, sql } from 'drizzle-orm'
-import { category, direction, nature, subCategory, platform, importFormatVersion, categorizationPattern } from '../lib/db/schema'
+import { category, direction, nature, subCategory, platform, importFormatVersion } from '../lib/db/schema'
 import {
   getOperatorDatabaseConfig,
   isDirectSupabaseHost,
@@ -17,7 +17,6 @@ import {
 } from './db-config'
 import {
   categories,
-  categorizationPatterns as seedCategorizationPatterns,
   directions,
   natures,
   platforms as seedPlatforms,
@@ -114,40 +113,6 @@ async function seed() {
     )
     .onConflictDoNothing()
   console.log(`  ${seedPlatforms.length} format versions inserted (or already present).`)
-
-  console.log('Seeding system categorization patterns...')
-  const seededSubCategories = await db.select({ id: subCategory.id, slug: subCategory.slug }).from(subCategory)
-  const subCategoryIdBySlug = new Map(seededSubCategories.map((row) => [row.slug, row.id]))
-  const missingSlugs = Array.from(
-    new Set(
-      seedCategorizationPatterns
-        .map((patternSeed) => patternSeed.subCategorySlug)
-        .filter((slug) => !subCategoryIdBySlug.has(slug)),
-    ),
-  )
-
-  if (missingSlugs.length > 0) {
-    throw new Error(
-      `Missing subcategory slugs for system categorization patterns: ${missingSlugs.join(', ')}`,
-    )
-  }
-
-  await db
-    .insert(categorizationPattern)
-    .values(
-      seedCategorizationPatterns.map((patternSeed) => ({
-        userId: null,
-        pattern: patternSeed.pattern,
-        subCategoryId: subCategoryIdBySlug.get(patternSeed.subCategorySlug)!,
-        // Phase 46: patterns are sign-agnostic (amount_sign column removed, ADR 0012)
-        confidence: patternSeed.confidence.toFixed(2),
-        priority: patternSeed.priority,
-        description: patternSeed.description,
-        isActive: true,
-      })),
-    )
-    .onConflictDoNothing()
-  console.log(`  ${seedCategorizationPatterns.length} system patterns inserted (or already present).`)
 
   console.log(JSON.stringify({ event: 'seed_succeeded', target: seedDiagnostics.target }))
 }

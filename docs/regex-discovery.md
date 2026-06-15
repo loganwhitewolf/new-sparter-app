@@ -51,7 +51,7 @@ still produces a coherent report, but every file is surfaced as unmatched and no
 evaluated for coverage. Seed first, then re-run:
 
 ```bash
-yarn db:seed && yarn db:seed-extras
+yarn db:seed && yarn db:seed-extras && yarn db:seed-patterns
 yarn regex:discover
 ```
 
@@ -73,16 +73,12 @@ patterns (below), the next run will no longer list the descriptions those patter
 ## Persisting chosen patterns
 
 This tool **only proposes** patterns — it never writes any to the database. After you pick a
-subcategory for a cluster you want to keep, persist the chosen pattern as a **new additive
-step** in `scripts/seed-extras.ts` (the project's append-only seed model — never edit shipped
-`seed-data.ts` shapes):
+subcategory for a cluster you want to keep, append the pattern to `scripts/seed-patterns-data.ts`
+(the canonical system pattern list) and run `yarn db:seed-patterns` (full replace of global
+patterns — user-created patterns are preserved):
 
-1. Append a new named async step to the `STEPS` array.
-2. In the step, resolve the target subcategory id by slug, then `INSERT` into
-   `categorizationPattern`. Make it idempotent against the
-   `categorization_pattern_unique (pattern, subCategoryId)` constraint — e.g. guard with an
-   existence check on the `(pattern, subCategoryId)` pair, or use `onConflictDoNothing()`.
-3. Run `yarn db:seed-extras` (and `:staging` / `:production` as needed).
+1. Add a row to `systemCategorizationPatterns` in `scripts/seed-patterns-data.ts`.
+2. Run `yarn db:seed-patterns` (and `:staging` / `:production` as needed).
 
 Keep developer-facing code, comments, and logs in English; merchant tokens and sample
 descriptions echoed into the report are user data and may be Italian.

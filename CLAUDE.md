@@ -47,7 +47,7 @@ Details and examples: Non-Negotiable Rules, Directory Structure, and Subscriptio
 - `.planning/phases/` — phase plans, context, research, summaries
 - `CONTEXT.md` — canonical domain language (dashboard, categorization, imports)
 - `docs/init/` — legacy bootstrap material from the original application (e.g. business logic handoff)
-- `scripts/seed-data.ts` — canonical seed dataset (categories, platforms, regex patterns)
+- `scripts/seed-data.ts` — canonical seed dataset (categories, platforms)
 
 ## GSD Workflow
 
@@ -152,9 +152,11 @@ lib/
 ├── validations/     # Zod schemas
 └── routes.ts        # Canonical app route constants and legacy redirects
 
-scripts/seed.ts         # Operator seed runner (baseline insert, onConflictDoNothing)
-scripts/seed-data.ts    # Canonical taxonomy rows (categories, subcategories, platforms, patterns)
-scripts/seed-extras.ts  # Additive seed steps — ordered STEPS array, append here for new columns
+scripts/seed.ts              # Operator seed runner (baseline taxonomy insert, onConflictDoNothing)
+scripts/seed-data.ts         # Canonical taxonomy rows (categories, subcategories, platforms)
+scripts/seed-extras.ts       # Additive taxonomy migration steps — ordered STEPS array
+scripts/seed-patterns-data.ts # Canonical system regex patterns (single source of truth)
+scripts/seed-patterns.ts     # Full replace of system patterns (userId = null)
 drizzle/migrations/     # Generated SQL migrations only
 proxy.ts             # Route protection and staging bypass
 auth.ts              # Better Auth configuration
@@ -168,17 +170,19 @@ Seed scripts follow the same additive model as migrations: each step is independ
 - 26 categories (IN/OUT/system)
 - ~120 subcategories
 - 6 banking platforms (General, Satispay, Intesa SP, Intesa SP CC, Revolut, Fineco)
-- system regex categorization patterns
 
 Inserted once via `onConflictDoNothing()`. Never add new columns to `seed-data.ts` shapes — the insert already ran in production.
 
-**Additive seed steps** (`seed-extras.ts`): when a phase introduces a new column on an already-seeded table, append a new named step to the `STEPS` array in `scripts/seed-extras.ts`. Each step is an idempotent async function that UPDATEs existing rows by slug or id. All steps run in order via `yarn db:seed-extras`.
+**Additive taxonomy steps** (`seed-extras.ts`): when a phase introduces a new column on an already-seeded table, append a new named step to the `STEPS` array in `scripts/seed-extras.ts`. Each step is an idempotent async function that UPDATEs existing rows by slug or id. All steps run in order via `yarn db:seed-extras`.
+
+**System regex patterns** (`seed-patterns-data.ts` + `seed-patterns.ts`): all global categorization regex live in `scripts/seed-patterns-data.ts`. `yarn db:seed-patterns` deletes every system pattern (`userId = null`) and re-inserts the full canonical list — user-created patterns are preserved. New patterns from regex-discovery go here, not in `seed-data.ts` or `seed-extras.ts`.
 
 **Run order after a schema migration:**
 ```bash
 yarn db:migrate        # apply SQL migration
 yarn db:seed           # baseline insert (idempotent)
-yarn db:seed-extras    # fill new columns on existing rows (all steps)
+yarn db:seed-extras    # taxonomy migrations on existing rows (all steps)
+yarn db:seed-patterns  # full replace of system regex patterns
 ```
 
 Domain values are intentionally Italian because the product taxonomy is Italian. Developer comments and operational logs around the seed flow must stay English.

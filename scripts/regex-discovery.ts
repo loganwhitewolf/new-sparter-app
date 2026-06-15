@@ -331,7 +331,7 @@ function renderReport(input: {
     lines.push(
       '> **Degraded run:** no active global import formats and/or patterns were found in the database. ' +
         'Every file is surfaced as unmatched and nothing can be evaluated for coverage. ' +
-        'Run `yarn db:seed && yarn db:seed-extras` against this database, then re-run `yarn regex:discover`.',
+        'Run `yarn db:seed && yarn db:seed-extras && yarn db:seed-patterns` against this database, then re-run `yarn regex:discover`.',
     )
   }
   lines.push('')
@@ -409,8 +409,7 @@ function renderReport(input: {
   lines.push('## Next step')
   lines.push('')
   lines.push(
-    'Assign a subcategory to each cluster you want to keep, then persist the chosen patterns as a NEW additive step ' +
-      'in `scripts/seed-extras.ts`. See `docs/regex-discovery.md` for the full workflow.',
+    'Assign a subcategory to each cluster you want to keep, then append the pattern to `scripts/seed-patterns-data.ts` and run `yarn db:seed-patterns`. See `docs/regex-discovery.md` for the full workflow.',
   )
   lines.push('')
   return lines.join('\n')

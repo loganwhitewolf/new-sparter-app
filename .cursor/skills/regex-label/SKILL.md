@@ -1,6 +1,7 @@
 ---
 name: regex-label
 description: Label a regex-discovery report and persist chosen categorization patterns. Use when the user has a `.data/regex-discovery/report-*.md` (from `yarn regex:discover`) and wants to turn its uncovered-merchant clusters into new categorization regex patterns. Trigger: `/regex-label [report-path]`.
+disable-model-invocation: true
 ---
 
 # regex-label
