@@ -44,6 +44,28 @@ const INPUT_DIR = resolve(process.cwd(), '.data', 'regex-discovery')
 const SUPPORTED_EXTENSIONS = ['.csv', '.txt', '.xlsx', '.xls']
 const MAX_SAMPLES_PER_CLUSTER = 5
 const MIN_TOKEN_LENGTH = 3
+// Clusters with fewer than this many transactions are collapsed into a compact "long tail"
+// section instead of getting a full proposal block. Override with --min-tx=N (N >= 1).
+const DEFAULT_MIN_TX = 2
+
+// Tokens that pass the length/number filter but carry no merchant signal: currency codes,
+// Italian legal-entity forms, banking/statement filler, common short prepositions/articles,
+// and payment-processor names (whose own name dominates the description — the real merchant
+// is the token after the `*`, e.g. "Paypal *Vodafoneita"). Extend as new noise surfaces.
+const STOPWORDS = new Set<string>([
+  // currency codes
+  'eur', 'usd', 'gbp', 'chf', 'jpy',
+  // legal-entity forms
+  'srl', 'srls', 'sas', 'spa', 'snc', 'sapa', 'soc', 'scs', 'ssd', 'coop.',
+  // banking / statement filler
+  'fil', 'fil.', 'pos', 'pag', 'pagamento', 'carta', 'contactless', 'addebito',
+  'bonifico', 'prelievo', 'acquisto', 'operazione', 'commissione',
+  // common short prepositions / articles (Italian)
+  'del', 'dei', 'della', 'delle', 'degli', 'con', 'per', 'tra', 'fra',
+  'una', 'uno', 'gli', 'che', 'non', 'sul', 'sulla',
+  // payment processors (the merchant is the token after the `*`)
+  'paypal', 'sumup', 'satispay', 'nexi', 'stripe', 'klarna', 'scalapay', 'izettle',
+])
 
 type UncoveredRow = { description: string; amount: string }
 
@@ -164,15 +186,28 @@ async function loadActiveGlobalFormats(database: Db): Promise<ImportFormatCandid
 // Clustering + proposal helpers
 // ---------------------------------------------------------------------------
 
-function isSignificantToken(token: string): boolean {
-  return token.length >= MIN_TOKEN_LENGTH && !/^\d+$/.test(token)
+// Strip leading processor/marker punctuation so "*Vodafoneita" tokenizes as "vodafoneita".
+// Internal dots/apostrophes/hyphens are preserved (e.g. "claude.ai", "www.generali.it").
+export function normalizeToken(token: string): string {
+  return token.replace(/^[*#@]+/, '')
 }
 
-// Heuristic: lowercase, tokenize on whitespace, drop pure-number and short (<3) tokens,
-// then pick the single most frequent significant token in the description as that row's
-// cluster key (simple top-token grouping). Ties resolve to the first-seen token.
-function clusterKeyFor(description: string): string | null {
-  const tokens = description.toLocaleLowerCase('it-IT').split(/\s+/).filter(isSignificantToken)
+export function isSignificantToken(token: string): boolean {
+  // Reject short tokens, any token containing a digit (store/filiale codes like "i011",
+  // transaction refs, "0000150"), and stopwords. A merchant identified only by a
+  // digit-bearing token is rare and is better caught during manual labeling.
+  return token.length >= MIN_TOKEN_LENGTH && !/\d/.test(token) && !STOPWORDS.has(token)
+}
+
+// Heuristic: lowercase, tokenize on whitespace, strip marker punctuation, drop pure-number,
+// short (<3), and stopword tokens, then pick the single most frequent significant token in
+// the description as that row's cluster key. Ties resolve to the first-seen token.
+export function clusterKeyFor(description: string): string | null {
+  const tokens = description
+    .toLocaleLowerCase('it-IT')
+    .split(/\s+/)
+    .map(normalizeToken)
+    .filter(isSignificantToken)
   if (tokens.length === 0) return null
 
   const counts = new Map<string, number>()
@@ -283,6 +318,7 @@ function renderReport(input: {
   clusters: Cluster[]
   patternCount: number
   degraded: boolean
+  minTx: number
 }): string {
   const lines: string[] = []
   lines.push(`# Regex discovery report — ${input.runDate}`)
@@ -319,13 +355,18 @@ function renderReport(input: {
   }
   lines.push('')
 
-  lines.push('## Uncovered clusters')
+  // Clusters arrive ranked (count desc, then EUR). Split into significant (>= minTx) shown
+  // in full, and the long tail (< minTx) collapsed into a compact scannable list.
+  const significant = input.clusters.filter((c) => c.count >= input.minTx)
+  const tail = input.clusters.filter((c) => c.count < input.minTx)
+
+  lines.push(`## Uncovered clusters (>= ${input.minTx} tx)`)
   lines.push('')
-  if (input.clusters.length === 0) {
-    lines.push('_No uncovered descriptions clustered — either everything is covered or no data rows were normalized._')
+  if (significant.length === 0) {
+    lines.push('_No clusters meet the threshold — see the long tail below, or re-run with `--min-tx=1`._')
   } else {
     let rank = 1
-    for (const cluster of input.clusters) {
+    for (const cluster of significant) {
       lines.push(`### ${rank}. \`${cluster.token}\``)
       lines.push(`- Transactions: ${cluster.count}`)
       lines.push(`- EUR total: ${cluster.totalEur}`)
@@ -344,6 +385,25 @@ function renderReport(input: {
       }
       lines.push('')
       rank += 1
+    }
+  }
+  lines.push('')
+
+  lines.push(`## Long tail (< ${input.minTx} tx)`)
+  lines.push('')
+  if (tail.length === 0) {
+    lines.push('_None._')
+  } else {
+    lines.push(
+      'One-off / low-frequency tokens — re-run with `--min-tx=1` to expand these into full ' +
+        'proposal blocks, or wait for them to recur.',
+    )
+    lines.push('')
+    lines.push('| Token | Tx | EUR | Sample |')
+    lines.push('|---|---|---|---|')
+    for (const cluster of tail) {
+      const sample = (cluster.samples[0] ?? '').replace(/\|/g, '\\|')
+      lines.push(`| \`${cluster.token}\` | ${cluster.count} | ${cluster.totalEur} | ${sample} |`)
     }
   }
   lines.push('')
@@ -383,7 +443,15 @@ function listInputFiles(): string[] {
   })
 }
 
-async function runDiscovery(database: Db): Promise<void> {
+// Parse the --min-tx=N flag (N >= 1). Falls back to DEFAULT_MIN_TX when absent or invalid.
+export function parseMinTx(argv: string[]): number {
+  const arg = argv.find((a) => a.startsWith('--min-tx='))
+  if (!arg) return DEFAULT_MIN_TX
+  const n = Number.parseInt(arg.slice('--min-tx='.length), 10)
+  return Number.isFinite(n) && n >= 1 ? n : DEFAULT_MIN_TX
+}
+
+async function runDiscovery(database: Db, minTx: number): Promise<void> {
   const patterns = await loadActiveGlobalPatterns(database)
   const slugById = await loadSubCategorySlugMap(database)
   const formats = await loadActiveGlobalFormats(database)
@@ -449,6 +517,7 @@ async function runDiscovery(database: Db): Promise<void> {
     clusters,
     patternCount: patterns.length,
     degraded,
+    minTx,
   })
 
   const reportPath = resolve(INPUT_DIR, `report-${runDate}.md`)
@@ -464,6 +533,7 @@ async function runDiscovery(database: Db): Promise<void> {
       coveredCount,
       uncoveredCount: uncovered.length,
       clusters: clusters.length,
+      minTx,
       degraded,
     }),
   )
@@ -501,8 +571,9 @@ if (executedDirectly) {
 
   const pool = new Pool(pgPoolConfigFromOperatorConfig(config))
   const db = drizzle(pool)
+  const minTx = parseMinTx(process.argv.slice(2))
 
-  runDiscovery(db)
+  runDiscovery(db, minTx)
     .catch((error: unknown) => {
       console.error(JSON.stringify({ event: 'regex_discovery_failed', error: String(error) }))
       process.exit(1)
