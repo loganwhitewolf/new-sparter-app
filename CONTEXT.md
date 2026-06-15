@@ -154,6 +154,10 @@ _Avoid_: assicurazioni come categoria, abbonamenti come categoria, famiglia come
 Discriminante: **la controparte, non lo strumento**. Controparte = te stesso → `transfer` (qualsiasi segno). Controparte = altri → categorizza per scopo (un bonifico in uscita verso un altro è la spesa sottostante; un accredito da un altro è income o rimborso). Lo **storno bancario** non è transfer: netta sotto la transazione originale.
 _Avoid_: movimenti di liquidità, ignore
 
+**CategorizationPattern** (Pattern di categorizzazione):
+Regex che mappa una descrizione a una Subcategory (Tier 1). I pattern di **sistema** (`userId = null`) vivono in un'unica lista canonica in `scripts/seed-patterns-data.ts`. L'aggiornamento è un **full replace**, non una migrazione incrementale: `yarn db:seed-patterns` **cancella tutte le righe di sistema e le ricrea da zero** dalla lista canonica (i pattern utente non vengono mai toccati). Quando `yarn regex:discover` scopre nuovi pattern da estratti conto reali, li si aggiunge alla lista in `seed-patterns-data.ts` e si rilancia `db:seed-patterns`: la tabella di sistema si riallinea interamente alla lista. La lista è quindi la **singola fonte di verità**; il DB ne è una proiezione rigenerabile.
+_Avoid_: migrazione pattern, aggiornamento incrementale dei pattern di sistema
+
 **PatternSuggestion** (Suggerimento di pattern):
 Candidato regex rilevato automaticamente durante la fase di analisi dell'import, a partire da descrizioni di transazioni non coperte da pattern esistenti che condividono un prefisso comune (≥2 token, ≥2 occorrenze nel file). Campi: `pattern` (prefisso estratto), `matchCount` (occorrenze nel file/import), `detectedAmountSign`, `sampleDescriptions` (max 3 descrizioni originali). Non è un `CategorizationPattern` finché l'utente non assegna una sottocategoria e lo salva. Può essere prodotto sia pre-import (da righe parse) sia post-import su transazioni già persistite (per rianalisi per `fileId`). Al massimo 5 per analisi, ordinate per `matchCount` discendente.
 _Avoid_: pattern suggerito, candidato, hint
