@@ -98,3 +98,11 @@ These existed before this task and were left untouched:
 - FOUND commit 2b75bde (Task 1)
 - FOUND commit 2b206c0 (Task 2)
 - FOUND commit 1434308 (Task 3)
+
+## Correction (2026-06-15, post-execution)
+
+The theme requirement above was **inverted**. The light theme on step 4 was the *recurring bug*, not the desired state — every onboarding step (including step 4) must be **dark**. Superseding the "light" statements above:
+
+- `onboardingThemeForStep` now returns `'dark'` for ALL steps (no step-4 special case); the regression test asserts step 4 → `'dark'` (commit `bfde492`).
+- The subcategory picker (a Radix Sheet that portals to `<body>`, so it followed the app/system theme and appeared light) now takes an opt-in `dataTheme` prop; the onboarding combobox passes `"onboarding-dark"` (commit `f2cabb5`). Other 6 picker call sites unchanged.
+- Also fixed a runtime bug in `getTopExpensesForOnboarding`: `user_id`/`sub_category_id` were ambiguous after the `LEFT JOIN sub_category` (sub_category also has `user_id`) — qualified with `expense.` (commit `0a97adf`). The DAL unit test mocks the result, so it didn't catch the real-Postgres ambiguity.
