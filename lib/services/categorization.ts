@@ -10,23 +10,14 @@ import {
   canUseHistoryCategorization,
   canUseRegexCategorization,
 } from '@/lib/config/categorization'
+// Tier-1 matcher + its types now live in the pure (non-server-only) module so that
+// plain tsx scripts can reuse the exact same function. Re-exported here so all
+// existing production import sites (which import from this module) keep working.
+import { applyTier1Regex } from './categorization-match'
+import type { ActivePattern, CategorizationResult } from './categorization-match'
 
-export type ActivePattern = {
-  id: number
-  userId: string | null
-  pattern: string
-  subCategoryId: number
-  // amountSign removed — Phase 46: patterns are sign-agnostic (amount_sign removed, ADR 0012, supersedes ADR 0008)
-  confidence: string
-  priority: number
-}
-
-export type CategorizationResult = {
-  subCategoryId: number
-  confidence: string
-  patternId: number | null
-  source: 'system_pattern' | 'user_pattern'
-} | null
+export { applyTier1Regex }
+export type { ActivePattern, CategorizationResult }
 
 export async function loadActivePatterns(
   database: DbOrTx,
@@ -58,34 +49,6 @@ export async function loadActivePatterns(
     )
 
   return rows as ActivePattern[]
-}
-
-// amountSignMatches removed — Phase 46: patterns are sign-agnostic (amount_sign removed, ADR 0012, supersedes ADR 0008)
-
-export function applyTier1Regex(
-  description: string,
-  amount: string,
-  patterns: ActivePattern[],
-): CategorizationResult {
-  for (const p of patterns) {
-    try {
-      const regex = new RegExp(p.pattern, 'i')
-      const stripped = description.split(/\s+/).filter(t => t.length > 0 && !/^\d+$/.test(t)).join(' ')
-      // Phase 46: patterns are sign-agnostic (ADR 0012) — amountSignMatches check removed
-      if (regex.test(description) || regex.test(stripped)) {
-        const source = p.userId === null ? 'system_pattern' : 'user_pattern'
-        return {
-          subCategoryId: p.subCategoryId,
-          confidence: p.confidence,
-          patternId: p.id,
-          source,
-        }
-      }
-    } catch {
-      // invalid regex pattern — skip and continue, never fail whole import
-    }
-  }
-  return null
 }
 
 export async function applyTier2History(
