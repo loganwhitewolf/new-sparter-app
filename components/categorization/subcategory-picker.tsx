@@ -63,6 +63,12 @@ export interface SubcategoryPickerProps {
    * Blocks further tile taps and shows a visual indicator. Default: false.
    */
   pending?: boolean
+  /**
+   * Optional `data-theme` applied to the portaled SheetContent. The sheet portals to
+   * <body>, so it does NOT inherit a caller's `data-theme` wrapper (e.g. the onboarding
+   * shell); pass e.g. "onboarding-dark" to force its palette. Omit to follow the app theme.
+   */
+  dataTheme?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -90,6 +96,7 @@ export function SubcategoryPicker({
   defaultType,
   onChange,
   pending = false,
+  dataTheme,
 }: SubcategoryPickerProps) {
   const options = React.useMemo(
     () => buildCategoryOptions(categories, allowedCategoryTypes),
@@ -113,6 +120,7 @@ export function SubcategoryPicker({
       */}
       <SheetContent
         side="bottom"
+        data-theme={dataTheme}
         showCloseButton={false}
         className="mx-auto flex h-[80vh] flex-col overflow-hidden rounded-t-2xl p-0 sm:h-[600px] sm:max-w-lg"
       >

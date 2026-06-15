@@ -160,6 +160,9 @@ export function SubcategoryCombobox({
         allowedCategoryTypes={['in', 'out', 'transfer', 'allocation']}
         defaultType={deriveDefaultType(expenseAmount)}
         onChange={handleSelect}
+        // Onboarding is a dark flow; the sheet portals to <body> (outside the shell's
+        // data-theme), so force the dark palette explicitly. See SubcategoryPicker.dataTheme.
+        dataTheme="onboarding-dark"
       />
     </div>
   )
