@@ -33,8 +33,15 @@ yarn regex:discover
 
 The tool connects to the operator database using the same env resolution as
 `yarn db:seed-extras` (`DATABASE_URL` for local; `--staging` / `--production` flags select
-the corresponding `*_DATABASE_URL`). It loads the active **global** patterns and import
-formats from that database, so coverage reflects exactly what production would categorize.
+the corresponding `*_DATABASE_URL`). Coverage uses the active **global** patterns, so it
+reflects exactly what production would categorize. Format detection, however, uses **all
+active import formats** (not only global-approved) — including private/draft formats created
+via the import wizard — because this is a local operator tool analyzing your own exports and
+should recognize any defined layout (e.g. the `;`-delimited Fineco format that lives only as
+private drafts). Files whose layout matches no active format are surfaced under "Unmatched
+files". Note: spreadsheet (`.xlsx`) date cells parse as ISO datetimes, which the detector's
+date check (`parseBankDate`, expecting `DD/MM/YYYY`) rejects — export as `;`-delimited CSV if
+a Fineco-style `.xlsx` is surfaced as unmatched despite matching headers.
 
 ### Seeding prerequisite
 

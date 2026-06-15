@@ -119,10 +119,13 @@ async function loadSubCategorySlugMap(database: Db): Promise<Map<number, string>
   return new Map(rows.map((row) => [row.id, row.slug]))
 }
 
-// Active global-approved formats. Mirrors the global-approved branch of
-// loadImportFormatsForDetection (ownerUserId null, visibility 'global', reviewStatus
-// 'approved' on both importFormatVersion and platform), shaped via the same toCandidate.
-async function loadActiveGlobalFormats(database: Db): Promise<ImportFormatCandidateInput[]> {
+// All active formats — NOT just global-approved. This is a local operator analysis tool
+// run on the operator's own exports, so it should match against any defined format,
+// including private/draft formats users created via the import wizard (e.g. the `;`-delimited
+// Fineco layout that exists only as private drafts and was never promoted to global). The
+// detector picks the highest-confidence match >= 0.8; non-matching junk formats are harmless.
+// Shaped via the same toCandidate as loadImportFormatsForDetection.
+async function loadAllActiveFormats(database: Db): Promise<ImportFormatCandidateInput[]> {
   const rows = await database
     .select({
       id: importFormatVersion.id,
@@ -145,18 +148,7 @@ async function loadActiveGlobalFormats(database: Db): Promise<ImportFormatCandid
     })
     .from(importFormatVersion)
     .innerJoin(platform, eq(importFormatVersion.platformId, platform.id))
-    .where(
-      and(
-        eq(importFormatVersion.isActive, true),
-        eq(platform.isActive, true),
-        isNull(importFormatVersion.ownerUserId),
-        isNull(platform.ownerUserId),
-        eq(importFormatVersion.visibility, 'global'),
-        eq(platform.visibility, 'global'),
-        eq(importFormatVersion.reviewStatus, 'approved'),
-        eq(platform.reviewStatus, 'approved'),
-      ),
-    )
+    .where(and(eq(importFormatVersion.isActive, true), eq(platform.isActive, true)))
 
   return rows.map((row) => ({
     id: row.id,
@@ -454,7 +446,7 @@ export function parseMinTx(argv: string[]): number {
 async function runDiscovery(database: Db, minTx: number): Promise<void> {
   const patterns = await loadActiveGlobalPatterns(database)
   const slugById = await loadSubCategorySlugMap(database)
-  const formats = await loadActiveGlobalFormats(database)
+  const formats = await loadAllActiveFormats(database)
   const degraded = formats.length === 0 || patterns.length === 0
 
   mkdirSync(INPUT_DIR, { recursive: true })
