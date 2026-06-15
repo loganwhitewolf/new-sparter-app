@@ -778,6 +778,49 @@ async function insertRegexDiscovery20260615(database: Db): Promise<void> {
   console.log(`    regex-discovery 2026-06-15: ${inserted} pattern(s) inserted`)
 }
 
+// Patterns labeled from the Satispay export (report 2026-06-15). Satispay is a P2P payment
+// app, so most rows are person-to-person transfers (un-patternable names) or Satispay-internal
+// operations. Excluded on purpose: "ricarica" (wallet top-up — platform-ambiguous, collides
+// with phone/fuel recharge elsewhere) and all person-name P2P clusters. "salvadanaio" is the
+// Satispay savings feature → accantonamenti-obiettivi.
+async function insertRegexDiscovery20260615Satispay(database: Db): Promise<void> {
+  const discovered: Array<{ slug: string; pattern: string; confidence: string; description: string }> = [
+    { slug: 'accantonamenti-obiettivi', pattern: '(?:\\bsalvadanaio\\b)', confidence: '0.85', description: 'Satispay salvadanaio (savings allocation)' },
+    { slug: 'pedaggi-e-parcheggi', pattern: '(?:\\bfree flow\\b)', confidence: '0.85', description: 'Highway free-flow toll (e.g. A33)' },
+    { slug: 'sport-e-fitness', pattern: '(?:\\bgpadel\\b)', confidence: '0.90', description: 'Padel court' },
+    { slug: 'spesa-quotidiana', pattern: '(?:\\beataly\\b)', confidence: '0.90', description: 'Eataly grocery' },
+    { slug: 'ristoranti', pattern: '(?:\\bbaita\\b)', confidence: '0.80', description: 'Mountain eatery (baita)' },
+    { slug: 'bar-caffe-e-snack', pattern: '(?:\\bcaf[eèé])', confidence: '0.80', description: 'Cafe (single-f; complements the existing caff- pattern)' },
+  ]
+
+  let inserted = 0
+  for (const d of discovered) {
+    const sub = await database
+      .select({ id: subCategory.id })
+      .from(subCategory)
+      .where(and(eq(subCategory.slug, d.slug), isNull(subCategory.userId)))
+      .limit(1)
+    const subId = sub[0]?.id
+    if (!subId) {
+      console.log(`    regex-discovery satispay: subcategory '${d.slug}' not found, skipped`)
+      continue
+    }
+    const res = await database
+      .insert(categorizationPattern)
+      .values({
+        userId: null,
+        pattern: d.pattern,
+        subCategoryId: subId,
+        confidence: d.confidence,
+        priority: 100,
+        description: d.description,
+      })
+      .onConflictDoNothing()
+    inserted += (res as unknown as { rowCount?: number }).rowCount ?? 0
+  }
+  console.log(`    regex-discovery 2026-06-15 satispay: ${inserted} pattern(s) inserted`)
+}
+
 // ---------------------------------------------------------------------------
 // Registry — append new steps here
 // ---------------------------------------------------------------------------
@@ -796,6 +839,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'v2-backfill-nature-id', run: v2BackfillNatureId },
   { name: 'v2-backfill-override-nature-id', run: v2BackfillOverrideNatureId },
   { name: 'regex-discovery-2026-06-15', run: insertRegexDiscovery20260615 },
+  { name: 'regex-discovery-2026-06-15-satispay', run: insertRegexDiscovery20260615Satispay },
 ]
 
 export const STEP_NAMES = STEPS.map((step) => step.name)
