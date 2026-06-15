@@ -613,4 +613,59 @@ export const getTopUncategorizedExpenses = cache(
   },
 )
 
+/** Row shape returned by getTopExpensesForOnboarding (260615-n3t). */
+export type TopOnboardingExpenseRow = TopUncategorizedExpenseRow & {
+  subCategoryId: number | null
+  subCategoryName: string | null
+}
+
+/**
+ * Returns up to `limit` top expense rows for the onboarding categorize step.
+ * Same dedupe/order/cap as getTopUncategorizedExpenses (DISTINCT ON description_hash,
+ * total_amount < 0, ORDER BY description_hash + ABS DESC, limit capped at 100, JS-side
+ * |amount| DESC re-sort), but WITHOUT the `sub_category_id IS NULL` predicate.
+ *
+ * INVARIANT: the onboarding categorize step must show a STABLE set — a row must never
+ * vanish after it is categorized or after a manual refresh. Categorized rows are returned
+ * here (with their subcategory id + canonical name) and rendered with a persistent green
+ * check; the done-state derives from "no uncategorized remain", not from an empty list.
+ *
+ * Non-goal: user_subcategory_override.custom_name is intentionally NOT joined — the green
+ * check uses the canonical system subcategory name only (keep it cheap).
+ *
+ * Security: userId is bound from the session by the caller. Limit hard-capped at 100.
+ */
+export const getTopExpensesForOnboarding = cache(
+  async (userId: string, limit = 15): Promise<TopOnboardingExpenseRow[]> => {
+    // Hard cap to prevent DoS from large limit values
+    const safeLimitValue = Math.min(limit, 100)
+
+    // sub_category ALSO has a user_id column, so user_id (and id) are ambiguous after the
+    // JOIN and MUST be qualified with expense. description_hash/total_amount/title live only
+    // on expense; sub_category.name is the only column taken from the joined table.
+    const result = await db.execute(sql`
+      SELECT DISTINCT ON (description_hash)
+        expense.id AS "id",
+        title,
+        description_hash AS "descriptionHash",
+        total_amount AS "totalAmount",
+        expense.sub_category_id AS "subCategoryId",
+        sub_category.name AS "subCategoryName"
+      FROM expense
+      LEFT JOIN sub_category ON sub_category.id = expense.sub_category_id
+      WHERE expense.user_id = ${userId}
+        AND total_amount::numeric < 0
+      ORDER BY description_hash, ABS(total_amount::numeric) DESC
+      LIMIT ${safeLimitValue}
+    `)
+
+    const rows = result.rows as TopOnboardingExpenseRow[]
+
+    // JS-side sort by |totalAmount| DESC because DISTINCT ON orders by description_hash
+    return rows.sort(
+      (a, b) => toDecimal(b.totalAmount).abs().comparedTo(toDecimal(a.totalAmount).abs()),
+    )
+  },
+)
+
 export { db }

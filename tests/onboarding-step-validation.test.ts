@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 // Import module under test — fails until lib/validations/onboarding.ts is created
-const { parseOnboardingStep, STEP_NAMES } = await import(
+const { parseOnboardingStep, STEP_NAMES, onboardingThemeForStep } = await import(
   '../lib/validations/onboarding'
 )
 
@@ -44,6 +44,28 @@ describe('parseOnboardingStep (R-OB-03)', () => {
 
   it('falls back to 1 for empty string', () => {
     expect(parseOnboardingStep('')).toBe(1)
+  })
+})
+
+describe('onboardingThemeForStep (R-OB-09 — all steps dark invariant)', () => {
+  it('resolves step 4 to the dark theme (regression guard — must NOT be light)', () => {
+    expect(onboardingThemeForStep(4)).toBe('dark')
+  })
+
+  it('resolves step 1 to the dark theme', () => {
+    expect(onboardingThemeForStep(1)).toBe('dark')
+  })
+
+  it('resolves step 2 to the dark theme', () => {
+    expect(onboardingThemeForStep(2)).toBe('dark')
+  })
+
+  it('resolves step 3 to the dark theme', () => {
+    expect(onboardingThemeForStep(3)).toBe('dark')
+  })
+
+  it('resolves step 5 to the dark theme', () => {
+    expect(onboardingThemeForStep(5)).toBe('dark')
   })
 })
 

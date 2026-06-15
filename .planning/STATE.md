@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 Phase: Milestone v2.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-06-15 — Quick task 260615-dtm: bank-agnostic regex-discovery tool shipped
+Last activity: 2026-06-15 — Quick task 260615-n3t: onboarding step-4 theme guard + persistent green check
 
 ## Accumulated Context
 
@@ -92,6 +92,7 @@ None.
 | 260609-k2d | Transactions nature + in/out/transfer filters; 7 UI fixes | 2026-06-09 | cdc5997 |
 | 260609-lcp | Cascading filters (type→nature, category→subcat); amount sign strip | 2026-06-09 | ffd4fc3 |
 | 260615-dtm | Bank-agnostic regex-discovery tool (uncovered-description clustering → proposed patterns) | 2026-06-15 | d737b8e |
+| 260615-n3t | Onboarding step-4 fix: guarded light theme + catalogued items stay with green check | 2026-06-15 | 1434308 |
 
 ## Deferred Items
 
