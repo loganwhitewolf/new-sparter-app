@@ -32,6 +32,8 @@
   --total-in: oklch(0.515 0.154 153.85);
   --total-out: oklch(0.637 0.237 25.33);
   --balance: oklch(0.372 0.033 264.39);
+  --total-allocation: #a78bfa;
+  --total-transfer: #94a3b8;
 
   --sidebar: oklch(0.966 0.002 247.84);
   --sidebar-foreground: oklch(0.211 0.026 264.88);
@@ -69,6 +71,8 @@
   --total-in: oklch(0.696 0.17 153.85);
   --total-out: oklch(0.704 0.191 22.22);
   --balance: oklch(0.704 0.013 265.64);
+  --total-allocation: #a78bfa;
+  --total-transfer: #94a3b8;
 
   --sidebar: oklch(0.174 0.021 264.88);
   --sidebar-foreground: oklch(0.985 0.002 247.84);

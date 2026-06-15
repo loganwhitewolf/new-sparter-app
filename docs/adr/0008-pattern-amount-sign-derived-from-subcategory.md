@@ -1,5 +1,7 @@
 # Pattern amountSign is derived from the subcategory, not user-editable
 
+> **Status: SUPERSEDED by ADR 0012 (2026-06-09).** This decision derived `amountSign` from `category.type` so an OUT pattern matched only negative amounts — explicitly to stop an Amazon refund (+50) from matching an OUT pattern. The new model (ADR 0012 + ADR 0004) does the opposite: a refund **must** reach the same subcategory to **net** by algebraic sum. The sign-gating therefore blocks the intended netting and is removed; patterns become sign-agnostic. `category.type` itself is also deprecated by ADR 0012. Text below retained for history.
+
 `CategorizationPattern.amountSign` (`positive | negative | any`) gates whether a pattern matches incoming positive, negative, or any amounts. It is load-bearing: the import accumulator aggregates **all** transactions by `descriptionHash` regardless of sign, so a pattern like `amazon` assigned to an `out` subcategory would otherwise also match an Amazon refund (+50€) and miscategorize income as an expense.
 
 We stop exposing `amountSign` as a form field. When a user creates a pattern (manual creation or promoting an import suggestion), the sign is **derived from the category type of the chosen subcategory**: `out → negative`, `in → positive`, `transfer`/`system → any`. The matching logic (`amountSignMatches`) stays unchanged. The pattern creation form reduces to regex + description + the subcategory picker.

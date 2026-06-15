@@ -12,6 +12,7 @@
 - ✅ **v1.14: Unified Table Filter & Sort** — Phase 40 (shipped 2026-06-04)
 - ✅ **v1.15: Collapsible Sidebar** — Phase 41 (shipped 2026-06-07)
 - ✅ **v1.16: Dashboard Overview Redesign** — Phases 42–45 (shipped 2026-06-09)
+- ✅ **v2.0: Nature/Direction Model Realignment** — Phases 46–50 (shipped 2026-06-14)
 
 ## Phases
 
@@ -120,18 +121,8 @@ Full details: `.planning/milestones/v1.13-ROADMAP.md`
 <summary>✅ v1.14: Unified Table Filter & Sort (Phase 40) — SHIPPED 2026-06-04</summary>
 
 - [x] **Phase 40: table-filter-sort** — Unified filtering + sorting across Transactions, Expenses, Files tables; shared `DataTableToolbar`; month-multi picker; `id` sort tiebreaker; per-table declarative config (ADR 0009, ADR 0010) *(complete 2026-06-04)*
-  - Goal: Replace the three divergent table controls with one coherent system — same behaviour, same UI shape, only the declared fields differ per table.
-  - Depends on: Phase 39
-  - Constraints: No filter engine (ADR 0010); URL = single source of truth; server-side filtering; offset+infinite-scroll pagination unchanged; `id` tiebreaker on all DAL sorts; Expenses have NO temporal filter (ADR 0009).
-  - Plans: 5 plans (5 waves)
 
-Plans:
-
-- [x] 40-01-PLAN.md — Foundation: shared TableConfig types + URL param parsers + id tiebreaker on transactions/imports DAL *(complete 2026-06-04)*
-- [x] 40-02-PLAN.md — Shared UI: DataTableToolbar + HeaderSortButton + ChipsRow + URL-mutation hook (mock config) *(complete 2026-06-04)*
-- [x] 40-03-PLAN.md — New controls: getMonthsWithData DAL + MonthMultiPicker + AmountRangePicker, wired into toolbar *(complete 2026-06-04)*
-- [x] 40-04-PLAN.md — Wire per-table configs + DAL filters for Transactions, Expenses, Files *(complete 2026-06-04)*
-- [x] 40-05-PLAN.md — Polish: empty states, a11y pass, URL migration, prototype deletion, yarn build green *(complete 2026-06-04)*
+Full details: `.planning/milestones/v1.14-ROADMAP.md`
 
 </details>
 
@@ -139,9 +130,8 @@ Plans:
 <summary>✅ v1.15: Collapsible Sidebar (Phase 41) — SHIPPED 2026-06-07</summary>
 
 - [x] **Phase 41: collapsible-sidebar** — Collapsible icon-rail sidebar; topbar removed on all breakpoints; app name + user controls (avatar, profile, logout) in sidebar; BottomNav gains Impostazioni entry; theme toggle moved to /settings page (ADR 0011) *(complete 2026-06-07)*
-  - [x] 41-01-PLAN.md — SidebarProvider context + localStorage hook + Tooltip wrapper (foundation)
-  - [x] 41-02-PLAN.md — AppShell + rewritten collapsible Sidebar (toggle, tooltips, bottom user controls); layout drops Topbar
-  - [x] 41-03-PLAN.md — BottomNav Impostazioni + SettingsHub Aspetto; delete topbar.tsx; update tests + build/a11y gate
+
+Full details: `.planning/milestones/v1.15-ROADMAP.md`
 
 </details>
 
@@ -154,6 +144,19 @@ Plans:
 - [x] **Phase 45: overview-movers** — Per-month movers drill-down: recharts bar click → top movers panel, humanized copy, highlighted bar, default to last month with data (3 plans, 3 waves) (completed 2026-06-09)
 
 Full details: `.planning/milestones/v1.16-ROADMAP.md`
+
+</details>
+
+<details>
+<summary>✅ v2.0: Nature/Direction Model Realignment (Phases 46–50) — SHIPPED 2026-06-14</summary>
+
+- [x] Phase 46: direction-nature-schema — direction/nature lookup tables; removed category.type, flow_nature, amount_sign (completed 2026-06-11)
+- [x] Phase 47: taxonomy-seed-rework — 23-category / 87-subcategory taxonomy on the nature model (completed 2026-06-11)
+- [x] Phase 48: sql-migration-recategorization — migration 0018 applied + data recategorization + verify assertions (completed 2026-06-12)
+- [x] Phase 49: dashboard-and-surfaces — 4-direction dashboard, algebraic-sum aggregation, cascade/filters re-pointed (completed 2026-06-13)
+- [x] Phase 50: transaction-pairing — explicit 1:1 order↔refund linking + netting + picker/badge/popover UI (completed 2026-06-14)
+
+Full detail archived in milestones/v2.0-ROADMAP.md.
 
 </details>
 
@@ -180,5 +183,6 @@ Full details: `.planning/milestones/v1.16-ROADMAP.md`
 | 43 | v1.16 | 4/4 | Complete | 2026-06-08 |
 | 44 | v1.16 | 3/3 | Complete | 2026-06-08 |
 | 45 | v1.16 | 3/3 | Complete | 2026-06-09 |
+| 46–50 | v2.0 | 22/22 | Complete | 2026-06-14 |
 
-**Total shipped: 45 phases · 159 plans complete**
+**Total shipped: 50 phases · 186 plans complete**

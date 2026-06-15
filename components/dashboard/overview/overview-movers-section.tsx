@@ -9,19 +9,32 @@ type Props = {
   data: OverviewChartPoint[]
   year: number
   defaultMonthIndex: number
-  initialMovers: MonthOverMonthChange[]
+  initialMoversIn: MonthOverMonthChange[]
+  initialMoversOut: MonthOverMonthChange[]
+  initialMoversAllocation: MonthOverMonthChange[]
 }
 
 /**
  * Shared-state parent for the chart + movers panel (D-03 architecture).
  *
  * Owns the single selectedMonth so chart highlight and panel month never drift.
- * On month change: updates selectedMonth immediately (instant highlight) then
- * fetches new movers inside useTransition (non-blocking, shows loading state).
+ * On month change: fetches movers for all 3 directions (in/out/allocation) in
+ * parallel and renders them side-by-side in a 3-column layout.
+ *
+ * Clicking any bar selects the month — no per-direction routing.
  */
-export function OverviewMoversSection({ data, year, defaultMonthIndex, initialMovers }: Props) {
+export function OverviewMoversSection({
+  data,
+  year,
+  defaultMonthIndex,
+  initialMoversIn,
+  initialMoversOut,
+  initialMoversAllocation,
+}: Props) {
   const [selectedMonth, setSelectedMonth] = useState(defaultMonthIndex)
-  const [movers, setMovers] = useState<MonthOverMonthChange[]>(initialMovers)
+  const [moversIn, setMoversIn] = useState<MonthOverMonthChange[]>(initialMoversIn)
+  const [moversOut, setMoversOut] = useState<MonthOverMonthChange[]>(initialMoversOut)
+  const [moversAllocation, setMoversAllocation] = useState<MonthOverMonthChange[]>(initialMoversAllocation)
   const [isPending, startTransition] = useTransition()
 
   function handleMonthSelect(monthIndex: number) {
@@ -29,12 +42,16 @@ export function OverviewMoversSection({ data, year, defaultMonthIndex, initialMo
     setSelectedMonth(monthIndex)
 
     startTransition(async () => {
-      const result = await fetchMovers(year, monthIndex)
-      if (result.error) {
-        setMovers([]) // show empty-state rather than stale data from previous month
-      } else {
-        setMovers(result.movers)
-      }
+      // Fetch all 3 directions in parallel.
+      const [resultIn, resultOut, resultAllocation] = await Promise.all([
+        fetchMovers(year, monthIndex, 'in'),
+        fetchMovers(year, monthIndex, 'out'),
+        fetchMovers(year, monthIndex, 'allocation'),
+      ])
+
+      setMoversIn(resultIn.error ? [] : resultIn.movers)
+      setMoversOut(resultOut.error ? [] : resultOut.movers)
+      setMoversAllocation(resultAllocation.error ? [] : resultAllocation.movers)
     })
   }
 
@@ -51,7 +68,9 @@ export function OverviewMoversSection({ data, year, defaultMonthIndex, initialMo
       <OverviewMoversPanel
         year={year}
         selectedMonth={selectedMonth}
-        movers={movers}
+        moversIn={moversIn}
+        moversOut={moversOut}
+        moversAllocation={moversAllocation}
         isPending={isPending}
       />
     </section>

@@ -1,5 +1,3 @@
-import Decimal from 'decimal.js'
-
 export interface PatternDetectorRow {
   description: string
   normalizedDescription: string
@@ -8,15 +6,14 @@ export interface PatternDetectorRow {
   covered: boolean
 }
 
+// Phase 46: patterns are sign-agnostic (ADR 0012) — amountSign removed from CoveragePattern
 export interface CoveragePattern {
   pattern: string
-  amountSign: 'positive' | 'negative' | 'any'
 }
 
 export interface PatternSuggestion {
   pattern: string
   matchCount: number
-  detectedAmountSign: 'positive' | 'negative' | 'any'
   sampleDescriptions: string[]
 }
 
@@ -28,21 +25,8 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
 }
 
-function amountSignMatches(
-  amountSign: 'positive' | 'negative' | 'any',
-  amount: string | null,
-): boolean {
-  if (amountSign === 'any') return true
-  if (amount === null) return false
-  try {
-    const d = new Decimal(amount)
-    if (amountSign === 'positive') return d.greaterThanOrEqualTo(0)
-    if (amountSign === 'negative') return d.lessThan(0)
-  } catch {
-    // unparseable amount — cannot confirm sign, do not claim coverage
-  }
-  return false
-}
+// amountSignMatches removed — Phase 46: patterns are sign-agnostic (ADR 0012)
+// Coverage is now determined by regex match alone.
 
 function isCoveredByPatterns(
   row: PatternDetectorRow,
@@ -56,10 +40,8 @@ function isCoveredByPatterns(
   for (const p of coveragePatterns) {
     try {
       const regex = new RegExp(p.pattern, 'i')
-      if (
-        (regex.test(row.normalizedDescription) || regex.test(strippedDescription)) &&
-        amountSignMatches(p.amountSign, row.amount)
-      ) {
+      // Phase 46: patterns are sign-agnostic (ADR 0012) — coverage is regex-match only
+      if (regex.test(row.normalizedDescription) || regex.test(strippedDescription)) {
         return true
       }
     } catch {
@@ -83,23 +65,7 @@ function longestCommonPrefix(a: string[], b: string[]): string[] {
   return result
 }
 
-function inferAmountSign(amounts: (string | null)[]): 'positive' | 'negative' | 'any' {
-  const signs = new Set<'positive' | 'negative'>()
-  for (const amount of amounts) {
-    if (amount === null) continue
-    try {
-      const d = new Decimal(amount)
-      if (d.lessThan(0)) signs.add('negative')
-      else signs.add('positive')
-    } catch {
-      // unparseable — skip
-    }
-  }
-  if (signs.size === 1) {
-    return signs.has('positive') ? 'positive' : 'negative'
-  }
-  return 'any'
-}
+// inferAmountSign removed — ADR 0012: patterns are sign-agnostic
 
 export function detectPatternSuggestions(
   rows: PatternDetectorRow[],
@@ -143,13 +109,11 @@ export function detectPatternSuggestions(
 
     const prefixString = prefix.join(' ')
     const escaped = escapeRegex(prefixString)
-    const amounts = group.map(g => g.row.amount)
     const sampleDescriptions = group.slice(0, 3).map(g => g.row.description)
 
     suggestions.push({
       pattern: escaped,
       matchCount: group.length,
-      detectedAmountSign: inferAmountSign(amounts),
       sampleDescriptions,
     })
   }

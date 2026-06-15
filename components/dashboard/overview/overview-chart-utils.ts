@@ -6,16 +6,13 @@ import { NATURE_COLORS, NATURE_LABELS } from '@/lib/utils/nature-labels'
 // ─── Key constants ────────────────────────────────────────────────────────────
 
 /**
- * All OUT nature keys in display order.
- * Use as the default includedOut argument to select all expense buckets.
+ * OUT nature keys in display order — spending only (essential / discretionary / debt).
+ * Phase 49: savings and investment moved to allocation bucket; transfer excluded entirely.
  */
 export const OUT_KEYS = [
   'essential',
   'discretionary',
-  'operational',
-  'financial',
   'debt',
-  'extraordinary',
 ] as const
 
 /**
@@ -24,10 +21,16 @@ export const OUT_KEYS = [
  */
 export const INCOME_KEYS = ['recurring', 'extraordinary'] as const
 
+/**
+ * Allocation nature keys (savings + investment).
+ */
+export const ALLOCATION_KEYS = ['savings', 'investment'] as const
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type OutKey = (typeof OUT_KEYS)[number]
 export type IncomeKey = (typeof INCOME_KEYS)[number]
+export type AllocationKey = (typeof ALLOCATION_KEYS)[number]
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
 
@@ -43,6 +46,7 @@ export type NatureBreakdownItem = {
 export type NatureBreakdown = {
   income: NatureBreakdownItem[]
   out: NatureBreakdownItem[]
+  allocation: NatureBreakdownItem[]
 }
 
 /**
@@ -53,7 +57,8 @@ export type NatureBreakdown = {
  *   'recurring'     → NATURE_LABELS/NATURE_COLORS['income']
  *   'extraordinary' → NATURE_LABELS/NATURE_COLORS['income_extraordinary']
  *
- * Out keys map 1:1 to FlowNature.
+ * Out keys map 1:1 to FlowNature (essential/discretionary/debt only).
+ * Allocation keys: savings + investment.
  *
  * Only included keys are returned in each array; excluded keys are omitted.
  * Amount conversions use Number() at the presentation boundary — not monetary arithmetic.
@@ -94,7 +99,22 @@ export function deriveNatureBreakdown(
     })
   }
 
-  return { income, out }
+  const allocation: NatureBreakdownItem[] = [
+    {
+      key: 'savings',
+      label: 'Risparmio',
+      color: NATURE_COLORS['savings'],
+      amount: Number(toDecimal(point.allocation.savings)),
+    },
+    {
+      key: 'investment',
+      label: 'Investimento',
+      color: NATURE_COLORS['investment'],
+      amount: Number(toDecimal(point.allocation.investment)),
+    },
+  ]
+
+  return { income, out, allocation }
 }
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
@@ -118,18 +138,20 @@ export function sumSelected(
 /**
  * Derive a single bar chart row from an OverviewChartPoint,
  * summing only the income and out buckets that are currently selected.
+ * The allocation bucket is always totalled in full (no per-nature filtering).
  *
  * Rules:
  * - includedIncome drives entrate (subset of INCOME_KEYS)
- * - includedOut drives uscite (subset of OUT_KEYS)
+ * - includedOut drives uscite (subset of OUT_KEYS — essential/discretionary/debt)
+ * - accantonato = savings + investment (always shown in full — D-01)
  * - Number() conversion happens ONLY in the returned row (Recharts boundary)
- * - The returned object has exactly { label, entrate, uscite } — no KPI fields
+ * - The returned object has exactly { label, entrate, uscite, accantonato }
  */
 export function deriveFilteredBarRow(
   point: OverviewChartPoint,
   includedIncome: readonly IncomeKey[],
   includedOut: readonly OutKey[]
-): { label: string; entrate: number; uscite: number } {
+): { label: string; entrate: number; uscite: number; accantonato: number } {
   const incomeValues: Record<string, string> = {
     recurring: point.income.recurring,
     extraordinary: point.income.extraordinary,
@@ -140,12 +162,14 @@ export function deriveFilteredBarRow(
     point.out as unknown as Record<string, string>,
     includedOut
   )
+  const accantonato = toDecimal(point.allocation.savings)
+    .plus(toDecimal(point.allocation.investment))
 
   return {
     label: point.label,
     // Convert to number only at the Recharts boundary (Recharts requires numbers).
     entrate: Number(entrate),
     uscite: Number(uscite),
+    accantonato: Number(accantonato),
   }
 }
-

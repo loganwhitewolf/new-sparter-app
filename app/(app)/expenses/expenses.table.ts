@@ -1,9 +1,10 @@
 import { NATURE_LABELS } from '@/lib/utils/nature-labels'
 import type { TableConfig } from '@/lib/utils/table-config'
 
-const TYPE_LABELS: Record<string, string> = {
+const DIRECTION_LABELS: Record<string, string> = {
   in: 'Entrate',
   out: 'Uscite',
+  allocation: 'Accantonamenti',
   transfer: 'Trasferimenti',
   unclassified: 'Non classificato',
 }
@@ -12,11 +13,11 @@ const TYPE_LABELS: Record<string, string> = {
  * Declarative table config for the Expenses table (Wave 4, cascade extension lcp-01).
  * Consumed by DataTableToolbar — defines search, filters, sortable columns, and defaultSort.
  *
- * Field inventory (LOCKED per D-11, D-19..D-25; extended lcp-01):
+ * Field inventory (LOCKED per D-11, D-19..D-25; extended lcp-01, D-08):
  *   - search: q (title)
  *   - amount: amount-range (absolute value on totalAmount, D-20)
- *   - type: select (category type in/out/transfer/unclassified)
- *   - nature: select (FlowNature via subCategory, dependsOn:'type')
+ *   - direction: select (direction code in/out/allocation/transfer/unclassified, D-08)
+ *   - nature: select (FlowNature via subCategory, dependsOn:'direction')
  *   - category: select (via subCategory → category join)
  *   - subCategory: select (dependsOn:'category')
  *   - platform: select (via file join)
@@ -35,17 +36,17 @@ export const expensesTableConfig: TableConfig = {
       toChip: (v) => `Importo ≥ ${v} €`,
     },
     {
-      key: 'type',
-      label: 'Tipo',
+      key: 'direction',
+      label: 'Direzione',
       type: 'select',
       options: [],
-      toChip: (v) => `Tipo: ${TYPE_LABELS[v] ?? v}`,
+      toChip: (v) => `Direzione: ${DIRECTION_LABELS[v] ?? v}`,
     },
     {
       key: 'nature',
       label: 'Natura',
       type: 'select',
-      dependsOn: 'type',
+      dependsOn: 'direction',
       options: [],
       toChip: (v) => `Natura: ${NATURE_LABELS[v as keyof typeof NATURE_LABELS] ?? v}`,
     },
@@ -53,6 +54,7 @@ export const expensesTableConfig: TableConfig = {
       key: 'category',
       label: 'Categoria',
       type: 'select',
+      dependsOn: 'direction',
       options: [],
       toChip: (v) => `Categoria: ${v}`,
     },

@@ -6,7 +6,7 @@ import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
 import { parseExpenseFilters, type ExpenseSearchParams } from '@/lib/validations/expense'
 import type { ExpenseFilters as ExpenseListFilters } from '@/lib/dal/expenses'
 import { NATURE_LABELS, NATURE_ORDER } from '@/lib/utils/nature-labels'
-import { buildTypeNatureMap, buildCategorySubcategoryMap } from '@/lib/utils/cascade-options'
+import { buildDirectionNatureMap, buildCategorySubcategoryMap, buildDirectionCategoryMap } from '@/lib/utils/cascade-options'
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { ExpenseTable } from '@/components/expenses/expense-table'
 import { ExpenseFormDialog } from '@/components/expenses/expense-form-dialog'
@@ -33,7 +33,7 @@ function buildExpenseTableKey(filters: ExpenseListFilters, expenses: Awaited<Ret
     filters.sort ?? '',
     filters.dir ?? '',
     filters.nature ?? '',
-    filters.type ?? '',
+    filters.direction ?? '',
     filters.subCategoryId ?? '',
   ].join(':')
   const dataKey = expenses
@@ -69,7 +69,7 @@ export default async function ExpensesPage({
     dir: parsed.dir,
     // No period — D-05: default view is all-time
     nature: parsed.nature,
-    type: parsed.type,
+    direction: parsed.type,
     subCategoryId: parsed.subCategoryId,
   }
 
@@ -77,11 +77,10 @@ export default async function ExpensesPage({
     getExpenses(filters),
     getCategories(),
     getTransactionPlatforms(),
-    getMostUsedSubcategories(['in', 'out', 'transfer', 'system']),
+    getMostUsedSubcategories(['in', 'out', 'transfer', 'allocation']),
   ])
 
   const categoryOptions = categories
-    .filter((c) => c.type !== 'system')
     .map((c) => ({ value: c.slug, label: c.name }))
   const platformOptions = platforms.map((p) => ({ value: p.slug, label: p.name }))
 
@@ -94,17 +93,19 @@ export default async function ExpensesPage({
     { value: 'unclassified', label: NATURE_LABELS.unclassified },
   ]
 
-  // Type filter options: In/Out/Transfer + 'Non classificato'
-  const typeOptions = [
+  // Direction filter options: In/Out/Accantonamenti/Trasferimenti + 'Non classificato' (D-08)
+  const directionOptions = [
     { value: 'in', label: 'Entrate' },
     { value: 'out', label: 'Uscite' },
+    { value: 'allocation', label: 'Accantonamenti' },
     { value: 'transfer', label: 'Trasferimenti' },
     { value: 'unclassified', label: 'Non classificato' },
   ]
 
-  // Cascade-derived option maps: type→nature and category→subcategory
+  // Cascade-derived option maps: direction→nature, direction→category, category→subcategory
   const dependentOptions = {
-    nature: buildTypeNatureMap(categories),
+    nature: buildDirectionNatureMap(categories),
+    category: buildDirectionCategoryMap(categories),
     subCategory: buildCategorySubcategoryMap(categories),
   }
 
@@ -127,7 +128,7 @@ export default async function ExpensesPage({
             category: categoryOptions,
             platform: platformOptions,
             nature: natureOptions,
-            type: typeOptions,
+            direction: directionOptions,
           }}
           dependentOptions={dependentOptions}
         />

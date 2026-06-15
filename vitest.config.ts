@@ -12,7 +12,12 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx', 'lib/**/*.test.ts'],
+    include: [
+      'tests/**/*.test.ts',
+      'tests/**/*.test.tsx',
+      'lib/**/*.test.ts',
+      'tests/category-settings-seed.ts',
+    ],
     exclude: [
       '**/node_modules/**',
       '**/.next/**',

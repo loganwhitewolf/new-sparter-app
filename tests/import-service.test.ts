@@ -71,8 +71,9 @@ vi.mock('@/lib/dal/patterns', () => ({
 }))
 vi.mock('@/lib/validations/pattern', () => ({
   CreatePatternSchema: {
+    // Phase 46: amountSign removed (ADR 0012) — patterns are sign-agnostic
     safeParse: (value: Record<string, unknown>) => {
-      if (!value.pattern || !value.subCategoryId || !value.amountSign || value.confidence === undefined) {
+      if (!value.pattern || !value.subCategoryId || value.confidence === undefined) {
         return { success: false, error: { issues: [{ message: 'Dati pattern mancanti.' }] } }
       }
       return { success: true, data: value }
@@ -81,11 +82,7 @@ vi.mock('@/lib/validations/pattern', () => ({
   UpdatePatternSchema: {
     safeParse: (value: Record<string, unknown>) => ({ success: true, data: value }),
   },
-  deriveAmountSign: (categoryType: string) => {
-    if (categoryType === 'out') return 'negative'
-    if (categoryType === 'in') return 'positive'
-    return 'any'
-  },
+  // deriveAmountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012)
 }))
 
 vi.mock('@/lib/db/schema', () => ({
@@ -455,7 +452,7 @@ describe('applyTier1Regex', () => {
       userId: null,
       pattern: 'supermercato',
       subCategoryId: 10,
-      amountSign: 'any',
+      // Phase 46: amountSign removed (ADR 0012)
       confidence: '0.90',
       priority: 10,
     },
@@ -464,7 +461,7 @@ describe('applyTier1Regex', () => {
       userId: null,
       pattern: 'caffè',
       subCategoryId: 20,
-      amountSign: 'negative',
+      // Phase 46: amountSign removed (ADR 0012)
       confidence: '0.85',
       priority: 20,
     },
@@ -473,7 +470,7 @@ describe('applyTier1Regex', () => {
       userId: 'user-1',
       pattern: 'netflix',
       subCategoryId: 30,
-      amountSign: 'any',
+      // Phase 46: amountSign removed (ADR 0012)
       confidence: '0.95',
       priority: 5,
     },
@@ -482,7 +479,7 @@ describe('applyTier1Regex', () => {
       userId: null,
       pattern: '([invalid regex',
       subCategoryId: 40,
-      amountSign: 'any',
+      // Phase 46: amountSign removed (ADR 0012)
       confidence: '0.80',
       priority: 50,
     },
@@ -506,11 +503,10 @@ describe('applyTier1Regex', () => {
     })
   })
 
-  it('respects amount sign constraint — rejects positive amounts for negative-only patterns', () => {
-    // The coffee pattern requires a negative amount
+  it('matches positive amounts (Phase 46: patterns are sign-agnostic, ADR 0012)', () => {
+    // Phase 46: amountSign constraint removed — patterns match regardless of sign
     const result = applyTier1Regex('Caffè Nero rimborso', '5.00', patterns)
-    // The positive amount should skip the coffee pattern, and no other patterns should match
-    expect(result).toBeNull()
+    expect(result).toMatchObject({ subCategoryId: 20, patternId: 2 })
   })
 
   it('accepts negative amounts for negative-only patterns', () => {
@@ -525,13 +521,13 @@ describe('applyTier1Regex', () => {
   })
 
   it('prefers a user pattern over a matching system pattern when the ordered pattern list puts user rules first', () => {
+    // Phase 46: amountSign removed (ADR 0012)
     const result = applyTier1Regex('Amazon marketplace', '-22.00', [
       {
         id: 10,
         userId: 'user-1',
         pattern: 'amazon',
         subCategoryId: 99,
-        amountSign: 'negative',
         confidence: '0.96',
         priority: 100,
       },
@@ -540,7 +536,6 @@ describe('applyTier1Regex', () => {
         userId: null,
         pattern: 'amazon',
         subCategoryId: 11,
-        amountSign: 'negative',
         confidence: '0.90',
         priority: 20,
       },
@@ -586,13 +581,13 @@ describe('categorizePipeline direct', () => {
   }
 
   it('returns non-null with subCategoryId for basic plan when a pattern matches', async () => {
+    // Phase 46: amountSign removed (ADR 0012)
     const patterns: ActivePattern[] = [
       {
         id: 5,
         userId: null,
         pattern: 'netflix',
         subCategoryId: 5,
-        amountSign: 'any',
         confidence: '0.95',
         priority: 10,
       },
@@ -612,6 +607,7 @@ describe('categorizePipeline direct', () => {
     expect(result).toMatchObject({ subCategoryId: 5 })
   })
 
+  // Phase 46: amountSign removed (ADR 0012)
   it('returns the user Netflix pattern result before a colliding system Netflix pattern', async () => {
     const patterns: ActivePattern[] = [
       {
@@ -619,7 +615,6 @@ describe('categorizePipeline direct', () => {
         userId: USER_ID,
         pattern: 'netflix',
         subCategoryId: 301,
-        amountSign: 'negative',
         confidence: '0.97',
         priority: 50,
       },
@@ -628,7 +623,6 @@ describe('categorizePipeline direct', () => {
         userId: null,
         pattern: 'netflix',
         subCategoryId: 302,
-        amountSign: 'negative',
         confidence: '0.90',
         priority: 10,
       },
@@ -652,6 +646,7 @@ describe('categorizePipeline direct', () => {
     })
   })
 
+  // Phase 46: amountSign removed (ADR 0012)
   it('uses global system regex patterns for free plan imports', async () => {
     const patterns: ActivePattern[] = [
       {
@@ -659,7 +654,6 @@ describe('categorizePipeline direct', () => {
         userId: null,
         pattern: 'netflix',
         subCategoryId: 5,
-        amountSign: 'any',
         confidence: '0.95',
         priority: 10,
       },
@@ -683,13 +677,13 @@ describe('categorizePipeline direct', () => {
   })
 
   it('uses user-owned regex patterns for free plan imports by default during alpha', async () => {
+    // Phase 46: amountSign removed (ADR 0012)
     const patterns: ActivePattern[] = [
       {
         id: 5,
         userId: USER_ID,
         pattern: 'netflix',
         subCategoryId: 5,
-        amountSign: 'any',
         confidence: '0.95',
         priority: 10,
       },
@@ -731,6 +725,7 @@ describe('categorizePipeline direct', () => {
     })
   })
 
+  // Phase 46: amountSign removed (ADR 0012)
   it('can raise regex and history minimum plans through configuration', async () => {
     process.env.CATEGORIZATION_REGEX_MIN_PLAN = 'basic'
     process.env.CATEGORIZATION_HISTORY_MIN_PLAN = 'basic'
@@ -748,7 +743,6 @@ describe('categorizePipeline direct', () => {
           userId: USER_ID,
           pattern: 'netflix',
           subCategoryId: 5,
-          amountSign: 'any',
           confidence: '0.95',
           priority: 10,
         },
@@ -1192,13 +1186,13 @@ describe('importFile', () => {
     )
   })
 
+  // Phase 46: amountSign removed (ADR 0012)
   it('basic plan imports a canonical user Netflix pattern before the system collision and records classification history', async () => {
     const userNetflixPattern: ActivePattern = {
       id: 201,
       userId: USER_ID,
       pattern: 'netflix',
       subCategoryId: 701,
-      amountSign: 'negative',
       confidence: '0.97',
       priority: 50,
     }
@@ -1207,7 +1201,6 @@ describe('importFile', () => {
       userId: null,
       pattern: 'netflix',
       subCategoryId: 702,
-      amountSign: 'negative',
       confidence: '0.90',
       priority: 10,
     }
@@ -1515,12 +1508,12 @@ describe('analyzeFile — pattern suggestions', () => {
   // ANL-03: sorted by matchCount desc, capped at 5
   it('returns at most 5 suggestions sorted by matchCount descending', async () => {
     const raw = [
-      { pattern: 'b', matchCount: 2, detectedAmountSign: 'any' as const, sampleDescriptions: [] },
-      { pattern: 'a', matchCount: 10, detectedAmountSign: 'negative' as const, sampleDescriptions: [] },
-      { pattern: 'c', matchCount: 7, detectedAmountSign: 'any' as const, sampleDescriptions: [] },
-      { pattern: 'd', matchCount: 3, detectedAmountSign: 'any' as const, sampleDescriptions: [] },
-      { pattern: 'e', matchCount: 5, detectedAmountSign: 'any' as const, sampleDescriptions: [] },
-      { pattern: 'f', matchCount: 1, detectedAmountSign: 'any' as const, sampleDescriptions: [] },
+      { pattern: 'b', matchCount: 2, sampleDescriptions: [] },
+      { pattern: 'a', matchCount: 10, sampleDescriptions: [] },
+      { pattern: 'c', matchCount: 7, sampleDescriptions: [] },
+      { pattern: 'd', matchCount: 3, sampleDescriptions: [] },
+      { pattern: 'e', matchCount: 5, sampleDescriptions: [] },
+      { pattern: 'f', matchCount: 1, sampleDescriptions: [] },
     ]
     mocks.detectPatternSuggestions.mockReturnValue(raw)
     mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))

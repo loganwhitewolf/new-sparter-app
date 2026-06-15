@@ -11,7 +11,7 @@ import {
   type TransactionSearchParams,
 } from '@/lib/validations/transactions'
 import { NATURE_LABELS, NATURE_ORDER } from '@/lib/utils/nature-labels'
-import { buildTypeNatureMap, buildCategorySubcategoryMap } from '@/lib/utils/cascade-options'
+import { buildDirectionNatureMap, buildCategorySubcategoryMap, buildDirectionCategoryMap } from '@/lib/utils/cascade-options'
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { TransactionFormDialog } from '@/components/transactions/transaction-form-dialog'
 import { TransactionTable } from '@/components/transactions/transaction-table'
@@ -39,6 +39,11 @@ function buildTransactionTableKey(
       transaction.expenseStatus ?? '',
       transaction.expenseCategoryName ?? '',
       transaction.expenseSubCategoryName ?? '',
+      // Pairing fields (PAIR-02): remount the table when a pair is created/removed
+      // so the badge appears/disappears without a manual reload — the table copies
+      // `transactions` into local state, so prop updates only land on remount.
+      transaction.pairedWithId ?? '',
+      transaction.pairedNetAmount ?? '',
     ].join(':'))
     .join('|')
 
@@ -55,7 +60,7 @@ function buildTransactionTableKey(
     params.amountMax ?? '',
     params.status ?? '',
     params.nature ?? '',
-    params.type ?? '',
+    params.direction ?? params.type ?? '',
   ].join(':')
 
   return `${filterKey}:${dataKey}`
@@ -67,18 +72,20 @@ export default async function TransactionsPage({
   searchParams: Promise<TransactionSearchParams>
 }) {
   const params = await searchParams
-  const filters = parseTransactionFilters(params)
+  const parsed = parseTransactionFilters(params)
+  // Map URL param 'type' to DAL field 'direction' (renamed in Phase 49 Plan 03)
+  const { type: _type, ...parsedRest } = parsed
+  const filters = { ...parsedRest, direction: _type }
   const [transactions, platforms, categories, mostUsed, monthsWithData] = await Promise.all([
     getTransactions(filters),
     getTransactionPlatforms(),
     getCategories(),
-    getMostUsedSubcategories(['in', 'out', 'transfer', 'system']),
+    getMostUsedSubcategories(['in', 'out', 'transfer', 'allocation']),
     getMonthsWithData('transactions'),
   ])
 
   const platformOptions = platforms.map((p) => ({ value: p.slug, label: p.name }))
   const categoryOptions = categories
-    .filter((c) => c.type !== 'system')
     .map((c) => ({ value: c.slug, label: c.name }))
 
   // Nature filter options: nine FlowNature values in canonical order + 'Non classificato'
@@ -90,17 +97,19 @@ export default async function TransactionsPage({
     { value: 'unclassified', label: NATURE_LABELS.unclassified },
   ]
 
-  // Type filter options: In/Out/Transfer + 'Non classificato'
-  const typeOptions = [
+  // Direction filter options: In/Out/Accantonamenti/Trasferimenti + 'Non classificato' (D-08)
+  const directionOptions = [
     { value: 'in', label: 'Entrate' },
     { value: 'out', label: 'Uscite' },
+    { value: 'allocation', label: 'Accantonamenti' },
     { value: 'transfer', label: 'Trasferimenti' },
     { value: 'unclassified', label: 'Non classificato' },
   ]
 
-  // Cascade-derived option maps: type→nature and category→subcategory
+  // Cascade-derived option maps: direction→nature, direction→category, category→subcategory
   const dependentOptions = {
-    nature: buildTypeNatureMap(categories),
+    nature: buildDirectionNatureMap(categories),
+    category: buildDirectionCategoryMap(categories),
     subCategory: buildCategorySubcategoryMap(categories),
   }
 
@@ -127,7 +136,7 @@ export default async function TransactionsPage({
             platform: platformOptions,
             category: categoryOptions,
             nature: natureOptions,
-            type: typeOptions,
+            direction: directionOptions,
           }}
           dependentOptions={dependentOptions}
         />

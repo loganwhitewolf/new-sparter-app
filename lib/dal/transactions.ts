@@ -2,12 +2,15 @@ import 'server-only'
 import { cache } from 'react'
 import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
+import { toDecimal } from '@/lib/utils/decimal'
 import { verifySession } from '@/lib/dal/auth'
 import {
   category,
+  direction,
   expense,
   file as importFile,
   importFormatVersion,
+  nature,
   platform,
   subCategory,
   transaction,
@@ -59,9 +62,9 @@ export type TransactionFilters = {
   amountMin?: string
   amountMax?: string
   status?: 'uncategorized' | 'categorized'
-  // Category-derived filters (Task 1):
+  // Category-derived filters: nature via nature.code, direction via direction.code
   nature?: string
-  type?: string
+  direction?: string
 }
 
 export const transactionListSelect = {
@@ -84,7 +87,64 @@ export const transactionListSelect = {
   platformId: platform.id,
   platformName: platform.name,
   platformSlug: platform.slug,
-  categoryType: category.type,
+  // Direction code from the nature→direction join (replaces the category.id placeholder)
+  categoryType: direction.code,
+  // Phase 50: pairing fields — correlated subqueries (no LEFT JOIN to preserve buildTransactionOrderBy)
+  pairedWithId: sql<string | null>`(
+    SELECT CASE
+      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
+      ELSE tp.transaction_a_id
+    END
+    FROM transaction_pair tp
+    WHERE tp.transaction_a_id = ${transaction.id}
+       OR tp.transaction_b_id = ${transaction.id}
+    LIMIT 1
+  )`,
+  pairedNetAmount: sql<string | null>`(
+    SELECT (${transaction.amount}::numeric + t2.amount::numeric)::text
+    FROM transaction_pair tp
+    JOIN transaction t2 ON t2.id = CASE
+      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
+      ELSE tp.transaction_a_id
+    END
+    WHERE tp.transaction_a_id = ${transaction.id}
+       OR tp.transaction_b_id = ${transaction.id}
+    LIMIT 1
+  )`,
+  // Counterpart's OWN original amount (not the net) — shown as "Importo" in the pair popover.
+  pairedAmount: sql<string | null>`(
+    SELECT t2.amount::text
+    FROM transaction_pair tp
+    JOIN transaction t2 ON t2.id = CASE
+      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
+      ELSE tp.transaction_a_id
+    END
+    WHERE tp.transaction_a_id = ${transaction.id}
+       OR tp.transaction_b_id = ${transaction.id}
+    LIMIT 1
+  )`,
+  pairedDescription: sql<string | null>`(
+    SELECT t2.description
+    FROM transaction_pair tp
+    JOIN transaction t2 ON t2.id = CASE
+      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
+      ELSE tp.transaction_a_id
+    END
+    WHERE tp.transaction_a_id = ${transaction.id}
+       OR tp.transaction_b_id = ${transaction.id}
+    LIMIT 1
+  )`,
+  pairedOccurredAt: sql<Date | null>`(
+    SELECT t2.occurred_at
+    FROM transaction_pair tp
+    JOIN transaction t2 ON t2.id = CASE
+      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
+      ELSE tp.transaction_a_id
+    END
+    WHERE tp.transaction_a_id = ${transaction.id}
+       OR tp.transaction_b_id = ${transaction.id}
+    LIMIT 1
+  )`,
 }
 
 export const transactionPlatformSelect = {
@@ -112,7 +172,14 @@ export type TransactionListRow = {
   platformId: number | null
   platformName: string | null
   platformSlug: string | null
-  categoryType: (typeof category.$inferSelect)['type'] | null
+  // Direction code from the nature→direction join
+  categoryType: string | null
+  // Phase 50: pairing fields (nullable — null when transaction is unpaired)
+  pairedWithId: string | null
+  pairedNetAmount: string | null
+  pairedAmount: string | null
+  pairedDescription: string | null
+  pairedOccurredAt: Date | null
 }
 
 export type TransactionPlatformOption = {
@@ -217,22 +284,18 @@ export const getTransactions = cache(
       conditions.push(isNotNull(expense.subCategoryId))
     }
 
-    // Category-derived filters (Task 1):
-    // nature filter — via subCategory.nature (already left-joined)
+    // Nature filter — cascade child via subCategory.natureId → nature.code join
     if (filters.nature === 'unclassified') {
-      conditions.push(or(isNull(expense.subCategoryId), isNull(subCategory.nature)))
+      conditions.push(or(isNull(expense.subCategoryId), isNull(subCategory.natureId)))
     } else if (filters.nature) {
-      // Cast excludes null — only non-null enum members are valid here
-      type NatureValue = NonNullable<(typeof subCategory.$inferSelect)['nature']>
-      conditions.push(eq(subCategory.nature, filters.nature as NatureValue))
+      conditions.push(eq(nature.code, filters.nature))
     }
 
-    // type filter — via category.type (already left-joined)
-    if (filters.type === 'unclassified') {
-      conditions.push(isNull(category.type))
-    } else if (filters.type) {
-      type CategoryTypeValue = (typeof category.$inferSelect)['type']
-      conditions.push(eq(category.type, filters.type as CategoryTypeValue))
+    // Direction filter — via nature→direction join; 'unclassified' matches null natureId rows
+    if (filters.direction === 'unclassified') {
+      conditions.push(isNull(subCategory.natureId))
+    } else if (filters.direction) {
+      conditions.push(eq(direction.code, filters.direction))
     }
 
     return db
@@ -247,6 +310,8 @@ export const getTransactions = cache(
       .leftJoin(expense, eq(transaction.expenseId, expense.id))
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
+      .leftJoin(nature, eq(subCategory.natureId, nature.id))
+      .leftJoin(direction, eq(nature.directionId, direction.id))
       .leftJoin(
         userSubcategoryOverride,
         and(
@@ -543,7 +608,7 @@ export const getTopUncategorizedExpenses = cache(
 
     // JS-side sort by |totalAmount| DESC because DISTINCT ON orders by description_hash
     return rows.sort(
-      (a, b) => Math.abs(parseFloat(b.totalAmount)) - Math.abs(parseFloat(a.totalAmount)),
+      (a, b) => toDecimal(b.totalAmount).abs().comparedTo(toDecimal(a.totalAmount).abs()),
     )
   },
 )

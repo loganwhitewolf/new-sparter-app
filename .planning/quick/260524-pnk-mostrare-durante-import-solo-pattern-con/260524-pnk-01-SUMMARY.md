@@ -1,4 +1,5 @@
 ---
+status: complete
 phase: 260524-pnk
 plan: "01"
 subsystem: pattern-detection

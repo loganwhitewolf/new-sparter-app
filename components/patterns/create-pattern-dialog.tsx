@@ -125,7 +125,7 @@ export function CreatePatternDialog({ categories }: Props) {
             onOpenChange={setPickerOpen}
             categories={categories}
             mostUsed={[]}
-            allowedCategoryTypes={['in', 'out', 'transfer', 'system']}
+            allowedCategoryTypes={['in', 'out', 'transfer', 'allocation']}
             defaultType={null}
             onChange={handlePickerChange}
           />

@@ -17,7 +17,6 @@ const { SuggestionCard } = await import('../components/import/suggestion-card')
 const suggestion = {
   pattern: 'netflix',
   matchCount: 3,
-  detectedAmountSign: 'negative' as const,
   sampleDescriptions: ['NETFLIX 10/01', 'NETFLIX 11/01', 'NETFLIX 12/01'],
 }
 

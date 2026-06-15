@@ -1,4 +1,5 @@
 import type { OverviewData } from '@/lib/dal/dashboard'
+import { toDecimal } from '@/lib/utils/decimal'
 import { formatEur } from './format'
 import { ReadingKpiCard, type Reading } from './kpi-card-reading'
 
@@ -13,6 +14,18 @@ function balanceReading(balance: number): Reading {
   if (balance > 0) return { text: 'Spendi meno di quanto guadagni', sentiment: 'good' }
   if (balance < 0) return { text: 'Spendi più di quanto guadagni', sentiment: 'bad' }
   return { text: 'Sei in pareggio', sentiment: 'neutral' }
+}
+
+/**
+ * D-05: Allocation reading — "more allocated = positive" sentiment.
+ * Mirrors the shape of savingsReading/balanceReading.
+ * When delta is null (no prior-year data), returns a neutral reading.
+ */
+function allocationReading(delta: number | null, prevYear: number): Reading {
+  if (delta === null) return { text: `Nessun confronto con il ${prevYear}`, sentiment: 'neutral' }
+  if (delta > 0) return { text: `Stai accantonando più del ${prevYear}`, sentiment: 'good' }
+  if (delta < 0) return { text: `Stai accantonando meno del ${prevYear}`, sentiment: 'warn' }
+  return { text: `In linea con il ${prevYear}`, sentiment: 'neutral' }
 }
 
 export function trendReading(delta: number, prevYear: number, kind: 'in' | 'out'): Reading {
@@ -51,7 +64,7 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
   const balanceNumeric = Number(data.balance)
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
       <ReadingKpiCard
         label="Totale entrate"
         value={formatEur(data.totalIn)}
@@ -90,6 +103,16 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         goodWhenPositive
         prevYear={prevYear}
         reading={savingsReading(data.savingsRate)}
+        className="min-h-0"
+      />
+      <ReadingKpiCard
+        label="Accantonato"
+        value={formatEur(toDecimal(data.totalAllocation).abs().toNumber())}
+        tone="allocation"
+        delta={data.deltas.totalAllocation}
+        goodWhenPositive
+        prevYear={prevYear}
+        reading={allocationReading(data.deltas.totalAllocation, prevYear)}
         className="min-h-0"
       />
     </div>

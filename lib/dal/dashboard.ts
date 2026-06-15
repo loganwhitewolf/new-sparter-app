@@ -15,7 +15,15 @@ import {
 } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { db } from '@/lib/db'
-import { category, expense, subCategory, transaction as transactionTable, userSubcategoryOverride } from '@/lib/db/schema'
+import {
+  category,
+  direction,
+  expense,
+  nature,
+  subCategory,
+  transaction as transactionTable,
+  userSubcategoryOverride,
+} from '@/lib/db/schema'
 import type { DashboardFilters, DashboardPreset } from '@/lib/validations/dashboard'
 import type { DateRange } from '@/lib/utils/date'
 import { dashboardPresetToDateRange, monthLabel, monthsBetween } from '@/lib/utils/date'
@@ -27,16 +35,19 @@ import {
   computeSavingsRate,
 } from '@/lib/utils/dashboard'
 import { toDecimal } from '@/lib/utils/decimal'
+import { effectiveAmount, isNotSecondary } from '@/lib/dal/transaction-pairs-sql'
 
 export type OverviewData = {
   totalIn: string
   totalOut: string
+  totalAllocation: string
   balance: string
   savingsRate: number
   uncategorizedCount: number
   deltas: {
     totalIn: number | null
     totalOut: number | null
+    totalAllocation: number | null
     balance: number | null
     savingsRate: number | null
     uncategorizedCount: number | null
@@ -163,13 +174,14 @@ type BreakdownCategoryDraft = Omit<BreakdownCategory, 'percentage' | 'subCategor
 type OverviewAggregateRow = {
   totalIn: string | null
   totalOut: string | null
+  totalAllocation: string | null
 }
 
 type BreakdownAggregateRow = {
   categoryId: number | null
   categoryName: string | null
   categorySlug: string | null
-  categoryType: 'in' | 'out' | 'system' | 'transfer' | null
+  categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
   subCategoryId: number | null
   subCategoryName: string | null
   subCategorySlug: string | null
@@ -181,7 +193,7 @@ type CategoryRankingAggregateRow = {
   categoryId: number | null
   categoryName: string | null
   categorySlug: string | null
-  categoryType: 'in' | 'out' | 'system' | 'transfer' | null
+  categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
   month: string | null
   count: number | string | null
   amount: string | null
@@ -206,7 +218,7 @@ type NatureTrendAggregateRow = {
 type CategoryDetailTrendRow = {
   categoryId: number | null
   categorySlug: string | null
-  categoryType: 'in' | 'out' | 'system' | 'transfer' | null
+  categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
   month: string | null
   count: number | string | null
   amount: string | null
@@ -215,7 +227,7 @@ type CategoryDetailTrendRow = {
 type CategoryDetailSubcategoryRow = {
   categoryId: number | null
   categorySlug: string | null
-  categoryType: 'in' | 'out' | 'system' | 'transfer' | null
+  categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
   subCategoryId: number | null
   subCategoryName: string | null
   subCategorySlug: string | null
@@ -227,7 +239,7 @@ type CategoryDetailTopTransactionRow = {
   id: string | null
   categoryId: number | null
   categorySlug: string | null
-  categoryType: 'in' | 'out' | 'system' | 'transfer' | null
+  categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
   description: string | null
   customTitle: string | null
   amount: string | null
@@ -370,7 +382,7 @@ function emptyCategoryDetailData(
 
 function rowMatchesCategory(
   categoryData: CategoryDetailCategory,
-  row: { categoryId: number | null; categorySlug: string | null; categoryType: 'in' | 'out' | 'system' | 'transfer' | null }
+  row: { categoryId: number | null; categorySlug: string | null; categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null }
 ): boolean {
   return (
     row.categoryId === categoryData.id &&
@@ -378,14 +390,6 @@ function rowMatchesCategory(
     row.categoryType !== 'transfer' &&
     row.categoryType === categoryData.type
   )
-}
-
-function notTransferCategory() {
-  return or(isNull(category.type), ne(category.type, 'transfer'))
-}
-
-export function notExcludedFromTotals() {
-  return or(isNull(subCategory.excludeFromTotals), eq(subCategory.excludeFromTotals, false))
 }
 
 function dateScopedTransactions(userId: string, from: Date, to: Date) {
@@ -416,9 +420,7 @@ export async function getUncategorizedCount(userId: string, from: Date, to: Date
         and(
           dateScopedTransactions(userId, from, to),
           expenseStatusUncategorized(),
-          isNull(expense.subCategoryId),
-          notTransferCategory(),
-          notExcludedFromTotals()
+          isNull(expense.subCategoryId)
         )
       )
 
@@ -432,18 +434,41 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
   try {
     const rows = await db
       .select({
-        totalIn: sql<string>`coalesce(sum(case when ${transactionTable.amount} > 0 then ${transactionTable.amount} else 0 end), 0)::text`,
-        totalOut: sql<string>`coalesce(abs(sum(case when ${transactionTable.amount} < 0 then ${transactionTable.amount} else 0 end)), 0)::text`,
+        totalIn: sql<string>`coalesce(sum(case when ${direction.code} = 'in' then ${effectiveAmount()} else 0 end), 0)::text`,
+        totalOut: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' then ${effectiveAmount()} else 0 end)), 0)::text`,
+        totalAllocation: sql<string>`coalesce(sum(case when ${direction.code} = 'allocation' then ${effectiveAmount()} else 0 end), 0)::text`,
       })
       .from(transactionTable)
-      .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
-      .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
-      .leftJoin(category, eq(subCategory.categoryId, category.id))
-      .where(and(dateScopedTransactions(userId, from, to), expenseStatusIncludedInDashboardTotals(), notTransferCategory(), notExcludedFromTotals()))
+      .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+      .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+      .innerJoin(category, eq(subCategory.categoryId, category.id))
+      .leftJoin(
+        userSubcategoryOverride,
+        and(
+          eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+          eq(userSubcategoryOverride.userId, userId),
+        ),
+      )
+      .innerJoin(
+        nature,
+        eq(
+          nature.id,
+          sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
+        )
+      )
+      .innerJoin(direction, eq(nature.directionId, direction.id))
+      .where(
+        and(
+          dateScopedTransactions(userId, from, to),
+          expenseStatusIncludedInDashboardTotals(),
+          ne(direction.code, 'transfer'),
+          isNotSecondary()
+        )
+      )
 
-    return rows[0] ?? { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT }
+    return rows[0] ?? { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT, totalAllocation: ZERO_AMOUNT }
   } catch {
-    return { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT }
+    return { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT, totalAllocation: ZERO_AMOUNT }
   }
 }
 
@@ -455,22 +480,28 @@ export function buildOverviewData(input: {
 }): OverviewData {
   const totalIn = normalizeAmount(input.current.totalIn)
   const totalOut = normalizeAmount(input.current.totalOut)
+  // totalAllocation: propagate from aggregate row (new field in Phase 49)
+  const totalAllocation = normalizeAmount(input.current.totalAllocation)
   const balance = balanceFrom(totalIn, totalOut)
   const previousTotalIn = normalizeAmount(input.previous.totalIn)
   const previousTotalOut = normalizeAmount(input.previous.totalOut)
+  const previousTotalAllocation = normalizeAmount(input.previous.totalAllocation)
   const previousBalance = balanceFrom(previousTotalIn, previousTotalOut)
+  // Savings rate uses spending-only totalOut — allocation must NOT enter the inputs (D-06, Pitfall 3)
   const savingsRate = computeSavingsRate(totalIn, totalOut)
   const previousSavingsRate = computeSavingsRate(previousTotalIn, previousTotalOut)
 
   return {
     totalIn,
     totalOut,
+    totalAllocation,
     balance,
     savingsRate,
     uncategorizedCount: input.currentUncategorizedCount,
     deltas: {
       totalIn: computeDeltaPercent(totalIn, previousTotalIn),
       totalOut: computeDeltaPercent(totalOut, previousTotalOut),
+      totalAllocation: computeDeltaPercent(totalAllocation, previousTotalAllocation),
       balance: computeDeltaPercent(balance, previousBalance),
       savingsRate: computeDeltaPercent(savingsRate, previousSavingsRate),
       uncategorizedCount: computeDeltaPercent(
@@ -491,6 +522,7 @@ export function buildBreakdownData(rows: BreakdownAggregateRow[]): BreakdownCate
       row.categorySlug === null ||
       row.categoryType === null ||
       row.categoryType === 'transfer' ||
+      row.categoryType === 'allocation' ||
       row.subCategoryId === null ||
       row.subCategoryName === null ||
       row.subCategorySlug === null
@@ -567,6 +599,7 @@ export function buildCategoryRankingData(input: {
       row.categorySlug === null ||
       row.categoryType === null ||
       row.categoryType === 'transfer' ||
+      row.categoryType === 'allocation' ||
       row.month === null ||
       !monthKeySet.has(row.month)
     ) {
@@ -664,13 +697,12 @@ export function buildMonthlyNatureTrendData(input: {
   const emptySegments = (): Record<FlowNature | 'unclassified', string> => ({
     essential: ZERO_AMOUNT,
     discretionary: ZERO_AMOUNT,
-    operational: ZERO_AMOUNT,
-    financial: ZERO_AMOUNT,
     income: ZERO_AMOUNT,
     income_extraordinary: ZERO_AMOUNT,
     debt: ZERO_AMOUNT,
-    extraordinary: ZERO_AMOUNT,
     transfer: ZERO_AMOUNT,
+    savings: ZERO_AMOUNT,
+    investment: ZERO_AMOUNT,
     unclassified: ZERO_AMOUNT,
   })
 
@@ -870,7 +902,8 @@ export const getCategoriesBreakdown = cache(
   async (filters: DashboardFilters): Promise<BreakdownCategory[]> => {
     const { userId } = await verifySession()
     const { from, to } = dashboardPresetToDateRange(filters.preset)
-    const typeFilter = filters.type === 'all' ? undefined : eq(category.type, filters.type)
+    // Direction filter: use direction.code when a specific type is selected
+    const typeFilter = filters.type === 'all' ? undefined : eq(direction.code, filters.type)
 
     let rows: BreakdownAggregateRow[] = []
 
@@ -880,12 +913,13 @@ export const getCategoriesBreakdown = cache(
           categoryId: category.id,
           categoryName: category.name,
           categorySlug: category.slug,
-          categoryType: category.type,
+          // Restored from direction join (Phase 49 — replaces sql`null` stub)
+          categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
           subCategoryId: subCategory.id,
           subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
           subCategorySlug: subCategory.slug,
           count: countDistinct(expense.id),
-          amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+          amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
         })
         .from(transactionTable)
         .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -898,16 +932,24 @@ export const getCategoriesBreakdown = cache(
             eq(userSubcategoryOverride.userId, userId),
           ),
         )
+        .innerJoin(
+          nature,
+          eq(
+            nature.id,
+            sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
+          )
+        )
+        .innerJoin(direction, eq(nature.directionId, direction.id))
         .where(
           and(
             dateScopedTransactions(userId, from, to),
             expenseStatusIncludedInDashboardTotals(),
-            ne(category.type, 'transfer'),
-            notExcludedFromTotals(),
+            eq(direction.includedInTotals, true),
+            isNotSecondary(),
             typeFilter
           )
         )
-        .groupBy(category.id, subCategory.id, userSubcategoryOverride.customName)
+        .groupBy(category.id, subCategory.id, userSubcategoryOverride.customName, direction.code)
         .orderBy(category.id, subCategory.id)
     } catch {
       rows = []
@@ -922,7 +964,8 @@ export const getCategoryRanking = cache(
     const { userId } = await verifySession()
     const { from, to } = dashboardPresetToDateRange(filters.preset)
     const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
-    const typeFilter = filters.type === 'all' ? undefined : eq(category.type, filters.type)
+    // Direction filter: use direction.code when a specific type is selected
+    const typeFilter = filters.type === 'all' ? undefined : eq(direction.code, filters.type)
 
     let rows: CategoryRankingAggregateRow[] = []
 
@@ -932,10 +975,11 @@ export const getCategoryRanking = cache(
           categoryId: category.id,
           categoryName: category.name,
           categorySlug: category.slug,
-          categoryType: category.type,
+          // Restored from direction join (Phase 49 — replaces sql`null` stub)
+          categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
           month: monthSql,
           count: countDistinct(expense.id),
-          amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+          amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
         })
         .from(transactionTable)
         .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -948,17 +992,25 @@ export const getCategoryRanking = cache(
             eq(userSubcategoryOverride.userId, userId),
           ),
         )
+        .innerJoin(
+          nature,
+          eq(
+            nature.id,
+            sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
+          )
+        )
+        .innerJoin(direction, eq(nature.directionId, direction.id))
         .where(
           and(
             dateScopedTransactions(userId, from, to),
             expenseStatusIncludedInDashboardTotals(),
-            ne(category.type, 'transfer'),
-            notExcludedFromTotals(),
+            eq(direction.includedInTotals, true),
+            isNotSecondary(),
             typeFilter
           )
         )
-        .groupBy(category.id, monthSql)
-        .orderBy(desc(sql`coalesce(abs(sum(${transactionTable.amount})), 0)`), category.id, monthSql)
+        .groupBy(category.id, monthSql, direction.code)
+        .orderBy(desc(sql`coalesce(abs(sum(${effectiveAmount()})), 0)`), category.id, monthSql)
     } catch {
       rows = []
     }
@@ -971,7 +1023,8 @@ export const getCategoryDeviations = cache(
   async (input: CategoryDeviationsInput): Promise<Map<number, DeviationData>> => {
     const { userId } = await verifySession()
     const { reference, baseline } = getDeviationDateRanges()
-    const typeFilter = input.type === 'all' ? undefined : eq(category.type, input.type)
+    // Direction filter: use direction.code when a specific type is selected
+    const typeFilter = input.type === 'all' ? undefined : eq(direction.code, input.type)
     const groupColumn = input.categoryId !== undefined ? subCategory.id : category.id
     const categoryScope =
       input.categoryId !== undefined ? eq(category.id, input.categoryId) : undefined
@@ -986,18 +1039,33 @@ export const getCategoryDeviations = cache(
         db
           .select({
             id: groupColumn,
-            amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
           })
           .from(transactionTable)
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
+          .leftJoin(
+            userSubcategoryOverride,
+            and(
+              eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+              eq(userSubcategoryOverride.userId, userId),
+            ),
+          )
+          .innerJoin(
+            nature,
+            eq(
+              nature.id,
+              sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
+            )
+          )
+          .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
               dateScopedTransactions(userId, reference.from, reference.to),
               expenseStatusIncludedInDashboardTotals(),
-              ne(category.type, 'transfer'),
-              notExcludedFromTotals(),
+              eq(direction.includedInTotals, true),
+              isNotSecondary(),
               typeFilter,
               categoryScope
             )
@@ -1007,18 +1075,33 @@ export const getCategoryDeviations = cache(
           .select({
             id: groupColumn,
             month: monthSql,
-            amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
           })
           .from(transactionTable)
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
+          .leftJoin(
+            userSubcategoryOverride,
+            and(
+              eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+              eq(userSubcategoryOverride.userId, userId),
+            ),
+          )
+          .innerJoin(
+            nature,
+            eq(
+              nature.id,
+              sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
+            )
+          )
+          .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
               dateScopedTransactions(userId, baseline.from, baseline.to),
               expenseStatusIncludedInDashboardTotals(),
-              ne(category.type, 'transfer'),
-              notExcludedFromTotals(),
+              eq(direction.includedInTotals, true),
+              isNotSecondary(),
               typeFilter,
               categoryScope
             )
@@ -1048,25 +1131,34 @@ export const getCategoryDetail = cache(
   async (categoryId: number, filters: DashboardFilters): Promise<CategoryDetailData> => {
     const { userId } = await verifySession()
     const { from, to } = dashboardPresetToDateRange(filters.preset)
-    const selectedType = filters.type === 'in' ? 'in' : 'out'
     const emptyData = () => emptyCategoryDetailData(null, from, to)
 
     let categoryData: CategoryDetailCategory | null = null
 
     try {
+      // Resolve the category's direction code via a correlated subquery on subcategories
       const categoryRows = await db
         .select({
           id: category.id,
           name: category.name,
           slug: category.slug,
-          type: category.type,
+          // Derive type from the first subcategory's direction, honouring userSubcategoryOverride
+          type: sql<'in' | 'out' | null>`(
+            SELECT d.code FROM direction d
+            INNER JOIN nature n ON n.direction_id = d.id
+            INNER JOIN sub_category sc ON sc.id IN (
+              SELECT sc2.id FROM sub_category sc2 WHERE sc2.category_id = ${category.id}
+            )
+            LEFT JOIN user_subcategory_override uso
+              ON uso.sub_category_id = sc.id AND uso.user_id = ${userId}
+            WHERE n.id = COALESCE(uso.nature_id, sc.nature_id)
+            LIMIT 1
+          )`,
         })
         .from(category)
         .where(
           and(
             eq(category.id, categoryId),
-            eq(category.type, selectedType),
-            ne(category.type, 'transfer'),
             eq(category.isActive, true),
             or(isNull(category.userId), eq(category.userId, userId))
           )
@@ -1075,12 +1167,12 @@ export const getCategoryDetail = cache(
 
       const row = categoryRows[0]
 
-      if (row && row.type !== 'transfer') {
+      if (row) {
         categoryData = {
           id: row.id,
           name: row.name,
           slug: row.slug,
-          type: row.type as 'in' | 'out',
+          type: (row.type ?? 'out') as 'in' | 'out',
         }
       }
     } catch {
@@ -1094,8 +1186,6 @@ export const getCategoryDetail = cache(
     const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
     const activeScopedCategory = and(
       eq(category.id, categoryId),
-      eq(category.type, selectedType),
-      ne(category.type, 'transfer'),
       eq(category.isActive, true),
       or(isNull(category.userId), eq(category.userId, userId))
     )
@@ -1110,10 +1200,11 @@ export const getCategoryDetail = cache(
           .select({
             categoryId: category.id,
             categorySlug: category.slug,
-            categoryType: category.type,
+            // Restored from direction join (Phase 49 — replaces sql`null` stub)
+            categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
             month: monthSql,
             count: countDistinct(expense.id),
-            amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
           })
           .from(transactionTable)
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -1126,27 +1217,37 @@ export const getCategoryDetail = cache(
               eq(userSubcategoryOverride.userId, userId),
             ),
           )
+          .innerJoin(
+            nature,
+            eq(
+              nature.id,
+              sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
+            )
+          )
+          .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
               dateScopedTransactions(userId, from, to),
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
-              notExcludedFromTotals()
+              eq(direction.includedInTotals, true),
+              isNotSecondary()
             )
           )
-          .groupBy(category.id, monthSql)
+          .groupBy(category.id, monthSql, direction.code)
           .orderBy(monthSql),
         db
           .select({
             categoryId: category.id,
             categorySlug: category.slug,
-            categoryType: category.type,
+            // Restored from direction join (Phase 49 — replaces sql`null` stub)
+            categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
             subCategoryId: subCategory.id,
             subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
             subCategorySlug: subCategory.slug,
             count: countDistinct(expense.id),
-            amount: sql<string>`coalesce(abs(sum(${transactionTable.amount})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
           })
           .from(transactionTable)
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -1159,23 +1260,33 @@ export const getCategoryDetail = cache(
               eq(userSubcategoryOverride.userId, userId),
             ),
           )
+          .innerJoin(
+            nature,
+            eq(
+              nature.id,
+              sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
+            )
+          )
+          .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
               dateScopedTransactions(userId, from, to),
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
-              notExcludedFromTotals()
+              eq(direction.includedInTotals, true),
+              isNotSecondary()
             )
           )
-          .groupBy(category.id, subCategory.id, userSubcategoryOverride.customName)
-          .orderBy(desc(sql`coalesce(abs(sum(${transactionTable.amount})), 0)`), sql`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`, subCategory.id),
+          .groupBy(category.id, subCategory.id, userSubcategoryOverride.customName, direction.code)
+          .orderBy(desc(sql`coalesce(abs(sum(${effectiveAmount()})), 0)`), sql`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`, subCategory.id),
         db
           .select({
             id: transactionTable.id,
             categoryId: category.id,
             categorySlug: category.slug,
-            categoryType: category.type,
+            // Restored from direction join (Phase 49 — replaces sql`null` stub)
+            categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
             description: transactionTable.description,
             customTitle: transactionTable.customTitle,
             amount: transactionTable.amount,
@@ -1185,16 +1296,32 @@ export const getCategoryDetail = cache(
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
+          .leftJoin(
+            userSubcategoryOverride,
+            and(
+              eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+              eq(userSubcategoryOverride.userId, userId),
+            ),
+          )
+          .innerJoin(
+            nature,
+            eq(
+              nature.id,
+              sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
+            )
+          )
+          .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
               dateScopedTransactions(userId, from, to),
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
-              notExcludedFromTotals()
+              eq(direction.includedInTotals, true),
+              isNotSecondary()
             )
           )
-          .orderBy(desc(sql`abs(${transactionTable.amount})`), desc(transactionTable.occurredAt), transactionTable.id)
+          .orderBy(desc(sql`abs(${effectiveAmount()})`), desc(transactionTable.occurredAt), transactionTable.id)
           .limit(5),
       ])
 
@@ -1219,43 +1346,16 @@ export const getCategoryDetail = cache(
   }
 )
 
-
-export const getAggregatedTransactionsData = cache(
-  async (preset: DashboardPreset): Promise<MonthlyTrendPoint[]> => {
-    const { userId } = await verifySession()
-    const { from, to } = dashboardPresetToDateRange(preset)
-    const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
-
-    let rows: TrendAggregateRow[] = []
-
-    try {
-      rows = await db
-        .select({
-          month: monthSql,
-          totalIn: sql<string>`coalesce(sum(case when ${transactionTable.amount} > 0 and (${category.type} is null or ${category.type} <> 'transfer') and (${subCategory.excludeFromTotals} is null or ${subCategory.excludeFromTotals} = false) then ${transactionTable.amount} else 0 end), 0)::text`,
-          totalOut: sql<string>`coalesce(abs(sum(case when ${transactionTable.amount} < 0 and (${category.type} is null or ${category.type} <> 'transfer') and (${subCategory.excludeFromTotals} is null or ${subCategory.excludeFromTotals} = false) then ${transactionTable.amount} else 0 end)), 0)::text`,
-          totalNc: sql<number>`count(distinct case when ${expense.status} = '1' and ${expense.subCategoryId} is null then ${expense.id} end)`,
-          totalIgn: sql<number>`count(distinct case when ${category.type} = 'transfer' then ${expense.id} end)`,
-        })
-        .from(transactionTable)
-        .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
-        .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
-        .leftJoin(category, eq(subCategory.categoryId, category.id))
-        .where(and(dateScopedTransactions(userId, from, to), expenseStatusIncludedInDashboardTotals()))
-        .groupBy(monthSql)
-    } catch {
-      rows = []
-    }
-
-    return buildMonthlyTrendData({ from, to, rows })
-  }
-)
-
 export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Promise<MonthlyNatureTrendPoint[]> => {
   const { userId } = await verifySession()
   const { from, to } = dashboardPresetToDateRange(preset)
   const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
-  const natureSql = sql<FlowNature | null>`coalesce(${userSubcategoryOverride.nature}, ${subCategory.nature})`
+  // Direction-aware nature grouping: resolve effective nature via override.natureId or sub.natureId → nature.code
+  const natureSql = sql<FlowNature | null>`(
+    SELECT n.code FROM nature n
+    WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
+    LIMIT 1
+  )`
 
   let rows: NatureTrendAggregateRow[] = []
 
@@ -1264,9 +1364,9 @@ export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Pr
       .select({
         month: monthSql,
         nature: natureSql,
-        amount: sql<string>`coalesce(sum(${transactionTable.amount}), 0)::text`,
+        amount: sql<string>`coalesce(sum(${effectiveAmount()}), 0)::text`,
         totalNc: sql<number>`count(distinct case when ${expense.status} = '1' and ${expense.subCategoryId} is null then ${expense.id} end)`,
-        totalIgn: sql<number>`count(distinct case when ${category.type} = 'transfer' then ${expense.id} end)`,
+        totalIgn: sql<number>`count(distinct case when ${direction.code} = 'transfer' then ${expense.id} end)`,
       })
       .from(transactionTable)
       .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -1279,12 +1379,20 @@ export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Pr
           eq(userSubcategoryOverride.userId, userId),
         ),
       )
+      .leftJoin(
+        nature,
+        eq(
+          nature.id,
+          sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
+        )
+      )
+      .leftJoin(direction, eq(nature.directionId, direction.id))
       .where(
         and(
           dateScopedTransactions(userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
-          notExcludedFromTotals(),
-          notTransferCategory(),
+          or(isNull(direction.code), ne(direction.code, 'transfer')),
+          isNotSecondary()
         )
       )
       .groupBy(monthSql, natureSql)

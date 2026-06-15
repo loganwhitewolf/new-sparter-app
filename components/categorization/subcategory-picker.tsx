@@ -55,7 +55,7 @@ export interface SubcategoryPickerProps {
    * Pre-selected type chip derived from the row's amount sign.
    * null → "Tutte" chip selected.
    */
-  defaultType: 'in' | 'out' | 'transfer' | null
+  defaultType: 'in' | 'out' | 'allocation' | 'transfer' | null
   /** Called with the string subCategoryId when the user taps a tile. */
   onChange: (subCategoryId: string) => void
   /**
@@ -66,13 +66,14 @@ export interface SubcategoryPickerProps {
 }
 
 // ---------------------------------------------------------------------------
-// Type chip definitions — no "system" chip (D-03)
+// Type chip definitions — all 4 direction chips (D-07)
 // ---------------------------------------------------------------------------
 
 const TYPE_FILTERS: Array<{ key: FilterKey; label: string }> = [
   { key: null, label: 'Tutte' },
   { key: 'in', label: 'Entrate' },
   { key: 'out', label: 'Uscite' },
+  { key: 'allocation', label: 'Accantonamenti' },
   { key: 'transfer', label: 'Trasferimenti' },
 ]
 

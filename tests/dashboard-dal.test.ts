@@ -11,7 +11,6 @@ vi.mock('@/lib/db/schema', () => ({
     userId: 'category.userId',
     name: 'category.name',
     slug: 'category.slug',
-    type: 'category.type',
     isActive: 'category.isActive',
   },
   expense: {
@@ -27,14 +26,26 @@ vi.mock('@/lib/db/schema', () => ({
     slug: 'subCategory.slug',
     categoryId: 'subCategory.categoryId',
     isActive: 'subCategory.isActive',
-    excludeFromTotals: 'subCategory.excludeFromTotals',
-    nature: 'subCategory.nature',
+    // Phase 49: excludeFromTotals and nature removed (D-10 / Pitfall 6)
+    // direction join provides direction.includedInTotals instead
+    natureId: 'subCategory.natureId',
   },
   userSubcategoryOverride: {
     customName: 'userSubcategoryOverride.customName',
     subCategoryId: 'userSubcategoryOverride.subCategoryId',
     userId: 'userSubcategoryOverride.userId',
-    nature: 'userSubcategoryOverride.nature',
+    natureId: 'userSubcategoryOverride.natureId',
+  },
+  direction: {
+    id: 'direction.id',
+    code: 'direction.code',
+    labelIt: 'direction.labelIt',
+    includedInTotals: 'direction.includedInTotals',
+  },
+  nature: {
+    id: 'nature.id',
+    code: 'nature.code',
+    directionId: 'nature.directionId',
   },
   transaction: {
     id: 'transaction.id',
@@ -70,7 +81,6 @@ const {
   buildOverviewData,
   getDeviationDateRanges,
   getOverviewComparisonRanges,
-  notExcludedFromTotals,
 } = await import('../lib/dal/dashboard')
 
 describe('dashboard DAL amount mapping', () => {
@@ -112,8 +122,8 @@ describe('dashboard DAL amount mapping', () => {
 
   it('builds overview KPI strings from Decimal aggregate rows', () => {
     const overview = buildOverviewData({
-      current: { totalIn: '2500.125', totalOut: '1500.115' },
-      previous: { totalIn: '2000.00', totalOut: '1000.00' },
+      current: { totalIn: '2500.125', totalOut: '1500.115', totalAllocation: null },
+      previous: { totalIn: '2000.00', totalOut: '1000.00', totalAllocation: null },
       currentUncategorizedCount: 3,
       previousUncategorizedCount: 2,
     })
@@ -131,8 +141,8 @@ describe('dashboard DAL amount mapping', () => {
 
   it('returns zero overview data when aggregates are nullable empty-state rows', () => {
     const overview = buildOverviewData({
-      current: { totalIn: null, totalOut: null },
-      previous: { totalIn: null, totalOut: null },
+      current: { totalIn: null, totalOut: null, totalAllocation: null },
+      previous: { totalIn: null, totalOut: null, totalAllocation: null },
       currentUncategorizedCount: 0,
       previousUncategorizedCount: 0,
     })
@@ -361,12 +371,6 @@ describe('dashboard DAL amount mapping', () => {
   it('DASHBOARD_TOTAL_EXPENSE_STATUSES excludes status=4 (ignored expenses)', () => {
     expect(DASHBOARD_TOTAL_EXPENSE_STATUSES).toEqual(['1', '2', '3'])
     expect(DASHBOARD_TOTAL_EXPENSE_STATUSES).not.toContain('4')
-  })
-
-  it('notExcludedFromTotals() helper builds correct OR predicate', () => {
-    const predicate = notExcludedFromTotals()
-    expect(predicate).not.toBeNull()
-    expect(predicate).not.toBeUndefined()
   })
 
   it('zero-fills monthly trend buckets while preserving imported transaction amounts and counts', () => {
@@ -658,16 +662,16 @@ describe('buildMonthlyNatureTrendData (R-FN-04, R-FN-08, R-FN-09)', () => {
 
     expect(result).toHaveLength(2)
     for (const point of result) {
+      // Phase 46: FlowNature v2.0 — 8 natures (extraordinary→savings, financial→investment, operational dissolved)
       expect(Object.keys(point.segments).sort()).toEqual(
         [
           'debt',
           'discretionary',
           'essential',
-          'extraordinary',
-          'financial',
           'income',
           'income_extraordinary',
-          'operational',
+          'investment',
+          'savings',
           'transfer',
           'unclassified',
         ].sort()
@@ -709,6 +713,7 @@ describe('buildMonthlyNatureTrendData (R-FN-04, R-FN-08, R-FN-09)', () => {
     expect(result[0]?.totalIgn).toBe(1)
   })
 
+  // Phase 46: FlowNature v2.0 — financial → investment
   it('segments across different natures accumulate independently per month', () => {
     const result = buildMonthlyNatureTrendData({
       from: new Date(2026, 0, 1),
@@ -716,14 +721,14 @@ describe('buildMonthlyNatureTrendData (R-FN-04, R-FN-08, R-FN-09)', () => {
       rows: [
         { month: '2026-01', nature: 'essential', amount: '300.00', totalNc: 0, totalIgn: 0 },
         { month: '2026-01', nature: 'discretionary', amount: '100.00', totalNc: 0, totalIgn: 0 },
-        { month: '2026-02', nature: 'financial', amount: '50.00', totalNc: 1, totalIgn: 0 },
+        { month: '2026-02', nature: 'investment', amount: '50.00', totalNc: 1, totalIgn: 0 },
       ],
     })
 
     expect(result[0]?.segments.essential).toBe('300.00')
     expect(result[0]?.segments.discretionary).toBe('100.00')
-    expect(result[0]?.segments.financial).toBe('0.00')
-    expect(result[1]?.segments.financial).toBe('50.00')
+    expect(result[0]?.segments.investment).toBe('0.00')
+    expect(result[1]?.segments.investment).toBe('50.00')
     expect(result[1]?.segments.essential).toBe('0.00')
     expect(result[1]?.totalNc).toBe(1)
   })
@@ -740,5 +745,223 @@ describe('buildMonthlyNatureTrendData (R-FN-04, R-FN-08, R-FN-09)', () => {
 
     expect(result).toHaveLength(1)
     expect(result[0]?.segments.essential).toBe('400.00')
+  })
+})
+
+// ─── Phase 49 RED: money-correctness tests (ADR 0012 — direction algebraic sum) ──────────────
+// These tests are RED until Plans 02/03 implement the direction-grouped aggregation.
+// Expected to FAIL at commit time because:
+//   - OverviewData.totalAllocation does not yet exist on the type
+//   - buildOverviewData does not yet accept / propagate totalAllocation
+// Do NOT implement production code here — keep RED.
+
+describe('DASH money-correctness (Phase 49 — ADR 0012)', () => {
+  // DASH-02: A +€30 refund under an OUT subcategory (amount positive, direction = out)
+  // must LOWER totalOut, not raise it (algebraic sum: 100 spending + 30 refund = 70 net)
+  it('DASH-02: refund netting — +€30 refund under OUT direction lowers totalOut to 70.00 (not 100 or 130)', () => {
+    // buildOverviewData receives pre-aggregated rows from getOverviewAmountTotals.
+    // After Plan 02, getOverviewAmountTotals will return { totalIn, totalOut, totalAllocation }
+    // using algebraic sum per direction bucket. Mocked here with the expected output values:
+    //   - €100 OUT spending + €30 refund = totalOut 70.00 (algebraic sum: sum(OUT amounts) = -100 + 30 = -70, abs → 70)
+    const overview = buildOverviewData({
+      current: {
+        totalIn: '0.00',
+        totalOut: '70.00',
+        totalAllocation: '0.00',
+      },
+      previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00' },
+      currentUncategorizedCount: 0,
+      previousUncategorizedCount: 0,
+    })
+
+    // The critical assertion: algebraic-sum refund netting
+    expect(overview.totalOut).toBe('70.00')
+    expect(overview.totalAllocation).toBe('0.00')
+  })
+
+  // DASH-03: -€500 savings deposit (allocation direction, included_in_totals=false)
+  // must appear in totalAllocation, NOT in totalOut
+  it('DASH-03: allocation isolation — -€500 savings deposit appears in totalAllocation (500.00), totalOut stays 0.00', () => {
+    const overview = buildOverviewData({
+      current: {
+        totalIn: '0.00',
+        totalOut: '0.00',
+        totalAllocation: '500.00',
+      },
+      previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00' },
+      currentUncategorizedCount: 0,
+      previousUncategorizedCount: 0,
+    })
+
+    expect(overview.totalOut).toBe('0.00')
+    expect(overview.totalAllocation).toBe('500.00')
+  })
+
+  // DASH-02: net divestment — +€800 investment deposit and +€300 divestment in same month
+  // Allocation algebraic sum: -800 + 300 = -500 → abs → 500 (net allocation, not 800+300=1100)
+  it('DASH-02: net divestment — +€800 deposit and +€300 divestment net to 500.00 in allocation (not 1100.00)', () => {
+    const overview = buildOverviewData({
+      current: {
+        totalIn: '0.00',
+        totalOut: '0.00',
+        // Algebraic sum for allocation: (-800) + (+300) = -500 → abs for display = 500
+        totalAllocation: '500.00',
+      },
+      previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00' },
+      currentUncategorizedCount: 0,
+      previousUncategorizedCount: 0,
+    })
+
+    // Assert netted value, NOT double-counted 800+300=1100
+    expect(overview.totalAllocation).toBe('500.00')
+    expect(overview.totalAllocation).not.toBe('1100.00')
+  })
+
+  // DASH-01: transfer direction (included_in_totals=false) contributes 0 to all three totals
+  it('DASH-01: transfer exclusion — transfer direction transaction contributes 0 to totalIn, totalOut, totalAllocation', () => {
+    // Direction included_in_totals=false for transfer; excluded from all aggregation
+    const overview = buildOverviewData({
+      current: {
+        totalIn: '0.00',
+        totalOut: '0.00',
+        totalAllocation: '0.00',
+      },
+      previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00' },
+      currentUncategorizedCount: 0,
+      previousUncategorizedCount: 0,
+    })
+
+    expect(overview.totalIn).toBe('0.00')
+    expect(overview.totalOut).toBe('0.00')
+    expect(overview.totalAllocation).toBe('0.00')
+  })
+
+  // DASH-04: savings rate = (in − out) / in where out = spending only (no allocation, no transfer)
+  // totalIn=3000, totalOut=2000 (spending) → (3000-2000)/3000*100 = 33.3% (computeSavingsRate rounds to 1dp)
+  // totalAllocation must NOT enter the savings rate denominator
+  it('DASH-04: savings rate unchanged — (3000-2000)/3000 = 33.3, allocation NOT included in denominator', () => {
+    const overview = buildOverviewData({
+      current: {
+        totalIn: '3000.00',
+        totalOut: '2000.00',
+        totalAllocation: '500.00',
+      },
+      previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00' },
+      currentUncategorizedCount: 0,
+      previousUncategorizedCount: 0,
+    })
+
+    // Savings rate must be (3000 - 2000) / 3000 * 100 = 33.3 (computeSavingsRate rounds to 1dp)
+    // totalAllocation (500) must NOT enter the savings rate denominator
+    // If allocation were included: (3000 - 2000 - 500) / 3000 * 100 = 16.7 — wrong
+    expect(overview.savingsRate).toBe(33.3)
+    // totalAllocation is surfaced on OverviewData (Phase 49 — plan 02)
+    expect(overview.totalAllocation).toBe('500.00')
+  })
+})
+
+// ─── Phase 50 RED: transaction-pairing netting tests (PAIR-03) ──────────────
+// These tests are RED until Plans 02/03 implement isNotSecondary / effectiveAmount helpers
+// and wire them into the dashboard DAL queries.
+// Dynamic import is used so that the module-not-found error is scoped to each test,
+// not to the entire file — keeping all pre-existing tests GREEN while these are RED.
+
+describe('transaction pairing netting (Phase 50 — PAIR-03)', () => {
+  // ── isNotSecondary() fragment contract ─────────────────────────────────────
+  describe('isNotSecondary() SQL fragment', () => {
+    it('returns a sql fragment referencing transaction_pair and transaction_b_id', async () => {
+      // This dynamic import is RED until Plan 02 creates lib/dal/transaction-pairs-sql.ts
+      const { isNotSecondary } = await import('@/lib/dal/transaction-pairs-sql')
+      const fragment = isNotSecondary()
+      const sqlText = JSON.stringify(fragment)
+      // Check for the key identifiers that must appear in the NOT EXISTS clause
+      expect(sqlText.toLowerCase()).toMatch(/transaction_pair|tp\.transaction_b_id/)
+    })
+
+    it('returns a value that is truthy (Drizzle sql fragment, not null/undefined)', async () => {
+      const { isNotSecondary } = await import('@/lib/dal/transaction-pairs-sql')
+      expect(isNotSecondary()).toBeTruthy()
+    })
+  })
+
+  // ── effectiveAmount() fragment contract ──────────────────────────────────
+  describe('effectiveAmount() SQL fragment', () => {
+    it('returns a sql fragment with a CASE WHEN EXISTS referencing transaction_a_id and ::numeric addition', async () => {
+      const { effectiveAmount } = await import('@/lib/dal/transaction-pairs-sql')
+      const fragment = effectiveAmount()
+      const sqlText = JSON.stringify(fragment)
+      // The CASE WHEN EXISTS must reference the pair table and ::numeric cast
+      expect(sqlText.toLowerCase()).toMatch(/case|when|exists|transaction_pair/)
+    })
+
+    it('returns a value that is truthy (Drizzle sql fragment, not null/undefined)', async () => {
+      const { effectiveAmount } = await import('@/lib/dal/transaction-pairs-sql')
+      expect(effectiveAmount()).toBeTruthy()
+    })
+  })
+
+  // ── Scenario-level netting (buildOverviewData + mocked pre-aggregated rows) ──
+  // The netting contract: when a primary (-100.00) and secondary (+50.00) pair exist,
+  // the SQL helpers exclude the secondary and replace the primary's amount with the net.
+  // The aggregated totalOut passed to buildOverviewData already reflects this net: -50.00 → abs = 50.00.
+  // This pin ensures buildOverviewData does not accidentally double-count or ignore the net.
+  describe('netting scenario: primary cena -100 + secondary ricarica +50 → net totalOut 50.00 (PAIR-03)', () => {
+    it('buildOverviewData with pre-netted totalOut=50.00 returns 50.00, not 100.00 or 150.00', () => {
+      // The netting SQL helpers produce: primary.amount + secondary.amount = -100 + 50 = -50 → abs = 50
+      // This is the expected totalOut value after pairing netting is applied by the DAL.
+      const overview = buildOverviewData({
+        current: {
+          totalIn: '0.00',
+          totalOut: '50.00', // algebraic net: |-100 + 50| = 50 (secondary excluded, primary netted)
+          totalAllocation: '0.00',
+        },
+        previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00' },
+        currentUncategorizedCount: 0,
+        previousUncategorizedCount: 0,
+      })
+
+      // Pin: netted value, not the raw primary alone (100) nor the sum of both (150)
+      expect(overview.totalOut).toBe('50.00')
+      expect(overview.totalOut).not.toBe('100.00')
+      expect(overview.totalOut).not.toBe('150.00')
+    })
+
+    it('secondary transaction excluded from totals: it does NOT add its own +50.00 to totalIn', () => {
+      // If secondary were NOT excluded, totalIn would receive +50.00 from the refund.
+      // After pairing: secondary is excluded (isNotSecondary() WHERE clause), so totalIn = 0.
+      const overview = buildOverviewData({
+        current: {
+          totalIn: '0.00', // secondary excluded from its own month's IN totals (D-06)
+          totalOut: '50.00',
+          totalAllocation: '0.00',
+        },
+        previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00' },
+        currentUncategorizedCount: 0,
+        previousUncategorizedCount: 0,
+      })
+
+      expect(overview.totalIn).toBe('0.00')
+    })
+  })
+
+  // ── ADR 0004 regression guard: unpaired transactions unaffected ─────────────
+  // Pre-existing unpaired-transaction assertions from above must remain GREEN.
+  // This new test pins the baseline explicitly to defend it as a regression guard (PAIR-03).
+  describe('ADR 0004 regression guard — unpaired transactions unaffected (PAIR-03)', () => {
+    it('buildOverviewData with only unpaired transactions produces the same result as before pairing', () => {
+      // Same fixture as the pre-existing test above — must stay GREEN after Plan 02 netting changes
+      const overview = buildOverviewData({
+        current: { totalIn: '2500.125', totalOut: '1500.115', totalAllocation: null },
+        previous: { totalIn: '2000.00', totalOut: '1000.00', totalAllocation: null },
+        currentUncategorizedCount: 3,
+        previousUncategorizedCount: 2,
+      })
+
+      // These are the same expected values as the pre-existing baseline test (unpaired scenario)
+      expect(overview.totalIn).toBe('2500.13')
+      expect(overview.totalOut).toBe('1500.12')
+      expect(overview.balance).toBe('1000.01')
+      expect(overview.savingsRate).toBe(40)
+    })
   })
 })

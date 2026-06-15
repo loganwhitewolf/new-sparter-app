@@ -119,11 +119,11 @@ describe('pattern DAL normalization', () => {
   it('normalizes slash-delimited createPattern input before DB writes', async () => {
     const { database, values } = makeInsertDatabase()
 
+    // Phase 46: amountSign removed (ADR 0012)
     await createPattern({
       userId: 'user-1',
       pattern: '/netflix/i',
       subCategoryId: 42,
-      amountSign: 'negative',
       confidence: 0.95,
     }, database as never)
 

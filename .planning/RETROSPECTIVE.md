@@ -4,6 +4,39 @@ Living retrospective — one section per milestone, newest first.
 
 ---
 
+## Milestone: v2.0 — Nature/Direction Model Realignment
+
+**Shipped:** 2026-06-14
+**Phases:** 5 (46–50) | **Plans:** 22 | **Tasks:** 37
+
+### What Was Built
+Replaced the dual-axis `category.type` + `nature` classification with a single nature→direction model: FK-backed `direction`(4) + `nature`(8) lookup tables (46), a 23-category/87-subcategory reseed (47), migration 0018 + data recategorization with verification assertions (48), the dashboard/surfaces rebuilt on the direction model with algebraic-sum aggregation (49), and explicit 1:1 transaction pairing (order↔refund) with shared netting fragments and a picker/badge/popover UI (50).
+
+### What Worked
+- **Design LOCKED before execution** (ADR 0012, CONTEXT.md, nature-remapping-WORKING.md) — zero discovery churn across 5 phases on a schema-breaking change.
+- **RED test scaffolds first** (Nyquist Dimension 8) — Phase 50 Wave 0 authored the behavioral contract before any production code, so the service/DAL/netting had verification targets from task one.
+- **Shared SQL fragments** (`isNotSecondary()`/`effectiveAmount()`) authored once and reused at all 8 aggregation sites — no per-query re-derivation.
+
+### What Was Inefficient
+- **Service-layer integrity gaps slipped to code review**, not planning: self-pairing, non-atomic ownership-then-write, and missing opposite-sign enforcement (CR-01/02/03) — all foreseeable for a join table with no `userId` column.
+- **Manual-only UI surface** (the pairing flow has no headless render harness) surfaced 5 real defects only at the operator checkpoint (overflow, stale date window, no-reload refresh, zero-amount popover).
+- **Stale tracking artifacts** (7 quick-tasks, 5 traceability rows) accumulated and had to be reconciled at milestone close.
+
+### Patterns Established
+- Shared SQL fragment helpers for cross-site aggregation consistency.
+- `key`-based remount to resync prop-derived local state (table + dialog) instead of effect-driven setState.
+- For integrity tables with no owner column, the service is the *sole* enforcement point — guard self-reference, opposite-sign, and atomicity explicitly.
+
+### Key Lessons
+- A join table without a `userId`/owner column shifts 100% of ownership + integrity enforcement onto the service layer — enumerate those guards (self-ref, sign, atomicity) during planning, not in review.
+- Budget an operator-verification checkpoint for any UI surface that has no automated render harness.
+
+### Cost Observations
+- Model mix: Opus orchestrator + Sonnet executors/verifier/reviewer/fixer.
+- Notable: the Phase 50 execute→checkpoint→review→fix loop ran end-to-end in one session with all gates (post-merge tests, schema-drift, code review, verification) green.
+
+---
+
 ## Milestone: v1.16 — Dashboard Overview Redesign
 
 **Shipped:** 2026-06-09

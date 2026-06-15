@@ -1,7 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { db } from '@/lib/db'
-import { category, expense, file, importFormatVersion, platform, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
+import { category, direction, expense, file, importFormatVersion, nature, platform, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
 import { eq, and, gte, ilike, inArray, isNull, lte, or, asc, desc, sql } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { periodToDateRange } from '@/lib/utils/date'
@@ -36,10 +36,10 @@ export type ExpenseFilters = {
   amountMax?: string
   /** Platform slug filter — requires importedFromFileId join chain */
   platform?: string
-  /** FlowNature filter — nine enum members plus sentinel 'unclassified' (null nature). */
+  /** FlowNature filter — eight nature codes plus sentinel 'unclassified' (null natureId). */
   nature?: string
-  /** Category type filter — in/out/transfer plus sentinel 'unclassified' (null type). */
-  type?: string
+  /** Direction filter — in/out/allocation/transfer plus sentinel 'unclassified' (null natureId). */
+  direction?: string
   /** Subcategory id filter — narrows to a specific subCategory.id. */
   subCategoryId?: number
 }
@@ -134,22 +134,19 @@ export const getExpenses = cache(async (
     conditions.push(eq(platform.slug, filters.platform))
   }
 
-  // Cascade filters (lcp-01 Task 3): nature, type, subCategoryId.
-  // All use the existing subCategory + category left joins.
+  // Nature filter — cascade child via subCategory.natureId → nature.code join
   if (filters.nature === 'unclassified') {
-    // Unclassified: no subCategory linked, or subCategory has null nature
-    conditions.push(or(isNull(expense.subCategoryId), isNull(subCategory.nature)))
+    // Unclassified: no subCategory linked, or subCategory has null natureId
+    conditions.push(or(isNull(expense.subCategoryId), isNull(subCategory.natureId)))
   } else if (filters.nature) {
-    type NatureValue = NonNullable<(typeof subCategory.$inferSelect)['nature']>
-    conditions.push(eq(subCategory.nature, filters.nature as NatureValue))
+    conditions.push(eq(nature.code, filters.nature))
   }
 
-  if (filters.type === 'unclassified') {
-    // Unclassified type: no category linked (null category.type)
-    conditions.push(isNull(category.type))
-  } else if (filters.type) {
-    type CategoryTypeValue = (typeof category.$inferSelect)['type']
-    conditions.push(eq(category.type, filters.type as CategoryTypeValue))
+  // Direction filter — via nature→direction join; 'unclassified' matches null natureId rows
+  if (filters.direction === 'unclassified') {
+    conditions.push(isNull(subCategory.natureId))
+  } else if (filters.direction) {
+    conditions.push(eq(direction.code, filters.direction))
   }
 
   if (filters.subCategoryId) {
@@ -173,6 +170,8 @@ export const getExpenses = cache(async (
     .from(expense)
     .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
     .leftJoin(category, eq(subCategory.categoryId, category.id))
+    .leftJoin(nature, eq(subCategory.natureId, nature.id))
+    .leftJoin(direction, eq(nature.directionId, direction.id))
     .leftJoin(
       userSubcategoryOverride,
       and(

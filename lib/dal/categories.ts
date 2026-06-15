@@ -2,7 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { db, type DbOrTx } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
-import { category, expense, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
+import { category, expense, nature, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
 import { and, asc, eq, isNull, or, sql } from 'drizzle-orm'
 import type { FlowNature } from '@/lib/utils/nature-labels'
 
@@ -10,7 +10,7 @@ export type CategoryWithSubCategories = {
   id: number
   name: string
   slug: string
-  type: 'in' | 'out' | 'system' | 'transfer'
+  type: 'in' | 'out' | 'allocation' | 'transfer' | null
   userId: string | null
   isOwned: boolean
   subCategories: Array<{
@@ -69,14 +69,27 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
       categoryId: category.id,
       categoryName: category.name,
       categorySlug: category.slug,
-      categoryType: category.type,
       categoryUserId: category.userId,
       subCategoryId: subCategory.id,
       subCategoryName: subCategory.name,
       subCategorySlug: subCategory.slug,
       subCategoryUserId: subCategory.userId,
       overrideCustomName: userSubcategoryOverride.customName,
-      effectiveNature: sql<FlowNature | null>`coalesce(${userSubcategoryOverride.nature}, ${subCategory.nature})`,
+      overrideNatureId: userSubcategoryOverride.natureId,
+      subCategoryNatureId: subCategory.natureId,
+      // Resolved nature.code — coalesce override natureId → sub natureId, then join nature
+      effectiveNatureCode: sql<FlowNature | null>`(
+        SELECT n.code FROM nature n
+        WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
+        LIMIT 1
+      )`,
+      // Direction code derived from the effective nature via the nature→direction FK chain
+      categoryType: sql<'in' | 'out' | 'allocation' | 'transfer' | null>`(
+        SELECT d.code FROM direction d
+        INNER JOIN nature n ON n.direction_id = d.id
+        WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
+        LIMIT 1
+      )`,
     })
     .from(category)
     .leftJoin(
@@ -131,7 +144,7 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
         isOwned: row.subCategoryUserId === userId,
         hasOverride: row.overrideCustomName !== null,
         customName: row.overrideCustomName,
-        effectiveNature: row.effectiveNature,
+        effectiveNature: row.effectiveNatureCode,
       })
     }
   }
@@ -145,7 +158,8 @@ export async function getCategories(): Promise<CategoryWithSubCategories[]> {
 }
 
 export async function createUserCategory(
-  input: { userId: string, name: string, slug: string, type: 'in' | 'out' },
+  // TODO(Phase 49): type field removed — direction semantics derived from nature in Phase 49
+  input: { userId: string, name: string, slug: string },
   database: DbOrTx = db,
 ) {
   const rows = await mapDuplicate(
@@ -155,7 +169,6 @@ export async function createUserCategory(
         userId: input.userId,
         name: input.name,
         slug: input.slug,
-        type: input.type,
         isActive: true,
       })
       .returning(),
@@ -208,7 +221,8 @@ export async function deleteUserCategory(
 }
 
 export async function createUserSubcategory(
-  input: { userId: string, categoryId: number, name: string, slug: string, nature: FlowNature },
+  // TODO(Phase 49): accept natureId (number) instead of nature (FlowNature string) once lookup is wired
+  input: { userId: string, categoryId: number, name: string, slug: string, natureId?: number | null },
   database: DbOrTx = db,
 ) {
   const categoryRows = await database
@@ -235,7 +249,7 @@ export async function createUserSubcategory(
         name: input.name,
         slug: input.slug,
         isActive: true,
-        nature: input.nature,
+        natureId: input.natureId ?? null,
       })
       .returning(),
   )
@@ -244,15 +258,15 @@ export async function createUserSubcategory(
 }
 
 export async function upsertSubcategoryNatureOverride(
-  { userId, subCategoryId, nature }: { userId: string; subCategoryId: number; nature: FlowNature | null },
+  { userId, subCategoryId, natureId }: { userId: string; subCategoryId: number; natureId: number | null },
   database: DbOrTx = db,
 ) {
   const rows = await database
     .insert(userSubcategoryOverride)
-    .values({ userId, subCategoryId, nature, customName: null })
+    .values({ userId, subCategoryId, natureId, customName: null })
     .onConflictDoUpdate({
       target: [userSubcategoryOverride.userId, userSubcategoryOverride.subCategoryId],
-      set: { nature, updatedAt: new Date() },
+      set: { natureId, updatedAt: new Date() },
     })
     .returning()
 

@@ -12,7 +12,6 @@ import {
   deletePattern,
   getCategoryTypeForSubCategory,
 } from "@/lib/dal/patterns";
-import { deriveAmountSign } from "@/lib/validations/pattern";
 import {
   canManageCustomPatterns,
   getCategorizationAccessConfig,
@@ -81,7 +80,7 @@ export async function createPatternAction(
   const parsed = CreatePatternSchema.safeParse({
     pattern: formData.get("pattern"),
     subCategoryId: subCategoryIdRaw,
-    amountSign: "any", // placeholder; overridden below via getCategoryTypeForSubCategory
+    // amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012)
     confidence: Number(formData.get("confidence")),
     description: (formData.get("description") as string) || undefined,
   });
@@ -89,18 +88,17 @@ export async function createPatternAction(
     return { error: parsed.error.issues[0].message };
   }
 
-  // Derive amountSign server-side from the subcategory's category type (ADR 0008, T-39-10).
+  // Validate subcategory scope (getCategoryTypeForSubCategory returns null if not visible)
+  // Phase 46: amountSign derivation from category type removed (ADR 0012)
   const categoryType = await getCategoryTypeForSubCategory(parsed.data.subCategoryId, userId);
   if (!categoryType) {
     return { error: "Seleziona una sottocategoria valida." };
   }
-  const derivedAmountSign = deriveAmountSign(categoryType);
 
   let created: Awaited<ReturnType<typeof createPattern>>;
   try {
     created = await createPattern({
       ...parsed.data,
-      amountSign: derivedAmountSign,
       userId,
     });
   } catch (err) {
@@ -134,7 +132,7 @@ export async function createPatternAction(
       created.id,
       created.pattern,
       created.subCategoryId,
-      created.amountSign,
+      // amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012)
       Number(created.confidence),
     );
   } catch (err) {
@@ -176,20 +174,18 @@ export async function updatePatternAction(
     return { error: parsed.error.issues[0].message };
   }
 
-  // Derive amountSign server-side when a subCategoryId is provided (ADR 0008, T-39-10).
-  let derivedAmountSign: 'positive' | 'negative' | 'any' | undefined;
+  // Phase 46: amountSign derivation from category type removed (ADR 0012, patterns are sign-agnostic)
+  // Validate subcategory scope if a subCategoryId is provided
   if (parsed.data.subCategoryId !== undefined) {
     const categoryType = await getCategoryTypeForSubCategory(parsed.data.subCategoryId, userId);
     if (!categoryType) {
       return { error: "Seleziona una sottocategoria valida." };
     }
-    derivedAmountSign = deriveAmountSign(categoryType);
   }
 
   try {
     const updated = await updatePattern(id, userId, {
       ...parsed.data,
-      ...(derivedAmountSign !== undefined ? { amountSign: derivedAmountSign } : {}),
     });
     if (!updated) return { error: "Pattern non trovato o accesso negato." };
   } catch {
@@ -236,11 +232,11 @@ export async function promoteSuggestionAction(
     : undefined;
 
   // Parse only the fields we trust from the client (pattern, subCategoryId).
-  // amountSign is derived server-side; confidence is hardcoded to 1 (ADR 0008, T-39-09).
+  // Phase 46: amountSign removed; confidence is hardcoded to 1.
   const parsed = CreatePatternSchema.safeParse({
     pattern: formData.get("pattern"),
     subCategoryId: subCategoryIdRaw,
-    amountSign: "any", // placeholder; overridden below
+    // amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012)
     confidence: 1,
     description: undefined, // Inline form does not collect a description (D-01).
   });
@@ -248,18 +244,16 @@ export async function promoteSuggestionAction(
     return { error: parsed.error.issues[0].message };
   }
 
-  // Derive amountSign server-side from the subcategory's category type (ADR 0008, T-39-10).
+  // Validate subcategory scope
   const categoryType = await getCategoryTypeForSubCategory(parsed.data.subCategoryId, userId);
   if (!categoryType) {
     return { error: "Seleziona una sottocategoria valida." };
   }
-  const derivedAmountSign = deriveAmountSign(categoryType);
 
   let created: Awaited<ReturnType<typeof createPattern>>;
   try {
     created = await createPattern({
       ...parsed.data,
-      amountSign: derivedAmountSign,
       confidence: 0.85,
       userId,
     });
@@ -295,7 +289,7 @@ export async function promoteSuggestionAction(
       created.id,
       created.pattern,
       created.subCategoryId,
-      created.amountSign,
+      // amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012)
       Number(created.confidence),
     );
   } catch (err) {

@@ -25,14 +25,15 @@ type CategorySettingsPanelProps = {
   categories: CategoryWithSubCategories[];
 };
 
-const TYPE_LABELS: Record<CategoryWithSubCategories["type"], string> = {
+// Direction-based grouping: category.type is now a direction code from the nature→direction join
+const TYPE_LABELS: Record<string, string> = {
   in: "Entrate",
   out: "Uscite",
-  system: "Sistema",
+  allocation: "Accantonamenti",
   transfer: "Trasferimenti",
 };
 
-const TYPE_ORDER: CategoryWithSubCategories["type"][] = ["out", "in", "transfer", "system"];
+const TYPE_ORDER: (string | null)[] = ["out", "in", "allocation", "transfer", null];
 
 function CategorySidebar({
   categories,
@@ -45,7 +46,8 @@ function CategorySidebar({
 }) {
   const grouped = TYPE_ORDER.map((type) => ({
     type,
-    label: TYPE_LABELS[type],
+    // null-type categories (no direction assigned) show under '—' group
+    label: type !== null ? (TYPE_LABELS[type] ?? type) : '—',
     items: categories.filter((c) => c.type === type),
   })).filter((g) => g.items.length > 0);
 
@@ -105,7 +107,7 @@ function SubcategoryList({
             )}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            {category.type === "system"
+            {!category.isOwned
               ? "Categoria condivisa: puoi personalizzare solo il nome delle sottocategorie."
               : "Categoria personale: puoi rinominare, aggiungere sottocategorie e, se non ci sono spese collegate, eliminarla."}
           </p>

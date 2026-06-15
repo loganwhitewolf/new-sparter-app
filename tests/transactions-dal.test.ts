@@ -127,6 +127,15 @@ vi.mock('@/lib/db/schema', () => ({
     name: 'subCategory.name',
     categoryId: 'subCategory.categoryId',
   },
+  nature: {
+    id: 'nature.id',
+    code: 'nature.code',
+    directionId: 'nature.directionId',
+  },
+  direction: {
+    id: 'direction.id',
+    code: 'direction.code',
+  },
   userSubcategoryOverride: {
     customName: 'userSubcategoryOverride.customName',
     subCategoryId: 'userSubcategoryOverride.subCategoryId',
@@ -770,5 +779,65 @@ describe('getTopUncategorizedExpenses (R-OB-07 query)', () => {
     expect(result[0].id).toBe('e2') // -99.00 largest absolute value
     expect(result[1].id).toBe('e3') // -12.50
     expect(result[2].id).toBe('e1') // -5.00
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 50 RED: transaction-pairing select-shape contract (PAIR-02)
+// These cases are RED until Plan 04 extends transactionListSelect + TransactionListRow.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('transaction pairing select-shape contract (Phase 50 — PAIR-02)', () => {
+  // ── transactionListSelect exposes all four paired fields ──────────────────
+  it('transactionListSelect includes pairedWithId as a sql fragment (PAIR-02)', () => {
+    // Plan 04 will add a correlated subselect for pairedWithId to transactionListSelect.
+    // Until then this assertion is RED (key absent on the object).
+    expect(transactionListSelect).toHaveProperty('pairedWithId')
+    // The value must be a sql fragment (not a plain column reference string)
+    expect((transactionListSelect as Record<string, unknown>).pairedWithId).toMatchObject({ op: 'sql' })
+  })
+
+  it('transactionListSelect includes pairedNetAmount as a sql fragment with ::numeric addition (PAIR-02)', () => {
+    expect(transactionListSelect).toHaveProperty('pairedNetAmount')
+    const fragment = (transactionListSelect as Record<string, unknown>).pairedNetAmount as {
+      op: string
+      strings?: string[]
+    }
+    expect(fragment).toMatchObject({ op: 'sql' })
+    // The fragment must contain a ::numeric cast for the signed Decimal net computation
+    const sqlText = (fragment.strings ?? []).join('')
+    expect(sqlText).toContain('::numeric')
+  })
+
+  it('transactionListSelect includes pairedAmount (counterpart original amount, not the net) as a sql fragment (PAIR-02)', () => {
+    expect(transactionListSelect).toHaveProperty('pairedAmount')
+    const fragment = (transactionListSelect as Record<string, unknown>).pairedAmount as {
+      op: string
+      strings?: string[]
+    }
+    expect(fragment).toMatchObject({ op: 'sql' })
+    // It must select the counterpart's own amount (t2.amount), NOT a summed net.
+    const sqlText = (fragment.strings ?? []).join('')
+    expect(sqlText).toContain('t2.amount')
+    expect(sqlText).not.toContain('+')
+  })
+
+  it('transactionListSelect includes pairedDescription as a sql fragment (PAIR-02)', () => {
+    expect(transactionListSelect).toHaveProperty('pairedDescription')
+    expect((transactionListSelect as Record<string, unknown>).pairedDescription).toMatchObject({ op: 'sql' })
+  })
+
+  it('transactionListSelect includes pairedOccurredAt as a sql fragment (PAIR-02)', () => {
+    expect(transactionListSelect).toHaveProperty('pairedOccurredAt')
+    expect((transactionListSelect as Record<string, unknown>).pairedOccurredAt).toMatchObject({ op: 'sql' })
+  })
+
+  // ── TypeScript-level: all four keys appear in the select object ──────────
+  it('transactionListSelect exposes all four pairedWithId / pairedNetAmount / pairedDescription / pairedOccurredAt keys (PAIR-02)', () => {
+    const keys = Object.keys(transactionListSelect)
+    expect(keys).toContain('pairedWithId')
+    expect(keys).toContain('pairedNetAmount')
+    expect(keys).toContain('pairedDescription')
+    expect(keys).toContain('pairedOccurredAt')
   })
 })

@@ -1,4 +1,5 @@
 ---
+status: complete
 phase: quick-260525-ga2
 plan: "01"
 subsystem: pattern-application

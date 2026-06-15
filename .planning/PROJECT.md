@@ -15,11 +15,13 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v1.16 (Phases 1–45) complete. The app now has:
+All milestones M001–v2.0 (Phases 1–50) complete. The app now has:
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
 - Import management, categorization (Tier 1 regex, Tier 2 history, Tier 3 AI gated)
 - Pattern suggestions: detect recurring uncategorized descriptions → review and promote during analysis → re-run post-import from `/import/[fileId]/suggestions`
-- Category settings with user-owned and system categories/subcategories, FlowNature per-subcategory (9-member enum incl. `income_extraordinary`)
+- Category settings with user-owned and system categories/subcategories on the v2.0 nature→direction model: `direction`(4) + `nature`(8) FK-backed lookup tables, `sub_category.nature_id` FK, `direction.included_in_totals` as the single totals-exclusion source (`category.type`/`flow_nature`/`amount_sign`/`exclude_from_totals` removed)
+- Direction-based dashboard/surfaces (v2.0): 4-direction view with allocation bucket, algebraic-sum aggregation, cascade options + table filters keyed by direction
+- Explicit transaction pairing (v2.0): 1:1 order↔refund linking with algebraic netting across all 8 dashboard aggregation sites, searchable counterpart picker, inline signed-net badge + popover, and unlink-restores-baseline
 - Redesigned year-scoped `/dashboard/overview` (v1.16): grouped Entrate/Uscite bar chart with always-on compact labels, 4 KPI cards (Entrate/Uscite/Bilancio/Tasso risparmio) with YTD-vs-prior delta and sentiment reading lines, filter chips for income type and expense nature, FlowNature ⓘ education popovers, inline amber uncategorized nudge with localStorage dismiss, per-month movers drill-down (click bar → top movers panel, humanized Italian copy, "spesa nuova" for new spend, defaults to last month with data)
 - First-import onboarding (5-step flow: upload → overview → education → categorize → outro); routing gate via RSC layout
 - Unified subcategory picker (vaul bottom sheet, type chips, master-detail rail, most-used section) across all 7 selection surfaces; pattern form reduced to regex + description + picker
@@ -29,11 +31,23 @@ All milestones M001–v1.16 (Phases 1–45) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Current Milestone: v1.16 — SHIPPED 2026-06-09
+## Next Milestone
 
-All v1.16 requirements delivered. See `.planning/milestones/v1.16-ROADMAP.md` for full details.
+TBD — run `/gsd-new-milestone` to scope the next milestone. Operator deploy (R038/R039/R041 — live Vercel/Supabase/R2) remains operator-pending and is the most likely near-term candidate.
 
-**Deferred:** FlowNature taxonomy rename (EDU-FUT-01) → future quick task. REVAL-01/R029 parked. Operator deploy R038/R039/R041 operator-pending.
+## Last Shipped Milestone: v2.0 — Nature/Direction Model Realignment (shipped 2026-06-14)
+
+**Goal:** Replace the dual-axis `category.type` + `nature` classification with a single nature→direction model backed by lookup tables, migrate and recategorize all existing data, and add explicit transaction pairing on top of the implicit netting.
+
+**Target features:**
+- **NATURE-TABLE-01** — `direction`(4) + `nature`(9) lookup tables, `sub_category.nature_id` FK; remove `category.type` / `flow_nature` / `amount_sign` (supersedes ADR 0008); dissolve & rename categories and subcategories per `.planning/nature-remapping-WORKING.md` (23 categories · ~65 subcategories · 9 natures); rework `seed-data`/`seed-extras`; migrate + recategorize existing transactions; update dashboard/KPI/cascade/filters to direction + algebraic sum (4-direction view incl. `allocation`); deprecate `exclude_from_totals` in favour of `direction.included_in_totals`.
+- **TX-PAIRING-01** — explicit transaction↔opposite linking (order↔refund), additive over the implicit subcategory netting (ADR 0004); ships as the final phase.
+
+**Status:** all 5 phases complete (2026-06-14). Phase 50 (transaction-pairing, TX-PAIRING-01) shipped the explicit 1:1 order↔refund linking — `transaction_pair` table (migration 0020, applied), ownership-validating service (atomic, opposite-sign-enforced), shared `isNotSecondary()`/`effectiveAmount()` netting across all 8 dashboard aggregation sites, and the picker/badge/popover UI. Milestone v2.0 is ready for `/gsd-complete-milestone`.
+
+**Design status:** LOCKED & certified. Contract: `docs/adr/0012-direction-derived-from-nature-allocation.md`, `CONTEXT.md`, `.planning/nature-remapping-WORKING.md`. No discovery to redo.
+
+**Prior milestone:** v1.16 (Dashboard Overview Redesign) shipped 2026-06-09; see `.planning/milestones/v1.16-ROADMAP.md`. EDU-FUT-01 (FlowNature taxonomy rename) is absorbed into NATURE-TABLE-01. Operator deploy R038/R039/R041 remain operator-pending.
 
 ## Architecture / Key Patterns
 
@@ -75,9 +89,12 @@ All v1.16 requirements delivered. See `.planning/milestones/v1.16-ROADMAP.md` fo
 - ✓ Collapsible icon-rail sidebar: `SidebarProvider` + `useSidebarCollapsed` (localStorage-backed, SSR-safe); `AppShell` drives `<aside>` width (w-16/w-60); chevron toggle + tooltips in collapsed mode; user Avatar dropdown at bottom; topbar deleted; BottomNav 5th Impostazioni entry; ThemeToggle in SettingsHub Aspetto section (ADR 0011) — v1.15
 - ✓ Dashboard overview redesign: year-scoped overview page with grouped Entrate/Uscite bar chart (variant A, always-on compact labels), 4 KPI cards with YTD delta + sentiment reading lines, FlowNature filter chips (income type + expense nature), ⓘ legend popovers + per-chip tooltips, inline amber uncategorized nudge (localStorage dismiss, lastSeenCount reappear), per-month movers drill-down (click bar → panel, humanized copy, "spesa nuova" for new spend, default = last month with data); `income_extraordinary` FlowNature member added (9 members total) — v1.16
 
-### Active (next milestone — TBD)
+### Active (v2.0)
 
-### Parked backlog (not in v1.16)
+- [ ] NATURE-TABLE-01 — nature/direction lookup tables, schema migration, data recategorization, dashboard/KPI/cascade/filter rework, seed rework (see REQUIREMENTS.md)
+- [ ] TX-PAIRING-01 — explicit transaction↔opposite linking, additive over implicit netting (final phase)
+
+### Parked backlog (not in v2.0)
 
 - [ ] REVAL-01: Apply newly created pattern to existing transactions from same import file.
 - [ ] R029: Complete categorization revalidation for all entrypoints.
@@ -173,4 +190,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-09 after v1.16 milestone*
+*Last updated: 2026-06-14 — after v2.0 milestone (Nature/Direction Model Realignment shipped)*

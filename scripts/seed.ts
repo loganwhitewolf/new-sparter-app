@@ -6,7 +6,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { inArray, sql } from 'drizzle-orm'
-import { category, subCategory, platform, importFormatVersion, categorizationPattern } from '../lib/db/schema'
+import { category, direction, nature, subCategory, platform, importFormatVersion } from '../lib/db/schema'
 import {
   getOperatorDatabaseConfig,
   isDirectSupabaseHost,
@@ -17,7 +17,8 @@ import {
 } from './db-config'
 import {
   categories,
-  categorizationPatterns as seedCategorizationPatterns,
+  directions,
+  natures,
   platforms as seedPlatforms,
   subCategories,
 } from './seed-data'
@@ -68,20 +69,28 @@ function headerSignatureFor(platformSeed: (typeof seedPlatforms)[number]) {
 
 async function seed() {
   console.log(JSON.stringify({ event: 'seed_started', target: seedDiagnostics.target }))
+
+  console.log('Seeding directions...')
+  await db.insert(direction).values(directions as Array<typeof direction.$inferInsert>).onConflictDoNothing()
+  await db.execute(sql`select setval('direction_id_seq', coalesce((select max(${direction.id}) from ${direction}), 0) + 1, false)`)
+  console.log(`  ${directions.length} directions inserted (or already present).`)
+
+  console.log('Seeding natures...')
+  await db.insert(nature).values(natures as Array<typeof nature.$inferInsert>).onConflictDoNothing()
+  await db.execute(sql`select setval('nature_id_seq', coalesce((select max(${nature.id}) from ${nature}), 0) + 1, false)`)
+  console.log(`  ${natures.length} natures inserted (or already present).`)
+
   console.log('Seeding categories...')
-  await db.insert(category).values(categories as Array<typeof category.$inferInsert>).onConflictDoNothing()
+  // Phase 46: category.type column removed (ADR 0012 — direction is now derived from nature, not category)
+  await db.insert(category).values(categories.map(({ type: _type, ...rest }) => rest) as Array<typeof category.$inferInsert>).onConflictDoNothing()
   console.log(`  ${categories.length} categories inserted (or already present).`)
 
   console.log('Seeding subcategories...')
+  // v2 literals include natureId; cast passes it through to sub_category.nature_id (D-11, D-13)
   await db.insert(subCategory).values(subCategories as Array<typeof subCategory.$inferInsert>).onConflictDoNothing()
   console.log(`  ${subCategories.length} sottocategories inserted (or already present).`)
 
-  await db
-    .update(subCategory)
-    .set({ excludeFromTotals: true })
-    .where(inArray(subCategory.slug, ['ricariche-conti', 'addebito-carta-di-credito']))
-  console.log('  excludeFromTotals=true set for ricariche-conti and addebito-carta-di-credito.')
-
+  // Phase 49: exclude_from_totals column dropped (D-10); transfer exclusion now via direction.included_in_totals
   console.log('Seeding import platforms...')
   await db
     .insert(platform)
@@ -104,40 +113,6 @@ async function seed() {
     )
     .onConflictDoNothing()
   console.log(`  ${seedPlatforms.length} format versions inserted (or already present).`)
-
-  console.log('Seeding system categorization patterns...')
-  const seededSubCategories = await db.select({ id: subCategory.id, slug: subCategory.slug }).from(subCategory)
-  const subCategoryIdBySlug = new Map(seededSubCategories.map((row) => [row.slug, row.id]))
-  const missingSlugs = Array.from(
-    new Set(
-      seedCategorizationPatterns
-        .map((patternSeed) => patternSeed.subCategorySlug)
-        .filter((slug) => !subCategoryIdBySlug.has(slug)),
-    ),
-  )
-
-  if (missingSlugs.length > 0) {
-    throw new Error(
-      `Missing subcategory slugs for system categorization patterns: ${missingSlugs.join(', ')}`,
-    )
-  }
-
-  await db
-    .insert(categorizationPattern)
-    .values(
-      seedCategorizationPatterns.map((patternSeed) => ({
-        userId: null,
-        pattern: patternSeed.pattern,
-        subCategoryId: subCategoryIdBySlug.get(patternSeed.subCategorySlug)!,
-        amountSign: patternSeed.amountSign,
-        confidence: patternSeed.confidence.toFixed(2),
-        priority: patternSeed.priority,
-        description: patternSeed.description,
-        isActive: true,
-      })),
-    )
-    .onConflictDoNothing()
-  console.log(`  ${seedCategorizationPatterns.length} system patterns inserted (or already present).`)
 
   console.log(JSON.stringify({ event: 'seed_succeeded', target: seedDiagnostics.target }))
 }

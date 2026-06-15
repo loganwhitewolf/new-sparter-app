@@ -52,22 +52,13 @@ const regexString = z.string().transform((val, ctx) => {
   }
 })
 
-/**
- * Derives the amountSign for a pattern from the parent category type.
- * Per ADR 0008: out -> negative, in -> positive, transfer/system -> any.
- */
-export function deriveAmountSign(
-  categoryType: 'in' | 'out' | 'system' | 'transfer',
-): 'positive' | 'negative' | 'any' {
-  if (categoryType === 'out') return 'negative'
-  if (categoryType === 'in') return 'positive'
-  return 'any' // transfer | system
-}
+// Phase 46: patterns are sign-agnostic (amount_sign removed, ADR 0012, supersedes ADR 0008)
+// deriveAmountSign removed — patterns no longer have a sign field
 
 export const CreatePatternSchema = z.object({
   pattern: regexString,
   subCategoryId: z.number({ error: 'Seleziona una sottocategoria.' }).int().positive({ error: 'Seleziona una sottocategoria.' }),
-  amountSign: z.enum(['positive', 'negative', 'any']),
+  // amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012)
   confidence: z.number().min(0).max(1),
   description: z.string().max(255).optional(),
 })
@@ -75,12 +66,12 @@ export const CreatePatternSchema = z.object({
 export const UpdatePatternSchema = CreatePatternSchema.partial()
 
 /**
- * Client-facing update schema — omits server-derived fields (ADR 0008).
- * Used by updatePatternAction to prevent clients from injecting amountSign
- * or confidence values that must always be derived server-side.
+ * Client-facing update schema — omits server-derived fields.
+ * Used by updatePatternAction to prevent clients from injecting
+ * confidence values that must always be derived server-side.
  */
 export const UpdatePatternClientSchema = CreatePatternSchema
-  .omit({ amountSign: true, confidence: true })
+  .omit({ confidence: true })
   .partial()
 
 export type CreatePatternInput = z.infer<typeof CreatePatternSchema>

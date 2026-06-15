@@ -24,7 +24,7 @@ type Props = {
   id: number
   pattern: string
   subCategoryId: number
-  amountSign: 'positive' | 'negative' | 'any'
+  // Phase 46: amountSign removed (ADR 0012) — patterns are sign-agnostic
   confidence: string
   description: string | null
   categories: CategoryWithSubCategories[]
@@ -168,7 +168,7 @@ export function PatternActions({
               onOpenChange={setPickerOpen}
               categories={categories}
               mostUsed={[]}
-              allowedCategoryTypes={['in', 'out', 'transfer', 'system']}
+              allowedCategoryTypes={['in', 'out', 'transfer', 'allocation']}
               defaultType={null}
               onChange={handlePickerChange}
             />

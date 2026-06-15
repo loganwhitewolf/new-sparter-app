@@ -36,7 +36,6 @@ const IdSchema = z.preprocess(
 
 export const CreateCategorySchema = z.object({
   name: NameSchema,
-  type: z.enum(['in', 'out'], { message: 'Tipo categoria non valido.' }),
 }).transform((input) => ({
   ...input,
   slug: deriveCategorySlug(input.name),
@@ -54,13 +53,16 @@ export const DeleteCategorySchema = z.object({
   id: IdSchema,
 })
 
+// Phase 46: FlowNature v2.0 — 8 codes (operational→dissolved, financial→investment, extraordinary→savings)
 export const NatureSchema = z.enum([
   'essential',
   'discretionary',
-  'operational',
-  'financial',
+  'income',
+  'income_extraordinary',
   'debt',
-  'extraordinary',
+  'transfer',
+  'savings',
+  'investment',
 ])
 
 export const SetSubcategoryNatureSchema = z.object({
@@ -71,7 +73,10 @@ export const SetSubcategoryNatureSchema = z.object({
 export const CreateSubcategorySchema = z.object({
   categoryId: IdSchema,
   name: NameSchema,
-  nature: NatureSchema,
+  natureId: z.preprocess(
+    (v) => (v === null || v === undefined || v === '' ? null : Number(v)),
+    z.number().int().positive().nullable().optional(),
+  ).default(null),
 }).transform((input) => ({
   ...input,
   slug: deriveCategorySlug(input.name),

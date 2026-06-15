@@ -85,7 +85,6 @@ function makeSuggestion(overrides: Record<string, unknown> = {}) {
   return {
     pattern: 'COFFEE SHOP',
     matchCount: 3,
-    detectedAmountSign: 'negative' as const,
     sampleDescriptions: ['COFFEE SHOP 001', 'COFFEE SHOP 002', 'COFFEE SHOP 003'],
     ...overrides,
   }

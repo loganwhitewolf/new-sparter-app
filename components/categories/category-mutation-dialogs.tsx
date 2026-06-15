@@ -36,8 +36,6 @@ import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import { NATURE_LABELS, NATURE_ORDER } from '@/lib/utils/nature-labels'
 import type { ActionState } from '@/lib/validations/category'
 
-type CategoryType = 'in' | 'out'
-
 function useDialogAction(
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>,
   successMessage: string,
@@ -88,7 +86,6 @@ function ActionError({ error }: { error: string | null }) {
 }
 
 export function CreateCategoryDialog() {
-  const [type, setType] = useState<CategoryType>('out')
   const { open, setOpen, state, submit, isPending } = useDialogAction(
     createCategoryAction,
     'Categoria creata.',
@@ -110,22 +107,9 @@ export function CreateCategoryDialog() {
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="flex flex-col gap-4">
-          <input type="hidden" name="type" value={type} />
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" htmlFor="category-name-new">Nome categoria</label>
             <Input id="category-name-new" name="name" required placeholder="es. Casa vacanze" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Tipo</label>
-            <Select value={type} onValueChange={(value) => setType(value as CategoryType)}>
-              <SelectTrigger className="w-full" aria-label="Tipo categoria">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="out">Uscite</SelectItem>
-                <SelectItem value="in">Entrate</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
           <ActionError error={state.error} />
           <DialogFooter>

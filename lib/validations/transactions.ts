@@ -107,7 +107,7 @@ const NATURE_ALLOWED = [
   'unclassified',
 ] as const
 
-const TYPE_ALLOWED = ['in', 'out', 'transfer', 'unclassified'] as const
+const TYPE_ALLOWED = ['in', 'out', 'allocation', 'transfer', 'unclassified'] as const
 
 function firstTrimmed(value: string | string[] | undefined): string | undefined {
   const rawValue = Array.isArray(value) ? value[0] : value
@@ -196,7 +196,7 @@ export function parseTransactionFilters(
     | 'uncategorized'
     | undefined
   const nature = parseStatus(input.nature, NATURE_ALLOWED)
-  const type = parseStatus(input.type, TYPE_ALLOWED)
+  const type = parseStatus(input.direction ?? input.type, TYPE_ALLOWED)
 
   return {
     ...(platform && PLATFORM_SLUG_RE.test(platform) ? { platform } : {}),

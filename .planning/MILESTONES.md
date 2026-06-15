@@ -1,5 +1,35 @@
 # Milestones
 
+## v2.0 Nature/Direction Model Realignment (Shipped: 2026-06-14)
+
+**Phases completed:** 5 phases, 22 plans, 37 tasks
+
+**Key accomplishments:**
+
+- `direction` and `nature` lookup tables added to schema.ts with NOT NULL FK chain, 3 deprecated enums removed, `category.type` + `amount_sign` dropped, and pattern unique constraint shrunk to `(pattern, subCategoryId)` — schema authorship complete, no migration generated (D-06)
+- 1. [Rule 1 - Bug] FlowNature v2.0 codes in NATURE_SLUGS record
+- direction (4) and nature (8) baseline lookup rows authored in seed-data.ts; seed.ts wired in FK order with setval; removed-column writes cleaned from both seed scripts (build-survival for 46-01 schema, D-05)
+- Fixture manifest esplicito (23 cat / 87 sub) e 6 test Vitest RED che gateano il wholesale replace di seed-data in Plan 02
+- 23 active v2 categories and 87 natureId-tagged subcategories replace v1 literals in seed-data.ts; Wave 0 contract tests GREEN
+- 28 sign-agnostic categorizationPatterns retargeted to v2 slugs; seed.ts passes natureId and sets excludeFromTotals on v2 TRANSFER subs
+- Step 1 no-op plus seven additive v2 seed-extras steps for deployed DB remap and code-based nature_id backfill — ready for Phase 48 operator apply
+- R-FN-03 seed nature assignment tests enabled against v2 subCategories.natureId — Phase 47 closes with 949 tests and production build green without DB apply
+- Task 1
+- Read-only operator verification script asserting D-04 nature_id coverage + MIG-03 pattern dedup via fatal/info split, with `db:verify*` npm scripts and a pure classifier unit test.
+- Authored MIGRATION-RUNBOOK.md (canonical D-06 order, pg_dump/pg_restore rollback, staging-first gate) and drove the guarded apply of migration 0018 + seed + seed-extras to the deployed DB, with the staging/backup deviation documented in the runbook.
+- 1. [Rule 1 - Bug] savingsRate expected value corrected from 33 to 33.3
+- Restored `CategoryWithSubCategories.type` as a real direction code via correlated subquery, re-pointed transaction/expense filters from `nature.code` to `direction.code`, and wired `getMostUsedSubcategories` direction filtering — unblocking cascade-options and the SubcategoryPicker.
+- 1. [Post-checkpoint fix] KPI "Accantonato" showed negative values
+- Rewired all categorization surfaces to the nature→direction model: buildDirectionNatureMap with allocation bucket, 4-direction SubcategoryPicker chips, table filters keyed by direction, settings panel grouping by direction, and nature write-path fixed to pass real natureId via NATURE_ID_BY_CODE.
+- Rimossa la colonna `sub_category.exclude_from_totals` dallo schema e dal database via migration 0019; `direction.included_in_totals` è ora l'unica fonte di verità per l'esclusione dai totali di spesa.
+- tests/transaction-pairs-service.test.ts
+- Drizzle transaction_pair table (dual single-column UNIQUEs + cascade FKs) materialized in local DB via 0020 migration, plus shared isNotSecondary()/effectiveAmount() SQL fragment helpers
+- Ownership-validating pairing service with Decimal.js primary resolution, counterpart-picker DAL (verifySession-scoped + NOT EXISTS), and thin server actions — 23/23 Plan 01 RED tests now GREEN.
+- Dashboard and overview aggregations netted via shared `isNotSecondary()`/`effectiveAmount()` fragments at all 8 sites; transaction list exposes 4 paired fields via correlated subqueries.
+- Full pairing UX shipped: "Collega rimborso"/"Scollega" row actions, searchable counterpart picker dialog, inline signed-net badge, and counterpart-detail popover — operator-verified end-to-end including dashboard netting and unlink baseline restoration
+
+---
+
 ## v1.16 Dashboard Overview Redesign (Shipped: 2026-06-09)
 
 **Phases completed:** 4 phases, 13 plans, 19 tasks

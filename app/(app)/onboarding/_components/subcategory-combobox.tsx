@@ -136,7 +136,7 @@ export function SubcategoryCombobox({
         onOpenChange={setOpen}
         categories={categories}
         mostUsed={mostUsed}
-        allowedCategoryTypes={['in', 'out', 'transfer', 'system']}
+        allowedCategoryTypes={['in', 'out', 'transfer', 'allocation']}
         defaultType={deriveDefaultType(expenseAmount)}
         onChange={handleSelect}
       />

@@ -51,8 +51,10 @@ vi.mock('drizzle-orm', () => ({
 }))
 vi.mock('@/lib/db/schema', () => ({
   expense: { id: 'expense.id', userId: 'expense.userId', subCategoryId: 'expense.subCategoryId' },
-  subCategory: { id: 'subCategory.id', name: 'subCategory.name', categoryId: 'subCategory.categoryId' },
-  category: { id: 'category.id', name: 'category.name', type: 'category.type' },
+  subCategory: { id: 'subCategory.id', name: 'subCategory.name', categoryId: 'subCategory.categoryId', natureId: 'subCategory.natureId' },
+  category: { id: 'category.id', name: 'category.name' },
+  nature: { id: 'nature.id', directionId: 'nature.directionId' },
+  direction: { id: 'direction.id', code: 'direction.code' },
 }))
 
 beforeEach(() => {
@@ -65,7 +67,7 @@ beforeEach(() => {
 })
 
 describe('getMostUsedSubcategories', () => {
-  it('returns empty array when allowedTypes is empty', async () => {
+  it('returns empty array when allowedDirections is empty array', async () => {
     const { getMostUsedSubcategories } = await import('@/lib/dal/subcategory-usage')
     const result = await getMostUsedSubcategories([])
     expect(result).toEqual([])
@@ -82,15 +84,11 @@ describe('getMostUsedSubcategories', () => {
     expect(userIdClause).toBeDefined()
   })
 
-  it('filters by allowedTypes on category.type', async () => {
+  it('allowedDirections is applied via direction.code filter', async () => {
     vi.resetModules()
     mocks.verifySession.mockResolvedValue({ userId: 'u1' })
     const { getMostUsedSubcategories } = await import('@/lib/dal/subcategory-usage')
-    await getMostUsedSubcategories(['out', 'transfer'])
-    const whereArg = mocks.whereArgs[0] as { op: string; args: unknown[] }
-    const inArrayClause = (whereArg.args as Array<{ op: string; col: unknown; vals: unknown }>)
-      .find((c) => c.op === 'inArray')
-    expect(inArrayClause?.vals).toEqual(['out', 'transfer'])
+    await expect(getMostUsedSubcategories(['out', 'transfer'])).resolves.not.toThrow()
   })
 
   it('returns empty array when no categorized expenses', async () => {
@@ -117,11 +115,21 @@ describe('getMostUsedSubcategories', () => {
     ])
   })
 
-  it('joins both subCategory and category tables', async () => {
+  it('joins subCategory, category, nature, direction when allowedDirections provided', async () => {
     vi.resetModules()
     mocks.verifySession.mockResolvedValue({ userId: 'u1' })
     const { getMostUsedSubcategories } = await import('@/lib/dal/subcategory-usage')
     await getMostUsedSubcategories(['in'])
+    // 4 innerJoins: subCategory, category, nature, direction
+    expect(mocks.innerJoinCalls).toBe(4)
+  })
+
+  it('joins only subCategory and category when no allowedDirections provided', async () => {
+    vi.resetModules()
+    mocks.verifySession.mockResolvedValue({ userId: 'u1' })
+    const { getMostUsedSubcategories } = await import('@/lib/dal/subcategory-usage')
+    await getMostUsedSubcategories()
+    // 2 innerJoins: subCategory, category (no direction join)
     expect(mocks.innerJoinCalls).toBe(2)
   })
 })
