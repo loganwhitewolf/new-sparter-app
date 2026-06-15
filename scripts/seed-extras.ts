@@ -821,6 +821,46 @@ async function insertRegexDiscovery20260615Satispay(database: Db): Promise<void>
   console.log(`    regex-discovery 2026-06-15 satispay: ${inserted} pattern(s) inserted`)
 }
 
+// Patterns labeled from a Fineco current-account export (report 2026-06-15). This file is
+// structured banking text (bonifici, cedole BTP, imposte). Only unambiguous, globally-safe
+// signals are taken here; internal transfers (Revolut/Satispay wallet top-ups) and
+// heterogeneous outgoing "Beneficiario:" bonifici are excluded (platform/causale-dependent).
+async function insertRegexDiscovery20260615Fineco(database: Db): Promise<void> {
+  const discovered: Array<{ slug: string; pattern: string; confidence: string; description: string }> = [
+    { slug: 'imposte', pattern: '(?:\\bimposta di bollo\\b)', confidence: '0.90', description: 'Stamp duty (imposta di bollo, account/dossier)' },
+    { slug: 'imposte', pattern: '(?:\\brit\\.ced)', confidence: '0.85', description: 'Withholding tax on bond coupons (ritenuta cedole)' },
+    { slug: 'interessi-attivi', pattern: '(?:\\bced\\.su\\b)', confidence: '0.85', description: 'Bond coupon income (cedole BTP)' },
+    { slug: 'stipendio-base', pattern: '(?:\\baccredito stipendio\\b)', confidence: '0.90', description: 'Salary credit' },
+  ]
+
+  let inserted = 0
+  for (const d of discovered) {
+    const sub = await database
+      .select({ id: subCategory.id })
+      .from(subCategory)
+      .where(and(eq(subCategory.slug, d.slug), isNull(subCategory.userId)))
+      .limit(1)
+    const subId = sub[0]?.id
+    if (!subId) {
+      console.log(`    regex-discovery fineco: subcategory '${d.slug}' not found, skipped`)
+      continue
+    }
+    const res = await database
+      .insert(categorizationPattern)
+      .values({
+        userId: null,
+        pattern: d.pattern,
+        subCategoryId: subId,
+        confidence: d.confidence,
+        priority: 100,
+        description: d.description,
+      })
+      .onConflictDoNothing()
+    inserted += (res as unknown as { rowCount?: number }).rowCount ?? 0
+  }
+  console.log(`    regex-discovery 2026-06-15 fineco: ${inserted} pattern(s) inserted`)
+}
+
 // ---------------------------------------------------------------------------
 // Registry — append new steps here
 // ---------------------------------------------------------------------------
@@ -840,6 +880,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'v2-backfill-override-nature-id', run: v2BackfillOverrideNatureId },
   { name: 'regex-discovery-2026-06-15', run: insertRegexDiscovery20260615 },
   { name: 'regex-discovery-2026-06-15-satispay', run: insertRegexDiscovery20260615Satispay },
+  { name: 'regex-discovery-2026-06-15-fineco', run: insertRegexDiscovery20260615Fineco },
 ]
 
 export const STEP_NAMES = STEPS.map((step) => step.name)
