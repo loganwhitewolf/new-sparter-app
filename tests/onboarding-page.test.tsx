@@ -12,7 +12,7 @@ import React from 'react'
 const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   getLatestImportSummaryForUser: vi.fn(),
-  getTopUncategorizedExpenses: vi.fn(),
+  getTopExpensesForOnboarding: vi.fn(),
   getCategories: vi.fn(),
   redirect: vi.fn(),
 }))
@@ -28,7 +28,7 @@ vi.mock('@/lib/dal/imports', () => ({
   getFileCoveredMonths: vi.fn(),
 }))
 vi.mock('@/lib/dal/transactions', () => ({
-  getTopUncategorizedExpenses: mocks.getTopUncategorizedExpenses,
+  getTopExpensesForOnboarding: mocks.getTopExpensesForOnboarding,
 }))
 vi.mock('@/lib/dal/categories', () => ({
   getCategories: mocks.getCategories,
@@ -135,12 +135,14 @@ describe('OnboardingPage routing (R-OB-03, R-OB-04, R-OB-06, R-OB-09)', () => {
     vi.clearAllMocks()
     mocks.verifySession.mockResolvedValue({ userId: 'user-1', subscriptionPlan: 'basic' })
     mocks.getLatestImportSummaryForUser.mockResolvedValue(null)
-    mocks.getTopUncategorizedExpenses.mockResolvedValue([
+    mocks.getTopExpensesForOnboarding.mockResolvedValue([
       {
         id: 'expense-1',
         title: 'Supermercato',
         descriptionHash: 'hash-1',
         totalAmount: '-42.50',
+        subCategoryId: null,
+        subCategoryName: null,
       },
     ])
     mocks.getCategories.mockResolvedValue([])
@@ -174,7 +176,7 @@ describe('OnboardingPage routing (R-OB-03, R-OB-04, R-OB-06, R-OB-09)', () => {
     const html = await renderPageHtml('4')
     expect(html).toContain('Categorizza le spese principali')
     expect(html).toContain('data-testid="subcategory-combobox"')
-    expect(mocks.getTopUncategorizedExpenses).toHaveBeenCalledWith('user-1', 15)
+    expect(mocks.getTopExpensesForOnboarding).toHaveBeenCalledWith('user-1', 15)
   })
 
   it('R-OB-08 renders Step5Outro when ?step=5', async () => {

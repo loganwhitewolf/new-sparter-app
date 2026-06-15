@@ -15,6 +15,14 @@ type SubcategoryComboboxProps = {
   expenseAmount: string
   categories: CategoryWithSubCategories[]
   mostUsed: MostUsedSubcategory[]
+  /**
+   * Seeds the green-check branch on the FIRST server render for an already-categorized
+   * expense. The list is stable (getTopExpensesForOnboarding returns categorized rows),
+   * so this is the durable source of the check across revalidation and manual refresh.
+   */
+  initialCategorized?: boolean
+  /** Canonical subcategory name for an already-categorized expense (optional display). */
+  initialSubcategoryName?: string | null
 }
 
 const amountFormatter = new Intl.NumberFormat('it-IT', {
@@ -60,9 +68,14 @@ export function SubcategoryCombobox({
   expenseAmount,
   categories,
   mostUsed,
+  initialCategorized,
+  initialSubcategoryName,
 }: SubcategoryComboboxProps) {
   const [open, setOpen] = useState(false)
-  const [isCategorized, setIsCategorized] = useState(false)
+  // Seed from the server-provided categorized state so an already-categorized expense
+  // renders the green check immediately (durable across revalidation + refresh). The
+  // optimistic client flow below still flips this to true on a successful action.
+  const [isCategorized, setIsCategorized] = useState(initialCategorized ?? false)
   const [isTransitionPending, startTransition] = useTransition()
   const [state, formAction, isActionPending] = useActionState(
     onboardingCategorizeExpense,
@@ -78,10 +91,18 @@ export function SubcategoryCombobox({
   }, [state])
 
   if (isCategorized) {
+    // INVARIANT: a categorized row stays visible with this green check across server
+    // revalidation (revalidatePath('/onboarding')) and manual page refresh, because the
+    // list is stable and initialCategorized seeds the state on the first server render.
     return (
       <div className="rounded-2xl bg-success/10 border border-success/20 p-4 flex items-center gap-3">
         <CheckCircle className="h-4 w-4 text-success shrink-0" aria-hidden="true" />
-        <p className="text-sm text-foreground/60 flex-1 min-w-0 truncate">{expenseTitle}</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-foreground/60 truncate">{expenseTitle}</p>
+          {initialSubcategoryName ? (
+            <p className="text-xs text-foreground/40 truncate">{initialSubcategoryName}</p>
+          ) : null}
+        </div>
         <p className="text-sm shrink-0 text-foreground/50">{formatAmount(expenseAmount)}</p>
       </div>
     )

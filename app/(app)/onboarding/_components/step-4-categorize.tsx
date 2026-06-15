@@ -3,7 +3,7 @@ import { CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getCategories } from '@/lib/dal/categories'
 import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
-import { getTopUncategorizedExpenses } from '@/lib/dal/transactions'
+import { getTopExpensesForOnboarding } from '@/lib/dal/transactions'
 import { APP_ROUTES } from '@/lib/routes'
 import { SubcategoryCombobox } from '@/app/(app)/onboarding/_components/subcategory-combobox'
 
@@ -13,10 +13,17 @@ type Step4CategorizeProps = {
 
 export async function Step4Categorize({ userId }: Step4CategorizeProps) {
   const [expenses, categories, mostUsed] = await Promise.all([
-    getTopUncategorizedExpenses(userId, 15),
+    // Stable top-15: categorized rows are included so a row never vanishes after save
+    // or refresh; already-categorized rows render with a persistent green check.
+    getTopExpensesForOnboarding(userId, 15),
     getCategories(),
     getMostUsedSubcategories(['in', 'out', 'transfer', 'allocation']),
   ])
+
+  // Done-state derives from "no uncategorized remain in the fetched set", NOT from an
+  // empty list — the list is intentionally stable so the user keeps seeing their
+  // categorized rows (green checks) instead of having them disappear.
+  const remaining = expenses.filter((e) => e.subCategoryId === null).length
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-80px)] px-4 pt-2 pb-28 text-foreground">
@@ -24,11 +31,11 @@ export async function Step4Categorize({ userId }: Step4CategorizeProps) {
         <div className="mb-5">
           <h1 className="mb-1 text-2xl font-bold">Categorizza le spese principali</h1>
           <p className="text-sm text-muted-foreground">
-            Le 15 con il valore più alto · {expenses.length} da completare
+            Le 15 con il valore più alto · {remaining} da completare
           </p>
         </div>
 
-        {expenses.length > 0 ? (
+        {expenses.length > 0 && remaining > 0 ? (
           <div className="space-y-2 overflow-y-auto">
             {expenses.map((expense) => (
               <SubcategoryCombobox
@@ -38,6 +45,8 @@ export async function Step4Categorize({ userId }: Step4CategorizeProps) {
                 expenseAmount={expense.totalAmount}
                 categories={categories}
                 mostUsed={mostUsed}
+                initialCategorized={expense.subCategoryId !== null}
+                initialSubcategoryName={expense.subCategoryName}
               />
             ))}
           </div>

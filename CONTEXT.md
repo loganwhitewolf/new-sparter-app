@@ -168,6 +168,11 @@ _Avoid_: pattern suggerito, candidato, hint
 Il flusso di accesso riservato agli utenti con zero transazioni. Attivo finché `count(transaction) === 0`. Composto da 5 step: upload → overview → educazione → categorizzazione → outro. Termina quando l'utente esce verso la dashboard o le impostazioni.
 _Avoid_: wizard di registrazione, setup iniziale
 
+**Step 4 (Categorizzazione) — invarianti** _(260615-n3t)_. Tre regole stabili, garantite da test di regressione (companion eseguibile di questa nota; vedi `onboardingThemeForStep` e `getTopExpensesForOnboarding`):
+1. **Tema.** Lo step 4 è l'unico step a tema chiaro (`light`); gli altri quattro sono `dark`. Il mapping vive in `onboardingThemeForStep(step)` (`lib/validations/onboarding.ts`), unica fonte di verità — `page.tsx` non deriva il tema inline.
+2. **Lista stabile + check persistente.** Lo step mostra un set stabile di 15 spese (`getTopExpensesForOnboarding`, senza filtro `IS NULL`). Una spesa già categorizzata resta visibile con la spunta verde e **non sparisce** dopo il salvataggio (`revalidatePath('/onboarding')`) né dopo un refresh manuale: lo stato categorizzato è seminato sul primo render server (`initialCategorized`).
+3. **Done-state.** Il messaggio "Tutto categorizzato!" appare quando **non resta alcuna spesa non categorizzata** nel set recuperato (`remaining === 0`), non quando la lista è vuota.
+
 **Months Covered** (Mesi coperti):
 Label derivata on-the-fly dalle date delle transazioni di un file (es. "Apr–Giu 2026"). Non è una proprietà persistita sul file. Calcolata da `DATE_TRUNC('month', MIN/MAX(transaction.date))` per quel `fileId`. Usata solo a fini di display nella lista file e nell'overview di onboarding.
 _Avoid_: periodo del file, mese assegnato
