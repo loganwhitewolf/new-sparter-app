@@ -248,12 +248,13 @@ export async function promoteSuggestionAction(
     : undefined;
 
   // Parse only the fields we trust from the client (pattern, subCategoryId).
-  // Phase 46: amountSign removed; confidence is hardcoded to 0.85 (D-01).
-  const parsed = CreatePatternSchema.safeParse({
+  // Phase 46: amountSign removed; confidence is hardcoded to 0.85 (D-01, WR-03).
+  // Use a schema that omits confidence so no sentinel value is needed.
+  const PromoteFormSchema = CreatePatternSchema.omit({ confidence: true });
+  const parsed = PromoteFormSchema.safeParse({
     pattern: formData.get("pattern"),
     subCategoryId: subCategoryIdRaw,
     // amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012)
-    confidence: 1,
     description: undefined, // Inline form does not collect a description (D-01).
   });
   if (!parsed.success) {
