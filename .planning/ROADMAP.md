@@ -172,7 +172,7 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 51-03-PLAN.md — Standalone discoverRegexCandidates service (strip → normalize → cluster) + Fineco DoD anchor; legacy analyzeFile call annotated (PIPE-01/02/03, SC-4)
+- [x] 51-03-PLAN.md — Standalone discoverRegexCandidates service (strip → normalize → cluster) + Fineco DoD anchor; legacy analyzeFile call annotated (PIPE-01/02/03, SC-4) *(complete 2026-06-16, commits 676a37c + 60b5479 + d169fa8)*
 
 ### Phase 52: regex-validity-and-dedup
 
@@ -186,7 +186,16 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
   3. A candidate whose generated regex would already be matched/covered by an existing pattern in the regex table is skipped and not shown (Check 1).
   4. A candidate is skipped when that transaction type is already covered by an existing manual categorization for the same `descriptionHash` (Check 2).
 
-**Plans**: TBD
+**Plans**: 3 plans (2 waves)
+
+**Wave 1**
+
+- [ ] 52-01-PLAN.md — Pure util: `descriptionHashes` passthrough + `candidateCoveredByExistingPattern` (Check 1 helper, RDISC-03)
+- [ ] 52-02-PLAN.md — DAL: `getManuallyCategorizedHashes` manual-history query (Check 2 data source, RDISC-04)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 52-03-PLAN.md — Service: residual split + Check 1/Check 2 wiring + two-list `DiscoveryResult` (RDISC-01/02/03/04, both DoD cases)
 
 ### Phase 53: retroactive-application
 
@@ -245,10 +254,10 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
 | 42–45 | v1.16 | 13/13 | Complete | 2026-06-09 |
 | 46–50 | v2.0 | 22/22 | Complete | 2026-06-14 |
-| 51. discovery-pipeline-reorder | v2.1 | 2/3 | Executing | - |
-| 52. regex-validity-and-dedup | v2.1 | 0/? | Not started | - |
+| 51. discovery-pipeline-reorder | v2.1 | 3/3 | Complete | 2026-06-16 |
+| 52. regex-validity-and-dedup | v2.1 | 0/3 | Not started | - |
 | 53. retroactive-application | v2.1 | 0/? | Not started | - |
 | 54. reusable-trigger | v2.1 | 0/? | Not started | - |
 | 55. import-summary-ux | v2.1 | 0/? | Not started | - |
 
-**Total shipped: 50 phases · 186 plans complete**
+**Total shipped: 51 phases · 189 plans complete**
