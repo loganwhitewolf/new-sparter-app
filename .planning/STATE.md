@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: — Regex Discovery & Transaction Unification
 status: executing
-last_updated: "2026-06-16T15:20:53Z"
-last_activity: 2026-06-16 -- Phase 53 Plan 02 complete
+last_updated: "2026-06-16T17:30:00Z"
+last_activity: 2026-06-16 -- Phase 53 Plan 03 complete
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 9
-  completed_plans: 8
-  percent: 44
+  completed_plans: 9
+  percent: 56
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 
 ## Current Position
 
-Phase: 53 (retroactive-application) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-06-16 -- Phase 53 Plan 02 complete (promoteSuggestionAction platform apply)
+Phase: 53 (retroactive-application) — COMPLETE
+Plan: 3 of 3 — ALL PLANS COMPLETE
+Status: Phase complete — ready for Phase 54
+Last activity: 2026-06-16 -- Phase 53 Plan 03 complete (inline apply feedback UI)
 
 ## Roadmap (v2.1 — Phases 51–55)
 
@@ -35,7 +35,7 @@ Last activity: 2026-06-16 -- Phase 53 Plan 02 complete (promoteSuggestionAction 
 |-------|------|--------------|--------|
 | 51 | discovery-pipeline-reorder | PIPE-01, PIPE-02, PIPE-03 | Complete |
 | 52 | regex-validity-and-dedup | RDISC-01, RDISC-02, RDISC-03, RDISC-04 | Complete |
-| 53 | retroactive-application | APPLY-01, APPLY-02 | Not started |
+| 53 | retroactive-application | APPLY-01, APPLY-02 | Complete |
 | 54 | reusable-trigger | TRIG-01, TRIG-02 | Not started |
 | 55 | import-summary-ux | SUMUI-01, SUMUI-02, SUMUI-03 | Not started |
 
@@ -62,6 +62,8 @@ Plan 52-03: discoverRegexCandidates now returns two lists: regex candidates from
 Plan 53-01: applyNewPatternToPlatformExpenses is a new sibling function using platform-scoped Set B DAL; PatternApplyResult exported from service layer; legacy applyNewPatternToExpenses unchanged for createPatternAction; getPlatformIdForUserFile resolves file ownership with platform join.
 
 Plan 53-02: ActionState extended with optional applyResult?: PatternApplyResult | null; promoteSuggestionAction resolves platformId server-side from fileId (T-53-04/05), calls applyNewPatternToPlatformExpenses, returns structured counts; non-fatal apply failure returns zero counts; APPLY-02 scope locked to platform uncategorized history.
+
+Plan 53-03: fileId/platformId threaded from RSC page → SuggestionSection → SuggestionCard → SuggestionPromoteForm; hidden fileId input in form (T-53-08); SuggestionCard renders Italian count copy (categorizzate / ancora senza match) from applyResult after promote; card persists with opacity-50 (not removed); notFound when platformId null; initialApplyResult test-only prop for SSR snapshot testing.
 
 Design contract is LOCKED. Do not re-open or re-derive the data model:
 
@@ -115,11 +117,11 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-16T15:20:53Z
-Handoff synced: 2026-06-16 — Phase 53 Plan 02 complete: promoteSuggestionAction wired to platform apply + applyResult (commits 893afc6, b3d25a6).
+Last session: 2026-06-16T17:30:00Z
+Handoff synced: 2026-06-16 — Phase 53 complete: all 3 plans done. Plan 03 wired inline apply feedback UI (commits 4406115, ce3190b).
 Resume file: None
 
-**Next:** Execute Phase 53 Plan 03 — UI rendering of applyResult inline in SuggestionCard.
+**Next:** Phase 54 — reusable-trigger (TRIG-01, TRIG-02).
 
 ## Operator Next Steps
 
@@ -143,3 +145,4 @@ Resume file: None
 | Phase 52 P03 | 3 min | 3 tasks | 2 files |
 | Phase 53 PP01 | 3min | - tasks | - files |
 | Phase 53 P02 | 8min | 2 tasks (TDD RED+GREEN) | 4 files |
+| Phase 53 P03 | 10min | 2 tasks + verification | 7 files |
