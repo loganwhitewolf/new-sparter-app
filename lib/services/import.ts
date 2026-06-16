@@ -296,6 +296,7 @@ export async function analyzeFile(input: {
     : { ...EMPTY_IMPORT_STATS, rowCount: parsed.rowCount }
 
   let patternSuggestions: PatternSuggestion[] = []
+  // TODO Phase 55: remove — regex discovery now runs post-import via discoverRegexCandidates in lib/services/regex-discovery.ts (PIPE-01/02)
   if (best && !input.skipPatternSuggestions) {
     try {
       const activePatterns = await loadActivePatterns(db, input.userId)
