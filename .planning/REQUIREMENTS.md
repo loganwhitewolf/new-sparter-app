@@ -22,7 +22,7 @@ Correct the definition of a valid regex and stop proposing duplicates.
 - [ ] **RDISC-01**: A regex is proposed only when, after normalization, ≥2 transactions share a common prefix/substring but differ in a residual variable part (causale, month, progressive number). *Test case:* Fineco "Bonifico Andrea Bernardini causale stipendio marzo/maggio/giugno" → one regex.
 - [ ] **RDISC-02**: When ≥2 transactions are identical after normalization, they are surfaced as a single-categorization suggestion, not a regex. *Test case:* repeated identical "Macellaio" → single categorization, no regex.
 - [x] **RDISC-03**: Check 1 — a candidate is skipped when the regex it would generate is already matched/covered by an existing pattern in the regex table.
-- [ ] **RDISC-04**: Check 2 — a candidate is skipped when that transaction type is already covered by an existing manual category (e.g. a manually categorized expense / history for the same descriptionHash).
+- [x] **RDISC-04**: Check 2 — a candidate is skipped when that transaction type is already covered by an existing manual category (e.g. a manually categorized expense / history for the same descriptionHash).
 
 ### Application & Scope (APPLY)
 
@@ -80,7 +80,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RDISC-01 | Phase 52 | Pending |
 | RDISC-02 | Phase 52 | Pending |
 | RDISC-03 | Phase 52 | Complete |
-| RDISC-04 | Phase 52 | Pending |
+| RDISC-04 | Phase 52 | Complete |
 | APPLY-01 | Phase 53 | Pending |
 | APPLY-02 | Phase 53 | Pending |
 | TRIG-01 | Phase 54 | Pending |
