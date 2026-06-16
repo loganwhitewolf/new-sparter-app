@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Nature/Direction Model Realignment
 status: Awaiting next milestone
-last_updated: "2026-06-14T15:47:51.121Z"
-last_activity: 2026-06-14 — Milestone v2.0 completed and archived
+last_updated: "2026-06-16T07:49:00.000Z"
+last_activity: 2026-06-16 — Completed quick task 260616-dlw: Fix transaction description sort
 progress:
   total_phases: 5
   completed_phases: 5
@@ -94,6 +94,7 @@ None.
 | 260615-dtm | Bank-agnostic regex-discovery tool (uncovered-description clustering → proposed patterns) | 2026-06-15 | d737b8e |
 | 260615-n3t | Onboarding step-4 fix: guarded light theme + catalogued items stay with green check | 2026-06-15 | 1434308 |
 | 260615-oiq | Onboarding private platform creation imports immediately and returns to step 2 | 2026-06-15 | d5b590c |
+| 260616-dlw | Fix transaction description sort (validation + DAL + infinite scroll) | 2026-06-16 | c71d32e |
 
 ## Deferred Items
 
