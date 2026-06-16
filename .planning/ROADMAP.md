@@ -19,7 +19,7 @@
 
 ### v2.1 — Regex Discovery & Transaction Unification
 
-- [ ] **Phase 51: discovery-pipeline-reorder** — Move regex discovery downstream of auto-categorization into a standalone service operating on the uncategorized set only
+- [x] **Phase 51: discovery-pipeline-reorder** — Move regex discovery downstream of auto-categorization into a standalone service operating on the uncategorized set only *(complete 2026-06-16, 3/3 plans)*
 - [ ] **Phase 52: regex-validity-and-dedup** — Correct regex vs single-categorization distinction; skip candidates already covered by existing patterns or manual categories
 - [ ] **Phase 53: retroactive-application** — Apply a created regex to existing uncategorized data; resolve and implement the current-file-vs-platform-history scope
 - [ ] **Phase 54: reusable-trigger** — Same discovery service invoked automatically post-import and on-demand from the Files table
