@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: — Regex Discovery & Transaction Unification
 status: executing
-last_updated: "2026-06-16T10:00:00.000Z"
-last_activity: 2026-06-16 -- Phase 51 Plan 01 completed (WithMeta util extension)
+last_updated: "2026-06-16T09:55:29Z"
+last_activity: 2026-06-16 -- Phase 51 Plan 02 completed (DAL query getUncategorizedExpensesForDiscovery)
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 33
+  completed_plans: 2
+  percent: 67
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 ## Current Position
 
 Phase: 51 (discovery-pipeline-reorder) — EXECUTING
-Plan: 2 of 3
-Status: Executing Phase 51 (Plan 01 complete)
-Last activity: 2026-06-16 -- Phase 51 Plan 01 completed (WithMeta util extension)
+Plan: 3 of 3
+Status: Executing Phase 51 (Plans 01–02 complete)
+Last activity: 2026-06-16 -- Phase 51 Plan 02 completed (DAL query getUncategorizedExpensesForDiscovery)
 
 ## Roadmap (v2.1 — Phases 51–55)
 
@@ -48,6 +48,8 @@ Last activity: 2026-06-16 -- Phase 51 Plan 01 completed (WithMeta util extension
 ### Decisions
 
 Plan 51-01: detectPatternSuggestionsWithMeta reuses shared helpers — no clustering logic duplicated; strippedByNormalization rolled up as any-member-true at candidate level; residualVariablePart from first grouped row's tokens beyond stable prefix.
+
+Plan 51-02: getUncategorizedExpensesForDiscovery uses isNull(expense.subCategoryId) as sole Set B filter (covers statuses 1 and 4 without enumerating them); no cache() or verifySession() — userId passed as parameter following loadActivePatterns pattern; no DbOrTx — discovery is post-commit, never inside a transaction.
 
 Design contract is LOCKED. Do not re-open or re-derive the data model:
 
@@ -100,15 +102,15 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-16T10:00:00.000Z
-Handoff synced: 2026-06-16 — Phase 51 Plan 01 complete: WithMeta util extension + unit tests (commits 11d1f9f, af5f078).
-Resume file: .planning/phases/51-discovery-pipeline-reorder/51-02-PLAN.md
+Last session: 2026-06-16T09:55:29Z
+Handoff synced: 2026-06-16 — Phase 51 Plan 02 complete: DAL query getUncategorizedExpensesForDiscovery + unit tests (commits 953d15a, 6dc63da).
+Resume file: .planning/phases/51-discovery-pipeline-reorder/51-03-PLAN.md
 
-**Next:** Execute Plan 51-02 — DAL query getUncategorizedExpensesForDiscovery.
+**Next:** Execute Plan 51-03 — service discoverRegexCandidates.
 
 ## Operator Next Steps
 
-- Execute Plan 51-02 with `/gsd-execute-phase 51` (DAL + service layers)
+- Execute Plan 51-03 with `/gsd-execute-phase 51` (service discoverRegexCandidates)
 
 ## Performance Metrics
 
@@ -121,3 +123,4 @@ Resume file: .planning/phases/51-discovery-pipeline-reorder/51-02-PLAN.md
 | Phase 50-transaction-pairing P50-04 | 25min | 2 tasks | 3 files |
 | Phase 50-transaction-pairing P50-05 | 90min | 2 tasks + operator checkpoint + 5 fixes | 5 files |
 | Phase 51 P01 | 15min | 2 tasks | 2 files |
+| Phase 51 P02 | 15min | 2 tasks | 2 files |
