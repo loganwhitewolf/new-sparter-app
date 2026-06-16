@@ -20,7 +20,7 @@
 ### v2.1 — Regex Discovery & Transaction Unification
 
 - [x] **Phase 51: discovery-pipeline-reorder** — Move regex discovery downstream of auto-categorization into a standalone service operating on the uncategorized set only *(complete 2026-06-16, 3/3 plans)*
-- [ ] **Phase 52: regex-validity-and-dedup** — Correct regex vs single-categorization distinction; skip candidates already covered by existing patterns or manual categories
+- [x] **Phase 52: regex-validity-and-dedup** — Correct regex vs single-categorization distinction; skip candidates already covered by existing patterns or manual categories (completed 2026-06-16)
 - [ ] **Phase 53: retroactive-application** — Apply a created regex to existing uncategorized data; resolve and implement the current-file-vs-platform-history scope
 - [ ] **Phase 54: reusable-trigger** — Same discovery service invoked automatically post-import and on-demand from the Files table
 - [ ] **Phase 55: import-summary-ux** — Capped example list and visual separation of proposed regex vs single-categorization suggestions, with the new-step messaging
@@ -255,7 +255,7 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 | 42–45 | v1.16 | 13/13 | Complete | 2026-06-09 |
 | 46–50 | v2.0 | 22/22 | Complete | 2026-06-14 |
 | 51. discovery-pipeline-reorder | v2.1 | 3/3 | Complete | 2026-06-16 |
-| 52. regex-validity-and-dedup | v2.1 | 3/3 | Complete   | 2026-06-16 |
+| 52. regex-validity-and-dedup | v2.1 | 3/3 | Complete    | 2026-06-16 |
 | 53. retroactive-application | v2.1 | 0/? | Not started | - |
 | 54. reusable-trigger | v2.1 | 0/? | Not started | - |
 | 55. import-summary-ux | v2.1 | 0/? | Not started | - |

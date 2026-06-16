@@ -47,6 +47,8 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 
 Operator deploy (R038/R039/R041 — live Vercel/Supabase/R2) remains operator-pending.
 
+**v2.1 progress:** Phases 51 and 52 are complete. Regex discovery now runs as a standalone post-categorization service over uncategorized expenses, separates regex candidates from single-categorization suggestions, and applies active-pattern plus manual-history dedup gates before proposing.
+
 ## Last Shipped Milestone: v2.0 — Nature/Direction Model Realignment (shipped 2026-06-14)
 
 **Goal:** Replace the dual-axis `category.type` + `nature` classification with a single nature→direction model backed by lookup tables, migrate and recategorize all existing data, and add explicit transaction pairing on top of the implicit netting.

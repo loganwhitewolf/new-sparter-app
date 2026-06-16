@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: — Regex Discovery & Transaction Unification
-status: verifying
-last_updated: "2026-06-16T13:26:50.790Z"
-last_activity: 2026-06-16 -- Phase 52 Plan 03 completed (service validity and dedup gates)
+status: planning
+last_updated: "2026-06-16T13:42:49.516Z"
+last_activity: 2026-06-16
 progress:
   total_phases: 5
   completed_phases: 2
@@ -20,21 +20,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-16)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 52 — regex-validity-and-dedup
+**Current focus:** Phase 53 — retroactive-application
 
 ## Current Position
 
-Phase: 52 (regex-validity-and-dedup) — IN PROGRESS
-Plan: 3 of 3
-Status: All Phase 52 implementation plans complete — phase verification pending
-Last activity: 2026-06-16 -- Phase 52 Plan 03 completed (service validity and dedup gates)
+Phase: 53
+Plan: Not started
+Status: Phase 52 verified complete; Phase 53 is ready for discussion/planning
+Last activity: 2026-06-16
 
 ## Roadmap (v2.1 — Phases 51–55)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
 | 51 | discovery-pipeline-reorder | PIPE-01, PIPE-02, PIPE-03 | Complete |
-| 52 | regex-validity-and-dedup | RDISC-01, RDISC-02, RDISC-03, RDISC-04 | In Progress |
+| 52 | regex-validity-and-dedup | RDISC-01, RDISC-02, RDISC-03, RDISC-04 | Complete |
 | 53 | retroactive-application | APPLY-01, APPLY-02 | Not started |
 | 54 | reusable-trigger | TRIG-01, TRIG-02 | Not started |
 | 55 | import-summary-ux | SUMUI-01, SUMUI-02, SUMUI-03 | Not started |
@@ -70,7 +70,7 @@ v2.0 closed (Phases 46–50, shipped 2026-06-14): nature/direction lookup tables
 Codebase facts relevant to v2.1 (verified, do not re-research):
 
 - `lib/services/import.ts`: `analyzeFile()` runs `detectPatternSuggestions` over ALL normalized rows with `covered:false` hardcoded, BEFORE categorization — discovery currently runs in the wrong place. `importFile()` runs `categorizePipeline` per-expense inside a `db.transaction`. (Phase 51 reorders this.)
-- `lib/utils/pattern-suggestions.ts`: pure `detectPatternSuggestions` — token-prefix grouping (≥2 tokens, ≥2 members), strips numeric tokens; `isCoveredByPatterns` tests candidates against active regex patterns (partial Check 1). Does NOT distinguish identical-after-normalization (single categorization) from prefix+variable (regex); no Check 2. (Phase 52.)
+- `lib/utils/pattern-suggestions.ts`: pure `detectPatternSuggestions` / `detectPatternSuggestionsWithMeta` — token-prefix grouping (>=2 tokens, >=2 members), strips numeric tokens, carries grouped `descriptionHashes`, and exposes `candidateCoveredByExistingPattern` for generated-regex coverage checks.
 - `lib/services/categorization.ts`: `categorizePipeline` (Tier1 regex `applyTier1Regex` + Tier2 history), `loadActivePatterns`.
 - `lib/services/pattern-application.ts`: `applyNewPatternToExpenses` already applies a new pattern retroactively to ALL of a user's uncategorized expenses (platform-agnostic) — relevant to APPLY-01/APPLY-02 scope decision (Phase 53).
 - `app/(app)/import/[fileId]/suggestions/page.tsx`: post-import re-run on `getUncategorizedTransactionsByFileId` (Set B for that file), capped at 5, still `covered:false`, no Check 2.
@@ -114,11 +114,11 @@ Last session: 2026-06-16T13:26:50.785Z
 Handoff synced: 2026-06-16 — Phase 51 complete: service discoverRegexCandidates + tests + TODO annotation (commits 676a37c, 60b5479, d169fa8).
 Resume file: None
 
-**Next:** Verify Phase 52 — regex-validity-and-dedup against RDISC-01/02/03/04.
+**Next:** Discuss or plan Phase 53 — retroactive-application.
 
 ## Operator Next Steps
 
-- Continue `$gsd-execute-phase 52` phase-level verification gates for RDISC-01/02/03/04.
+- Start Phase 53 (`$gsd-discuss-phase 53` or `$gsd-plan-phase 53`) to resolve retroactive application scope and implementation details.
 
 ## Performance Metrics
 
