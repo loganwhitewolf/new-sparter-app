@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: — Regex Discovery & Transaction Unification
 status: executing
-last_updated: "2026-06-16T10:07:00Z"
-last_activity: 2026-06-16 -- Phase 51 Plan 03 completed (service discoverRegexCandidates)
+last_updated: "2026-06-16T13:21:16.565Z"
+last_activity: 2026-06-16 -- Phase 52 Plan 01 completed (pure candidate validity helpers)
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_plans: 6
+  completed_plans: 4
+  percent: 67
 ---
 
 # Project State
@@ -20,21 +20,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-16)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 51 — discovery-pipeline-reorder
+**Current focus:** Phase 52 — regex-validity-and-dedup
 
 ## Current Position
 
-Phase: 51 (discovery-pipeline-reorder) — COMPLETE
-Plan: 3 of 3
-Status: Phase 51 complete — all 3 plans delivered
-Last activity: 2026-06-16 -- Phase 51 Plan 03 completed (service discoverRegexCandidates)
+Phase: 52 (regex-validity-and-dedup) — IN PROGRESS
+Plan: 1 of 3
+Status: Plan 52-01 complete — Wave 1 continues with DAL manual-history query
+Last activity: 2026-06-16 -- Phase 52 Plan 01 completed (pure candidate validity helpers)
 
 ## Roadmap (v2.1 — Phases 51–55)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 51 | discovery-pipeline-reorder | PIPE-01, PIPE-02, PIPE-03 | Not started |
-| 52 | regex-validity-and-dedup | RDISC-01, RDISC-02, RDISC-03, RDISC-04 | Not started |
+| 51 | discovery-pipeline-reorder | PIPE-01, PIPE-02, PIPE-03 | Complete |
+| 52 | regex-validity-and-dedup | RDISC-01, RDISC-02, RDISC-03, RDISC-04 | In Progress |
 | 53 | retroactive-application | APPLY-01, APPLY-02 | Not started |
 | 54 | reusable-trigger | TRIG-01, TRIG-02 | Not started |
 | 55 | import-summary-ux | SUMUI-01, SUMUI-02, SUMUI-03 | Not started |
@@ -52,6 +52,8 @@ Plan 51-01: detectPatternSuggestionsWithMeta reuses shared helpers — no cluste
 Plan 51-02: getUncategorizedExpensesForDiscovery uses isNull(expense.subCategoryId) as sole Set B filter (covers statuses 1 and 4 without enumerating them); no cache() or verifySession() — userId passed as parameter following loadActivePatterns pattern; no DbOrTx — discovery is post-commit, never inside a transaction.
 
 Plan 51-03: discoverRegexCandidates reads stripPattern from expenses[0].descriptionStripPattern (platform-level constant from DAL join); applyStrip is a private one-liner — does NOT call normalizeTransactionRow (requires ImportPlatformConfig not available here); amount: null on all detector rows (description-only clustering); legacy analyzeFile call annotated with TODO Phase 55, not deleted (preserves current import summary UI).
+
+Plan 52-01: PatternSuggestionWithMeta now carries all grouped member descriptionHashes (legacy nulls filtered); candidateCoveredByExistingPattern is a pure helper that mirrors the existing full plus numeric-stripped active-pattern matcher; clustering guard and prefix math unchanged.
 
 Design contract is LOCKED. Do not re-open or re-derive the data model:
 
@@ -104,15 +106,15 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-16T10:07:00Z
+Last session: 2026-06-16T13:21:16.327Z
 Handoff synced: 2026-06-16 — Phase 51 complete: service discoverRegexCandidates + tests + TODO annotation (commits 676a37c, 60b5479, d169fa8).
-Resume file: None — Phase 51 complete, next phase is 52-regex-validity-and-dedup.
+Resume file: None
 
-**Next:** Plan Phase 52 — regex-validity-and-dedup (RDISC-01/02/03/04).
+**Next:** Execute Phase 52 Plan 02 — DAL manual-history query for Check 2 (RDISC-04).
 
 ## Operator Next Steps
 
-- Plan Phase 52 with `/gsd-plan-phase 52` (regex-validity-and-dedup: RDISC-01/02/03/04)
+- Continue `$gsd-execute-phase 52` with Plan 52-02 (DAL manual-history query for RDISC-04).
 
 ## Performance Metrics
 
@@ -127,3 +129,4 @@ Resume file: None — Phase 51 complete, next phase is 52-regex-validity-and-ded
 | Phase 51 P01 | 15min | 2 tasks | 2 files |
 | Phase 51 P02 | 15min | 2 tasks | 2 files |
 | Phase 51 P03 | 8min | 3 tasks (TDD RED+GREEN + comment) | 3 files |
+| Phase 52 P01 | 3 min | 2 tasks | 6 files |
