@@ -16,6 +16,9 @@ const mocks = vi.hoisted(() => ({
   getCategoryTypeForSubCategory: vi.fn(),
   revalidatePath: vi.fn(),
   refresh: vi.fn(),
+  applyNewPatternToExpenses: vi.fn(),
+  applyNewPatternToPlatformExpenses: vi.fn(),
+  getPlatformIdForUserFile: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
@@ -33,6 +36,15 @@ vi.mock('@/lib/dal/patterns', () => ({
   updatePattern: mocks.updatePattern,
   deletePattern: mocks.deletePattern,
   getCategoryTypeForSubCategory: mocks.getCategoryTypeForSubCategory,
+}))
+
+vi.mock('@/lib/services/pattern-application', () => ({
+  applyNewPatternToExpenses: mocks.applyNewPatternToExpenses,
+  applyNewPatternToPlatformExpenses: mocks.applyNewPatternToPlatformExpenses,
+}))
+
+vi.mock('@/lib/dal/files', () => ({
+  getPlatformIdForUserFile: mocks.getPlatformIdForUserFile,
 }))
 
 vi.mock('@/lib/validations/pattern', async () => {
@@ -84,6 +96,7 @@ function validPromoteForm(overrides: Record<string, string | null> = {}) {
     pattern: 'netflix',          // pre-normalized suggestion.pattern (no /…/i delimiters)
     subCategoryId: '42',
     amountSign: 'negative',
+    fileId: 'file-abc',
     ...overrides,
     // NOTE: `confidence` intentionally NOT included — server hardcodes 0.85 per D-01
   })
@@ -114,10 +127,13 @@ describe('pattern Server Actions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.verifySession.mockResolvedValue(paidSession)
-    mocks.createPattern.mockResolvedValue({ id: 7 })
+    mocks.createPattern.mockResolvedValue({ id: 7, pattern: 'netflix', subCategoryId: 42, confidence: '0.85' })
     mocks.updatePattern.mockResolvedValue({ id: 7 })
     mocks.deletePattern.mockResolvedValue({ id: 7 })
     mocks.getCategoryTypeForSubCategory.mockResolvedValue('out')
+    mocks.applyNewPatternToExpenses.mockResolvedValue(0)
+    mocks.applyNewPatternToPlatformExpenses.mockResolvedValue({ updatedCount: 3, notUpdatedCount: 12 })
+    mocks.getPlatformIdForUserFile.mockResolvedValue(1)
   })
 
   describe('createPatternAction', () => {
@@ -335,7 +351,7 @@ describe('pattern Server Actions', () => {
     it('passes session userId, hardcoded confidence 0.85, and rejects FormData userId tampering (REV-03, T-35-01)', async () => {
       const result = await promoteSuggestionAction({ error: null }, validPromoteForm({ userId: 'attacker-id' }))
 
-      expect(result).toEqual({ error: null })
+      expect(result).toEqual({ error: null, applyResult: { updatedCount: 3, notUpdatedCount: 12 } })
       expect(mocks.createPattern).toHaveBeenCalledWith({
         userId: 'user-abc',          // from session, NOT 'attacker-id' from FormData
         pattern: 'netflix',
@@ -352,7 +368,7 @@ describe('pattern Server Actions', () => {
         validPromoteForm({ confidence: '0.99' }),
       )
 
-      expect(result).toEqual({ error: null })
+      expect(result).toEqual({ error: null, applyResult: { updatedCount: 3, notUpdatedCount: 12 } })
       expect(mocks.createPattern).toHaveBeenCalledWith(
         expect.objectContaining({ confidence: 0.85 }),
       )
@@ -364,7 +380,7 @@ describe('pattern Server Actions', () => {
 
       const result = await promoteSuggestionAction({ error: null }, validPromoteForm())
 
-      expect(result).toEqual({ error: null })
+      expect(result).toEqual({ error: null, applyResult: { updatedCount: 3, notUpdatedCount: 12 } })
       expect(mocks.createPattern).toHaveBeenCalledOnce()
       expectExactCategoryRevalidationRoutes()
     })
@@ -412,6 +428,56 @@ describe('pattern Server Actions', () => {
       ).rejects.toThrow('NEXT_REDIRECT')
       expect(mocks.createPattern).not.toHaveBeenCalled()
       expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+
+    // --- Plan 53-02: applyResult + platform resolution ---
+
+    it('resolves platformId server-side from fileId and calls applyNewPatternToPlatformExpenses (APPLY-01/02)', async () => {
+      const result = await promoteSuggestionAction({ error: null }, validPromoteForm())
+
+      expect(result).toEqual({ error: null, applyResult: { updatedCount: 3, notUpdatedCount: 12 } })
+      expect(mocks.getPlatformIdForUserFile).toHaveBeenCalledWith({ userId: 'user-abc', fileId: 'file-abc' })
+      expect(mocks.applyNewPatternToPlatformExpenses).toHaveBeenCalledWith(
+        expect.anything(), // db
+        expect.objectContaining({ userId: 'user-abc', platformId: 1 }),
+      )
+    })
+
+    it('does NOT call legacy applyNewPatternToExpenses on the promote path', async () => {
+      await promoteSuggestionAction({ error: null }, validPromoteForm())
+
+      expect(mocks.applyNewPatternToExpenses).not.toHaveBeenCalled()
+    })
+
+    it('returns Italian error and does not create pattern when fileId is missing from FormData (T-53-04)', async () => {
+      const result = await promoteSuggestionAction(
+        { error: null },
+        validPromoteForm({ fileId: null }),
+      )
+
+      expect(result.error).toBeTruthy()
+      expect(result.error).toMatch(/file/i)
+      expect(mocks.createPattern).not.toHaveBeenCalled()
+    })
+
+    it('returns Italian error and does not create pattern when platformId cannot be resolved (T-53-05)', async () => {
+      mocks.getPlatformIdForUserFile.mockResolvedValueOnce(null)
+
+      const result = await promoteSuggestionAction({ error: null }, validPromoteForm())
+
+      expect(result.error).toBeTruthy()
+      expect(result.error).toMatch(/piattaforma/i)
+      expect(mocks.createPattern).not.toHaveBeenCalled()
+    })
+
+    it('returns applyResult with zero counts when apply throws after pattern is saved (non-fatal)', async () => {
+      mocks.applyNewPatternToPlatformExpenses.mockRejectedValueOnce(new Error('DB timeout'))
+
+      const result = await promoteSuggestionAction({ error: null }, validPromoteForm())
+
+      expect(result).toEqual({ error: null, applyResult: { updatedCount: 0, notUpdatedCount: 0 } })
+      expect(mocks.createPattern).toHaveBeenCalledOnce()
+      expectExactCategoryRevalidationRoutes()
     })
   })
 })
