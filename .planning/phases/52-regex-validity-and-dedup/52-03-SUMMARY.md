@@ -101,6 +101,12 @@ None.
 - `yarn check:language` - passed.
 - `grep -c "^import 'server-only'" lib/services/regex-discovery.ts` - `1`.
 
+## Self-Check: PASSED
+
+- Key files exist and were committed.
+- All acceptance criteria from the plan were verified.
+- RED and GREEN commits are present in git history.
+
 ## User Setup Required
 
 None - no external service configuration required.
