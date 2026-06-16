@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks (vi.hoisted runs before module imports)
 // ---------------------------------------------------------------------------
 const mocks = vi.hoisted(() => ({
   getUncategorizedExpensesForDiscovery: vi.fn(),
+  getManuallyCategorizedHashes: vi.fn(),
   loadActivePatterns: vi.fn(),
 }))
 
@@ -15,6 +16,7 @@ vi.mock('server-only', () => ({}))
 // so real clustering + normalization run against the fixture data
 vi.mock('@/lib/dal/regex-discovery', () => ({
   getUncategorizedExpensesForDiscovery: mocks.getUncategorizedExpensesForDiscovery,
+  getManuallyCategorizedHashes: mocks.getManuallyCategorizedHashes,
 }))
 
 // Mock categorization service for loadActivePatterns
@@ -64,7 +66,33 @@ const finecoExpenses = [
   },
 ]
 
+const macellaioExpenses = [
+  {
+    id: 'exp-m1',
+    title: 'Macellaio Da Mario',
+    descriptionHash: 'macellaio-hash-1',
+    descriptionStripPattern: null,
+  },
+  {
+    id: 'exp-m2',
+    title: 'Macellaio Da Mario',
+    descriptionHash: 'macellaio-hash-2',
+    descriptionStripPattern: null,
+  },
+  {
+    id: 'exp-m3',
+    title: 'Macellaio Da Mario',
+    descriptionHash: 'macellaio-hash-3',
+    descriptionStripPattern: null,
+  },
+]
+
 describe('discoverRegexCandidates', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getManuallyCategorizedHashes.mockResolvedValue(new Set())
+  })
+
   it('SC-4: Fineco DoD anchor — three salary transfers yield one candidate with expected stable prefix', async () => {
     mocks.getUncategorizedExpensesForDiscovery.mockResolvedValueOnce(finecoExpenses)
     // Empty active patterns — DoD text is NOT pre-covered, survives as Set B
@@ -81,6 +109,7 @@ describe('discoverRegexCandidates', () => {
     expect(result.platformId).toBe(FINECO_PLATFORM_ID)
     // Exactly one candidate
     expect(result.candidates).toHaveLength(1)
+    expect(result.singleCategorizationSuggestions).toHaveLength(0)
 
     const candidate = result.candidates[0]
     // Stable prefix contains the invariant portion of all three titles
@@ -90,6 +119,7 @@ describe('discoverRegexCandidates', () => {
     expect(candidate.residualVariablePart).toBeTruthy()
     expect(candidate.sampleNormalized).toBeTruthy()
     expect(typeof candidate.strippedByNormalization).toBe('boolean')
+    expect(candidate.descriptionHashes).toEqual(expect.arrayContaining(['hash1', 'hash2', 'hash3']))
   })
 
   it('PIPE-02: standalone callable — resolves with only userId + platformId, no import context', async () => {
@@ -163,7 +193,101 @@ describe('discoverRegexCandidates', () => {
 
     // All DoD rows are covered by the active pattern — no candidates should emerge
     expect(result.candidates).toHaveLength(0)
+    expect(result.singleCategorizationSuggestions).toHaveLength(0)
     // totalUncategorized still reports the raw Set B count (fetch is separate from clustering)
     expect(result.totalUncategorized).toBe(3)
+  })
+
+  it('RDISC-01: Fineco salary family yields one regex candidate and zero single suggestions', async () => {
+    mocks.getUncategorizedExpensesForDiscovery.mockResolvedValueOnce(finecoExpenses)
+    mocks.loadActivePatterns.mockResolvedValueOnce([])
+
+    const result = await discoverRegexCandidates({
+      userId: 'user-fineco',
+      scope: { platformId: FINECO_PLATFORM_ID },
+    })
+
+    expect(result.candidates).toHaveLength(1)
+    expect(result.singleCategorizationSuggestions).toHaveLength(0)
+    expect(result.candidates[0].residualVariablePart.trim()).not.toBe('')
+  })
+
+  it('RDISC-02: identical Macellaio rows yield one single-categorization suggestion and no regex candidate', async () => {
+    mocks.getUncategorizedExpensesForDiscovery.mockResolvedValueOnce(macellaioExpenses)
+    mocks.loadActivePatterns.mockResolvedValueOnce([])
+
+    const result = await discoverRegexCandidates({
+      userId: 'user-macellaio',
+      scope: { platformId: FINECO_PLATFORM_ID },
+    })
+
+    expect(result.candidates).toHaveLength(0)
+    expect(result.singleCategorizationSuggestions).toHaveLength(1)
+    expect(result.singleCategorizationSuggestions[0]).toMatchObject({
+      normalizedDescription: 'macellaio da mario',
+      matchCount: 3,
+      descriptionHashes: ['macellaio-hash-1', 'macellaio-hash-2', 'macellaio-hash-3'],
+    })
+    expect(result.singleCategorizationSuggestions[0].sampleDescriptions).toHaveLength(3)
+    expect(result.singleCategorizationSuggestions[0]).not.toHaveProperty('pattern')
+  })
+
+  it('RDISC-03: Check 1 drops a regex family covered by an active pattern', async () => {
+    mocks.getUncategorizedExpensesForDiscovery.mockResolvedValueOnce(finecoExpenses)
+    mocks.loadActivePatterns.mockResolvedValueOnce([{ pattern: 'bonifico andrea' }])
+
+    const result = await discoverRegexCandidates({
+      userId: 'user-check1',
+      scope: { platformId: FINECO_PLATFORM_ID },
+    })
+
+    expect(result.candidates).toHaveLength(0)
+    expect(result.singleCategorizationSuggestions).toHaveLength(0)
+  })
+
+  it('RDISC-04: Check 2 drops a regex family when any member hash is manually categorized', async () => {
+    mocks.getUncategorizedExpensesForDiscovery.mockResolvedValueOnce(finecoExpenses)
+    mocks.loadActivePatterns.mockResolvedValueOnce([])
+    mocks.getManuallyCategorizedHashes.mockResolvedValueOnce(new Set(['hash2']))
+
+    const result = await discoverRegexCandidates({
+      userId: 'user-check2',
+      scope: { platformId: FINECO_PLATFORM_ID },
+    })
+
+    expect(mocks.getManuallyCategorizedHashes).toHaveBeenCalledWith(
+      'user-check2',
+      expect.arrayContaining(['hash1', 'hash2', 'hash3']),
+    )
+    expect(result.candidates).toHaveLength(0)
+    expect(result.singleCategorizationSuggestions).toHaveLength(0)
+  })
+
+  it('RDISC-04: Check 2 also drops single-categorization suggestions', async () => {
+    mocks.getUncategorizedExpensesForDiscovery.mockResolvedValueOnce(macellaioExpenses)
+    mocks.loadActivePatterns.mockResolvedValueOnce([])
+    mocks.getManuallyCategorizedHashes.mockResolvedValueOnce(new Set(['macellaio-hash-3']))
+
+    const result = await discoverRegexCandidates({
+      userId: 'user-single-check2',
+      scope: { platformId: FINECO_PLATFORM_ID },
+    })
+
+    expect(result.candidates).toHaveLength(0)
+    expect(result.singleCategorizationSuggestions).toHaveLength(0)
+  })
+
+  it('keeps the Fineco regex candidate when Check 2 returns an empty manual set', async () => {
+    mocks.getUncategorizedExpensesForDiscovery.mockResolvedValueOnce(finecoExpenses)
+    mocks.loadActivePatterns.mockResolvedValueOnce([])
+    mocks.getManuallyCategorizedHashes.mockResolvedValueOnce(new Set())
+
+    const result = await discoverRegexCandidates({
+      userId: 'user-empty-manual',
+      scope: { platformId: FINECO_PLATFORM_ID },
+    })
+
+    expect(result.candidates).toHaveLength(1)
+    expect(result.singleCategorizationSuggestions).toHaveLength(0)
   })
 })
