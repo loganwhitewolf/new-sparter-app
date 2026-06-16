@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.1
-milestone_name: Regex Discovery & Transaction Unification
-status: roadmapped
-last_updated: "2026-06-16T09:00:00.000Z"
-last_activity: 2026-06-16
+milestone_name: — Regex Discovery & Transaction Unification
+status: planning
+last_updated: "2026-06-16T09:11:10.514Z"
+last_activity: 2026-06-16 — v2.1 roadmap created, 14/14 requirements mapped
 progress:
   total_phases: 5
   completed_phases: 0
@@ -98,9 +98,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-16
+Last session: 2026-06-16T09:11:10.504Z
 Handoff synced: 2026-06-16 — v2.1 roadmap created (Phases 51–55), REQUIREMENTS.md traceability filled, STATE.md updated.
-Resume file: None.
+Resume file: .planning/phases/51-discovery-pipeline-reorder/51-CONTEXT.md
 
 **Next:** Plan Phase 51 — `/gsd-plan-phase 51` (discovery-pipeline-reorder: PIPE-01/02/03).
 
