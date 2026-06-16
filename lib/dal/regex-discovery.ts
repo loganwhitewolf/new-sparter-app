@@ -59,6 +59,7 @@ export type UncategorizedExpenseForPlatformApply = {
   id: string
   title: string
   totalAmount: string
+  descriptionStripPattern: string | null
 }
 
 /**
@@ -66,7 +67,10 @@ export type UncategorizedExpenseForPlatformApply = {
  *
  * Write-path mirror of getUncategorizedExpensesForDiscovery: identical join chain and WHERE
  * (expense → file → importFormatVersion → platform, isNull(subCategoryId), eq(platform.id))
- * but selects { id, title, totalAmount } for the apply match loop.
+ * but selects { id, title, totalAmount, descriptionStripPattern } for the apply match loop.
+ *
+ * descriptionStripPattern is included so the apply loop mirrors the discovery pipeline:
+ * strip platform boilerplate before normalizing, then match (CR-02).
  *
  * Platform scope (APPLY-02): only expenses linked to the same platform as the promoted file
  * are returned — never user-wide. Manual expenses without importedFromFileId are excluded
@@ -83,6 +87,7 @@ export async function getUncategorizedExpensesForPlatformApply(
       id: expense.id,
       title: expense.title,
       totalAmount: expense.totalAmount,
+      descriptionStripPattern: platform.descriptionStripPattern,
     })
     .from(expense)
     .leftJoin(file, eq(expense.importedFromFileId, file.id))

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Hoisted mocks — must be declared before any import
 const mocks = vi.hoisted(() => ({
-  uncategorizedExpenses: [] as Array<{ id: string; title: string; totalAmount: string }>,
+  uncategorizedExpenses: [] as Array<{ id: string; title: string; totalAmount: string; descriptionStripPattern: string | null }>,
   writeClassificationHistoryCalls: [] as unknown[],
   updateExpenseCalls: [] as unknown[],
 
@@ -92,8 +92,8 @@ describe('applyNewPatternToPlatformExpenses', () => {
   it('only updates expenses returned by platform-scoped DAL (platform boundary, APPLY-02 T-53-01)', async () => {
     // Platform 1 (Fineco) fixture — returned by the mock
     mocks.uncategorizedExpenses = [
-      { id: 'exp-fineco-1', title: 'Pagamento Netflix', totalAmount: '-9.99' },
-      { id: 'exp-fineco-2', title: 'Pagamento Spotify', totalAmount: '-4.99' },
+      { id: 'exp-fineco-1', title: 'Pagamento Netflix', totalAmount: '-9.99', descriptionStripPattern: null },
+      { id: 'exp-fineco-2', title: 'Pagamento Spotify', totalAmount: '-4.99', descriptionStripPattern: null },
     ]
 
     const db = (await import('@/lib/db')).db
@@ -120,9 +120,9 @@ describe('applyNewPatternToPlatformExpenses', () => {
   // ── Count semantics ────────────────────────────────────────────────────────
   it('returns { updatedCount: 2, notUpdatedCount: 1 } when 3 scanned, 2 match', async () => {
     mocks.uncategorizedExpenses = [
-      { id: 'exp-1', title: 'Addebito Netflix abbonamento', totalAmount: '-9.99' },
-      { id: 'exp-2', title: 'Netflix pagamento mensile', totalAmount: '-9.99' },
-      { id: 'exp-3', title: 'Macellaio San Salvatore', totalAmount: '-35.00' },
+      { id: 'exp-1', title: 'Addebito Netflix abbonamento', totalAmount: '-9.99', descriptionStripPattern: null },
+      { id: 'exp-2', title: 'Netflix pagamento mensile', totalAmount: '-9.99', descriptionStripPattern: null },
+      { id: 'exp-3', title: 'Macellaio San Salvatore', totalAmount: '-35.00', descriptionStripPattern: null },
     ]
 
     const db = (await import('@/lib/db')).db
@@ -142,8 +142,8 @@ describe('applyNewPatternToPlatformExpenses', () => {
 
   it('returns { updatedCount: 0, notUpdatedCount: scanned } when no match', async () => {
     mocks.uncategorizedExpenses = [
-      { id: 'exp-1', title: 'Macellaio San Salvatore', totalAmount: '-35.00' },
-      { id: 'exp-2', title: 'Supermercato Esselunga', totalAmount: '-55.00' },
+      { id: 'exp-1', title: 'Macellaio San Salvatore', totalAmount: '-35.00', descriptionStripPattern: null },
+      { id: 'exp-2', title: 'Supermercato Esselunga', totalAmount: '-55.00', descriptionStripPattern: null },
     ]
 
     const db = (await import('@/lib/db')).db
@@ -182,8 +182,8 @@ describe('applyNewPatternToPlatformExpenses', () => {
   // ── Invalid regex ──────────────────────────────────────────────────────────
   it('returns { updatedCount: 0, notUpdatedCount: scanned } for invalid regex without throwing', async () => {
     mocks.uncategorizedExpenses = [
-      { id: 'exp-1', title: 'Netflix abbonamento', totalAmount: '-9.99' },
-      { id: 'exp-2', title: 'Macellaio', totalAmount: '-35.00' },
+      { id: 'exp-1', title: 'Netflix abbonamento', totalAmount: '-9.99', descriptionStripPattern: null },
+      { id: 'exp-2', title: 'Macellaio', totalAmount: '-35.00', descriptionStripPattern: null },
     ]
 
     const db = (await import('@/lib/db')).db
@@ -207,9 +207,9 @@ describe('applyNewPatternToPlatformExpenses', () => {
     // → stripped (remove pure-numeric tokens): "***** data operazione" (removes "114")
     // Pattern "data operazione" matches the stripped form
     mocks.uncategorizedExpenses = [
-      { id: 'exp-num-1', title: '***** 114 data operazione', totalAmount: '-50.00' },
-      { id: 'exp-num-2', title: '***** 998 data operazione', totalAmount: '-75.00' },
-      { id: 'exp-num-3', title: 'Macellaio San Salvatore', totalAmount: '-35.00' },
+      { id: 'exp-num-1', title: '***** 114 data operazione', totalAmount: '-50.00', descriptionStripPattern: null },
+      { id: 'exp-num-2', title: '***** 998 data operazione', totalAmount: '-75.00', descriptionStripPattern: null },
+      { id: 'exp-num-3', title: 'Macellaio San Salvatore', totalAmount: '-35.00', descriptionStripPattern: null },
     ]
 
     const db = (await import('@/lib/db')).db
@@ -230,8 +230,8 @@ describe('applyNewPatternToPlatformExpenses', () => {
   // ── writeClassificationHistory called for each matched expense ─────────────
   it('calls writeClassificationHistory for each matched expense with source=user_pattern', async () => {
     mocks.uncategorizedExpenses = [
-      { id: 'exp-1', title: 'Netflix abbonamento', totalAmount: '-9.99' },
-      { id: 'exp-2', title: 'Netflix mensile', totalAmount: '-9.99' },
+      { id: 'exp-1', title: 'Netflix abbonamento', totalAmount: '-9.99', descriptionStripPattern: null },
+      { id: 'exp-2', title: 'Netflix mensile', totalAmount: '-9.99', descriptionStripPattern: null },
     ]
 
     const db = (await import('@/lib/db')).db

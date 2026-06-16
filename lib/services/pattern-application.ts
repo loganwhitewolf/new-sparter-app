@@ -167,7 +167,13 @@ export async function applyNewPatternToPlatformExpenses(
 
   const matchingIds = uncategorized
     .filter((e) => {
-      const normalized = normalizeDescription(e.title)
+      // Mirror the discovery pipeline (CR-02): apply platform descriptionStripPattern before
+      // normalizing so patterns generated from stripped titles continue to match on apply.
+      const rawTitle = e.title
+      const preStripped = e.descriptionStripPattern
+        ? rawTitle.replace(new RegExp(e.descriptionStripPattern, 'i'), '').trim()
+        : rawTitle
+      const normalized = normalizeDescription(preStripped)
       // Patterns generated from suggestions strip pure-numeric tokens (e.g. "114" in
       // "***** 114 data operazione"). Test against both the full normalized title and
       // the stripped form so suggestion-generated patterns still match (Pitfall 6).
