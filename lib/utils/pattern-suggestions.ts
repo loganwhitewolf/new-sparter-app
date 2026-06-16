@@ -1,3 +1,12 @@
+// Pure prefix/variable clustering util — shared by the in-app discovery pipeline and
+// plain Node/tsx scripts (e.g. scripts/regex-discovery.ts).
+//
+// This module deliberately carries NO `import 'server-only'` guard so it can be
+// imported both from production server code and from plain Node/tsx scripts. The
+// `server-only` package throws unconditionally outside a React Server Component
+// context, so a script can never import server-only modules directly; it imports
+// this module instead.
+
 export interface PatternDetectorRow {
   description: string
   normalizedDescription: string
@@ -115,6 +124,105 @@ export function detectPatternSuggestions(
       pattern: escaped,
       matchCount: group.length,
       sampleDescriptions,
+    })
+  }
+
+  return suggestions
+}
+
+// ---------------------------------------------------------------------------
+// WithMeta variant — additive extension for PIPE-03 (D-05 per-candidate metadata)
+// ---------------------------------------------------------------------------
+
+export interface PatternDetectorRowWithMeta extends PatternDetectorRow {
+  /** Raw (pre-strip) title for D-05 reporting */
+  rawTitle: string
+  /** Whether descriptionStripPattern altered rawTitle before normalizeDescription was called */
+  strippedByNormalization: boolean
+}
+
+export interface PatternSuggestionWithMeta extends PatternSuggestion {
+  /** Shared prefix tokens joined, pre-escape (human-readable stable portion) */
+  stablePrefix: string
+  /** True if at least one sample had its description altered by the platform strip pattern */
+  strippedByNormalization: boolean
+  /** Example residual variable text beyond the stable prefix (from first sample description) */
+  residualVariablePart: string
+  /** One sample normalized description (post-strip, post-normalizeDescription) */
+  sampleNormalized: string
+}
+
+/**
+ * Identical clustering pipeline as detectPatternSuggestions, extended to carry
+ * per-candidate D-05 metadata. The input rows must include rawTitle and
+ * strippedByNormalization (computed by the caller before normalization runs).
+ *
+ * The original detectPatternSuggestions and PatternSuggestion are unchanged so
+ * the existing analyzeFile caller in lib/services/import.ts keeps compiling.
+ */
+export function detectPatternSuggestionsWithMeta(
+  rows: PatternDetectorRowWithMeta[],
+  coveragePatterns: CoveragePattern[],
+): PatternSuggestionWithMeta[] {
+  // Step 1: filter eligible rows and compute stripped tokens; drop rows with <2 stripped tokens
+  type Candidate = { row: PatternDetectorRowWithMeta; tokens: string[] }
+  const candidates: Candidate[] = []
+  for (const r of rows) {
+    if (!r.valid) continue
+    if (r.covered) continue
+    if (isCoveredByPatterns(r, coveragePatterns)) continue
+    const tokens = stripNumericTokens(r.normalizedDescription)
+    if (tokens.length < 2) continue
+    candidates.push({ row: r, tokens })
+  }
+
+  // Step 2: bucket by first 2 stripped tokens
+  const buckets = new Map<string, Candidate[]>()
+  for (const c of candidates) {
+    const head = c.tokens.slice(0, 2).join(' ')
+    const list = buckets.get(head) ?? []
+    list.push(c)
+    buckets.set(head, list)
+  }
+
+  // Step 3: compute longest common prefix per bucket; emit WithMeta suggestions
+  const suggestions: PatternSuggestionWithMeta[] = []
+  for (const group of buckets.values()) {
+    if (group.length < 2) continue
+    let prefix = group[0].tokens
+    for (let i = 1; i < group.length; i++) {
+      prefix = longestCommonPrefix(prefix, group[i].tokens)
+      if (prefix.length < 2) break
+    }
+    if (prefix.length < 2) continue
+
+    const prefixString = prefix.join(' ')
+    const escaped = escapeRegex(prefixString)
+    const sampleDescriptions = group.slice(0, 3).map(g => g.row.description)
+
+    // D-05: stablePrefix is the human-readable joined prefix (pre-escape)
+    const stablePrefix = prefixString
+
+    // D-05: residualVariablePart — tokens of the first sample beyond the stable prefix
+    const firstNormalized = group[0].row.normalizedDescription
+    const firstTokens = stripNumericTokens(firstNormalized)
+    const residualTokens = firstTokens.slice(prefix.length)
+    const residualVariablePart = residualTokens.join(' ')
+
+    // D-05: sampleNormalized — normalized description of the first grouped row
+    const sampleNormalized = firstNormalized
+
+    // D-05: strippedByNormalization — true if ANY member row was stripped
+    const strippedByNormalization = group.some(g => g.row.strippedByNormalization)
+
+    suggestions.push({
+      pattern: escaped,
+      matchCount: group.length,
+      sampleDescriptions,
+      stablePrefix,
+      strippedByNormalization,
+      residualVariablePart,
+      sampleNormalized,
     })
   }
 
