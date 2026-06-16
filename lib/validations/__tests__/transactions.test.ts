@@ -72,12 +72,24 @@ describe("parseTransactionFilters", () => {
   it("falls back safely for unknown sort and direction values", () => {
     expect(
       parseTransactionFilters({
-        sort: "description",
+        sort: "category",
         dir: "oldest-first",
       }),
     ).toMatchObject({
       sort: "occurredAt",
       dir: "desc",
+    })
+  })
+
+  it("accepts description sort", () => {
+    expect(
+      parseTransactionFilters({
+        sort: "description",
+        dir: "asc",
+      }),
+    ).toMatchObject({
+      sort: "description",
+      dir: "asc",
     })
   })
 

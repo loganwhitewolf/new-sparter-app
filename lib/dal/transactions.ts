@@ -17,6 +17,7 @@ import {
   userSubcategoryOverride,
 } from '@/lib/db/schema'
 import type {
+  ParsedTransactionFilters,
   TransactionSort,
   TransactionSortDirection,
 } from '@/lib/validations/transactions'
@@ -190,13 +191,31 @@ export type TransactionPlatformOption = {
 
 export type TransactionRow = typeof transaction.$inferSelect
 
+/** Matches table display label: customTitle when set, else bank description. */
+export const transactionDisplayTitleSortKey = sql<string>`LOWER(COALESCE(NULLIF(TRIM(${transaction.customTitle}), ''), ${transaction.description}))`
+
 export function getTransactionSortColumn(sort: TransactionSort) {
   switch (sort) {
     case 'amount':
       return transaction.amount
+    case 'description':
+      return transactionDisplayTitleSortKey
     case 'occurredAt':
-    default:
       return transaction.occurredAt
+    default: {
+      const _exhaustive: never = sort
+      return _exhaustive
+    }
+  }
+}
+
+export function mapParsedTransactionFiltersToDal(
+  parsed: ParsedTransactionFilters,
+): TransactionFilters {
+  const { type, ...rest } = parsed
+  return {
+    ...rest,
+    ...(type ? { direction: type } : {}),
   }
 }
 

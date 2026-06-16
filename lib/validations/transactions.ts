@@ -47,7 +47,7 @@ export type UpdateTransactionCustomTitleInput = z.infer<
   typeof UpdateTransactionCustomTitleSchema
 >
 
-export const transactionSortSchema = z.enum(["occurredAt", "amount"])
+export const transactionSortSchema = z.enum(["occurredAt", "amount", "description"])
 export const transactionSortDirectionSchema = z.enum(["asc", "desc"])
 
 export type TransactionSort = z.infer<typeof transactionSortSchema>

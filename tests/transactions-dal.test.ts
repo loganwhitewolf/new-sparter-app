@@ -165,6 +165,8 @@ const {
   getTransactionPlatforms,
   getTransactions,
   getTransactionSortColumn,
+  mapParsedTransactionFiltersToDal,
+  transactionDisplayTitleSortKey,
   transactionListSelect,
   transactionPlatformSelect,
   updateTransactionCustomTitle,
@@ -189,7 +191,7 @@ describe('transaction DAL query helpers', () => {
   it('uses explicit whitelisted sort branches and defaults unsupported values to occurredAt', () => {
     expect(getTransactionSortColumn('occurredAt')).toBe('transaction.occurredAt')
     expect(getTransactionSortColumn('amount')).toBe('transaction.amount')
-    expect(getTransactionSortColumn('description' as never)).toBe('transaction.occurredAt')
+    expect(getTransactionSortColumn('description')).toBe(transactionDisplayTitleSortKey)
   })
 
   it('builds orderBy array with id tiebreaker as LAST element (D-06)', () => {
@@ -207,10 +209,24 @@ describe('transaction DAL query helpers', () => {
       { op: 'desc', column: 'transaction.occurredAt' },
       { op: 'desc', column: 'transaction.id' },
     ])
-    expect(buildTransactionOrderBy({ sort: 'description' as never, dir: 'asc' })).toEqual([
-      { op: 'asc', column: 'transaction.occurredAt' },
+    expect(buildTransactionOrderBy({ sort: 'description', dir: 'asc' })).toEqual([
+      { op: 'asc', column: transactionDisplayTitleSortKey },
       { op: 'asc', column: 'transaction.id' },
     ])
+  })
+
+  it('maps parsed URL filters to DAL filters including direction', () => {
+    expect(
+      mapParsedTransactionFiltersToDal({
+        sort: 'description',
+        dir: 'asc',
+        type: 'out',
+      }),
+    ).toEqual({
+      sort: 'description',
+      dir: 'asc',
+      direction: 'out',
+    })
   })
 
   it('id tiebreaker is the LAST element in the orderBy array for default sort', () => {
