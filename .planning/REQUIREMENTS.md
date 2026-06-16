@@ -76,7 +76,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | PIPE-01 | Phase 51 | Pending |
 | PIPE-02 | Phase 51 | Pending |
-| PIPE-03 | Phase 51 | Pending |
+| PIPE-03 | Phase 51 | Partial (util layer complete in 51-01; service wires it in 51-03) |
 | RDISC-01 | Phase 52 | Pending |
 | RDISC-02 | Phase 52 | Pending |
 | RDISC-03 | Phase 52 | Pending |

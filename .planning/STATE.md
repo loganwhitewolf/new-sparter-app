@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: — Regex Discovery & Transaction Unification
-status: planning
-last_updated: "2026-06-16T09:43:06.842Z"
-last_activity: 2026-06-16 — v2.1 roadmap created, 14/14 requirements mapped
+status: executing
+last_updated: "2026-06-16T10:00:00.000Z"
+last_activity: 2026-06-16 -- Phase 51 Plan 01 completed (WithMeta util extension)
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 3
+  completed_plans: 1
+  percent: 33
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-16)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 51 — discovery-pipeline-reorder (first phase of v2.1)
+**Current focus:** Phase 51 — discovery-pipeline-reorder
 
 ## Current Position
 
-Phase: Not started — roadmap created (Phases 51–55)
-Plan: —
-Status: Roadmapped, ready to plan Phase 51
-Last activity: 2026-06-16 — v2.1 roadmap created, 14/14 requirements mapped
+Phase: 51 (discovery-pipeline-reorder) — EXECUTING
+Plan: 2 of 3
+Status: Executing Phase 51 (Plan 01 complete)
+Last activity: 2026-06-16 -- Phase 51 Plan 01 completed (WithMeta util extension)
 
 ## Roadmap (v2.1 — Phases 51–55)
 
@@ -46,6 +46,8 @@ Last activity: 2026-06-16 — v2.1 roadmap created, 14/14 requirements mapped
 ## Accumulated Context
 
 ### Decisions
+
+Plan 51-01: detectPatternSuggestionsWithMeta reuses shared helpers — no clustering logic duplicated; strippedByNormalization rolled up as any-member-true at candidate level; residualVariablePart from first grouped row's tokens beyond stable prefix.
 
 Design contract is LOCKED. Do not re-open or re-derive the data model:
 
@@ -98,15 +100,15 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-16T09:11:10.504Z
-Handoff synced: 2026-06-16 — v2.1 roadmap created (Phases 51–55), REQUIREMENTS.md traceability filled, STATE.md updated.
-Resume file: .planning/phases/51-discovery-pipeline-reorder/51-CONTEXT.md
+Last session: 2026-06-16T10:00:00.000Z
+Handoff synced: 2026-06-16 — Phase 51 Plan 01 complete: WithMeta util extension + unit tests (commits 11d1f9f, af5f078).
+Resume file: .planning/phases/51-discovery-pipeline-reorder/51-02-PLAN.md
 
-**Next:** Plan Phase 51 — `/gsd-plan-phase 51` (discovery-pipeline-reorder: PIPE-01/02/03).
+**Next:** Execute Plan 51-02 — DAL query getUncategorizedExpensesForDiscovery.
 
 ## Operator Next Steps
 
-- Plan the first v2.1 phase with `/gsd-plan-phase 51`
+- Execute Plan 51-02 with `/gsd-execute-phase 51` (DAL + service layers)
 
 ## Performance Metrics
 
@@ -118,3 +120,4 @@ Resume file: .planning/phases/51-discovery-pipeline-reorder/51-CONTEXT.md
 | Phase 50-transaction-pairing P50-03 | 10min | 2 tasks | 4 files |
 | Phase 50-transaction-pairing P50-04 | 25min | 2 tasks | 3 files |
 | Phase 50-transaction-pairing P50-05 | 90min | 2 tasks + operator checkpoint + 5 fixes | 5 files |
+| Phase 51 P01 | 15min | 2 tasks | 2 files |

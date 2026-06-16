@@ -167,7 +167,7 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 
 **Wave 1**
 
-- [ ] 51-01-PLAN.md — Extend pattern-suggestions util with detectPatternSuggestionsWithMeta + D-05 metadata (PIPE-03)
+- [x] 51-01-PLAN.md — Extend pattern-suggestions util with detectPatternSuggestionsWithMeta + D-05 metadata (PIPE-03) *(complete 2026-06-16, commits 11d1f9f + af5f078)*
 - [ ] 51-02-PLAN.md — New DAL query getUncategorizedExpensesForDiscovery: Set B by user + platform (PIPE-01)
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -245,7 +245,7 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
 | 42–45 | v1.16 | 13/13 | Complete | 2026-06-09 |
 | 46–50 | v2.0 | 22/22 | Complete | 2026-06-14 |
-| 51. discovery-pipeline-reorder | v2.1 | 0/3 | Planned | - |
+| 51. discovery-pipeline-reorder | v2.1 | 1/3 | Executing | - |
 | 52. regex-validity-and-dedup | v2.1 | 0/? | Not started | - |
 | 53. retroactive-application | v2.1 | 0/? | Not started | - |
 | 54. reusable-trigger | v2.1 | 0/? | Not started | - |
