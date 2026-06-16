@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  candidateCoveredByExistingPattern,
   detectPatternSuggestions,
   detectPatternSuggestionsWithMeta,
   type PatternDetectorRowWithMeta,
@@ -31,9 +32,18 @@ function rowMeta(
  */
 function finecoRows(): PatternDetectorRowWithMeta[] {
   return [
-    rowMeta({ normalizedDescription: 'bonifico andrea bernardini causale stipendio marzo' }),
-    rowMeta({ normalizedDescription: 'bonifico andrea bernardini causale stipendio maggio' }),
-    rowMeta({ normalizedDescription: 'bonifico andrea bernardini causale stipendio giugno' }),
+    rowMeta({
+      normalizedDescription: 'bonifico andrea bernardini causale stipendio marzo',
+      descriptionHash: 'fineco-hash-1',
+    }),
+    rowMeta({
+      normalizedDescription: 'bonifico andrea bernardini causale stipendio maggio',
+      descriptionHash: 'fineco-hash-2',
+    }),
+    rowMeta({
+      normalizedDescription: 'bonifico andrea bernardini causale stipendio giugno',
+      descriptionHash: 'fineco-hash-3',
+    }),
   ]
 }
 
@@ -132,5 +142,73 @@ describe('detectPatternSuggestionsWithMeta — D-05 metadata', () => {
     expect(s).toHaveProperty('pattern')
     expect(s).toHaveProperty('matchCount')
     expect(s).toHaveProperty('sampleDescriptions')
+  })
+})
+
+describe('detectPatternSuggestionsWithMeta — Phase 52 validity and dedup metadata', () => {
+  it('passes every grouped member descriptionHash through to the suggestion', () => {
+    const suggestions = detectPatternSuggestionsWithMeta(finecoRows(), [])
+
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0].descriptionHashes).toHaveLength(3)
+    expect(suggestions[0].descriptionHashes).toEqual(
+      expect.arrayContaining(['fineco-hash-1', 'fineco-hash-2', 'fineco-hash-3']),
+    )
+  })
+
+  it('filters null descriptionHash values from the suggestion hash list', () => {
+    const rows = finecoRows()
+    rows[1] = { ...rows[1], descriptionHash: null }
+
+    const suggestions = detectPatternSuggestionsWithMeta(rows, [])
+
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0].descriptionHashes).toEqual(['fineco-hash-1', 'fineco-hash-3'])
+  })
+
+  it('emits an empty residual for identical multi-token groups', () => {
+    const rows = [
+      rowMeta({ normalizedDescription: 'macellaio da mario', descriptionHash: 'macellaio-hash-1' }),
+      rowMeta({ normalizedDescription: 'macellaio da mario', descriptionHash: 'macellaio-hash-2' }),
+      rowMeta({ normalizedDescription: 'macellaio da mario', descriptionHash: 'macellaio-hash-3' }),
+    ]
+
+    const suggestions = detectPatternSuggestionsWithMeta(rows, [])
+
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0].residualVariablePart).toBe('')
+    expect(suggestions[0].descriptionHashes).toEqual(
+      expect.arrayContaining(['macellaio-hash-1', 'macellaio-hash-2', 'macellaio-hash-3']),
+    )
+  })
+
+  it('returns true when an existing pattern covers the candidate sample', () => {
+    const suggestions = detectPatternSuggestionsWithMeta(finecoRows(), [])
+
+    expect(suggestions).toHaveLength(1)
+    expect(candidateCoveredByExistingPattern(suggestions[0], [{ pattern: 'bonifico' }])).toBe(true)
+  })
+
+  it('returns false when no existing pattern covers the candidate sample', () => {
+    const suggestions = detectPatternSuggestionsWithMeta(finecoRows(), [])
+
+    expect(suggestions).toHaveLength(1)
+    expect(candidateCoveredByExistingPattern(suggestions[0], [{ pattern: 'revolut' }])).toBe(false)
+  })
+
+  it('matches the numeric-stripped candidate sample and skips invalid regex patterns', () => {
+    const rows = [
+      rowMeta({ normalizedDescription: 'revolut 114 data operazione', descriptionHash: 'revolut-hash-1' }),
+      rowMeta({ normalizedDescription: 'revolut 115 data operazione', descriptionHash: 'revolut-hash-2' }),
+    ]
+    const suggestions = detectPatternSuggestionsWithMeta(rows, [])
+
+    expect(suggestions).toHaveLength(1)
+    expect(
+      candidateCoveredByExistingPattern(suggestions[0], [
+        { pattern: '[' },
+        { pattern: 'revolut data operazione' },
+      ]),
+    ).toBe(true)
   })
 })
