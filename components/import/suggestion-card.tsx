@@ -13,11 +13,13 @@ type Props = {
   categories: CategoryWithSubCategories[]
   fileId: string
   platformId: number
+  /** @internal test-only: pre-seeds the applyResult state for SSR snapshot tests */
+  initialApplyResult?: PatternApplyResult | null
 }
 
-export function SuggestionCard({ suggestion, categories, fileId, platformId: _platformId }: Props) {
-  const [promoted, setPromoted] = useState(false)
-  const [applyResult, setApplyResult] = useState<PatternApplyResult | null>(null)
+export function SuggestionCard({ suggestion, categories, fileId, platformId: _platformId, initialApplyResult = null }: Props) {
+  const [promoted, setPromoted] = useState(initialApplyResult != null)
+  const [applyResult, setApplyResult] = useState<PatternApplyResult | null>(initialApplyResult)
   const [showSamples, setShowSamples] = useState(false)
 
   const handlePromoted = useCallback((result: PatternApplyResult) => {

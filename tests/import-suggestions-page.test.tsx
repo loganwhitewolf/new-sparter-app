@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   getFileForUser: vi.fn(),
+  getPlatformIdForUserFile: vi.fn(),
   getUncategorizedTransactionsByFileId: vi.fn(),
   loadActivePatterns: vi.fn(),
   getCategories: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock('@/lib/dal/auth', () => ({
 
 vi.mock('@/lib/dal/files', () => ({
   getFileForUser: mocks.getFileForUser,
+  getPlatformIdForUserFile: mocks.getPlatformIdForUserFile,
 }))
 
 vi.mock('@/lib/dal/transactions', () => ({
@@ -105,6 +107,7 @@ describe('suggestions page', () => {
     vi.resetModules()
     mocks.verifySession.mockReset()
     mocks.getFileForUser.mockReset()
+    mocks.getPlatformIdForUserFile.mockReset()
     mocks.getUncategorizedTransactionsByFileId.mockReset()
     mocks.loadActivePatterns.mockReset()
     mocks.getCategories.mockReset()
@@ -117,6 +120,7 @@ describe('suggestions page', () => {
     // Default happy-path setup
     mocks.verifySession.mockResolvedValue({ userId: USER_ID })
     mocks.getFileForUser.mockResolvedValue(makeFileRow())
+    mocks.getPlatformIdForUserFile.mockResolvedValue(2)
     mocks.getUncategorizedTransactionsByFileId.mockResolvedValue([])
     mocks.loadActivePatterns.mockResolvedValue([])
     mocks.getCategories.mockResolvedValue([])
@@ -237,5 +241,28 @@ describe('suggestions page', () => {
     expect(html).not.toMatch(/ricategorizz/i)
     expect(html).not.toMatch(/riclassific/i)
     expect(html).not.toMatch(/applica (ai|alle) transazion/i)
+  })
+
+  it('APPLY-01 platform guard: calls notFound when getPlatformIdForUserFile returns null', async () => {
+    mocks.getPlatformIdForUserFile.mockResolvedValue(null)
+    await expect(renderPage()).rejects.toThrow('notFound')
+    expect(mocks.notFound).toHaveBeenCalledTimes(1)
+  })
+
+  it('APPLY-01 platform guard: calls getPlatformIdForUserFile with userId and fileId after file guard passes', async () => {
+    await renderPage()
+
+    expect(mocks.getPlatformIdForUserFile).toHaveBeenCalledTimes(1)
+    expect(mocks.getPlatformIdForUserFile).toHaveBeenCalledWith({
+      userId: USER_ID,
+      fileId: FILE_ID,
+    })
+  })
+
+  it('APPLY-01 platform guard: does not call DAL queries when file guard fails (status not imported)', async () => {
+    mocks.getFileForUser.mockResolvedValue(makeFileRow({ status: 'analyzed' }))
+    await expect(renderPage()).rejects.toThrow('notFound')
+    // getPlatformIdForUserFile must NOT be called when file guard already throws notFound
+    expect(mocks.getPlatformIdForUserFile).not.toHaveBeenCalled()
   })
 })

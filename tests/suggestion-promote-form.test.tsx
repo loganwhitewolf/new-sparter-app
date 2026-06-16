@@ -54,6 +54,7 @@ describe('SuggestionPromoteForm', () => {
       createElement(SuggestionPromoteForm, {
         suggestion,
         categories,
+        fileId: 'file-abc',
         onPromoted: noopOnPromoted,
       }),
     )
@@ -66,6 +67,20 @@ describe('SuggestionPromoteForm', () => {
     expect(html).not.toMatch(/<input[^>]*name="amountSign"/)
   })
 
+  it('APPLY-01: renders hidden fileId input with the provided fileId value', () => {
+    const html = renderToStaticMarkup(
+      createElement(SuggestionPromoteForm, {
+        suggestion,
+        categories,
+        fileId: 'file-abc',
+        onPromoted: noopOnPromoted,
+      }),
+    )
+
+    // fileId hidden input MUST exist and carry the fileId prop value (T-53-08)
+    expect(html).toMatch(/<input[^>]*type="hidden"[^>]*name="fileId"[^>]*value="file-abc"/)
+  })
+
   it('REV-03: renders only Sottocategoria label — no cascading Categoria+Sottocategoria pair', () => {
     // The rebuilt form removed the cascading Category→Subcategory Select pair (plan 39-05).
     // Only a single "Subcategory" label + picker trigger remains.
@@ -73,6 +88,7 @@ describe('SuggestionPromoteForm', () => {
       createElement(SuggestionPromoteForm, {
         suggestion,
         categories,
+        fileId: 'file-abc',
         onPromoted: noopOnPromoted,
       }),
     )
@@ -90,6 +106,7 @@ describe('SuggestionPromoteForm', () => {
       createElement(SuggestionPromoteForm, {
         suggestion,
         categories,
+        fileId: 'file-abc',
         onPromoted: noopOnPromoted,
       }),
     )
@@ -102,6 +119,7 @@ describe('SuggestionPromoteForm', () => {
       createElement(SuggestionPromoteForm, {
         suggestion,
         categories,
+        fileId: 'file-abc',
         onPromoted: noopOnPromoted,
       }),
     )
@@ -114,6 +132,7 @@ describe('SuggestionPromoteForm', () => {
       createElement(SuggestionPromoteForm, {
         suggestion,
         categories,
+        fileId: 'file-abc',
         onPromoted: noopOnPromoted,
       }),
     )
