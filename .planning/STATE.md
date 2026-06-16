@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: — Regex Discovery & Transaction Unification
-status: executing
-last_updated: "2026-06-16T13:24:15.222Z"
-last_activity: 2026-06-16 -- Phase 52 Plan 02 completed (manual-history hash DAL)
+status: verifying
+last_updated: "2026-06-16T13:26:50.790Z"
+last_activity: 2026-06-16 -- Phase 52 Plan 03 completed (service validity and dedup gates)
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 83
+  completed_plans: 6
+  percent: 40
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 ## Current Position
 
 Phase: 52 (regex-validity-and-dedup) — IN PROGRESS
-Plan: 2 of 3
-Status: Wave 1 complete — ready for Plan 52-03 service orchestration wiring
-Last activity: 2026-06-16 -- Phase 52 Plan 02 completed (manual-history hash DAL)
+Plan: 3 of 3
+Status: All Phase 52 implementation plans complete — phase verification pending
+Last activity: 2026-06-16 -- Phase 52 Plan 03 completed (service validity and dedup gates)
 
 ## Roadmap (v2.1 — Phases 51–55)
 
@@ -56,6 +56,8 @@ Plan 51-03: discoverRegexCandidates reads stripPattern from expenses[0].descript
 Plan 52-01: PatternSuggestionWithMeta now carries all grouped member descriptionHashes (legacy nulls filtered); candidateCoveredByExistingPattern is a pure helper that mirrors the existing full plus numeric-stripped active-pattern matcher; clustering guard and prefix math unchanged.
 
 Plan 52-02: getManuallyCategorizedHashes queries expenseClassificationHistory source='manual' joined to expense.descriptionHash, scoped by userId, with empty-input short-circuit and Set<string> result for Check 2.
+
+Plan 52-03: discoverRegexCandidates now returns two lists: regex candidates from non-empty residual families and singleCategorizationSuggestions from identical normalized groups; Check 1 gates regex families with candidateCoveredByExistingPattern and Check 2 gates both lists with any-member manual-history hashes.
 
 Design contract is LOCKED. Do not re-open or re-derive the data model:
 
@@ -108,15 +110,15 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-16T13:24:15.218Z
+Last session: 2026-06-16T13:26:50.785Z
 Handoff synced: 2026-06-16 — Phase 51 complete: service discoverRegexCandidates + tests + TODO annotation (commits 676a37c, 60b5479, d169fa8).
 Resume file: None
 
-**Next:** Execute Phase 52 Plan 03 — service split plus Check 1/Check 2 wiring.
+**Next:** Verify Phase 52 — regex-validity-and-dedup against RDISC-01/02/03/04.
 
 ## Operator Next Steps
 
-- Continue `$gsd-execute-phase 52` with Plan 52-03 (service orchestration wiring for RDISC-01/02/03/04).
+- Continue `$gsd-execute-phase 52` phase-level verification gates for RDISC-01/02/03/04.
 
 ## Performance Metrics
 
@@ -133,3 +135,4 @@ Resume file: None
 | Phase 51 P03 | 8min | 3 tasks (TDD RED+GREEN + comment) | 3 files |
 | Phase 52 P01 | 3 min | 2 tasks | 6 files |
 | Phase 52 P02 | 2 min | 2 tasks | 2 files |
+| Phase 52 P03 | 3 min | 3 tasks | 2 files |
