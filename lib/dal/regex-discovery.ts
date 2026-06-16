@@ -55,6 +55,48 @@ export async function getUncategorizedExpensesForDiscovery(
     )
 }
 
+export type UncategorizedExpenseForPlatformApply = {
+  id: string
+  title: string
+  totalAmount: string
+}
+
+/**
+ * Fetches the platform-scoped uncategorized expense set (Set B) for retroactive apply writes.
+ *
+ * Write-path mirror of getUncategorizedExpensesForDiscovery: identical join chain and WHERE
+ * (expense → file → importFormatVersion → platform, isNull(subCategoryId), eq(platform.id))
+ * but selects { id, title, totalAmount } for the apply match loop.
+ *
+ * Platform scope (APPLY-02): only expenses linked to the same platform as the promoted file
+ * are returned — never user-wide. Manual expenses without importedFromFileId are excluded
+ * by the leftJoin + eq(platform.id) filter; this is intentional per D-03 locked decision.
+ *
+ * No DbOrTx — apply runs post-commit, never inside a transaction (same as discovery read).
+ */
+export async function getUncategorizedExpensesForPlatformApply(
+  userId: string,
+  platformId: number,
+): Promise<UncategorizedExpenseForPlatformApply[]> {
+  return db
+    .select({
+      id: expense.id,
+      title: expense.title,
+      totalAmount: expense.totalAmount,
+    })
+    .from(expense)
+    .leftJoin(file, eq(expense.importedFromFileId, file.id))
+    .leftJoin(importFormatVersion, eq(file.importFormatVersionId, importFormatVersion.id))
+    .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
+    .where(
+      and(
+        eq(expense.userId, userId),
+        eq(platform.id, platformId),
+        isNull(expense.subCategoryId),
+      ),
+    )
+}
+
 /**
  * Returns the subset of description hashes the user has manually categorized before.
  *
