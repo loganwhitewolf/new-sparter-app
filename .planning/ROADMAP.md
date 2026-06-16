@@ -162,7 +162,10 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
   2. Discovery can be invoked as a standalone service against a user's persisted uncategorized transactions without an import being in progress (no longer wired inside `analyzeFile`'s pre-categorization path).
   3. Platform-specific normalization (e.g. Fineco `descriptionStripPattern`) is applied to descriptions before discovery runs, and the service can report what normalization already collapsed versus what residual-variable text remains for the regex step to handle.
   4. The Fineco DoD input ("Bonifico Andrea Bernardini causale stipendio …") reaches the discovery step as normalized, uncategorized text — i.e. it survives categorization as Set B and is fed to discovery, not silently dropped.
-**Plans**: TBD
+**Plans**: 3 plans (2 waves)
+- [ ] 51-01-PLAN.md — Extend pattern-suggestions util with detectPatternSuggestionsWithMeta + D-05 metadata (PIPE-03)
+- [ ] 51-02-PLAN.md — New DAL query getUncategorizedExpensesForDiscovery: Set B by user + platform (PIPE-01)
+- [ ] 51-03-PLAN.md — Standalone discoverRegexCandidates service (strip → normalize → cluster) + Fineco DoD anchor; legacy analyzeFile call annotated (PIPE-01/02/03, SC-4)
 
 ### Phase 52: regex-validity-and-dedup
 **Goal**: The discovery service proposes a regex only for genuine prefix+variable families, surfaces identical-after-normalization groups as single categorizations instead, and never re-proposes something already covered.
@@ -223,7 +226,7 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
 | 42–45 | v1.16 | 13/13 | Complete | 2026-06-09 |
 | 46–50 | v2.0 | 22/22 | Complete | 2026-06-14 |
-| 51. discovery-pipeline-reorder | v2.1 | 0/? | Not started | - |
+| 51. discovery-pipeline-reorder | v2.1 | 0/3 | Planned | - |
 | 52. regex-validity-and-dedup | v2.1 | 0/? | Not started | - |
 | 53. retroactive-application | v2.1 | 0/? | Not started | - |
 | 54. reusable-trigger | v2.1 | 0/? | Not started | - |
