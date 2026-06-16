@@ -1,7 +1,13 @@
 import 'server-only'
 import { db } from '@/lib/db'
-import { expense, file, importFormatVersion, platform } from '@/lib/db/schema'
-import { and, eq, isNull } from 'drizzle-orm'
+import {
+  expense,
+  expenseClassificationHistory,
+  file,
+  importFormatVersion,
+  platform,
+} from '@/lib/db/schema'
+import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm'
 
 export type UncategorizedExpenseForDiscovery = {
   id: string
@@ -47,4 +53,38 @@ export async function getUncategorizedExpensesForDiscovery(
         isNull(expense.subCategoryId),
       ),
     )
+}
+
+/**
+ * Returns the subset of description hashes the user has manually categorized before.
+ *
+ * Check 2 (RDISC-04) must query classification history, not current expense state:
+ * the expense table is unique by userId + descriptionHash, so an uncategorized
+ * candidate row cannot coexist with a currently categorized row for the same hash.
+ */
+export async function getManuallyCategorizedHashes(
+  userId: string,
+  descriptionHashes: string[],
+): Promise<Set<string>> {
+  const hashes = [...new Set(descriptionHashes)]
+  if (hashes.length === 0) return new Set()
+
+  const rows = await db
+    .selectDistinct({ descriptionHash: expense.descriptionHash })
+    .from(expenseClassificationHistory)
+    .innerJoin(expense, eq(expenseClassificationHistory.expenseId, expense.id))
+    .where(
+      and(
+        eq(expenseClassificationHistory.userId, userId),
+        eq(expenseClassificationHistory.source, 'manual'),
+        isNotNull(expense.descriptionHash),
+        inArray(expense.descriptionHash, hashes),
+      ),
+    )
+
+  return new Set(
+    rows
+      .map(row => row.descriptionHash)
+      .filter((hash): hash is string => hash !== null),
+  )
 }
