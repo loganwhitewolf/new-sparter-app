@@ -154,59 +154,78 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 ## Phase Details
 
 ### Phase 51: discovery-pipeline-reorder
+
 **Goal**: Regex discovery runs as a distinct step downstream of auto-categorization, looking only at what categorization could not handle, and lives in a service that does not depend on an in-progress import.
 **Depends on**: Nothing new (builds on shipped v1.10 pipeline + v2.0 model)
 **Requirements**: PIPE-01, PIPE-02, PIPE-03
 **Success Criteria** (what must be TRUE):
+
   1. After an import is analyzed/committed, transactions that auto-categorization already classified (Set A) never appear as discovery input — only the still-uncategorized residual (Set B) is examined.
   2. Discovery can be invoked as a standalone service against a user's persisted uncategorized transactions without an import being in progress (no longer wired inside `analyzeFile`'s pre-categorization path).
   3. Platform-specific normalization (e.g. Fineco `descriptionStripPattern`) is applied to descriptions before discovery runs, and the service can report what normalization already collapsed versus what residual-variable text remains for the regex step to handle.
-  4. The Fineco DoD input ("Bonifico Andrea Bernardini causale stipendio …") reaches the discovery step as normalized, uncategorized text — i.e. it survives categorization as Set B and is fed to discovery, not silently dropped.
-**Plans**: 3 plans (2 waves)
+  4. The Fineco DoD input ("Bonifico Andrea Bernardini causale stipendio …") reaches the discovery step as normalized, uncategorized text — i.e. it survives categorization as Set B and is fed to discovery, not silently dropped.**Plans**: 3 plans (2 waves)
+
+**Wave 1**
+
 - [ ] 51-01-PLAN.md — Extend pattern-suggestions util with detectPatternSuggestionsWithMeta + D-05 metadata (PIPE-03)
 - [ ] 51-02-PLAN.md — New DAL query getUncategorizedExpensesForDiscovery: Set B by user + platform (PIPE-01)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 51-03-PLAN.md — Standalone discoverRegexCandidates service (strip → normalize → cluster) + Fineco DoD anchor; legacy analyzeFile call annotated (PIPE-01/02/03, SC-4)
 
 ### Phase 52: regex-validity-and-dedup
+
 **Goal**: The discovery service proposes a regex only for genuine prefix+variable families, surfaces identical-after-normalization groups as single categorizations instead, and never re-proposes something already covered.
 **Depends on**: Phase 51
 **Requirements**: RDISC-01, RDISC-02, RDISC-03, RDISC-04
 **Success Criteria** (what must be TRUE):
+
   1. Fineco "Bonifico Andrea Bernardini causale stipendio marzo/maggio/giugno" (≥2 transactions sharing a prefix but differing in a residual variable part) produces exactly one proposed regex. *(DoD test case 1)*
   2. Repeated identical "Macellaio" transactions (identical after normalization) are surfaced as a single-categorization suggestion, with no regex proposed for them. *(DoD test case 2)*
   3. A candidate whose generated regex would already be matched/covered by an existing pattern in the regex table is skipped and not shown (Check 1).
   4. A candidate is skipped when that transaction type is already covered by an existing manual categorization for the same `descriptionHash` (Check 2).
+
 **Plans**: TBD
 
 ### Phase 53: retroactive-application
+
 **Goal**: A regex created during discovery immediately categorizes existing uncategorized transactions, with the retroactive scope resolved and enforced.
 **Depends on**: Phase 52
 **Requirements**: APPLY-01, APPLY-02
 **Success Criteria** (what must be TRUE):
+
   1. When the user promotes a discovered candidate into a regex, the uncategorized transactions of the current file that match it become categorized without a re-import.
   2. Retroactive application honors the resolved scope decision (current file only vs the platform's entire uncategorized history); whichever scope is chosen, the user can observe exactly which existing transactions were (and were not) re-categorized.
   3. Applying a regex never re-touches already-categorized transactions (Set A) and never crosses into another platform's history when the resolved scope is platform-bounded.
+
 **Plans**: TBD
 
 ### Phase 54: reusable-trigger
+
 **Goal**: One discovery service is reachable from two entry points — automatically after every import and on demand from the Files table.
 **Depends on**: Phase 53
 **Requirements**: TRIG-01, TRIG-02
 **Success Criteria** (what must be TRUE):
+
   1. After an import completes, discovery runs automatically as the step following auto-categorization, producing the same kind of results as a manual re-run.
   2. From the Files table the user can trigger a "ricontrolla regex" re-check that invokes the same underlying discovery service (no parallel/divergent implementation), via whichever UX (per-row or bulk) is resolved in discuss/plan.
   3. An on-demand re-check produces results consistent with the automatic post-import run for the same uncategorized set (same service → same candidates, modulo data changed since import).
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 55: import-summary-ux
+
 **Goal**: The post-import summary is legible — a bounded set of example transactions, clearly separated proposed regex versus single-categorization suggestions, and a cue that discovery is now its own step.
 **Depends on**: Phase 54
 **Requirements**: SUMUI-01, SUMUI-02, SUMUI-03
 **Success Criteria** (what must be TRUE):
+
   1. The import summary shows at most 10 example transactions (raising the prior cap of 5).
   2. Proposed regex suggestions and single-categorization suggestions are presented as visually distinct groups, so the user can tell at a glance which is which.
   3. The summary communicates that regex discovery now happens as a separate step after import (exact copy/placement resolved in discuss/plan), without misrepresenting the new flow.
+
 **Plans**: TBD
 **UI hint**: yes
 

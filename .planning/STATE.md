@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: — Regex Discovery & Transaction Unification
 status: planning
-last_updated: "2026-06-16T09:11:10.514Z"
+last_updated: "2026-06-16T09:43:06.842Z"
 last_activity: 2026-06-16 — v2.1 roadmap created, 14/14 requirements mapped
 progress:
   total_phases: 5

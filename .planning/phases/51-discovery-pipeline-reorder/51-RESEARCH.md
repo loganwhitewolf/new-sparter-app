@@ -597,17 +597,19 @@ Step 2.6: SKIPPED — this phase is code/config changes only. No external CLI to
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`strippedByNormalization` semantics for D-05**
    - What we know: `expense.title` for Fineco rows already has the strip applied at import time (normalizeTransactionRow runs at importFile time). Re-applying the strip in the service is idempotent.
    - What's unclear: Should `strippedByNormalization` mean "the strip *would* change the raw input" (always `false` for Fineco post-import) or "this platform has a non-null strip pattern" (always `true` for Fineco)? The first is technically accurate; the second is more useful for the Phase 55 UX.
    - Recommendation: Planner decides; both are defensible. The second ("platform has strip pattern") is recommended for UX clarity — document the semantic in a comment.
+   - **RESOLVED (51-01 plan):** per-candidate `strippedByNormalization` is computed at the row level as `stripped !== rawTitle` (true when the strip actually changed the input), rolled up to the candidate as "any member row stripped". Documented in 51-01-T1 action/behavior.
 
 2. **uncategorized filter — status '4'**
    - What we know: `getExpenses` treats statuses '1' and '4' as uncategorized for the UI filter. `applyNewPatternToExpenses` uses `isNull(expense.subCategoryId)` (which covers any status including '4').
    - What's unclear: Should discovery include status '4' expenses? Status '4' is not documented in the schema comments.
    - Recommendation: Use `isNull(expense.subCategoryId)` as the primary filter — this is what `applyNewPatternToExpenses` uses and is the most semantically correct signal for "has not been classified".
+   - **RESOLVED (51-02 plan):** the DAL query uses `isNull(expense.subCategoryId)` as the Set B filter (no `status` predicate). Documented in 51-02-T1 action + acceptance_criteria.
 
 ---
 
