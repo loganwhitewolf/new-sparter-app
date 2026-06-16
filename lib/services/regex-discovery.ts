@@ -24,7 +24,11 @@ export type DiscoveryResult = {
  */
 function applyStrip(rawTitle: string, stripPattern: string | null): string {
   if (!stripPattern) return rawTitle
-  return rawTitle.replace(new RegExp(stripPattern, 'i'), '').trim()
+  try {
+    return rawTitle.replace(new RegExp(stripPattern, 'i'), '').trim()
+  } catch {
+    return rawTitle
+  }
 }
 
 /**
