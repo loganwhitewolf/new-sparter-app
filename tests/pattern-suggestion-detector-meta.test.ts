@@ -16,7 +16,6 @@ function rowMeta(
   const rawTitle = overrides.rawTitle ?? overrides.normalizedDescription.toUpperCase()
   return {
     description: rawTitle,
-    normalizedDescription: overrides.normalizedDescription,
     amount: null,
     valid: true,
     covered: false,
