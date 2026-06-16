@@ -66,7 +66,6 @@ export default async function SuggestionsPage({
           suggestions={patternSuggestions}
           categories={categories}
           fileId={fileId}
-          platformId={platformId}
         />
       )}
     </div>

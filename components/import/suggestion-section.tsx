@@ -8,10 +8,9 @@ type Props = {
   suggestions: PatternSuggestion[]
   categories: CategoryWithSubCategories[]
   fileId: string
-  platformId: number
 }
 
-export function SuggestionSection({ suggestions, categories, fileId, platformId }: Props) {
+export function SuggestionSection({ suggestions, categories, fileId }: Props) {
   if (suggestions.length === 0) return null
 
   return (
@@ -26,7 +25,6 @@ export function SuggestionSection({ suggestions, categories, fileId, platformId 
             suggestion={suggestion}
             categories={categories}
             fileId={fileId}
-            platformId={platformId}
           />
         ))}
       </div>

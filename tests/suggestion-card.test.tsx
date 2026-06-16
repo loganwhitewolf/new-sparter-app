@@ -48,7 +48,6 @@ const defaultProps = {
   suggestion,
   categories,
   fileId: 'file-abc',
-  platformId: 2,
 }
 
 describe('SuggestionCard', () => {
