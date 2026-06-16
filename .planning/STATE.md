@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: — Regex Discovery & Transaction Unification
 status: executing
-last_updated: "2026-06-16T15:16:43.126Z"
-last_activity: 2026-06-16 -- Phase 53 execution started
+last_updated: "2026-06-16T15:20:53Z"
+last_activity: 2026-06-16 -- Phase 53 Plan 02 complete
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
-  percent: 40
+  completed_plans: 8
+  percent: 44
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 ## Current Position
 
 Phase: 53 (retroactive-application) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
-Last activity: 2026-06-16 -- Phase 53 execution started
+Last activity: 2026-06-16 -- Phase 53 Plan 02 complete (promoteSuggestionAction platform apply)
 
 ## Roadmap (v2.1 — Phases 51–55)
 
@@ -58,6 +58,10 @@ Plan 52-01: PatternSuggestionWithMeta now carries all grouped member description
 Plan 52-02: getManuallyCategorizedHashes queries expenseClassificationHistory source='manual' joined to expense.descriptionHash, scoped by userId, with empty-input short-circuit and Set<string> result for Check 2.
 
 Plan 52-03: discoverRegexCandidates now returns two lists: regex candidates from non-empty residual families and singleCategorizationSuggestions from identical normalized groups; Check 1 gates regex families with candidateCoveredByExistingPattern and Check 2 gates both lists with any-member manual-history hashes.
+
+Plan 53-01: applyNewPatternToPlatformExpenses is a new sibling function using platform-scoped Set B DAL; PatternApplyResult exported from service layer; legacy applyNewPatternToExpenses unchanged for createPatternAction; getPlatformIdForUserFile resolves file ownership with platform join.
+
+Plan 53-02: ActionState extended with optional applyResult?: PatternApplyResult | null; promoteSuggestionAction resolves platformId server-side from fileId (T-53-04/05), calls applyNewPatternToPlatformExpenses, returns structured counts; non-fatal apply failure returns zero counts; APPLY-02 scope locked to platform uncategorized history.
 
 Design contract is LOCKED. Do not re-open or re-derive the data model:
 
@@ -111,11 +115,11 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-16T15:16:43.121Z
-Handoff synced: 2026-06-16 — Phase 51 complete: service discoverRegexCandidates + tests + TODO annotation (commits 676a37c, 60b5479, d169fa8).
+Last session: 2026-06-16T15:20:53Z
+Handoff synced: 2026-06-16 — Phase 53 Plan 02 complete: promoteSuggestionAction wired to platform apply + applyResult (commits 893afc6, b3d25a6).
 Resume file: None
 
-**Next:** Discuss or plan Phase 53 — retroactive-application.
+**Next:** Execute Phase 53 Plan 03 — UI rendering of applyResult inline in SuggestionCard.
 
 ## Operator Next Steps
 
@@ -138,3 +142,4 @@ Resume file: None
 | Phase 52 P02 | 2 min | 2 tasks | 2 files |
 | Phase 52 P03 | 3 min | 3 tasks | 2 files |
 | Phase 53 PP01 | 3min | - tasks | - files |
+| Phase 53 P02 | 8min | 2 tasks (TDD RED+GREEN) | 4 files |

@@ -81,7 +81,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RDISC-02 | Phase 52 | Complete |
 | RDISC-03 | Phase 52 | Complete |
 | RDISC-04 | Phase 52 | Complete |
-| APPLY-01 | Phase 53 | Pending |
+| APPLY-01 | Phase 53 | Partial (service + action wired in 53-01/02; UI renders in 53-03) |
 | APPLY-02 | Phase 53 | Complete |
 | TRIG-01 | Phase 54 | Pending |
 | TRIG-02 | Phase 54 | Pending |
