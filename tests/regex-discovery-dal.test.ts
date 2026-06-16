@@ -109,9 +109,11 @@ function makeQueryChainWithFixture(finalValue: unknown[] = []) {
   return chain
 }
 
-const { getUncategorizedExpensesForDiscovery, getManuallyCategorizedHashes } = await import(
-  '../lib/dal/regex-discovery'
-)
+const {
+  getUncategorizedExpensesForDiscovery,
+  getManuallyCategorizedHashes,
+  getUncategorizedExpensesForPlatformApply,
+} = await import('../lib/dal/regex-discovery')
 
 describe('getUncategorizedExpensesForDiscovery', () => {
   beforeEach(() => {
@@ -253,5 +255,63 @@ describe('getManuallyCategorizedHashes', () => {
     await getManuallyCategorizedHashes('user-1', ['h1'])
 
     expect(mocks.innerJoinCount).toBe(1)
+  })
+})
+
+describe('getUncategorizedExpensesForPlatformApply', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.whereArgs.length = 0
+    mocks.leftJoinCount = 0
+    mocks.innerJoinCount = 0
+    mocks.selectDistinctCount = 0
+    mocks.manualHistoryRows = []
+  })
+
+  it('returns the array the mocked chain resolves to', async () => {
+    const result = await getUncategorizedExpensesForPlatformApply('user-1', 7)
+
+    expect(result).toEqual(mocks.uncategorizedRows)
+  })
+
+  it('performs exactly three leftJoins (file, importFormatVersion, platform) mirroring discovery', async () => {
+    await getUncategorizedExpensesForPlatformApply('user-1', 7)
+
+    expect(mocks.leftJoinCount).toBe(3)
+  })
+
+  it('passes userId condition to WHERE clause (cross-user isolation T-53-01)', async () => {
+    await getUncategorizedExpensesForPlatformApply('user-1', 7)
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.op).toBe('and')
+    expect(where.args).toContainEqual({
+      op: 'eq',
+      left: 'expense.userId',
+      right: 'user-1',
+    })
+  })
+
+  it('passes platformId condition to WHERE clause (cross-platform isolation T-53-01)', async () => {
+    await getUncategorizedExpensesForPlatformApply('user-1', 7)
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.op).toBe('and')
+    expect(where.args).toContainEqual({
+      op: 'eq',
+      left: 'platform.id',
+      right: 7,
+    })
+  })
+
+  it('filters Set B via isNull(expense.subCategoryId) — Set A (categorized) excluded (T-53-02)', async () => {
+    await getUncategorizedExpensesForPlatformApply('user-1', 7)
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.op).toBe('and')
+    expect(where.args).toContainEqual({
+      op: 'isNull',
+      column: 'expense.subCategoryId',
+    })
   })
 })
