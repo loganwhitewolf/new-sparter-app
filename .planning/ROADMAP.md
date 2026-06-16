@@ -208,7 +208,19 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
   2. Retroactive application honors the resolved scope decision (current file only vs the platform's entire uncategorized history); whichever scope is chosen, the user can observe exactly which existing transactions were (and were not) re-categorized.
   3. Applying a regex never re-touches already-categorized transactions (Set A) and never crosses into another platform's history when the resolved scope is platform-bounded.
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+**Wave 1**
+
+- [ ] 53-01-PLAN.md — Platform-scoped DAL + applyNewPatternToPlatformExpenses with structured counts (APPLY-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 53-02-PLAN.md — promoteSuggestionAction integration: fileId → platform resolve, ActionState.applyResult (APPLY-01/02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 53-03-PLAN.md — Suggestions UI: fileId threading, inline card apply counts (ROADMAP SC-2)
 
 ### Phase 54: reusable-trigger
 

@@ -459,16 +459,15 @@ return (
 | A2 | `createPatternAction` can keep legacy user-wide apply without user confusion this milestone | User Constraints | Settings-form users see different scope than discovery promote. |
 | A3 | REQUIREMENTS.md APPLY-01 "current file" wording is satisfied by platform scope superset | Phase Requirements | Traceability audit may flag wording mismatch — update REQUIREMENTS in plan. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Apply failure UX when pattern is saved but DB apply throws**
-   - What we know: Today errors are logged, action still returns success.
-   - What's unclear: Whether to show `0 · 0` counts or an Italian soft warning on the card.
-   - Recommendation: Return `applyResult: { updatedCount: 0, notUpdatedCount: scannedOrZero }` and optional `applyWarning` string in ActionState only if planner wants explicit messaging; default to counts-only.
+1. **Apply failure UX when pattern is saved but DB apply throws** — **RESOLVED**
+   - **Decision:** On apply catch, `promoteSuggestionAction` returns `{ error: null, applyResult: { updatedCount: 0, notUpdatedCount: 0 } }` (pattern saved; no soft warning string in ActionState for v1). Logged server-side only.
+   - **Owner:** Plan 53-02 Task 2.
 
-2. **Extract shared DAL vs duplicate SELECT in apply function**
-   - What we know: Discovery DAL returns `descriptionHash`/`descriptionStripPattern`; apply needs `totalAmount` only for logging.
-   - Recommendation: Add parallel `getUncategorizedExpensesForPlatformApply` with shared WHERE builder or internal helper to prevent join drift.
+2. **Extract shared DAL vs duplicate SELECT in apply function** — **RESOLVED**
+   - **Decision:** Add sibling `getUncategorizedExpensesForPlatformApply` with identical join/WHERE to `getUncategorizedExpensesForDiscovery`; SELECT `{ id, title, totalAmount }`. Shared WHERE builder optional — duplicate join strings acceptable if documented in DAL comment.
+   - **Owner:** Plan 53-01 Task 2.
 
 ## Environment Availability
 
