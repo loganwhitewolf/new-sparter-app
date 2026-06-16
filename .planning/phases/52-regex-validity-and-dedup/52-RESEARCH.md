@@ -601,21 +601,21 @@ Step 2.6: SKIPPED — code/config changes only. No external CLI tools, services,
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Macellaio fixture token count (drives A1).**
+> All three resolved during plan-phase decision capture (2026-06-16) and locked in `52-CONTEXT.md`.
+
+1. **Macellaio fixture token count (drives A1).** — **RESOLVED: multi-token, guard unchanged.**
    - Known: realistic bank descriptors are multi-token; the `< 2` guard drops single tokens.
-   - Unclear: whether the DoD demands the literal 1-token "Macellaio."
-   - Recommendation: use a multi-token identical fixture; confirm with user. No util change if multi-token.
+   - Decision: real repeated merchants are always multi-token → use a multi-token identical fixture (`"Macellaio Da Mario"`); the `< 2` token guard stays unchanged, zero util behavioral change.
 
-2. **Check 2 platform scoping.**
+2. **Check 2 platform scoping.** — **RESOLVED: entire user manual history, platform-agnostic.**
    - Known: discovery is platform-scoped (D-03). The manual-history query is naturally user-scoped.
-   - Unclear: should Check 2 also restrict manual history to the same platform, or dedup across the user's entire manual history (a manual categorization of the same descriptionHash on another platform still means "user knows this type")?
-   - Recommendation: dedup across the user's whole manual history (hash is platform-agnostic content addressing) — simpler and matches user intent. Confirm in plan.
+   - Decision: dedup across the user's whole manual history (hash is platform-agnostic content addressing); a manual categorization of the same descriptionHash on any platform suppresses the candidate.
 
-3. **Should single-categorization suggestions also run Check 1?**
-   - A single-categorization has no generated regex, so Check 1 (generated-regex coverage) is moot for them. But an existing pattern could already categorize that exact description — in which case the row would have been filtered at the row stage (it'd be covered) and never reach clustering.
-   - Recommendation: Check 1 applies only to regex families; single-categorization groups are already protected by the row coverage filter + Check 2. No extra gate needed.
+3. **Should single-categorization suggestions also run Check 1?** — **RESOLVED: no — Check 1 is regex-families only.**
+   - A single-categorization has no generated regex, so Check 1 (generated-regex coverage) is moot for them. An existing pattern that already categorizes that exact description would have filtered the row at the row-coverage stage and it would never reach clustering.
+   - Decision: Check 1 applies only to regex families; single-categorization groups are already protected by the row coverage filter + Check 2. No extra gate.
 
 ---
 
