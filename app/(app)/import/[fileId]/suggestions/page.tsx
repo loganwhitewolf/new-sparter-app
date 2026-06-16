@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { db } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
-import { getFileForUser } from '@/lib/dal/files'
+import { getFileForUser, getPlatformIdForUserFile } from '@/lib/dal/files'
 import { getUncategorizedTransactionsByFileId } from '@/lib/dal/transactions'
 import { getCategories } from '@/lib/dal/categories'
 import { loadActivePatterns } from '@/lib/services/categorization'
@@ -22,6 +22,11 @@ export default async function SuggestionsPage({
 
   const fileRow = await getFileForUser({ userId, fileId })
   if (!fileRow || fileRow.status !== 'imported') {
+    notFound()
+  }
+
+  const platformId = await getPlatformIdForUserFile({ userId, fileId })
+  if (platformId == null) {
     notFound()
   }
 
@@ -57,7 +62,12 @@ export default async function SuggestionsPage({
           Nessun suggerimento trovato — tutte le transazioni risultano già categorizzate o non sono stati rilevati pattern ricorrenti.
         </p>
       ) : (
-        <SuggestionSection suggestions={patternSuggestions} categories={categories} />
+        <SuggestionSection
+          suggestions={patternSuggestions}
+          categories={categories}
+          fileId={fileId}
+          platformId={platformId}
+        />
       )}
     </div>
   )

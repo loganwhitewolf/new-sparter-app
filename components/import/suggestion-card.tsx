@@ -6,17 +6,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SuggestionPromoteForm } from './suggestion-promote-form'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { PatternSuggestion } from '@/lib/utils/pattern-suggestions'
+import type { PatternApplyResult } from '@/lib/validations/pattern'
 
 type Props = {
   suggestion: PatternSuggestion
   categories: CategoryWithSubCategories[]
+  fileId: string
+  platformId: number
 }
 
-export function SuggestionCard({ suggestion, categories }: Props) {
+export function SuggestionCard({ suggestion, categories, fileId, platformId: _platformId }: Props) {
   const [promoted, setPromoted] = useState(false)
+  const [applyResult, setApplyResult] = useState<PatternApplyResult | null>(null)
   const [showSamples, setShowSamples] = useState(false)
 
-  const handlePromoted = useCallback(() => setPromoted(true), [])
+  const handlePromoted = useCallback((result: PatternApplyResult) => {
+    setPromoted(true)
+    setApplyResult(result)
+  }, [])
 
   const sampleCount = suggestion.sampleDescriptions.length
   const samplesId = `samples-${suggestion.pattern}`
@@ -44,6 +51,11 @@ export function SuggestionCard({ suggestion, categories }: Props) {
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 pt-0">
+        {applyResult && (
+          <p className="text-sm text-muted-foreground">
+            {applyResult.updatedCount} categorizzate · {applyResult.notUpdatedCount} ancora senza match
+          </p>
+        )}
         {sampleCount > 0 && (
           <>
             <button
@@ -71,6 +83,7 @@ export function SuggestionCard({ suggestion, categories }: Props) {
           <SuggestionPromoteForm
             suggestion={suggestion}
             categories={categories}
+            fileId={fileId}
             onPromoted={handlePromoted}
             disabled={promoted}
           />
