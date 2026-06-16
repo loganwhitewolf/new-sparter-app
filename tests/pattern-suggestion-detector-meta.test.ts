@@ -22,6 +22,7 @@ function rowMeta(
     covered: false,
     rawTitle,
     strippedByNormalization: false,
+    descriptionHash: null,
     ...overrides,
   }
 }
