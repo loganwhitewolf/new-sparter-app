@@ -1,7 +1,7 @@
 // Pure prefix/variable clustering util — shared by the in-app discovery pipeline and
 // plain Node/tsx scripts (e.g. scripts/regex-discovery.ts).
 //
-// This module deliberately carries NO `import 'server-only'` guard so it can be
+// This module deliberately carries NO server-only import guard so it can be
 // imported both from production server code and from plain Node/tsx scripts. The
 // `server-only` package throws unconditionally outside a React Server Component
 // context, so a script can never import server-only modules directly; it imports
@@ -139,6 +139,8 @@ export interface PatternDetectorRowWithMeta extends PatternDetectorRow {
   rawTitle: string
   /** Whether descriptionStripPattern altered rawTitle before normalizeDescription was called */
   strippedByNormalization: boolean
+  /** Stable content hash for deduping grouped descriptions against manual history */
+  descriptionHash: string | null
 }
 
 export interface PatternSuggestionWithMeta extends PatternSuggestion {
@@ -150,6 +152,26 @@ export interface PatternSuggestionWithMeta extends PatternSuggestion {
   residualVariablePart: string
   /** One sample normalized description (post-strip, post-normalizeDescription) */
   sampleNormalized: string
+  /** Hashes for all grouped member descriptions, with legacy nulls filtered out */
+  descriptionHashes: string[]
+}
+
+export function candidateCoveredByExistingPattern(
+  candidate: PatternSuggestionWithMeta,
+  coveragePatterns: CoveragePattern[],
+): boolean {
+  const strippedDescription = stripNumericTokens(candidate.sampleNormalized).join(' ')
+  for (const p of coveragePatterns) {
+    try {
+      const regex = new RegExp(p.pattern, 'i')
+      if (regex.test(candidate.sampleNormalized) || regex.test(strippedDescription)) {
+        return true
+      }
+    } catch {
+      // invalid regex pattern — skip and continue
+    }
+  }
+  return false
 }
 
 /**
@@ -199,6 +221,9 @@ export function detectPatternSuggestionsWithMeta(
     const prefixString = prefix.join(' ')
     const escaped = escapeRegex(prefixString)
     const sampleDescriptions = group.slice(0, 3).map(g => g.row.description)
+    const descriptionHashes = group
+      .map(g => g.row.descriptionHash)
+      .filter((hash): hash is string => hash !== null)
 
     // D-05: stablePrefix is the human-readable joined prefix (pre-escape)
     const stablePrefix = prefixString
@@ -223,6 +248,7 @@ export function detectPatternSuggestionsWithMeta(
       strippedByNormalization,
       residualVariablePart,
       sampleNormalized,
+      descriptionHashes,
     })
   }
 
