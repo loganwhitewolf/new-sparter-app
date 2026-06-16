@@ -3,7 +3,7 @@ import { verifySession } from "@/lib/dal/auth";
 import { db } from "@/lib/db";
 import {
   CreatePatternSchema,
-  UpdatePatternSchema,
+  UpdatePatternClientSchema,
   type ActionState,
 } from "@/lib/validations/pattern";
 import {
@@ -167,11 +167,10 @@ export async function updatePatternAction(
     ? Number(formData.get("subCategoryId"))
     : undefined;
 
-  const confidenceRaw = formData.get("confidence")
-  const parsed = UpdatePatternSchema.safeParse({
+  // Use UpdatePatternClientSchema (omits confidence) — confidence is never client-controlled (WR-04).
+  const parsed = UpdatePatternClientSchema.safeParse({
     pattern: formData.get("pattern") || undefined,
     subCategoryId: subCategoryIdRaw,
-    confidence: confidenceRaw !== null ? Number(confidenceRaw) : undefined,
     description: (formData.get("description") as string) || undefined,
   });
   if (!parsed.success) {

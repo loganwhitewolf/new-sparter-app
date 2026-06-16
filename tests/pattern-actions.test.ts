@@ -215,14 +215,14 @@ describe('pattern Server Actions', () => {
   })
 
   describe('updatePatternAction', () => {
-    it('passes canonical schema output, id, and session userId to the DAL', async () => {
+    it('passes canonical schema output, id, and session userId to the DAL (no confidence — client-controlled confidence removed, WR-04)', async () => {
       const result = await updatePatternAction({ error: null }, validUpdateForm({ userId: 'attacker-id' }))
 
       expect(result).toEqual({ error: null })
+      // confidence is no longer accepted from the client (UpdatePatternClientSchema omits it)
       expect(mocks.updatePattern).toHaveBeenCalledWith(7, 'user-abc', {
         pattern: 'netflix',
         subCategoryId: 42,
-        confidence: 0.95,
         description: 'Streaming subscriptions',
       })
       expectExactCategoryRevalidationRoutes()
@@ -247,12 +247,14 @@ describe('pattern Server Actions', () => {
       expect(mocks.revalidatePath).not.toHaveBeenCalled()
     })
 
-    it('returns validation errors without writing for invalid confidence', async () => {
+    it('ignores client-supplied confidence — does not pass it to the DAL (WR-04)', async () => {
+      // UpdatePatternClientSchema omits confidence; any client value is silently dropped.
+      // The action should succeed and call updatePattern without a confidence field.
       const result = await updatePatternAction({ error: null }, validUpdateForm({ confidence: '-0.1' }))
 
-      expect(result.error).toBeTruthy()
-      expect(mocks.updatePattern).not.toHaveBeenCalled()
-      expect(mocks.revalidatePath).not.toHaveBeenCalled()
+      expect(result).toEqual({ error: null })
+      const callArgs = mocks.updatePattern.mock.calls[0][2]
+      expect(callArgs).not.toHaveProperty('confidence')
     })
 
     it('returns validation errors without writing for unsupported flags', async () => {
