@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: — Regex Discovery & Transaction Unification
-status: planning
-last_updated: "2026-06-16T14:16:41.996Z"
-last_activity: 2026-06-16 -- Phase 53 planning complete
+status: executing
+last_updated: "2026-06-16T15:16:43.126Z"
+last_activity: 2026-06-16 -- Phase 53 execution started
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 9
+  completed_plans: 7
   percent: 40
 ---
 
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 
 ## Current Position
 
-Phase: 53
-Plan: Not started
-Status: Phase 52 verified complete; Phase 53 is ready for discussion/planning
-Last activity: 2026-06-16 -- Phase 53 planning complete
+Phase: 53 (retroactive-application) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-06-16 -- Phase 53 execution started
 
 ## Roadmap (v2.1 — Phases 51–55)
 
@@ -77,6 +77,7 @@ Codebase facts relevant to v2.1 (verified, do not re-research):
 - Files table: `app/(app)/import/files.table.ts` + `app/(app)/import/FilesToolbar.tsx` — where the on-demand "ricontrolla regex" trigger (TRIG-02) lives (Phase 54).
 - Import summary UI: `ImportPreview`/`AnalyzePage` consume `analyzeFile`'s `sampleRows` + `patternSuggestions` (capped at 5, sampleDescriptions sliced to 3) (Phase 55).
 - Offline tool exists: `scripts/regex-discovery.ts` + `/regex-label` skill (quick-task 260615-dtm). Relationship to in-pipeline discovery is TOOL-01 (deferred — only clarify the boundary).
+- [Phase ?]: Plan 53-01: applyNewPatternToPlatformExpenses is a sibling function using platform-scoped Set B DAL; PatternApplyResult exported from service layer; legacy applyNewPatternToExpenses unchanged for createPatternAction
 
 ### Planning Risk
 
@@ -110,7 +111,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-16T13:26:50.785Z
+Last session: 2026-06-16T15:16:43.121Z
 Handoff synced: 2026-06-16 — Phase 51 complete: service discoverRegexCandidates + tests + TODO annotation (commits 676a37c, 60b5479, d169fa8).
 Resume file: None
 
@@ -136,3 +137,4 @@ Resume file: None
 | Phase 52 P01 | 3 min | 2 tasks | 6 files |
 | Phase 52 P02 | 2 min | 2 tasks | 2 files |
 | Phase 52 P03 | 3 min | 3 tasks | 2 files |
+| Phase 53 PP01 | 3min | - tasks | - files |

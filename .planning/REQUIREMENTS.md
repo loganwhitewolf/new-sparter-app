@@ -29,7 +29,7 @@ Correct the definition of a valid regex and stop proposing duplicates.
 Apply a newly created regex to existing data.
 
 - [ ] **APPLY-01**: A regex created during discovery is applied to the uncategorized transactions of the current file.
-- [ ] **APPLY-02**: The retroactive application scope is decided and implemented: current file only vs the entire platform's uncategorized history. *(Open decision — resolve in discuss/plan.)*
+- [x] **APPLY-02**: The retroactive application scope is decided and implemented: current file only vs the entire platform's uncategorized history. *(Open decision — resolve in discuss/plan.)*
 
 ### Reusable Trigger (TRIG)
 
@@ -82,7 +82,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RDISC-03 | Phase 52 | Complete |
 | RDISC-04 | Phase 52 | Complete |
 | APPLY-01 | Phase 53 | Pending |
-| APPLY-02 | Phase 53 | Pending |
+| APPLY-02 | Phase 53 | Complete |
 | TRIG-01 | Phase 54 | Pending |
 | TRIG-02 | Phase 54 | Pending |
 | SUMUI-01 | Phase 55 | Pending |

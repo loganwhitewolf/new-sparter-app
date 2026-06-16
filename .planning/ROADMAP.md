@@ -212,7 +212,7 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 Plans:
 **Wave 1**
 
-- [ ] 53-01-PLAN.md — Platform-scoped DAL + applyNewPatternToPlatformExpenses with structured counts (APPLY-02)
+- [x] 53-01-PLAN.md — Platform-scoped DAL + applyNewPatternToPlatformExpenses with structured counts (APPLY-02)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -268,7 +268,7 @@ Plans:
 | 46–50 | v2.0 | 22/22 | Complete | 2026-06-14 |
 | 51. discovery-pipeline-reorder | v2.1 | 3/3 | Complete | 2026-06-16 |
 | 52. regex-validity-and-dedup | v2.1 | 3/3 | Complete    | 2026-06-16 |
-| 53. retroactive-application | v2.1 | 0/? | Not started | - |
+| 53. retroactive-application | v2.1 | 1/3 | In Progress|  |
 | 54. reusable-trigger | v2.1 | 0/? | Not started | - |
 | 55. import-summary-ux | v2.1 | 0/? | Not started | - |
 
