@@ -1,20 +1,9 @@
-import React from 'react'
+import { readFileSync } from 'node:fs'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it, vi } from 'vitest'
-
-vi.mock('next/link', () => ({
-  default: ({
-    href,
-    children,
-    className,
-  }: {
-    href: string
-    children: React.ReactNode
-    className?: string
-  }) => React.createElement('a', { href, className }, children),
-}))
+import { describe, expect, it } from 'vitest'
 
 const { Step5Outro } = await import('@/app/(app)/onboarding/_components/step-5-outro')
+const source = readFileSync('app/(app)/onboarding/_components/step-5-outro.tsx', 'utf8')
 
 function renderOutro() {
   return renderToStaticMarkup(<Step5Outro />)
@@ -39,6 +28,11 @@ describe('Step5Outro (R-OB-08)', () => {
 
     expect(html).toContain('href="/settings/categories"')
     expect(html).toContain('Personalizza le categorie')
+  })
+
+  it('uses hard navigation for settings categories so the app shell sidebar is restored', () => {
+    expect(source).not.toContain("from 'next/link'")
+    expect(source).toContain('<a href={APP_ROUTES.categorySettings}>')
   })
 
   it('R-OB-08 does not append a firstRun query parameter to either CTA', () => {
