@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Regex Discovery & Transaction Unification
-status: planning
-last_updated: "2026-06-16T08:25:00.538Z"
+status: roadmapped
+last_updated: "2026-06-16T09:00:00.000Z"
 last_activity: 2026-06-16
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,31 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-10)
+See: .planning/PROJECT.md (updated 2026-06-16)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 50 — transaction-pairing
+**Current focus:** Phase 51 — discovery-pipeline-reorder (first phase of v2.1)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started — roadmap created (Phases 51–55)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-16 — Milestone v2.1 started
+Status: Roadmapped, ready to plan Phase 51
+Last activity: 2026-06-16 — v2.1 roadmap created, 14/14 requirements mapped
+
+## Roadmap (v2.1 — Phases 51–55)
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 51 | discovery-pipeline-reorder | PIPE-01, PIPE-02, PIPE-03 | Not started |
+| 52 | regex-validity-and-dedup | RDISC-01, RDISC-02, RDISC-03, RDISC-04 | Not started |
+| 53 | retroactive-application | APPLY-01, APPLY-02 | Not started |
+| 54 | reusable-trigger | TRIG-01, TRIG-02 | Not started |
+| 55 | import-summary-ux | SUMUI-01, SUMUI-02, SUMUI-03 | Not started |
+
+**Open decisions to resolve in discuss/plan:** APPLY-02 retroactive scope (current file vs platform history); TRIG-02 re-check UX (per-row vs bulk); SUMUI-03 exact copy/placement of the "discovery is now a separate step" cue. Phase success criteria are phrased to accommodate either resolution.
+
+**Deferred (tracked, not in v2.1):** TOOL-01 (consolidate in-app discovery with offline `yarn regex:discover`), GLOBAL-01 (file-independent suggestions), DISM-01 (persistent dismissal).
 
 ## Accumulated Context
 
@@ -35,55 +49,32 @@ Last activity: 2026-06-16 — Milestone v2.1 started
 
 Design contract is LOCKED. Do not re-open or re-derive the data model:
 
-- **49-01 D-01:** savingsRate expected value in test is 33.3 (not 33) — computeSavingsRate uses toDecimalPlaces(1); RESEARCH.md had a rounding error in the example value.
-
 - ADR 0012: direction derived from nature; 4th direction `allocation`; `category.type` removed
 - CONTEXT.md: canonical nature/direction vocabulary + categorization rules
 - `.planning/nature-remapping-WORKING.md`: 23 categories / ~65 subcats — final remap confirmed 2026-06-09
 
-v2.0 / Phase 46 decisions (shipped 2026-06-11):
+v2.0 closed (Phases 46–50, shipped 2026-06-14): nature/direction lookup tables, schema migration 0018, data recategorization, 4-direction dashboard, explicit transaction pairing (`transaction_pair`, migration 0020). Full decision log archived with the v2.0 milestone.
 
-- **8 nature rows** (not 9): `income`, `income_extraordinary`, `essential`, `discretionary`, `debt`, `transfer`, `savings`, `investment` — stale "9" references in docs; uncategorized = `null` `nature_id` on subcategory (D-02)
-- `direction` + `nature` lookup tables in `schema.ts` (varchar codes, not pgEnum); FK chain `sub_category.nature_id → nature → direction`
-- `category.type`, `flow_nature` enum, `amount_sign` removed from schema; pattern unique constraint `(pattern, subCategoryId)`
-- **D-06:** no `drizzle-kit generate` / DB apply in Phase 46 — migration deferred to Phase 48
-- **D-10:** `sub_category.exclude_from_totals` retained in schema — removal + `direction.included_in_totals` consumption deferred to Phase 49
-- **46-02 minimum-compile:** DAL/actions/components/tests compile green; semantic aggregation/filter rewrite marked `TODO(Phase 49)` — not a Phase 46 deliverable
-- **46-03 seed baseline:** `directions` (4) + `natures` (8) in `seed-data.ts`; `seed.ts` FK-order insert; `seed-extras` pattern-dedupe sign-agnostic repair only (no new STEPS yet — Phase 47 adds nature_id backfill)
-- **47-02 seed-data v2:** wholesale replace `categories` (23 active) + `subCategories` (87 with `natureId` 1-8); dissolved wrappers omitted from fresh baseline; Wave 0 tests GREEN (TAX-01/TAX-02 baseline)
-- **47-03 patterns + seed wiring:** sign-agnostic `categorizationPatterns` (28 rows) retargeted to v2 slugs; bonifico deduped to `trasferimento-tra-conti`; `seed.ts` excludeFromTotals triple + natureId pass-through (D-10, D-13)
-- **47-05 R-FN-03 + phase gate:** R-FN-03 todos enabled; transfer subs assert natureId 6 (D-13); 949 tests + build green; 47-VALIDATION.md Nyquist sign-off; no DB apply (D-05)
+Codebase facts relevant to v2.1 (verified, do not re-research):
 
-- **48-01 migration**: 0018 hand-crafted from 0017 snapshot diff (drizzle-kit TTY limitation, D-07 sanction); MIG-03 pre-dedup DELETE guards against sign-only duplicate constraint failures
-- **48-01 D-16**: rebucketIncomeNatures guard removed; step is no-op retained for append-only registry invariant; nature assignment delegated to v2-backfill-nature-id
-- **48-02 verify-migration**: classifyResults (pure, exported) + runVerification (4 read-only SQL assertions); fatal on activeSystemNullNatureCount>0 (D-04) or patternDuplicateCount>0 (MIG-03); informational for user-owned null nature_id (D-03); db:verify* scripts mirror db:seed-extras* triplet
-- Migrations: `drizzle-kit generate` + `scripts/migrate.ts` only — never `drizzle-kit push`
-- Seeds: additive model — append steps to `seed-extras.ts`, never edit shipped `seed-data.ts` shapes
-- Monetary arithmetic: Decimal.js throughout
-- Layering: dal / services / actions
-- [Phase ?]: 49-02 D-01: categoryType fields use sql<union> cast for direction.code to satisfy TypeScript strict mode in dashboard.ts
-- [49-04]: OUT_KEYS narrowed to essential/discretionary/debt only; savings/investment in allocation bucket; onMonthSelect carries direction param; allocationReading uses "piu/meno del {prevYear}" copy from UI-SPEC
-- [49-04 post-checkpoint]: totalAllocation display wrapped in abs() — DAL algebraic value unchanged; movers changed to 3-column simultaneous layout (removed per-direction routing)
-- [49-05]: buildDirectionNatureMap replaces buildTypeNatureMap (direction-keyed, allocation bucket); SubcategoryPicker 4 direction chips; table filters key=direction + dependsOn=direction; setSubcategoryNatureAction resolves real natureId via NATURE_ID_BY_CODE; detectedAmountSign removed (ADR 0012)
-- [Phase ?]: 50-02 D-07: yarn db:generate --name transaction_pair bypasses drizzle-kit TTY prompt; --name flag is standard workaround for headless migration generation contexts
-- [Phase ?]: 50-02: transaction_pair table LIVE in local dev DB (0020 migration applied); no userId column on pair table (D-01/T-50-01) — ownership enforced in Plan 03 service layer
-- [50-03]: createPair verifies both tx.userId === sessionUserId before insert (IDOR gate, D-01); primary resolution via Decimal.js abs(), tie-break by occurredAt (D-10); getEligibleCounterparts verifySession-scoped + NOT EXISTS already-paired (D-14); actions revalidate /transactions + /overview
-- [50-04]: PAIR-03 netting via shared helpers at all 8 aggregation sites; getOverview (overview.ts) untouched to avoid double-count; transactionListSelect uses correlated subqueries (not LEFT JOIN) for 4 paired fields
-- [50-05]: TransactionTable key-based remount — pairedWithId + pairedNetAmount included in buildTransactionTableKey; table copies props into local state so prop updates are invisible without remount
-- [50-05]: CounterpartPickerDialog mounted with key={pairTarget.id} — re-anchors ±90-day date window to the reference transaction's occurredAt on every open; prevents stale date range from reused dialog instance
-- [50-05]: Popover Importo uses pairedAmount (= t2.amount correlated subquery, counterpart's original amount); Netto uses pairedNetAmount — two distinct values; pairedAmount added to transactionListSelect in Plan 04 field set
+- `lib/services/import.ts`: `analyzeFile()` runs `detectPatternSuggestions` over ALL normalized rows with `covered:false` hardcoded, BEFORE categorization — discovery currently runs in the wrong place. `importFile()` runs `categorizePipeline` per-expense inside a `db.transaction`. (Phase 51 reorders this.)
+- `lib/utils/pattern-suggestions.ts`: pure `detectPatternSuggestions` — token-prefix grouping (≥2 tokens, ≥2 members), strips numeric tokens; `isCoveredByPatterns` tests candidates against active regex patterns (partial Check 1). Does NOT distinguish identical-after-normalization (single categorization) from prefix+variable (regex); no Check 2. (Phase 52.)
+- `lib/services/categorization.ts`: `categorizePipeline` (Tier1 regex `applyTier1Regex` + Tier2 history), `loadActivePatterns`.
+- `lib/services/pattern-application.ts`: `applyNewPatternToExpenses` already applies a new pattern retroactively to ALL of a user's uncategorized expenses (platform-agnostic) — relevant to APPLY-01/APPLY-02 scope decision (Phase 53).
+- `app/(app)/import/[fileId]/suggestions/page.tsx`: post-import re-run on `getUncategorizedTransactionsByFileId` (Set B for that file), capped at 5, still `covered:false`, no Check 2.
+- Files table: `app/(app)/import/files.table.ts` + `app/(app)/import/FilesToolbar.tsx` — where the on-demand "ricontrolla regex" trigger (TRIG-02) lives (Phase 54).
+- Import summary UI: `ImportPreview`/`AnalyzePage` consume `analyzeFile`'s `sampleRows` + `patternSuggestions` (capped at 5, sampleDescriptions sliced to 3) (Phase 55).
+- Offline tool exists: `scripts/regex-discovery.ts` + `/regex-label` skill (quick-task 260615-dtm). Relationship to in-pipeline discovery is TOOL-01 (deferred — only clarify the boundary).
 
 ### Planning Risk
 
-**Resolved (Phase 46):** 8-vs-9 nature row count — **8 is correct**; implemented in schema + seed (46-01, 46-03).
-
-**Open for Phase 47:** None — Phase 47 complete. Deployed DB apply deferred to Phase 48 (D-05).
+None open. All v2.1 success criteria are observable; the two DoD test cases (Fineco "Bonifico Andrea Bernardini" → regex; identical "Macellaio" → single categorization) are encoded in Phase 51 and Phase 52 criteria.
 
 ### Blockers/Concerns
 
 None.
 
-### Quick Tasks Completed (carried from v1.16)
+### Quick Tasks Completed (carried from v1.16 / v2.0)
 
 | # | Description | Date | Commit |
 |---|-------------|------|--------|
@@ -98,24 +89,24 @@ None.
 
 | Category | Item | Status |
 |----------|------|--------|
-| phase_46 | 46-VERIFICATION.md | not generated — run `/gsd-verify-work 46` if process gap matters |
-| phase_49 | DATA-06 `exclude_from_totals` removal | D-10 — deferred from Phase 46 |
-| phase_49 | Semantic DAL/dashboard/filter rewrite | `TODO(Phase 49)` stubs from 46-02 |
-| operator | R038/R039/R041 | live deploy operator-pending |
-| backlog | R029 | partial revalidation coverage |
-| backlog | REVAL-01 | parked |
+| v2.1 | TOOL-01 | consolidate in-app + offline discovery — only clarify boundary this milestone |
+| v2.1 | GLOBAL-01 | file-independent suggestions — parked |
+| v2.1 | DISM-01 | persistent dismissal of noisy suggestions — parked |
+| operator | R038/R039/R041 | live Vercel/Supabase/R2 deploy operator-pending |
+| backlog | R029 | partial categorization revalidation coverage |
+| backlog | REVAL-01 | superseded by APPLY-01/APPLY-02 in this milestone |
 
 ## Session Continuity
 
-Last session: 2026-06-14T10:00:00Z
-Handoff synced: 2026-06-14 — 50-05 SUMMARY committed (Phase 50 fully complete)
-Resume file: None — Phase 50 complete. Remaining v2.0 work: 48-03-PLAN.md (MIGRATION-RUNBOOK) or 49-06-PLAN.md (drop exclude_from_totals).
+Last session: 2026-06-16
+Handoff synced: 2026-06-16 — v2.1 roadmap created (Phases 51–55), REQUIREMENTS.md traceability filled, STATE.md updated.
+Resume file: None.
 
-**Next:** Phase 50 complete (5/5 plans). Remaining open v2.0 plans: 48-03 (MIGRATION-RUNBOOK + operator-guarded apply) and 49-06 (BLOCKING — drop sub_category.exclude_from_totals migration).
+**Next:** Plan Phase 51 — `/gsd-plan-phase 51` (discovery-pipeline-reorder: PIPE-01/02/03).
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Plan the first v2.1 phase with `/gsd-plan-phase 51`
 
 ## Performance Metrics
 

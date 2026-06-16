@@ -74,26 +74,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PIPE-01 | TBD | Pending |
-| PIPE-02 | TBD | Pending |
-| PIPE-03 | TBD | Pending |
-| RDISC-01 | TBD | Pending |
-| RDISC-02 | TBD | Pending |
-| RDISC-03 | TBD | Pending |
-| RDISC-04 | TBD | Pending |
-| APPLY-01 | TBD | Pending |
-| APPLY-02 | TBD | Pending |
-| TRIG-01 | TBD | Pending |
-| TRIG-02 | TBD | Pending |
-| SUMUI-01 | TBD | Pending |
-| SUMUI-02 | TBD | Pending |
-| SUMUI-03 | TBD | Pending |
+| PIPE-01 | Phase 51 | Pending |
+| PIPE-02 | Phase 51 | Pending |
+| PIPE-03 | Phase 51 | Pending |
+| RDISC-01 | Phase 52 | Pending |
+| RDISC-02 | Phase 52 | Pending |
+| RDISC-03 | Phase 52 | Pending |
+| RDISC-04 | Phase 52 | Pending |
+| APPLY-01 | Phase 53 | Pending |
+| APPLY-02 | Phase 53 | Pending |
+| TRIG-01 | Phase 54 | Pending |
+| TRIG-02 | Phase 54 | Pending |
+| SUMUI-01 | Phase 55 | Pending |
+| SUMUI-02 | Phase 55 | Pending |
+| SUMUI-03 | Phase 55 | Pending |
 
 **Coverage:**
 - v2.1 requirements: 14 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 14 ⚠️
+- Mapped to phases: 14 (Phases 51–55) ✓
+- Unmapped: 0
+
+Deferred (not mapped, tracked for future): TOOL-01, GLOBAL-01, DISM-01.
 
 ---
 *Requirements defined: 2026-06-16*
-*Last updated: 2026-06-16 — milestone v2.1 scoping*
+*Last updated: 2026-06-16 — roadmap created, all 14 v2.1 requirements mapped to Phases 51–55*

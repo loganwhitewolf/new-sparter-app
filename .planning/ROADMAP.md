@@ -13,8 +13,17 @@
 - ✅ **v1.15: Collapsible Sidebar** — Phase 41 (shipped 2026-06-07)
 - ✅ **v1.16: Dashboard Overview Redesign** — Phases 42–45 (shipped 2026-06-09)
 - ✅ **v2.0: Nature/Direction Model Realignment** — Phases 46–50 (shipped 2026-06-14)
+- 🚧 **v2.1: Regex Discovery & Transaction Unification** — Phases 51–55 (in planning)
 
 ## Phases
+
+### v2.1 — Regex Discovery & Transaction Unification
+
+- [ ] **Phase 51: discovery-pipeline-reorder** — Move regex discovery downstream of auto-categorization into a standalone service operating on the uncategorized set only
+- [ ] **Phase 52: regex-validity-and-dedup** — Correct regex vs single-categorization distinction; skip candidates already covered by existing patterns or manual categories
+- [ ] **Phase 53: retroactive-application** — Apply a created regex to existing uncategorized data; resolve and implement the current-file-vs-platform-history scope
+- [ ] **Phase 54: reusable-trigger** — Same discovery service invoked automatically post-import and on-demand from the Files table
+- [ ] **Phase 55: import-summary-ux** — Capped example list and visual separation of proposed regex vs single-categorization suggestions, with the new-step messaging
 
 <details>
 <summary>✅ M001–M006 (Phases 1–23) — SHIPPED</summary>
@@ -80,13 +89,6 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 <summary>✅ v1.11: FlowNature & Segmented Chart (Phase 37) — SHIPPED 2026-05-26</summary>
 
 - [x] Phase 37: flow-nature-chart — `nature` enum on `sub_category`; stacked nature-segmented `EntrateUsciteChart`; URL-persisted legend toggles; nature editable in settings *(complete 2026-05-26)*
-  - [x] 37-01: Wave 0 scaffolding + `lib/utils/nature-labels.ts`
-  - [x] 37-02: Schema migration — `flowNatureEnum`, nature columns, seed 126 subcategories
-  - [x] 37-03: DAL `getMonthlyTrendByNature` + `effectiveNature` on `CategoryWithSubCategories`
-  - [x] 37-04: Stacked nature chart rewrite + URL-persisted legend toggle
-  - [x] 37-05: Settings — nature required on creation + `SubcategoryNatureSelect` + `setSubcategoryNatureAction`
-
-Full details: `.planning/milestones/v1.13-ROADMAP.md`
 
 </details>
 
@@ -94,11 +96,6 @@ Full details: `.planning/milestones/v1.13-ROADMAP.md`
 <summary>✅ v1.12: First-import Onboarding (Phase 38) — SHIPPED 2026-05-28</summary>
 
 - [x] Phase 38: first-import-onboarding — 5-step guided flow; RSC layout routing gate; categorization wizard with nature badges *(complete 2026-05-28)*
-  - [x] 38-01: DAL foundation + RSC layout guard
-  - [x] 38-02: Onboarding route group + Steps 1–3
-  - [x] 38-03: Step 4 categorization wizard + Step 5 outro + prototype deletion
-
-Full details: `.planning/milestones/v1.13-ROADMAP.md`
 
 </details>
 
@@ -106,12 +103,6 @@ Full details: `.planning/milestones/v1.13-ROADMAP.md`
 <summary>✅ v1.13: Unified Categorization Picker (Phase 39) — SHIPPED 2026-06-02</summary>
 
 - [x] Phase 39: unified-subcategory-picker — Single `SubcategoryPicker` (vaul bottom sheet) across all 7 surfaces; pattern form rework; `amountSign` derived server-side per ADR 0008 *(complete 2026-06-02)*
-  - [x] 39-01: vaul + `getMostUsedSubcategories` DAL + `subcategory-options.ts` extraction
-  - [x] 39-02: `SubcategoryPicker` component (variant E) — bottom sheet, type chips, master-detail, search-collapse
-  - [x] 39-03: Adopt in 4 commit-on-tap surfaces (expense, transaction, bulk, onboarding)
-  - [x] 39-05: Pattern forms rework — `amountSign` server-side, `confidence=1`
-  - [x] 39-04: Adopt in 2 fill-field forms (expense form, transaction form)
-  - [x] 39-06: Cleanup — delete legacy pickers + prototype route; `yarn build` green
 
 Full details: `.planning/milestones/v1.13-ROADMAP.md`
 
@@ -129,7 +120,7 @@ Full details: `.planning/milestones/v1.14-ROADMAP.md`
 <details>
 <summary>✅ v1.15: Collapsible Sidebar (Phase 41) — SHIPPED 2026-06-07</summary>
 
-- [x] **Phase 41: collapsible-sidebar** — Collapsible icon-rail sidebar; topbar removed on all breakpoints; app name + user controls (avatar, profile, logout) in sidebar; BottomNav gains Impostazioni entry; theme toggle moved to /settings page (ADR 0011) *(complete 2026-06-07)*
+- [x] **Phase 41: collapsible-sidebar** — Collapsible icon-rail sidebar; topbar removed; app name + user controls in sidebar; BottomNav Impostazioni entry; theme toggle in /settings (ADR 0011) *(complete 2026-06-07)*
 
 Full details: `.planning/milestones/v1.15-ROADMAP.md`
 
@@ -138,10 +129,10 @@ Full details: `.planning/milestones/v1.15-ROADMAP.md`
 <details>
 <summary>✅ v1.16: Dashboard Overview Redesign (Phases 42–45) — SHIPPED 2026-06-09</summary>
 
-- [x] **Phase 42: overview-data-layer** — DAL foundation: getOverview, getMonthOverMonthCategoryChanges, getYearsWithData, income-split resolution, CONTEXT.md glossary update (completed 2026-06-08)
-- [x] **Phase 43: overview-shell** — Redesigned overview tab: header H1 + year selector, hero chart variant A (grouped bars, always-on labels), 4 KPI cards with qualitative reading lines (completed 2026-06-08)
-- [x] **Phase 44: overview-interactions** — Uncategorized nudge (inline amber, localStorage dismiss), chart filter chips (income type + expense nature), FlowNature ⓘ education popovers (completed 2026-06-08)
-- [x] **Phase 45: overview-movers** — Per-month movers drill-down: recharts bar click → top movers panel, humanized copy, highlighted bar, default to last month with data (3 plans, 3 waves) (completed 2026-06-09)
+- [x] **Phase 42: overview-data-layer** — DAL foundation: getOverview, getMonthOverMonthCategoryChanges, getYearsWithData, income-split resolution (completed 2026-06-08)
+- [x] **Phase 43: overview-shell** — Redesigned overview tab: header + year selector, hero chart variant A, 4 KPI cards with reading lines (completed 2026-06-08)
+- [x] **Phase 44: overview-interactions** — Uncategorized nudge, chart filter chips, FlowNature ⓘ education popovers (completed 2026-06-08)
+- [x] **Phase 45: overview-movers** — Per-month movers drill-down: bar click → top movers panel, humanized copy, default last month with data (completed 2026-06-09)
 
 Full details: `.planning/milestones/v1.16-ROADMAP.md`
 
@@ -160,6 +151,62 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 
 </details>
 
+## Phase Details
+
+### Phase 51: discovery-pipeline-reorder
+**Goal**: Regex discovery runs as a distinct step downstream of auto-categorization, looking only at what categorization could not handle, and lives in a service that does not depend on an in-progress import.
+**Depends on**: Nothing new (builds on shipped v1.10 pipeline + v2.0 model)
+**Requirements**: PIPE-01, PIPE-02, PIPE-03
+**Success Criteria** (what must be TRUE):
+  1. After an import is analyzed/committed, transactions that auto-categorization already classified (Set A) never appear as discovery input — only the still-uncategorized residual (Set B) is examined.
+  2. Discovery can be invoked as a standalone service against a user's persisted uncategorized transactions without an import being in progress (no longer wired inside `analyzeFile`'s pre-categorization path).
+  3. Platform-specific normalization (e.g. Fineco `descriptionStripPattern`) is applied to descriptions before discovery runs, and the service can report what normalization already collapsed versus what residual-variable text remains for the regex step to handle.
+  4. The Fineco DoD input ("Bonifico Andrea Bernardini causale stipendio …") reaches the discovery step as normalized, uncategorized text — i.e. it survives categorization as Set B and is fed to discovery, not silently dropped.
+**Plans**: TBD
+
+### Phase 52: regex-validity-and-dedup
+**Goal**: The discovery service proposes a regex only for genuine prefix+variable families, surfaces identical-after-normalization groups as single categorizations instead, and never re-proposes something already covered.
+**Depends on**: Phase 51
+**Requirements**: RDISC-01, RDISC-02, RDISC-03, RDISC-04
+**Success Criteria** (what must be TRUE):
+  1. Fineco "Bonifico Andrea Bernardini causale stipendio marzo/maggio/giugno" (≥2 transactions sharing a prefix but differing in a residual variable part) produces exactly one proposed regex. *(DoD test case 1)*
+  2. Repeated identical "Macellaio" transactions (identical after normalization) are surfaced as a single-categorization suggestion, with no regex proposed for them. *(DoD test case 2)*
+  3. A candidate whose generated regex would already be matched/covered by an existing pattern in the regex table is skipped and not shown (Check 1).
+  4. A candidate is skipped when that transaction type is already covered by an existing manual categorization for the same `descriptionHash` (Check 2).
+**Plans**: TBD
+
+### Phase 53: retroactive-application
+**Goal**: A regex created during discovery immediately categorizes existing uncategorized transactions, with the retroactive scope resolved and enforced.
+**Depends on**: Phase 52
+**Requirements**: APPLY-01, APPLY-02
+**Success Criteria** (what must be TRUE):
+  1. When the user promotes a discovered candidate into a regex, the uncategorized transactions of the current file that match it become categorized without a re-import.
+  2. Retroactive application honors the resolved scope decision (current file only vs the platform's entire uncategorized history); whichever scope is chosen, the user can observe exactly which existing transactions were (and were not) re-categorized.
+  3. Applying a regex never re-touches already-categorized transactions (Set A) and never crosses into another platform's history when the resolved scope is platform-bounded.
+**Plans**: TBD
+
+### Phase 54: reusable-trigger
+**Goal**: One discovery service is reachable from two entry points — automatically after every import and on demand from the Files table.
+**Depends on**: Phase 53
+**Requirements**: TRIG-01, TRIG-02
+**Success Criteria** (what must be TRUE):
+  1. After an import completes, discovery runs automatically as the step following auto-categorization, producing the same kind of results as a manual re-run.
+  2. From the Files table the user can trigger a "ricontrolla regex" re-check that invokes the same underlying discovery service (no parallel/divergent implementation), via whichever UX (per-row or bulk) is resolved in discuss/plan.
+  3. An on-demand re-check produces results consistent with the automatic post-import run for the same uncategorized set (same service → same candidates, modulo data changed since import).
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 55: import-summary-ux
+**Goal**: The post-import summary is legible — a bounded set of example transactions, clearly separated proposed regex versus single-categorization suggestions, and a cue that discovery is now its own step.
+**Depends on**: Phase 54
+**Requirements**: SUMUI-01, SUMUI-02, SUMUI-03
+**Success Criteria** (what must be TRUE):
+  1. The import summary shows at most 10 example transactions (raising the prior cap of 5).
+  2. Proposed regex suggestions and single-categorization suggestions are presented as visually distinct groups, so the user can tell at a glance which is which.
+  3. The summary communicates that regex discovery now happens as a separate step after import (exact copy/placement resolved in discuss/plan), without misrepresenting the new flow.
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans | Status | Completed |
@@ -167,22 +214,19 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 | 1–23 | M001–M006 | 87/87 | Complete | 2026-05 |
 | 24–28 | M007 | 20/20 | Complete | 2026-05-19 |
 | 29 | v1.8/M008 | 4/4 | Complete | 2026-05-20 |
-| 30 | v1.9 | 3/3 | Complete | 2026-05-21 |
-| 31 | v1.9 | 3/3 | Complete | 2026-05-21 |
-| 32 | v1.9 | 3/3 | Complete | 2026-05-22 |
-| 33 | v1.10 | 1/1 | Complete | 2026-05-22 |
-| 34 | v1.10 | 2/2 | Complete | 2026-05-23 |
-| 35 | v1.10 | 4/4 | Complete | 2026-05-23 |
-| 36 | v1.10 | 2/2 | Complete | 2026-05-23 |
+| 30–32 | v1.9 | 9/9 | Complete | 2026-05-22 |
+| 33–36 | v1.10 | 9/9 | Complete | 2026-05-25 |
 | 37 | v1.11 | 5/5 | Complete | 2026-05-26 |
 | 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
 | 39 | v1.13 | 6/6 | Complete | 2026-06-02 |
 | 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
-| 42 | v1.16 | 3/3 | Complete | 2026-06-08 |
-| 43 | v1.16 | 4/4 | Complete | 2026-06-08 |
-| 44 | v1.16 | 3/3 | Complete | 2026-06-08 |
-| 45 | v1.16 | 3/3 | Complete | 2026-06-09 |
+| 42–45 | v1.16 | 13/13 | Complete | 2026-06-09 |
 | 46–50 | v2.0 | 22/22 | Complete | 2026-06-14 |
+| 51. discovery-pipeline-reorder | v2.1 | 0/? | Not started | - |
+| 52. regex-validity-and-dedup | v2.1 | 0/? | Not started | - |
+| 53. retroactive-application | v2.1 | 0/? | Not started | - |
+| 54. reusable-trigger | v2.1 | 0/? | Not started | - |
+| 55. import-summary-ux | v2.1 | 0/? | Not started | - |
 
 **Total shipped: 50 phases · 186 plans complete**
