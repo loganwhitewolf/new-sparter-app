@@ -50,15 +50,9 @@ vi.mock('drizzle-orm', () => ({
   isNull: (column: unknown) => ({ op: 'isNull', column }),
 }))
 
-// normalizeDescription: real implementation from utils/import would normalize titles;
-// for tests we need a simple version that matches the production logic
-vi.mock('@/lib/utils/import', () => ({
-  normalizeDescription: (title: string) =>
-    title
-      .toLowerCase()
-      .replace(/[^a-z0-9\s*]/g, '')
-      .trim(),
-}))
+// normalizeDescription: use the real implementation (no server-only guard in utils/import).
+// A mock would diverge from production (it stripped non-alphanumeric chars; the real function
+// does not), causing match-count assertions to test the wrong normalization path.
 
 const { applyNewPatternToPlatformExpenses } = await import('../lib/services/pattern-application')
 
@@ -209,8 +203,8 @@ describe('applyNewPatternToPlatformExpenses', () => {
 
   // ── Numeric-stripped dual match (Pitfall 6 / matcher fidelity) ────────────
   it('matches via numeric-stripped form for titles with pure-numeric tokens', async () => {
-    // "***** 114 data operazione" → normalized "* 114 data operazione"
-    // → stripped: "* data operazione" (removes "114")
+    // "***** 114 data operazione" → normalized "***** 114 data operazione"
+    // → stripped (remove pure-numeric tokens): "***** data operazione" (removes "114")
     // Pattern "data operazione" matches the stripped form
     mocks.uncategorizedExpenses = [
       { id: 'exp-num-1', title: '***** 114 data operazione', totalAmount: '-50.00' },
