@@ -1,8 +1,12 @@
 import 'server-only'
 import { db } from '@/lib/db'
-import { getUncategorizedExpensesForDiscovery } from '@/lib/dal/regex-discovery'
+import {
+  getManuallyCategorizedHashes,
+  getUncategorizedExpensesForDiscovery,
+} from '@/lib/dal/regex-discovery'
 import { loadActivePatterns } from '@/lib/services/categorization'
 import {
+  candidateCoveredByExistingPattern,
   detectPatternSuggestionsWithMeta,
   type PatternDetectorRowWithMeta,
   type PatternSuggestionWithMeta,
@@ -11,8 +15,16 @@ import { normalizeDescription } from '@/lib/utils/import'
 
 export type DiscoveryScope = { platformId: number }
 
+export type SingleCategorizationSuggestion = {
+  normalizedDescription: string
+  sampleDescriptions: string[]
+  matchCount: number
+  descriptionHashes: string[]
+}
+
 export type DiscoveryResult = {
   candidates: PatternSuggestionWithMeta[]
+  singleCategorizationSuggestions: SingleCategorizationSuggestion[]
   totalUncategorized: number
   platformId: number
 }
@@ -28,6 +40,17 @@ function applyStrip(rawTitle: string, stripPattern: string | null): string {
     return rawTitle.replace(new RegExp(stripPattern, 'i'), '').trim()
   } catch {
     return rawTitle
+  }
+}
+
+function toSingleCategorization(
+  suggestion: PatternSuggestionWithMeta,
+): SingleCategorizationSuggestion {
+  return {
+    normalizedDescription: suggestion.sampleNormalized,
+    sampleDescriptions: suggestion.sampleDescriptions,
+    matchCount: suggestion.matchCount,
+    descriptionHashes: suggestion.descriptionHashes,
   }
 }
 
@@ -74,16 +97,44 @@ export async function discoverRegexCandidates(input: {
       covered: false,
       rawTitle,
       strippedByNormalization: stripped !== rawTitle,
+      descriptionHash: e.descriptionHash ?? null,
     }
   })
 
   // 4. Delegate to pure util — coverage filtering + prefix/variable clustering
-  const candidates = detectPatternSuggestionsWithMeta(detectorRows, activePatterns)
+  const clustered = detectPatternSuggestionsWithMeta(detectorRows, activePatterns)
+
+  // 5. RDISC-01/02: non-empty residuals are regex families; empty residuals are
+  // identical-after-normalization groups surfaced as single-categorization suggestions.
+  let regexFamilies = clustered.filter(s => s.residualVariablePart.trim() !== '')
+  const identicalGroups = clustered.filter(s => s.residualVariablePart.trim() === '')
+
+  // 6. RDISC-03 Check 1: drop regex families covered by an existing active pattern.
+  regexFamilies = regexFamilies.filter(
+    s => !candidateCoveredByExistingPattern(s, activePatterns),
+  )
+
+  // 7. RDISC-04 Check 2: drop any regex or single suggestion with a member hash the
+  // user has already manually categorized anywhere in their history.
+  const allHashes = [...regexFamilies, ...identicalGroups].flatMap(s => s.descriptionHashes)
+  const manualHashes = await getManuallyCategorizedHashes(userId, allHashes)
+  const notManuallyCovered = (s: { descriptionHashes: string[] }) =>
+    !s.descriptionHashes.some(hash => manualHashes.has(hash))
+
+  const candidates = regexFamilies
+    .filter(notManuallyCovered)
     .sort((a, b) => b.matchCount - a.matchCount)
     .slice(0, 10) // cap at 10; Phase 55 renders these in the import summary
 
+  const singleCategorizationSuggestions = identicalGroups
+    .filter(notManuallyCovered)
+    .map(toSingleCategorization)
+    .sort((a, b) => b.matchCount - a.matchCount)
+    .slice(0, 10)
+
   return {
     candidates,
+    singleCategorizationSuggestions,
     totalUncategorized: expenses.length,
     platformId: scope.platformId,
   }
