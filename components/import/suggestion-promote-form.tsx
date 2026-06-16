@@ -57,8 +57,8 @@ export function SuggestionPromoteForm({ suggestion, categories, fileId, onPromot
     >
       {/*
         Hidden inputs pre-filled from the suggestion.
-        amountSign is intentionally NOT sent — the Server Action derives it server-side (ADR 0008).
-        confidence is NOT sent — hardcoded to 1 server-side (T-39-09).
+        amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012, supersedes ADR 0008)
+        confidence is NOT sent — Server Action hardcodes 0.85 per D-01 (ignores any client value)
       */}
       <input type="hidden" name="pattern" value={suggestion.pattern} />
       <input type="hidden" name="subCategoryId" value={subCategoryId} />
