@@ -64,12 +64,12 @@ function MoverList({ movers, emptyStateCopy, toneOnIncrease }: MoverListProps) {
 
 // ─── Main panel ───────────────────────────────────────────────────────────────
 
-/**
- * Presentational panel displaying top-movers for a selected month in a 4-column layout:
- * Variazioni entrate | Dove hai risparmiato | Dove hai speso di più | Accantonamenti
- *
- * The OUT movers are pre-split by the parent into increases/savings so each gets
- * its own column. No fetching — all state lives in OverviewMoversSection.
+ /**
+  * Presentational panel displaying top-movers for a selected month in a 4-column layout:
+ * Income changes | Savings movers | Higher spending movers | Allocation movers
+  *
+  * The OUT movers are pre-split by the parent into increases/savings so each gets
+  * its own column. No fetching — all state lives in OverviewMoversSection.
  */
 export function OverviewMoversPanel({
   year,

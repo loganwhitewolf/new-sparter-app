@@ -68,7 +68,7 @@ describe('SuggestionPromoteForm', () => {
 
   it('REV-03: renders only Sottocategoria label — no cascading Categoria+Sottocategoria pair', () => {
     // The rebuilt form removed the cascading Category→Subcategory Select pair (plan 39-05).
-    // Only a single "Sottocategoria" label + picker trigger remains.
+    // Only a single "Subcategory" label + picker trigger remains.
     const html = renderToStaticMarkup(
       createElement(SuggestionPromoteForm, {
         suggestion,
@@ -77,11 +77,11 @@ describe('SuggestionPromoteForm', () => {
       }),
     )
 
-    // "Sottocategoria" label still present
+    // The subcategory label is still present.
     expect(html).toContain('Sottocategoria')
-    // "Categoria" as a standalone label no longer exists (was removed with the cascading Select)
-    // Note: "Sottocategoria" contains the substring "categoria" — we check for the exact label text
-    // by looking for patterns that would indicate a separate Categoria label element
+    // Category as a standalone label no longer exists (was removed with the cascading Select).
+    // Note: the Italian subcategory label contains the category substring, so we check for
+    // patterns that would indicate a separate Category label element.
     expect(html).not.toMatch(/<label[^>]*>\s*Categoria\s*<\/label>/)
   })
 
