@@ -31,9 +31,21 @@ All milestones M001–v2.0 (Phases 1–50) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Next Milestone
+## Current Milestone: v2.1 Regex Discovery & Transaction Unification (Area 3)
 
-TBD — run `/gsd-new-milestone` to scope the next milestone. Operator deploy (R038/R039/R041 — live Vercel/Supabase/R2) remains operator-pending and is the most likely near-term candidate.
+**Goal:** Re-architect regex discovery as a separate step *downstream* of auto-categorization (today it runs inside import, before categorization), removing duplicate and already-covered proposals, with a reusable trigger and a cleaned-up import summary.
+
+**Target features:**
+- Reordered pipeline: platform-specific normalization → auto-categorization → regex discovery over the uncategorized set only; discovery extracted from the import flow into a standalone, reusable service.
+- Correct regex definition: a regex is valid only when, after normalization, ≥2 transactions share a common prefix but differ in a residual variable part. If they become identical → single categorization, not a regex.
+- Dedup Check 1 (existing regex table) and Check 2 (existing manual category coverage) before proposing.
+- Retroactive application scope (current file vs entire uncategorized platform history) — decided during development.
+- Reusable trigger: same service invoked automatically post-import and on-demand from the Files table ("re-check regex").
+- Import summary redesign: max 10 example transactions, visual separation of proposed regex vs single categorization suggestions.
+
+**Note:** A bank-agnostic offline tool already exists (`yarn regex:discover` + `/regex-label` skill, quick-task 260615-dtm). Its relationship to this in-pipeline discovery must be clarified during planning.
+
+Operator deploy (R038/R039/R041 — live Vercel/Supabase/R2) remains operator-pending.
 
 ## Last Shipped Milestone: v2.0 — Nature/Direction Model Realignment (shipped 2026-06-14)
 
@@ -190,4 +202,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-14 — after v2.0 milestone (Nature/Direction Model Realignment shipped)*
+*Last updated: 2026-06-16 — started milestone v2.1 (Regex Discovery & Transaction Unification)*
