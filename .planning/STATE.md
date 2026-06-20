@@ -4,17 +4,17 @@ milestone: v2.1
 milestone_name: — Regex Discovery & Transaction Unification
 current_phase: 54
 current_phase_name: reusable-trigger
-status: executing
-stopped_at: Phase 54 Plan 02 complete — ready for 54-03
-last_updated: "2026-06-20T13:33:12Z"
+status: verifying
+stopped_at: Phase 54 Plan 03 complete — TRIG-02 on-demand re-check wired, Phase 54 complete
+last_updated: "2026-06-20T13:41:22.059Z"
 last_activity: 2026-06-20
-last_activity_desc: Phase 54 Plan 02 executed — TRIG-01 wired (post-commit discovery + CTA)
+last_activity_desc: Phase 54 execution started
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 11
-  percent: 92
+  completed_plans: 12
+  percent: 80
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 
 Phase: 54 (reusable-trigger) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-20 — Phase 54 execution started
 
 ## Roadmap (v2.1 — Phases 51–55)
@@ -72,6 +72,8 @@ Plan 53-03: fileId/platformId threaded from RSC page → SuggestionSection → S
 Plan 54-01: suggestions page migrated to discoverRegexCandidates (D-04) — platform-scoped, consistent with apply path; notFound() guards preserved; detectPatternSuggestions removal deferred to Phase 55.
 
 Plan 54-02: post-commit discovery synchronous (D-02) — non-fatal try/catch, logs post_import_discovery_failed on error; null platformId post-commit → skip discovery, discoveryCount 0 (T-54-04 mitigation); no auto-redirect to suggestions page (D-05) — CTA only; onboarding returnTo path preserved unchanged.
+
+Plan 54-03: recheckRegexAction is a thin, ownership-guarded server action over discoverRegexCandidates — no second detector path (TRIG-02 SC-3 satisfied); userId always from verifySession (T-54-09); platformId always from getPlatformIdForUserFile (T-54-08 IDOR guard); zero candidates → toast no navigation (D-06); total > 0 → router.push to /import/[fileId]/suggestions (D-03).
 
 Design contract is LOCKED. Do not re-open or re-derive the data model:
 
@@ -132,7 +134,7 @@ None.
 
 **Stopped at:** Phase 54 context gathered
 
-Last session: 2026-06-20T13:34:52.383Z
+Last session: 2026-06-20T13:41:22.054Z
 Handoff synced: 2026-06-16 — Phase 53 complete: all 3 plans done. Plan 03 wired inline apply feedback UI (commits 4406115, ce3190b).
 Resume file: .planning/phases/54-reusable-trigger/54-CONTEXT.md
 
@@ -162,3 +164,5 @@ Resume file: .planning/phases/54-reusable-trigger/54-CONTEXT.md
 | Phase 53 P02 | 8min | 2 tasks (TDD RED+GREEN) | 4 files |
 | Phase 53 P03 | 10min | 2 tasks + verification | 7 files |
 | Phase 54 P01 | 3min | 3 tasks | 3 files |
+| Phase 54 P02 | 5min | 2 tasks (TDD RED+GREEN) | 3 files |
+| Phase 54 P03 | 8min | 3 tasks (TDD RED+GREEN) | 5 files |
