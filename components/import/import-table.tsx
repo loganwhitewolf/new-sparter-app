@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertCircle } from "lucide-react";
 import { formatAbsoluteAmount } from "@/lib/utils/format-amount";
 import { toast } from "sonner";
@@ -23,7 +24,7 @@ import {
 } from "@/components/ui/table";
 import { useToolbarSort } from "@/components/data-table/DataTableToolbar";
 import { HeaderSortButton } from "@/components/data-table/HeaderSortButton";
-import { loadMoreImports } from "@/lib/actions/import";
+import { loadMoreImports, recheckRegexAction } from "@/lib/actions/import";
 import type { ImportListRow } from "@/lib/dal/imports";
 import type {
   ImportSearchParams,
@@ -116,6 +117,10 @@ export function ImportTable({
   const [deleteImport, setDeleteImport] = useState<ImportListRow | null>(null);
   const [staleDeleteImport, setStaleDeleteImport] =
     useState<ImportListRow | null>(null);
+
+  // TRIG-02: re-check state — single boolean (menu is disabled during the call)
+  const [recheckPending, setRecheckPending] = useState(false);
+  const router = useRouter();
   const isLoadingMoreRef = useRef(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const filtered = hasActiveFilters(filters);
@@ -185,6 +190,41 @@ export function ImportTable({
   function handleDeleteSuccess(fileId: string) {
     setLoadedImports((current) => current.filter((row) => row.id !== fileId));
     setDeleteImport(null);
+  }
+
+  /**
+   * On-demand per-row regex re-check (TRIG-02).
+   * Calls recheckRegexAction as a plain async fn (not useActionState) so navigation
+   * can happen synchronously after the await (D-03).
+   * - Zero candidates: shows toast without navigating (D-06).
+   * - Action error: shows toast.error without navigating.
+   * - Success (>0): navigates to the suggestions page (D-03).
+   */
+  async function handleRecheckRegex(row: ImportListRow) {
+    setRecheckPending(true);
+
+    const formData = new FormData();
+    formData.set("fileId", row.id);
+    const result = await recheckRegexAction(formData);
+
+    setRecheckPending(false);
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    const total =
+      (result.data?.candidatesCount ?? 0) + (result.data?.singleCount ?? 0);
+
+    if (total === 0) {
+      // D-06: zero candidates — stay on the table, show neutral toast
+      toast("Nessun pattern trovato per questa piattaforma");
+      return;
+    }
+
+    // D-03: navigate to the suggestions page when candidates are found
+    router.push(`/import/${encodeURIComponent(row.id)}/suggestions`);
   }
 
   if (loadError) {
@@ -344,6 +384,8 @@ export function ImportTable({
                       onRename={setRenameImport}
                       onDelete={setDeleteImport}
                       onDeleteStale={setStaleDeleteImport}
+                      onRecheckRegex={handleRecheckRegex}
+                      isRecheckPending={recheckPending}
                     />
                   </TableCell>
                 </TableRow>
