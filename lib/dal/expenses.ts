@@ -66,16 +66,26 @@ export type ExpenseRow = {
 /** Matches "Titolo" column label (case-insensitive). */
 export const expenseTitleSortKey = sql<string>`LOWER(${expense.title})`
 
-/** Matches "Categoria" column label (`Categoria · Sottocategoria`, case-insensitive). */
+/** Total column uses formatAbsoluteAmount — sort by magnitude, not sign (D-20). */
+export const expenseTotalAmountAbsSortKey = sql`ABS(${expense.totalAmount}::numeric)`
+
+/** Rows showing "—" in the category column (missing category or subcategory name). */
+export const expenseCategoryIncompleteBucket = sql<number>`CASE
+  WHEN ${category.name} IS NULL THEN 1
+  WHEN COALESCE(
+    NULLIF(TRIM(${userSubcategoryOverride.customName}), ''),
+    NULLIF(TRIM(${subCategory.name}), '')
+  ) IS NULL THEN 1
+  ELSE 0
+END`
+
+/** Matches "Categoria · Sottocategoria" when both names are present (case-insensitive). */
 export const expenseCategorySortKey = sql<string>`LOWER(
-  CASE
-    WHEN ${category.name} IS NULL THEN 'zzzzzz'
-    ELSE CONCAT(
-      COALESCE(${category.name}, ''),
-      ' · ',
-      COALESCE(NULLIF(TRIM(${userSubcategoryOverride.customName}), ''), ${subCategory.name}, '')
-    )
-  END
+  CONCAT(
+    ${category.name},
+    ' · ',
+    COALESCE(NULLIF(TRIM(${userSubcategoryOverride.customName}), ''), ${subCategory.name})
+  )
 )`
 
 export function getExpenseSortColumn(sort: ExpenseSort) {
@@ -85,10 +95,13 @@ export function getExpenseSortColumn(sort: ExpenseSort) {
     case 'category':
       return expenseCategorySortKey
     case 'totalAmount':
-      return expense.totalAmount
+      return expenseTotalAmountAbsSortKey
     case 'createdAt':
-    default:
       return expense.createdAt
+    default: {
+      const _exhaustive: never = sort
+      return _exhaustive
+    }
   }
 }
 
@@ -96,6 +109,13 @@ export function buildExpenseOrderBy({
   sort = 'createdAt',
   dir = 'desc',
 }: Pick<ExpenseFilters, 'sort' | 'dir'> = {}) {
+  // Incomplete category rows ("—") stay last in both ASC and DESC via bucket 0/1.
+  if (sort === 'category') {
+    return dir === 'asc'
+      ? [asc(expenseCategoryIncompleteBucket), asc(expenseCategorySortKey), asc(expense.id)]
+      : [asc(expenseCategoryIncompleteBucket), desc(expenseCategorySortKey), desc(expense.id)]
+  }
+
   const column = getExpenseSortColumn(sort)
   // Tie-break on id so OFFSET pagination never returns the same expense twice.
   return dir === 'asc'

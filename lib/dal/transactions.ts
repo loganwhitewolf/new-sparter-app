@@ -201,11 +201,16 @@ export const transactionAmountAbsSortKey = sql`ABS(${transaction.amount}::numeri
 export const transactionLinkedExpenseCategorySortKey = sql<string>`LOWER(
   CASE
     WHEN ${expense.id} IS NULL THEN 'nessuna spesa collegata'
-    WHEN ${expense.subCategoryId} IS NULL OR ${expense.status} NOT IN ('2', '3') THEN 'da categorizzare'
+    WHEN ${expense.status} NOT IN ('2', '3') THEN 'da categorizzare'
+    WHEN ${category.name} IS NULL
+      OR COALESCE(
+        NULLIF(TRIM(${userSubcategoryOverride.customName}), ''),
+        NULLIF(TRIM(${subCategory.name}), '')
+      ) IS NULL THEN 'categorizzata'
     ELSE CONCAT(
-      COALESCE(${category.name}, ''),
+      ${category.name},
       ' → ',
-      COALESCE(NULLIF(TRIM(${userSubcategoryOverride.customName}), ''), ${subCategory.name}, '')
+      COALESCE(NULLIF(TRIM(${userSubcategoryOverride.customName}), ''), ${subCategory.name})
     )
   END
 )`

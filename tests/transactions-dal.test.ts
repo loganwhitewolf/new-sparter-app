@@ -228,6 +228,56 @@ describe('transaction DAL query helpers', () => {
     ])
   })
 
+  describe('transactionLinkedExpenseCategorySortKey — Spesa collegata labels', () => {
+    const fragment = transactionLinkedExpenseCategorySortKey as {
+      op: string
+      strings?: string[]
+      values?: unknown[]
+    }
+    const sqlText = () => (fragment.strings ?? []).join('')
+    const sqlValues = () => fragment.values ?? []
+
+    it('is a LOWER(CASE) fragment on joined expense/category columns', () => {
+      expect(fragment).toMatchObject({ op: 'sql' })
+      expect(sqlText().toLowerCase()).toContain('lower(')
+      expect(sqlText().toLowerCase()).toContain('case')
+      expect(sqlValues()).toEqual(
+        expect.arrayContaining([
+          'expense.id',
+          'expense.status',
+          'category.name',
+          'userSubcategoryOverride.customName',
+          'subCategory.name',
+        ]),
+      )
+    })
+
+    it('maps unlinked transactions to nessuna spesa collegata', () => {
+      expect(sqlText()).toContain("'nessuna spesa collegata'")
+      expect(sqlText().toLowerCase()).toMatch(/when\s+.*is null\s+then/)
+    })
+
+    it('maps uncategorized expense status to da categorizzare via expense.status', () => {
+      expect(sqlText()).toContain("'da categorizzare'")
+      expect(sqlText()).toContain("NOT IN ('2', '3')")
+      // Regression: sort follows expense.status (UI badge), not subCategoryId.
+      expect(sqlText()).not.toContain('subCategoryId')
+      expect(sqlText()).not.toContain('sub_category_id')
+    })
+
+    it('maps categorized expense with missing category/subcategory names to categorizzata', () => {
+      expect(sqlText()).toContain("'categorizzata'")
+      expect(sqlText()).toContain('NULLIF(TRIM(')
+      expect(sqlValues()).toContain('category.name')
+    })
+
+    it('builds full category path with arrow separator when names are present', () => {
+      expect(sqlText()).toContain("' → '")
+      expect(sqlText()).toContain('CONCAT(')
+      expect(sqlText()).toContain('COALESCE(NULLIF(TRIM(')
+    })
+  })
+
   it('maps parsed URL filters to DAL filters including direction', () => {
     expect(
       mapParsedTransactionFiltersToDal({

@@ -126,6 +126,8 @@ const {
   EXPENSE_LIST_LIMIT,
   expenseTitleSortKey,
   expenseCategorySortKey,
+  expenseCategoryIncompleteBucket,
+  expenseTotalAmountAbsSortKey,
   getExpenseSortColumn,
   getExpenses,
 } = await import('../lib/dal/expenses')
@@ -174,14 +176,33 @@ describe('expense DAL list pagination', () => {
     await getExpenses({ sort: 'totalAmount', dir: 'asc' })
 
     expect(mocks.orderByArgs).toEqual([
-      { op: 'asc', column: 'expense.totalAmount' },
+      { op: 'asc', column: expenseTotalAmountAbsSortKey },
+      { op: 'asc', column: 'expense.id' },
+    ])
+  })
+
+  it('orders category sort with incomplete rows last in both directions', async () => {
+    await getExpenses({ sort: 'category', dir: 'desc' })
+
+    expect(mocks.orderByArgs).toEqual([
+      { op: 'asc', column: expenseCategoryIncompleteBucket },
+      { op: 'desc', column: expenseCategorySortKey },
+      { op: 'desc', column: 'expense.id' },
+    ])
+
+    mocks.orderByArgs.length = 0
+    await getExpenses({ sort: 'category', dir: 'asc' })
+
+    expect(mocks.orderByArgs).toEqual([
+      { op: 'asc', column: expenseCategoryIncompleteBucket },
+      { op: 'asc', column: expenseCategorySortKey },
       { op: 'asc', column: 'expense.id' },
     ])
   })
 
   it('maps sort keys to DAL columns and expressions', () => {
     expect(getExpenseSortColumn('createdAt')).toBe('expense.createdAt')
-    expect(getExpenseSortColumn('totalAmount')).toBe('expense.totalAmount')
+    expect(getExpenseSortColumn('totalAmount')).toBe(expenseTotalAmountAbsSortKey)
     expect(getExpenseSortColumn('title')).toBe(expenseTitleSortKey)
     expect(getExpenseSortColumn('category')).toBe(expenseCategorySortKey)
   })

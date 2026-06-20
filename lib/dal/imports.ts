@@ -84,10 +84,11 @@ export const importNegativeTotalAbsSortKey = sql`ABS(${file.negativeTotal}::nume
 /** Matches "Totale entrate" column (absolute value). */
 export const importPositiveTotalAbsSortKey = sql`ABS(${file.positiveTotal}::numeric)`
 
-/** Matches "Piattaforma" column label (platform name or fallback, case-insensitive). */
-export const importPlatformSortKey = sql<string>`LOWER(
-  COALESCE(${platform.name}, 'piattaforma non disponibile')
-)`
+/** Rows showing "—" in the platform column (no joined platform name). */
+export const importPlatformMissingBucket = sql<number>`CASE WHEN ${platform.name} IS NULL THEN 1 ELSE 0 END`
+
+/** Matches "Piattaforma" column label when a platform name exists (case-insensitive). */
+export const importPlatformSortKey = sql<string>`LOWER(${platform.name})`
 
 /** Matches "Stato" badge labels (Italian, case-insensitive). Cast enum to text for CASE branches. */
 export const importStatusSortKey = sql<string>`LOWER(
@@ -135,7 +136,15 @@ export function buildImportOrderBy({
   sort = 'importedAt',
   dir = 'desc',
 }: Pick<ParsedImportFilters, 'sort' | 'dir'> = {}) {
-  const effectiveSort: ImportSort = (sort as ImportSort) ?? 'importedAt'
+  const effectiveSort: ImportSort = sort ?? 'importedAt'
+
+  // Missing platform rows ("—") stay last in both ASC and DESC via bucket 0/1.
+  if (effectiveSort === 'platform') {
+    return dir === 'asc'
+      ? [asc(importPlatformMissingBucket), asc(importPlatformSortKey), asc(file.id)]
+      : [asc(importPlatformMissingBucket), desc(importPlatformSortKey), desc(file.id)]
+  }
+
   const column = getImportSortColumn(effectiveSort)
 
   // Tie-break on id so OFFSET pagination never returns the same file twice.

@@ -178,6 +178,7 @@ const {
   getFileCoveredMonths,
   importNegativeTotalAbsSortKey,
   importPositiveTotalAbsSortKey,
+  importPlatformMissingBucket,
   importPlatformSortKey,
   importStatusSortKey,
   importDisplayNameSortKey,
@@ -333,6 +334,22 @@ describe('imports DAL read model', () => {
     expect(ascOrder[1]).toEqual({ op: 'asc', column: 'file.id' })
     expect(descOrder[0]).toEqual({ op: 'desc', column: importNegativeTotalAbsSortKey })
     expect(descOrder[1]).toEqual({ op: 'desc', column: 'file.id' })
+  })
+
+  it('orders platform sort with missing platform rows last in both directions', () => {
+    const ascOrder = buildImportOrderBy({ sort: 'platform', dir: 'asc' })
+    const descOrder = buildImportOrderBy({ sort: 'platform', dir: 'desc' })
+
+    expect(ascOrder).toEqual([
+      { op: 'asc', column: importPlatformMissingBucket },
+      { op: 'asc', column: importPlatformSortKey },
+      { op: 'asc', column: 'file.id' },
+    ])
+    expect(descOrder).toEqual([
+      { op: 'asc', column: importPlatformMissingBucket },
+      { op: 'desc', column: importPlatformSortKey },
+      { op: 'desc', column: 'file.id' },
+    ])
   })
 
   it('applies parsed sort and dir from filters to orderBy', async () => {
