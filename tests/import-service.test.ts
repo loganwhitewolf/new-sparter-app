@@ -11,6 +11,10 @@ const mocks = vi.hoisted(() => ({
   markFileFailed: vi.fn(),
   updateFileAnalysisState: vi.fn(),
   updateFileImportState: vi.fn(),
+  getPlatformIdForUserFile: vi.fn(),
+
+  // services/regex-discovery
+  discoverRegexCandidates: vi.fn(),
 
   // dal/import-formats
   loadImportFormatsForDetection: vi.fn(),
@@ -195,6 +199,7 @@ vi.mock('@/lib/dal/files', () => ({
   markFileFailed: mocks.markFileFailed,
   updateFileAnalysisState: mocks.updateFileAnalysisState,
   updateFileImportState: mocks.updateFileImportState,
+  getPlatformIdForUserFile: mocks.getPlatformIdForUserFile,
 }))
 
 vi.mock('@/lib/dal/transactions', () => ({
@@ -208,6 +213,10 @@ vi.mock('@/lib/dal/import-formats', () => ({
 
 vi.mock('@/lib/dal/classification-history', () => ({
   writeClassificationHistory: mocks.writeClassificationHistory,
+}))
+
+vi.mock('@/lib/services/regex-discovery', () => ({
+  discoverRegexCandidates: mocks.discoverRegexCandidates,
 }))
 
 vi.mock('@/lib/services/r2', () => ({
@@ -1265,6 +1274,133 @@ describe('importFile', () => {
     expect(mocks.markFileFailed).toHaveBeenCalledWith(
       expect.objectContaining({ userId: USER_ID, fileId: FILE_ID }),
     )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// importFile — post-commit discovery (TRIG-01) tests
+// ---------------------------------------------------------------------------
+describe('importFile — post-commit discovery (TRIG-01)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getFileForUser.mockResolvedValue(makeFileRow({ status: 'analyzed' }))
+    mocks.updateFileImportState.mockResolvedValue(makeFileRow({ status: 'importing' }))
+    mocks.markFileFailed.mockResolvedValue(makeFileRow({ status: 'failed' }))
+    mocks.getDuplicateHashes.mockResolvedValue(new Set<string>())
+    mocks.loadActivePatterns.mockResolvedValue([])
+    mocks.categorizePipeline.mockResolvedValue(null)
+    mocks.insertTransactionBatch.mockResolvedValue([])
+    mocks.writeClassificationHistory.mockResolvedValue(undefined)
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
+    mocks.loadImportFormatsForDetection.mockResolvedValue([makeFormatCandidate()])
+    mocks.readObjectBody.mockResolvedValue(
+      (async function* () { yield GENERAL_CSV })(),
+    )
+    mocks.getPlatformIdForUserFile.mockResolvedValue(5)
+    mocks.discoverRegexCandidates.mockResolvedValue({
+      candidates: [],
+      singleCategorizationSuggestions: [],
+      totalUncategorized: 0,
+      platformId: 5,
+    })
+
+    mocks.dbTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                then: vi.fn((onFulfilled?: (rows: unknown[]) => unknown) => {
+                  const rows: unknown[] = []
+                  return Promise.resolve(onFulfilled ? onFulfilled(rows) : rows)
+                }),
+              }),
+            }),
+          }),
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      }
+      return callback(tx)
+    })
+  })
+
+  it('Test 1: successful import returns discoveryCount equal to candidates + singleCategorizationSuggestions', async () => {
+    mocks.discoverRegexCandidates.mockResolvedValue({
+      candidates: [
+        { pattern: 'esselunga', matchCount: 3, residualVariablePart: '', sampleDescriptions: [], descriptionHashes: [] },
+        { pattern: 'caffè', matchCount: 2, residualVariablePart: '', sampleDescriptions: [], descriptionHashes: [] },
+      ],
+      singleCategorizationSuggestions: [
+        { normalizedDescription: 'netflix', sampleDescriptions: ['NETFLIX'], matchCount: 1, descriptionHashes: [] },
+      ],
+      totalUncategorized: 3,
+      platformId: 5,
+    })
+
+    const result = await importFile({ userId: USER_ID, fileId: FILE_ID })
+
+    expect(result.discoveryCount).toBe(3) // 2 candidates + 1 singleCategorizationSuggestion
+  })
+
+  it('Test 2: when discoverRegexCandidates throws, importFile returns successfully with discoveryCount 0 and logs post_import_discovery_failed', async () => {
+    mocks.discoverRegexCandidates.mockRejectedValue(new Error('Discovery service failed'))
+
+    const result = await importFile({ userId: USER_ID, fileId: FILE_ID })
+
+    // Import still succeeds
+    expect(result).toMatchObject({ fileId: FILE_ID, rowCount: 2, importedCount: 0 })
+    // discoveryCount is 0
+    expect(result.discoveryCount).toBe(0)
+    // Warning logged
+    expect(mocks.loggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'post_import_discovery_failed', userId: USER_ID, fileId: FILE_ID }),
+    )
+  })
+
+  it('Test 3: when getPlatformIdForUserFile returns null, discovery is skipped and discoveryCount is 0', async () => {
+    mocks.getPlatformIdForUserFile.mockResolvedValue(null)
+
+    const result = await importFile({ userId: USER_ID, fileId: FILE_ID })
+
+    // Import still succeeds
+    expect(result).toMatchObject({ fileId: FILE_ID })
+    // Discovery not called
+    expect(mocks.discoverRegexCandidates).not.toHaveBeenCalled()
+    // discoveryCount is 0
+    expect(result.discoveryCount).toBe(0)
+  })
+
+  it('Test 4: discoverRegexCandidates is called AFTER the transaction with userId and platformId only (no tx handle)', async () => {
+    const PLATFORM_ID = 42
+    mocks.getPlatformIdForUserFile.mockResolvedValue(PLATFORM_ID)
+    mocks.discoverRegexCandidates.mockResolvedValue({
+      candidates: [],
+      singleCategorizationSuggestions: [],
+      totalUncategorized: 0,
+      platformId: PLATFORM_ID,
+    })
+
+    await importFile({ userId: USER_ID, fileId: FILE_ID })
+
+    // Called with userId and scope.platformId — no tx handle
+    expect(mocks.discoverRegexCandidates).toHaveBeenCalledWith({
+      userId: USER_ID,
+      scope: { platformId: PLATFORM_ID },
+    })
+    // Called after transaction resolves (getPlatformIdForUserFile uses the main db, not a tx)
+    expect(mocks.getPlatformIdForUserFile).toHaveBeenCalledWith({
+      userId: USER_ID,
+      fileId: FILE_ID,
+    })
   })
 })
 
