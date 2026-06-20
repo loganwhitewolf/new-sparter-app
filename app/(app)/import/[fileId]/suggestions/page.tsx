@@ -1,15 +1,8 @@
 import { notFound } from 'next/navigation'
-import { db } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import { getFileForUser, getPlatformIdForUserFile } from '@/lib/dal/files'
-import { getUncategorizedTransactionsByFileId } from '@/lib/dal/transactions'
 import { getCategories } from '@/lib/dal/categories'
-import { loadActivePatterns } from '@/lib/services/categorization'
-import {
-  detectPatternSuggestions,
-  type PatternDetectorRow,
-} from '@/lib/utils/pattern-suggestions'
-import { normalizeDescription } from '@/lib/utils/import'
+import { discoverRegexCandidates } from '@/lib/services/regex-discovery'
 import { SuggestionSection } from '@/components/import/suggestion-section'
 
 export default async function SuggestionsPage({
@@ -30,24 +23,11 @@ export default async function SuggestionsPage({
     notFound()
   }
 
-  const [uncategorizedTxs, activePatterns, categories] = await Promise.all([
-    getUncategorizedTransactionsByFileId(db, fileId, userId),
-    loadActivePatterns(db, userId),
+  // D-04: platform-scoped discovery (not file-scoped) — intentional, consistent with apply path
+  const [discovery, categories] = await Promise.all([
+    discoverRegexCandidates({ userId, scope: { platformId } }),
     getCategories(),
   ])
-
-  const detectorRows: PatternDetectorRow[] = uncategorizedTxs.map((t) => ({
-    description: t.description,
-    normalizedDescription: normalizeDescription(t.description),
-    amount: t.amount,
-    valid: true,
-    covered: false,
-  }))
-
-  const raw = detectPatternSuggestions(detectorRows, activePatterns)
-  const patternSuggestions = raw
-    .sort((a, b) => b.matchCount - a.matchCount)
-    .slice(0, 5)
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,13 +37,14 @@ export default async function SuggestionsPage({
           Crea pattern per categorizzare automaticamente transazioni simili nelle prossime importazioni.
         </p>
       </div>
-      {patternSuggestions.length === 0 ? (
+      {discovery.candidates.length === 0 && discovery.singleCategorizationSuggestions.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           Nessun suggerimento trovato — tutte le transazioni risultano già categorizzate o non sono stati rilevati pattern ricorrenti.
         </p>
       ) : (
         <SuggestionSection
-          suggestions={patternSuggestions}
+          suggestions={discovery.candidates}
+          singleSuggestions={discovery.singleCategorizationSuggestions}
           categories={categories}
           fileId={fileId}
         />
