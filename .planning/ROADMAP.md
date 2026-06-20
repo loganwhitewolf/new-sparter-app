@@ -234,9 +234,15 @@ Plans:
   3. An on-demand re-check produces results consistent with the automatic post-import run for the same uncategorized set (same service → same candidates, modulo data changed since import).
 
 **Plans**: 3 plans
+**Wave 1**
+
 - [ ] 54-01-PLAN.md — Migrate the suggestions page to the unified discoverRegexCandidates service (D-04, foundation; fixes EUR-deposit anchor) [Wave 1]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 54-02-PLAN.md — Post-commit auto-run in importFile + discoveryCount field + import-result CTA (TRIG-01) [Wave 2]
 - [ ] 54-03-PLAN.md — Per-row "ricontrolla regex" action + thin server action over the unified service (TRIG-02) [Wave 2]
+
 **UI hint**: yes
 
 ### Phase 55: import-summary-ux
