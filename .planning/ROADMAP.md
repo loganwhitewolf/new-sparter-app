@@ -233,7 +233,10 @@ Plans:
   2. From the Files table the user can trigger a "ricontrolla regex" re-check that invokes the same underlying discovery service (no parallel/divergent implementation), via whichever UX (per-row or bulk) is resolved in discuss/plan.
   3. An on-demand re-check produces results consistent with the automatic post-import run for the same uncategorized set (same service → same candidates, modulo data changed since import).
 
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 54-01-PLAN.md — Migrate the suggestions page to the unified discoverRegexCandidates service (D-04, foundation; fixes EUR-deposit anchor) [Wave 1]
+- [ ] 54-02-PLAN.md — Post-commit auto-run in importFile + discoveryCount field + import-result CTA (TRIG-01) [Wave 2]
+- [ ] 54-03-PLAN.md — Per-row "ricontrolla regex" action + thin server action over the unified service (TRIG-02) [Wave 2]
 **UI hint**: yes
 
 ### Phase 55: import-summary-ux
