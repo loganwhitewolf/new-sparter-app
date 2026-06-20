@@ -30,15 +30,23 @@ function isNextNavigationError(error: unknown) {
   return digest.startsWith('NEXT_REDIRECT') || digest.startsWith('NEXT_HTTP_ERROR_FALLBACK')
 }
 
-function getFilterKey(filters: ReturnType<typeof parseImportFilters>) {
-  return JSON.stringify({
-    q: filters.q ?? '',
-    platform: filters.platform ?? '',
-    statusBucket: filters.statusBucket ?? '',
-    months: (filters.months ?? []).join(','),
-    amountMin: filters.amountMin ?? '',
-    amountMax: filters.amountMax ?? '',
-  })
+function buildImportTableKey(
+  filters: ReturnType<typeof parseImportFilters>,
+  imports: ImportListRow[],
+) {
+  const filterKey = [
+    filters.q ?? '',
+    filters.platform ?? '',
+    filters.statusBucket ?? '',
+    (filters.months ?? []).join(','),
+    filters.amountMin ?? '',
+    filters.amountMax ?? '',
+    filters.sort ?? '',
+    filters.dir ?? '',
+  ].join(':')
+  const dataKey = imports.map((row) => row.id).join('|')
+
+  return `${filterKey}:${dataKey}`
 }
 
 export default async function ImportPage({
@@ -48,7 +56,6 @@ export default async function ImportPage({
 }) {
   const rawSearchParams = await searchParams
   const filters = parseImportFilters(rawSearchParams)
-  const filterKey = getFilterKey(filters)
   let imports: ImportListRow[] = []
   let importHistoryLoadError = false
 
@@ -63,6 +70,8 @@ export default async function ImportPage({
 
     importHistoryLoadError = true
   }
+
+  const tableKey = buildImportTableKey(filters, imports)
 
   const [platforms, monthsWithData] = await Promise.all([
     getTransactionPlatforms(),
@@ -105,7 +114,7 @@ export default async function ImportPage({
           />
         ) : (
           <ImportTable
-            key={filterKey}
+            key={tableKey}
             imports={imports}
             route={APP_ROUTES.import}
             loadError={importHistoryLoadError}

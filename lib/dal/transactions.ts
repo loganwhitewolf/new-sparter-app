@@ -194,12 +194,40 @@ export type TransactionRow = typeof transaction.$inferSelect
 /** Matches table display label: customTitle when set, else bank description. */
 export const transactionDisplayTitleSortKey = sql<string>`LOWER(COALESCE(NULLIF(TRIM(${transaction.customTitle}), ''), ${transaction.description}))`
 
+/** Amount column is rendered with formatAbsoluteAmount — sort by magnitude, not sign (D-20). */
+export const transactionAmountAbsSortKey = sql`ABS(${transaction.amount}::numeric)`
+
+/** Matches "Spesa collegata" cell labels (categorized / da categorizzare / nessuna spesa). */
+export const transactionLinkedExpenseCategorySortKey = sql<string>`LOWER(
+  CASE
+    WHEN ${expense.id} IS NULL THEN 'nessuna spesa collegata'
+    WHEN ${expense.subCategoryId} IS NULL OR ${expense.status} NOT IN ('2', '3') THEN 'da categorizzare'
+    ELSE CONCAT(
+      COALESCE(${category.name}, ''),
+      ' → ',
+      COALESCE(NULLIF(TRIM(${userSubcategoryOverride.customName}), ''), ${subCategory.name}, '')
+    )
+  END
+)`
+
+/** Matches primary "Sorgente" label (platform name, manual, or fallback). */
+export const transactionPlatformSortKey = sql<string>`LOWER(
+  CASE
+    WHEN ${transaction.fileId} IS NULL THEN 'manuale'
+    ELSE COALESCE(${platform.name}, 'piattaforma non disponibile')
+  END
+)`
+
 export function getTransactionSortColumn(sort: TransactionSort) {
   switch (sort) {
     case 'amount':
-      return transaction.amount
+      return transactionAmountAbsSortKey
     case 'description':
       return transactionDisplayTitleSortKey
+    case 'category':
+      return transactionLinkedExpenseCategorySortKey
+    case 'platform':
+      return transactionPlatformSortKey
     case 'occurredAt':
       return transaction.occurredAt
     default: {

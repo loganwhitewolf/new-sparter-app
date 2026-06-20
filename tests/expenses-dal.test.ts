@@ -122,7 +122,13 @@ vi.mock('@/lib/db/schema', () => ({
   },
 }))
 
-const { EXPENSE_LIST_LIMIT, getExpenses } = await import('../lib/dal/expenses')
+const {
+  EXPENSE_LIST_LIMIT,
+  expenseTitleSortKey,
+  expenseCategorySortKey,
+  getExpenseSortColumn,
+  getExpenses,
+} = await import('../lib/dal/expenses')
 
 describe('expense DAL list pagination', () => {
   beforeEach(() => {
@@ -171,6 +177,13 @@ describe('expense DAL list pagination', () => {
       { op: 'asc', column: 'expense.totalAmount' },
       { op: 'asc', column: 'expense.id' },
     ])
+  })
+
+  it('maps sort keys to DAL columns and expressions', () => {
+    expect(getExpenseSortColumn('createdAt')).toBe('expense.createdAt')
+    expect(getExpenseSortColumn('totalAmount')).toBe('expense.totalAmount')
+    expect(getExpenseSortColumn('title')).toBe(expenseTitleSortKey)
+    expect(getExpenseSortColumn('category')).toBe(expenseCategorySortKey)
   })
 
   // ── Wave 4: this-month default removed (D-05) ──────────────────────────────

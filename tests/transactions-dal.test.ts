@@ -167,6 +167,9 @@ const {
   getTransactionSortColumn,
   mapParsedTransactionFiltersToDal,
   transactionDisplayTitleSortKey,
+  transactionAmountAbsSortKey,
+  transactionLinkedExpenseCategorySortKey,
+  transactionPlatformSortKey,
   transactionListSelect,
   transactionPlatformSelect,
   updateTransactionCustomTitle,
@@ -188,21 +191,23 @@ describe('transaction DAL query helpers', () => {
     mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
   })
 
-  it('uses explicit whitelisted sort branches and defaults unsupported values to occurredAt', () => {
+  it('uses explicit whitelisted sort branches', () => {
     expect(getTransactionSortColumn('occurredAt')).toBe('transaction.occurredAt')
-    expect(getTransactionSortColumn('amount')).toBe('transaction.amount')
+    expect(getTransactionSortColumn('amount')).toBe(transactionAmountAbsSortKey)
     expect(getTransactionSortColumn('description')).toBe(transactionDisplayTitleSortKey)
+    expect(getTransactionSortColumn('category')).toBe(transactionLinkedExpenseCategorySortKey)
+    expect(getTransactionSortColumn('platform')).toBe(transactionPlatformSortKey)
   })
 
   it('builds orderBy array with id tiebreaker as LAST element (D-06)', () => {
     // After the tiebreaker fix, buildTransactionOrderBy returns an array
     // so that OFFSET pagination never returns duplicate or missing rows on amount sort.
     expect(buildTransactionOrderBy({ sort: 'amount', dir: 'asc' })).toEqual([
-      { op: 'asc', column: 'transaction.amount' },
+      { op: 'asc', column: transactionAmountAbsSortKey },
       { op: 'asc', column: 'transaction.id' },
     ])
     expect(buildTransactionOrderBy({ sort: 'amount', dir: 'desc' })).toEqual([
-      { op: 'desc', column: 'transaction.amount' },
+      { op: 'desc', column: transactionAmountAbsSortKey },
       { op: 'desc', column: 'transaction.id' },
     ])
     expect(buildTransactionOrderBy({ sort: 'occurredAt', dir: 'desc' })).toEqual([
@@ -212,6 +217,14 @@ describe('transaction DAL query helpers', () => {
     expect(buildTransactionOrderBy({ sort: 'description', dir: 'asc' })).toEqual([
       { op: 'asc', column: transactionDisplayTitleSortKey },
       { op: 'asc', column: 'transaction.id' },
+    ])
+    expect(buildTransactionOrderBy({ sort: 'category', dir: 'asc' })).toEqual([
+      { op: 'asc', column: transactionLinkedExpenseCategorySortKey },
+      { op: 'asc', column: 'transaction.id' },
+    ])
+    expect(buildTransactionOrderBy({ sort: 'platform', dir: 'desc' })).toEqual([
+      { op: 'desc', column: transactionPlatformSortKey },
+      { op: 'desc', column: 'transaction.id' },
     ])
   })
 
@@ -276,7 +289,7 @@ describe('transaction DAL query helpers', () => {
     expect(mocks.selectedShapes[0]).toBe(transactionListSelect)
     expect(mocks.limitArgs).toEqual([TRANSACTION_LIST_LIMIT])
     expect(mocks.offsetArgs).toEqual([0])
-    expect(mocks.orderByArgs[0]).toEqual({ op: 'asc', column: 'transaction.amount' })
+    expect(mocks.orderByArgs[0]).toEqual({ op: 'asc', column: transactionAmountAbsSortKey })
     expect(mocks.whereArgs[0]).toEqual({
       op: 'and',
       args: expect.arrayContaining([
@@ -435,7 +448,7 @@ describe('transaction DAL query helpers', () => {
         { op: 'eq', left: 'transaction.fileId', right: importId },
       ]),
     })
-    expect(mocks.orderByArgs[0]).toEqual({ op: 'asc', column: 'transaction.amount' })
+    expect(mocks.orderByArgs[0]).toEqual({ op: 'asc', column: transactionAmountAbsSortKey })
   })
 
   // ── Wave 4: new filter conditions ──────────────────────────────────────────

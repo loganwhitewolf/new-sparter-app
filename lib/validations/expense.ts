@@ -64,7 +64,7 @@ export type ParsedExpenseFilters = {
   status?: 'uncategorized' | 'categorized'
   amountMin?: string
   amountMax?: string
-  sort?: 'createdAt' | 'totalAmount'
+  sort?: 'createdAt' | 'totalAmount' | 'title' | 'category'
   dir?: 'asc' | 'desc'
   /** FlowNature filter — nine enum members plus sentinel 'unclassified'. Mirrors transactions. */
   nature?: string
@@ -119,8 +119,16 @@ export function parseExpenseFilters(input: ExpenseSearchParams): ParsedExpenseFi
     | undefined
   const amountMin = parseAmount(input.amountMin)
   const amountMax = parseAmount(input.amountMax)
-  const sort: 'createdAt' | 'totalAmount' | undefined =
-    rawSort === 'totalAmount' ? 'totalAmount' : rawSort === 'createdAt' ? 'createdAt' : undefined
+  const sort: 'createdAt' | 'totalAmount' | 'title' | 'category' | undefined =
+    rawSort === 'totalAmount'
+      ? 'totalAmount'
+      : rawSort === 'createdAt'
+        ? 'createdAt'
+        : rawSort === 'title'
+          ? 'title'
+          : rawSort === 'category'
+            ? 'category'
+            : undefined
   const dir: 'asc' | 'desc' | undefined = rawDir === 'asc' ? 'asc' : rawDir === 'desc' ? 'desc' : undefined
   const nature = parseStatus(input.nature, NATURE_ALLOWED)
   const type = parseStatus(input.direction ?? input.type, TYPE_ALLOWED)

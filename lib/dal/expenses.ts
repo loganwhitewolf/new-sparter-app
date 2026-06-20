@@ -14,7 +14,7 @@ function escapeLikePattern(input: string): string {
 
 export const EXPENSE_LIST_LIMIT = 50
 
-export type ExpenseSort = 'createdAt' | 'totalAmount'
+export type ExpenseSort = 'createdAt' | 'totalAmount' | 'title' | 'category'
 export type ExpenseSortDirection = 'asc' | 'desc'
 
 export type ExpenseFilters = {
@@ -63,8 +63,27 @@ export type ExpenseRow = {
   platformName: string | null
 }
 
+/** Matches "Titolo" column label (case-insensitive). */
+export const expenseTitleSortKey = sql<string>`LOWER(${expense.title})`
+
+/** Matches "Categoria" column label (`Categoria · Sottocategoria`, case-insensitive). */
+export const expenseCategorySortKey = sql<string>`LOWER(
+  CASE
+    WHEN ${category.name} IS NULL THEN 'zzzzzz'
+    ELSE CONCAT(
+      COALESCE(${category.name}, ''),
+      ' · ',
+      COALESCE(NULLIF(TRIM(${userSubcategoryOverride.customName}), ''), ${subCategory.name}, '')
+    )
+  END
+)`
+
 export function getExpenseSortColumn(sort: ExpenseSort) {
   switch (sort) {
+    case 'title':
+      return expenseTitleSortKey
+    case 'category':
+      return expenseCategorySortKey
     case 'totalAmount':
       return expense.totalAmount
     case 'createdAt':

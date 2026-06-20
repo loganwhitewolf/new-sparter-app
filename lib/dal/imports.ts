@@ -1,6 +1,6 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, count, desc, eq, gte, ilike, inArray, isNotNull, lte, or, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gte, ilike, inArray, isNotNull, lte, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
 import { expense, file, importFormatVersion, platform, transaction } from '@/lib/db/schema'
@@ -61,6 +61,87 @@ export type ImportListRow = {
   referenceStartedAt: Date | null
   referenceEndedAt: Date | null
   errorMessage: string | null
+}
+
+export type ImportSort =
+  | 'displayName'
+  | 'status'
+  | 'platform'
+  | 'importedAt'
+  | 'rowCount'
+  | 'positiveTotal'
+  | 'negativeTotal'
+  | 'referenceStartedAt'
+
+export type ImportSortDirection = 'asc' | 'desc'
+
+/** Matches "File" column label (displayName when set, else originalName). */
+export const importDisplayNameSortKey = sql<string>`LOWER(COALESCE(NULLIF(TRIM(${file.displayName}), ''), ${file.originalName}))`
+
+/** Matches "Importo" column on negativeTotal (absolute value, D-20). */
+export const importNegativeTotalAbsSortKey = sql`ABS(${file.negativeTotal}::numeric)`
+
+/** Matches "Totale entrate" column (absolute value). */
+export const importPositiveTotalAbsSortKey = sql`ABS(${file.positiveTotal}::numeric)`
+
+/** Matches "Piattaforma" column label (platform name or fallback, case-insensitive). */
+export const importPlatformSortKey = sql<string>`LOWER(
+  COALESCE(${platform.name}, 'piattaforma non disponibile')
+)`
+
+/** Matches "Stato" badge labels (Italian, case-insensitive). Cast enum to text for CASE branches. */
+export const importStatusSortKey = sql<string>`LOWER(
+  CASE ${file.status}::text
+    WHEN 'pending_upload' THEN 'in attesa'
+    WHEN 'uploaded' THEN 'caricato'
+    WHEN 'analyzing' THEN 'in analisi'
+    WHEN 'analyzed' THEN 'analizzato'
+    WHEN 'importing' THEN 'importazione'
+    WHEN 'imported' THEN 'importato'
+    WHEN 'failed' THEN 'errore'
+    ELSE ${file.status}::text
+  END
+)`
+
+/** Matches "Periodo" column — earliest reference boundary available. */
+export const importReferencePeriodSortKey = sql<Date>`coalesce(${file.referenceStartedAt}, ${file.referenceEndedAt})`
+
+export function getImportSortColumn(sort: ImportSort) {
+  switch (sort) {
+    case 'displayName':
+      return importDisplayNameSortKey
+    case 'status':
+      return importStatusSortKey
+    case 'platform':
+      return importPlatformSortKey
+    case 'importedAt':
+      return importListOrderTimestamp
+    case 'rowCount':
+      return file.rowCount
+    case 'positiveTotal':
+      return importPositiveTotalAbsSortKey
+    case 'negativeTotal':
+      return importNegativeTotalAbsSortKey
+    case 'referenceStartedAt':
+      return importReferencePeriodSortKey
+    default: {
+      const _exhaustive: never = sort
+      return _exhaustive
+    }
+  }
+}
+
+export function buildImportOrderBy({
+  sort = 'importedAt',
+  dir = 'desc',
+}: Pick<ParsedImportFilters, 'sort' | 'dir'> = {}) {
+  const effectiveSort: ImportSort = (sort as ImportSort) ?? 'importedAt'
+  const column = getImportSortColumn(effectiveSort)
+
+  // Tie-break on id so OFFSET pagination never returns the same file twice.
+  return dir === 'asc'
+    ? [asc(column), asc(file.id)]
+    : [desc(column), desc(file.id)]
 }
 
 export type UpdateImportDisplayNameParams = {
@@ -172,7 +253,7 @@ export const getImportRows = cache(
       )
       .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
       .where(and(...conditions))
-      .orderBy(desc(importListOrderTimestamp), desc(file.createdAt), desc(file.id))
+      .orderBy(...buildImportOrderBy(filters))
       .limit(limit)
       .offset(offset)
   },
