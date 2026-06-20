@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: — Regex Discovery & Transaction Unification
-current_phase: 53
-current_phase_name: retroactive-application
+current_phase: 54
+current_phase_name: reusable-trigger
 status: executing
 stopped_at: Phase 54 context gathered
-last_updated: "2026-06-20T13:13:44.223Z"
-last_activity: 2026-06-16
-last_activity_desc: Phase 53 Plan 03 complete (inline apply feedback UI)
+last_updated: "2026-06-20T13:27:01.923Z"
+last_activity: 2026-06-20
+last_activity_desc: Phase 54 execution started
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 12
+  completed_plans: 10
   percent: 60
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-16)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 53 — retroactive-application
+**Current focus:** Phase 54 — reusable-trigger
 
 ## Current Position
 
-Phase: 53 (retroactive-application) — COMPLETE
-Plan: 3 of 3 — ALL PLANS COMPLETE
+Phase: 54 (reusable-trigger) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-06-16 -- Phase 53 Plan 03 complete (inline apply feedback UI)
+Last activity: 2026-06-20 — Phase 54 execution started
 
 ## Roadmap (v2.1 — Phases 51–55)
 
@@ -88,6 +88,9 @@ Codebase facts relevant to v2.1 (verified, do not re-research):
 - Import summary UI: `ImportPreview`/`AnalyzePage` consume `analyzeFile`'s `sampleRows` + `patternSuggestions` (capped at 5, sampleDescriptions sliced to 3) (Phase 55).
 - Offline tool exists: `scripts/regex-discovery.ts` + `/regex-label` skill (quick-task 260615-dtm). Relationship to in-pipeline discovery is TOOL-01 (deferred — only clarify the boundary).
 - [Phase ?]: Plan 53-01: applyNewPatternToPlatformExpenses is a sibling function using platform-scoped Set B DAL; PatternApplyResult exported from service layer; legacy applyNewPatternToExpenses unchanged for createPatternAction
+- [Phase ?]: Plan 54-01: suggestions page migrated to discoverRegexCandidates (D-04) — platform-scoped, consistent with apply path; notFound() guards preserved
+- [Phase ?]: Plan 54-01: detectPatternSuggestions removal deferred to Phase 55 — analyzeFile still consumes it; no UI/flow may call it from this plan onward
+- [Phase ?]: Plan 54-01: singleCategorizationSuggestions rendered as minimal read-only list (no SuggestionCard) — polished separation is Phase 55 SUMUI-02
 
 ### Planning Risk
 
@@ -123,7 +126,7 @@ None.
 
 **Stopped at:** Phase 54 context gathered
 
-Last session: 2026-06-20T12:53:21.897Z
+Last session: 2026-06-20T13:27:01.918Z
 Handoff synced: 2026-06-16 — Phase 53 complete: all 3 plans done. Plan 03 wired inline apply feedback UI (commits 4406115, ce3190b).
 Resume file: .planning/phases/54-reusable-trigger/54-CONTEXT.md
 
@@ -152,3 +155,4 @@ Resume file: .planning/phases/54-reusable-trigger/54-CONTEXT.md
 | Phase 53 PP01 | 3min | - tasks | - files |
 | Phase 53 P02 | 8min | 2 tasks (TDD RED+GREEN) | 4 files |
 | Phase 53 P03 | 10min | 2 tasks + verification | 7 files |
+| Phase 54 P01 | 3min | 3 tasks | 3 files |
