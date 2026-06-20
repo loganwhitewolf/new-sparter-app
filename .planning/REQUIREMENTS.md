@@ -35,7 +35,7 @@ Apply a newly created regex to existing data.
 
 One service, two entry points.
 
-- [ ] **TRIG-01**: Discovery runs automatically after import, as the step following auto-categorization.
+- [x] **TRIG-01**: Discovery runs automatically after import, as the step following auto-categorization.
 - [x] **TRIG-02**: Discovery can be re-run on-demand from the Files table ("ricontrolla regex"), reusing the same underlying service. *(Open decision: per-row vs bulk UX — resolve in discuss/plan.)*
 
 ### Import Summary UX (SUMUI)
@@ -83,7 +83,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RDISC-04 | Phase 52 | Complete |
 | APPLY-01 | Phase 53 | Partial (service + action wired in 53-01/02; UI renders in 53-03) |
 | APPLY-02 | Phase 53 | Complete |
-| TRIG-01 | Phase 54 | Pending |
+| TRIG-01 | Phase 54 | Complete |
 | TRIG-02 | Phase 54 | Complete |
 | SUMUI-01 | Phase 55 | Pending |
 | SUMUI-02 | Phase 55 | Pending |

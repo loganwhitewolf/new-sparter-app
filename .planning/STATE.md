@@ -5,16 +5,16 @@ milestone_name: — Regex Discovery & Transaction Unification
 current_phase: 54
 current_phase_name: reusable-trigger
 status: executing
-stopped_at: Phase 54 context gathered
-last_updated: "2026-06-20T13:27:01.923Z"
+stopped_at: Phase 54 Plan 02 complete — ready for 54-03
+last_updated: "2026-06-20T13:33:12Z"
 last_activity: 2026-06-20
-last_activity_desc: Phase 54 execution started
+last_activity_desc: Phase 54 Plan 02 executed — TRIG-01 wired (post-commit discovery + CTA)
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 12
-  completed_plans: 10
-  percent: 60
+  completed_plans: 11
+  percent: 92
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 ## Current Position
 
 Phase: 54 (reusable-trigger) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-06-20 — Phase 54 execution started
 
@@ -69,6 +69,10 @@ Plan 53-02: ActionState extended with optional applyResult?: PatternApplyResult 
 
 Plan 53-03: fileId/platformId threaded from RSC page → SuggestionSection → SuggestionCard → SuggestionPromoteForm; hidden fileId input in form (T-53-08); SuggestionCard renders Italian count copy (categorizzate / ancora senza match) from applyResult after promote; card persists with opacity-50 (not removed); notFound when platformId null; initialApplyResult test-only prop for SSR snapshot testing.
 
+Plan 54-01: suggestions page migrated to discoverRegexCandidates (D-04) — platform-scoped, consistent with apply path; notFound() guards preserved; detectPatternSuggestions removal deferred to Phase 55.
+
+Plan 54-02: post-commit discovery synchronous (D-02) — non-fatal try/catch, logs post_import_discovery_failed on error; null platformId post-commit → skip discovery, discoveryCount 0 (T-54-04 mitigation); no auto-redirect to suggestions page (D-05) — CTA only; onboarding returnTo path preserved unchanged.
+
 Design contract is LOCKED. Do not re-open or re-derive the data model:
 
 - ADR 0012: direction derived from nature; 4th direction `allocation`; `category.type` removed
@@ -91,6 +95,8 @@ Codebase facts relevant to v2.1 (verified, do not re-research):
 - [Phase ?]: Plan 54-01: suggestions page migrated to discoverRegexCandidates (D-04) — platform-scoped, consistent with apply path; notFound() guards preserved
 - [Phase ?]: Plan 54-01: detectPatternSuggestions removal deferred to Phase 55 — analyzeFile still consumes it; no UI/flow may call it from this plan onward
 - [Phase ?]: Plan 54-01: singleCategorizationSuggestions rendered as minimal read-only list (no SuggestionCard) — polished separation is Phase 55 SUMUI-02
+- [Phase ?]: Plan 54-02: importFile runs discoverRegexCandidates post-commit (non-fatal, outside db.transaction); ImportFileResult.discoveryCount = candidates.length + singleCategorizationSuggestions.length; 0 on failure or null platformId
+- [Phase ?]: Plan 54-02: import-result CTA surfaces discoveryCount when > 0 — no auto-redirect (D-05); onboarding returnTo preserved; pre-existing SuggestionSection fileId TS error fixed
 
 ### Planning Risk
 
@@ -126,7 +132,7 @@ None.
 
 **Stopped at:** Phase 54 context gathered
 
-Last session: 2026-06-20T13:27:01.918Z
+Last session: 2026-06-20T13:34:52.383Z
 Handoff synced: 2026-06-16 — Phase 53 complete: all 3 plans done. Plan 03 wired inline apply feedback UI (commits 4406115, ce3190b).
 Resume file: .planning/phases/54-reusable-trigger/54-CONTEXT.md
 
