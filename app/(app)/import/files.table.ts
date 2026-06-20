@@ -11,7 +11,7 @@ import type { TableConfig } from '@/lib/utils/table-config'
  *   - platform: select (via importFormatVersion join)
  *   - statusBucket: status with 3 processing buckets (D-22/D-23: label 'Elaborazione')
  *   - NO category filter (field inventory: Files have no category)
- *   - sortable: every displayed file column including import date (O-02: sortable, not a filter)
+ *   - sortable: every displayed data column (O-02: import date sortable, not a filter)
  */
 export const filesTableConfig: TableConfig = {
   id: 'files',
@@ -54,12 +54,14 @@ export const filesTableConfig: TableConfig = {
     },
   ],
   sortable: [
-    { key: 'importedAt', label: 'Data importazione' },
-    { key: 'platform', label: 'Piattaforma' },
-    { key: 'rowCount', label: 'Righe' },
-    { key: 'importedCount', label: 'Importate' },
-    { key: 'negativeTotal', label: 'Importo' },
+    { key: 'displayName', label: 'File' },
     { key: 'status', label: 'Stato' },
+    { key: 'platform', label: 'Piattaforma' },
+    { key: 'importedAt', label: 'Importato il' },
+    { key: 'rowCount', label: 'Righe' },
+    { key: 'positiveTotal', label: 'Totale entrate' },
+    { key: 'negativeTotal', label: 'Totale uscite' },
+    { key: 'referenceStartedAt', label: 'Periodo' },
   ],
   defaultSort: { key: 'importedAt', dir: 'desc' },
 }
