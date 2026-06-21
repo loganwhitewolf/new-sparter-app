@@ -34,7 +34,8 @@ export default async function SuggestionsPage({
       <div>
         <h1 className="text-xl font-semibold">Suggerimenti pattern</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Crea pattern per categorizzare automaticamente transazioni simili nelle prossime importazioni.
+          I suggerimenti sono stati rilevati dalle transazioni non categorizzate di questa piattaforma
+          dopo l&apos;importazione. Puoi ricontrollare i pattern in qualsiasi momento dal tab Importazioni.
         </p>
       </div>
       {discovery.candidates.length === 0 && discovery.singleCategorizationSuggestions.length === 0 ? (
