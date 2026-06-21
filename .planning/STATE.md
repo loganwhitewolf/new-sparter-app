@@ -4,16 +4,16 @@ milestone: v2.1
 milestone_name: — Regex Discovery & Transaction Unification
 current_phase: 55
 current_phase_name: import-summary-ux
-status: verifying
-stopped_at: Phase 55 context gathered
-last_updated: "2026-06-21T09:00:46.919Z"
+status: executing
+stopped_at: "Completed 55-01: removed legacy detectPatternSuggestions from import pipeline"
+last_updated: "2026-06-21T12:39:25.393Z"
 last_activity: 2026-06-21
-last_activity_desc: Phase 54 complete, transitioned to Phase 55
+last_activity_desc: Phase 55 execution started
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 15
+  completed_plans: 13
   percent: 80
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-16)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 54 — reusable-trigger
+**Current focus:** Phase 55 — import-summary-ux
 
 ## Current Position
 
-Phase: 55 — import-summary-ux
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-06-21 — Phase 54 complete, transitioned to Phase 55
+Phase: 55 (import-summary-ux) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-06-21 — Phase 55 execution started
 
 ## Roadmap (v2.1 — Phases 51–55)
 
@@ -99,6 +99,7 @@ Codebase facts relevant to v2.1 (verified, do not re-research):
 - [Phase ?]: Plan 54-01: singleCategorizationSuggestions rendered as minimal read-only list (no SuggestionCard) — polished separation is Phase 55 SUMUI-02
 - [Phase ?]: Plan 54-02: importFile runs discoverRegexCandidates post-commit (non-fatal, outside db.transaction); ImportFileResult.discoveryCount = candidates.length + singleCategorizationSuggestions.length; 0 on failure or null platformId
 - [Phase ?]: Plan 54-02: import-result CTA surfaces discoveryCount when > 0 — no auto-redirect (D-05); onboarding returnTo preserved; pre-existing SuggestionSection fileId TS error fixed
+- [Phase ?]: Plan 55-01: detectPatternSuggestions removed from analyzeFile (D-06/D-07/D-09); patternSuggestions removed from ImportAnalysisResult; detectPatternSuggestionsWithMeta preserved; SuggestionSection removed from import-preview analyze step; TypeScript clean, 1094 tests green
 
 ### Planning Risk
 
@@ -132,11 +133,11 @@ None.
 
 ## Session Continuity
 
-**Stopped at:** Phase 55 context gathered
+**Stopped at:** Completed 55-01: removed legacy detectPatternSuggestions from import pipeline
 
-Last session: 2026-06-21T09:00:46.913Z
+Last session: 2026-06-21T12:39:25.388Z
 Handoff synced: 2026-06-16 — Phase 53 complete: all 3 plans done. Plan 03 wired inline apply feedback UI (commits 4406115, ce3190b).
-Resume file: .planning/phases/55-import-summary-ux/55-CONTEXT.md
+Resume file: .planning/phases/55-import-summary-ux/55-02-PLAN.md
 
 **Next:** Phase 54 — reusable-trigger (TRIG-01, TRIG-02).
 
@@ -166,3 +167,4 @@ Resume file: .planning/phases/55-import-summary-ux/55-CONTEXT.md
 | Phase 54 P01 | 3min | 3 tasks | 3 files |
 | Phase 54 P02 | 5min | 2 tasks (TDD RED+GREEN) | 3 files |
 | Phase 54 P03 | 8min | 3 tasks (TDD RED+GREEN) | 5 files |
+| Phase 55 P01 | 7min | 2 tasks | 10 files |

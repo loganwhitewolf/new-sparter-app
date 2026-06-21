@@ -42,9 +42,9 @@ One service, two entry points.
 
 Clean up the post-import summary.
 
-- [ ] **SUMUI-01**: The import summary shows at most 10 example transactions.
-- [ ] **SUMUI-02**: The import summary visually separates proposed regex from single-categorization suggestions.
-- [ ] **SUMUI-03**: The user is informed that regex discovery now happens as a separate step after import. *(Open decision: exact copy/placement — resolve in discuss/plan.)*
+- [x] **SUMUI-01**: The import summary shows at most 10 example transactions.
+- [x] **SUMUI-02**: The import summary visually separates proposed regex from single-categorization suggestions.
+- [x] **SUMUI-03**: The user is informed that regex discovery now happens as a separate step after import. *(Open decision: exact copy/placement — resolve in discuss/plan.)*
 
 ## Future Requirements
 
@@ -85,9 +85,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | APPLY-02 | Phase 53 | Complete |
 | TRIG-01 | Phase 54 | Complete |
 | TRIG-02 | Phase 54 | Complete |
-| SUMUI-01 | Phase 55 | Pending |
-| SUMUI-02 | Phase 55 | Pending |
-| SUMUI-03 | Phase 55 | Pending |
+| SUMUI-01 | Phase 55 | Complete |
+| SUMUI-02 | Phase 55 | Complete |
+| SUMUI-03 | Phase 55 | Complete |
 
 **Coverage:**
 
