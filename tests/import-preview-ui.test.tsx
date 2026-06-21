@@ -59,7 +59,6 @@ describe('ImportPreview UI', () => {
     const html = renderToStaticMarkup(
       createElement(ImportPreview, {
         result: baseResult,
-        categories: [],
         confirmDisabledReason: "Configura un formato privato prima di confermare l'importazione.",
       }),
     )
@@ -78,7 +77,6 @@ describe('ImportPreview UI', () => {
           ...baseResult,
           errors: ['Impossibile leggere il file caricato. Riprova.'],
         },
-        categories: [],
       }),
     )
 

@@ -24,8 +24,6 @@ import {
 import { confirmImportAction } from '@/lib/actions/import'
 import type { ImportAnalysisResult } from '@/lib/services/import'
 import { APP_ROUTES } from '@/lib/routes'
-import type { CategoryWithSubCategories } from '@/lib/dal/categories'
-
 type FormatCandidate = {
   formatVersionId: number
   platformName: string
@@ -36,11 +34,10 @@ type Props = {
   result: ImportAnalysisResult
   candidates?: FormatCandidate[]
   confirmDisabledReason?: string
-  categories: CategoryWithSubCategories[]
   returnTo?: string
 }
 
-export function ImportPreview({ result, candidates = [], confirmDisabledReason, categories, returnTo }: Props) {
+export function ImportPreview({ result, candidates = [], confirmDisabledReason, returnTo }: Props) {
   const router = useRouter()
   const [selectedFormatVersionId, setSelectedFormatVersionId] = useState<string>(
     result.formatVersionId ? String(result.formatVersionId) : '',
@@ -180,7 +177,7 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {result.sampleRows.map((row) => (
+                  {result.sampleRows.slice(0, 10).map((row) => (
                     <TableRow key={row.rowIndex}>
                       <TableCell className="whitespace-nowrap text-sm">
                         {row.occurredAt ?? '—'}
