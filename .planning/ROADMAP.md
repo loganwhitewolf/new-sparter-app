@@ -256,10 +256,10 @@ Plans:
   2. Proposed regex suggestions and single-categorization suggestions are presented as visually distinct groups, so the user can tell at a glance which is which.
   3. The summary communicates that regex discovery now happens as a separate step after import (exact copy/placement resolved in discuss/plan), without misrepresenting the new flow.
 
-**Plans**: 1/3 plans executed
+**Plans**: 2/3 plans executed
 
 - [x] 55-01-PLAN.md — Legacy cleanup: rimozione detectPatternSuggestions e patternSuggestions dal flusso analyze (D-06, D-07, D-09)
-- [ ] 55-02-PLAN.md — ImportPreview: cap sampleRows a 10 e rimozione SuggestionSection pre-import (SUMUI-01, D-05, D-08)
+- [x] 55-02-PLAN.md — ImportPreview: cap sampleRows a 10 e rimozione SuggestionSection pre-import (SUMUI-01, D-05, D-08)
 - [ ] 55-03-PLAN.md — Suggestions page + SuggestionSection: paragrafo SUMUI-03 e heading distinti con intro text (SUMUI-02, SUMUI-03)
 
 **UI hint**: yes
@@ -284,6 +284,6 @@ Plans:
 | 52. regex-validity-and-dedup | v2.1 | 3/3 | Complete    | 2026-06-16 |
 | 53. retroactive-application | v2.1 | 2/3 | In Progress|  |
 | 54. reusable-trigger | v2.1 | 3/3 | Complete    | 2026-06-20 |
-| 55. import-summary-ux | v2.1 | 1/3 | In Progress|  |
+| 55. import-summary-ux | v2.1 | 2/3 | In Progress|  |
 
 **Total shipped: 51 phases · 189 plans complete**
