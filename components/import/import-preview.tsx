@@ -25,7 +25,6 @@ import { confirmImportAction } from '@/lib/actions/import'
 import type { ImportAnalysisResult } from '@/lib/services/import'
 import { APP_ROUTES } from '@/lib/routes'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
-import { SuggestionSection } from './suggestion-section'
 
 type FormatCandidate = {
   formatVersionId: number
@@ -209,9 +208,6 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
           </CardContent>
         </Card>
       )}
-
-      {/* Pattern suggestions — REV-01: rendered only when there are suggestions */}
-      <SuggestionSection suggestions={result.patternSuggestions} categories={categories} fileId={result.fileId} />
 
       {/* Confirm button — hidden when analysis has fatal errors */}
       {!hasErrors && !confirmDisabledReason && (

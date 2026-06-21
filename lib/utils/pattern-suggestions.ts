@@ -76,60 +76,6 @@ function longestCommonPrefix(a: string[], b: string[]): string[] {
 
 // inferAmountSign removed — ADR 0012: patterns are sign-agnostic
 
-export function detectPatternSuggestions(
-  rows: PatternDetectorRow[],
-  coveragePatterns: CoveragePattern[],
-): PatternSuggestion[] {
-  // Step 1: filter eligible rows and compute stripped tokens; drop rows with <2 stripped tokens
-  type Candidate = { row: PatternDetectorRow; tokens: string[] }
-  const candidates: Candidate[] = []
-  for (const r of rows) {
-    if (!r.valid) continue
-    if (r.covered) continue
-    if (isCoveredByPatterns(r, coveragePatterns)) continue
-    const tokens = stripNumericTokens(r.normalizedDescription)
-    if (tokens.length < 2) continue
-    candidates.push({ row: r, tokens })
-  }
-
-  // Step 2: bucket by first 2 stripped tokens — any qualifying suggestion (min prefix
-  // length = 2) must share the same first 2 tokens. Bucketing at this granularity
-  // prevents outliers with a different second token from collapsing unrelated subgroups.
-  const buckets = new Map<string, Candidate[]>()
-  for (const c of candidates) {
-    const head = c.tokens.slice(0, 2).join(' ')
-    const list = buckets.get(head) ?? []
-    list.push(c)
-    buckets.set(head, list)
-  }
-
-  // Step 3: for each bucket with >=2 members, compute the longest prefix
-  // shared by ALL members (intersect down). If the shared prefix has >=2 tokens,
-  // emit one suggestion.
-  const suggestions: PatternSuggestion[] = []
-  for (const group of buckets.values()) {
-    if (group.length < 2) continue
-    let prefix = group[0].tokens
-    for (let i = 1; i < group.length; i++) {
-      prefix = longestCommonPrefix(prefix, group[i].tokens)
-      if (prefix.length < 2) break
-    }
-    if (prefix.length < 2) continue
-
-    const prefixString = prefix.join(' ')
-    const escaped = escapeRegex(prefixString)
-    const sampleDescriptions = group.slice(0, 3).map(g => g.row.description)
-
-    suggestions.push({
-      pattern: escaped,
-      matchCount: group.length,
-      sampleDescriptions,
-    })
-  }
-
-  return suggestions
-}
-
 // ---------------------------------------------------------------------------
 // WithMeta variant — additive extension for PIPE-03 (D-05 per-candidate metadata)
 // ---------------------------------------------------------------------------
@@ -175,12 +121,9 @@ export function candidateCoveredByExistingPattern(
 }
 
 /**
- * Identical clustering pipeline as detectPatternSuggestions, extended to carry
- * per-candidate D-05 metadata. The input rows must include rawTitle and
- * strippedByNormalization (computed by the caller before normalization runs).
- *
- * The original detectPatternSuggestions and PatternSuggestion are unchanged so
- * the existing analyzeFile caller in lib/services/import.ts keeps compiling.
+ * Prefix/variable clustering pipeline with per-candidate D-05 metadata.
+ * The input rows must include rawTitle and strippedByNormalization
+ * (computed by the caller before normalization runs).
  */
 export function detectPatternSuggestionsWithMeta(
   rows: PatternDetectorRowWithMeta[],

@@ -368,7 +368,6 @@ export async function completeOnboardingPrivateImportAction(
       userId,
       fileId,
       selectedFormatVersionId,
-      skipPatternSuggestions: true,
     });
   } catch (error) {
     return { error: mapAnalyzeError(error) };
