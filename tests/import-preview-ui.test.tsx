@@ -30,30 +30,6 @@ const baseResult = {
   sampleRows: [],
 }
 
-const sampleCategories = [
-  {
-    id: 1,
-    name: 'Spese',
-    slug: 'spese',
-    type: 'out' as const,
-    userId: null,
-    isOwned: false,
-    subCategories: [
-      {
-        id: 42,
-        name: 'Streaming',
-        slug: 'streaming',
-        originalName: 'Streaming',
-        userId: null,
-        isOwned: false,
-        hasOverride: false,
-        customName: null,
-        effectiveNature: null,
-      },
-    ],
-  },
-]
-
 describe('ImportPreview UI', () => {
   it('does not render a destructive error box or confirm action when confirmation is disabled upstream', () => {
     const html = renderToStaticMarkup(
@@ -83,6 +59,34 @@ describe('ImportPreview UI', () => {
     expect(html).toContain('Impossibile leggere il file caricato. Riprova.')
     expect(html).toContain('data-slot="alert"')
     expect(html).not.toContain('Conferma importazione')
+  })
+
+  it('SUMUI-01: renders at most 10 sample rows even when result has 25', () => {
+    const twentyFiveRows = Array.from({ length: 25 }, (_, i) => ({
+      rowIndex: i,
+      description: `DESC-${i}`,
+      amount: '10.00',
+      occurredAt: '2024-01-01',
+      transactionHash: null,
+      duplicate: false,
+      valid: true,
+      errors: [],
+      warnings: [],
+      rawRow: {},
+    }))
+
+    const html = renderToStaticMarkup(
+      createElement(ImportPreview, {
+        result: {
+          ...baseResult,
+          sampleRows: twentyFiveRows,
+        },
+      }),
+    )
+
+    // Each row renders the description in a table cell; count occurrences
+    const descMatches = (html.match(/DESC-\d+/g) ?? []).length
+    expect(descMatches).toBe(10)
   })
 
 })
