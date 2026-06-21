@@ -50,7 +50,6 @@ function analysisResult(overrides = {}) {
         warnings: [],
       },
     ],
-    patternSuggestions: [],
     ...overrides,
   }
 }

@@ -28,13 +28,6 @@ const baseResult = {
   warnings: [],
   errors: [],
   sampleRows: [],
-  patternSuggestions: [],
-}
-
-const sampleSuggestion = {
-  pattern: 'netflix',
-  matchCount: 3,
-  sampleDescriptions: ['NETFLIX 10/01', 'NETFLIX 11/01', 'NETFLIX 12/01'],
 }
 
 const sampleCategories = [
@@ -94,38 +87,4 @@ describe('ImportPreview UI', () => {
     expect(html).not.toContain('Conferma importazione')
   })
 
-  it('REV-01: renders the Suggerimenti pattern section when patternSuggestions has entries', () => {
-    const html = renderToStaticMarkup(
-      createElement(ImportPreview, {
-        result: { ...baseResult, patternSuggestions: [sampleSuggestion] },
-        categories: sampleCategories,
-      }),
-    )
-
-    expect(html).toContain('Suggerimenti pattern (1)')
-    expect(html).toContain('netflix')
-  })
-
-  it('REV-01: does NOT render the Suggerimenti pattern section when patternSuggestions is empty', () => {
-    const html = renderToStaticMarkup(
-      createElement(ImportPreview, {
-        result: baseResult,
-        categories: sampleCategories,
-      }),
-    )
-
-    expect(html).not.toContain('Suggerimenti pattern')
-  })
-
-  it('REV-04: confirm button remains visible alongside the suggestions section (no blocking)', () => {
-    const html = renderToStaticMarkup(
-      createElement(ImportPreview, {
-        result: { ...baseResult, patternSuggestions: [sampleSuggestion] },
-        categories: sampleCategories,
-      }),
-    )
-
-    expect(html).toContain('Suggerimenti pattern (1)')
-    expect(html).toContain('Conferma importazione')
-  })
 })

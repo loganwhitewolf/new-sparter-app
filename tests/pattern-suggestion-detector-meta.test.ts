@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   candidateCoveredByExistingPattern,
-  detectPatternSuggestions,
   detectPatternSuggestionsWithMeta,
   type PatternDetectorRowWithMeta,
   type CoveragePattern,
@@ -95,33 +94,9 @@ describe('detectPatternSuggestionsWithMeta — D-05 metadata', () => {
   })
 
   // ---------------------------------------------------------------------------
-  // Parity: same clustering result as detectPatternSuggestions for identical input
+  // Coverage exclusion
   // ---------------------------------------------------------------------------
-  it('parity: same pattern and matchCount as detectPatternSuggestions for the same rows', () => {
-    const rows = finecoRows()
-    // Build plain PatternDetectorRow equivalents for the baseline function
-    const plainRows = rows.map(r => ({
-      description: r.description,
-      normalizedDescription: r.normalizedDescription,
-      amount: r.amount,
-      valid: r.valid,
-      covered: r.covered,
-    }))
-
-    const withMeta = detectPatternSuggestionsWithMeta(rows, [])
-    const plain = detectPatternSuggestions(plainRows, [])
-
-    expect(withMeta).toHaveLength(plain.length)
-    for (let i = 0; i < plain.length; i++) {
-      expect(withMeta[i].pattern).toBe(plain[i].pattern)
-      expect(withMeta[i].matchCount).toBe(plain[i].matchCount)
-    }
-  })
-
-  // ---------------------------------------------------------------------------
-  // Coverage exclusion — same isCoveredByPatterns gate as existing function
-  // ---------------------------------------------------------------------------
-  it('covered rows excluded from clustering (same gate as detectPatternSuggestions)', () => {
+  it('covered rows excluded from clustering', () => {
     const coverage: CoveragePattern[] = [{ pattern: 'bonifico andrea' }]
     // All three rows match the coverage pattern → no suggestion emitted
     const suggestions = detectPatternSuggestionsWithMeta(finecoRows(), coverage)
