@@ -19,9 +19,12 @@ export function SuggestionSection({ suggestions, singleSuggestions, categories, 
     <div className="flex flex-col gap-6">
       {suggestions.length > 0 && (
         <section aria-label="Suggerimenti pattern" className="flex flex-col gap-4">
-          <h2 className="text-base font-semibold">
-            Suggerimenti pattern ({suggestions.length})
-          </h2>
+          <div>
+            <h2 className="text-base font-semibold">Pattern proposti</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Crea un pattern per categorizzare automaticamente queste transazioni nelle importazioni future.
+            </p>
+          </div>
           <div className="flex flex-col gap-4">
             {suggestions.map((suggestion, index) => (
               <SuggestionCard
@@ -37,9 +40,14 @@ export function SuggestionSection({ suggestions, singleSuggestions, categories, 
 
       {singleSuggestions && singleSuggestions.length > 0 && (
         <section aria-label="Transazioni identiche senza categoria" className="flex flex-col gap-4">
-          <h2 className="text-base font-semibold">
-            Transazioni identiche ({singleSuggestions.length})
-          </h2>
+          <div>
+            <h2 className="text-base font-semibold">
+              Transazioni identiche ({singleSuggestions.length})
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Queste descrizioni compaiono più volte ma non generano un pattern automatizzabile. Categorizzale manualmente dalla pagina Spese.
+            </p>
+          </div>
           <ul className="flex flex-col gap-2">
             {singleSuggestions.map((item, index) => (
               <li key={`${item.normalizedDescription}-${index}`} className="flex items-center justify-between rounded-md border px-4 py-3 text-sm">
