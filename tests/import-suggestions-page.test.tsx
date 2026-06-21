@@ -238,8 +238,48 @@ describe('suggestions page', () => {
     const html = await renderPage()
 
     expect(html).toContain('Suggerimenti pattern')
+    // SUMUI-03: sub-heading communicates platform scope and re-check entry point
+    expect(html).toContain('rilevati dalle transazioni non categorizzate di questa piattaforma')
+    expect(html).toContain('tab Importazioni')
+  })
+
+  // --- SUMUI-02: SuggestionSection distinct headings ---
+
+  it('SUMUI-02: SuggestionSection shows distinct headings for regex and single-cat groups', async () => {
+    mocks.discoverRegexCandidates.mockResolvedValue({
+      candidates: [
+        {
+          pattern: 'bonifico.*',
+          sampleDescriptions: ['Bonifico Andrea'],
+          matchCount: 3,
+          stablePrefix: 'bonifico',
+          strippedByNormalization: false,
+          residualVariablePart: 'Andrea',
+          sampleNormalized: 'bonifico andrea',
+          descriptionHashes: ['h1', 'h2', 'h3'],
+        },
+      ],
+      singleCategorizationSuggestions: [
+        {
+          normalizedDescription: 'macellaio',
+          sampleDescriptions: ['Macellaio'],
+          matchCount: 2,
+          descriptionHashes: ['ha', 'hb'],
+        },
+      ],
+      totalUncategorized: 5,
+      platformId: PLATFORM_ID,
+    })
+
+    const html = await renderPage()
+
+    // Section 1 heading
+    expect(html).toContain('Pattern proposti')
     expect(html).toContain(
-      'Crea pattern per categorizzare automaticamente transazioni simili nelle prossime importazioni.',
+      'Crea un pattern per categorizzare automaticamente queste transazioni nelle importazioni future.',
     )
+    // Section 2 heading (count preserved)
+    expect(html).toContain('Transazioni identiche')
+    expect(html).toContain('Categorizzale manualmente dalla pagina Spese.')
   })
 })
