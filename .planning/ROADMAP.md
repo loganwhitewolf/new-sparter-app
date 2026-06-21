@@ -256,7 +256,10 @@ Plans:
   2. Proposed regex suggestions and single-categorization suggestions are presented as visually distinct groups, so the user can tell at a glance which is which.
   3. The summary communicates that regex discovery now happens as a separate step after import (exact copy/placement resolved in discuss/plan), without misrepresenting the new flow.
 
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 55-01-PLAN.md — Legacy cleanup: rimozione detectPatternSuggestions e patternSuggestions dal flusso analyze (D-06, D-07, D-09)
+- [ ] 55-02-PLAN.md — ImportPreview: cap sampleRows a 10 e rimozione SuggestionSection pre-import (SUMUI-01, D-05, D-08)
+- [ ] 55-03-PLAN.md — Suggestions page + SuggestionSection: paragrafo SUMUI-03 e heading distinti con intro text (SUMUI-02, SUMUI-03)
 **UI hint**: yes
 
 ## Progress
