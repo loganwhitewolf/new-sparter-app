@@ -117,8 +117,7 @@ export default async function TransactionsPage({
         <div>
           <h1 className="text-xl font-semibold">Transazioni</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Consulta i movimenti importati, filtra per periodo o piattaforma e
-            ordina la lista senza modificare i dati originali.
+            Consulta le tue transazioni.
           </p>
         </div>
         <TransactionFormDialog categories={categories} mostUsed={mostUsed} />

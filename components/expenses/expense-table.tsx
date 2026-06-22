@@ -206,7 +206,7 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                 />
               </TableHead>
               <HeaderSortButton
-                column={{ key: 'title', label: 'Titolo' }}
+                column={{ key: 'title', label: 'Spese' }}
                 activeSort={activeSort}
                 activeDir={activeDir}
                 onSort={onSort}
