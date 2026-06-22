@@ -13,17 +13,22 @@
 - ✅ **v1.15: Collapsible Sidebar** — Phase 41 (shipped 2026-06-07)
 - ✅ **v1.16: Dashboard Overview Redesign** — Phases 42–45 (shipped 2026-06-09)
 - ✅ **v2.0: Nature/Direction Model Realignment** — Phases 46–50 (shipped 2026-06-14)
-- 🚧 **v2.1: Regex Discovery & Transaction Unification** — Phases 51–55 (in planning)
+- ✅ **v2.1: Regex Discovery & Transaction Unification** — Phases 51–55 (shipped 2026-06-22)
 
 ## Phases
 
-### v2.1 — Regex Discovery & Transaction Unification
+<details>
+<summary>✅ v2.1: Regex Discovery & Transaction Unification (Phases 51–55) — SHIPPED 2026-06-22</summary>
 
 - [x] **Phase 51: discovery-pipeline-reorder** — Move regex discovery downstream of auto-categorization into a standalone service operating on the uncategorized set only *(complete 2026-06-16, 3/3 plans)*
-- [x] **Phase 52: regex-validity-and-dedup** — Correct regex vs single-categorization distinction; skip candidates already covered by existing patterns or manual categories (completed 2026-06-16)
+- [x] **Phase 52: regex-validity-and-dedup** — Correct regex vs single-categorization distinction; skip candidates already covered by existing patterns or manual categories *(complete 2026-06-16, 3/3 plans)*
 - [x] **Phase 53: retroactive-application** — Apply a created regex to existing uncategorized data; resolve and implement the current-file-vs-platform-history scope *(complete 2026-06-16, 3/3 plans)*
-- [x] **Phase 54: reusable-trigger** — Same discovery service invoked automatically post-import and on-demand from the Files table (completed 2026-06-21)
-- [x] **Phase 55: import-summary-ux** — Capped example list and visual separation of proposed regex vs single-categorization suggestions, with the new-step messaging (completed 2026-06-22)
+- [x] **Phase 54: reusable-trigger** — Same discovery service invoked automatically post-import and on-demand from the Files table *(complete 2026-06-21, 3/3 plans)*
+- [x] **Phase 55: import-summary-ux** — Capped example list and visual separation of proposed regex vs single-categorization suggestions, with the new-step messaging *(complete 2026-06-22, 3/3 plans)*
+
+Full details: `.planning/milestones/v2.1-ROADMAP.md`
+
+</details>
 
 <details>
 <summary>✅ M001–M006 (Phases 1–23) — SHIPPED</summary>
@@ -151,119 +156,6 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 
 </details>
 
-## Phase Details
-
-### Phase 51: discovery-pipeline-reorder
-
-**Goal**: Regex discovery runs as a distinct step downstream of auto-categorization, looking only at what categorization could not handle, and lives in a service that does not depend on an in-progress import.
-**Depends on**: Nothing new (builds on shipped v1.10 pipeline + v2.0 model)
-**Requirements**: PIPE-01, PIPE-02, PIPE-03
-**Success Criteria** (what must be TRUE):
-
-  1. After an import is analyzed/committed, transactions that auto-categorization already classified (Set A) never appear as discovery input — only the still-uncategorized residual (Set B) is examined.
-  2. Discovery can be invoked as a standalone service against a user's persisted uncategorized transactions without an import being in progress (no longer wired inside `analyzeFile`'s pre-categorization path).
-  3. Platform-specific normalization (e.g. Fineco `descriptionStripPattern`) is applied to descriptions before discovery runs, and the service can report what normalization already collapsed versus what residual-variable text remains for the regex step to handle.
-  4. The Fineco DoD input ("Bonifico Andrea Bernardini causale stipendio …") reaches the discovery step as normalized, uncategorized text — i.e. it survives categorization as Set B and is fed to discovery, not silently dropped.**Plans**: 3 plans (2 waves)
-
-**Wave 1**
-
-- [x] 51-01-PLAN.md — Extend pattern-suggestions util with detectPatternSuggestionsWithMeta + D-05 metadata (PIPE-03) *(complete 2026-06-16, commits 11d1f9f + af5f078)*
-- [x] 51-02-PLAN.md — New DAL query getUncategorizedExpensesForDiscovery: Set B by user + platform (PIPE-01) *(complete 2026-06-16, commits 953d15a + 6dc63da)*
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 51-03-PLAN.md — Standalone discoverRegexCandidates service (strip → normalize → cluster) + Fineco DoD anchor; legacy analyzeFile call annotated (PIPE-01/02/03, SC-4) *(complete 2026-06-16, commits 676a37c + 60b5479 + d169fa8)*
-
-### Phase 52: regex-validity-and-dedup
-
-**Goal**: The discovery service proposes a regex only for genuine prefix+variable families, surfaces identical-after-normalization groups as single categorizations instead, and never re-proposes something already covered.
-**Depends on**: Phase 51
-**Requirements**: RDISC-01, RDISC-02, RDISC-03, RDISC-04
-**Success Criteria** (what must be TRUE):
-
-  1. Fineco "Bonifico Andrea Bernardini causale stipendio marzo/maggio/giugno" (≥2 transactions sharing a prefix but differing in a residual variable part) produces exactly one proposed regex. *(DoD test case 1)*
-  2. Repeated identical "Macellaio" transactions (identical after normalization) are surfaced as a single-categorization suggestion, with no regex proposed for them. *(DoD test case 2)*
-  3. A candidate whose generated regex would already be matched/covered by an existing pattern in the regex table is skipped and not shown (Check 1).
-  4. A candidate is skipped when that transaction type is already covered by an existing manual categorization for the same `descriptionHash` (Check 2).
-
-**Plans**: 3 plans (2 waves)
-
-**Wave 1**
-
-- [x] 52-01-PLAN.md — Pure util: `descriptionHashes` passthrough + `candidateCoveredByExistingPattern` (Check 1 helper, RDISC-03)
-- [x] 52-02-PLAN.md — DAL: `getManuallyCategorizedHashes` manual-history query (Check 2 data source, RDISC-04)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 52-03-PLAN.md — Service: residual split + Check 1/Check 2 wiring + two-list `DiscoveryResult` (RDISC-01/02/03/04, both DoD cases)
-
-### Phase 53: retroactive-application
-
-**Goal**: A regex created during discovery immediately categorizes existing uncategorized transactions, with the retroactive scope resolved and enforced.
-**Depends on**: Phase 52
-**Requirements**: APPLY-01, APPLY-02
-**Success Criteria** (what must be TRUE):
-
-  1. When the user promotes a discovered candidate into a regex, the uncategorized transactions of the current file that match it become categorized without a re-import.
-  2. Retroactive application honors the resolved scope decision (current file only vs the platform's entire uncategorized history); whichever scope is chosen, the user can observe exactly which existing transactions were (and were not) re-categorized.
-  3. Applying a regex never re-touches already-categorized transactions (Set A) and never crosses into another platform's history when the resolved scope is platform-bounded.
-
-**Plans**: 3 plans
-Plans:
-**Wave 1**
-
-- [x] 53-01-PLAN.md — Platform-scoped DAL + applyNewPatternToPlatformExpenses with structured counts (APPLY-02)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [ ] 53-02-PLAN.md — promoteSuggestionAction integration: fileId → platform resolve, ActionState.applyResult (APPLY-01/02)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [ ] 53-03-PLAN.md — Suggestions UI: fileId threading, inline card apply counts (ROADMAP SC-2)
-
-### Phase 54: reusable-trigger
-
-**Goal**: One discovery service is reachable from two entry points — automatically after every import and on demand from the Files table.
-**Depends on**: Phase 53
-**Requirements**: TRIG-01, TRIG-02
-**Success Criteria** (what must be TRUE):
-
-  1. After an import completes, discovery runs automatically as the step following auto-categorization, producing the same kind of results as a manual re-run.
-  2. From the Files table the user can trigger a "ricontrolla regex" re-check that invokes the same underlying discovery service (no parallel/divergent implementation), via whichever UX (per-row or bulk) is resolved in discuss/plan.
-  3. An on-demand re-check produces results consistent with the automatic post-import run for the same uncategorized set (same service → same candidates, modulo data changed since import).
-
-**Plans**: 3/3 plans complete
-**Wave 1**
-
-- [x] 54-01-PLAN.md — Migrate the suggestions page to the unified discoverRegexCandidates service (D-04, foundation; fixes EUR-deposit anchor) [Wave 1]
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 54-02-PLAN.md — Post-commit auto-run in importFile + discoveryCount field + import-result CTA (TRIG-01) [Wave 2]
-- [x] 54-03-PLAN.md — Per-row "ricontrolla regex" action + thin server action over the unified service (TRIG-02) [Wave 2]
-
-**UI hint**: yes
-
-### Phase 55: import-summary-ux
-
-**Goal**: The post-import summary is legible — a bounded set of example transactions, clearly separated proposed regex versus single-categorization suggestions, and a cue that discovery is now its own step.
-**Depends on**: Phase 54
-**Requirements**: SUMUI-01, SUMUI-02, SUMUI-03
-**Success Criteria** (what must be TRUE):
-
-  1. The import summary shows at most 10 example transactions (raising the prior cap of 5).
-  2. Proposed regex suggestions and single-categorization suggestions are presented as visually distinct groups, so the user can tell at a glance which is which.
-  3. The summary communicates that regex discovery now happens as a separate step after import (exact copy/placement resolved in discuss/plan), without misrepresenting the new flow.
-
-**Plans**: 3/3 plans complete
-
-- [x] 55-01-PLAN.md — Legacy cleanup: rimozione detectPatternSuggestions e patternSuggestions dal flusso analyze (D-06, D-07, D-09)
-- [x] 55-02-PLAN.md — ImportPreview: cap sampleRows a 10 e rimozione SuggestionSection pre-import (SUMUI-01, D-05, D-08)
-- [x] 55-03-PLAN.md — Suggestions page + SuggestionSection: paragrafo SUMUI-03 e heading distinti con intro text (SUMUI-02, SUMUI-03)
-
-**UI hint**: yes
-
 ## Progress
 
 | Phase | Milestone | Plans | Status | Completed |
@@ -281,9 +173,9 @@ Plans:
 | 42–45 | v1.16 | 13/13 | Complete | 2026-06-09 |
 | 46–50 | v2.0 | 22/22 | Complete | 2026-06-14 |
 | 51. discovery-pipeline-reorder | v2.1 | 3/3 | Complete | 2026-06-16 |
-| 52. regex-validity-and-dedup | v2.1 | 3/3 | Complete    | 2026-06-16 |
-| 53. retroactive-application | v2.1 | 2/3 | In Progress|  |
-| 54. reusable-trigger | v2.1 | 3/3 | Complete    | 2026-06-20 |
-| 55. import-summary-ux | v2.1 | 3/3 | Complete    | 2026-06-21 |
+| 52. regex-validity-and-dedup | v2.1 | 3/3 | Complete | 2026-06-16 |
+| 53. retroactive-application | v2.1 | 3/3 | Complete | 2026-06-16 |
+| 54. reusable-trigger | v2.1 | 3/3 | Complete | 2026-06-21 |
+| 55. import-summary-ux | v2.1 | 3/3 | Complete | 2026-06-22 |
 
-**Total shipped: 51 phases · 189 plans complete**
+**Total shipped: 55 phases · 204 plans complete**

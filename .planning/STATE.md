@@ -1,30 +1,30 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: — Regex Discovery & Transaction Unification
-current_phase: 55
-status: verifying
-stopped_at: "Completed 55-01: removed legacy detectPatternSuggestions from import pipeline"
-last_updated: "2026-06-22T12:36:48.139Z"
+milestone: ""
+milestone_name: ""
+current_phase: null
+status: milestone_complete
+stopped_at: "Milestone v2.1 complete — archived 2026-06-22"
+last_updated: "2026-06-22T00:00:00Z"
 last_activity: 2026-06-22
-last_activity_desc: Phase 55 complete
+last_activity_desc: Milestone v2.1 archived
 progress:
   total_phases: 5
   completed_phases: 5
   total_plans: 15
   completed_plans: 15
   percent: 100
-current_phase_name: import-summary-ux
+current_phase_name: null
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-16)
+See: .planning/PROJECT.md (updated 2026-06-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 55 — import-summary-ux
+**Current focus:** Planning next milestone — run `/gsd-new-milestone` to start
 
 ## Current Position
 
@@ -122,14 +122,20 @@ None.
 
 ## Deferred Items
 
+Items acknowledged and deferred at milestone close on 2026-06-22:
+
 | Category | Item | Status |
 |----------|------|--------|
+| verification_gap | 53-VERIFICATION.md | human_needed — 3 browser/visual checks (inline count, cross-platform isolation, notFound behavior) |
+| verification_gap | 55-VERIFICATION.md | human_needed — 2 visual checks (cap 10 rows layout, SUMUI-02/03 visual hierarchy) |
+| uat_gap | 53-UAT.md | diagnosed — 0 pending scenarios |
+| quick_task | 260615-dtm-reusable-regex-discovery-tool-bank-agnos | unknown — TOOL-01 deferred to next milestone |
+| quick_task | 260615-n3t-fix-recurring-onboarding-catalogazione-s | unknown — to be evaluated in next milestone |
 | v2.1 | TOOL-01 | consolidate in-app + offline discovery — only clarify boundary this milestone |
 | v2.1 | GLOBAL-01 | file-independent suggestions — parked |
 | v2.1 | DISM-01 | persistent dismissal of noisy suggestions — parked |
 | operator | R038/R039/R041 | live Vercel/Supabase/R2 deploy operator-pending |
 | backlog | R029 | partial categorization revalidation coverage |
-| backlog | REVAL-01 | superseded by APPLY-01/APPLY-02 in this milestone |
 
 ## Session Continuity
 
