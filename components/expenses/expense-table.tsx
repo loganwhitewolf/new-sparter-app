@@ -213,19 +213,6 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                 className="text-xs uppercase tracking-wide text-muted-foreground font-normal"
               />
               <HeaderSortButton
-                column={{ key: 'category', label: 'Categoria' }}
-                activeSort={activeSort}
-                activeDir={activeDir}
-                onSort={onSort}
-                className="w-44 text-xs uppercase tracking-wide text-muted-foreground font-normal"
-              />
-              <TableHead className="w-36 text-xs uppercase tracking-wide text-muted-foreground font-normal">
-                Piattaforma
-              </TableHead>
-              <TableHead className="w-36 text-center text-xs uppercase tracking-wide text-muted-foreground font-normal">
-                Stato
-              </TableHead>
-              <HeaderSortButton
                 column={{ key: 'totalAmount', label: 'Totale' }}
                 activeSort={activeSort}
                 activeDir={activeDir}
@@ -241,6 +228,19 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                 onSort={onSort}
                 className="w-24 text-xs uppercase tracking-wide text-muted-foreground font-normal"
               />
+              <TableHead className="w-36 text-xs uppercase tracking-wide text-muted-foreground font-normal">
+                Piattaforma
+              </TableHead>
+              <HeaderSortButton
+                column={{ key: 'category', label: 'Categoria' }}
+                activeSort={activeSort}
+                activeDir={activeDir}
+                onSort={onSort}
+                className="w-44 text-xs uppercase tracking-wide text-muted-foreground font-normal"
+              />
+              <TableHead className="w-36 text-center text-xs uppercase tracking-wide text-muted-foreground font-normal">
+                Stato
+              </TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -280,6 +280,13 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                       }}
                     />
                   </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums text-sm">
+                    {formatAmount(exp.totalAmount)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums text-sm">
+                    {formatDate(exp.createdAt)}
+                  </TableCell>
+                  <TableCell className="truncate text-sm">{exp.platformName ?? '—'}</TableCell>
                   <TableCell>
                     {exp.subCategoryName ? (
                       <div className="flex flex-col gap-0.5">
@@ -292,7 +299,6 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                       <span className="text-sm text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="truncate text-sm">{exp.platformName ?? '—'}</TableCell>
                   <TableCell className="text-center">
                     {!isCategorized && !isIgnored ? (
                       <button
@@ -319,12 +325,6 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                         {isCategorized ? 'Categorizzata' : 'Ignorata'}
                       </Badge>
                     )}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums text-sm">
-                    {formatAmount(exp.totalAmount)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums text-sm">
-                    {formatDate(exp.createdAt)}
                   </TableCell>
                   <TableCell className="w-10 text-center">
                     <DropdownMenu
