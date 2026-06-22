@@ -73,6 +73,18 @@ describe('parseImportFilters', () => {
   it('ignores oversized query strings instead of passing them to SQL', () => {
     expect(parseImportFilters({ q: 'x'.repeat(256) })).toEqual({})
   })
+
+  it('parses sort and dir allowlist keys for table ordering', () => {
+    expect(parseImportFilters({ sort: 'displayName', dir: 'asc' })).toEqual({
+      sort: 'displayName',
+      dir: 'asc',
+    })
+    expect(parseImportFilters({ sort: 'negativeTotal', dir: 'desc' })).toEqual({
+      sort: 'negativeTotal',
+      dir: 'desc',
+    })
+    expect(parseImportFilters({ sort: 'bogus', dir: 'sideways' })).toEqual({})
+  })
 })
 
 describe('CreatePrivateImportFormatSchema', () => {

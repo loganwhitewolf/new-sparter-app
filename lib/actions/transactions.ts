@@ -11,6 +11,7 @@ import {
 } from '@/lib/validations/transactions'
 import {
   insertManualTransaction,
+  mapParsedTransactionFiltersToDal,
   updateTransactionCustomTitle as updateTransactionCustomTitleDAL,
   getTransactions,
   TRANSACTION_LIST_LIMIT,
@@ -86,10 +87,13 @@ export async function loadMoreTransactions({
 }: LoadMoreTransactionsInput): Promise<LoadMoreTransactionsResult> {
   try {
     const normalizedOffset = normalizeOffset(offset)
-    const transactions = await getTransactions(parseTransactionFilters(filters), {
-      limit: TRANSACTION_LIST_LIMIT,
-      offset: normalizedOffset,
-    })
+    const transactions = await getTransactions(
+      mapParsedTransactionFiltersToDal(parseTransactionFilters(filters)),
+      {
+        limit: TRANSACTION_LIST_LIMIT,
+        offset: normalizedOffset,
+      },
+    )
 
     return {
       transactions,

@@ -117,3 +117,20 @@ describe('parseExpenseFilters — nature/type/subCategory (lcp-01)', () => {
     expect(result.subCategoryId).toBeUndefined()
   })
 })
+
+describe('parseExpenseFilters — table sort', () => {
+  it('parses title and category sort keys', () => {
+    expect(parseExpenseFilters({ sort: 'title', dir: 'asc' })).toMatchObject({
+      sort: 'title',
+      dir: 'asc',
+    })
+    expect(parseExpenseFilters({ sort: 'category', dir: 'desc' })).toMatchObject({
+      sort: 'category',
+      dir: 'desc',
+    })
+  })
+
+  it('drops unknown sort and direction values', () => {
+    expect(parseExpenseFilters({ sort: 'platform', dir: 'sideways' })).toEqual({})
+  })
+})

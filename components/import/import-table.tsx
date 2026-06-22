@@ -272,9 +272,13 @@ export function ImportTable({
           </TableCaption>
           <TableHeader>
             <TableRow className="bg-secondary/70">
-              <TableHead className="min-w-[16rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
-                File
-              </TableHead>
+              <HeaderSortButton
+                column={{ key: "displayName", label: "File" }}
+                activeSort={activeSort}
+                activeDir={activeDir}
+                onSort={onSort}
+                className="min-w-[16rem] text-xs font-normal uppercase tracking-wide text-muted-foreground"
+              />
               <HeaderSortButton
                 column={{ key: "status", label: "Stato" }}
                 activeSort={activeSort}
@@ -304,15 +308,29 @@ export function ImportTable({
                 onSort={onSort}
                 className="w-24 text-xs font-normal uppercase tracking-wide text-muted-foreground"
               />
-              <TableHead className="w-32 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground">
-                Totale entrate
-              </TableHead>
-              <TableHead className="w-32 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground">
-                Totale uscite
-              </TableHead>
-              <TableHead className="min-w-[11rem] text-xs font-normal uppercase tracking-wide text-muted-foreground">
-                Periodo
-              </TableHead>
+              <HeaderSortButton
+                column={{ key: "positiveTotal", label: "Totale entrate" }}
+                activeSort={activeSort}
+                activeDir={activeDir}
+                align="right"
+                onSort={onSort}
+                className="w-32 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground"
+              />
+              <HeaderSortButton
+                column={{ key: "negativeTotal", label: "Totale uscite" }}
+                activeSort={activeSort}
+                activeDir={activeDir}
+                align="right"
+                onSort={onSort}
+                className="w-32 text-right text-xs font-normal uppercase tracking-wide text-muted-foreground"
+              />
+              <HeaderSortButton
+                column={{ key: "referenceStartedAt", label: "Periodo" }}
+                activeSort={activeSort}
+                activeDir={activeDir}
+                onSort={onSort}
+                className="min-w-[11rem] text-xs font-normal uppercase tracking-wide text-muted-foreground"
+              />
               <TableHead className="w-40">
                 <span className="sr-only">Azioni</span>
               </TableHead>

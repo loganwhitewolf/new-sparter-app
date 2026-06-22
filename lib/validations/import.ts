@@ -195,7 +195,30 @@ export type ParsedImportFilters = {
   months?: string[]
   amountMin?: string
   amountMax?: string
+  sort?:
+    | 'displayName'
+    | 'status'
+    | 'platform'
+    | 'importedAt'
+    | 'rowCount'
+    | 'positiveTotal'
+    | 'negativeTotal'
+    | 'referenceStartedAt'
+  dir?: 'asc' | 'desc'
 }
+
+export const importSortSchema = z.enum([
+  'displayName',
+  'status',
+  'platform',
+  'importedAt',
+  'rowCount',
+  'positiveTotal',
+  'negativeTotal',
+  'referenceStartedAt',
+])
+
+export const importSortDirectionSchema = z.enum(['asc', 'desc'])
 
 const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/
 const MAX_IMPORT_QUERY_LENGTH = 255
@@ -283,6 +306,8 @@ export function parseImportFilters(input: ImportSearchParams): ParsedImportFilte
   const months = parseMonths(input.months)
   const amountMin = parseAmount(input.amountMin)
   const amountMax = parseAmount(input.amountMax)
+  const sort = importSortSchema.safeParse(firstTrimmed(input.sort))
+  const dir = importSortDirectionSchema.safeParse(firstTrimmed(input.dir))
 
   return {
     ...(q && q.length <= MAX_IMPORT_QUERY_LENGTH ? { q } : {}),
@@ -295,5 +320,7 @@ export function parseImportFilters(input: ImportSearchParams): ParsedImportFilte
     ...(months.length > 0 ? { months } : {}),
     ...(amountMin ? { amountMin } : {}),
     ...(amountMax ? { amountMax } : {}),
+    ...(sort.success ? { sort: sort.data } : {}),
+    ...(dir.success ? { dir: dir.data } : {}),
   }
 }

@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import {
   getTransactionPlatforms,
   getTransactions,
+  mapParsedTransactionFiltersToDal,
 } from '@/lib/dal/transactions'
 import { getCategories } from '@/lib/dal/categories'
 import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
@@ -72,10 +73,7 @@ export default async function TransactionsPage({
   searchParams: Promise<TransactionSearchParams>
 }) {
   const params = await searchParams
-  const parsed = parseTransactionFilters(params)
-  // Map URL param 'type' to DAL field 'direction' (renamed in Phase 49 Plan 03)
-  const { type: _type, ...parsedRest } = parsed
-  const filters = { ...parsedRest, direction: _type }
+  const filters = mapParsedTransactionFiltersToDal(parseTransactionFilters(params))
   const [transactions, platforms, categories, mostUsed, monthsWithData] = await Promise.all([
     getTransactions(filters),
     getTransactionPlatforms(),

@@ -119,6 +119,7 @@ None.
 | 260615-dtm | Bank-agnostic regex-discovery tool (uncovered-description clustering → proposed patterns) | 2026-06-15 | d737b8e |
 | 260615-n3t | Onboarding step-4 fix: guarded light theme + catalogued items stay with green check | 2026-06-15 | 1434308 |
 | 260615-oiq | Onboarding private platform creation imports immediately and returns to step 2 | 2026-06-15 | d5b590c |
+| 260616-dlw | Fix transaction description sort (validation + DAL + infinite scroll) | 2026-06-16 | c71d32e |
 
 ## Deferred Items
 

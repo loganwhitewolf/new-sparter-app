@@ -113,6 +113,7 @@ vi.mock('@/lib/db', () => ({
 }))
 vi.mock('drizzle-orm', () => ({
   and: (...args: unknown[]) => ({ op: 'and', args }),
+  asc: (column: unknown) => ({ op: 'asc', column }),
   desc: (column: unknown) => ({ op: 'desc', column }),
   eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
   gte: (left: unknown, right: unknown) => ({ op: 'gte', left, right }),
@@ -175,6 +176,15 @@ const {
   importListSelect,
   updateImportDisplayName,
   getFileCoveredMonths,
+  importNegativeTotalAbsSortKey,
+  importPositiveTotalAbsSortKey,
+  importPlatformMissingBucket,
+  importPlatformSortKey,
+  importStatusSortKey,
+  importDisplayNameSortKey,
+  importReferencePeriodSortKey,
+  getImportSortColumn,
+  buildImportOrderBy,
 } = await import('../lib/dal/imports')
 
 describe('imports DAL read model', () => {
@@ -264,7 +274,6 @@ describe('imports DAL read model', () => {
 
     expect(mocks.orderByArgs[0]).toEqual([
       { op: 'desc', column: importListOrderTimestamp },
-      { op: 'desc', column: 'file.createdAt' },
       { op: 'desc', column: 'file.id' },
     ])
   })
@@ -304,6 +313,52 @@ describe('imports DAL read model', () => {
     ]
 
     await expect(getImportRows()).resolves.toEqual(mocks.queryResult)
+  })
+
+  it('maps sort keys to DAL columns and expressions', () => {
+    expect(getImportSortColumn('displayName')).toBe(importDisplayNameSortKey)
+    expect(getImportSortColumn('importedAt')).toBe(importListOrderTimestamp)
+    expect(getImportSortColumn('platform')).toBe(importPlatformSortKey)
+    expect(getImportSortColumn('rowCount')).toBe('file.rowCount')
+    expect(getImportSortColumn('positiveTotal')).toBe(importPositiveTotalAbsSortKey)
+    expect(getImportSortColumn('negativeTotal')).toBe(importNegativeTotalAbsSortKey)
+    expect(getImportSortColumn('referenceStartedAt')).toBe(importReferencePeriodSortKey)
+    expect(getImportSortColumn('status')).toBe(importStatusSortKey)
+  })
+
+  it('builds orderBy clauses with ABS on negativeTotal for amount sort and ties on id', () => {
+    const ascOrder = buildImportOrderBy({ sort: 'negativeTotal', dir: 'asc' })
+    const descOrder = buildImportOrderBy({ sort: 'negativeTotal', dir: 'desc' })
+
+    expect(ascOrder[0]).toEqual({ op: 'asc', column: importNegativeTotalAbsSortKey })
+    expect(ascOrder[1]).toEqual({ op: 'asc', column: 'file.id' })
+    expect(descOrder[0]).toEqual({ op: 'desc', column: importNegativeTotalAbsSortKey })
+    expect(descOrder[1]).toEqual({ op: 'desc', column: 'file.id' })
+  })
+
+  it('orders platform sort with missing platform rows last in both directions', () => {
+    const ascOrder = buildImportOrderBy({ sort: 'platform', dir: 'asc' })
+    const descOrder = buildImportOrderBy({ sort: 'platform', dir: 'desc' })
+
+    expect(ascOrder).toEqual([
+      { op: 'asc', column: importPlatformMissingBucket },
+      { op: 'asc', column: importPlatformSortKey },
+      { op: 'asc', column: 'file.id' },
+    ])
+    expect(descOrder).toEqual([
+      { op: 'asc', column: importPlatformMissingBucket },
+      { op: 'desc', column: importPlatformSortKey },
+      { op: 'desc', column: 'file.id' },
+    ])
+  })
+
+  it('applies parsed sort and dir from filters to orderBy', async () => {
+    await getImportRows({ sort: 'displayName', dir: 'asc' })
+
+    expect(mocks.orderByArgs[0]).toEqual([
+      { op: 'asc', column: importDisplayNameSortKey },
+      { op: 'asc', column: 'file.id' },
+    ])
   })
 
   it('does not expose another user selector or sensitive object keys/raw diagnostics in returned rows', async () => {
