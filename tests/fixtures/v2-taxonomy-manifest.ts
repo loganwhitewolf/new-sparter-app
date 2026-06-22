@@ -78,11 +78,11 @@ export const V2_SUBCATEGORY_MANIFEST: SubcategoryManifestEntry[] = [
   { slug: 'taxi-e-ride-sharing', natureCode: 'essential' },
   { slug: 'pedaggi-e-parcheggi', natureCode: 'essential' },
   { slug: 'assicurazione-veicoli', natureCode: 'essential' },
-  // OUT — Spesa (3)
+  // OUT - Groceries (3)
   { slug: 'spesa-quotidiana', natureCode: 'essential' },
   { slug: 'casalinghi-e-non-alimentari', natureCode: 'essential' },
   { slug: 'bio-vino-e-gourmet', natureCode: 'discretionary' },
-  // OUT — Salute (4)
+  // OUT - Health (4)
   { slug: 'visite-mediche', natureCode: 'essential' },
   { slug: 'trattamenti-medici', natureCode: 'essential' },
   { slug: 'farmaci', natureCode: 'essential' },

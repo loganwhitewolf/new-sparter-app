@@ -553,7 +553,6 @@ describe('import Server Actions', () => {
       warnings: [],
       errors: [],
       sampleRows: [],
-      patternSuggestions: [],
     }
 
     const importResult = {
@@ -595,7 +594,6 @@ describe('import Server Actions', () => {
         userId: 'user-abc',
         fileId: '11111111-1111-4111-8111-111111111111',
         selectedFormatVersionId: 77,
-        skipPatternSuggestions: true,
       })
       expect(mocks.importFile).toHaveBeenCalledWith({
         userId: 'user-abc',

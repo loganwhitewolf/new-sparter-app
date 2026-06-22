@@ -1,5 +1,21 @@
 # Milestones
 
+## v2.1 Regex Discovery & Transaction Unification (Shipped: 2026-06-22)
+
+**Phases completed:** 5 phases (51–55), 15 plans
+**Git range:** 11d1f9f → 09d0f57 · 89 files · +11214 / -803 lines · 50 commits · 8 days
+**Known deferred items at close:** 5 (see STATE.md Deferred Items)
+
+**Key accomplishments:**
+
+- Standalone `discoverRegexCandidates` service with Set B filter (`isNull(subCategoryId)`), platform-specific normalization strip, and D-05 metadata — regex discovery extracted from the import flow and independently callable with only `userId` + `platformId` (Fase 51)
+- Two-list `DiscoveryResult` with RDISC-01/02 routing (regex vs single-cat), Check 1 active-pattern dedup, and Check 2 manual-history hash dedup — zero false-positive proposals (Fase 52)
+- Platform-scoped retroactive application via `promoteSuggestionAction` with IDOR guard (`getPlatformIdForUserFile`): promotes a candidate to a pattern and immediately categorizes the platform's uncategorized history, returning inline Italian count copy on the suggestion card (Fase 53)
+- Single service (`discoverRegexCandidates`), two entry points: auto post-import non-fatal run with `discoveryCount` CTA (TRIG-01) and per-row "Ricontrolla regex" from the Files table via `recheckRegexAction` (TRIG-02) — no divergent implementation (Fase 54)
+- `detectPatternSuggestions` fully removed from utils and import service; `sampleRows` capped at 10; `SuggestionSection` with distinct headings + intro text; SUMUI-03 discovery-step paragraph — clean import summary UX (Fase 55)
+
+---
+
 ## v2.0 Nature/Direction Model Realignment (Shipped: 2026-06-14)
 
 **Phases completed:** 5 phases, 22 plans, 37 tasks

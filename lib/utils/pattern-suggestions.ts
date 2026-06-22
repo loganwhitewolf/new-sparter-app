@@ -1,3 +1,12 @@
+// Pure prefix/variable clustering util — shared by the in-app discovery pipeline and
+// plain Node/tsx scripts (e.g. scripts/regex-discovery.ts).
+//
+// This module deliberately carries NO server-only import guard so it can be
+// imported both from production server code and from plain Node/tsx scripts. The
+// `server-only` package throws unconditionally outside a React Server Component
+// context, so a script can never import server-only modules directly; it imports
+// this module instead.
+
 export interface PatternDetectorRow {
   description: string
   normalizedDescription: string
@@ -15,6 +24,7 @@ export interface PatternSuggestion {
   pattern: string
   matchCount: number
   sampleDescriptions: string[]
+  sampleAmounts: (string | null)[]
 }
 
 function isNumericToken(token: string): boolean {
@@ -67,12 +77,61 @@ function longestCommonPrefix(a: string[], b: string[]): string[] {
 
 // inferAmountSign removed — ADR 0012: patterns are sign-agnostic
 
-export function detectPatternSuggestions(
-  rows: PatternDetectorRow[],
+// ---------------------------------------------------------------------------
+// WithMeta variant — additive extension for PIPE-03 (D-05 per-candidate metadata)
+// ---------------------------------------------------------------------------
+
+export interface PatternDetectorRowWithMeta extends PatternDetectorRow {
+  /** Raw (pre-strip) title for D-05 reporting */
+  rawTitle: string
+  /** Whether descriptionStripPattern altered rawTitle before normalizeDescription was called */
+  strippedByNormalization: boolean
+  /** Stable content hash for deduping grouped descriptions against manual history */
+  descriptionHash: string | null
+}
+
+export interface PatternSuggestionWithMeta extends PatternSuggestion {
+  /** Shared prefix tokens joined, pre-escape (human-readable stable portion) */
+  stablePrefix: string
+  /** True if at least one sample had its description altered by the platform strip pattern */
+  strippedByNormalization: boolean
+  /** Example residual variable text beyond the stable prefix (from first sample description) */
+  residualVariablePart: string
+  /** One sample normalized description (post-strip, post-normalizeDescription) */
+  sampleNormalized: string
+  /** Hashes for all grouped member descriptions, with legacy nulls filtered out */
+  descriptionHashes: string[]
+}
+
+export function candidateCoveredByExistingPattern(
+  candidate: PatternSuggestionWithMeta,
   coveragePatterns: CoveragePattern[],
-): PatternSuggestion[] {
+): boolean {
+  const strippedDescription = stripNumericTokens(candidate.sampleNormalized).join(' ')
+  for (const p of coveragePatterns) {
+    try {
+      const regex = new RegExp(p.pattern, 'i')
+      if (regex.test(candidate.sampleNormalized) || regex.test(strippedDescription)) {
+        return true
+      }
+    } catch {
+      // invalid regex pattern — skip and continue
+    }
+  }
+  return false
+}
+
+/**
+ * Prefix/variable clustering pipeline with per-candidate D-05 metadata.
+ * The input rows must include rawTitle and strippedByNormalization
+ * (computed by the caller before normalization runs).
+ */
+export function detectPatternSuggestionsWithMeta(
+  rows: PatternDetectorRowWithMeta[],
+  coveragePatterns: CoveragePattern[],
+): PatternSuggestionWithMeta[] {
   // Step 1: filter eligible rows and compute stripped tokens; drop rows with <2 stripped tokens
-  type Candidate = { row: PatternDetectorRow; tokens: string[] }
+  type Candidate = { row: PatternDetectorRowWithMeta; tokens: string[] }
   const candidates: Candidate[] = []
   for (const r of rows) {
     if (!r.valid) continue
@@ -83,9 +142,7 @@ export function detectPatternSuggestions(
     candidates.push({ row: r, tokens })
   }
 
-  // Step 2: bucket by first 2 stripped tokens — any qualifying suggestion (min prefix
-  // length = 2) must share the same first 2 tokens. Bucketing at this granularity
-  // prevents outliers with a different second token from collapsing unrelated subgroups.
+  // Step 2: bucket by first 2 stripped tokens
   const buckets = new Map<string, Candidate[]>()
   for (const c of candidates) {
     const head = c.tokens.slice(0, 2).join(' ')
@@ -94,10 +151,8 @@ export function detectPatternSuggestions(
     buckets.set(head, list)
   }
 
-  // Step 3: for each bucket with >=2 members, compute the longest prefix
-  // shared by ALL members (intersect down). If the shared prefix has >=2 tokens,
-  // emit one suggestion.
-  const suggestions: PatternSuggestion[] = []
+  // Step 3: compute longest common prefix per bucket; emit WithMeta suggestions
+  const suggestions: PatternSuggestionWithMeta[] = []
   for (const group of buckets.values()) {
     if (group.length < 2) continue
     let prefix = group[0].tokens
@@ -110,11 +165,36 @@ export function detectPatternSuggestions(
     const prefixString = prefix.join(' ')
     const escaped = escapeRegex(prefixString)
     const sampleDescriptions = group.slice(0, 3).map(g => g.row.description)
+    const sampleAmounts = group.slice(0, 3).map(g => g.row.amount)
+    const descriptionHashes = group
+      .map(g => g.row.descriptionHash)
+      .filter((hash): hash is string => hash !== null)
+
+    // D-05: stablePrefix is the human-readable joined prefix (pre-escape)
+    const stablePrefix = prefixString
+
+    // D-05: residualVariablePart — tokens of the first sample beyond the stable prefix
+    const firstNormalized = group[0].row.normalizedDescription
+    const firstTokens = stripNumericTokens(firstNormalized)
+    const residualTokens = firstTokens.slice(prefix.length)
+    const residualVariablePart = residualTokens.join(' ')
+
+    // D-05: sampleNormalized — normalized description of the first grouped row
+    const sampleNormalized = firstNormalized
+
+    // D-05: strippedByNormalization — true if ANY member row was stripped
+    const strippedByNormalization = group.some(g => g.row.strippedByNormalization)
 
     suggestions.push({
       pattern: escaped,
       matchCount: group.length,
       sampleDescriptions,
+      sampleAmounts,
+      stablePrefix,
+      strippedByNormalization,
+      residualVariablePart,
+      sampleNormalized,
+      descriptionHashes,
     })
   }
 

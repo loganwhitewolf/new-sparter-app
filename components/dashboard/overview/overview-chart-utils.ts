@@ -51,7 +51,7 @@ export type NatureBreakdown = {
 
 /**
  * Derive a per-nature breakdown from a single OverviewChartPoint, respecting
- * the current includedIncome and includedOut filter sets.
+ * the current includedIncome, includedOut, and includedAllocation filter sets.
  *
  * Income key mapping (chart → FlowNature for labels/colors):
  *   'recurring'     → NATURE_LABELS/NATURE_COLORS['income']
@@ -66,7 +66,8 @@ export type NatureBreakdown = {
 export function deriveNatureBreakdown(
   point: OverviewChartPoint,
   includedIncome: Set<IncomeKey>,
-  includedOut: Set<OutKey>
+  includedOut: Set<OutKey>,
+  includedAllocation?: Set<AllocationKey>
 ): NatureBreakdown {
   const income: NatureBreakdownItem[] = []
 
@@ -99,7 +100,7 @@ export function deriveNatureBreakdown(
     })
   }
 
-  const allocation: NatureBreakdownItem[] = [
+  const allAllocation: NatureBreakdownItem[] = [
     {
       key: 'savings',
       label: 'Risparmio',
@@ -113,6 +114,9 @@ export function deriveNatureBreakdown(
       amount: Number(toDecimal(point.allocation.investment)),
     },
   ]
+  const allocation = includedAllocation
+    ? allAllocation.filter((item) => includedAllocation.has(item.key as AllocationKey))
+    : allAllocation
 
   return { income, out, allocation }
 }
@@ -137,20 +141,20 @@ export function sumSelected(
 
 /**
  * Derive a single bar chart row from an OverviewChartPoint,
- * summing only the income and out buckets that are currently selected.
- * The allocation bucket is always totalled in full (no per-nature filtering).
+ * summing only the income, out, and allocation buckets that are currently selected.
  *
  * Rules:
  * - includedIncome drives entrate (subset of INCOME_KEYS)
  * - includedOut drives uscite (subset of OUT_KEYS — essential/discretionary/debt)
- * - accantonato = savings + investment (always shown in full — D-01)
+ * - includedAllocation drives accantonato (subset of ALLOCATION_KEYS — savings/investment)
  * - Number() conversion happens ONLY in the returned row (Recharts boundary)
  * - The returned object has exactly { label, entrate, uscite, accantonato }
  */
 export function deriveFilteredBarRow(
   point: OverviewChartPoint,
   includedIncome: readonly IncomeKey[],
-  includedOut: readonly OutKey[]
+  includedOut: readonly OutKey[],
+  includedAllocation: readonly AllocationKey[] = [...ALLOCATION_KEYS]
 ): { label: string; entrate: number; uscite: number; accantonato: number } {
   const incomeValues: Record<string, string> = {
     recurring: point.income.recurring,
@@ -162,8 +166,11 @@ export function deriveFilteredBarRow(
     point.out as unknown as Record<string, string>,
     includedOut
   )
-  const accantonato = toDecimal(point.allocation.savings)
-    .plus(toDecimal(point.allocation.investment))
+  const allocationValues: Record<string, string> = {
+    savings: point.allocation.savings,
+    investment: point.allocation.investment,
+  }
+  const accantonato = sumSelected(allocationValues, includedAllocation)
 
   return {
     label: point.label,

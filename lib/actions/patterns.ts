@@ -3,7 +3,7 @@ import { verifySession } from "@/lib/dal/auth";
 import { db } from "@/lib/db";
 import {
   CreatePatternSchema,
-  UpdatePatternSchema,
+  UpdatePatternClientSchema,
   type ActionState,
 } from "@/lib/validations/pattern";
 import {
@@ -18,7 +18,11 @@ import {
   type PlanGate,
 } from "@/lib/config/categorization";
 import { revalidateCategorizationSurfaces } from "@/lib/actions/revalidation";
-import { applyNewPatternToExpenses } from "@/lib/services/pattern-application";
+import {
+  applyNewPatternToExpenses,
+  applyNewPatternToPlatformExpenses,
+} from "@/lib/services/pattern-application";
+import { getPlatformIdForUserFile } from "@/lib/dal/files";
 
 function errorCause(error: unknown): unknown {
   return typeof error === "object" && error !== null && "cause" in error
@@ -163,11 +167,10 @@ export async function updatePatternAction(
     ? Number(formData.get("subCategoryId"))
     : undefined;
 
-  const confidenceRaw = formData.get("confidence")
-  const parsed = UpdatePatternSchema.safeParse({
+  // Use UpdatePatternClientSchema (omits confidence) — confidence is never client-controlled (WR-04).
+  const parsed = UpdatePatternClientSchema.safeParse({
     pattern: formData.get("pattern") || undefined,
     subCategoryId: subCategoryIdRaw,
-    confidence: confidenceRaw !== null ? Number(confidenceRaw) : undefined,
     description: (formData.get("description") as string) || undefined,
   });
   if (!parsed.success) {
@@ -227,17 +230,30 @@ export async function promoteSuggestionAction(
   // Per D-03 (35-CONTEXT.md): suggestion promotion is available to all plans,
   // including `free`. Intentionally NOT calling requireCustomPatternsAccess here.
 
+  // Phase 53-02: resolve platformId server-side from fileId (T-53-04, T-53-05).
+  // fileId is provided by the hidden input on SuggestionPromoteForm.
+  const fileId = formData.get("fileId");
+  if (!fileId || typeof fileId !== "string" || fileId.trim() === "") {
+    return { error: "File di import non valido." };
+  }
+
+  const platformId = await getPlatformIdForUserFile({ userId, fileId });
+  if (platformId == null) {
+    return { error: "Impossibile determinare la piattaforma per questo file." };
+  }
+
   const subCategoryIdRaw = formData.get("subCategoryId")
     ? Number(formData.get("subCategoryId"))
     : undefined;
 
   // Parse only the fields we trust from the client (pattern, subCategoryId).
-  // Phase 46: amountSign removed; confidence is hardcoded to 1.
-  const parsed = CreatePatternSchema.safeParse({
+  // Phase 46: amountSign removed; confidence is hardcoded to 0.85 (D-01, WR-03).
+  // Use a schema that omits confidence so no sentinel value is needed.
+  const PromoteFormSchema = CreatePatternSchema.omit({ confidence: true });
+  const parsed = PromoteFormSchema.safeParse({
     pattern: formData.get("pattern"),
     subCategoryId: subCategoryIdRaw,
     // amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012)
-    confidence: 1,
     description: undefined, // Inline form does not collect a description (D-01).
   });
   if (!parsed.success) {
@@ -282,24 +298,28 @@ export async function promoteSuggestionAction(
     return { error: "Si è verificato un errore. Riprova tra qualche secondo." };
   }
 
+  // Phase 53-02: platform-scoped retroactive apply (APPLY-01/02).
+  // Replaces legacy user-wide applyNewPatternToExpenses on the promote path.
+  // Apply failures are non-fatal: pattern is already saved; return zero counts.
+  let applyResult = { updatedCount: 0, notUpdatedCount: 0 };
   try {
-    await applyNewPatternToExpenses(
-      db,
+    applyResult = await applyNewPatternToPlatformExpenses(db, {
       userId,
-      created.id,
-      created.pattern,
-      created.subCategoryId,
+      platformId,
+      patternId: created.id,
+      patternString: created.pattern,
+      subCategoryId: created.subCategoryId,
       // amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012)
-      Number(created.confidence),
-    );
+      confidence: Number(created.confidence),
+    });
   } catch (err) {
     console.error(
-      '[promoteSuggestionAction] applyNewPatternToExpenses failed (pattern saved, retroactive apply failed):',
+      '[promoteSuggestionAction] applyNewPatternToPlatformExpenses failed (pattern saved, retroactive apply failed):',
       err instanceof Error ? err.message : err,
       errorCause(err),
     )
   }
 
   revalidateCategorizationSurfaces();
-  return { error: null };
+  return { error: null, applyResult };
 }

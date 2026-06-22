@@ -14,7 +14,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { NATURE_COLORS, NATURE_LABELS } from '@/lib/utils/nature-labels'
-import { INCOME_KEYS, OUT_KEYS, type IncomeKey, type OutKey } from './overview-chart-utils'
+import { INCOME_KEYS, OUT_KEYS, ALLOCATION_KEYS, type IncomeKey, type OutKey, type AllocationKey } from './overview-chart-utils'
 
 // ─── Chip label helpers ───────────────────────────────────────────────────────
 
@@ -91,11 +91,15 @@ type OverviewChartFiltersProps = {
   includedIncome: Set<IncomeKey>
   /** Currently included out keys (controlled by parent OverviewChart). */
   includedOut: Set<OutKey>
+  /** Currently included allocation keys (controlled by parent OverviewChart). */
+  includedAllocation: Set<AllocationKey>
   /** Toggle an income key in/out of the included set. */
   onToggleIncome: (key: IncomeKey) => void
   /** Toggle an out key in/out of the included set. */
   onToggleOut: (key: OutKey) => void
-  /** Reset both filter groups to all-included default state. */
+  /** Toggle an allocation key in/out of the included set. */
+  onToggleAllocation: (key: AllocationKey) => void
+  /** Reset all filter groups to all-included default state. */
   onReset?: () => void
 }
 
@@ -156,13 +160,16 @@ function FilterChip({ label, tooltip, color, included, onToggle }: ChipProps) {
 export function OverviewChartFilters({
   includedIncome,
   includedOut,
+  includedAllocation,
   onToggleIncome,
   onToggleOut,
+  onToggleAllocation,
   onReset,
 }: OverviewChartFiltersProps) {
   const allIncluded =
     includedIncome.size === INCOME_KEYS.length &&
-    includedOut.size === OUT_KEYS.length
+    includedOut.size === OUT_KEYS.length &&
+    includedAllocation.size === ALLOCATION_KEYS.length
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -238,7 +245,7 @@ export function OverviewChartFilters({
           ))}
         </div>
 
-        {/* Accantonamento group — Risparmio / Investimento (display-only, always present) */}
+        {/* Accantonamento group — Risparmio / Investimento (toggleable) */}
         <div className="flex flex-wrap items-center gap-1.5">
           <div className="flex items-center gap-1">
             <span className="text-xs font-medium text-muted-foreground">Accantonamento</span>
@@ -255,30 +262,21 @@ export function OverviewChartFilters({
               <PopoverContent className="w-64 text-sm">
                 <p className="font-medium">Accantonamento</p>
                 <p className="mt-1 text-muted-foreground">
-                  La barra viola mostra il totale accantonato nel mese (risparmio + investimento).
-                  È sempre visibile anche quando il valore è zero.
+                  Filtra la barra viola per tipo di accantonamento. Ogni chip include o esclude
+                  risparmio o investimento dal totale mensile del grafico.
                 </p>
               </PopoverContent>
             </Popover>
           </div>
           {ALLOCATION_CHIPS.map((chip) => (
-            <Tooltip key={chip.key}>
-              <TooltipTrigger asChild>
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full border border-transparent bg-foreground/10 px-2.5 py-0.5 text-xs font-medium text-foreground"
-                >
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: chip.color }}
-                    aria-hidden="true"
-                  />
-                  {chip.label}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>{chip.tooltip}</p>
-              </TooltipContent>
-            </Tooltip>
+            <FilterChip
+              key={chip.key}
+              label={chip.label}
+              tooltip={chip.tooltip}
+              color={chip.color}
+              included={includedAllocation.has(chip.key)}
+              onToggle={() => onToggleAllocation(chip.key)}
+            />
           ))}
         </div>
 

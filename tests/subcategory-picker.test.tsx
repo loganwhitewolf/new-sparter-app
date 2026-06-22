@@ -204,7 +204,7 @@ describe('SubcategoryPicker (R-UP-01, R-UP-02, R-UP-03, R-UP-08)', () => {
 
   it('R-UP-01: onChange wiring — the component renders tile buttons for subcategories that call onSelect', () => {
     // With mostUsed=[] and open=true, the picker renders the initial state:
-    // left rail shows categories, right pane shows the "Più usate" (empty) detail.
+    // left rail shows categories, right pane shows the "Most used" (empty) detail.
     // Rail items for each category are rendered as clickable buttons.
     const html = renderPicker()
 

@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Sparter is a personal finance app for the Italian market. It supports email/password and Google/GitHub OAuth authentication with account linking, transaction and expense management, import history, CSV/Excel import flows backed by Cloudflare R2, user-managed categories, a year-scoped dashboard overview (grouped bar chart, 4 KPI cards, per-month movers drill-down, filter chips by income type and expense nature, FlowNature education popovers, uncategorized nudge), deviation analysis, pattern suggestion detection and promotion, a guided first-import onboarding flow, a unified subcategory picker bottom sheet across all 7 selection surfaces, a collapsible icon-rail sidebar, structured logging, and a health endpoint. The app is deployed on Vercel (operator action) or runnable locally with a Supabase/R2 stack.
+Sparter is a personal finance app for the Italian market. It supports email/password and Google/GitHub OAuth authentication with account linking, transaction and expense management, import history, CSV/Excel import flows backed by Cloudflare R2, user-managed categories, a year-scoped dashboard overview (grouped bar chart, 4 KPI cards, per-month movers drill-down, filter chips by income type and expense nature, FlowNature education popovers, uncategorized nudge), deviation analysis, a regex discovery pipeline (standalone post-categorization service with dedup gates, IDOR-guarded retroactive platform-scoped apply, and a reusable Files-table trigger), a guided first-import onboarding flow, a unified subcategory picker bottom sheet across all 7 selection surfaces, a collapsible icon-rail sidebar, structured logging, and a health endpoint. The app is deployed on Vercel (operator action) or runnable locally with a Supabase/R2 stack.
 
 ## Core Value
 
@@ -31,9 +31,18 @@ All milestones M001–v2.0 (Phases 1–50) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Next Milestone
+## Last Shipped Milestone: v2.1 — Regex Discovery & Transaction Unification (shipped 2026-06-22)
 
-TBD — run `/gsd-new-milestone` to scope the next milestone. Operator deploy (R038/R039/R041 — live Vercel/Supabase/R2) remains operator-pending and is the most likely near-term candidate.
+**Goal:** Re-architect regex discovery as a separate step downstream of auto-categorization, removing duplicate and already-covered proposals, with a reusable trigger and a cleaned-up import summary.
+
+**Delivered:**
+- Standalone `discoverRegexCandidates` service operating on post-categorization Set B only; no fileId or import context required; platform-specific normalization strip applied before clustering.
+- Two-list `DiscoveryResult`: `candidates` (genuine prefix+variable families) and `singleCategorizationSuggestions` (identical-after-normalization groups). Check 1 (active-pattern dedup) and Check 2 (manual-history hash dedup) gates applied before output.
+- `promoteSuggestionAction` resolves `platformId` server-side from `fileId` (IDOR guard); calls `applyNewPatternToPlatformExpenses` (platform-scoped Set B apply); returns inline Italian count copy on the suggestion card.
+- `discoverRegexCandidates` reachable from two entry points: auto post-import non-fatal run with `discoveryCount` CTA (TRIG-01), and per-row "Ricontrolla regex" via `recheckRegexAction` from the Files table (TRIG-02).
+- `detectPatternSuggestions` removed; `sampleRows` capped at 10; `SuggestionSection` with distinct headings + intro text; SUMUI-03 discovery-step paragraph.
+
+**Status:** All 5 phases (51–55) shipped. 14/14 requirements satisfied (v2.1-MILESTONE-AUDIT.md: passed). Operator deploy (R038/R039/R041) remains operator-pending.
 
 ## Last Shipped Milestone: v2.0 — Nature/Direction Model Realignment (shipped 2026-06-14)
 
@@ -89,15 +98,14 @@ TBD — run `/gsd-new-milestone` to scope the next milestone. Operator deploy (R
 - ✓ Collapsible icon-rail sidebar: `SidebarProvider` + `useSidebarCollapsed` (localStorage-backed, SSR-safe); `AppShell` drives `<aside>` width (w-16/w-60); chevron toggle + tooltips in collapsed mode; user Avatar dropdown at bottom; topbar deleted; BottomNav 5th Impostazioni entry; ThemeToggle in SettingsHub Aspetto section (ADR 0011) — v1.15
 - ✓ Dashboard overview redesign: year-scoped overview page with grouped Entrate/Uscite bar chart (variant A, always-on compact labels), 4 KPI cards with YTD delta + sentiment reading lines, FlowNature filter chips (income type + expense nature), ⓘ legend popovers + per-chip tooltips, inline amber uncategorized nudge (localStorage dismiss, lastSeenCount reappear), per-month movers drill-down (click bar → panel, humanized copy, "spesa nuova" for new spend, default = last month with data); `income_extraordinary` FlowNature member added (9 members total) — v1.16
 
-### Active (v2.0)
+### Validated (v2.0–v2.1)
 
-- [ ] NATURE-TABLE-01 — nature/direction lookup tables, schema migration, data recategorization, dashboard/KPI/cascade/filter rework, seed rework (see REQUIREMENTS.md)
-- [ ] TX-PAIRING-01 — explicit transaction↔opposite linking, additive over implicit netting (final phase)
-
-### Parked backlog (not in v2.0)
-
-- [ ] REVAL-01: Apply newly created pattern to existing transactions from same import file.
-- [ ] R029: Complete categorization revalidation for all entrypoints.
+- ✓ NATURE-TABLE-01 — `direction`(4) + `nature`(8) FK-backed lookup tables; `sub_category.nature_id` FK; `category.type`/`flow_nature`/`amount_sign`/`exclude_from_totals` removed; 23-category/87-subcategory reseed; migration 0018 applied; 4-direction dashboard with algebraic-sum aggregation — v2.0
+- ✓ TX-PAIRING-01 — explicit 1:1 order↔refund linking (`transaction_pair`, migration 0020); ownership-validating service; shared `isNotSecondary()`/`effectiveAmount()` fragments at all 8 aggregation sites; picker/badge/popover UI — v2.0
+- ✓ Regex discovery pipeline refactor: standalone `discoverRegexCandidates` service over post-categorization Set B; RDISC-01/02 routing (regex vs single-cat), Check 1 active-pattern dedup, Check 2 manual-history hash dedup — v2.1
+- ✓ Platform-scoped retroactive apply: `promoteSuggestionAction` with IDOR guard (`getPlatformIdForUserFile`); `applyNewPatternToPlatformExpenses`; inline Italian count feedback on suggestion card — v2.1
+- ✓ Reusable discovery trigger: auto post-import non-fatal run with `discoveryCount` CTA (TRIG-01) + per-row "Ricontrolla regex" via `recheckRegexAction` from Files table (TRIG-02) — single service, no divergent implementation — v2.1
+- ✓ Import summary UX: `sampleRows` capped at 10; distinct regex/single-cat section headings with intro text (SUMUI-02); SUMUI-03 discovery-step cue paragraph — v2.1
 
 ### Active (carryover / operator-pending)
 
@@ -171,6 +179,13 @@ TBD — run `/gsd-new-milestone` to scope the next milestone. Operator deploy (R
 | Uncategorized nudge in localStorage only (never DB) | Zero schema cost; per-session semantics acceptable for invitational nudge | ✓ Good |
 | Per-month movers via recharts `onClick` on bar | Drill-down stays within the page; no route change or modal required | ✓ Good |
 | `fetchMovers` server action (not DAL direct call from RSC) | Enables client-controlled month selection after initial SSR render | ✓ Good |
+| Set B filter via `isNull(expense.subCategoryId)` | Covers uncategorized statuses without enumerating them; mirrors `applyNewPatternToExpenses` | ✓ Good |
+| `discoverRegexCandidates` reads `descriptionStripPattern` from DAL join result | Platform-level constant available from first row; no separate config fetch | ✓ Good |
+| Two-list `DiscoveryResult` (candidates + singleCategorizationSuggestions) | Additive shape; downstream UI and triggers receive both lists without re-querying | ✓ Good |
+| Check 2 uses `expenseClassificationHistory source='manual'` | Covers the unique `(userId, descriptionHash)` constraint; not current expense state | ✓ Good |
+| `platformId` resolved server-side from `fileId` in `promoteSuggestionAction` | IDOR guard: client never supplies platformId directly; dead prop removed from client chain | ✓ Good |
+| Post-commit `discoverRegexCandidates` non-fatal (try/catch, `discoveryCount=0` on error) | Import always succeeds; discovery failure is logged but does not surface to user | ✓ Good |
+| `recheckRegexAction` called as plain async fn (not `useActionState`) | Enables `router.push` after await without state machine complexity | ✓ Good |
 
 ## Evolution
 
@@ -190,4 +205,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-14 — after v2.0 milestone (Nature/Direction Model Realignment shipped)*
+*Last updated: 2026-06-22 after v2.1 milestone*

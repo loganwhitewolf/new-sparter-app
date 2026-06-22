@@ -13,8 +13,22 @@
 - ✅ **v1.15: Collapsible Sidebar** — Phase 41 (shipped 2026-06-07)
 - ✅ **v1.16: Dashboard Overview Redesign** — Phases 42–45 (shipped 2026-06-09)
 - ✅ **v2.0: Nature/Direction Model Realignment** — Phases 46–50 (shipped 2026-06-14)
+- ✅ **v2.1: Regex Discovery & Transaction Unification** — Phases 51–55 (shipped 2026-06-22)
 
 ## Phases
+
+<details>
+<summary>✅ v2.1: Regex Discovery & Transaction Unification (Phases 51–55) — SHIPPED 2026-06-22</summary>
+
+- [x] **Phase 51: discovery-pipeline-reorder** — Move regex discovery downstream of auto-categorization into a standalone service operating on the uncategorized set only *(complete 2026-06-16, 3/3 plans)*
+- [x] **Phase 52: regex-validity-and-dedup** — Correct regex vs single-categorization distinction; skip candidates already covered by existing patterns or manual categories *(complete 2026-06-16, 3/3 plans)*
+- [x] **Phase 53: retroactive-application** — Apply a created regex to existing uncategorized data; resolve and implement the current-file-vs-platform-history scope *(complete 2026-06-16, 3/3 plans)*
+- [x] **Phase 54: reusable-trigger** — Same discovery service invoked automatically post-import and on-demand from the Files table *(complete 2026-06-21, 3/3 plans)*
+- [x] **Phase 55: import-summary-ux** — Capped example list and visual separation of proposed regex vs single-categorization suggestions, with the new-step messaging *(complete 2026-06-22, 3/3 plans)*
+
+Full details: `.planning/milestones/v2.1-ROADMAP.md`
+
+</details>
 
 <details>
 <summary>✅ M001–M006 (Phases 1–23) — SHIPPED</summary>
@@ -80,13 +94,6 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 <summary>✅ v1.11: FlowNature & Segmented Chart (Phase 37) — SHIPPED 2026-05-26</summary>
 
 - [x] Phase 37: flow-nature-chart — `nature` enum on `sub_category`; stacked nature-segmented `EntrateUsciteChart`; URL-persisted legend toggles; nature editable in settings *(complete 2026-05-26)*
-  - [x] 37-01: Wave 0 scaffolding + `lib/utils/nature-labels.ts`
-  - [x] 37-02: Schema migration — `flowNatureEnum`, nature columns, seed 126 subcategories
-  - [x] 37-03: DAL `getMonthlyTrendByNature` + `effectiveNature` on `CategoryWithSubCategories`
-  - [x] 37-04: Stacked nature chart rewrite + URL-persisted legend toggle
-  - [x] 37-05: Settings — nature required on creation + `SubcategoryNatureSelect` + `setSubcategoryNatureAction`
-
-Full details: `.planning/milestones/v1.13-ROADMAP.md`
 
 </details>
 
@@ -94,11 +101,6 @@ Full details: `.planning/milestones/v1.13-ROADMAP.md`
 <summary>✅ v1.12: First-import Onboarding (Phase 38) — SHIPPED 2026-05-28</summary>
 
 - [x] Phase 38: first-import-onboarding — 5-step guided flow; RSC layout routing gate; categorization wizard with nature badges *(complete 2026-05-28)*
-  - [x] 38-01: DAL foundation + RSC layout guard
-  - [x] 38-02: Onboarding route group + Steps 1–3
-  - [x] 38-03: Step 4 categorization wizard + Step 5 outro + prototype deletion
-
-Full details: `.planning/milestones/v1.13-ROADMAP.md`
 
 </details>
 
@@ -106,12 +108,6 @@ Full details: `.planning/milestones/v1.13-ROADMAP.md`
 <summary>✅ v1.13: Unified Categorization Picker (Phase 39) — SHIPPED 2026-06-02</summary>
 
 - [x] Phase 39: unified-subcategory-picker — Single `SubcategoryPicker` (vaul bottom sheet) across all 7 surfaces; pattern form rework; `amountSign` derived server-side per ADR 0008 *(complete 2026-06-02)*
-  - [x] 39-01: vaul + `getMostUsedSubcategories` DAL + `subcategory-options.ts` extraction
-  - [x] 39-02: `SubcategoryPicker` component (variant E) — bottom sheet, type chips, master-detail, search-collapse
-  - [x] 39-03: Adopt in 4 commit-on-tap surfaces (expense, transaction, bulk, onboarding)
-  - [x] 39-05: Pattern forms rework — `amountSign` server-side, `confidence=1`
-  - [x] 39-04: Adopt in 2 fill-field forms (expense form, transaction form)
-  - [x] 39-06: Cleanup — delete legacy pickers + prototype route; `yarn build` green
 
 Full details: `.planning/milestones/v1.13-ROADMAP.md`
 
@@ -129,7 +125,7 @@ Full details: `.planning/milestones/v1.14-ROADMAP.md`
 <details>
 <summary>✅ v1.15: Collapsible Sidebar (Phase 41) — SHIPPED 2026-06-07</summary>
 
-- [x] **Phase 41: collapsible-sidebar** — Collapsible icon-rail sidebar; topbar removed on all breakpoints; app name + user controls (avatar, profile, logout) in sidebar; BottomNav gains Impostazioni entry; theme toggle moved to /settings page (ADR 0011) *(complete 2026-06-07)*
+- [x] **Phase 41: collapsible-sidebar** — Collapsible icon-rail sidebar; topbar removed; app name + user controls in sidebar; BottomNav Impostazioni entry; theme toggle in /settings (ADR 0011) *(complete 2026-06-07)*
 
 Full details: `.planning/milestones/v1.15-ROADMAP.md`
 
@@ -138,10 +134,10 @@ Full details: `.planning/milestones/v1.15-ROADMAP.md`
 <details>
 <summary>✅ v1.16: Dashboard Overview Redesign (Phases 42–45) — SHIPPED 2026-06-09</summary>
 
-- [x] **Phase 42: overview-data-layer** — DAL foundation: getOverview, getMonthOverMonthCategoryChanges, getYearsWithData, income-split resolution, CONTEXT.md glossary update (completed 2026-06-08)
-- [x] **Phase 43: overview-shell** — Redesigned overview tab: header H1 + year selector, hero chart variant A (grouped bars, always-on labels), 4 KPI cards with qualitative reading lines (completed 2026-06-08)
-- [x] **Phase 44: overview-interactions** — Uncategorized nudge (inline amber, localStorage dismiss), chart filter chips (income type + expense nature), FlowNature ⓘ education popovers (completed 2026-06-08)
-- [x] **Phase 45: overview-movers** — Per-month movers drill-down: recharts bar click → top movers panel, humanized copy, highlighted bar, default to last month with data (3 plans, 3 waves) (completed 2026-06-09)
+- [x] **Phase 42: overview-data-layer** — DAL foundation: getOverview, getMonthOverMonthCategoryChanges, getYearsWithData, income-split resolution (completed 2026-06-08)
+- [x] **Phase 43: overview-shell** — Redesigned overview tab: header + year selector, hero chart variant A, 4 KPI cards with reading lines (completed 2026-06-08)
+- [x] **Phase 44: overview-interactions** — Uncategorized nudge, chart filter chips, FlowNature ⓘ education popovers (completed 2026-06-08)
+- [x] **Phase 45: overview-movers** — Per-month movers drill-down: bar click → top movers panel, humanized copy, default last month with data (completed 2026-06-09)
 
 Full details: `.planning/milestones/v1.16-ROADMAP.md`
 
@@ -167,22 +163,19 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 | 1–23 | M001–M006 | 87/87 | Complete | 2026-05 |
 | 24–28 | M007 | 20/20 | Complete | 2026-05-19 |
 | 29 | v1.8/M008 | 4/4 | Complete | 2026-05-20 |
-| 30 | v1.9 | 3/3 | Complete | 2026-05-21 |
-| 31 | v1.9 | 3/3 | Complete | 2026-05-21 |
-| 32 | v1.9 | 3/3 | Complete | 2026-05-22 |
-| 33 | v1.10 | 1/1 | Complete | 2026-05-22 |
-| 34 | v1.10 | 2/2 | Complete | 2026-05-23 |
-| 35 | v1.10 | 4/4 | Complete | 2026-05-23 |
-| 36 | v1.10 | 2/2 | Complete | 2026-05-23 |
+| 30–32 | v1.9 | 9/9 | Complete | 2026-05-22 |
+| 33–36 | v1.10 | 9/9 | Complete | 2026-05-25 |
 | 37 | v1.11 | 5/5 | Complete | 2026-05-26 |
 | 38 | v1.12 | 3/3 | Complete | 2026-05-28 |
 | 39 | v1.13 | 6/6 | Complete | 2026-06-02 |
 | 40 | v1.14 | 5/5 | Complete | 2026-06-04 |
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
-| 42 | v1.16 | 3/3 | Complete | 2026-06-08 |
-| 43 | v1.16 | 4/4 | Complete | 2026-06-08 |
-| 44 | v1.16 | 3/3 | Complete | 2026-06-08 |
-| 45 | v1.16 | 3/3 | Complete | 2026-06-09 |
+| 42–45 | v1.16 | 13/13 | Complete | 2026-06-09 |
 | 46–50 | v2.0 | 22/22 | Complete | 2026-06-14 |
+| 51. discovery-pipeline-reorder | v2.1 | 3/3 | Complete | 2026-06-16 |
+| 52. regex-validity-and-dedup | v2.1 | 3/3 | Complete | 2026-06-16 |
+| 53. retroactive-application | v2.1 | 3/3 | Complete | 2026-06-16 |
+| 54. reusable-trigger | v2.1 | 3/3 | Complete | 2026-06-21 |
+| 55. import-summary-ux | v2.1 | 3/3 | Complete | 2026-06-22 |
 
-**Total shipped: 50 phases · 186 plans complete**
+**Total shipped: 55 phases · 204 plans complete**

@@ -1,3 +1,10 @@
+/**
+ * Tests for the /import/[fileId]/suggestions page after migration to discoverRegexCandidates.
+ *
+ * NOTE: detectPatternSuggestions retirement (deleting the function and
+ * tests/pattern-suggestion-detector.test.ts) is deferred to Phase 55 because
+ * analyzeFile (lib/services/import.ts) still consumes it.
+ */
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -5,10 +12,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   getFileForUser: vi.fn(),
-  getUncategorizedTransactionsByFileId: vi.fn(),
-  loadActivePatterns: vi.fn(),
+  getPlatformIdForUserFile: vi.fn(),
+  discoverRegexCandidates: vi.fn(),
   getCategories: vi.fn(),
-  detectPatternSuggestions: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error('notFound')
   }),
@@ -24,35 +30,20 @@ vi.mock('@/lib/dal/auth', () => ({
 
 vi.mock('@/lib/dal/files', () => ({
   getFileForUser: mocks.getFileForUser,
-}))
-
-vi.mock('@/lib/dal/transactions', () => ({
-  getUncategorizedTransactionsByFileId: mocks.getUncategorizedTransactionsByFileId,
+  getPlatformIdForUserFile: mocks.getPlatformIdForUserFile,
 }))
 
 vi.mock('@/lib/dal/categories', () => ({
   getCategories: mocks.getCategories,
 }))
 
-vi.mock('@/lib/services/categorization', () => ({
-  loadActivePatterns: mocks.loadActivePatterns,
-}))
-
-vi.mock('@/lib/utils/pattern-suggestions', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@/lib/utils/pattern-suggestions')>()
-  return {
-    ...original,
-    detectPatternSuggestions: mocks.detectPatternSuggestions,
-  }
-})
-
-// db is used as an argument only (not called); mock to avoid DB connection
-vi.mock('@/lib/db', () => ({
-  db: {},
+vi.mock('@/lib/services/regex-discovery', () => ({
+  discoverRegexCandidates: mocks.discoverRegexCandidates,
 }))
 
 const FILE_ID = 'file-1'
 const USER_ID = 'user-1'
+const PLATFORM_ID = 2
 
 function makeFileRow(overrides: Record<string, unknown> = {}) {
   return {
@@ -81,12 +72,12 @@ function makeFileRow(overrides: Record<string, unknown> = {}) {
   }
 }
 
-function makeSuggestion(overrides: Record<string, unknown> = {}) {
+function makeEmptyDiscovery() {
   return {
-    pattern: 'COFFEE SHOP',
-    matchCount: 3,
-    sampleDescriptions: ['COFFEE SHOP 001', 'COFFEE SHOP 002', 'COFFEE SHOP 003'],
-    ...overrides,
+    candidates: [],
+    singleCategorizationSuggestions: [],
+    totalUncategorized: 0,
+    platformId: PLATFORM_ID,
   }
 }
 
@@ -105,10 +96,9 @@ describe('suggestions page', () => {
     vi.resetModules()
     mocks.verifySession.mockReset()
     mocks.getFileForUser.mockReset()
-    mocks.getUncategorizedTransactionsByFileId.mockReset()
-    mocks.loadActivePatterns.mockReset()
+    mocks.getPlatformIdForUserFile.mockReset()
+    mocks.discoverRegexCandidates.mockReset()
     mocks.getCategories.mockReset()
-    mocks.detectPatternSuggestions.mockReset()
     mocks.notFound.mockReset()
     mocks.notFound.mockImplementation(() => {
       throw new Error('notFound')
@@ -117,11 +107,12 @@ describe('suggestions page', () => {
     // Default happy-path setup
     mocks.verifySession.mockResolvedValue({ userId: USER_ID })
     mocks.getFileForUser.mockResolvedValue(makeFileRow())
-    mocks.getUncategorizedTransactionsByFileId.mockResolvedValue([])
-    mocks.loadActivePatterns.mockResolvedValue([])
+    mocks.getPlatformIdForUserFile.mockResolvedValue(PLATFORM_ID)
+    mocks.discoverRegexCandidates.mockResolvedValue(makeEmptyDiscovery())
     mocks.getCategories.mockResolvedValue([])
-    mocks.detectPatternSuggestions.mockReturnValue([])
   })
+
+  // --- notFound guard tests (preserved from Phase 53) ---
 
   it('POST-03 ownership: calls notFound when getFileForUser returns null', async () => {
     mocks.getFileForUser.mockResolvedValue(null)
@@ -139,85 +130,100 @@ describe('suggestions page', () => {
     await expect(renderPage()).resolves.toBeDefined()
   })
 
-  it('POST-01/POST-02 data flow: calls all DAL and service functions with correct args', async () => {
-    mocks.getUncategorizedTransactionsByFileId.mockResolvedValue([
-      { description: 'X', amount: '-1.00' },
-    ])
-    mocks.loadActivePatterns.mockResolvedValue([{ pattern: 'foo', amountSign: 'any' }])
-
-    await renderPage()
-
-    expect(mocks.getUncategorizedTransactionsByFileId).toHaveBeenCalledTimes(1)
-    expect(mocks.getUncategorizedTransactionsByFileId).toHaveBeenCalledWith(
-      expect.anything(), // db
-      FILE_ID,
-      USER_ID,
-    )
-    expect(mocks.loadActivePatterns).toHaveBeenCalledTimes(1)
-    expect(mocks.loadActivePatterns).toHaveBeenCalledWith(expect.anything(), USER_ID)
-    expect(mocks.getCategories).toHaveBeenCalledTimes(1)
+  it('APPLY-01 platform guard: calls notFound when getPlatformIdForUserFile returns null', async () => {
+    mocks.getPlatformIdForUserFile.mockResolvedValue(null)
+    await expect(renderPage()).rejects.toThrow('notFound')
+    expect(mocks.notFound).toHaveBeenCalledTimes(1)
   })
 
-  it('POST-01/POST-02 adapter: maps DAL rows to PatternDetectorRow with correct shape', async () => {
-    mocks.getUncategorizedTransactionsByFileId.mockResolvedValue([
-      { description: 'X', amount: '-1.00' },
-    ])
+  it('APPLY-01 platform guard: calls getPlatformIdForUserFile with userId and fileId after file guard passes', async () => {
     await renderPage()
 
-    const callArg = mocks.detectPatternSuggestions.mock.calls[0][0]
-    expect(callArg).toHaveLength(1)
-    expect(callArg[0]).toEqual({
-      description: 'X',
-      normalizedDescription: 'x',
-      amount: '-1.00',
-      valid: true,
-      covered: false,
+    expect(mocks.getPlatformIdForUserFile).toHaveBeenCalledTimes(1)
+    expect(mocks.getPlatformIdForUserFile).toHaveBeenCalledWith({
+      userId: USER_ID,
+      fileId: FILE_ID,
     })
   })
 
-  it('POST-01/POST-02 adapter: normalizes description to lowercase with collapsed whitespace', async () => {
-    mocks.getUncategorizedTransactionsByFileId.mockResolvedValue([
-      { description: 'Coffee  Shop 001', amount: '-4.50' },
-    ])
+  it('APPLY-01 platform guard: does not call DAL queries when file guard fails (status not imported)', async () => {
+    mocks.getFileForUser.mockResolvedValue(makeFileRow({ status: 'analyzed' }))
+    await expect(renderPage()).rejects.toThrow('notFound')
+    // getPlatformIdForUserFile must NOT be called when file guard already throws notFound
+    expect(mocks.getPlatformIdForUserFile).not.toHaveBeenCalled()
+  })
+
+  // --- unified service call assertion ---
+
+  it('D-04 service call: discoverRegexCandidates is called with { userId, scope: { platformId } }', async () => {
     await renderPage()
 
-    const callArg = mocks.detectPatternSuggestions.mock.calls[0][0]
-    expect(callArg).toHaveLength(1)
-    expect(callArg[0]).toEqual({
-      description: 'Coffee  Shop 001',
-      normalizedDescription: 'coffee shop 001',
-      amount: '-4.50',
-      valid: true,
-      covered: false,
+    expect(mocks.discoverRegexCandidates).toHaveBeenCalledTimes(1)
+    expect(mocks.discoverRegexCandidates).toHaveBeenCalledWith({
+      userId: USER_ID,
+      scope: { platformId: PLATFORM_ID },
     })
   })
 
-  it('D-04 sort+cap: passes at most 5 suggestions to render (sorted by matchCount desc)', async () => {
-    const manySuggestions = [
-      makeSuggestion({ pattern: 'A', matchCount: 1 }),
-      makeSuggestion({ pattern: 'B', matchCount: 7 }),
-      makeSuggestion({ pattern: 'C', matchCount: 3 }),
-      makeSuggestion({ pattern: 'D', matchCount: 5 }),
-      makeSuggestion({ pattern: 'E', matchCount: 2 }),
-      makeSuggestion({ pattern: 'F', matchCount: 6 }),
-      makeSuggestion({ pattern: 'G', matchCount: 4 }),
-    ]
-    mocks.detectPatternSuggestions.mockReturnValue(manySuggestions)
-    mocks.getUncategorizedTransactionsByFileId.mockResolvedValue([
-      { description: 'COFFEE SHOP 001', amount: '-2.00' },
-    ])
+  // --- EUR deposit verification anchor (RDISC-02 fix) ---
+
+  it('RDISC-02 anchor: 8 identical EUR deposit rows → 0 regex candidates, 1 single suggestion', async () => {
+    // This is the Phase 53 UAT bug: the legacy detector surfaced identical descriptions
+    // as regex candidates. discoverRegexCandidates routes them to singleCategorizationSuggestions.
+    mocks.discoverRegexCandidates.mockResolvedValue({
+      candidates: [],
+      singleCategorizationSuggestions: [
+        {
+          normalizedDescription: 'eur deposit',
+          sampleDescriptions: ['EUR deposit'],
+          sampleAmounts: [null],
+          matchCount: 8,
+          descriptionHashes: ['hash1', 'hash2', 'hash3', 'hash4', 'hash5', 'hash6', 'hash7', 'hash8'],
+        },
+      ],
+      totalUncategorized: 8,
+      platformId: PLATFORM_ID,
+    })
 
     const html = await renderPage()
 
-    // With 7 suggestions sorted and capped to 5, only top 5 matchCounts (7,6,5,4,3) appear
-    // SuggestionSection renders count in h2: "Suggerimenti pattern (5)"
-    expect(html).toContain('Suggerimenti pattern (5)')
-    expect(html).not.toContain('Suggerimenti pattern (7)')
-    expect(html).not.toContain('Suggerimenti pattern (6)')
+    // Must NOT contain any regex SuggestionCard (no promotable pattern)
+    expect(html).not.toContain('Suggerimenti pattern (')
+    // Must contain the single-categorization section
+    expect(html).toContain('Transazioni identiche')
+    expect(html).toContain('EUR deposit')
+    expect(html).toContain('8')
   })
 
-  it('D-07 empty state: renders inline message when no suggestions detected', async () => {
-    mocks.detectPatternSuggestions.mockReturnValue([])
+  it('single suggestion only: renders single list when candidates empty but singleSuggestions non-empty', async () => {
+    mocks.discoverRegexCandidates.mockResolvedValue({
+      candidates: [],
+      singleCategorizationSuggestions: [
+        {
+          normalizedDescription: 'supermercato locale',
+          sampleDescriptions: ['Supermercato Locale'],
+          sampleAmounts: [null],
+          matchCount: 4,
+          descriptionHashes: ['hashA', 'hashB', 'hashC', 'hashD'],
+        },
+      ],
+      totalUncategorized: 4,
+      platformId: PLATFORM_ID,
+    })
+
+    const html = await renderPage()
+
+    expect(html).not.toContain('Suggerimenti pattern (')
+    expect(html).toContain('Transazioni identiche')
+    expect(html).toContain('Supermercato Locale')
+    // Must not contain the empty-state message
+    expect(html).not.toContain('Nessun suggerimento trovato')
+  })
+
+  // --- empty state ---
+
+  it('empty state: renders inline message when both lists empty', async () => {
+    mocks.discoverRegexCandidates.mockResolvedValue(makeEmptyDiscovery())
 
     const html = await renderPage()
 
@@ -225,17 +231,59 @@ describe('suggestions page', () => {
       'Nessun suggerimento trovato — tutte le transazioni risultano già categorizzate o non sono stati rilevati pattern ricorrenti.',
     )
     expect(html).not.toContain('Suggerimenti pattern (')
+    expect(html).not.toContain('Transazioni identiche')
   })
 
-  it('D-08 copy / SCOP-03: page contains required heading and subtitle, no forbidden reclassification copy', async () => {
+  // --- page copy assertion ---
+
+  it('D-08 copy: page contains required heading and subtitle', async () => {
     const html = await renderPage()
 
     expect(html).toContain('Suggerimenti pattern')
+    // SUMUI-03: sub-heading communicates platform scope and re-check entry point
+    expect(html).toContain('rilevati dalle transazioni non categorizzate di questa piattaforma')
+    expect(html).toContain('tab Importazioni')
+  })
+
+  // --- SUMUI-02: SuggestionSection distinct headings ---
+
+  it('SUMUI-02: SuggestionSection shows distinct headings for regex and single-cat groups', async () => {
+    mocks.discoverRegexCandidates.mockResolvedValue({
+      candidates: [
+        {
+          pattern: 'bonifico.*',
+          sampleDescriptions: ['Bonifico Andrea'],
+          sampleAmounts: [null],
+          matchCount: 3,
+          stablePrefix: 'bonifico',
+          strippedByNormalization: false,
+          residualVariablePart: 'Andrea',
+          sampleNormalized: 'bonifico andrea',
+          descriptionHashes: ['h1', 'h2', 'h3'],
+        },
+      ],
+      singleCategorizationSuggestions: [
+        {
+          normalizedDescription: 'macellaio',
+          sampleDescriptions: ['Macellaio'],
+          sampleAmounts: [null],
+          matchCount: 2,
+          descriptionHashes: ['ha', 'hb'],
+        },
+      ],
+      totalUncategorized: 5,
+      platformId: PLATFORM_ID,
+    })
+
+    const html = await renderPage()
+
+    // Section 1 heading
+    expect(html).toContain('Pattern proposti')
     expect(html).toContain(
-      'Crea pattern per categorizzare automaticamente transazioni simili nelle prossime importazioni.',
+      'Crea un pattern per categorizzare automaticamente queste transazioni nelle importazioni future.',
     )
-    expect(html).not.toMatch(/ricategorizz/i)
-    expect(html).not.toMatch(/riclassific/i)
-    expect(html).not.toMatch(/applica (ai|alle) transazion/i)
+    // Section 2 heading (count preserved)
+    expect(html).toContain('Transazioni identiche')
+    expect(html).toContain('Categorizzale manualmente dalla pagina Spese.')
   })
 })

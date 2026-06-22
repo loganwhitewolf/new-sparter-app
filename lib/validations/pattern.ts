@@ -77,4 +77,22 @@ export const UpdatePatternClientSchema = CreatePatternSchema
 export type CreatePatternInput = z.infer<typeof CreatePatternSchema>
 export type UpdatePatternInput = z.infer<typeof UpdatePatternSchema>
 export type UpdatePatternClientInput = z.infer<typeof UpdatePatternClientSchema>
-export type ActionState = { error: string | null }
+
+/**
+ * Structured result returned after a retroactive apply (APPLY-01/02).
+ * Re-exported from service layer (PatternApplyResult) for client consumers
+ * (useActionState, SuggestionCard) without importing from the service directly.
+ */
+export type PatternApplyResult = {
+  updatedCount: number
+  notUpdatedCount: number
+}
+
+/**
+ * Server action state for pattern actions.
+ * applyResult is populated on successful promoteSuggestionAction calls (Plan 53-02).
+ */
+export type ActionState = {
+  error: string | null
+  applyResult?: PatternApplyResult | null
+}

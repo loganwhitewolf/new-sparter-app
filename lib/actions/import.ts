@@ -35,7 +35,8 @@ import {
   IMPORT_LIST_LIMIT,
   updateImportDisplayName,
 } from "@/lib/dal/imports";
-import { getFileForUser } from "@/lib/dal/files";
+import { getFileForUser, getPlatformIdForUserFile } from "@/lib/dal/files";
+import { discoverRegexCandidates } from "@/lib/services/regex-discovery";
 import { db } from "@/lib/db";
 import { file as fileTable } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -43,6 +44,7 @@ import {
   APP_ROUTES,
   ONBOARDING_AFTER_PRIVATE_PLATFORM_CREATION_ROUTE,
 } from "@/lib/routes";
+import { ANALYZE_STATUS_ERROR } from "@/lib/utils/import-status";
 
 export type ImportActionState<T = null> = {
   error: string | null;
@@ -246,8 +248,7 @@ export async function loadMoreImports({
   }
 }
 
-const SAFE_ANALYZE_LIFECYCLE_MSG =
-  "Analisi non consentita per questo file nel suo stato attuale.";
+const SAFE_ANALYZE_LIFECYCLE_MSG = ANALYZE_STATUS_ERROR;
 const SAFE_IMPORT_LIFECYCLE_MSG =
   "Importazione non consentita per questo file nel suo stato attuale.";
 
@@ -367,7 +368,6 @@ export async function completeOnboardingPrivateImportAction(
       userId,
       fileId,
       selectedFormatVersionId,
-      skipPatternSuggestions: true,
     });
   } catch (error) {
     return { error: mapAnalyzeError(error) };
@@ -548,6 +548,50 @@ export async function deleteStaleFileAction(
     return {
       error:
         "Impossibile eliminare l'importazione. Riprova tra qualche secondo.",
+    };
+  }
+}
+
+/**
+ * On-demand per-row re-check action (TRIG-02).
+ * Resolves userId server-side via verifySession — never from client input.
+ * Resolves platformId via ownership-guarded DAL call — IDOR guard (T-54-08, T-54-09).
+ * Delegates all discovery logic to discoverRegexCandidates — no second detector path.
+ * Read-only: no revalidatePath.
+ */
+export async function recheckRegexAction(
+  formData: FormData,
+): Promise<ImportActionState<{ candidatesCount: number; singleCount: number; platformId: number }>> {
+  // Validate client-supplied fileId (not trusted for ownership — only for lookup)
+  const fileId = formData.get("fileId");
+  if (!fileId || typeof fileId !== "string" || fileId.trim() === "") {
+    return { error: "File di import non valido." };
+  }
+
+  // Resolve userId server-side — never accept from client (T-54-09)
+  const { userId } = await verifySession();
+
+  // Ownership guard: resolve platformId only for files owned by this user (T-54-08)
+  const platformId = await getPlatformIdForUserFile({ userId, fileId });
+  if (platformId == null) {
+    return { error: "Impossibile determinare la piattaforma per questo file." };
+  }
+
+  // Call the unified discovery service — no business logic in the action (layer rule)
+  try {
+    const result = await discoverRegexCandidates({ userId, scope: { platformId } });
+    return {
+      error: null,
+      data: {
+        candidatesCount: result.candidates.length,
+        singleCount: result.singleCategorizationSuggestions.length,
+        platformId: result.platformId,
+      },
+    };
+  } catch {
+    return {
+      error:
+        "Impossibile eseguire il riconoscimento pattern. Riprova tra qualche secondo.",
     };
   }
 }

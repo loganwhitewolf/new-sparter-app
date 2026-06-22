@@ -1142,7 +1142,11 @@ export const getCategoryDetail = cache(
           id: category.id,
           name: category.name,
           slug: category.slug,
-          // Derive type from the first subcategory's direction, honouring userSubcategoryOverride
+          // Derive type from the first included-direction subcategory, honouring userSubcategoryOverride.
+          // AND d.included_in_totals = true restricts to 'in'/'out' so the result always matches
+          // the includedInTotals filter on the data queries and rowMatchesCategory never rejects rows
+          // because of a non-deterministic 'allocation'/'transfer' result.
+          // ORDER BY d.id makes LIMIT 1 deterministic.
           type: sql<'in' | 'out' | null>`(
             SELECT d.code FROM direction d
             INNER JOIN nature n ON n.direction_id = d.id
@@ -1152,6 +1156,8 @@ export const getCategoryDetail = cache(
             LEFT JOIN user_subcategory_override uso
               ON uso.sub_category_id = sc.id AND uso.user_id = ${userId}
             WHERE n.id = COALESCE(uso.nature_id, sc.nature_id)
+              AND d.included_in_totals = true
+            ORDER BY d.id
             LIMIT 1
           )`,
         })
