@@ -7,6 +7,7 @@ import { SuggestionPromoteForm } from './suggestion-promote-form'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { PatternSuggestion } from '@/lib/utils/pattern-suggestions'
 import type { PatternApplyResult } from '@/lib/validations/pattern'
+import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 
 type Props = {
   suggestion: PatternSuggestion
@@ -71,8 +72,13 @@ export function SuggestionCard({ suggestion, categories, fileId, initialApplyRes
             {showSamples && (
               <ul id={samplesId} className="flex flex-col gap-1">
                 {suggestion.sampleDescriptions.map((sample, i) => (
-                  <li key={i} className="text-xs text-muted-foreground truncate">
-                    {sample}
+                  <li key={i} className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span className="truncate">{sample}</span>
+                    {suggestion.sampleAmounts[i] != null && (
+                      <span className={`shrink-0 tabular-nums ${Number(suggestion.sampleAmounts[i]) < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                        {(Number(suggestion.sampleAmounts[i]) < 0 ? '−' : '+') + ' ' + formatAbsoluteAmount(suggestion.sampleAmounts[i]!)}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>

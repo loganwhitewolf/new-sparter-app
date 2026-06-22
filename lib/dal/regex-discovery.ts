@@ -12,6 +12,7 @@ import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm'
 export type UncategorizedExpenseForDiscovery = {
   id: string
   title: string
+  totalAmount: string
   descriptionHash: string | null
   descriptionStripPattern: string | null
 }
@@ -39,6 +40,7 @@ export async function getUncategorizedExpensesForDiscovery(
     .select({
       id: expense.id,
       title: expense.title,
+      totalAmount: expense.totalAmount,
       descriptionHash: expense.descriptionHash,
       descriptionStripPattern: platform.descriptionStripPattern,
     })

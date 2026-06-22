@@ -4,6 +4,7 @@ import { SuggestionCard } from './suggestion-card'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { PatternSuggestion } from '@/lib/utils/pattern-suggestions'
 import type { SingleCategorizationSuggestion } from '@/lib/services/regex-discovery'
+import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 
 type Props = {
   suggestions: PatternSuggestion[]
@@ -54,9 +55,16 @@ export function SuggestionSection({ suggestions, singleSuggestions, categories, 
                 <span className="font-medium">
                   {item.sampleDescriptions[0] ?? item.normalizedDescription}
                 </span>
-                <span className="ml-4 shrink-0 text-muted-foreground">
-                  {item.matchCount} {item.matchCount === 1 ? 'transazione' : 'transazioni'}
-                </span>
+                <div className="ml-4 flex shrink-0 items-center gap-3">
+                  {item.sampleAmounts[0] != null && (
+                    <span className={`tabular-nums ${Number(item.sampleAmounts[0]) < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                      {(Number(item.sampleAmounts[0]) < 0 ? '−' : '+') + ' ' + formatAbsoluteAmount(item.sampleAmounts[0])}
+                    </span>
+                  )}
+                  <span className="text-muted-foreground">
+                    {item.matchCount} {item.matchCount === 1 ? 'transazione' : 'transazioni'}
+                  </span>
+                </div>
               </li>
             ))}
           </ul>

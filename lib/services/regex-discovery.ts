@@ -18,6 +18,7 @@ export type DiscoveryScope = { platformId: number }
 export type SingleCategorizationSuggestion = {
   normalizedDescription: string
   sampleDescriptions: string[]
+  sampleAmounts: (string | null)[]
   matchCount: number
   descriptionHashes: string[]
 }
@@ -49,6 +50,7 @@ function toSingleCategorization(
   return {
     normalizedDescription: suggestion.sampleNormalized,
     sampleDescriptions: suggestion.sampleDescriptions,
+    sampleAmounts: suggestion.sampleAmounts,
     matchCount: suggestion.matchCount,
     descriptionHashes: suggestion.descriptionHashes,
   }
@@ -92,7 +94,7 @@ export async function discoverRegexCandidates(input: {
     return {
       description: rawTitle, // human-readable label for sampleDescriptions
       normalizedDescription,
-      amount: null, // amount not needed for description-only discovery clustering
+      amount: e.totalAmount,
       valid: true,
       covered: false,
       rawTitle,

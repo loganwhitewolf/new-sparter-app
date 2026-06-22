@@ -24,6 +24,7 @@ export interface PatternSuggestion {
   pattern: string
   matchCount: number
   sampleDescriptions: string[]
+  sampleAmounts: (string | null)[]
 }
 
 function isNumericToken(token: string): boolean {
@@ -164,6 +165,7 @@ export function detectPatternSuggestionsWithMeta(
     const prefixString = prefix.join(' ')
     const escaped = escapeRegex(prefixString)
     const sampleDescriptions = group.slice(0, 3).map(g => g.row.description)
+    const sampleAmounts = group.slice(0, 3).map(g => g.row.amount)
     const descriptionHashes = group
       .map(g => g.row.descriptionHash)
       .filter((hash): hash is string => hash !== null)
@@ -187,6 +189,7 @@ export function detectPatternSuggestionsWithMeta(
       pattern: escaped,
       matchCount: group.length,
       sampleDescriptions,
+      sampleAmounts,
       stablePrefix,
       strippedByNormalization,
       residualVariablePart,

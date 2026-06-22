@@ -176,6 +176,7 @@ describe('suggestions page', () => {
         {
           normalizedDescription: 'eur deposit',
           sampleDescriptions: ['EUR deposit'],
+          sampleAmounts: [null],
           matchCount: 8,
           descriptionHashes: ['hash1', 'hash2', 'hash3', 'hash4', 'hash5', 'hash6', 'hash7', 'hash8'],
         },
@@ -201,6 +202,7 @@ describe('suggestions page', () => {
         {
           normalizedDescription: 'supermercato locale',
           sampleDescriptions: ['Supermercato Locale'],
+          sampleAmounts: [null],
           matchCount: 4,
           descriptionHashes: ['hashA', 'hashB', 'hashC', 'hashD'],
         },
@@ -251,6 +253,7 @@ describe('suggestions page', () => {
         {
           pattern: 'bonifico.*',
           sampleDescriptions: ['Bonifico Andrea'],
+          sampleAmounts: [null],
           matchCount: 3,
           stablePrefix: 'bonifico',
           strippedByNormalization: false,
@@ -263,6 +266,7 @@ describe('suggestions page', () => {
         {
           normalizedDescription: 'macellaio',
           sampleDescriptions: ['Macellaio'],
+          sampleAmounts: [null],
           matchCount: 2,
           descriptionHashes: ['ha', 'hb'],
         },
