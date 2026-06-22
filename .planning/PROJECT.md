@@ -47,7 +47,7 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 
 Operator deploy (R038/R039/R041 — live Vercel/Supabase/R2) remains operator-pending.
 
-**v2.1 progress:** Phases 51 and 52 are complete. Regex discovery now runs as a standalone post-categorization service over uncategorized expenses, separates regex candidates from single-categorization suggestions, and applies active-pattern plus manual-history dedup gates before proposing.
+**v2.1 progress:** All 5 phases (51–55) complete. Regex discovery runs as a standalone post-categorization service over uncategorized expenses, separates regex candidates from single-categorization suggestions, applies active-pattern plus manual-history dedup gates before proposing, offers a reusable "re-check" trigger from the Files table, and the import summary now caps sample rows at 10 with visually separated regex vs single-cat sections and polish copy on the suggestions page (SUMUI-01/02/03). Ready for `/gsd-complete-milestone v2.1`.
 
 ## Last Shipped Milestone: v2.0 — Nature/Direction Model Realignment (shipped 2026-06-14)
 
@@ -204,4 +204,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-16 — started milestone v2.1 (Regex Discovery & Transaction Unification)*
+*Last updated: 2026-06-22 — Phase 55 complete; milestone v2.1 all phases done*

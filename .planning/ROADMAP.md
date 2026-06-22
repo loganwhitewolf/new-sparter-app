@@ -23,7 +23,7 @@
 - [x] **Phase 52: regex-validity-and-dedup** — Correct regex vs single-categorization distinction; skip candidates already covered by existing patterns or manual categories (completed 2026-06-16)
 - [x] **Phase 53: retroactive-application** — Apply a created regex to existing uncategorized data; resolve and implement the current-file-vs-platform-history scope *(complete 2026-06-16, 3/3 plans)*
 - [x] **Phase 54: reusable-trigger** — Same discovery service invoked automatically post-import and on-demand from the Files table (completed 2026-06-21)
-- [ ] **Phase 55: import-summary-ux** — Capped example list and visual separation of proposed regex vs single-categorization suggestions, with the new-step messaging
+- [x] **Phase 55: import-summary-ux** — Capped example list and visual separation of proposed regex vs single-categorization suggestions, with the new-step messaging (completed 2026-06-22)
 
 <details>
 <summary>✅ M001–M006 (Phases 1–23) — SHIPPED</summary>
@@ -284,6 +284,6 @@ Plans:
 | 52. regex-validity-and-dedup | v2.1 | 3/3 | Complete    | 2026-06-16 |
 | 53. retroactive-application | v2.1 | 2/3 | In Progress|  |
 | 54. reusable-trigger | v2.1 | 3/3 | Complete    | 2026-06-20 |
-| 55. import-summary-ux | v2.1 | 3/3 | Complete   | 2026-06-21 |
+| 55. import-summary-ux | v2.1 | 3/3 | Complete    | 2026-06-21 |
 
 **Total shipped: 51 phases · 189 plans complete**
