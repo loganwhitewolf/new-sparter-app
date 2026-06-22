@@ -111,24 +111,16 @@ export function ImportRowActions({ row, displayName, onRename, onDelete, onDelet
             </DropdownMenuItem>
           )}
 
-          {row.status === 'imported' && (
-            <DropdownMenuItem asChild>
-              <Link href={`/import/${encodeURIComponent(row.id)}/suggestions`}>
-                <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
-                Rivedi suggerimenti
-              </Link>
-            </DropdownMenuItem>
-          )}
-
           {/* Per-row on-demand re-check (TRIG-02, D-01): triggers recheckRegexAction on the client.
-              Shown only for imported rows; disabled while a re-check is in progress. */}
+              Shown only for imported rows; disabled while a re-check is in progress.
+              Navigates to suggestions page when candidates are found (D-03). */}
           {row.status === 'imported' && (
             <DropdownMenuItem
               onClick={() => onRecheckRegex(row)}
               disabled={isRecheckPending}
             >
               <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
-              {isRecheckPending ? 'Ricerca in corso…' : 'Ricontrolla regex'}
+              {isRecheckPending ? 'Ricerca in corso…' : 'Rivedi suggerimenti'}
             </DropdownMenuItem>
           )}
 
