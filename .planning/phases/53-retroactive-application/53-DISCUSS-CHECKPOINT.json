@@ -1,0 +1,68 @@
+{
+  "phase": "53",
+  "phase_name": "retroactive-application",
+  "timestamp": "2026-06-16T13:55:00+02:00",
+  "areas_completed": [
+    "Retroactive scope",
+    "Visible result"
+  ],
+  "areas_remaining": [],
+  "decisions": {
+    "Retroactive scope": [
+      {
+        "question": "When a discovered regex is promoted, what retroactive write scope should it use?",
+        "answer": "Apply to the entire uncategorized history for the same platform.",
+        "options_presented": [
+          "Current file only",
+          "Entire uncategorized history for the same platform",
+          "Two explicit modes"
+        ]
+      },
+      {
+        "question": "Which transactions should be observable in the result?",
+        "answer": "Show separated counts for updated and not-updated transactions, rather than a full transaction list.",
+        "options_presented": [
+          "Updated only",
+          "Updated plus not updated because out of scope or no match",
+          "Per-transaction detail"
+        ]
+      }
+    ],
+    "Visible result": [
+      {
+        "question": "Where should feedback appear after creating the pattern?",
+        "answer": "Inside the suggestion card, immediately at the action point.",
+        "options_presented": [
+          "Inside the suggestion card",
+          "Global toast/banner",
+          "Dedicated post-action summary page"
+        ]
+      },
+      {
+        "question": "Should the feedback persist or be temporary?",
+        "answer": "Persist in the card while the page is open.",
+        "options_presented": [
+          "Persist in the card while the page is open",
+          "Temporary",
+          "Persist and remove/disable the promoted card"
+        ]
+      }
+    ]
+  },
+  "deferred_ideas": [],
+  "canonical_refs": [
+    ".planning/ROADMAP.md",
+    ".planning/REQUIREMENTS.md",
+    ".planning/PROJECT.md",
+    ".planning/STATE.md",
+    ".planning/phases/51-discovery-pipeline-reorder/51-CONTEXT.md",
+    ".planning/phases/52-regex-validity-and-dedup/52-CONTEXT.md",
+    "lib/services/pattern-application.ts",
+    "lib/actions/patterns.ts",
+    "lib/services/regex-discovery.ts",
+    "lib/dal/regex-discovery.ts",
+    "components/import/suggestion-promote-form.tsx",
+    "components/import/suggestion-section.tsx",
+    "app/(app)/import/[fileId]/suggestions/page.tsx"
+  ]
+}
