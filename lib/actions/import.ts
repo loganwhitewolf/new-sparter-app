@@ -247,7 +247,7 @@ export async function loadMoreImports({
   }
 }
 
-const SAFE_ANALYZE_LIFECYCLE_MSG =
+export const SAFE_ANALYZE_LIFECYCLE_MSG =
   "Analisi non consentita per questo file nel suo stato attuale.";
 const SAFE_IMPORT_LIFECYCLE_MSG =
   "Importazione non consentita per questo file nel suo stato attuale.";
