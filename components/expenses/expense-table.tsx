@@ -280,7 +280,7 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                       }}
                     />
                   </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums text-sm">
+                  <TableCell className={cn('text-right font-mono tabular-nums text-sm', exp.totalAmount.trim().startsWith('-') ? 'text-total-out' : 'text-total-in')}>
                     {formatAmount(exp.totalAmount)}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums text-sm">
