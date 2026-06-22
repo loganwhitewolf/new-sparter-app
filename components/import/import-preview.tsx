@@ -24,6 +24,7 @@ import {
 import { confirmImportAction } from '@/lib/actions/import'
 import type { ImportAnalysisResult } from '@/lib/services/import'
 import { APP_ROUTES } from '@/lib/routes'
+import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 type FormatCandidate = {
   formatVersionId: number
   platformName: string
@@ -186,7 +187,11 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
                         {row.description}
                       </TableCell>
                       <TableCell className="text-right text-sm tabular-nums">
-                        {row.amount ?? '—'}
+                        {row.amount != null ? (
+                          <span className={Number(row.amount) < 0 ? 'text-destructive' : 'text-green-600'}>
+                            {(Number(row.amount) < 0 ? '−' : '+') + ' ' + formatAbsoluteAmount(row.amount)}
+                          </span>
+                        ) : '—'}
                       </TableCell>
                       <TableCell>
                         {row.duplicate ? (
