@@ -100,14 +100,6 @@ function isExpenseCategorized(status: TransactionListRow['expenseStatus']) {
   return status === '2' || status === '3'
 }
 
-function getLinkedExpenseCategoryLabel(transaction: TransactionListRow) {
-  const parts = [
-    transaction.expenseCategoryName?.trim(),
-    transaction.expenseSubCategoryName?.trim(),
-  ].filter(Boolean)
-
-  return parts.length > 0 ? parts.join(' → ') : 'Categorizzata'
-}
 
 function transactionRowLabel(transaction: TransactionListRow) {
   const raw = transaction.customTitle?.trim() || transaction.description
@@ -442,12 +434,14 @@ export function TransactionTable({ transactions, route, searchParams, categories
                 <TableCell>
                   {hasExpense ? (
                     isCategorized ? (
-                      <span
-                        className="block truncate text-sm"
-                        title={getLinkedExpenseCategoryLabel(transaction)}
-                      >
-                        {getLinkedExpenseCategoryLabel(transaction)}
-                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-sm">
+                          {transaction.expenseSubCategoryName?.trim() || transaction.expenseCategoryName?.trim() || 'Categorizzata'}
+                        </span>
+                        {transaction.expenseSubCategoryName?.trim() && transaction.expenseCategoryName?.trim() && (
+                          <span className="text-xs text-muted-foreground">{transaction.expenseCategoryName.trim()}</span>
+                        )}
+                      </div>
                     ) : (
                       <button
                         type="button"

@@ -72,8 +72,8 @@ export function SuggestionCard({ suggestion, categories, fileId, initialApplyRes
             {showSamples && (
               <ul id={samplesId} className="flex flex-col gap-1">
                 {suggestion.sampleDescriptions.map((sample, i) => (
-                  <li key={i} className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                    <span className="truncate">{sample}</span>
+                  <li key={i} className="flex items-start justify-between gap-2 text-xs text-muted-foreground">
+                    <span className="break-words min-w-0">{sample}</span>
                     {suggestion.sampleAmounts[i] != null && (
                       <span className={`shrink-0 tabular-nums ${Number(suggestion.sampleAmounts[i]) < 0 ? 'text-destructive' : 'text-green-600'}`}>
                         {(Number(suggestion.sampleAmounts[i]) < 0 ? '−' : '+') + ' ' + formatAbsoluteAmount(suggestion.sampleAmounts[i]!)}
