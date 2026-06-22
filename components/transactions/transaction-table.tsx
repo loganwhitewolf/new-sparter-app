@@ -374,7 +374,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
                     aria-label={`Seleziona ${rowLabel}`}
                   />
                 </TableCell>
-                <TableCell className="overflow-hidden">
+                <TableCell className="max-w-0 w-full">
                   <div className="flex flex-col gap-1">
                     <TransactionTitleEdit
                       id={transaction.id}
