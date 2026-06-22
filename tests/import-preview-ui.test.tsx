@@ -28,45 +28,13 @@ const baseResult = {
   warnings: [],
   errors: [],
   sampleRows: [],
-  patternSuggestions: [],
 }
-
-const sampleSuggestion = {
-  pattern: 'netflix',
-  matchCount: 3,
-  sampleDescriptions: ['NETFLIX 10/01', 'NETFLIX 11/01', 'NETFLIX 12/01'],
-}
-
-const sampleCategories = [
-  {
-    id: 1,
-    name: 'Spese',
-    slug: 'spese',
-    type: 'out' as const,
-    userId: null,
-    isOwned: false,
-    subCategories: [
-      {
-        id: 42,
-        name: 'Streaming',
-        slug: 'streaming',
-        originalName: 'Streaming',
-        userId: null,
-        isOwned: false,
-        hasOverride: false,
-        customName: null,
-        effectiveNature: null,
-      },
-    ],
-  },
-]
 
 describe('ImportPreview UI', () => {
   it('does not render a destructive error box or confirm action when confirmation is disabled upstream', () => {
     const html = renderToStaticMarkup(
       createElement(ImportPreview, {
         result: baseResult,
-        categories: [],
         confirmDisabledReason: "Configura un formato privato prima di confermare l'importazione.",
       }),
     )
@@ -85,7 +53,6 @@ describe('ImportPreview UI', () => {
           ...baseResult,
           errors: ['Impossibile leggere il file caricato. Riprova.'],
         },
-        categories: [],
       }),
     )
 
@@ -94,38 +61,32 @@ describe('ImportPreview UI', () => {
     expect(html).not.toContain('Conferma importazione')
   })
 
-  it('REV-01: renders the Suggerimenti pattern section when patternSuggestions has entries', () => {
+  it('SUMUI-01: renders at most 10 sample rows even when result has 25', () => {
+    const twentyFiveRows = Array.from({ length: 25 }, (_, i) => ({
+      rowIndex: i,
+      description: `DESC-${i}`,
+      amount: '10.00',
+      occurredAt: '2024-01-01',
+      transactionHash: null,
+      duplicate: false,
+      valid: true,
+      errors: [],
+      warnings: [],
+      rawRow: {},
+    }))
+
     const html = renderToStaticMarkup(
       createElement(ImportPreview, {
-        result: { ...baseResult, patternSuggestions: [sampleSuggestion] },
-        categories: sampleCategories,
+        result: {
+          ...baseResult,
+          sampleRows: twentyFiveRows,
+        },
       }),
     )
 
-    expect(html).toContain('Suggerimenti pattern (1)')
-    expect(html).toContain('netflix')
+    // Each row renders the description in a table cell; count occurrences
+    const descMatches = (html.match(/DESC-\d+/g) ?? []).length
+    expect(descMatches).toBe(10)
   })
 
-  it('REV-01: does NOT render the Suggerimenti pattern section when patternSuggestions is empty', () => {
-    const html = renderToStaticMarkup(
-      createElement(ImportPreview, {
-        result: baseResult,
-        categories: sampleCategories,
-      }),
-    )
-
-    expect(html).not.toContain('Suggerimenti pattern')
-  })
-
-  it('REV-04: confirm button remains visible alongside the suggestions section (no blocking)', () => {
-    const html = renderToStaticMarkup(
-      createElement(ImportPreview, {
-        result: { ...baseResult, patternSuggestions: [sampleSuggestion] },
-        categories: sampleCategories,
-      }),
-    )
-
-    expect(html).toContain('Suggerimenti pattern (1)')
-    expect(html).toContain('Conferma importazione')
-  })
 })

@@ -14,8 +14,10 @@ import {
   deriveNatureBreakdown,
   INCOME_KEYS,
   OUT_KEYS,
+  ALLOCATION_KEYS,
   type IncomeKey,
   type OutKey,
+  type AllocationKey,
 } from './overview-chart-utils'
 import { OverviewChartFilters } from './overview-chart-filters'
 
@@ -35,9 +37,10 @@ type NatureTooltipProps = {
   data: OverviewChartPoint[]
   includedIncome: Set<IncomeKey>
   includedOut: Set<OutKey>
+  includedAllocation: Set<AllocationKey>
 }
 
-function NatureTooltip({ active, payload, data, includedIncome, includedOut }: NatureTooltipProps) {
+function NatureTooltip({ active, payload, data, includedIncome, includedOut, includedAllocation }: NatureTooltipProps) {
   if (!active || !payload?.length) return null
 
   // Resolve the hovered data point from the original (unfiltered) data array.
@@ -46,7 +49,7 @@ function NatureTooltip({ active, payload, data, includedIncome, includedOut }: N
   const point = data.find((p) => p.label === hoveredLabel)
   if (!point) return null
 
-  const breakdown = deriveNatureBreakdown(point, includedIncome, includedOut)
+  const breakdown = deriveNatureBreakdown(point, includedIncome, includedOut, includedAllocation)
 
   return (
     <div className="rounded-md border bg-popover px-3 py-2 text-sm shadow-md min-w-[160px]">
@@ -116,13 +119,16 @@ type OverviewChartProps = {
 }
 
 export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewChartProps) {
-  // D-06: default all-on — all income and out keys included.
+  // D-06: default all-on — all income, out, and allocation keys included.
   // D-09: chip state is chart-local only (no URL, no localStorage).
   const [includedIncome, setIncludedIncome] = useState<Set<IncomeKey>>(
     () => new Set(INCOME_KEYS)
   )
   const [includedOut, setIncludedOut] = useState<Set<OutKey>>(
     () => new Set(OUT_KEYS)
+  )
+  const [includedAllocation, setIncludedAllocation] = useState<Set<AllocationKey>>(
+    () => new Set(ALLOCATION_KEYS)
   )
 
   // D-07: inclusive toggle — adds or removes a single key from the included set.
@@ -150,16 +156,29 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
     })
   }
 
-  // D-08: reset restores all keys in both groups.
+  function handleToggleAllocation(key: AllocationKey) {
+    setIncludedAllocation((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      return next
+    })
+  }
+
+  // D-08: reset restores all keys in all groups.
   function handleReset() {
     setIncludedIncome(new Set(INCOME_KEYS))
     setIncludedOut(new Set(OUT_KEYS))
+    setIncludedAllocation(new Set(ALLOCATION_KEYS))
   }
 
   // Derive bar rows using filter-aware reduction (FILT-01, FILT-02).
   // Number() conversion happens only inside deriveFilteredBarRow (Recharts boundary).
   const rows = data.map((p) =>
-    deriveFilteredBarRow(p, [...includedIncome], [...includedOut])
+    deriveFilteredBarRow(p, [...includedIncome], [...includedOut], [...includedAllocation])
   )
 
   return (
@@ -168,8 +187,10 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
       <OverviewChartFilters
         includedIncome={includedIncome}
         includedOut={includedOut}
+        includedAllocation={includedAllocation}
         onToggleIncome={handleToggleIncome}
         onToggleOut={handleToggleOut}
+        onToggleAllocation={handleToggleAllocation}
         onReset={handleReset}
       />
 
@@ -203,6 +224,7 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
                 data={data}
                 includedIncome={includedIncome}
                 includedOut={includedOut}
+                includedAllocation={includedAllocation}
               />
             }
           />

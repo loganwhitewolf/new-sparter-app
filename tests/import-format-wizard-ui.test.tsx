@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   loadContext: vi.fn(),
   createFormat: vi.fn(),
+  completeOnboardingImport: vi.fn(),
   push: vi.fn(),
 }))
 
@@ -13,6 +14,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 vi.mock('@/lib/actions/import', () => ({
+  completeOnboardingPrivateImportAction: mocks.completeOnboardingImport,
   createPrivateImportFormatAction: mocks.createFormat,
   loadImportFormatWizardContextAction: mocks.loadContext,
 }))
@@ -116,6 +118,16 @@ describe('ImportFormatWizard UI', () => {
     expect(html).toContain('Non sono disponibili intestazioni sicure')
     expect(html).not.toContain('name="timestampColumn"')
     expect(html).not.toContain('Salva formato e riprova analisi')
+  })
+
+  it('uses onboarding import copy and keeps the back link inside onboarding', () => {
+    const html = renderToStaticMarkup(createElement(ImportFormatWizard, { context, from: 'onboarding' }))
+
+    expect(html).toContain('Salva formato e importa')
+    expect(html).toContain('href="/onboarding"')
+    expect(html).toContain('Torna all&#x27;onboarding')
+    expect(html).not.toContain('Salva formato e riprova analisi')
+    expect(html).not.toContain('Torna alle importazioni')
   })
 })
 

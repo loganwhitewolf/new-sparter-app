@@ -67,6 +67,7 @@ vi.mock('@/lib/validations/import', async () => {
 
 const {
   analyzeImportAction,
+  completeOnboardingPrivateImportAction,
   confirmImportAction,
   deleteImportAction,
   loadMoreImports,
@@ -530,6 +531,94 @@ describe('import Server Actions', () => {
 
       await confirmImportAction(validConfirmForm())
 
+      expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('completeOnboardingPrivateImportAction', () => {
+    function validCompletionForm(overrides: Record<string, string | null> = {}) {
+      return makeFormData({
+        fileId: '11111111-1111-4111-8111-111111111111',
+        selectedFormatVersionId: '77',
+        ...overrides,
+      })
+    }
+
+    const analysisResult = {
+      fileId: '11111111-1111-4111-8111-111111111111',
+      formatVersionId: 77,
+      platformName: 'Private Bank',
+      rowCount: 2,
+      duplicateCount: 0,
+      warnings: [],
+      errors: [],
+      sampleRows: [],
+    }
+
+    const importResult = {
+      fileId: '11111111-1111-4111-8111-111111111111',
+      rowCount: 2,
+      duplicateCount: 0,
+      importedCount: 2,
+      warnings: [],
+      errors: [],
+    }
+
+    beforeEach(() => {
+      mocks.analyzeFile.mockResolvedValue(analysisResult)
+      mocks.importFile.mockResolvedValue(importResult)
+    })
+
+    it('requires the newly created format id before auth or service work', async () => {
+      const result = await completeOnboardingPrivateImportAction(
+        validCompletionForm({ selectedFormatVersionId: null }),
+      )
+
+      expect(result).toEqual({ error: 'Importazione non valida.' })
+      expect(mocks.verifySession).not.toHaveBeenCalled()
+      expect(mocks.analyzeFile).not.toHaveBeenCalled()
+      expect(mocks.importFile).not.toHaveBeenCalled()
+    })
+
+    it('analyzes without pattern suggestions, imports with the private format, and returns onboarding step 2', async () => {
+      const result = await completeOnboardingPrivateImportAction(validCompletionForm())
+
+      expect(result).toEqual({
+        error: null,
+        data: {
+          ...importResult,
+          nextRoute: '/onboarding?step=2',
+        },
+      })
+      expect(mocks.analyzeFile).toHaveBeenCalledWith({
+        userId: 'user-abc',
+        fileId: '11111111-1111-4111-8111-111111111111',
+        selectedFormatVersionId: 77,
+      })
+      expect(mocks.importFile).toHaveBeenCalledWith({
+        userId: 'user-abc',
+        fileId: '11111111-1111-4111-8111-111111111111',
+        selectedFormatVersionId: 77,
+        overrideWarnings: true,
+        subscriptionPlan: 'free',
+      })
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/import')
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/expenses')
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/onboarding')
+    })
+
+    it('does not import when retry analysis still fails', async () => {
+      mocks.analyzeFile.mockResolvedValueOnce({
+        ...analysisResult,
+        errors: ['No supported import format matched the uploaded file headers and sample rows.'],
+      })
+
+      const result = await completeOnboardingPrivateImportAction(validCompletionForm())
+
+      expect(result).toEqual({
+        error: 'No supported import format matched the uploaded file headers and sample rows.',
+      })
+      expect(mocks.importFile).not.toHaveBeenCalled()
       expect(mocks.revalidatePath).not.toHaveBeenCalled()
     })
   })

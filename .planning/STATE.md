@@ -1,90 +1,115 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Nature/Direction Model Realignment
-status: Awaiting next milestone
-last_updated: "2026-06-14T15:47:51.121Z"
-last_activity: 2026-06-14 — Milestone v2.0 completed and archived
+milestone: ""
+milestone_name: ""
+current_phase: null
+status: milestone_complete
+stopped_at: "Milestone v2.1 complete — archived 2026-06-22"
+last_updated: "2026-06-22T00:00:00Z"
+last_activity: 2026-06-22
+last_activity_desc: Milestone v2.1 archived
 progress:
   total_phases: 5
   completed_phases: 5
-  total_plans: 22
-  completed_plans: 22
+  total_plans: 15
+  completed_plans: 15
   percent: 100
-stopped_at: Phase 50 Plan 05 — COMPLETE (Phase 50 fully complete)
+current_phase_name: null
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-10)
+See: .planning/PROJECT.md (updated 2026-06-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 50 — transaction-pairing
+**Current focus:** Planning next milestone — run `/gsd-new-milestone` to start
 
 ## Current Position
 
-Phase: Milestone v2.0 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-15 — Quick task 260615-n3t: onboarding step-4 theme guard + persistent green check
+Phase: 55
+Plan: Not started
+Status: Phase complete — ready for verification
+Last activity: 2026-06-22 — Phase 55 complete
+
+## Roadmap (v2.1 — Phases 51–55)
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 51 | discovery-pipeline-reorder | PIPE-01, PIPE-02, PIPE-03 | Complete |
+| 52 | regex-validity-and-dedup | RDISC-01, RDISC-02, RDISC-03, RDISC-04 | Complete |
+| 53 | retroactive-application | APPLY-01, APPLY-02 | Complete |
+| 54 | reusable-trigger | TRIG-01, TRIG-02 | Not started |
+| 55 | import-summary-ux | SUMUI-01, SUMUI-02, SUMUI-03 | Not started |
+
+**Open decisions to resolve in discuss/plan:** APPLY-02 retroactive scope (current file vs platform history); TRIG-02 re-check UX (per-row vs bulk); SUMUI-03 exact copy/placement of the "discovery is now a separate step" cue. Phase success criteria are phrased to accommodate either resolution.
+
+**Deferred (tracked, not in v2.1):** TOOL-01 (consolidate in-app discovery with offline `yarn regex:discover`), GLOBAL-01 (file-independent suggestions), DISM-01 (persistent dismissal).
 
 ## Accumulated Context
 
 ### Decisions
 
-Design contract is LOCKED. Do not re-open or re-derive the data model:
+Plan 51-01: detectPatternSuggestionsWithMeta reuses shared helpers — no clustering logic duplicated; strippedByNormalization rolled up as any-member-true at candidate level; residualVariablePart from first grouped row's tokens beyond stable prefix.
 
-- **49-01 D-01:** savingsRate expected value in test is 33.3 (not 33) — computeSavingsRate uses toDecimalPlaces(1); RESEARCH.md had a rounding error in the example value.
+Plan 51-02: getUncategorizedExpensesForDiscovery uses isNull(expense.subCategoryId) as sole Set B filter (covers statuses 1 and 4 without enumerating them); no cache() or verifySession() — userId passed as parameter following loadActivePatterns pattern; no DbOrTx — discovery is post-commit, never inside a transaction.
+
+Plan 51-03: discoverRegexCandidates reads stripPattern from expenses[0].descriptionStripPattern (platform-level constant from DAL join); applyStrip is a private one-liner — does NOT call normalizeTransactionRow (requires ImportPlatformConfig not available here); amount: null on all detector rows (description-only clustering); legacy analyzeFile call annotated with TODO Phase 55, not deleted (preserves current import summary UI).
+
+Plan 52-01: PatternSuggestionWithMeta now carries all grouped member descriptionHashes (legacy nulls filtered); candidateCoveredByExistingPattern is a pure helper that mirrors the existing full plus numeric-stripped active-pattern matcher; clustering guard and prefix math unchanged.
+
+Plan 52-02: getManuallyCategorizedHashes queries expenseClassificationHistory source='manual' joined to expense.descriptionHash, scoped by userId, with empty-input short-circuit and Set<string> result for Check 2.
+
+Plan 52-03: discoverRegexCandidates now returns two lists: regex candidates from non-empty residual families and singleCategorizationSuggestions from identical normalized groups; Check 1 gates regex families with candidateCoveredByExistingPattern and Check 2 gates both lists with any-member manual-history hashes.
+
+Plan 53-01: applyNewPatternToPlatformExpenses is a new sibling function using platform-scoped Set B DAL; PatternApplyResult exported from service layer; legacy applyNewPatternToExpenses unchanged for createPatternAction; getPlatformIdForUserFile resolves file ownership with platform join.
+
+Plan 53-02: ActionState extended with optional applyResult?: PatternApplyResult | null; promoteSuggestionAction resolves platformId server-side from fileId (T-53-04/05), calls applyNewPatternToPlatformExpenses, returns structured counts; non-fatal apply failure returns zero counts; APPLY-02 scope locked to platform uncategorized history.
+
+Plan 53-03: fileId/platformId threaded from RSC page → SuggestionSection → SuggestionCard → SuggestionPromoteForm; hidden fileId input in form (T-53-08); SuggestionCard renders Italian count copy (categorizzate / ancora senza match) from applyResult after promote; card persists with opacity-50 (not removed); notFound when platformId null; initialApplyResult test-only prop for SSR snapshot testing.
+
+Plan 54-01: suggestions page migrated to discoverRegexCandidates (D-04) — platform-scoped, consistent with apply path; notFound() guards preserved; detectPatternSuggestions removal deferred to Phase 55.
+
+Plan 54-02: post-commit discovery synchronous (D-02) — non-fatal try/catch, logs post_import_discovery_failed on error; null platformId post-commit → skip discovery, discoveryCount 0 (T-54-04 mitigation); no auto-redirect to suggestions page (D-05) — CTA only; onboarding returnTo path preserved unchanged.
+
+Plan 54-03: recheckRegexAction is a thin, ownership-guarded server action over discoverRegexCandidates — no second detector path (TRIG-02 SC-3 satisfied); userId always from verifySession (T-54-09); platformId always from getPlatformIdForUserFile (T-54-08 IDOR guard); zero candidates → toast no navigation (D-06); total > 0 → router.push to /import/[fileId]/suggestions (D-03).
+
+Design contract is LOCKED. Do not re-open or re-derive the data model:
 
 - ADR 0012: direction derived from nature; 4th direction `allocation`; `category.type` removed
 - CONTEXT.md: canonical nature/direction vocabulary + categorization rules
 - `.planning/nature-remapping-WORKING.md`: 23 categories / ~65 subcats — final remap confirmed 2026-06-09
 
-v2.0 / Phase 46 decisions (shipped 2026-06-11):
+v2.0 closed (Phases 46–50, shipped 2026-06-14): nature/direction lookup tables, schema migration 0018, data recategorization, 4-direction dashboard, explicit transaction pairing (`transaction_pair`, migration 0020). Full decision log archived with the v2.0 milestone.
 
-- **8 nature rows** (not 9): `income`, `income_extraordinary`, `essential`, `discretionary`, `debt`, `transfer`, `savings`, `investment` — stale "9" references in docs; uncategorized = `null` `nature_id` on subcategory (D-02)
-- `direction` + `nature` lookup tables in `schema.ts` (varchar codes, not pgEnum); FK chain `sub_category.nature_id → nature → direction`
-- `category.type`, `flow_nature` enum, `amount_sign` removed from schema; pattern unique constraint `(pattern, subCategoryId)`
-- **D-06:** no `drizzle-kit generate` / DB apply in Phase 46 — migration deferred to Phase 48
-- **D-10:** `sub_category.exclude_from_totals` retained in schema — removal + `direction.included_in_totals` consumption deferred to Phase 49
-- **46-02 minimum-compile:** DAL/actions/components/tests compile green; semantic aggregation/filter rewrite marked `TODO(Phase 49)` — not a Phase 46 deliverable
-- **46-03 seed baseline:** `directions` (4) + `natures` (8) in `seed-data.ts`; `seed.ts` FK-order insert; `seed-extras` pattern-dedupe sign-agnostic repair only (no new STEPS yet — Phase 47 adds nature_id backfill)
-- **47-02 seed-data v2:** wholesale replace `categories` (23 active) + `subCategories` (87 with `natureId` 1-8); dissolved wrappers omitted from fresh baseline; Wave 0 tests GREEN (TAX-01/TAX-02 baseline)
-- **47-03 patterns + seed wiring:** sign-agnostic `categorizationPatterns` (28 rows) retargeted to v2 slugs; bonifico deduped to `trasferimento-tra-conti`; `seed.ts` excludeFromTotals triple + natureId pass-through (D-10, D-13)
-- **47-05 R-FN-03 + phase gate:** R-FN-03 todos enabled; transfer subs assert natureId 6 (D-13); 949 tests + build green; 47-VALIDATION.md Nyquist sign-off; no DB apply (D-05)
+Codebase facts relevant to v2.1 (verified, do not re-research):
 
-- **48-01 migration**: 0018 hand-crafted from 0017 snapshot diff (drizzle-kit TTY limitation, D-07 sanction); MIG-03 pre-dedup DELETE guards against sign-only duplicate constraint failures
-- **48-01 D-16**: rebucketIncomeNatures guard removed; step is no-op retained for append-only registry invariant; nature assignment delegated to v2-backfill-nature-id
-- **48-02 verify-migration**: classifyResults (pure, exported) + runVerification (4 read-only SQL assertions); fatal on activeSystemNullNatureCount>0 (D-04) or patternDuplicateCount>0 (MIG-03); informational for user-owned null nature_id (D-03); db:verify* scripts mirror db:seed-extras* triplet
-- Migrations: `drizzle-kit generate` + `scripts/migrate.ts` only — never `drizzle-kit push`
-- Seeds: additive model — append steps to `seed-extras.ts`, never edit shipped `seed-data.ts` shapes
-- Monetary arithmetic: Decimal.js throughout
-- Layering: dal / services / actions
-- [Phase ?]: 49-02 D-01: categoryType fields use sql<union> cast for direction.code to satisfy TypeScript strict mode in dashboard.ts
-- [49-04]: OUT_KEYS narrowed to essential/discretionary/debt only; savings/investment in allocation bucket; onMonthSelect carries direction param; allocationReading uses "piu/meno del {prevYear}" copy from UI-SPEC
-- [49-04 post-checkpoint]: totalAllocation display wrapped in abs() — DAL algebraic value unchanged; movers changed to 3-column simultaneous layout (removed per-direction routing)
-- [49-05]: buildDirectionNatureMap replaces buildTypeNatureMap (direction-keyed, allocation bucket); SubcategoryPicker 4 direction chips; table filters key=direction + dependsOn=direction; setSubcategoryNatureAction resolves real natureId via NATURE_ID_BY_CODE; detectedAmountSign removed (ADR 0012)
-- [Phase ?]: 50-02 D-07: yarn db:generate --name transaction_pair bypasses drizzle-kit TTY prompt; --name flag is standard workaround for headless migration generation contexts
-- [Phase ?]: 50-02: transaction_pair table LIVE in local dev DB (0020 migration applied); no userId column on pair table (D-01/T-50-01) — ownership enforced in Plan 03 service layer
-- [50-03]: createPair verifies both tx.userId === sessionUserId before insert (IDOR gate, D-01); primary resolution via Decimal.js abs(), tie-break by occurredAt (D-10); getEligibleCounterparts verifySession-scoped + NOT EXISTS already-paired (D-14); actions revalidate /transactions + /overview
-- [50-04]: PAIR-03 netting via shared helpers at all 8 aggregation sites; getOverview (overview.ts) untouched to avoid double-count; transactionListSelect uses correlated subqueries (not LEFT JOIN) for 4 paired fields
-- [50-05]: TransactionTable key-based remount — pairedWithId + pairedNetAmount included in buildTransactionTableKey; table copies props into local state so prop updates are invisible without remount
-- [50-05]: CounterpartPickerDialog mounted with key={pairTarget.id} — re-anchors ±90-day date window to the reference transaction's occurredAt on every open; prevents stale date range from reused dialog instance
-- [50-05]: Popover Importo uses pairedAmount (= t2.amount correlated subquery, counterpart's original amount); Netto uses pairedNetAmount — two distinct values; pairedAmount added to transactionListSelect in Plan 04 field set
+- `lib/services/import.ts`: `analyzeFile()` runs `detectPatternSuggestions` over ALL normalized rows with `covered:false` hardcoded, BEFORE categorization — discovery currently runs in the wrong place. `importFile()` runs `categorizePipeline` per-expense inside a `db.transaction`. (Phase 51 reorders this.)
+- `lib/utils/pattern-suggestions.ts`: pure `detectPatternSuggestions` / `detectPatternSuggestionsWithMeta` — token-prefix grouping (>=2 tokens, >=2 members), strips numeric tokens, carries grouped `descriptionHashes`, and exposes `candidateCoveredByExistingPattern` for generated-regex coverage checks.
+- `lib/services/categorization.ts`: `categorizePipeline` (Tier1 regex `applyTier1Regex` + Tier2 history), `loadActivePatterns`.
+- `lib/services/pattern-application.ts`: `applyNewPatternToExpenses` already applies a new pattern retroactively to ALL of a user's uncategorized expenses (platform-agnostic) — relevant to APPLY-01/APPLY-02 scope decision (Phase 53).
+- `app/(app)/import/[fileId]/suggestions/page.tsx`: post-import re-run on `getUncategorizedTransactionsByFileId` (Set B for that file), capped at 5, still `covered:false`, no Check 2.
+- Files table: `app/(app)/import/files.table.ts` + `app/(app)/import/FilesToolbar.tsx` — where the on-demand "ricontrolla regex" trigger (TRIG-02) lives (Phase 54).
+- Import summary UI: `ImportPreview`/`AnalyzePage` consume `analyzeFile`'s `sampleRows` + `patternSuggestions` (capped at 5, sampleDescriptions sliced to 3) (Phase 55).
+- Offline tool exists: `scripts/regex-discovery.ts` + `/regex-label` skill (quick-task 260615-dtm). Relationship to in-pipeline discovery is TOOL-01 (deferred — only clarify the boundary).
+- [Phase ?]: Plan 53-01: applyNewPatternToPlatformExpenses is a sibling function using platform-scoped Set B DAL; PatternApplyResult exported from service layer; legacy applyNewPatternToExpenses unchanged for createPatternAction
+- [Phase ?]: Plan 54-01: suggestions page migrated to discoverRegexCandidates (D-04) — platform-scoped, consistent with apply path; notFound() guards preserved
+- [Phase ?]: Plan 54-01: detectPatternSuggestions removal deferred to Phase 55 — analyzeFile still consumes it; no UI/flow may call it from this plan onward
+- [Phase ?]: Plan 54-01: singleCategorizationSuggestions rendered as minimal read-only list (no SuggestionCard) — polished separation is Phase 55 SUMUI-02
+- [Phase ?]: Plan 54-02: importFile runs discoverRegexCandidates post-commit (non-fatal, outside db.transaction); ImportFileResult.discoveryCount = candidates.length + singleCategorizationSuggestions.length; 0 on failure or null platformId
+- [Phase ?]: Plan 54-02: import-result CTA surfaces discoveryCount when > 0 — no auto-redirect (D-05); onboarding returnTo preserved; pre-existing SuggestionSection fileId TS error fixed
+- [Phase ?]: Plan 55-01: detectPatternSuggestions removed from analyzeFile (D-06/D-07/D-09); patternSuggestions removed from ImportAnalysisResult; detectPatternSuggestionsWithMeta preserved; SuggestionSection removed from import-preview analyze step; TypeScript clean, 1094 tests green
 
 ### Planning Risk
 
-**Resolved (Phase 46):** 8-vs-9 nature row count — **8 is correct**; implemented in schema + seed (46-01, 46-03).
-
-**Open for Phase 47:** None — Phase 47 complete. Deployed DB apply deferred to Phase 48 (D-05).
+None open. All v2.1 success criteria are observable; the two DoD test cases (Fineco "Bonifico Andrea Bernardini" → regex; identical "Macellaio" → single categorization) are encoded in Phase 51 and Phase 52 criteria.
 
 ### Blockers/Concerns
 
 None.
 
-### Quick Tasks Completed (carried from v1.16)
+### Quick Tasks Completed (carried from v1.16 / v2.0)
 
 | # | Description | Date | Commit |
 |---|-------------|------|--------|
@@ -93,29 +118,39 @@ None.
 | 260609-lcp | Cascading filters (type→nature, category→subcat); amount sign strip | 2026-06-09 | ffd4fc3 |
 | 260615-dtm | Bank-agnostic regex-discovery tool (uncovered-description clustering → proposed patterns) | 2026-06-15 | d737b8e |
 | 260615-n3t | Onboarding step-4 fix: guarded light theme + catalogued items stay with green check | 2026-06-15 | 1434308 |
+| 260615-oiq | Onboarding private platform creation imports immediately and returns to step 2 | 2026-06-15 | d5b590c |
+| 260616-dlw | Fix transaction description sort (validation + DAL + infinite scroll) | 2026-06-16 | c71d32e |
 
 ## Deferred Items
 
+Items acknowledged and deferred at milestone close on 2026-06-22:
+
 | Category | Item | Status |
 |----------|------|--------|
-| phase_46 | 46-VERIFICATION.md | not generated — run `/gsd-verify-work 46` if process gap matters |
-| phase_49 | DATA-06 `exclude_from_totals` removal | D-10 — deferred from Phase 46 |
-| phase_49 | Semantic DAL/dashboard/filter rewrite | `TODO(Phase 49)` stubs from 46-02 |
-| operator | R038/R039/R041 | live deploy operator-pending |
-| backlog | R029 | partial revalidation coverage |
-| backlog | REVAL-01 | parked |
+| verification_gap | 53-VERIFICATION.md | human_needed — 3 browser/visual checks (inline count, cross-platform isolation, notFound behavior) |
+| verification_gap | 55-VERIFICATION.md | human_needed — 2 visual checks (cap 10 rows layout, SUMUI-02/03 visual hierarchy) |
+| uat_gap | 53-UAT.md | diagnosed — 0 pending scenarios |
+| quick_task | 260615-dtm-reusable-regex-discovery-tool-bank-agnos | unknown — TOOL-01 deferred to next milestone |
+| quick_task | 260615-n3t-fix-recurring-onboarding-catalogazione-s | unknown — to be evaluated in next milestone |
+| v2.1 | TOOL-01 | consolidate in-app + offline discovery — only clarify boundary this milestone |
+| v2.1 | GLOBAL-01 | file-independent suggestions — parked |
+| v2.1 | DISM-01 | persistent dismissal of noisy suggestions — parked |
+| operator | R038/R039/R041 | live Vercel/Supabase/R2 deploy operator-pending |
+| backlog | R029 | partial categorization revalidation coverage |
 
 ## Session Continuity
 
-Last session: 2026-06-14T10:00:00Z
-Handoff synced: 2026-06-14 — 50-05 SUMMARY committed (Phase 50 fully complete)
-Resume file: None — Phase 50 complete. Remaining v2.0 work: 48-03-PLAN.md (MIGRATION-RUNBOOK) or 49-06-PLAN.md (drop exclude_from_totals).
+**Stopped at:** Completed 55-01: removed legacy detectPatternSuggestions from import pipeline
 
-**Next:** Phase 50 complete (5/5 plans). Remaining open v2.0 plans: 48-03 (MIGRATION-RUNBOOK + operator-guarded apply) and 49-06 (BLOCKING — drop sub_category.exclude_from_totals migration).
+Last session: 2026-06-21T12:49:24.183Z
+Handoff synced: 2026-06-16 — Phase 53 complete: all 3 plans done. Plan 03 wired inline apply feedback UI (commits 4406115, ce3190b).
+Resume file: .planning/phases/55-import-summary-ux/55-02-PLAN.md
+
+**Next:** Phase 54 — reusable-trigger (TRIG-01, TRIG-02).
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Start Phase 53 (`$gsd-discuss-phase 53` or `$gsd-plan-phase 53`) to resolve retroactive application scope and implementation details.
 
 ## Performance Metrics
 
@@ -127,3 +162,18 @@ Resume file: None — Phase 50 complete. Remaining v2.0 work: 48-03-PLAN.md (MIG
 | Phase 50-transaction-pairing P50-03 | 10min | 2 tasks | 4 files |
 | Phase 50-transaction-pairing P50-04 | 25min | 2 tasks | 3 files |
 | Phase 50-transaction-pairing P50-05 | 90min | 2 tasks + operator checkpoint + 5 fixes | 5 files |
+| Phase 51 P01 | 15min | 2 tasks | 2 files |
+| Phase 51 P02 | 15min | 2 tasks | 2 files |
+| Phase 51 P03 | 8min | 3 tasks (TDD RED+GREEN + comment) | 3 files |
+| Phase 52 P01 | 3 min | 2 tasks | 6 files |
+| Phase 52 P02 | 2 min | 2 tasks | 2 files |
+| Phase 52 P03 | 3 min | 3 tasks | 2 files |
+| Phase 53 PP01 | 3min | - tasks | - files |
+| Phase 53 P02 | 8min | 2 tasks (TDD RED+GREEN) | 4 files |
+| Phase 53 P03 | 10min | 2 tasks + verification | 7 files |
+| Phase 54 P01 | 3min | 3 tasks | 3 files |
+| Phase 54 P02 | 5min | 2 tasks (TDD RED+GREEN) | 3 files |
+| Phase 54 P03 | 8min | 3 tasks (TDD RED+GREEN) | 5 files |
+| Phase 55 P01 | 7min | 2 tasks | 10 files |
+| Phase 55 P02 | 3min | 2 tasks | 4 files |
+| Phase 55 P03 | 2min | 3 tasks | 3 files |

@@ -4,6 +4,52 @@ Living retrospective — one section per milestone, newest first.
 
 ---
 
+## Milestone: v2.1 — Regex Discovery & Transaction Unification
+
+**Shipped:** 2026-06-22
+**Phases:** 5 (51–55) | **Plans:** 15 | **Commits:** 50 | **Timeline:** 8 days (2026-06-14 → 2026-06-22)
+
+### What Was Built
+
+- **Phase 51**: Standalone `discoverRegexCandidates` service with Set B filter (`isNull(subCategoryId)`), platform-specific normalization strip, and D-05 metadata (stablePrefix, residualVariablePart, sampleNormalized, strippedByNormalization) — regex discovery extracted from import flow and independently callable.
+- **Phase 52**: Two-list `DiscoveryResult` with RDISC-01/02 residual routing, Check 1 (active-pattern dedup via `candidateCoveredByExistingPattern`) and Check 2 (manual-history hash dedup via `getManuallyCategorizedHashes`) — zero false-positive proposals.
+- **Phase 53**: `promoteSuggestionAction` with IDOR guard resolving `platformId` server-side from `fileId`; `applyNewPatternToPlatformExpenses` for platform-scoped retroactive apply; inline Italian count copy on suggestion card ("{N} categorizzate · {M} ancora senza match").
+- **Phase 54**: Single `discoverRegexCandidates` service wired at two entry points: auto post-import non-fatal run with `discoveryCount` CTA (TRIG-01) and per-row "Ricontrolla regex" via `recheckRegexAction` in the Files table (TRIG-02).
+- **Phase 55**: `detectPatternSuggestions` fully removed from utils and import service; `sampleRows.slice(0, 10)` in ImportPreview; `SuggestionSection` with distinct h2 headings + intro text; SUMUI-03 paragraph communicating the discovery-as-separate-step flow.
+
+### What Worked
+
+- **TDD red-green gates throughout**: every plan produced a RED commit then a GREEN commit. Phase 51 to 55 maintained this discipline consistently — verification was mechanical, not investigative.
+- **Wave-based plan parallelism**: Phases 51 and 52 each had Wave 1 (pure util + DAL in parallel) gating Wave 2 (service wiring). This eliminated idle time and kept individual plans small (2–3 tasks each).
+- **3-source cross-reference audit**: VERIFICATION.md + SUMMARY frontmatter + integration checker gave high confidence on the 4 stale checkboxes without requiring a full re-run of tests. The audit caught the docs gap without blocking the close.
+- **Security-first code review (Phase 53)**: WR-01 caught the dead `platformId` prop in the client chain before merge — removing it improved security posture (server always re-derives from fileId) and simplified the component signature.
+- **Non-fatal post-commit discovery**: wrapping `discoverRegexCandidates` in try/catch with `discoveryCount=0` fallback meant import correctness was never coupled to discovery correctness — a clean separation of concerns.
+
+### What Was Inefficient
+
+- **REQUIREMENTS.md checkboxes not updated during execution**: PIPE-01, PIPE-02, PIPE-03, and APPLY-01 were still `[ ]` at milestone close. The 3-source audit resolved the ambiguity, but it was unnecessary friction. Checkboxes should be updated as part of plan completion, not deferred to close.
+- **`human_needed` verifications accumulate without a clear owner**: Phases 53 and 55 each flagged browser/visual items that require a running dev environment. These items were acknowledged and deferred without a concrete owner or timeline — they will either be resolved next milestone or silently persist.
+- **ROADMAP.md Phase Details section grew stale**: Plan 53 still showed `[ ]` for plans 53-02 and 53-03 in the ROADMAP, even though all three SUMMARY.md files existed. The roadmap was tracking plan states that the GSD state engine had already superseded — a minor but recurring inconsistency.
+
+### Patterns Established
+
+- **Two-list service output (candidates + singleCategorizationSuggestions)**: additive shape that downstream consumers (suggestions page, CTA count) receive without re-querying. Viable pattern for any discovery/classification service that produces heterogeneous output types.
+- **Server-side `platformId` resolution from `fileId` as IDOR guard**: `getPlatformIdForUserFile({ userId, fileId })` is the canonical pattern for all server actions that accept a fileId from the client. Zero cases where platformId should be trusted from the client.
+- **Post-commit non-fatal service call**: pattern for side-effect services that should run after a transaction commits but must not affect the primary operation's success. Wrap in try/catch, log the failure, return a zero-value count to the caller.
+
+### Key Lessons
+
+- Design dedup gates (Check 1, Check 2) before wiring the service that uses them — the gate logic is the hard part, and getting it right as isolated pure functions (Plan 52-01/02) made Plan 52-03 (service orchestration) trivial.
+- Every server action that accepts a `fileId` from the client needs an IDOR guard before any DB write. Enumerate the guard pattern in planning, not in code review.
+- REQUIREMENTS.md checkbox updates should be a required step in each plan's completion checklist — not an optional documentation task.
+
+### Cost Observations
+
+- Model mix: Sonnet orchestrator + Sonnet executors/verifier.
+- Notable: Phases 51–55 averaged ~3–8 min per plan; the entire milestone ran in 8 calendar days with no operator checkpoints required (all verifiable programmatically except the 5 human-needed browser/visual items).
+
+---
+
 ## Milestone: v2.0 — Nature/Direction Model Realignment
 
 **Shipped:** 2026-06-14

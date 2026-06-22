@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { CheckCircle, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { APP_ROUTES } from '@/lib/routes'
@@ -25,9 +24,9 @@ export function Step5Outro() {
           </a>
         </Button>
         <Button asChild variant="outline" size="lg" className="w-full">
-          <Link href={APP_ROUTES.categorySettings}>
+          <a href={APP_ROUTES.categorySettings}>
             Personalizza le categorie
-          </Link>
+          </a>
         </Button>
       </div>
     </div>

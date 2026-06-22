@@ -54,6 +54,7 @@ describe('SuggestionPromoteForm', () => {
       createElement(SuggestionPromoteForm, {
         suggestion,
         categories,
+        fileId: 'file-abc',
         onPromoted: noopOnPromoted,
       }),
     )
@@ -66,22 +67,37 @@ describe('SuggestionPromoteForm', () => {
     expect(html).not.toMatch(/<input[^>]*name="amountSign"/)
   })
 
-  it('REV-03: renders only Sottocategoria label — no cascading Categoria+Sottocategoria pair', () => {
-    // The rebuilt form removed the cascading Category→Subcategory Select pair (plan 39-05).
-    // Only a single "Sottocategoria" label + picker trigger remains.
+  it('APPLY-01: renders hidden fileId input with the provided fileId value', () => {
     const html = renderToStaticMarkup(
       createElement(SuggestionPromoteForm, {
         suggestion,
         categories,
+        fileId: 'file-abc',
         onPromoted: noopOnPromoted,
       }),
     )
 
-    // "Sottocategoria" label still present
+    // fileId hidden input MUST exist and carry the fileId prop value (T-53-08)
+    expect(html).toMatch(/<input[^>]*type="hidden"[^>]*name="fileId"[^>]*value="file-abc"/)
+  })
+
+  it('REV-03: renders only Sottocategoria label — no cascading Categoria+Sottocategoria pair', () => {
+    // The rebuilt form removed the cascading Category→Subcategory Select pair (plan 39-05).
+    // Only a single "Subcategory" label + picker trigger remains.
+    const html = renderToStaticMarkup(
+      createElement(SuggestionPromoteForm, {
+        suggestion,
+        categories,
+        fileId: 'file-abc',
+        onPromoted: noopOnPromoted,
+      }),
+    )
+
+    // The subcategory label is still present.
     expect(html).toContain('Sottocategoria')
-    // "Categoria" as a standalone label no longer exists (was removed with the cascading Select)
-    // Note: "Sottocategoria" contains the substring "categoria" — we check for the exact label text
-    // by looking for patterns that would indicate a separate Categoria label element
+    // Category as a standalone label no longer exists (was removed with the cascading Select).
+    // Note: the Italian subcategory label contains the category substring, so we check for
+    // patterns that would indicate a separate Category label element.
     expect(html).not.toMatch(/<label[^>]*>\s*Categoria\s*<\/label>/)
   })
 
@@ -90,6 +106,7 @@ describe('SuggestionPromoteForm', () => {
       createElement(SuggestionPromoteForm, {
         suggestion,
         categories,
+        fileId: 'file-abc',
         onPromoted: noopOnPromoted,
       }),
     )
@@ -102,6 +119,7 @@ describe('SuggestionPromoteForm', () => {
       createElement(SuggestionPromoteForm, {
         suggestion,
         categories,
+        fileId: 'file-abc',
         onPromoted: noopOnPromoted,
       }),
     )
@@ -114,6 +132,7 @@ describe('SuggestionPromoteForm', () => {
       createElement(SuggestionPromoteForm, {
         suggestion,
         categories,
+        fileId: 'file-abc',
         onPromoted: noopOnPromoted,
       }),
     )

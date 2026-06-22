@@ -9,15 +9,17 @@ import { SubcategoryPicker } from '@/components/categorization/subcategory-picke
 import { promoteSuggestionAction } from '@/lib/actions/patterns'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { PatternSuggestion } from '@/lib/utils/pattern-suggestions'
+import type { PatternApplyResult } from '@/lib/validations/pattern'
 
 type Props = {
   suggestion: PatternSuggestion
   categories: CategoryWithSubCategories[]
-  onPromoted: () => void
+  fileId: string
+  onPromoted: (applyResult: PatternApplyResult) => void
   disabled?: boolean
 }
 
-export function SuggestionPromoteForm({ suggestion, categories, onPromoted, disabled }: Props) {
+export function SuggestionPromoteForm({ suggestion, categories, fileId, onPromoted, disabled }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [subCategoryId, setSubCategoryId] = useState('')
   const [subCategoryLabel, setSubCategoryLabel] = useState<string | null>(null)
@@ -26,10 +28,11 @@ export function SuggestionPromoteForm({ suggestion, categories, onPromoted, disa
 
   // submittedRef guards against the initial-render false positive
   // (state.error === null is also the initial state). See Pitfall 4.
+  // state.applyResult must be present before calling onPromoted (Pitfall 3).
   useEffect(() => {
-    if (submittedRef.current && state.error === null) {
+    if (submittedRef.current && state.error === null && state.applyResult) {
       submittedRef.current = false
-      onPromoted()
+      onPromoted(state.applyResult)
     }
   }, [state, onPromoted])
 
@@ -54,11 +57,12 @@ export function SuggestionPromoteForm({ suggestion, categories, onPromoted, disa
     >
       {/*
         Hidden inputs pre-filled from the suggestion.
-        amountSign is intentionally NOT sent — the Server Action derives it server-side (ADR 0008).
-        confidence is NOT sent — hardcoded to 1 server-side (T-39-09).
+        amountSign removed — Phase 46: patterns are sign-agnostic (ADR 0012, supersedes ADR 0008)
+        confidence is NOT sent — Server Action hardcodes 0.85 per D-01 (ignores any client value)
       */}
       <input type="hidden" name="pattern" value={suggestion.pattern} />
       <input type="hidden" name="subCategoryId" value={subCategoryId} />
+      <input type="hidden" name="fileId" value={fileId} />
 
       <div className="flex flex-col gap-1.5">
         <label className="text-sm">Sottocategoria</label>

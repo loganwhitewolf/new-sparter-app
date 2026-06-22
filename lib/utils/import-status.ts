@@ -28,6 +28,14 @@ export function isUnknownFormatFailed(row: Pick<ImportListRow, 'status' | 'error
   )
 }
 
+/**
+ * The error message thrown when analyze is attempted on a file in a non-analyzable
+ * status (e.g. already 'imported'). Surfaced by analyzeImportAction so callers
+ * can distinguish this case from generic failures.
+ */
+export const ANALYZE_STATUS_ERROR =
+  'Analisi non consentita per questo file nel suo stato attuale.'
+
 /** Statuses where the file is actively being processed server-side. */
 export const IN_PROGRESS_STATUSES = new Set<ImportListRow['status']>(['analyzing', 'importing'])
 

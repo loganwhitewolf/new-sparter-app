@@ -11,6 +11,10 @@ const mocks = vi.hoisted(() => ({
   markFileFailed: vi.fn(),
   updateFileAnalysisState: vi.fn(),
   updateFileImportState: vi.fn(),
+  getPlatformIdForUserFile: vi.fn(),
+
+  // services/regex-discovery
+  discoverRegexCandidates: vi.fn(),
 
   // dal/import-formats
   loadImportFormatsForDetection: vi.fn(),
@@ -25,9 +29,6 @@ const mocks = vi.hoisted(() => ({
   // services/categorization
   loadActivePatterns: vi.fn(),
   categorizePipeline: vi.fn(),
-
-  // utils/pattern-suggestions (Phase 34)
-  detectPatternSuggestions: vi.fn(),
 
   // services/import-parsers
   parseImportFile: vi.fn(),
@@ -195,6 +196,7 @@ vi.mock('@/lib/dal/files', () => ({
   markFileFailed: mocks.markFileFailed,
   updateFileAnalysisState: mocks.updateFileAnalysisState,
   updateFileImportState: mocks.updateFileImportState,
+  getPlatformIdForUserFile: mocks.getPlatformIdForUserFile,
 }))
 
 vi.mock('@/lib/dal/transactions', () => ({
@@ -210,6 +212,10 @@ vi.mock('@/lib/dal/classification-history', () => ({
   writeClassificationHistory: mocks.writeClassificationHistory,
 }))
 
+vi.mock('@/lib/services/regex-discovery', () => ({
+  discoverRegexCandidates: mocks.discoverRegexCandidates,
+}))
+
 vi.mock('@/lib/services/r2', () => ({
   readObjectBody: mocks.readObjectBody,
 }))
@@ -222,10 +228,6 @@ vi.mock('@/lib/services/categorization', () => ({
   loadActivePatterns: mocks.loadActivePatterns,
   categorizePipeline: mocks.categorizePipeline,
   // applyTier1Regex is tested directly via importActual below
-}))
-
-vi.mock('@/lib/utils/pattern-suggestions', () => ({
-  detectPatternSuggestions: mocks.detectPatternSuggestions,
 }))
 
 // Use actual implementations for pure utility functions
@@ -1269,6 +1271,133 @@ describe('importFile', () => {
 })
 
 // ---------------------------------------------------------------------------
+// importFile — post-commit discovery (TRIG-01) tests
+// ---------------------------------------------------------------------------
+describe('importFile — post-commit discovery (TRIG-01)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getFileForUser.mockResolvedValue(makeFileRow({ status: 'analyzed' }))
+    mocks.updateFileImportState.mockResolvedValue(makeFileRow({ status: 'importing' }))
+    mocks.markFileFailed.mockResolvedValue(makeFileRow({ status: 'failed' }))
+    mocks.getDuplicateHashes.mockResolvedValue(new Set<string>())
+    mocks.loadActivePatterns.mockResolvedValue([])
+    mocks.categorizePipeline.mockResolvedValue(null)
+    mocks.insertTransactionBatch.mockResolvedValue([])
+    mocks.writeClassificationHistory.mockResolvedValue(undefined)
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
+    mocks.loadImportFormatsForDetection.mockResolvedValue([makeFormatCandidate()])
+    mocks.readObjectBody.mockResolvedValue(
+      (async function* () { yield GENERAL_CSV })(),
+    )
+    mocks.getPlatformIdForUserFile.mockResolvedValue(5)
+    mocks.discoverRegexCandidates.mockResolvedValue({
+      candidates: [],
+      singleCategorizationSuggestions: [],
+      totalUncategorized: 0,
+      platformId: 5,
+    })
+
+    mocks.dbTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                then: vi.fn((onFulfilled?: (rows: unknown[]) => unknown) => {
+                  const rows: unknown[] = []
+                  return Promise.resolve(onFulfilled ? onFulfilled(rows) : rows)
+                }),
+              }),
+            }),
+          }),
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      }
+      return callback(tx)
+    })
+  })
+
+  it('Test 1: successful import returns discoveryCount equal to candidates + singleCategorizationSuggestions', async () => {
+    mocks.discoverRegexCandidates.mockResolvedValue({
+      candidates: [
+        { pattern: 'esselunga', matchCount: 3, residualVariablePart: '', sampleDescriptions: [], descriptionHashes: [] },
+        { pattern: 'caffè', matchCount: 2, residualVariablePart: '', sampleDescriptions: [], descriptionHashes: [] },
+      ],
+      singleCategorizationSuggestions: [
+        { normalizedDescription: 'netflix', sampleDescriptions: ['NETFLIX'], matchCount: 1, descriptionHashes: [] },
+      ],
+      totalUncategorized: 3,
+      platformId: 5,
+    })
+
+    const result = await importFile({ userId: USER_ID, fileId: FILE_ID })
+
+    expect(result.discoveryCount).toBe(3) // 2 candidates + 1 singleCategorizationSuggestion
+  })
+
+  it('Test 2: when discoverRegexCandidates throws, importFile returns successfully with discoveryCount 0 and logs post_import_discovery_failed', async () => {
+    mocks.discoverRegexCandidates.mockRejectedValue(new Error('Discovery service failed'))
+
+    const result = await importFile({ userId: USER_ID, fileId: FILE_ID })
+
+    // Import still succeeds
+    expect(result).toMatchObject({ fileId: FILE_ID, rowCount: 2, importedCount: 0 })
+    // discoveryCount is 0
+    expect(result.discoveryCount).toBe(0)
+    // Warning logged
+    expect(mocks.loggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'post_import_discovery_failed', userId: USER_ID, fileId: FILE_ID }),
+    )
+  })
+
+  it('Test 3: when getPlatformIdForUserFile returns null, discovery is skipped and discoveryCount is 0', async () => {
+    mocks.getPlatformIdForUserFile.mockResolvedValue(null)
+
+    const result = await importFile({ userId: USER_ID, fileId: FILE_ID })
+
+    // Import still succeeds
+    expect(result).toMatchObject({ fileId: FILE_ID })
+    // Discovery not called
+    expect(mocks.discoverRegexCandidates).not.toHaveBeenCalled()
+    // discoveryCount is 0
+    expect(result.discoveryCount).toBe(0)
+  })
+
+  it('Test 4: discoverRegexCandidates is called AFTER the transaction with userId and platformId only (no tx handle)', async () => {
+    const PLATFORM_ID = 42
+    mocks.getPlatformIdForUserFile.mockResolvedValue(PLATFORM_ID)
+    mocks.discoverRegexCandidates.mockResolvedValue({
+      candidates: [],
+      singleCategorizationSuggestions: [],
+      totalUncategorized: 0,
+      platformId: PLATFORM_ID,
+    })
+
+    await importFile({ userId: USER_ID, fileId: FILE_ID })
+
+    // Called with userId and scope.platformId — no tx handle
+    expect(mocks.discoverRegexCandidates).toHaveBeenCalledWith({
+      userId: USER_ID,
+      scope: { platformId: PLATFORM_ID },
+    })
+    // Called after transaction resolves (getPlatformIdForUserFile uses the main db, not a tx)
+    expect(mocks.getPlatformIdForUserFile).toHaveBeenCalledWith({
+      userId: USER_ID,
+      fileId: FILE_ID,
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
 // analyzeFile unit tests
 // ---------------------------------------------------------------------------
 describe('analyzeFile', () => {
@@ -1468,110 +1597,3 @@ describe('analyzeFile', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Phase 34 — analyzeFile pattern-suggestions integration (Wave 0 scaffolding)
-// ---------------------------------------------------------------------------
-describe('analyzeFile — pattern suggestions', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mocks.getFileForUser.mockResolvedValue(makeFileRow())
-    mocks.updateFileAnalysisState.mockResolvedValue(makeFileRow({ status: 'analyzing' }))
-    mocks.markFileFailed.mockResolvedValue(makeFileRow({ status: 'failed' }))
-    mocks.getDuplicateHashes.mockResolvedValue(new Set<string>())
-    mocks.loadImportFormatsForDetection.mockResolvedValue([makeFormatCandidate()])
-    mocks.loadActivePatterns.mockResolvedValue([])
-    mocks.detectPatternSuggestions.mockReturnValue([])
-  })
-
-  // ANL-01: patternSuggestions is always present in ImportAnalysisResult
-  it('includes patternSuggestions field in result even when empty', async () => {
-    mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
-    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
-
-    const result = await analyzeFile({ userId: USER_ID, fileId: FILE_ID })
-
-    expect(result).toHaveProperty('patternSuggestions')
-    expect(result.patternSuggestions).toEqual([])
-  })
-
-  // ANL-01 + D-07: patternSuggestions present even when errors.length > 0
-  it('includes patternSuggestions as [] when analysis produces errors', async () => {
-    mocks.loadImportFormatsForDetection.mockResolvedValue([])
-    mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
-    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
-
-    const result = await analyzeFile({ userId: USER_ID, fileId: FILE_ID })
-
-    expect(result.errors.length).toBeGreaterThan(0)
-    expect(result).toHaveProperty('patternSuggestions', [])
-  })
-
-  // ANL-03: sorted by matchCount desc, capped at 5
-  it('returns at most 5 suggestions sorted by matchCount descending', async () => {
-    const raw = [
-      { pattern: 'b', matchCount: 2, sampleDescriptions: [] },
-      { pattern: 'a', matchCount: 10, sampleDescriptions: [] },
-      { pattern: 'c', matchCount: 7, sampleDescriptions: [] },
-      { pattern: 'd', matchCount: 3, sampleDescriptions: [] },
-      { pattern: 'e', matchCount: 5, sampleDescriptions: [] },
-      { pattern: 'f', matchCount: 1, sampleDescriptions: [] },
-    ]
-    mocks.detectPatternSuggestions.mockReturnValue(raw)
-    mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
-    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
-
-    const result = await analyzeFile({ userId: USER_ID, fileId: FILE_ID })
-
-    expect(result.patternSuggestions).toHaveLength(5)
-    expect(result.patternSuggestions[0]!.matchCount).toBe(10)
-    expect(result.patternSuggestions[1]!.matchCount).toBe(7)
-    expect(result.patternSuggestions[2]!.matchCount).toBe(5)
-    expect(result.patternSuggestions[3]!.matchCount).toBe(3)
-    expect(result.patternSuggestions[4]!.matchCount).toBe(2)
-    // The matchCount=1 row must be sliced off
-    expect(result.patternSuggestions.map(s => s.matchCount)).not.toContain(1)
-  })
-
-  // ANL-05: detection failure does not propagate, logs warn, returns []
-  it('returns patternSuggestions [] and logs a warning when detection throws', async () => {
-    mocks.loadActivePatterns.mockRejectedValue(
-      new Error('DB timeout with https://internal-r2/secret-key\n    at internalFn (/srv/app/lib/db.ts:42:5)'),
-    )
-    mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
-    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
-
-    const result = await analyzeFile({ userId: USER_ID, fileId: FILE_ID })
-
-    expect(result.patternSuggestions).toEqual([])
-    // File is still analyzed (not failed) — detection error is non-critical
-    expect(result.errors).toEqual([])
-    expect(mocks.loggerWarn).toHaveBeenCalledWith(
-      expect.objectContaining({ event: 'pattern_suggestion_detection_failed' }),
-    )
-    // ANL-05 security assertions: no URL leak, no stack-frame leak, no raw R2 key
-    const logPayload = JSON.stringify(mocks.loggerWarn.mock.calls)
-    expect(logPayload).not.toContain('https://internal-r2/secret-key')
-    expect(logPayload).not.toMatch(/\s+at\s+/)
-  })
-
-  // D-03: no subscriptionPlan parameter added — free users get suggestions
-  it('does not require subscriptionPlan — calls loadActivePatterns for all plans', async () => {
-    mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
-    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
-
-    await analyzeFile({ userId: USER_ID, fileId: FILE_ID })
-
-    expect(mocks.loadActivePatterns).toHaveBeenCalledWith(expect.anything(), USER_ID)
-  })
-
-  // D-05 / SCOP-01 / SCOP-02: loadActivePatterns is skipped when best is null
-  it('skips loadActivePatterns when no format is detected', async () => {
-    mocks.loadImportFormatsForDetection.mockResolvedValue([])
-    mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
-    mocks.parseImportFile.mockResolvedValue(makeParsedImport())
-
-    const result = await analyzeFile({ userId: USER_ID, fileId: FILE_ID })
-
-    expect(mocks.loadActivePatterns).not.toHaveBeenCalled()
-    expect(result.patternSuggestions).toEqual([])
-  })
-})

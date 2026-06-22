@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  completeOnboardingPrivateImportAction,
   createPrivateImportFormatAction,
   type ImportActionState,
 } from '@/lib/actions/import'
@@ -23,7 +24,10 @@ import type {
   CreatePrivateImportFormatResult,
   ImportFormatWizardContext,
 } from '@/lib/services/import-format-wizard'
-import { APP_ROUTES } from '@/lib/routes'
+import {
+  APP_ROUTES,
+  ONBOARDING_AFTER_PRIVATE_PLATFORM_CREATION_ROUTE,
+} from '@/lib/routes'
 
 const MAX_HEADER_OPTIONS = 80
 const DEFAULT_DELIMITERS = [
@@ -49,6 +53,7 @@ type Props = {
   context: ImportFormatWizardContext
   from?: string
   createAction?: typeof createPrivateImportFormatAction
+  completeOnboardingAction?: typeof completeOnboardingPrivateImportAction
 }
 
 function emptyState(): ImportActionState<CreatePrivateImportFormatResult> {
@@ -125,11 +130,13 @@ export function ImportFormatWizard({
   context,
   from,
   createAction = createPrivateImportFormatAction,
+  completeOnboardingAction = completeOnboardingPrivateImportAction,
 }: Props) {
   const router = useRouter()
   const [state, formAction, isPending] = useActionState(createAction, emptyState())
   const [amountMode, setAmountMode] = useState<AmountMode>('single')
   const [clientErrors, setClientErrors] = useState<string[]>([])
+  const [completionError, setCompletionError] = useState<string | null>(null)
 
   // Controlled values for shadcn Select (needed to populate hidden inputs)
   const [delimiter, setDelimiter] = useState(context.detectedDelimiter ?? ';')
@@ -144,9 +151,37 @@ export function ImportFormatWizard({
   const hasHeaders = headerOptions.length > 0
   const truncatedHeaders = context.headers.length > headerOptions.length
   const createdFormatVersionId = state.data?.formatVersionId
+  const isOnboardingFlow = from === 'onboarding'
 
   useEffect(() => {
     if (createdFormatVersionId) {
+      if (isOnboardingFlow) {
+        let cancelled = false
+
+        const formData = new FormData()
+        formData.set('fileId', context.fileId)
+        formData.set('selectedFormatVersionId', String(createdFormatVersionId))
+
+        void completeOnboardingAction(formData)
+          .then((result) => {
+            if (cancelled) return
+            if (result.error) {
+              setCompletionError(result.error)
+              return
+            }
+
+            router.push(result.data?.nextRoute ?? ONBOARDING_AFTER_PRIVATE_PLATFORM_CREATION_ROUTE)
+          })
+          .catch(() => {
+            if (cancelled) return
+            setCompletionError('Impossibile importare il file. Riprova tra qualche secondo.')
+          })
+
+        return () => {
+          cancelled = true
+        }
+      }
+
       const fromParam = from ? `&from=${encodeURIComponent(from)}` : ''
       router.push(
         `/import/${encodeURIComponent(context.fileId)}/analyze?formatVersionId=${encodeURIComponent(
@@ -154,11 +189,12 @@ export function ImportFormatWizard({
         )}${fromParam}`,
       )
     }
-  }, [context.fileId, createdFormatVersionId, from, router])
+  }, [completeOnboardingAction, context.fileId, createdFormatVersionId, from, isOnboardingFlow, router])
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     const errors = validateWizardFields(readFormValues(event.currentTarget), context.headers, isExcel)
     setClientErrors(errors)
+    setCompletionError(null)
     if (errors.length > 0) {
       event.preventDefault()
     }
@@ -203,11 +239,13 @@ export function ImportFormatWizard({
               <input type="hidden" name="negativeAmountColumn" value={negativeAmountColumn} />
               <input type="hidden" name="amountMode" value={amountMode} />
 
-              {(clientErrors.length > 0 || state.error) && (
+              {(clientErrors.length > 0 || state.error || completionError) && (
                 <Alert variant="destructive" role="alert" aria-live="assertive">
                   <AlertCircle className="h-4 w-4" aria-hidden="true" />
                   <AlertDescription>
-                    {state.error ? (
+                    {completionError ? (
+                      <p>{completionError}</p>
+                    ) : state.error ? (
                       <p>{state.error}</p>
                     ) : (
                       <ul className="list-disc space-y-1 pl-4">
@@ -224,7 +262,9 @@ export function ImportFormatWizard({
                 <Alert role="status" aria-live="polite">
                   <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                   <AlertDescription>
-                    Formato salvato. Riprovo l'analisi dello stesso file…
+                    {isOnboardingFlow
+                      ? 'Formato salvato. Importo il file e torno all’onboarding…'
+                      : "Formato salvato. Riprovo l'analisi dello stesso file…"}
                   </AlertDescription>
                 </Alert>
               )}
@@ -362,10 +402,12 @@ export function ImportFormatWizard({
                   {isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                   )}
-                  Salva formato e riprova analisi
+                  {isOnboardingFlow ? 'Salva formato e importa' : 'Salva formato e riprova analisi'}
                 </Button>
                 <Button asChild variant="ghost">
-                  <Link href={APP_ROUTES.import}>Torna alle importazioni</Link>
+                  <Link href={isOnboardingFlow ? APP_ROUTES.onboarding : APP_ROUTES.import}>
+                    {isOnboardingFlow ? "Torna all'onboarding" : 'Torna alle importazioni'}
+                  </Link>
                 </Button>
               </div>
             </form>

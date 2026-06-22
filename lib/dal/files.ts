@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, eq, isNotNull } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
-import { file } from '@/lib/db/schema'
+import { file, importFormatVersion, platform } from '@/lib/db/schema'
 
 export type FileRow = typeof file.$inferSelect
 export type FileStatus = FileRow['status']
@@ -64,6 +64,33 @@ export async function getFileForUser(
     .limit(1)
 
   return rows[0] ?? null
+}
+
+/**
+ * Resolves the platformId for a file that belongs to the given user.
+ *
+ * Joins file → importFormatVersion → platform to traverse the ownership chain.
+ * Returns null when:
+ * - the file does not exist or does not belong to userId (ownership guard)
+ * - the file has no importFormatVersionId (pending/failed upload)
+ * - the importFormatVersion has no platformId
+ *
+ * Callers must treat null as "cannot resolve platform" and must NOT fall back to
+ * user-wide apply (APPLY-02 locked decision).
+ */
+export async function getPlatformIdForUserFile(
+  input: { userId: string; fileId: string },
+  database: DbOrTx = db,
+): Promise<number | null> {
+  const rows = await database
+    .select({ platformId: platform.id })
+    .from(file)
+    .leftJoin(importFormatVersion, eq(file.importFormatVersionId, importFormatVersion.id))
+    .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
+    .where(and(eq(file.id, input.fileId), eq(file.userId, input.userId)))
+    .limit(1)
+
+  return rows[0]?.platformId ?? null
 }
 
 export async function findFileByContentHash(

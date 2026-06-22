@@ -1,13 +1,12 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ImportPreview } from '@/components/import/import-preview'
 import { analyzeImportAction } from '@/lib/actions/import'
-import { getCategories } from '@/lib/dal/categories'
 import type { ImportAnalysisResult } from '@/lib/services/import'
-import { UNKNOWN_FORMAT_ERROR } from '@/lib/utils/import-status'
+import { ANALYZE_STATUS_ERROR, UNKNOWN_FORMAT_ERROR } from '@/lib/utils/import-status'
 
 function isUnknownFormatAnalysis(result: ImportAnalysisResult) {
   return result.formatVersionId === null && result.errors.some((error) => error.includes(UNKNOWN_FORMAT_ERROR))
@@ -43,14 +42,15 @@ export default async function AnalyzePage({
     fd.set('selectedFormatVersionId', selectedFormatVersionId)
   }
 
-  const [result, categories] = await Promise.all([
-    analyzeImportAction(fd),
-    getCategories(),
-  ])
+  const result = await analyzeImportAction(fd)
 
   if (result.error && !result.data) {
     if (result.error.includes('not found') || result.error.includes('access denied')) {
       notFound()
+    }
+
+    if (result.error === ANALYZE_STATUS_ERROR) {
+      redirect(`/import/${encodeURIComponent(fileId)}/suggestions`)
     }
 
     return (
@@ -125,7 +125,6 @@ export default async function AnalyzePage({
       {!isUnknownFormat && (
         <ImportPreview
           result={result.data}
-          categories={categories}
           returnTo={from === 'onboarding' ? '/onboarding?step=2' : undefined}
         />
       )}

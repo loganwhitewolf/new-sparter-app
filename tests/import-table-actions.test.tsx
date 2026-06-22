@@ -130,6 +130,8 @@ const DISPLAY_NAME = "Gennaio 2026";
 const onRename = vi.fn();
 const onDelete = vi.fn();
 const onDeleteStale = vi.fn();
+// Added with TRIG-02 (Plan 54-03): recheckRegexAction per-row re-check
+const onRecheckRegex = vi.fn();
 
 function render(row: ReturnType<typeof makeRow>, displayName = DISPLAY_NAME) {
   return renderToStaticMarkup(
@@ -139,6 +141,7 @@ function render(row: ReturnType<typeof makeRow>, displayName = DISPLAY_NAME) {
       onRename,
       onDelete,
       onDeleteStale,
+      onRecheckRegex,
     }),
   );
 }

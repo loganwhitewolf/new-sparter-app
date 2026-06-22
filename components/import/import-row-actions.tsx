@@ -19,9 +19,13 @@ type Props = {
   onRename: (row: ImportListRow) => void
   onDelete: (row: ImportListRow) => void
   onDeleteStale: (row: ImportListRow) => void
+  /** Callback for the per-row on-demand regex re-check (TRIG-02, D-01). */
+  onRecheckRegex: (row: ImportListRow) => void
+  /** True while the re-check action is pending — disables the menu item. */
+  isRecheckPending?: boolean
 }
 
-export function ImportRowActions({ row, displayName, onRename, onDelete, onDeleteStale }: Props) {
+export function ImportRowActions({ row, displayName, onRename, onDelete, onDeleteStale, onRecheckRegex, isRecheckPending }: Props) {
   if (row.status === 'analyzing') {
     return (
       <div
@@ -113,6 +117,18 @@ export function ImportRowActions({ row, displayName, onRename, onDelete, onDelet
                 <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
                 Rivedi suggerimenti
               </Link>
+            </DropdownMenuItem>
+          )}
+
+          {/* Per-row on-demand re-check (TRIG-02, D-01): triggers recheckRegexAction on the client.
+              Shown only for imported rows; disabled while a re-check is in progress. */}
+          {row.status === 'imported' && (
+            <DropdownMenuItem
+              onClick={() => onRecheckRegex(row)}
+              disabled={isRecheckPending}
+            >
+              <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
+              {isRecheckPending ? 'Ricerca in corso…' : 'Ricontrolla regex'}
             </DropdownMenuItem>
           )}
 

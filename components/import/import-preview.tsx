@@ -1,7 +1,7 @@
 'use client'
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Loader2, Sparkles } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -24,9 +24,7 @@ import {
 import { confirmImportAction } from '@/lib/actions/import'
 import type { ImportAnalysisResult } from '@/lib/services/import'
 import { APP_ROUTES } from '@/lib/routes'
-import type { CategoryWithSubCategories } from '@/lib/dal/categories'
-import { SuggestionSection } from './suggestion-section'
-
+import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 type FormatCandidate = {
   formatVersionId: number
   platformName: string
@@ -37,11 +35,10 @@ type Props = {
   result: ImportAnalysisResult
   candidates?: FormatCandidate[]
   confirmDisabledReason?: string
-  categories: CategoryWithSubCategories[]
   returnTo?: string
 }
 
-export function ImportPreview({ result, candidates = [], confirmDisabledReason, categories, returnTo }: Props) {
+export function ImportPreview({ result, candidates = [], confirmDisabledReason, returnTo }: Props) {
   const router = useRouter()
   const [selectedFormatVersionId, setSelectedFormatVersionId] = useState<string>(
     result.formatVersionId ? String(result.formatVersionId) : '',
@@ -49,6 +46,8 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [discoveryCount, setDiscoveryCount] = useState<number | null>(null)
+  const [importedFileId, setImportedFileId] = useState<string | null>(null)
   const submitLock = useRef(false)
 
   const hasErrors = result.errors.length > 0
@@ -79,7 +78,20 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
         return
       }
       setSuccess(true)
-      router.push(returnTo ?? APP_ROUTES.expenses)
+      // Onboarding returnTo path: always redirect as before
+      if (returnTo) {
+        router.push(returnTo)
+        return
+      }
+      // Default path: show discovery CTA when candidates found, otherwise redirect to expenses
+      const count = res.data?.discoveryCount ?? 0
+      if (count > 0) {
+        setDiscoveryCount(count)
+        setImportedFileId(res.data?.fileId ?? result.fileId)
+        // No auto-redirect (D-05)
+      } else {
+        router.push(APP_ROUTES.expenses)
+      }
     } catch {
       setError('Importazione fallita. Riprova.')
       submitLock.current = false
@@ -166,7 +178,7 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {result.sampleRows.map((row) => (
+                  {result.sampleRows.slice(0, 10).map((row) => (
                     <TableRow key={row.rowIndex}>
                       <TableCell className="whitespace-nowrap text-sm">
                         {row.occurredAt ?? '—'}
@@ -175,7 +187,11 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
                         {row.description}
                       </TableCell>
                       <TableCell className="text-right text-sm tabular-nums">
-                        {row.amount ?? '—'}
+                        {row.amount != null ? (
+                          <span className={Number(row.amount) < 0 ? 'text-destructive' : 'text-green-600'}>
+                            {(Number(row.amount) < 0 ? '−' : '+') + ' ' + formatAbsoluteAmount(row.amount)}
+                          </span>
+                        ) : '—'}
                       </TableCell>
                       <TableCell>
                         {row.duplicate ? (
@@ -195,9 +211,6 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
         </Card>
       )}
 
-      {/* Pattern suggestions — REV-01: rendered only when there are suggestions */}
-      <SuggestionSection suggestions={result.patternSuggestions} categories={categories} />
-
       {/* Confirm button — hidden when analysis has fatal errors */}
       {!hasErrors && !confirmDisabledReason && (
         <div className="flex flex-col gap-3">
@@ -208,7 +221,42 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
             </Alert>
           )}
 
-          {success && (
+          {success && discoveryCount === null && (
+            <Alert role="status">
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertDescription>Importazione completata. Reindirizzamento…</AlertDescription>
+            </Alert>
+          )}
+
+          {success && discoveryCount !== null && discoveryCount > 0 && importedFileId && (
+            <Alert role="status">
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertDescription>
+                <div className="flex flex-col gap-2">
+                  <span>Importazione completata.</span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button asChild size="sm" variant="default">
+                      <a href={`/import/${encodeURIComponent(importedFileId)}/suggestions`}>
+                        <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
+                        {discoveryCount === 1
+                          ? '1 pattern proposto — Rivedi suggerimenti'
+                          : `${discoveryCount} pattern proposti — Rivedi suggerimenti`}
+                      </a>
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => router.push(APP_ROUTES.expenses)}
+                      className="text-sm text-muted-foreground underline-offset-2 hover:underline"
+                    >
+                      Vai alle spese
+                    </button>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {success && discoveryCount === 0 && (
             <Alert role="status">
               <CheckCircle2 className="h-4 w-4" />
               <AlertDescription>Importazione completata. Reindirizzamento…</AlertDescription>
