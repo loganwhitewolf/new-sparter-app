@@ -4,9 +4,9 @@ import { AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ImportPreview } from '@/components/import/import-preview'
-import { analyzeImportAction, SAFE_ANALYZE_LIFECYCLE_MSG } from '@/lib/actions/import'
+import { analyzeImportAction } from '@/lib/actions/import'
 import type { ImportAnalysisResult } from '@/lib/services/import'
-import { UNKNOWN_FORMAT_ERROR } from '@/lib/utils/import-status'
+import { ANALYZE_STATUS_ERROR, UNKNOWN_FORMAT_ERROR } from '@/lib/utils/import-status'
 
 function isUnknownFormatAnalysis(result: ImportAnalysisResult) {
   return result.formatVersionId === null && result.errors.some((error) => error.includes(UNKNOWN_FORMAT_ERROR))
@@ -49,7 +49,7 @@ export default async function AnalyzePage({
       notFound()
     }
 
-    if (result.error === SAFE_ANALYZE_LIFECYCLE_MSG) {
+    if (result.error === ANALYZE_STATUS_ERROR) {
       redirect(`/import/${encodeURIComponent(fileId)}/suggestions`)
     }
 

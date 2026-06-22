@@ -44,6 +44,7 @@ import {
   APP_ROUTES,
   ONBOARDING_AFTER_PRIVATE_PLATFORM_CREATION_ROUTE,
 } from "@/lib/routes";
+import { ANALYZE_STATUS_ERROR } from "@/lib/utils/import-status";
 
 export type ImportActionState<T = null> = {
   error: string | null;
@@ -247,8 +248,7 @@ export async function loadMoreImports({
   }
 }
 
-export const SAFE_ANALYZE_LIFECYCLE_MSG =
-  "Analisi non consentita per questo file nel suo stato attuale.";
+const SAFE_ANALYZE_LIFECYCLE_MSG = ANALYZE_STATUS_ERROR;
 const SAFE_IMPORT_LIFECYCLE_MSG =
   "Importazione non consentita per questo file nel suo stato attuale.";
 
