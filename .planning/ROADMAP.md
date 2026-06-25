@@ -178,10 +178,20 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
   5. La tabella `platform` non contiene più campi del contratto di parsing; i campi rimasti sono solo identità (`name`, `slug`, `country`, `visibility`, `ownerUserId`)
 
 **Plans**: 4/4 plans complete
+**Wave 1**
 
 - [x] 56-01-PLAN.md — Regression baseline: pin transactionHash for all CSV fixtures against current code (IFMT-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [x] 56-02-PLAN.md — Schema: add the parsing contract (nullable) to import_format_version + generated ADD migration (IFMT-01)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [x] 56-03-PLAN.md — seed-extras data copy + seed-data/seed.ts rework + drop platform contract columns (IFMT-03, IFMT-05)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [x] 56-04-PLAN.md — Re-point detector/DAL/type/wizard to the version-owned contract; regression GREEN (IFMT-04, IFMT-05)
 
 ### Phase 57: pdf-import-trade-republic
