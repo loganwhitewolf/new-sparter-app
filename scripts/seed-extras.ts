@@ -760,6 +760,38 @@ async function insertCartoleriaOggettistica(database: Db): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Step: move-parsing-contract-to-format-version
+// Copies the twelve parsing-contract columns from each platform row into the
+// matching import_format_version row (joined on platformId). Guarded so that
+// rows already populated (delimiter IS NOT NULL) are skipped — idempotent.
+// Run this BEFORE applying the platform-column DROP migration (Plan 03 drop step).
+// ---------------------------------------------------------------------------
+
+async function moveParsingContractToFormatVersion(database: Db): Promise<void> {
+  const result = await database.execute(sql`
+    UPDATE import_format_version ifv
+    SET
+      delimiter              = p.delimiter,
+      description_column     = p.description_column,
+      amount_type            = p.amount_type,
+      amount_column          = p.amount_column,
+      positive_amount_column = p.positive_amount_column,
+      negative_amount_column = p.negative_amount_column,
+      timestamp_column       = p.timestamp_column,
+      date_format            = p.date_format,
+      date_replace           = p.date_replace,
+      decimal_replace        = p.decimal_replace,
+      multiply_by            = p.multiply_by,
+      description_strip_pattern = p.description_strip_pattern
+    FROM platform p
+    WHERE ifv.platform_id = p.id
+      AND ifv.delimiter IS NULL
+  `)
+  const rowCount = result.rowCount ?? 0
+  console.log(`    move-parsing-contract-to-format-version: ${rowCount} row(s) updated`)
+}
+
+// ---------------------------------------------------------------------------
 // Registry — append new taxonomy migration steps here (not regex patterns — see seed-patterns.ts)
 // ---------------------------------------------------------------------------
 
@@ -777,6 +809,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'v2-backfill-nature-id', run: v2BackfillNatureId },
   { name: 'v2-backfill-override-nature-id', run: v2BackfillOverrideNatureId },
   { name: 'insert-cartoleria-oggettistica', run: insertCartoleriaOggettistica },
+  { name: 'move-parsing-contract-to-format-version', run: moveParsingContractToFormatVersion },
 ]
 
 export const STEP_NAMES = STEPS.map((step) => step.name)
