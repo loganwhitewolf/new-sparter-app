@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: ""
-milestone_name: ""
-current_phase: null
-status: milestone_complete
-stopped_at: "Milestone v2.1 complete — archived 2026-06-22"
-last_updated: "2026-06-22T00:00:00Z"
-last_activity: 2026-06-22
-last_activity_desc: Milestone v2.1 archived
+milestone: v2.2
+milestone_name: PDF Import
+status: planning
+last_updated: "2026-06-25T11:37:18.141Z"
+last_activity: 2026-06-25
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
-current_phase_name: null
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -28,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-22)
 
 ## Current Position
 
-Phase: 55
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-06-22 — Phase 55 complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-25 — Milestone v2.2 started
 
 ## Roadmap (v2.1 — Phases 51–55)
 
