@@ -42,7 +42,7 @@ export async function getUncategorizedExpensesForDiscovery(
       title: expense.title,
       totalAmount: expense.totalAmount,
       descriptionHash: expense.descriptionHash,
-      descriptionStripPattern: platform.descriptionStripPattern,
+      descriptionStripPattern: importFormatVersion.descriptionStripPattern,
     })
     .from(expense)
     .leftJoin(file, eq(expense.importedFromFileId, file.id))
@@ -89,7 +89,7 @@ export async function getUncategorizedExpensesForPlatformApply(
       id: expense.id,
       title: expense.title,
       totalAmount: expense.totalAmount,
-      descriptionStripPattern: platform.descriptionStripPattern,
+      descriptionStripPattern: importFormatVersion.descriptionStripPattern,
     })
     .from(expense)
     .leftJoin(file, eq(expense.importedFromFileId, file.id))
