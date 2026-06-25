@@ -159,7 +159,7 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 
 ### v2.2: PDF Import (Phases 56–57)
 
-- [ ] **Phase 56: import-format-refactor** — Sposta il contratto di parsing da `platform` a `import_format_version`; `platform` diventa pura identità; sblocca il versioning reale dei formati per Platform
+- [x] **Phase 56: import-format-refactor** — Sposta il contratto di parsing da `platform` a `import_format_version`; `platform` diventa pura identità; sblocca il versioning reale dei formati per Platform (completed 2026-06-25)
 - [ ] **Phase 57: pdf-import-trade-republic** — Import estratti PDF Trade Republic tramite template per-banca normalizzato a `ParsedImportFile`; segno importi via coordinate X (`unpdf`); solo sezione "TRANSAZIONI SUL CONTO"
 
 ## Phase Details
@@ -177,12 +177,12 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
   4. È possibile aggiungere una seconda `import_format_version` (v2) a una Platform esistente e selezionarla al momento dell'import — il constraint `unique(platformId, version)` è funzionante
   5. La tabella `platform` non contiene più campi del contratto di parsing; i campi rimasti sono solo identità (`name`, `slug`, `country`, `visibility`, `ownerUserId`)
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans complete
 
 - [x] 56-01-PLAN.md — Regression baseline: pin transactionHash for all CSV fixtures against current code (IFMT-02)
 - [x] 56-02-PLAN.md — Schema: add the parsing contract (nullable) to import_format_version + generated ADD migration (IFMT-01)
 - [x] 56-03-PLAN.md — seed-extras data copy + seed-data/seed.ts rework + drop platform contract columns (IFMT-03, IFMT-05)
-- [ ] 56-04-PLAN.md — Re-point detector/DAL/type/wizard to the version-owned contract; regression GREEN (IFMT-04, IFMT-05)
+- [x] 56-04-PLAN.md — Re-point detector/DAL/type/wizard to the version-owned contract; regression GREEN (IFMT-04, IFMT-05)
 
 ### Phase 57: pdf-import-trade-republic
 
@@ -221,7 +221,7 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 | 53. retroactive-application | v2.1 | 3/3 | Complete | 2026-06-16 |
 | 54. reusable-trigger | v2.1 | 3/3 | Complete | 2026-06-21 |
 | 55. import-summary-ux | v2.1 | 3/3 | Complete | 2026-06-22 |
-| 56. import-format-refactor | v2.2 | 3/4 | In Progress|  |
+| 56. import-format-refactor | v2.2 | 4/4 | Complete   | 2026-06-25 |
 | 57. pdf-import-trade-republic | v2.2 | 0/TBD | Not started | — |
 
 **Total shipped: 55 phases · 204 plans complete**
