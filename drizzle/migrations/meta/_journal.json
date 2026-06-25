@@ -148,6 +148,13 @@
       "when": 1781418909932,
       "tag": "0020_transaction_pair",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1782391894718,
+      "tag": "0021_glorious_callisto",
+      "breakpoints": true
     }
   ]
 }
