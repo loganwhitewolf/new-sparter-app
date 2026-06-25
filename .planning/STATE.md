@@ -6,14 +6,14 @@ current_phase: 56
 current_phase_name: import-format-refactor
 status: executing
 stopped_at: Completed 56-01-PLAN.md
-last_updated: "2026-06-25T13:28:11.416Z"
+last_updated: "2026-06-25T13:35:38.823Z"
 last_activity: 2026-06-25
 last_activity_desc: Phase 56 execution started
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 5
+  completed_plans: 5
   percent: 50
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-25)
 ## Current Position
 
 Phase: 56 (import-format-refactor) — EXECUTING
-Plan: 4 of 4
+Plan: 2 of 5
 Status: Ready to execute
 Last activity: 2026-06-25 — Phase 56 execution started
 
@@ -65,6 +65,7 @@ Design contract is LOCKED. Do not re-derive the approach:
 - [Phase ?]: Regression test written BEFORE any column move — pins transactionHash of all 7 CSV fixtures as static hex literals (IFMT-02)
 - [Phase ?]: Schema transition migration: 12 contract columns added nullable to importFormatVersion; platform columns untouched until Plan 03 data copy
 - [Phase ?]: Migration 0021_glorious_callisto.sql produced via drizzle-kit generate — ADD COLUMN only on import_format_version, no DROP, applied at operator deploy time
+- [Phase ?]: platform Drizzle import removed from seed-extras.ts — no other step references the table object after Step 2 became a no-op (IFMT-05)
 
 ### Codebase facts rilevanti per v2.2 (da verificare prima dell'implementazione)
 
@@ -119,7 +120,7 @@ Items riconosciuti e posticipati al termine di v2.1 (2026-06-22):
 
 **Stopped at:** Completed 56-01-PLAN.md
 
-Last session: 2026-06-25T13:05:32.757Z
+Last session: 2026-06-25T13:35:35.772Z
 Resume: `/gsd-plan-phase 56` per pianificare il refactor import-format
 
 **Next:** Phase 56 — import-format-refactor (IFMT-01..05)
@@ -158,3 +159,4 @@ Resume: `/gsd-plan-phase 56` per pianificare il refactor import-format
 | Phase 56 P02 | 8min | 2 tasks | 4 files |
 | Phase 56 P03 | 4min | 3 tasks | 6 files |
 | Phase Phase 56 PP56-04 | 8min | 3 tasks | 4 files |
+| Phase 56 P05 | 3min | 4 tasks | 3 files |
