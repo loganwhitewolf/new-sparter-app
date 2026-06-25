@@ -300,6 +300,19 @@ export const importFormatVersion = pgTable(
     headerSignature: text("header_signature").notNull(),
     notes: text("notes"),
     isActive: boolean("is_active").default(true).notNull(),
+    // Parsing contract columns (nullable — transition migration; Plan 03 copies from platform then drops platform columns)
+    delimiter: varchar("delimiter", { length: 4 }),
+    descriptionColumn: varchar("description_column", { length: 120 }),
+    amountType: amountTypeEnum("amount_type"),
+    amountColumn: varchar("amount_column", { length: 120 }),
+    positiveAmountColumn: varchar("positive_amount_column", { length: 120 }),
+    negativeAmountColumn: varchar("negative_amount_column", { length: 120 }),
+    timestampColumn: varchar("timestamp_column", { length: 120 }),
+    dateFormat: varchar("date_format", { length: 60 }),
+    dateReplace: boolean("date_replace"),
+    decimalReplace: boolean("decimal_replace"),
+    multiplyBy: integer("multiply_by"),
+    descriptionStripPattern: text("description_strip_pattern"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
