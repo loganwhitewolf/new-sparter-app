@@ -20,7 +20,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseImportFile } from '../lib/services/import-parsers'
 import { normalizeTransactionRow, type ImportPlatformConfig } from '../lib/utils/import'
-import { platforms as seedPlatforms } from '../scripts/seed-data'
+import { importFormatVersions as seedFormatVersions, platforms as seedPlatforms } from '../scripts/seed-data'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,9 +32,10 @@ const fixturePath = (name: string) => join(process.cwd(), 'tests', 'fixtures', '
 const FIXED_USER_ID = 'hash-contract-user'
 
 /**
- * Build an ImportPlatformConfig from a seed platform shape.
- * descriptionStripPattern is not on seed-data.ts shapes (it is applied via
- * seed-extras); callers must inject it explicitly.
+ * Build an ImportPlatformConfig from the format-version seed shape (ADR 0013).
+ * The contract now lives on importFormatVersions; platforms holds identity only.
+ * descriptionStripPattern is taken directly from the format-version seed shape
+ * (Fineco carries it; all others are null).
  */
 function buildConfig(
   slug: string,
@@ -42,17 +43,19 @@ function buildConfig(
 ): ImportPlatformConfig {
   const p = seedPlatforms.find((s) => s.slug === slug)
   if (!p) throw new Error(`Seed platform not found: ${slug}`)
+  const fv = seedFormatVersions.find((v) => v.platformId === p.id)
+  if (!fv) throw new Error(`Seed format version not found for platform: ${slug}`)
   return {
     id: p.id,
     platformId: p.id,
-    timestampColumn: p.timestampColumn,
-    descriptionColumn: p.descriptionColumn,
+    timestampColumn: fv.timestampColumn,
+    descriptionColumn: fv.descriptionColumn,
     descriptionStripPattern,
-    amountType: p.amountType,
-    amountColumn: p.amountColumn ?? null,
-    positiveAmountColumn: p.positiveAmountColumn ?? null,
-    negativeAmountColumn: p.negativeAmountColumn ?? null,
-    multiplyBy: p.multiplyBy,
+    amountType: fv.amountType,
+    amountColumn: fv.amountColumn ?? null,
+    positiveAmountColumn: fv.positiveAmountColumn ?? null,
+    negativeAmountColumn: fv.negativeAmountColumn ?? null,
+    multiplyBy: fv.multiplyBy,
   }
 }
 

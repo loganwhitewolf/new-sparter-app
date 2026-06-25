@@ -18,6 +18,7 @@ import {
 import {
   categories,
   directions,
+  importFormatVersions as seedFormatVersions,
   natures,
   platforms as seedPlatforms,
   subCategories,
@@ -55,16 +56,16 @@ if (isDirectSupabaseHost(seedDiagnostics.host)) {
 const pool = new Pool(pgPoolConfigFromOperatorConfig(seedConfig))
 const db = drizzle(pool)
 
-function headerSignatureFor(platformSeed: (typeof seedPlatforms)[number]) {
+function headerSignatureFor(formatVersionSeed: (typeof seedFormatVersions)[number]) {
   const columns = [
-    platformSeed.timestampColumn,
-    platformSeed.descriptionColumn,
-    platformSeed.amountColumn,
-    platformSeed.positiveAmountColumn,
-    platformSeed.negativeAmountColumn,
+    formatVersionSeed.timestampColumn,
+    formatVersionSeed.descriptionColumn,
+    formatVersionSeed.amountColumn,
+    formatVersionSeed.positiveAmountColumn,
+    formatVersionSeed.negativeAmountColumn,
   ].filter((column): column is string => Boolean(column))
 
-  return columns.join(platformSeed.delimiter)
+  return columns.join(formatVersionSeed.delimiter)
 }
 
 async function seed() {
@@ -91,6 +92,7 @@ async function seed() {
   console.log(`  ${subCategories.length} sottocategories inserted (or already present).`)
 
   // Phase 49: exclude_from_totals column dropped (D-10); transfer exclusion now via direction.included_in_totals
+  // Phase 56: platform holds identity only (ADR 0013); parsing contract moved to importFormatVersion
   console.log('Seeding import platforms...')
   await db
     .insert(platform)
@@ -103,16 +105,28 @@ async function seed() {
   await db
     .insert(importFormatVersion)
     .values(
-      seedPlatforms.map((platformSeed) => ({
-        platformId: platformSeed.id,
-        version: 1,
-        headerSignature: headerSignatureFor(platformSeed),
-        notes: `Initial ${platformSeed.name} CSV import contract`,
+      seedFormatVersions.map((fv) => ({
+        platformId: fv.platformId,
+        version: fv.version,
+        headerSignature: headerSignatureFor(fv),
+        notes: fv.notes,
         isActive: true,
+        delimiter: fv.delimiter,
+        descriptionColumn: fv.descriptionColumn,
+        amountType: fv.amountType,
+        amountColumn: fv.amountColumn,
+        positiveAmountColumn: fv.positiveAmountColumn,
+        negativeAmountColumn: fv.negativeAmountColumn,
+        timestampColumn: fv.timestampColumn,
+        dateFormat: fv.dateFormat,
+        dateReplace: fv.dateReplace,
+        decimalReplace: fv.decimalReplace,
+        multiplyBy: fv.multiplyBy,
+        descriptionStripPattern: fv.descriptionStripPattern,
       })),
     )
     .onConflictDoNothing()
-  console.log(`  ${seedPlatforms.length} format versions inserted (or already present).`)
+  console.log(`  ${seedFormatVersions.length} format versions inserted (or already present).`)
 
   console.log(JSON.stringify({ event: 'seed_succeeded', target: seedDiagnostics.target }))
 }
