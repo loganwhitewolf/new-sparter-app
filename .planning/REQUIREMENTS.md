@@ -14,9 +14,9 @@ The parsing contract is owned by `import_format_version`, not `platform`. See `d
 
 - [x] **IFMT-01**: The parsing contract (`delimiter`, `*Column`, `dateFormat`, `dateReplace`, `decimalReplace`, `multiplyBy`, `descriptionStripPattern`, `amountType`) lives on `import_format_version`; `platform` retains only identity (`name`/`slug`/`country`/`visibility`/`ownerUserId`).
 - [x] **IFMT-02**: The 6 existing CSV/XLSX imports produce identical `transactionHash` values before and after the refactor — proven by a regression test over real fixtures.
-- [ ] **IFMT-03**: Existing `platform` / `import_format_version` rows in production are migrated by an additive, idempotent `seed-extras` step (no `drizzle-kit push`; migration via `drizzle-kit generate` + `scripts/migrate.ts`).
+- [x] **IFMT-03**: Existing `platform` / `import_format_version` rows in production are migrated by an additive, idempotent `seed-extras` step (no `drizzle-kit push`; migration via `drizzle-kit generate` + `scripts/migrate.ts`).
 - [ ] **IFMT-04**: Multiple format versions per platform become expressible and selectable (versioning works — the `unique(platformId, version)` constraint is now meaningful).
-- [ ] **IFMT-05**: The detector (`scoreCandidate`), `normalizeTransactionRow` / `ImportPlatformConfig`, the detection DAL, seed scripts, and the format wizard operate against the moved contract with no behavioral regression.
+- [x] **IFMT-05**: The detector (`scoreCandidate`), `normalizeTransactionRow` / `ImportPlatformConfig`, the detection DAL, seed scripts, and the format wizard operate against the moved contract with no behavioral regression.
 
 ### PDF Import (Trade Republic)
 
@@ -46,9 +46,9 @@ Per-bank PDF parsing normalized into the existing tabular pipeline. See `docs/ad
 |--------|-------|--------|
 | IFMT-01 | Phase 56 | Complete |
 | IFMT-02 | Phase 56 | Complete |
-| IFMT-03 | Phase 56 | Pending |
+| IFMT-03 | Phase 56 | Complete |
 | IFMT-04 | Phase 56 | Pending |
-| IFMT-05 | Phase 56 | Pending |
+| IFMT-05 | Phase 56 | Complete |
 | PDF-01 | Phase 57 | Pending |
 | PDF-02 | Phase 57 | Pending |
 | PDF-03 | Phase 57 | Pending |
