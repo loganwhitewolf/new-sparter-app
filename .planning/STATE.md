@@ -2,14 +2,18 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: PDF Import
-status: roadmapped
-last_updated: "2026-06-25T00:00:00.000Z"
+current_phase: 56
+current_phase_name: import-format-refactor
+status: executing
+stopped_at: Completed 56-01-PLAN.md
+last_updated: "2026-06-25T12:50:00.941Z"
 last_activity: 2026-06-25
+last_activity_desc: Phase 56 execution started
 progress:
   total_phases: 2
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 4
+  completed_plans: 1
   percent: 0
 ---
 
@@ -20,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-25)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** v2.2 — PDF Import — Phase 56: import-format-refactor
+**Current focus:** Phase 56 — import-format-refactor
 
 ## Current Position
 
-Phase: 56 — import-format-refactor (not started)
-Plan: —
-Status: Roadmap defined — ready for planning
-Last activity: 2026-06-25 — Roadmap v2.2 created (Phase 56–57)
+Phase: 56 (import-format-refactor) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-06-25 — Phase 56 execution started
 
 Progress bar: `░░░░░░░░░░░░░░░░░░░░` 0% (0/2 phases)
 
@@ -58,6 +62,7 @@ Design contract is LOCKED. Do not re-derive the approach:
 - Categorizzazione automatica delle descrizioni TR è fuori scope — follow-up via `regex-discovery` + `seed-patterns`.
 - OCR/scanned PDF fuori scope.
 - Parser PDF generico fuori scope.
+- [Phase ?]: Regression test written BEFORE any column move — pins transactionHash of all 7 CSV fixtures as static hex literals (IFMT-02)
 
 ### Codebase facts rilevanti per v2.2 (da verificare prima dell'implementazione)
 
@@ -108,9 +113,11 @@ Items riconosciuti e posticipati al termine di v2.1 (2026-06-22):
 
 ## Session Continuity
 
-**Stopped at:** Roadmap v2.2 creata (2026-06-25) — Phase 56 non ancora pianificata
+**Resume file:** None
 
-Last session: 2026-06-25
+**Stopped at:** Completed 56-01-PLAN.md
+
+Last session: 2026-06-25T12:50:00.936Z
 Resume: `/gsd-plan-phase 56` per pianificare il refactor import-format
 
 **Next:** Phase 56 — import-format-refactor (IFMT-01..05)
@@ -145,3 +152,4 @@ Resume: `/gsd-plan-phase 56` per pianificare il refactor import-format
 | Phase 55 P01 | 7min | 2 tasks | 10 files |
 | Phase 55 P02 | 3min | 2 tasks | 4 files |
 | Phase 55 P03 | 2min | 3 tasks | 3 files |
+| Phase 56 P01 | 10min | 1 tasks | 1 files |
