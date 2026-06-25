@@ -174,7 +174,11 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
   3. Le righe già in produzione su `platform` e `import_format_version` sono migrate da uno step `seed-extras` additivo e idempotente (generato con `drizzle-kit generate` + `scripts/migrate.ts`, mai `drizzle-kit push`)
   4. È possibile aggiungere una seconda `import_format_version` (v2) a una Platform esistente e selezionarla al momento dell'import — il constraint `unique(platformId, version)` è funzionante
   5. La tabella `platform` non contiene più campi del contratto di parsing; i campi rimasti sono solo identità (`name`, `slug`, `country`, `visibility`, `ownerUserId`)
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 56-01-PLAN.md — Regression baseline: pin transactionHash for all CSV fixtures against current code (IFMT-02)
+- [ ] 56-02-PLAN.md — Schema: add the parsing contract (nullable) to import_format_version + generated ADD migration (IFMT-01)
+- [ ] 56-03-PLAN.md — seed-extras data copy + seed-data/seed.ts rework + drop platform contract columns (IFMT-03, IFMT-05)
+- [ ] 56-04-PLAN.md — Re-point detector/DAL/type/wizard to the version-owned contract; regression GREEN (IFMT-04, IFMT-05)
 
 ### Phase 57: pdf-import-trade-republic
 **Goal**: L'utente può caricare un estratto PDF Trade Republic e importare le transazioni della sezione "TRANSAZIONI SUL CONTO" con segni corretti, passando per il pipeline esistente (detector, normalize, dedup, preview) invariato
@@ -210,7 +214,7 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 | 53. retroactive-application | v2.1 | 3/3 | Complete | 2026-06-16 |
 | 54. reusable-trigger | v2.1 | 3/3 | Complete | 2026-06-21 |
 | 55. import-summary-ux | v2.1 | 3/3 | Complete | 2026-06-22 |
-| 56. import-format-refactor | v2.2 | 0/TBD | Not started | — |
+| 56. import-format-refactor | v2.2 | 0/4 | Not started | — |
 | 57. pdf-import-trade-republic | v2.2 | 0/TBD | Not started | — |
 
 **Total shipped: 55 phases · 204 plans complete**
