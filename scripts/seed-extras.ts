@@ -14,7 +14,6 @@ import {
   category,
   expense,
   nature,
-  platform,
   subCategory,
 } from '../lib/db/schema'
 import {
@@ -43,14 +42,12 @@ async function setSubcategoryNature(_database: Db): Promise<void> {
   console.log('    set-subcategory-nature: no-op (Phase 47 — superseded by v2-backfill-nature-id)')
 }
 
-// Step 2 (phase description-strip-pattern): set descriptionStripPattern on Fineco platform
-async function setFinecoDescriptionStripPattern(database: Db): Promise<void> {
-  const result = await database
-    .update(platform)
-    .set({ descriptionStripPattern: '\\s+Carta N\\..*$' })
-    .where(eq(platform.slug, 'fineco'))
-  const count = (result as unknown as { rowCount?: number }).rowCount ?? 0
-  console.log(`    fineco description_strip_pattern: ${count} rows updated`)
+// Step 2 (phase description-strip-pattern): no-op — superseded by Phase 56 (ADR 0013).
+// descriptionStripPattern now lives on importFormatVersion (not platform); the column was
+// dropped from platform in migration 0022. New installs receive the value via seed-data.ts
+// importFormatVersions rows; existing rows were migrated by move-parsing-contract-to-format-version.
+async function setFinecoDescriptionStripPattern(_database: Db): Promise<void> {
+  console.log('    set-fineco-description-strip-pattern: no-op (superseded — descriptionStripPattern now lives on importFormatVersion, seeded via seed-data.ts importFormatVersions)')
 }
 
 // Step 3 (quick-260531-fko): reorganize grocery category (categoryId 8) subcategory taxonomy
