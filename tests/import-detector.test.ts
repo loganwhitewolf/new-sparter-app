@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { detectImportFormat } from '../lib/services/import-format-detector'
 import { parseImportFile } from '../lib/services/import-parsers'
-import { platforms as seedPlatforms } from '../scripts/seed-data'
+import { importFormatVersions as seedFormatVersions, platforms as seedPlatforms } from '../scripts/seed-data'
 
 const fixturePath = (name: string) => join(process.cwd(), 'tests', 'fixtures', 'import', name)
 
@@ -17,20 +17,41 @@ const expectedFixtureHeaders = [
   ['fineco.csv', 'Data,Descrizione_Completa,Entrate,Uscite'],
 ] as const
 
-const formats = seedPlatforms.map((platform) => ({
-  id: platform.id * 10,
-  platformId: platform.id,
-  platform: { ...platform, descriptionStripPattern: null as string | null },
-  version: 1,
-  headerSignature: [
-    platform.timestampColumn,
-    platform.descriptionColumn,
-    platform.amountColumn,
-    platform.positiveAmountColumn,
-    platform.negativeAmountColumn,
-  ].filter((column): column is string => Boolean(column)).join(platform.delimiter),
-  isActive: true,
-}))
+// Build candidate fixtures from version-sourced contract (ADR 0013).
+// Contract fields come from importFormatVersions; identity (id, name, slug, country) from platforms.
+const formats = seedPlatforms.map((p) => {
+  const fv = seedFormatVersions.find((v) => v.platformId === p.id)
+  if (!fv) throw new Error(`No format version found for platform id ${p.id}`)
+  return {
+    id: p.id * 10,
+    platformId: p.id,
+    platform: {
+      id: p.id,
+      name: p.name,
+      slug: p.slug,
+      country: p.country,
+      // Contract from importFormatVersion
+      delimiter: fv.delimiter,
+      timestampColumn: fv.timestampColumn,
+      descriptionColumn: fv.descriptionColumn,
+      amountType: fv.amountType,
+      amountColumn: fv.amountColumn ?? null,
+      positiveAmountColumn: fv.positiveAmountColumn ?? null,
+      negativeAmountColumn: fv.negativeAmountColumn ?? null,
+      multiplyBy: fv.multiplyBy,
+      descriptionStripPattern: fv.descriptionStripPattern ?? null,
+    },
+    version: 1,
+    headerSignature: [
+      fv.timestampColumn,
+      fv.descriptionColumn,
+      fv.amountColumn,
+      fv.positiveAmountColumn,
+      fv.negativeAmountColumn,
+    ].filter((column): column is string => Boolean(column)).join(fv.delimiter),
+    isActive: true,
+  }
+})
 
 async function detectFixture(fileName: string) {
   const parsed = await parseImportFile(readFileSync(fixturePath(fileName)), { fileName })
