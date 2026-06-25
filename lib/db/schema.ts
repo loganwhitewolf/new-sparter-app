@@ -250,6 +250,7 @@ export const nature = pgTable(
   (table) => [index("nature_directionId_idx").on(table.directionId)],
 );
 
+// platform holds identity only (ADR 0013). Parsing contract lives on importFormatVersion.
 export const platform = pgTable(
   "platform",
   {
@@ -260,18 +261,6 @@ export const platform = pgTable(
     name: varchar("name", { length: 100 }).notNull(),
     slug: varchar("slug", { length: 100 }).notNull().unique(),
     country: varchar("country", { length: 2 }).notNull(),
-    delimiter: varchar("delimiter", { length: 4 }).notNull(),
-    descriptionColumn: varchar("description_column", { length: 120 }).notNull(),
-    amountType: amountTypeEnum("amount_type").notNull(),
-    amountColumn: varchar("amount_column", { length: 120 }),
-    positiveAmountColumn: varchar("positive_amount_column", { length: 120 }),
-    negativeAmountColumn: varchar("negative_amount_column", { length: 120 }),
-    timestampColumn: varchar("timestamp_column", { length: 120 }).notNull(),
-    dateFormat: varchar("date_format", { length: 60 }),
-    dateReplace: boolean("date_replace").default(false).notNull(),
-    decimalReplace: boolean("decimal_replace").default(false).notNull(),
-    multiplyBy: integer("multiply_by").default(1).notNull(),
-    descriptionStripPattern: text("description_strip_pattern"),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -300,18 +289,21 @@ export const importFormatVersion = pgTable(
     headerSignature: text("header_signature").notNull(),
     notes: text("notes"),
     isActive: boolean("is_active").default(true).notNull(),
-    // Parsing contract columns (nullable — transition migration; Plan 03 copies from platform then drops platform columns)
-    delimiter: varchar("delimiter", { length: 4 }),
-    descriptionColumn: varchar("description_column", { length: 120 }),
-    amountType: amountTypeEnum("amount_type"),
+    // Parsing contract columns — owned here (ADR 0013). Nullability mirrors original platform columns.
+    // notNull: delimiter, descriptionColumn, amountType, timestampColumn (were NOT NULL on platform)
+    // notNull with default: dateReplace, decimalReplace, multiplyBy (had DEFAULT on platform)
+    // nullable: amountColumn, positiveAmountColumn, negativeAmountColumn, dateFormat, descriptionStripPattern
+    delimiter: varchar("delimiter", { length: 4 }).notNull(),
+    descriptionColumn: varchar("description_column", { length: 120 }).notNull(),
+    amountType: amountTypeEnum("amount_type").notNull(),
     amountColumn: varchar("amount_column", { length: 120 }),
     positiveAmountColumn: varchar("positive_amount_column", { length: 120 }),
     negativeAmountColumn: varchar("negative_amount_column", { length: 120 }),
-    timestampColumn: varchar("timestamp_column", { length: 120 }),
+    timestampColumn: varchar("timestamp_column", { length: 120 }).notNull(),
     dateFormat: varchar("date_format", { length: 60 }),
-    dateReplace: boolean("date_replace"),
-    decimalReplace: boolean("decimal_replace"),
-    multiplyBy: integer("multiply_by"),
+    dateReplace: boolean("date_replace").default(false).notNull(),
+    decimalReplace: boolean("decimal_replace").default(false).notNull(),
+    multiplyBy: integer("multiply_by").default(1).notNull(),
     descriptionStripPattern: text("description_strip_pattern"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
