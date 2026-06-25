@@ -14,6 +14,7 @@
 - ✅ **v1.16: Dashboard Overview Redesign** — Phases 42–45 (shipped 2026-06-09)
 - ✅ **v2.0: Nature/Direction Model Realignment** — Phases 46–50 (shipped 2026-06-14)
 - ✅ **v2.1: Regex Discovery & Transaction Unification** — Phases 51–55 (shipped 2026-06-22)
+- 🔄 **v2.2: PDF Import** — Phases 56–57 (in progress)
 
 ## Phases
 
@@ -156,6 +157,38 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 
 </details>
 
+### v2.2: PDF Import (Phases 56–57)
+
+- [ ] **Phase 56: import-format-refactor** — Sposta il contratto di parsing da `platform` a `import_format_version`; `platform` diventa pura identità; sblocca il versioning reale dei formati per Platform
+- [ ] **Phase 57: pdf-import-trade-republic** — Import estratti PDF Trade Republic tramite template per-banca normalizzato a `ParsedImportFile`; segno importi via coordinate X (`unpdf`); solo sezione "TRANSAZIONI SUL CONTO"
+
+## Phase Details
+
+### Phase 56: import-format-refactor
+**Goal**: Il contratto di parsing (`delimiter`, `*Column`, `dateFormat`, `dateReplace`, `decimalReplace`, `multiplyBy`, `descriptionStripPattern`, `amountType`) vive su `import_format_version`; `platform` è pura identità del fornitore; il versioning reale dei tracciati per Platform è esprimibile e funzionante
+**Depends on**: Phase 55 (nothing new to depend on — first phase of v2.2)
+**Requirements**: IFMT-01, IFMT-02, IFMT-03, IFMT-04, IFMT-05
+**Success Criteria** (what must be TRUE):
+  1. Reimportando un file CSV/XLSX di fixture esistente dopo il refactor, i valori `transactionHash` prodotti sono byte-identici a quelli generati prima — verificato da un test di regressione sulle 6 Platform attive
+  2. Il detector (`scoreCandidate`), `normalizeTransactionRow`/`ImportPlatformConfig`, il DAL di detection, i seed script e il wizard dei formati operano sul nuovo contratto senza regressioni comportamentali
+  3. Le righe già in produzione su `platform` e `import_format_version` sono migrate da uno step `seed-extras` additivo e idempotente (generato con `drizzle-kit generate` + `scripts/migrate.ts`, mai `drizzle-kit push`)
+  4. È possibile aggiungere una seconda `import_format_version` (v2) a una Platform esistente e selezionarla al momento dell'import — il constraint `unique(platformId, version)` è funzionante
+  5. La tabella `platform` non contiene più campi del contratto di parsing; i campi rimasti sono solo identità (`name`, `slug`, `country`, `visibility`, `ownerUserId`)
+**Plans**: TBD
+
+### Phase 57: pdf-import-trade-republic
+**Goal**: L'utente può caricare un estratto PDF Trade Republic e importare le transazioni della sezione "TRANSAZIONI SUL CONTO" con segni corretti, passando per il pipeline esistente (detector, normalize, dedup, preview) invariato
+**Depends on**: Phase 56
+**Requirements**: PDF-01, PDF-02, PDF-03, PDF-04, PDF-05
+**Success Criteria** (what must be TRUE):
+  1. Caricando un PDF Trade Republic di esempio, il sistema importa solo le righe della sezione "TRANSAZIONI SUL CONTO" — riepiloghi, posizioni e sezioni-specchio ("PANORAMICA TRANSAZIONI") vengono scartati
+  2. Il segno di ciascun importo è determinato dalla posizione X (`unpdf`, serverless) e verificato contro la catena dei saldi progressivi; un disallineamento produce un errore esplicito e non importa nessun dato
+  3. Un file PDF con estensione `.pdf` / tipo `application/pdf` superiore a 5 MB (o oltre il ceiling di pagine) viene rifiutato con un messaggio d'errore esplicito prima dell'upload R2
+  4. Le righe estratte dal PDF passano invariate per detector, `normalizeTransactionRow`, dedup per hash e preview — le stesse schermate e azioni disponibili per CSV/XLSX funzionano anche per il PDF Trade Republic
+  5. Le descrizioni con parte seriale variabile (es. `quantity: <num>` nei savings plan) aggregano nella stessa Expense dopo il `descriptionStripPattern` minimale configurato per Trade Republic
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans | Status | Completed |
@@ -177,5 +210,8 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 | 53. retroactive-application | v2.1 | 3/3 | Complete | 2026-06-16 |
 | 54. reusable-trigger | v2.1 | 3/3 | Complete | 2026-06-21 |
 | 55. import-summary-ux | v2.1 | 3/3 | Complete | 2026-06-22 |
+| 56. import-format-refactor | v2.2 | 0/TBD | Not started | — |
+| 57. pdf-import-trade-republic | v2.2 | 0/TBD | Not started | — |
 
 **Total shipped: 55 phases · 204 plans complete**
+**Active milestone: v2.2 — 2 phases planned, 0 complete**

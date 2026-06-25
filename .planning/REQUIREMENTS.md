@@ -42,17 +42,15 @@ Per-bank PDF parsing normalized into the existing tabular pipeline. See `docs/ad
 
 ## Traceability
 
-_Filled by the roadmapper: each REQ-ID maps to exactly one phase._
-
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| IFMT-01 | — | Pending |
-| IFMT-02 | — | Pending |
-| IFMT-03 | — | Pending |
-| IFMT-04 | — | Pending |
-| IFMT-05 | — | Pending |
-| PDF-01 | — | Pending |
-| PDF-02 | — | Pending |
-| PDF-03 | — | Pending |
-| PDF-04 | — | Pending |
-| PDF-05 | — | Pending |
+| IFMT-01 | Phase 56 | Pending |
+| IFMT-02 | Phase 56 | Pending |
+| IFMT-03 | Phase 56 | Pending |
+| IFMT-04 | Phase 56 | Pending |
+| IFMT-05 | Phase 56 | Pending |
+| PDF-01 | Phase 57 | Pending |
+| PDF-02 | Phase 57 | Pending |
+| PDF-03 | Phase 57 | Pending |
+| PDF-04 | Phase 57 | Pending |
+| PDF-05 | Phase 57 | Pending |
