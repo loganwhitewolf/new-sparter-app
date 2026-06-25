@@ -234,7 +234,7 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 | 53. retroactive-application | v2.1 | 3/3 | Complete | 2026-06-16 |
 | 54. reusable-trigger | v2.1 | 3/3 | Complete | 2026-06-21 |
 | 55. import-summary-ux | v2.1 | 3/3 | Complete | 2026-06-22 |
-| 56. import-format-refactor | v2.2 | 5/5 | Complete   | 2026-06-25 |
+| 56. import-format-refactor | v2.2 | 5/5 | Complete    | 2026-06-25 |
 | 57. pdf-import-trade-republic | v2.2 | 0/TBD | Not started | — |
 
 **Total shipped: 55 phases · 204 plans complete**
