@@ -938,6 +938,12 @@ export const platforms = [
     slug: "fineco",
     country: "IT",
   },
+  {
+    id: 8,
+    name: "Trade Republic",
+    slug: "trade-republic",
+    country: "IT",
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -1068,6 +1074,30 @@ export const importFormatVersions = [
     // applied to already-deployed rows. New installs get this value from seed.ts directly.
     descriptionStripPattern: "\\s+Carta N\\..*$",
     notes: "Initial Fineco CSV import contract",
+  },
+  {
+    // Trade Republic PDF import contract (ADR 0014, D-08).
+    // Synthetic headers emitted by the Wave 2 TR PDF parser — not present as text in the PDF.
+    // headerSignatureFor: [data, descrizione, null, importo_entrata, importo_uscita].filter(Boolean).join(",")
+    //   → "data,descrizione,importo_entrata,importo_uscita"
+    // delimiter "," is the join character for headerSignatureFor (Pitfall 2: NOT NULL constraint).
+    platformId: 8,
+    version: 1,
+    delimiter: ",",
+    descriptionColumn: "descrizione",
+    amountType: "separate" as AmountType,
+    amountColumn: null,
+    positiveAmountColumn: "importo_entrata",
+    negativeAmountColumn: "importo_uscita",
+    timestampColumn: "data",
+    dateFormat: null,
+    dateReplace: false,
+    decimalReplace: false,
+    multiplyBy: 1,
+    // Strip "quantity: 0.000502" from savings-plan descriptions so recurring rows
+    // aggregate into a single Expense (D-06, PDF-05). Pattern applied case-insensitively.
+    descriptionStripPattern: "quantity:\\s*[\\d.,]+\\s*",
+    notes: "Initial Trade Republic PDF import contract",
   },
 ];
 
