@@ -302,7 +302,12 @@ export async function analyzeImportAction(
       // with a user-friendly Italian text listing the supported PDF platforms.
       // Only platform.name (public product data) is exposed — no slugs or internal ids (T-57-05-02).
       if (result.errors[0] === UNRECOGNIZED_PDF_FORMAT) {
-        const platformNames = await listPdfImportPlatformNames();
+        let platformNames: string[] = [];
+        try {
+          platformNames = await listPdfImportPlatformNames();
+        } catch {
+          // Non-fatal: fall through to the no-platforms fallback message
+        }
         if (platformNames.length > 0) {
           errorMessage = `Il file PDF non è stato riconosciuto. Le piattaforme supportate per l'import PDF sono: ${platformNames.join(", ")}.`;
         } else {
