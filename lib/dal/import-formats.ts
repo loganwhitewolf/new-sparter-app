@@ -220,6 +220,10 @@ export async function listPdfImportPlatformNames(input?: {
       and(
         eq(platform.isActive, true),
         eq(importFormatVersion.isActive, true),
+        eq(platform.reviewStatus, APPROVED_REVIEW_STATUS),
+        eq(importFormatVersion.reviewStatus, APPROVED_REVIEW_STATUS),
+        isNull(platform.ownerUserId),
+        isNull(importFormatVersion.ownerUserId),
         inArray(platform.slug, [...PDF_IMPORT_PLATFORM_SLUGS]),
       ),
     )
