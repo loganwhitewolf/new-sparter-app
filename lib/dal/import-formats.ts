@@ -1,10 +1,11 @@
 import 'server-only'
-import { and, eq, isNull, or } from 'drizzle-orm'
+import { and, eq, inArray, isNull, or } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { importFormatVersion, platform } from '@/lib/db/schema'
 import type { ImportFormatCandidateInput } from '@/lib/services/import-format-detector'
+import { PDF_IMPORT_PLATFORM_SLUGS } from '@/lib/services/import-parsers'
 
-type ImportFormatDatabase = Pick<typeof db, 'select'>
+export type ImportFormatDatabase = Pick<typeof db, 'select'>
 
 type ImportFormatRow = {
   id: number
@@ -15,22 +16,24 @@ type ImportFormatRow = {
   ownerUserId: string | null
   visibility: string
   reviewStatus: string
+  // Contract fields sourced from importFormatVersion (ADR 0013)
+  delimiter: string
+  timestampColumn: string
+  descriptionColumn: string
+  amountType: 'single' | 'separate'
+  amountColumn: string | null
+  positiveAmountColumn: string | null
+  negativeAmountColumn: string | null
+  multiplyBy: number
+  descriptionStripPattern: string | null
+  // Identity fields sourced from platform
   platformOwnerUserId: string | null
   platformVisibility: string
   platformReviewStatus: string
   platformIsActive: boolean
   platformName: string
   platformSlug: string
-  platformDelimiter: string
   platformCountry: string
-  platformTimestampColumn: string
-  platformDescriptionColumn: string
-  platformAmountType: 'single' | 'separate'
-  platformAmountColumn: string | null
-  platformPositiveAmountColumn: string | null
-  platformNegativeAmountColumn: string | null
-  platformMultiplyBy: number
-  platformDescriptionStripPattern: string | null
 }
 
 const GLOBAL_VISIBILITY = 'global'
@@ -47,22 +50,24 @@ function hasExpectedRowShape(row: Partial<ImportFormatRow>): row is ImportFormat
     (typeof row.ownerUserId === 'string' || row.ownerUserId === null) &&
     typeof row.visibility === 'string' &&
     typeof row.reviewStatus === 'string' &&
+    // Contract fields (from importFormatVersion)
+    typeof row.delimiter === 'string' &&
+    typeof row.timestampColumn === 'string' &&
+    typeof row.descriptionColumn === 'string' &&
+    (row.amountType === 'single' || row.amountType === 'separate') &&
+    (typeof row.amountColumn === 'string' || row.amountColumn === null) &&
+    (typeof row.positiveAmountColumn === 'string' || row.positiveAmountColumn === null) &&
+    (typeof row.negativeAmountColumn === 'string' || row.negativeAmountColumn === null) &&
+    typeof row.multiplyBy === 'number' &&
+    (typeof row.descriptionStripPattern === 'string' || row.descriptionStripPattern === null) &&
+    // Identity fields (from platform)
     (typeof row.platformOwnerUserId === 'string' || row.platformOwnerUserId === null) &&
     typeof row.platformVisibility === 'string' &&
     typeof row.platformReviewStatus === 'string' &&
     typeof row.platformIsActive === 'boolean' &&
     typeof row.platformName === 'string' &&
     typeof row.platformSlug === 'string' &&
-    typeof row.platformDelimiter === 'string' &&
-    typeof row.platformCountry === 'string' &&
-    typeof row.platformTimestampColumn === 'string' &&
-    typeof row.platformDescriptionColumn === 'string' &&
-    (row.platformAmountType === 'single' || row.platformAmountType === 'separate') &&
-    (typeof row.platformAmountColumn === 'string' || row.platformAmountColumn === null) &&
-    (typeof row.platformPositiveAmountColumn === 'string' || row.platformPositiveAmountColumn === null) &&
-    (typeof row.platformNegativeAmountColumn === 'string' || row.platformNegativeAmountColumn === null) &&
-    typeof row.platformMultiplyBy === 'number' &&
-    (typeof row.platformDescriptionStripPattern === 'string' || row.platformDescriptionStripPattern === null)
+    typeof row.platformCountry === 'string'
   )
 }
 
@@ -97,19 +102,21 @@ function toCandidate(row: ImportFormatRow): ImportFormatCandidateInput {
     headerSignature: row.headerSignature,
     isActive: row.isActive,
     platform: {
+      // Identity from platform
       id: row.platformId,
       name: row.platformName,
       slug: row.platformSlug,
-      delimiter: row.platformDelimiter,
       country: row.platformCountry,
-      timestampColumn: row.platformTimestampColumn,
-      descriptionColumn: row.platformDescriptionColumn,
-      amountType: row.platformAmountType,
-      amountColumn: row.platformAmountColumn,
-      positiveAmountColumn: row.platformPositiveAmountColumn,
-      negativeAmountColumn: row.platformNegativeAmountColumn,
-      multiplyBy: row.platformMultiplyBy,
-      descriptionStripPattern: row.platformDescriptionStripPattern,
+      // Contract from importFormatVersion (ADR 0013)
+      delimiter: row.delimiter,
+      timestampColumn: row.timestampColumn,
+      descriptionColumn: row.descriptionColumn,
+      amountType: row.amountType,
+      amountColumn: row.amountColumn,
+      positiveAmountColumn: row.positiveAmountColumn,
+      negativeAmountColumn: row.negativeAmountColumn,
+      multiplyBy: row.multiplyBy,
+      descriptionStripPattern: row.descriptionStripPattern,
     },
   }
 }
@@ -162,22 +169,24 @@ export async function loadImportFormatsForDetection(input: {
       ownerUserId: importFormatVersion.ownerUserId,
       visibility: importFormatVersion.visibility,
       reviewStatus: importFormatVersion.reviewStatus,
+      // Contract columns from importFormatVersion (ADR 0013)
+      delimiter: importFormatVersion.delimiter,
+      timestampColumn: importFormatVersion.timestampColumn,
+      descriptionColumn: importFormatVersion.descriptionColumn,
+      amountType: importFormatVersion.amountType,
+      amountColumn: importFormatVersion.amountColumn,
+      positiveAmountColumn: importFormatVersion.positiveAmountColumn,
+      negativeAmountColumn: importFormatVersion.negativeAmountColumn,
+      multiplyBy: importFormatVersion.multiplyBy,
+      descriptionStripPattern: importFormatVersion.descriptionStripPattern,
+      // Identity columns from platform
       platformOwnerUserId: platform.ownerUserId,
       platformVisibility: platform.visibility,
       platformReviewStatus: platform.reviewStatus,
       platformIsActive: platform.isActive,
       platformName: platform.name,
       platformSlug: platform.slug,
-      platformDelimiter: platform.delimiter,
       platformCountry: platform.country,
-      platformTimestampColumn: platform.timestampColumn,
-      platformDescriptionColumn: platform.descriptionColumn,
-      platformAmountType: platform.amountType,
-      platformAmountColumn: platform.amountColumn,
-      platformPositiveAmountColumn: platform.positiveAmountColumn,
-      platformNegativeAmountColumn: platform.negativeAmountColumn,
-      platformMultiplyBy: platform.multiplyBy,
-      platformDescriptionStripPattern: platform.descriptionStripPattern,
     })
     .from(importFormatVersion)
     .innerJoin(platform, eq(importFormatVersion.platformId, platform.id))
@@ -187,4 +196,39 @@ export async function loadImportFormatsForDetection(input: {
     .filter((row): row is ImportFormatRow => hasExpectedRowShape(row))
     .filter((row) => isAccessibleImportFormat(row, input.userId))
     .map(toCandidate)
+}
+
+/**
+ * Returns the display names of all active platforms that support PDF import.
+ * Filters by PDF_IMPORT_PLATFORM_SLUGS (the allowlist co-located with the .pdf dispatch
+ * in import-parsers.ts) — no fileType column on import_format_version required.
+ * Results are deduplicated (a platform may have multiple active format versions) and
+ * sorted alphabetically for stable output (T-57-05-02).
+ *
+ * @param input.database - Optional injectable database instance (used in tests).
+ */
+export async function listPdfImportPlatformNames(input?: {
+  database?: ImportFormatDatabase
+}): Promise<string[]> {
+  const database = input?.database ?? db
+
+  const rows = await database
+    .select({ name: platform.name })
+    .from(platform)
+    .innerJoin(importFormatVersion, eq(importFormatVersion.platformId, platform.id))
+    .where(
+      and(
+        eq(platform.isActive, true),
+        eq(importFormatVersion.isActive, true),
+        eq(platform.reviewStatus, APPROVED_REVIEW_STATUS),
+        eq(importFormatVersion.reviewStatus, APPROVED_REVIEW_STATUS),
+        isNull(platform.ownerUserId),
+        isNull(importFormatVersion.ownerUserId),
+        inArray(platform.slug, [...PDF_IMPORT_PLATFORM_SLUGS]),
+      ),
+    )
+
+  // Deduplicate names and sort alphabetically for stable output
+  const unique = [...new Set(rows.map(r => r.name))].sort()
+  return unique
 }

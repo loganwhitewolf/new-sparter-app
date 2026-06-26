@@ -107,7 +107,7 @@ export function TransactionFilters({ filters, platforms, categories }: Props) {
             <Input
               id="transaction-name"
               type="search"
-              placeholder="Nome o descrizione…"
+              placeholder="Cerca per descrizione…"
               defaultValue={filters.name ?? ''}
               onChange={(e) => handleNameChange(e.currentTarget.value)}
               disabled={isPending}

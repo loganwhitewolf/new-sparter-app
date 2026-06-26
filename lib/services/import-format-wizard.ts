@@ -220,20 +220,13 @@ async function createPrivateRows(
   const createdPlatforms = await database
     .insert(platform)
     .values({
+      // Identity only — contract lives on importFormatVersion (ADR 0013)
       ownerUserId: input.userId,
       visibility: PRIVATE_VISIBILITY,
       reviewStatus: DRAFT_REVIEW_STATUS,
       name: input.platformName,
       slug,
       country: 'IT',
-      delimiter: input.delimiter,
-      timestampColumn: input.timestampColumn,
-      descriptionColumn: input.descriptionColumn,
-      amountType: input.amountMode,
-      amountColumn: input.amountMode === 'single' ? input.amountColumn ?? null : null,
-      positiveAmountColumn: input.amountMode === 'separate' ? input.positiveAmountColumn ?? null : null,
-      negativeAmountColumn: input.amountMode === 'separate' ? input.negativeAmountColumn ?? null : null,
-      multiplyBy: 1,
       isActive: true,
     })
     .returning({ id: platform.id, name: platform.name, slug: platform.slug })
@@ -254,6 +247,19 @@ async function createPrivateRows(
       headerSignature: header,
       notes: 'Created from private import format wizard.',
       isActive: true,
+      // Parsing contract (ADR 0013)
+      delimiter: input.delimiter,
+      timestampColumn: input.timestampColumn,
+      descriptionColumn: input.descriptionColumn,
+      amountType: input.amountMode,
+      amountColumn: input.amountMode === 'single' ? (input.amountColumn ?? null) : null,
+      positiveAmountColumn: input.amountMode === 'separate' ? (input.positiveAmountColumn ?? null) : null,
+      negativeAmountColumn: input.amountMode === 'separate' ? (input.negativeAmountColumn ?? null) : null,
+      multiplyBy: 1,
+      dateFormat: null,
+      dateReplace: false,
+      decimalReplace: false,
+      descriptionStripPattern: null,
     })
     .returning({ id: importFormatVersion.id, headerSignature: importFormatVersion.headerSignature })
 

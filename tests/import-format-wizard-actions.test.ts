@@ -200,21 +200,20 @@ describe('import format wizard Server Actions', () => {
     })
     expect(mocks.txExecute).toHaveBeenCalledTimes(1)
     expect(mocks.insertedPlatforms[0]).not.toHaveProperty('id')
+    // platform holds identity only (ADR 0013) — no contract fields
     expect(mocks.insertedPlatforms[0]).toMatchObject({
       ownerUserId: 'user-abc',
       visibility: 'private',
       reviewStatus: 'draft',
       name: 'My Bank',
       country: 'IT',
-      delimiter: ',',
-      timestampColumn: 'Data',
-      descriptionColumn: 'Descrizione',
-      amountType: 'single',
-      amountColumn: 'Importo',
-      positiveAmountColumn: null,
-      negativeAmountColumn: null,
       isActive: true,
     })
+    expect(mocks.insertedPlatforms[0]).not.toHaveProperty('delimiter')
+    expect(mocks.insertedPlatforms[0]).not.toHaveProperty('timestampColumn')
+    expect(mocks.insertedPlatforms[0]).not.toHaveProperty('descriptionColumn')
+    expect(mocks.insertedPlatforms[0]).not.toHaveProperty('amountType')
+    // importFormatVersion holds the full parsing contract (ADR 0013)
     expect(mocks.insertedVersions[0]).toMatchObject({
       platformId: 301,
       ownerUserId: 'user-abc',
@@ -223,6 +222,18 @@ describe('import format wizard Server Actions', () => {
       version: 1,
       headerSignature: 'Data,Descrizione,Importo',
       isActive: true,
+      delimiter: ',',
+      timestampColumn: 'Data',
+      descriptionColumn: 'Descrizione',
+      amountType: 'single',
+      amountColumn: 'Importo',
+      positiveAmountColumn: null,
+      negativeAmountColumn: null,
+      multiplyBy: 1,
+      dateFormat: null,
+      dateReplace: false,
+      decimalReplace: false,
+      descriptionStripPattern: null,
     })
     expect(mocks.updatedFiles[0]).toMatchObject({
       status: 'uploaded',

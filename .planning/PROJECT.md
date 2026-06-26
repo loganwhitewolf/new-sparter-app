@@ -31,6 +31,18 @@ All milestones M001–v2.0 (Phases 1–50) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
+## Current Milestone: v2.2 — PDF Import
+
+**Goal:** Enable importing PDF bank statements (first real case: Trade Republic), starting with a refactor that separates the parsing contract from Platform identity.
+
+**Target features:**
+- **Import Format refactor (behavior-preserving):** move the parsing contract (delimiter, `*Column`, `dateFormat`, `dateReplace`, `decimalReplace`, `multiplyBy`, `descriptionStripPattern`, `amountType`) off `platform` and onto `import_format_version`; `platform` becomes pure identity. Unblocks real per-platform format versioning (today the version table exists but the mapping lives on the non-versioned parent). Invariant: the 6 existing CSV/XLSX imports produce identical `transactionHash` before/after. Contract: `docs/adr/0013-import-format-owns-parsing-contract.md`.
+- **PDF import (Trade Republic):** per-bank template recognized by markers, normalized to `ParsedImportFile` with synthetic headers so detector/normalize/dedup/preview stay unchanged; amount sign via positional X coordinates (`unpdf`, serverless) cross-checked against the running-balance chain; imports only the "TRANSAZIONI SUL CONTO" section; minimal `descriptionStripPattern` so recurring rows aggregate. Contract: `docs/adr/0014-pdf-import-per-bank-template.md`.
+
+**Design status:** LOCKED & documented in the 2026-06-25 grill — ADR 0013/0014, `CONTEXT.md` (Platform / Import Format / Sezione canonica dei movimenti), memory `project_pdf_import`. No discovery to redo.
+
+**Out of scope:** automatic categorization of Trade Republic descriptions (follow-up via regex-discovery), OCR / scanned PDFs, a generic multi-bank PDF parser.
+
 ## Last Shipped Milestone: v2.1 — Regex Discovery & Transaction Unification (shipped 2026-06-22)
 
 **Goal:** Re-architect regex discovery as a separate step downstream of auto-categorization, removing duplicate and already-covered proposals, with a reusable trigger and a cleaned-up import summary.
@@ -142,6 +154,9 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 - [x] v1.13: Unified Categorization Picker — Single `SubcategoryPicker` (vaul bottom sheet) across all 7 surfaces; pattern form rework; `amountSign` derived from subcategory type per ADR 0008. Shipped 2026-06-02.
 - [x] v1.15 Phase 41: Collapsible Sidebar — Icon-rail sidebar with localStorage-persisted collapse state, chevron toggle, tooltips in collapsed mode, user dropdown at bottom; Topbar removed; BottomNav 5th "Impostazioni" entry; ThemeToggle moved to SettingsHub Aspetto section. Shipped 2026-06-07.
 - [x] v1.16: Dashboard Overview Redesign — Year-scoped overview redesign: grouped bar chart (variant A), 4 KPI cards with delta + reading lines, filter chips, FlowNature education popovers, uncategorized nudge, per-month movers drill-down. Shipped 2026-06-09.
+- [x] v2.0: Nature/Direction Model Realignment — nature→direction lookup-table model, data migration/recategorization, explicit transaction pairing. Shipped 2026-06-14.
+- [x] v2.1: Regex Discovery & Transaction Unification — standalone discovery service, dedup gates, IDOR-guarded retroactive apply, reusable trigger, cleaned import summary. Shipped 2026-06-22.
+- [ ] v2.2: PDF Import — Import Format refactor (`platform`→`import_format_version`) then per-bank PDF import (Trade Republic) via `unpdf` positional extraction. Design LOCKED (ADR 0013/0014).
 
 ## Key Decisions
 
@@ -205,4 +220,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-22 after v2.1 milestone*
+*Last updated: 2026-06-25 — started milestone v2.2 (PDF Import)*

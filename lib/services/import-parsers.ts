@@ -2,6 +2,7 @@ import { parse } from 'csv-parse/sync'
 import { detect } from 'chardet'
 import iconv from 'iconv-lite'
 import { readSheet } from 'read-excel-file/node'
+import { parseTradeRepublicPdf } from './trade-republic-pdf-parser'
 
 export type ParsedImportRow = Record<string, string>
 
@@ -31,6 +32,14 @@ const DEFAULT_MAX_ROWS = 10_000
 const DEFAULT_SAMPLE_SIZE = 25
 const DEFAULT_WARNING_LIMIT = 20
 const DELIMITERS = [',', ';', '\t', '|'] as const
+
+/**
+ * Platform slugs that use PDF-based import (co-located with the .pdf dispatch below).
+ * Add a new slug here whenever a per-bank PDF parser is introduced.
+ * Used by listPdfImportPlatformNames() in the DAL to enumerate supported PDF platforms
+ * without requiring a fileType column on import_format_version.
+ */
+export const PDF_IMPORT_PLATFORM_SLUGS = ['trade-republic'] as const
 
 function boundedPush(messages: string[], message: string, limit: number) {
   if (messages.length < limit) messages.push(message)
@@ -193,6 +202,18 @@ export async function parseImportFile(bytes: Buffer, inputOptions: ParseImportFi
         ...parsed,
         errors: parsed.headers.length === 0 ? ['Spreadsheet has no header row.'] : [],
       }
+    }
+
+    // .pdf must be dispatched before the CSV decode path — a PDF must never reach
+    // chooseDelimiter/parseCsv which expects text and would produce garbage rows (T-57-04-01).
+    //
+    // PDF_IMPORT_PLATFORM_SLUGS: single source of truth for which platforms use PDF import.
+    // Add the slug here whenever a new bank PDF parser is introduced.
+    if (lowerName.endsWith('.pdf')) {
+      return parseTradeRepublicPdf(bytes, {
+        fileName: options.fileName,
+        sampleSize: options.sampleSize,
+      })
     }
 
     const decoded = decodeBuffer(bytes, options.warningLimit)

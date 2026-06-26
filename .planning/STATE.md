@@ -1,156 +1,133 @@
 ---
 gsd_state_version: 1.0
-milestone: ""
-milestone_name: ""
-current_phase: null
-status: milestone_complete
-stopped_at: "Milestone v2.1 complete — archived 2026-06-22"
-last_updated: "2026-06-22T00:00:00Z"
-last_activity: 2026-06-22
-last_activity_desc: Milestone v2.1 archived
+milestone: v2.2
+milestone_name: PDF Import
+current_phase: 57
+current_phase_name: pdf-import-trade-republic
+status: "Phase 57 shipped — PR #24"
+stopped_at: Phase 57 verified and complete — milestone v2.2 shipped
+last_updated: "2026-06-26T12:57:26.033Z"
+last_activity: 2026-06-26
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 15
-  completed_plans: 15
+  total_phases: 2
+  completed_phases: 2
+  total_plans: 10
+  completed_plans: 10
   percent: 100
-current_phase_name: null
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-22)
+See: .planning/PROJECT.md (updated 2026-06-25)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Planning next milestone — run `/gsd-new-milestone` to start
+**Current focus:** Milestone v2.2 SHIPPED — PDF Import (Phases 56–57 complete)
 
 ## Current Position
 
-Phase: 55
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-06-22 — Phase 55 complete
+Phase: 57 (pdf-import-trade-republic) — COMPLETE
+Plan: 5 of 5
+Status: Phase 57 shipped — PR #24
+Last activity: 2026-06-26
 
-## Roadmap (v2.1 — Phases 51–55)
+Progress bar: `████████████████████` 100% (2/2 phases)
+
+## Roadmap (v2.2 — Phases 56–57)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 51 | discovery-pipeline-reorder | PIPE-01, PIPE-02, PIPE-03 | Complete |
-| 52 | regex-validity-and-dedup | RDISC-01, RDISC-02, RDISC-03, RDISC-04 | Complete |
-| 53 | retroactive-application | APPLY-01, APPLY-02 | Complete |
-| 54 | reusable-trigger | TRIG-01, TRIG-02 | Not started |
-| 55 | import-summary-ux | SUMUI-01, SUMUI-02, SUMUI-03 | Not started |
+| 56 | import-format-refactor | IFMT-01, IFMT-02, IFMT-03, IFMT-04, IFMT-05 | Complete (2026-06-25) |
+| 57 | pdf-import-trade-republic | PDF-01, PDF-02, PDF-03, PDF-04, PDF-05 | Complete (2026-06-26) |
 
-**Open decisions to resolve in discuss/plan:** APPLY-02 retroactive scope (current file vs platform history); TRIG-02 re-check UX (per-row vs bulk); SUMUI-03 exact copy/placement of the "discovery is now a separate step" cue. Phase success criteria are phrased to accommodate either resolution.
-
-**Deferred (tracked, not in v2.1):** TOOL-01 (consolidate in-app discovery with offline `yarn regex:discover`), GLOBAL-01 (file-independent suggestions), DISM-01 (persistent dismissal).
+**Milestone v2.2 SHIPPED 2026-06-26.**
 
 ## Accumulated Context
 
 ### Decisions
 
-Plan 51-01: detectPatternSuggestionsWithMeta reuses shared helpers — no clustering logic duplicated; strippedByNormalization rolled up as any-member-true at candidate level; residualVariablePart from first grouped row's tokens beyond stable prefix.
+Design contract is LOCKED. Do not re-derive the approach:
 
-Plan 51-02: getUncategorizedExpensesForDiscovery uses isNull(expense.subCategoryId) as sole Set B filter (covers statuses 1 and 4 without enumerating them); no cache() or verifySession() — userId passed as parameter following loadActivePatterns pattern; no DbOrTx — discovery is post-commit, never inside a transaction.
+- ADR 0013: il contratto di parsing (`delimiter`, `*Column`, `dateFormat`, `dateReplace`, `decimalReplace`, `multiplyBy`, `descriptionStripPattern`, `amountType`) si sposta da `platform` a `import_format_version`; `platform` resta pura identità; behavior-preserving, regression-gated su fixture reali.
+- ADR 0014: per-banca, non generico; template deterministico che riconosce il documento per marker ed estrae solo la sezione canonica dei movimenti; normalizzato a `ParsedImportFile` con header sintetici; segno via coordinate X (`unpdf`, serverless); catena saldi come guard esplicita; `pdf-parse` scartato (testo piatto, no coordinate).
+- CONTEXT.md: "Platform" = pura identità fornitore; "Import Format" = contratto versionato; "Sezione canonica dei movimenti" = solo "TRANSAZIONI SUL CONTO" per Trade Republic; "PANORAMICA TRANSAZIONI" e "PANORAMICA DEL SALDO" scartate.
+- Migration path: `drizzle-kit generate` + `scripts/migrate.ts` + step additivo in `seed-extras.ts` — mai `drizzle-kit push` in produzione.
+- `unpdf` scelto per coordinate X (serverless-ready); `pdf-parse` scartato.
+- Categorizzazione automatica delle descrizioni TR è fuori scope — follow-up via `regex-discovery` + `seed-patterns`.
+- OCR/scanned PDF fuori scope.
+- Parser PDF generico fuori scope.
+- [Phase 56]: Regression test written BEFORE any column move — pins transactionHash of all 7 CSV fixtures as static hex literals (IFMT-02)
+- [Phase 56]: Schema transition migration: 12 contract columns added nullable to importFormatVersion; platform columns untouched until Plan 03 data copy
+- [Phase 56]: Migration 0021_glorious_callisto.sql produced via drizzle-kit generate — ADD COLUMN only on import_format_version, no DROP, applied at operator deploy time
+- [Phase 56]: platform Drizzle import removed from seed-extras.ts — no other step references the table object after Step 2 became a no-op (IFMT-05)
+- [Phase 57]: application/octet-stream added as defensive PDF MIME fallback (browser Assumption A5); extension check still constrains file kind
+- [Phase 57]: initiate route required no code change — PDF support flows through InitiateUploadSchema transparently
+- [Phase 57]: 5 MB size cap preserved unchanged per D-05/T-57-02-01
+- [Phase 57]: UNRECOGNIZED_PDF_FORMAT — costante singola nel parser (italiano generico, nessun marker interno esposto)
+- [Phase 57]: PDF_IMPORT_PLATFORM_SLUGS allowlist co-locata con il dispatch .pdf in import-parsers.ts (no fileType column su import_format_version — allowlist approach evita scope creep)
 
-Plan 51-03: discoverRegexCandidates reads stripPattern from expenses[0].descriptionStripPattern (platform-level constant from DAL join); applyStrip is a private one-liner — does NOT call normalizeTransactionRow (requires ImportPlatformConfig not available here); amount: null on all detector rows (description-only clustering); legacy analyzeFile call annotated with TODO Phase 55, not deleted (preserves current import summary UI).
+### Codebase facts rilevanti per la prossima milestone
 
-Plan 52-01: PatternSuggestionWithMeta now carries all grouped member descriptionHashes (legacy nulls filtered); candidateCoveredByExistingPattern is a pure helper that mirrors the existing full plus numeric-stripped active-pattern matcher; clustering guard and prefix math unchanged.
-
-Plan 52-02: getManuallyCategorizedHashes queries expenseClassificationHistory source='manual' joined to expense.descriptionHash, scoped by userId, with empty-input short-circuit and Set<string> result for Check 2.
-
-Plan 52-03: discoverRegexCandidates now returns two lists: regex candidates from non-empty residual families and singleCategorizationSuggestions from identical normalized groups; Check 1 gates regex families with candidateCoveredByExistingPattern and Check 2 gates both lists with any-member manual-history hashes.
-
-Plan 53-01: applyNewPatternToPlatformExpenses is a new sibling function using platform-scoped Set B DAL; PatternApplyResult exported from service layer; legacy applyNewPatternToExpenses unchanged for createPatternAction; getPlatformIdForUserFile resolves file ownership with platform join.
-
-Plan 53-02: ActionState extended with optional applyResult?: PatternApplyResult | null; promoteSuggestionAction resolves platformId server-side from fileId (T-53-04/05), calls applyNewPatternToPlatformExpenses, returns structured counts; non-fatal apply failure returns zero counts; APPLY-02 scope locked to platform uncategorized history.
-
-Plan 53-03: fileId/platformId threaded from RSC page → SuggestionSection → SuggestionCard → SuggestionPromoteForm; hidden fileId input in form (T-53-08); SuggestionCard renders Italian count copy (categorizzate / ancora senza match) from applyResult after promote; card persists with opacity-50 (not removed); notFound when platformId null; initialApplyResult test-only prop for SSR snapshot testing.
-
-Plan 54-01: suggestions page migrated to discoverRegexCandidates (D-04) — platform-scoped, consistent with apply path; notFound() guards preserved; detectPatternSuggestions removal deferred to Phase 55.
-
-Plan 54-02: post-commit discovery synchronous (D-02) — non-fatal try/catch, logs post_import_discovery_failed on error; null platformId post-commit → skip discovery, discoveryCount 0 (T-54-04 mitigation); no auto-redirect to suggestions page (D-05) — CTA only; onboarding returnTo path preserved unchanged.
-
-Plan 54-03: recheckRegexAction is a thin, ownership-guarded server action over discoverRegexCandidates — no second detector path (TRIG-02 SC-3 satisfied); userId always from verifySession (T-54-09); platformId always from getPlatformIdForUserFile (T-54-08 IDOR guard); zero candidates → toast no navigation (D-06); total > 0 → router.push to /import/[fileId]/suggestions (D-03).
-
-Design contract is LOCKED. Do not re-open or re-derive the data model:
-
-- ADR 0012: direction derived from nature; 4th direction `allocation`; `category.type` removed
-- CONTEXT.md: canonical nature/direction vocabulary + categorization rules
-- `.planning/nature-remapping-WORKING.md`: 23 categories / ~65 subcats — final remap confirmed 2026-06-09
-
-v2.0 closed (Phases 46–50, shipped 2026-06-14): nature/direction lookup tables, schema migration 0018, data recategorization, 4-direction dashboard, explicit transaction pairing (`transaction_pair`, migration 0020). Full decision log archived with the v2.0 milestone.
-
-Codebase facts relevant to v2.1 (verified, do not re-research):
-
-- `lib/services/import.ts`: `analyzeFile()` runs `detectPatternSuggestions` over ALL normalized rows with `covered:false` hardcoded, BEFORE categorization — discovery currently runs in the wrong place. `importFile()` runs `categorizePipeline` per-expense inside a `db.transaction`. (Phase 51 reorders this.)
-- `lib/utils/pattern-suggestions.ts`: pure `detectPatternSuggestions` / `detectPatternSuggestionsWithMeta` — token-prefix grouping (>=2 tokens, >=2 members), strips numeric tokens, carries grouped `descriptionHashes`, and exposes `candidateCoveredByExistingPattern` for generated-regex coverage checks.
-- `lib/services/categorization.ts`: `categorizePipeline` (Tier1 regex `applyTier1Regex` + Tier2 history), `loadActivePatterns`.
-- `lib/services/pattern-application.ts`: `applyNewPatternToExpenses` already applies a new pattern retroactively to ALL of a user's uncategorized expenses (platform-agnostic) — relevant to APPLY-01/APPLY-02 scope decision (Phase 53).
-- `app/(app)/import/[fileId]/suggestions/page.tsx`: post-import re-run on `getUncategorizedTransactionsByFileId` (Set B for that file), capped at 5, still `covered:false`, no Check 2.
-- Files table: `app/(app)/import/files.table.ts` + `app/(app)/import/FilesToolbar.tsx` — where the on-demand "ricontrolla regex" trigger (TRIG-02) lives (Phase 54).
-- Import summary UI: `ImportPreview`/`AnalyzePage` consume `analyzeFile`'s `sampleRows` + `patternSuggestions` (capped at 5, sampleDescriptions sliced to 3) (Phase 55).
-- Offline tool exists: `scripts/regex-discovery.ts` + `/regex-label` skill (quick-task 260615-dtm). Relationship to in-pipeline discovery is TOOL-01 (deferred — only clarify the boundary).
-- [Phase ?]: Plan 53-01: applyNewPatternToPlatformExpenses is a sibling function using platform-scoped Set B DAL; PatternApplyResult exported from service layer; legacy applyNewPatternToExpenses unchanged for createPatternAction
-- [Phase ?]: Plan 54-01: suggestions page migrated to discoverRegexCandidates (D-04) — platform-scoped, consistent with apply path; notFound() guards preserved
-- [Phase ?]: Plan 54-01: detectPatternSuggestions removal deferred to Phase 55 — analyzeFile still consumes it; no UI/flow may call it from this plan onward
-- [Phase ?]: Plan 54-01: singleCategorizationSuggestions rendered as minimal read-only list (no SuggestionCard) — polished separation is Phase 55 SUMUI-02
-- [Phase ?]: Plan 54-02: importFile runs discoverRegexCandidates post-commit (non-fatal, outside db.transaction); ImportFileResult.discoveryCount = candidates.length + singleCategorizationSuggestions.length; 0 on failure or null platformId
-- [Phase ?]: Plan 54-02: import-result CTA surfaces discoveryCount when > 0 — no auto-redirect (D-05); onboarding returnTo preserved; pre-existing SuggestionSection fileId TS error fixed
-- [Phase ?]: Plan 55-01: detectPatternSuggestions removed from analyzeFile (D-06/D-07/D-09); patternSuggestions removed from ImportAnalysisResult; detectPatternSuggestionsWithMeta preserved; SuggestionSection removed from import-preview analyze step; TypeScript clean, 1094 tests green
+- TR platform (id 8, slug `trade-republic`) con importFormatVersion seeded in `seed-data.ts` — TR pronto per import in produzione dopo `yarn db:seed`
+- `descriptionStripPattern: "quantity:\\s*[\\d.,]+\\s*"` seeded per TR — savings plan rows si aggregano nella stessa Expense
+- Pipeline `parseImportFile` ha il dispatch `.pdf` prima del path CSV — mai toccare l'ordine
+- `PDF_IMPORT_PLATFORM_SLUGS` è il punto unico di verità per aggiungere nuove banche PDF
 
 ### Planning Risk
 
-None open. All v2.1 success criteria are observable; the two DoD test cases (Fineco "Bonifico Andrea Bernardini" → regex; identical "Macellaio" → single categorization) are encoded in Phase 51 and Phase 52 criteria.
+Nessuno aperto. Milestone v2.2 completata e verificata.
 
 ### Blockers/Concerns
 
-None.
+Nessuno.
 
-### Quick Tasks Completed (carried from v1.16 / v2.0)
+### Quick Tasks Completati (carryover da v2.1)
 
 | # | Description | Date | Commit |
 |---|-------------|------|--------|
 | 260609-fru | Dashboard overview prototype fixes | 2026-06-09 | 5ebd690 |
 | 260609-k2d | Transactions nature + in/out/transfer filters; 7 UI fixes | 2026-06-09 | cdc5997 |
 | 260609-lcp | Cascading filters (type→nature, category→subcat); amount sign strip | 2026-06-09 | ffd4fc3 |
-| 260615-dtm | Bank-agnostic regex-discovery tool (uncovered-description clustering → proposed patterns) | 2026-06-15 | d737b8e |
-| 260615-n3t | Onboarding step-4 fix: guarded light theme + catalogued items stay with green check | 2026-06-15 | 1434308 |
-| 260615-oiq | Onboarding private platform creation imports immediately and returns to step 2 | 2026-06-15 | d5b590c |
-| 260616-dlw | Fix transaction description sort (validation + DAL + infinite scroll) | 2026-06-16 | c71d32e |
+| 260615-dtm | Bank-agnostic regex-discovery tool | 2026-06-15 | d737b8e |
+| 260615-n3t | Onboarding step-4 fix | 2026-06-15 | 1434308 |
+| 260615-oiq | Onboarding private platform creation | 2026-06-15 | d5b590c |
+| 260616-dlw | Fix transaction description sort | 2026-06-16 | c71d32e |
 
 ## Deferred Items
 
-Items acknowledged and deferred at milestone close on 2026-06-22:
+Items riconosciuti e posticipati:
 
 | Category | Item | Status |
 |----------|------|--------|
-| verification_gap | 53-VERIFICATION.md | human_needed — 3 browser/visual checks (inline count, cross-platform isolation, notFound behavior) |
-| verification_gap | 55-VERIFICATION.md | human_needed — 2 visual checks (cap 10 rows layout, SUMUI-02/03 visual hierarchy) |
+| verification_gap | 53-VERIFICATION.md | human_needed — 3 browser/visual checks |
+| verification_gap | 55-VERIFICATION.md | human_needed — 2 visual checks |
 | uat_gap | 53-UAT.md | diagnosed — 0 pending scenarios |
-| quick_task | 260615-dtm-reusable-regex-discovery-tool-bank-agnos | unknown — TOOL-01 deferred to next milestone |
-| quick_task | 260615-n3t-fix-recurring-onboarding-catalogazione-s | unknown — to be evaluated in next milestone |
-| v2.1 | TOOL-01 | consolidate in-app + offline discovery — only clarify boundary this milestone |
+| quick_task | 260615-dtm-reusable-regex-discovery-tool | unknown — TOOL-01 deferred |
+| quick_task | 260615-n3t-fix-recurring-onboarding-catalogazione | unknown — to evaluate |
+| v2.1 | TOOL-01 | consolidate in-app + offline discovery — parked |
 | v2.1 | GLOBAL-01 | file-independent suggestions — parked |
 | v2.1 | DISM-01 | persistent dismissal of noisy suggestions — parked |
+| v2.2 | TR categorization | regex-discovery + seed-patterns post-import — deferred |
 | operator | R038/R039/R041 | live Vercel/Supabase/R2 deploy operator-pending |
 | backlog | R029 | partial categorization revalidation coverage |
 
 ## Session Continuity
 
-**Stopped at:** Completed 55-01: removed legacy detectPatternSuggestions from import pipeline
+**Resume file:** None
 
-Last session: 2026-06-21T12:49:24.183Z
-Handoff synced: 2026-06-16 — Phase 53 complete: all 3 plans done. Plan 03 wired inline apply feedback UI (commits 4406115, ce3190b).
-Resume file: .planning/phases/55-import-summary-ux/55-02-PLAN.md
+**Stopped at:** Phase 57 verified — milestone v2.2 complete
 
-**Next:** Phase 54 — reusable-trigger (TRIG-01, TRIG-02).
+Last session: 2026-06-26T14:50:00Z
+Resume: `/gsd-new-milestone` per avviare la prossima milestone, oppure `/gsd-progress` per verificare lo stato
+
+**Next:** Milestone v2.2 è shipped. Prossima milestone da definire.
 
 ## Operator Next Steps
 
-- Start Phase 53 (`$gsd-discuss-phase 53` or `$gsd-plan-phase 53`) to resolve retroactive application scope and implementation details.
+- Archivio milestone v2.2: `/gsd-complete-milestone`
+- Deploy su Vercel: applicare migration 0022 + `yarn db:seed` per attivare la piattaforma Trade Republic in produzione
+- Prossima milestone: `/gsd-new-milestone`
 
 ## Performance Metrics
 
@@ -177,3 +154,11 @@ Resume file: .planning/phases/55-import-summary-ux/55-02-PLAN.md
 | Phase 55 P01 | 7min | 2 tasks | 10 files |
 | Phase 55 P02 | 3min | 2 tasks | 4 files |
 | Phase 55 P03 | 2min | 3 tasks | 3 files |
+| Phase 56 P01 | 10min | 1 tasks | 1 files |
+| Phase 56 P02 | 8min | 2 tasks | 4 files |
+| Phase 56 P03 | 4min | 3 tasks | 6 files |
+| Phase Phase 56 PP56-04 | 8min | 3 tasks | 4 files |
+| Phase 56 P05 | 3min | 4 tasks | 3 files |
+| Phase 57 P02 | 2min | 2 tasks | 3 files |
+| Phase 57 P03 | 10min | 2 tasks | 2 files |
+| Phase 57 P05 | 3min | 1 tasks | 6 files |

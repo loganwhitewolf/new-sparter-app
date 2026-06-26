@@ -888,6 +888,7 @@ export const subCategories = [
 
 // ---------------------------------------------------------------------------
 // PLATFORMS
+// platform holds identity only (ADR 0013). Parsing contract lives on importFormatVersions.
 // ---------------------------------------------------------------------------
 
 export type AmountType = "single" | "separate";
@@ -900,6 +901,62 @@ export const platforms = [
     // ISO 3166-1 alpha-2 placeholder for the catch-all import format.
     // The platform.country column is varchar(2), so values must remain two characters.
     country: "ZZ",
+  },
+  {
+    id: 2,
+    name: "Crypto.com",
+    slug: "crypto-com",
+    country: "IT",
+  },
+  {
+    id: 3,
+    name: "Satispay",
+    slug: "satispay",
+    country: "IT",
+  },
+  {
+    id: 4,
+    name: "Intesa SP",
+    slug: "intesa-sp",
+    country: "IT",
+  },
+  {
+    id: 5,
+    name: "Intesa SP Carta Credito",
+    slug: "intesa-sp-carta-credito",
+    country: "IT",
+  },
+  {
+    id: 6,
+    name: "Revolut",
+    slug: "revolut",
+    country: "IT",
+  },
+  {
+    id: 7,
+    name: "Fineco",
+    slug: "fineco",
+    country: "IT",
+  },
+  {
+    id: 8,
+    name: "Trade Republic",
+    slug: "trade-republic",
+    country: "IT",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// IMPORT FORMAT VERSIONS
+// One version-1 entry per platform, carrying the full parsing contract (ADR 0013).
+// descriptionStripPattern: Fineco only — strips boilerplate from card-transaction descriptions.
+// All other values identical to the previous platform columns to preserve transactionHash parity.
+// ---------------------------------------------------------------------------
+
+export const importFormatVersions = [
+  {
+    platformId: 1,
+    version: 1,
     delimiter: ",",
     descriptionColumn: "description",
     amountType: "single" as AmountType,
@@ -911,12 +968,12 @@ export const platforms = [
     dateReplace: false,
     decimalReplace: false,
     multiplyBy: 1,
+    descriptionStripPattern: null,
+    notes: "Initial General CSV import contract",
   },
   {
-    id: 2,
-    name: "Crypto.com",
-    slug: "crypto-com",
-    country: "IT",
+    platformId: 2,
+    version: 1,
     delimiter: ",",
     descriptionColumn: "Transaction Description",
     amountType: "single" as AmountType,
@@ -928,12 +985,12 @@ export const platforms = [
     dateReplace: false,
     decimalReplace: false,
     multiplyBy: 1,
+    descriptionStripPattern: null,
+    notes: "Initial Crypto.com CSV import contract",
   },
   {
-    id: 3,
-    name: "Satispay",
-    slug: "satispay",
-    country: "IT",
+    platformId: 3,
+    version: 1,
     delimiter: ",",
     descriptionColumn: "Nome",
     amountType: "single" as AmountType,
@@ -945,12 +1002,12 @@ export const platforms = [
     dateReplace: true,
     decimalReplace: false,
     multiplyBy: 1,
+    descriptionStripPattern: null,
+    notes: "Initial Satispay CSV import contract",
   },
   {
-    id: 4,
-    name: "Intesa SP",
-    slug: "intesa-sp",
-    country: "IT",
+    platformId: 4,
+    version: 1,
     delimiter: ",",
     descriptionColumn: "Operazione",
     amountType: "single" as AmountType,
@@ -962,12 +1019,12 @@ export const platforms = [
     dateReplace: true,
     decimalReplace: true,
     multiplyBy: 1,
+    descriptionStripPattern: null,
+    notes: "Initial Intesa SP CSV import contract",
   },
   {
-    id: 5,
-    name: "Intesa SP Carta Credito",
-    slug: "intesa-sp-carta-credito",
-    country: "IT",
+    platformId: 5,
+    version: 1,
     delimiter: ",",
     descriptionColumn: "Descrizione",
     amountType: "single" as AmountType,
@@ -979,12 +1036,12 @@ export const platforms = [
     dateReplace: true,
     decimalReplace: true,
     multiplyBy: -1,
+    descriptionStripPattern: null,
+    notes: "Initial Intesa SP Carta Credito CSV import contract",
   },
   {
-    id: 6,
-    name: "Revolut",
-    slug: "revolut",
-    country: "IT",
+    platformId: 6,
+    version: 1,
     delimiter: ",",
     descriptionColumn: "Description",
     amountType: "single" as AmountType,
@@ -996,12 +1053,12 @@ export const platforms = [
     dateReplace: false,
     decimalReplace: false,
     multiplyBy: 1,
+    descriptionStripPattern: null,
+    notes: "Initial Revolut CSV import contract",
   },
   {
-    id: 7,
-    name: "Fineco",
-    slug: "fineco",
-    country: "IT",
+    platformId: 7,
+    version: 1,
     delimiter: ",",
     descriptionColumn: "Descrizione_Completa",
     amountType: "separate" as AmountType,
@@ -1013,6 +1070,34 @@ export const platforms = [
     dateReplace: true,
     decimalReplace: false,
     multiplyBy: 1,
+    // Fineco boilerplate strip — mirrors the seed-extras step (set-fineco-description-strip-pattern)
+    // applied to already-deployed rows. New installs get this value from seed.ts directly.
+    descriptionStripPattern: "\\s+Carta N\\..*$",
+    notes: "Initial Fineco CSV import contract",
+  },
+  {
+    // Trade Republic PDF import contract (ADR 0014, D-08).
+    // Synthetic headers emitted by the Wave 2 TR PDF parser — not present as text in the PDF.
+    // headerSignatureFor: [data, descrizione, null, importo_entrata, importo_uscita].filter(Boolean).join(",")
+    //   → "data,descrizione,importo_entrata,importo_uscita"
+    // delimiter "," is the join character for headerSignatureFor (Pitfall 2: NOT NULL constraint).
+    platformId: 8,
+    version: 1,
+    delimiter: ",",
+    descriptionColumn: "descrizione",
+    amountType: "separate" as AmountType,
+    amountColumn: null,
+    positiveAmountColumn: "importo_entrata",
+    negativeAmountColumn: "importo_uscita",
+    timestampColumn: "data",
+    dateFormat: null,
+    dateReplace: false,
+    decimalReplace: false,
+    multiplyBy: 1,
+    // Strip "quantity: 0.000502" from savings-plan descriptions so recurring rows
+    // aggregate into a single Expense (D-06, PDF-05). Pattern applied case-insensitively.
+    descriptionStripPattern: "quantity:\\s*[\\d.,]+\\s*",
+    notes: "Initial Trade Republic PDF import contract",
   },
 ];
 

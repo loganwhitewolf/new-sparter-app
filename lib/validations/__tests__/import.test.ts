@@ -2,10 +2,80 @@ import { describe, expect, it } from 'vitest'
 
 import {
   CreatePrivateImportFormatSchema,
+  InitiateUploadSchema,
+  MAX_IMPORT_FILE_SIZE_BYTES,
   UpdateImportDisplayNameSchema,
   getPrivateImportFormatColumnValidationError,
   parseImportFilters,
 } from '../import'
+
+describe('InitiateUploadSchema — PDF support', () => {
+  it('accepts a PDF with application/pdf content type', () => {
+    const result = InitiateUploadSchema.safeParse({
+      name: 'statement.pdf',
+      size: 1_000_000,
+      type: 'application/pdf',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts a PDF with application/octet-stream as a defensive fallback', () => {
+    const result = InitiateUploadSchema.safeParse({
+      name: 'statement.pdf',
+      size: 1_000_000,
+      type: 'application/octet-stream',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects a PDF over the 5 MB size cap', () => {
+    const result = InitiateUploadSchema.safeParse({
+      name: 'statement.pdf',
+      size: MAX_IMPORT_FILE_SIZE_BYTES + 1,
+      type: 'application/pdf',
+    })
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0].message).toMatch(/maximum import size/i)
+  })
+
+  it('rejects a file with .txt extension even if content type is application/pdf', () => {
+    const result = InitiateUploadSchema.safeParse({
+      name: 'statement.txt',
+      size: 1_000_000,
+      type: 'application/pdf',
+    })
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0].message).toMatch(/CSV.*XLSX.*PDF|PDF.*CSV.*XLSX/i)
+  })
+
+  it('still accepts an existing CSV file (regression)', () => {
+    const result = InitiateUploadSchema.safeParse({
+      name: 'import.csv',
+      size: 50_000,
+      type: 'text/csv',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('still accepts an existing XLSX file (regression)', () => {
+    const result = InitiateUploadSchema.safeParse({
+      name: 'import.xlsx',
+      size: 50_000,
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('still rejects an XLSX file over the 5 MB cap (regression)', () => {
+    const result = InitiateUploadSchema.safeParse({
+      name: 'big.xlsx',
+      size: MAX_IMPORT_FILE_SIZE_BYTES + 1,
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0].message).toMatch(/maximum import size/i)
+  })
+})
 
 describe('parseImportFilters', () => {
   it('returns an empty filter object for empty Next searchParams', () => {

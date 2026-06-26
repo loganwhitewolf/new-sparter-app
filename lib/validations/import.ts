@@ -9,9 +9,12 @@ export const IMPORT_CONTENT_TYPES = [
   'text/plain',
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/pdf',
+  // Defensive fallback: some browsers emit octet-stream for PDF files (Assumption A5)
+  'application/octet-stream',
 ] as const
 
-const SUPPORTED_EXTENSIONS = ['.csv', '.xlsx'] as const
+const SUPPORTED_EXTENSIONS = ['.csv', '.xlsx', '.pdf'] as const
 
 function extensionOf(name: string) {
   return name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0] ?? ''
@@ -28,7 +31,7 @@ export const InitiateUploadSchema = z.object({
     .min(1, { error: 'File name is required.' })
     .max(255, { error: 'File name is too long.' })
     .refine((name) => SUPPORTED_EXTENSIONS.includes(extensionOf(name) as (typeof SUPPORTED_EXTENSIONS)[number]), {
-      error: 'Only CSV and XLSX imports are supported.',
+      error: 'Only CSV, XLSX, and PDF imports are supported.',
     }),
   size: z
     .number({ error: 'File size is required.' })
