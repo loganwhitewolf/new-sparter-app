@@ -396,11 +396,28 @@ export async function completeOnboardingPrivateImportAction(
   }
 
   if (analysis.errors.length > 0) {
-    return {
-      error:
-        analysis.errors[0] ??
-        "Impossibile analizzare il file. Riprova tra qualche secondo.",
-    };
+    let errorMessage =
+      analysis.errors[0] ??
+      "Impossibile analizzare il file. Riprova tra qualche secondo.";
+
+    // Apply the same PDF enrichment as analyzeImportAction so onboarding users
+    // also see the supported-platform list, not the bare constant string.
+    if (analysis.errors[0] === UNRECOGNIZED_PDF_FORMAT) {
+      let platformNames: string[] = [];
+      try {
+        platformNames = await listPdfImportPlatformNames();
+      } catch {
+        // Non-fatal: fall through to the no-platforms fallback message
+      }
+      if (platformNames.length > 0) {
+        errorMessage = `Il file PDF non è stato riconosciuto. Le piattaforme supportate per l'import PDF sono: ${platformNames.join(", ")}.`;
+      } else {
+        errorMessage =
+          "Il file PDF non è stato riconosciuto come formato supportato.";
+      }
+    }
+
+    return { error: errorMessage };
   }
 
   try {
