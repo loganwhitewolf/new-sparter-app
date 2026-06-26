@@ -1,5 +1,21 @@
 # Milestones
 
+## v2.2 PDF Import (Shipped: 2026-06-26)
+
+**Phases completed:** 2 phases (56–57), 10 plans
+**Git range:** 5c9e8ec → dc1fd62 · 52 files · +11129 / -235 lines · 2 days
+**Closeout type:** override_closeout (no formal audit — both phases verified, all 10 requirements satisfied)
+
+**Key accomplishments:**
+
+- Parsing contract (`delimiter`, `*Column`, `dateFormat`, `dateReplace`, `decimalReplace`, `multiplyBy`, `descriptionStripPattern`, `amountType`) moved from `platform` to `import_format_version` via two-step migration (ADD nullable → data copy → DROP); behavior proven identical by regression test over 7 real CSV fixtures (Phase 56)
+- `platform` reduced to pure identity (`name`, `slug`, `country`, `visibility`, `ownerUserId`); multiple versioned format contracts per bank are now expressible with a `unique(platformId, version)` constraint (Phase 56)
+- Trade Republic PDF parser built on `unpdf` positional X-coordinate column detection + Decimal.js balance chain validation; only "TRANSAZIONI SUL CONTO" section extracted, summaries and mirror sections discarded (Phase 57)
+- PDF rows normalized to `ParsedImportFile` with synthetic headers — detector, `normalizeTransactionRow`, dedup, and preview pass unchanged; `descriptionStripPattern` strips `quantity:` serial token so savings plan rows aggregate into a single Expense (Phase 57)
+- User-friendly Italian "PDF non riconosciuto" error UX with supported-platform list; `PDF_IMPORT_PLATFORM_SLUGS` allowlist co-located with `.pdf` dispatch as the single source of truth for adding future banks (Phase 57)
+
+---
+
 ## v2.1 Regex Discovery & Transaction Unification (Shipped: 2026-06-22)
 
 **Phases completed:** 5 phases (51–55), 15 plans

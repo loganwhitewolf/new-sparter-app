@@ -4,9 +4,9 @@ milestone: v2.2
 milestone_name: PDF Import
 current_phase: 57
 current_phase_name: pdf-import-trade-republic
-status: "Phase 57 shipped — PR #24"
-stopped_at: Phase 57 verified and complete — milestone v2.2 shipped
-last_updated: "2026-06-26T12:57:26.033Z"
+status: "v2.2 archived — milestone complete"
+stopped_at: Milestone v2.2 archived 2026-06-26
+last_updated: "2026-06-26T16:00:00.000Z"
 last_activity: 2026-06-26
 progress:
   total_phases: 2
@@ -23,7 +23,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-25)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Milestone v2.2 SHIPPED — PDF Import (Phases 56–57 complete)
+**Current focus:** Milestone v2.2 archived — next milestone da definire con `/gsd-new-milestone`
 
 ## Current Position
 
@@ -125,8 +125,7 @@ Resume: `/gsd-new-milestone` per avviare la prossima milestone, oppure `/gsd-pro
 
 ## Operator Next Steps
 
-- Archivio milestone v2.2: `/gsd-complete-milestone`
-- Deploy su Vercel: applicare migration 0022 + `yarn db:seed` per attivare la piattaforma Trade Republic in produzione
+- Deploy su Vercel: `yarn db:migrate → yarn db:seed → yarn db:seed-extras → yarn db:seed-patterns` (migration 0022 ha backfill critico — fare prima del merge PR #24)
 - Prossima milestone: `/gsd-new-milestone`
 
 ## Performance Metrics
