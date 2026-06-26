@@ -210,7 +210,11 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
   4. Le righe estratte dal PDF passano invariate per detector, `normalizeTransactionRow`, dedup per hash e preview — le stesse schermate e azioni disponibili per CSV/XLSX funzionano anche per il PDF Trade Republic
   5. Le descrizioni con parte seriale variabile (es. `quantity: <num>` nei savings plan) aggregano nella stessa Expense dopo il `descriptionStripPattern` minimale configurato per Trade Republic
 
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 57-01-PLAN.md — Wave 0: install unpdf, obtain TR PDF fixture, calibrate X-coordinate boundaries, seed TR platform + import_format_version (synthetic headers)
+- [ ] 57-02-PLAN.md — Wave 1: upload validation — accept .pdf / application/pdf via presigned PUT, keep 5 MB cap
+- [ ] 57-03-PLAN.md — Wave 1: TR PDF parser core — marker recognition, section isolation, positional sign, Decimal.js balance chain, page ceiling
+- [ ] 57-04-PLAN.md — Wave 2: pipeline integration — .pdf dispatch in parseImportFile, end-to-end detector/normalize verification
 **UI hint**: yes
 
 ## Progress
