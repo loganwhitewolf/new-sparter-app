@@ -11,7 +11,7 @@ import {
   IMPORT_CONTENT_TYPES,
 } from '@/lib/validations/import'
 
-const ACCEPTED_EXTENSIONS = ['.csv', '.xlsx']
+const ACCEPTED_EXTENSIONS = ['.csv', '.xlsx', '.pdf']
 const ACCEPTED_TYPES = IMPORT_CONTENT_TYPES as readonly string[]
 
 type UploadStage = 'idle' | 'hashing' | 'initiating' | 'uploading' | 'confirming' | 'done'
@@ -30,7 +30,7 @@ function validateFile(file: File): string | null {
     return `Formato non supportato. Usa ${ACCEPTED_EXTENSIONS.join(' o ')}.`
   }
   if (!ACCEPTED_TYPES.includes(file.type) && file.type !== '') {
-    return 'Tipo di file non supportato. Usa un file CSV o XLSX.'
+    return 'Tipo di file non supportato. Usa un file CSV, XLSX o PDF.'
   }
   if (file.size === 0) {
     return 'Il file è vuoto.'
@@ -112,7 +112,9 @@ export function ImportUploader() {
         body: JSON.stringify({
           name: selectedFile.name,
           size: selectedFile.size,
-          type: selectedFile.type || 'text/csv',
+          // When the browser reports an empty type, derive a fallback from the extension
+          // so the server-side schema can still accept/reject the correct MIME bucket.
+          type: selectedFile.type || (selectedFile.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'text/csv'),
           contentHash,
         }),
       })
