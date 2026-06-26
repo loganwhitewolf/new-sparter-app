@@ -4,11 +4,10 @@ milestone: v2.2
 milestone_name: PDF Import
 current_phase: 57
 current_phase_name: pdf-import-trade-republic
-status: complete
+status: "Phase 57 shipped — PR #24"
 stopped_at: Phase 57 verified and complete — milestone v2.2 shipped
-last_updated: "2026-06-26T14:50:00Z"
+last_updated: "2026-06-26T12:57:26.033Z"
 last_activity: 2026-06-26
-last_activity_desc: Phase 57 verification complete — all 5 success criteria verified, 59/59 tests pass, UAT 5/5 pass
 progress:
   total_phases: 2
   completed_phases: 2
@@ -30,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-06-25)
 
 Phase: 57 (pdf-import-trade-republic) — COMPLETE
 Plan: 5 of 5
-Status: Verified and shipped
-Last activity: 2026-06-26 — Phase 57 verification complete
+Status: Phase 57 shipped — PR #24
+Last activity: 2026-06-26
 
 Progress bar: `████████████████████` 100% (2/2 phases)
 
