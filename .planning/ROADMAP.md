@@ -210,13 +210,13 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
   4. Le righe estratte dal PDF passano invariate per detector, `normalizeTransactionRow`, dedup per hash e preview — le stesse schermate e azioni disponibili per CSV/XLSX funzionano anche per il PDF Trade Republic
   5. Le descrizioni con parte seriale variabile (es. `quantity: <num>` nei savings plan) aggregano nella stessa Expense dopo il `descriptionStripPattern` minimale configurato per Trade Republic
 
-**Plans**: 4/5 plans complete (1 gap-closure plan pending)
+**Plans**: 5/5 plans complete
 
 - [x] 57-01-PLAN.md — Wave 0: install unpdf, obtain TR PDF fixture, calibrate X-coordinate boundaries, seed TR platform + import_format_version (synthetic headers)
 - [x] 57-02-PLAN.md — Wave 1: upload validation — accept .pdf / application/pdf via presigned PUT, keep 5 MB cap
 - [x] 57-03-PLAN.md — Wave 1: TR PDF parser core — marker recognition, section isolation, positional sign, Decimal.js balance chain, page ceiling
 - [x] 57-04-PLAN.md — Wave 2: pipeline integration — .pdf dispatch in parseImportFile, end-to-end detector/normalize verification
-- [ ] 57-05-PLAN.md — Wave 1 (gap closure, UAT Test 5): user-friendly Italian "PDF non riconosciuto" message with supported-platform list; no internal markers leaked
+- [x] 57-05-PLAN.md — Wave 1 (gap closure, UAT Test 5): user-friendly Italian "PDF non riconosciuto" message with supported-platform list; no internal markers leaked
 
 **UI hint**: yes
 
@@ -242,7 +242,7 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 | 54. reusable-trigger | v2.1 | 3/3 | Complete | 2026-06-21 |
 | 55. import-summary-ux | v2.1 | 3/3 | Complete | 2026-06-22 |
 | 56. import-format-refactor | v2.2 | 5/5 | Complete    | 2026-06-25 |
-| 57. pdf-import-trade-republic | v2.2 | 4/4 | Complete   | 2026-06-26 |
+| 57. pdf-import-trade-republic | v2.2 | 5/5 | Complete   | 2026-06-26 |
 
 **Total shipped: 55 phases · 204 plans complete**
 **Active milestone: v2.2 — 2 phases planned, 0 complete**
