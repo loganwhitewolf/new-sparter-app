@@ -2,6 +2,7 @@ import { parse } from 'csv-parse/sync'
 import { detect } from 'chardet'
 import iconv from 'iconv-lite'
 import { readSheet } from 'read-excel-file/node'
+import { parseTradeRepublicPdf } from './trade-republic-pdf-parser'
 
 export type ParsedImportRow = Record<string, string>
 
@@ -193,6 +194,15 @@ export async function parseImportFile(bytes: Buffer, inputOptions: ParseImportFi
         ...parsed,
         errors: parsed.headers.length === 0 ? ['Spreadsheet has no header row.'] : [],
       }
+    }
+
+    // .pdf must be dispatched before the CSV decode path — a PDF must never reach
+    // chooseDelimiter/parseCsv which expects text and would produce garbage rows (T-57-04-01).
+    if (lowerName.endsWith('.pdf')) {
+      return parseTradeRepublicPdf(bytes, {
+        fileName: options.fileName,
+        sampleSize: options.sampleSize,
+      })
     }
 
     const decoded = decodeBuffer(bytes, options.warningLimit)
