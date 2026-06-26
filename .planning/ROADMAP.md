@@ -14,7 +14,7 @@
 - ✅ **v1.16: Dashboard Overview Redesign** — Phases 42–45 (shipped 2026-06-09)
 - ✅ **v2.0: Nature/Direction Model Realignment** — Phases 46–50 (shipped 2026-06-14)
 - ✅ **v2.1: Regex Discovery & Transaction Unification** — Phases 51–55 (shipped 2026-06-22)
-- 🔄 **v2.2: PDF Import** — Phases 56–57 (in progress)
+- ✅ **v2.2: PDF Import** — Phases 56–57 (shipped 2026-06-26)
 
 ## Phases
 
@@ -157,7 +157,7 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 
 </details>
 
-### v2.2: PDF Import (Phases 56–57)
+### v2.2: PDF Import (Phases 56–57) — SHIPPED 2026-06-26
 
 - [x] **Phase 56: import-format-refactor** — Sposta il contratto di parsing da `platform` a `import_format_version`; `platform` diventa pura identità; sblocca il versioning reale dei formati per Platform (completed 2026-06-25)
 - [x] **Phase 57: pdf-import-trade-republic** — Import estratti PDF Trade Republic tramite template per-banca normalizzato a `ParsedImportFile`; segno importi via coordinate X (`unpdf`); solo sezione "TRANSAZIONI SUL CONTO" (completed 2026-06-26)
@@ -241,8 +241,8 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 | 53. retroactive-application | v2.1 | 3/3 | Complete | 2026-06-16 |
 | 54. reusable-trigger | v2.1 | 3/3 | Complete | 2026-06-21 |
 | 55. import-summary-ux | v2.1 | 3/3 | Complete | 2026-06-22 |
-| 56. import-format-refactor | v2.2 | 5/5 | Complete    | 2026-06-25 |
-| 57. pdf-import-trade-republic | v2.2 | 5/5 | Complete   | 2026-06-26 |
+| 56. import-format-refactor | v2.2 | 5/5 | Complete | 2026-06-25 |
+| 57. pdf-import-trade-republic | v2.2 | 5/5 | Complete | 2026-06-26 |
 
-**Total shipped: 55 phases · 204 plans complete**
-**Active milestone: v2.2 — 2 phases planned, 0 complete**
+**Total shipped: 57 phases · 214 plans complete**
+**Active milestone: v2.2 — 2 phases planned, 2 complete — SHIPPED 2026-06-26**

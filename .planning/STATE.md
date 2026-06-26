@@ -4,11 +4,11 @@ milestone: v2.2
 milestone_name: PDF Import
 current_phase: 57
 current_phase_name: pdf-import-trade-republic
-status: executing
-stopped_at: Completed 56-01-PLAN.md
-last_updated: "2026-06-26T12:34:56.604Z"
+status: complete
+stopped_at: Phase 57 verified and complete — milestone v2.2 shipped
+last_updated: "2026-06-26T14:50:00Z"
 last_activity: 2026-06-26
-last_activity_desc: Phase 57 execution started
+last_activity_desc: Phase 57 verification complete — all 5 success criteria verified, 59/59 tests pass, UAT 5/5 pass
 progress:
   total_phases: 2
   completed_phases: 2
@@ -24,29 +24,25 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-25)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 57 — pdf-import-trade-republic
+**Current focus:** Milestone v2.2 SHIPPED — PDF Import (Phases 56–57 complete)
 
 ## Current Position
 
-Phase: 57 (pdf-import-trade-republic) — EXECUTING
-Plan: 2 of 5
-Status: Ready to execute
-Last activity: 2026-06-26 — Phase 57 execution started
+Phase: 57 (pdf-import-trade-republic) — COMPLETE
+Plan: 5 of 5
+Status: Verified and shipped
+Last activity: 2026-06-26 — Phase 57 verification complete
 
-Progress bar: `░░░░░░░░░░░░░░░░░░░░` 0% (0/2 phases)
+Progress bar: `████████████████████` 100% (2/2 phases)
 
 ## Roadmap (v2.2 — Phases 56–57)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 56 | import-format-refactor | IFMT-01, IFMT-02, IFMT-03, IFMT-04, IFMT-05 | Not started |
-| 57 | pdf-import-trade-republic | PDF-01, PDF-02, PDF-03, PDF-04, PDF-05 | Not started |
+| 56 | import-format-refactor | IFMT-01, IFMT-02, IFMT-03, IFMT-04, IFMT-05 | Complete (2026-06-25) |
+| 57 | pdf-import-trade-republic | PDF-01, PDF-02, PDF-03, PDF-04, PDF-05 | Complete (2026-06-26) |
 
-**Design contract:** LOCKED (ADR 0013/0014, CONTEXT.md, 2026-06-25 grill). No discovery to redo.
-
-**Phase 56 invariant:** i 6 import CSV/XLSX esistenti producono `transactionHash` identici prima e dopo il refactor.
-
-**Phase 57 invariant:** il parsing PDF non bypassa il pipeline esistente — le righe estratte passano per detector/normalize/dedup/preview invariati.
+**Milestone v2.2 SHIPPED 2026-06-26.**
 
 ## Accumulated Context
 
@@ -62,28 +58,26 @@ Design contract is LOCKED. Do not re-derive the approach:
 - Categorizzazione automatica delle descrizioni TR è fuori scope — follow-up via `regex-discovery` + `seed-patterns`.
 - OCR/scanned PDF fuori scope.
 - Parser PDF generico fuori scope.
-- [Phase ?]: Regression test written BEFORE any column move — pins transactionHash of all 7 CSV fixtures as static hex literals (IFMT-02)
-- [Phase ?]: Schema transition migration: 12 contract columns added nullable to importFormatVersion; platform columns untouched until Plan 03 data copy
-- [Phase ?]: Migration 0021_glorious_callisto.sql produced via drizzle-kit generate — ADD COLUMN only on import_format_version, no DROP, applied at operator deploy time
-- [Phase ?]: platform Drizzle import removed from seed-extras.ts — no other step references the table object after Step 2 became a no-op (IFMT-05)
-- [Phase ?]: application/octet-stream added as defensive PDF MIME fallback (browser Assumption A5); extension check still constrains file kind
-- [Phase ?]: initiate route required no code change — PDF support flows through InitiateUploadSchema transparently
-- [Phase ?]: 5 MB size cap preserved unchanged per D-05/T-57-02-01
-- [Phase ?]: costante singola nel parser
-- [Phase ?]: allowlist approach evita scope creep
+- [Phase 56]: Regression test written BEFORE any column move — pins transactionHash of all 7 CSV fixtures as static hex literals (IFMT-02)
+- [Phase 56]: Schema transition migration: 12 contract columns added nullable to importFormatVersion; platform columns untouched until Plan 03 data copy
+- [Phase 56]: Migration 0021_glorious_callisto.sql produced via drizzle-kit generate — ADD COLUMN only on import_format_version, no DROP, applied at operator deploy time
+- [Phase 56]: platform Drizzle import removed from seed-extras.ts — no other step references the table object after Step 2 became a no-op (IFMT-05)
+- [Phase 57]: application/octet-stream added as defensive PDF MIME fallback (browser Assumption A5); extension check still constrains file kind
+- [Phase 57]: initiate route required no code change — PDF support flows through InitiateUploadSchema transparently
+- [Phase 57]: 5 MB size cap preserved unchanged per D-05/T-57-02-01
+- [Phase 57]: UNRECOGNIZED_PDF_FORMAT — costante singola nel parser (italiano generico, nessun marker interno esposto)
+- [Phase 57]: PDF_IMPORT_PLATFORM_SLUGS allowlist co-locata con il dispatch .pdf in import-parsers.ts (no fileType column su import_format_version — allowlist approach evita scope creep)
 
-### Codebase facts rilevanti per v2.2 (da verificare prima dell'implementazione)
+### Codebase facts rilevanti per la prossima milestone
 
-- `platform` contiene attualmente: `delimiter`, `dateFormat`, `dateReplace`, `decimalReplace`, `multiplyBy`, `amountColumn`, `descriptionColumn`, `dateColumn`, `descriptionStripPattern`, `amountType` — tutti da spostare su `import_format_version`.
-- `import_format_version` contiene attualmente: `headerSignature`, `notes`, `version`, `platformId` — riceverà il contratto di parsing da `platform`.
-- Detector: `lib/services/import.ts` — `scoreCandidate` legge i campi di parsing da `platform`; va re-pointed a `import_format_version`.
-- `normalizeTransactionRow` / `ImportPlatformConfig`: tipi e logica di normalizzazione usano i campi di parsing da `platform`; va aggiornato.
-- `seed-data.ts` / `seed.ts`: colonne di parsing presenti sulle righe Platform; da spostare sulle righe `import_format_version` corrispondenti.
-- `seed-extras.ts`: aggiungere uno step additivo per migrare le righe esistenti in produzione.
+- TR platform (id 8, slug `trade-republic`) con importFormatVersion seeded in `seed-data.ts` — TR pronto per import in produzione dopo `yarn db:seed`
+- `descriptionStripPattern: "quantity:\\s*[\\d.,]+\\s*"` seeded per TR — savings plan rows si aggregano nella stessa Expense
+- Pipeline `parseImportFile` ha il dispatch `.pdf` prima del path CSV — mai toccare l'ordine
+- `PDF_IMPORT_PLATFORM_SLUGS` è il punto unico di verità per aggiungere nuove banche PDF
 
 ### Planning Risk
 
-Nessuno aperto. Il design è LOCKED e documentato in ADR 0013/0014. Il gating via regression test sui fixture reali (IFMT-02) è il guard principale del Phase 56.
+Nessuno aperto. Milestone v2.2 completata e verificata.
 
 ### Blockers/Concerns
 
@@ -103,7 +97,7 @@ Nessuno.
 
 ## Deferred Items
 
-Items riconosciuti e posticipati al termine di v2.1 (2026-06-22):
+Items riconosciuti e posticipati:
 
 | Category | Item | Status |
 |----------|------|--------|
@@ -123,17 +117,18 @@ Items riconosciuti e posticipati al termine di v2.1 (2026-06-22):
 
 **Resume file:** None
 
-**Stopped at:** Completed 56-01-PLAN.md
+**Stopped at:** Phase 57 verified — milestone v2.2 complete
 
-Last session: 2026-06-26T12:34:47.666Z
-Resume: `/gsd-plan-phase 56` per pianificare il refactor import-format
+Last session: 2026-06-26T14:50:00Z
+Resume: `/gsd-new-milestone` per avviare la prossima milestone, oppure `/gsd-progress` per verificare lo stato
 
-**Next:** Phase 56 — import-format-refactor (IFMT-01..05)
+**Next:** Milestone v2.2 è shipped. Prossima milestone da definire.
 
 ## Operator Next Steps
 
-- Pianificare Phase 56: `/gsd-plan-phase 56` (o `/gsd-discuss-phase 56` se serve approfondimento)
-- Poi Phase 57: `/gsd-plan-phase 57` (dipende da Phase 56 completata)
+- Archivio milestone v2.2: `/gsd-complete-milestone`
+- Deploy su Vercel: applicare migration 0022 + `yarn db:seed` per attivare la piattaforma Trade Republic in produzione
+- Prossima milestone: `/gsd-new-milestone`
 
 ## Performance Metrics
 
