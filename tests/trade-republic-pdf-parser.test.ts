@@ -142,6 +142,18 @@ describe('Trade Republic PDF parser — section extraction', () => {
     expect(result.headers).toEqual([...TR_SYNTHETIC_HEADERS])
   })
 
+  it('no row has an empty descrizione — fused tipo+description tokens are split correctly', async () => {
+    // Regression: tokens like "Rendimento Cash Dividend for ISIN US0378331005" start in the
+    // TIPO X range (x≈121) but contain both tipo and description fused. Before the fix the
+    // whole token was discarded as tipo, leaving descrizione empty and causing import errors.
+    const bytes = readFileSync(fixturePath)
+    const result = await parseTradeRepublicPdf(bytes, { fileName: 'trade-republic-sample.pdf' })
+
+    expect(result.errors).toHaveLength(0)
+    const emptyDescRows = result.rows.filter(r => !r['descrizione']?.trim())
+    expect(emptyDescRows).toHaveLength(0)
+  })
+
   it('returns error and zero rows for a non-Trade-Republic PDF (missing markers)', async () => {
     // Use a CSV file as a fake "PDF" that lacks TR markers
     const fakeBytes = Buffer.from('This is not a Trade Republic PDF document')

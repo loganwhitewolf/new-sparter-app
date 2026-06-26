@@ -278,10 +278,20 @@ function parseRowBucket(bucket: StructuredTextItem[]): ExtractedRow | null {
     if (!str) continue
 
     // Date token (leftmost column).
-    // Some page layouts fuse the date and tipo into a single token (e.g. "01 gen 2024 Interessi").
+    // Some page layouts fuse date+tipo+description into one token (e.g. "14 mag 2026 Rendimento Cash Dividend for ISIN US0378331005").
+    // Extract the date, strip the next word as tipo, and keep any remainder as description.
     if (DATE_PATTERN.test(str) && item.x < DATE_X_MAX) {
       const match = DATE_EXTRACT.exec(str)
       data = match ? match[1]! : str
+      if (match) {
+        const remainder = str.slice(match[0].length).trim()
+        if (remainder) {
+          // remainder = "Rendimento Cash Dividend ..." — first word is tipo, rest is description
+          const spaceIdx = remainder.indexOf(' ')
+          const descPart = spaceIdx >= 0 ? remainder.slice(spaceIdx + 1).trim() : ''
+          if (descPart) descParts.push(descPart)
+        }
+      }
       continue
     }
 
@@ -308,9 +318,15 @@ function parseRowBucket(bucket: StructuredTextItem[]): ExtractedRow | null {
       continue
     }
 
-    // Tipo column — skip (not needed in output headers)
+    // Tipo column — first word is the movement type (skip), but some layouts fuse tipo+description
+    // into a single token starting in this range (e.g. "Rendimento Cash Dividend for ISIN US…").
+    // Strip the tipo word and keep any remainder as description.
     if (item.x >= DATA_X_MIN && item.x < TIPO_X_MAX) {
-      // Could include as part of description if needed — currently skipped
+      const spaceIdx = str.indexOf(' ')
+      if (spaceIdx >= 0) {
+        const descPart = str.slice(spaceIdx + 1).trim()
+        if (descPart) descParts.push(descPart)
+      }
       continue
     }
   }
