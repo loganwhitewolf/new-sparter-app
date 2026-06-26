@@ -22,7 +22,7 @@ The parsing contract is owned by `import_format_version`, not `platform`. See `d
 
 Per-bank PDF parsing normalized into the existing tabular pipeline. See `docs/adr/0014-pdf-import-per-bank-template.md`.
 
-- [ ] **PDF-01**: The user can upload a PDF statement (`.pdf` / `application/pdf`) via presigned PUT, with a 5 MB cap and a defensive page ceiling that fail with an explicit error.
+- [x] **PDF-01**: The user can upload a PDF statement (`.pdf` / `application/pdf`) via presigned PUT, with a 5 MB cap and a defensive page ceiling that fail with an explicit error.
 - [ ] **PDF-02**: The system recognizes a Trade Republic statement by markers and extracts **only** the "TRANSAZIONI SUL CONTO" section, discarding summaries, positions, and mirror sections (e.g. "PANORAMICA TRANSAZIONI").
 - [ ] **PDF-03**: Each amount's sign is determined positionally (X coordinates via `unpdf`) and cross-checked against the running-balance chain; a mismatch produces an explicit error and imports no data.
 - [ ] **PDF-04**: PDF-extracted rows pass through the detector, `normalizeTransactionRow`, dedup, and preview unchanged (synthetic headers → `ParsedImportFile`).
@@ -49,7 +49,7 @@ Per-bank PDF parsing normalized into the existing tabular pipeline. See `docs/ad
 | IFMT-03 | Phase 56 | Complete |
 | IFMT-04 | Phase 56 | Complete |
 | IFMT-05 | Phase 56 | Complete |
-| PDF-01 | Phase 57 | Pending |
+| PDF-01 | Phase 57 | Complete |
 | PDF-02 | Phase 57 | Pending |
 | PDF-03 | Phase 57 | Pending |
 | PDF-04 | Phase 57 | Pending |
