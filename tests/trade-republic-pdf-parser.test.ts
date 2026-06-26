@@ -23,6 +23,7 @@ import { getDocumentProxy, extractTextItems } from 'unpdf'
 import type { StructuredTextItem } from 'unpdf'
 import {
   parseTradeRepublicPdf,
+  validateBalanceChain,
   TR_SYNTHETIC_HEADERS,
   MAX_PDF_PAGES,
   CREDIT_X_MIN,
@@ -30,6 +31,7 @@ import {
   DEBIT_X_MIN,
   DEBIT_X_MAX,
   BALANCE_X_MIN,
+  type ExtractedRow,
 } from '../lib/services/trade-republic-pdf-parser'
 
 // Re-export constants for downstream consumers (backward compat with Wave 0 usages)
@@ -53,7 +55,7 @@ describe('Trade Republic PDF — calibration probe', () => {
 
     const { items } = await extractTextItems(pdf)
 
-    // Collect tokens from TRANSAZIONI SUL CONTO section
+    // Collect tokens from the movements section (TR_MARKERS[1])
     let inSection = false
     const sectionItems: StructuredTextItem[] = []
 
@@ -219,18 +221,31 @@ describe('Trade Republic PDF parser — balance chain validation', () => {
     expect(result.rowCount).toBeGreaterThan(0)
   })
 
-  it('returns explicit error and zero rows when a row balance is tampered', async () => {
-    // We test this by checking the error path via a document that has been
-    // constructed to fail. Since we cannot easily tamper with the binary PDF,
-    // we verify through the parser's internal tamper detection by checking
-    // that a non-TR document produces zero rows with an explicit error.
-    // The tamper scenario is validated via the balance chain test below.
-    // Note: full tamper test requires a synthetic fixture — this validates the error contract.
-    const fakeBytes = Buffer.from('%PDF-1.4 fake pdf content without TR markers')
-    const result = await parseTradeRepublicPdf(fakeBytes, { fileName: 'tampered.pdf' })
+  it('returns explicit error and zero rows when a row balance is tampered', () => {
+    // Unit-test validateBalanceChain directly with a tampered middle row.
+    // Three rows: row1 → row2 (ok), row2 → row3 (tampered balance).
+    const rows: ExtractedRow[] = [
+      { data: '01 gen 2026', descrizione: 'Deposito', importo_entrata: '100,00 €', importo_uscita: '', runningBalance: '1.100,00 €' },
+      { data: '02 gen 2026', descrizione: 'Pagamento', importo_entrata: '', importo_uscita: '50,00 €', runningBalance: '1.050,00 €' },
+      // Tamper: balance should be 1050 + 25 = 1075 but we set it to 999
+      { data: '03 gen 2026', descrizione: 'Entrata', importo_entrata: '25,00 €', importo_uscita: '', runningBalance: '999,00 €' },
+    ]
 
-    expect(result.errors.length).toBeGreaterThan(0)
-    expect(result.rows).toHaveLength(0)
+    const error = validateBalanceChain(rows)
+    expect(error).not.toBeNull()
+    expect(error).toContain('Balance chain mismatch at row 3')
+    expect(error).toContain('999')
+  })
+
+  it('validateBalanceChain returns null for a valid chain', () => {
+    const rows: ExtractedRow[] = [
+      { data: '01 gen 2026', descrizione: 'Deposito', importo_entrata: '100,00 €', importo_uscita: '', runningBalance: '1.100,00 €' },
+      { data: '02 gen 2026', descrizione: 'Pagamento', importo_entrata: '', importo_uscita: '50,00 €', runningBalance: '1.050,00 €' },
+      { data: '03 gen 2026', descrizione: 'Entrata', importo_entrata: '25,00 €', importo_uscita: '', runningBalance: '1.075,00 €' },
+    ]
+
+    const error = validateBalanceChain(rows)
+    expect(error).toBeNull()
   })
 
   it('uses Decimal.js — no floating-point drift across 30+ rows', async () => {
@@ -255,11 +270,10 @@ describe('Trade Republic PDF parser — quantity strip', () => {
 
     expect(result.errors).toHaveLength(0)
 
-    // Find savings plan rows — they contain 'Piano di risparmio' or similar
-    // and the raw description includes 'quantity:'
+    // Find savings plan rows — descriptions include 'quantity:'
     // After the strip pattern is applied by normalizeTransactionRow, two rows
     // differing only in 'quantity: N' should have the same description.
-    // Here we verify the strip pattern itself normalizes descriptions correctly.
+    // Verify the strip pattern normalizes descriptions correctly.
     const { normalizeDescription } = await import('../lib/utils/import')
     const TR_STRIP_PATTERN = /quantity:\s*[\d.,]+\s*/i
 
@@ -290,11 +304,19 @@ describe('Trade Republic PDF parser — quantity strip', () => {
 // ---------------------------------------------------------------------------
 
 describe('Trade Republic PDF parser — validation', () => {
-  it('returns explicit error and zero rows when PDF exceeds MAX_PDF_PAGES (50)', async () => {
-    // We cannot easily create a 51-page PDF in tests, but we can verify the
-    // constant is correct and the error path is triggered by a mock.
-    // The behavioral test is in the parser unit — here we verify MAX_PDF_PAGES constant.
+  it('MAX_PDF_PAGES constant is 50 (page ceiling defined by D-05)', () => {
     expect(MAX_PDF_PAGES).toBe(50)
+  })
+
+  it('real TR fixture is within the page ceiling', async () => {
+    // Positive test: the sample fixture must load without page ceiling error
+    const bytes = readFileSync(fixturePath)
+    const result = await parseTradeRepublicPdf(bytes, { fileName: 'trade-republic-sample.pdf' })
+
+    // No page ceiling error (fixture has 4 pages, well within 50)
+    const hasCeilingError = result.errors.some(e => e.includes('pages, which exceeds'))
+    expect(hasCeilingError).toBe(false)
+    expect(result.rowCount).toBeGreaterThan(0)
   })
 
   it('returns ParsedImportFile shape with delimiter: null for valid fixture', async () => {

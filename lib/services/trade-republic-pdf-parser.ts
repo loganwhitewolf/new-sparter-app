@@ -7,8 +7,8 @@
  *
  * Design constraints (ADR 0014, 57-CONTEXT.md):
  *   - Per-bank template: recognizes TR by document markers only.
- *   - Section isolation: extracts only "TRANSAZIONI SUL CONTO"; discards
- *     "PANORAMICA TRANSAZIONI" and all other summary/position sections.
+ *   - Section isolation: extracts only the movements section (TR_MARKERS[1]); discards
+ *     the summary/position sections (SECTION_END_PATTERNS).
  *   - Positional sign: credit/debit determined by X-coordinate band.
  *   - Balance chain: validated with Decimal.js before returning rows.
  *   - delimiter: null in output (scoreCandidate gives delimiterScore 1.0).
@@ -82,7 +82,8 @@ export const BALANCE_X_MIN = 470
 
 type AmountColumnKind = 'credit' | 'debit' | 'balance' | 'other'
 
-interface ExtractedRow {
+/** @internal — exported only for unit tests of validateBalanceChain. */
+export interface ExtractedRow {
   data: string
   descrizione: string
   importo_entrata: string
@@ -102,8 +103,8 @@ interface ExtractedRow {
 const TR_MARKERS = ['TRADE REPUBLIC', 'TRANSAZIONI SUL CONTO'] as const
 
 /**
- * Section header tokens that terminate the TRANSAZIONI SUL CONTO section.
- * Any item whose str contains one of these strings ends the section.
+ * Section header tokens that terminate the movements section.
+ * Any item whose str contains one of these strings ends the movements section (TR_MARKERS[1]).
  */
 const SECTION_END_PATTERNS = [
   'PANORAMICA',
@@ -168,7 +169,7 @@ function isColumnHeader(str: string): boolean {
 }
 
 /**
- * Given a list of items from a single page of the TRANSAZIONI SUL CONTO section,
+ * Given a list of items from a single page of the movements section,
  * group them into logical rows by Y coordinate proximity (Y-axis bucketing).
  *
  * PDF Y=0 is at the bottom; items are sorted by y DESCENDING to get
@@ -202,8 +203,8 @@ function groupPageItemsIntoRows(items: StructuredTextItem[]): StructuredTextItem
 }
 
 /**
- * Extract items belonging to the TRANSAZIONI SUL CONTO section from all pages.
- * Discards PANORAMICA TRANSAZIONI and all other sections (Pitfall 3).
+ * Extract items belonging to the movements section (TR_MARKERS[1]) from all pages.
+ * Discards the summary/mirror section and all other non-movements sections (Pitfall 3).
  *
  * Returns a list of per-page item arrays so that row-grouping can be done
  * correctly within each page boundary (avoids mixing Y values from different
@@ -335,9 +336,11 @@ function parseRowBucket(bucket: StructuredTextItem[]): ExtractedRow | null {
  * Per D-03 / T-57-03-01: any mismatch returns an explicit error — never
  * silently import wrong numbers.
  *
+ * Exported for unit testing — callers should use parseTradeRepublicPdf instead.
+ *
  * @returns null if valid, or an error string on mismatch.
  */
-function validateBalanceChain(rows: ExtractedRow[]): string | null {
+export function validateBalanceChain(rows: ExtractedRow[]): string | null {
   if (rows.length < 2) return null
 
   for (let i = 1; i < rows.length; i++) {
@@ -460,7 +463,7 @@ export async function parseTradeRepublicPdf(
     ])
   }
 
-  // Isolate the TRANSAZIONI SUL CONTO section items, grouped by page (Pitfall 3)
+  // Isolate the movements section items, grouped by page (Pitfall 3)
   const sectionItemsByPage = extractSectionItemsByPage(allPageItems)
 
   if (sectionItemsByPage.length === 0 || sectionItemsByPage.every(p => p.length === 0)) {
