@@ -577,7 +577,7 @@ The pattern is applied with the `i` (case-insensitive) flag. The `normalizedDesc
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Exact X-coordinate thresholds for TR column bands**
    - What we know: `unpdf` returns `x` in points; TR has 4 data columns (data, descrizione, importo_entrata, importo_uscita) + balance
