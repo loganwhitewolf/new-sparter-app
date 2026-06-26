@@ -45,6 +45,8 @@ import {
   ONBOARDING_AFTER_PRIVATE_PLATFORM_CREATION_ROUTE,
 } from "@/lib/routes";
 import { ANALYZE_STATUS_ERROR } from "@/lib/utils/import-status";
+import { UNRECOGNIZED_PDF_FORMAT } from "@/lib/services/trade-republic-pdf-parser";
+import { listPdfImportPlatformNames } from "@/lib/dal/import-formats";
 
 export type ImportActionState<T = null> = {
   error: string | null;
@@ -292,10 +294,25 @@ export async function analyzeImportAction(
     });
 
     if (result.errors.length > 0) {
+      let errorMessage =
+        result.errors[0] ??
+        "Impossibile analizzare il file. Riprova tra qualche secondo.";
+
+      // If the parser emitted the stable unrecognized-PDF code, enrich the message
+      // with a user-friendly Italian text listing the supported PDF platforms.
+      // Only platform.name (public product data) is exposed — no slugs or internal ids (T-57-05-02).
+      if (result.errors[0] === UNRECOGNIZED_PDF_FORMAT) {
+        const platformNames = await listPdfImportPlatformNames();
+        if (platformNames.length > 0) {
+          errorMessage = `Il file PDF non è stato riconosciuto. Le piattaforme supportate per l'import PDF sono: ${platformNames.join(", ")}.`;
+        } else {
+          errorMessage =
+            "Il file PDF non è stato riconosciuto come formato supportato.";
+        }
+      }
+
       return {
-        error:
-          result.errors[0] ??
-          "Impossibile analizzare il file. Riprova tra qualche secondo.",
+        error: errorMessage,
         data: result,
       };
     }

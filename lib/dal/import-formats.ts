@@ -1,10 +1,11 @@
 import 'server-only'
-import { and, eq, isNull, or } from 'drizzle-orm'
+import { and, eq, inArray, isNull, or } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { importFormatVersion, platform } from '@/lib/db/schema'
 import type { ImportFormatCandidateInput } from '@/lib/services/import-format-detector'
+import { PDF_IMPORT_PLATFORM_SLUGS } from '@/lib/services/import-parsers'
 
-type ImportFormatDatabase = Pick<typeof db, 'select'>
+export type ImportFormatDatabase = Pick<typeof db, 'select'>
 
 type ImportFormatRow = {
   id: number
@@ -195,4 +196,35 @@ export async function loadImportFormatsForDetection(input: {
     .filter((row): row is ImportFormatRow => hasExpectedRowShape(row))
     .filter((row) => isAccessibleImportFormat(row, input.userId))
     .map(toCandidate)
+}
+
+/**
+ * Returns the display names of all active platforms that support PDF import.
+ * Filters by PDF_IMPORT_PLATFORM_SLUGS (the allowlist co-located with the .pdf dispatch
+ * in import-parsers.ts) — no fileType column on import_format_version required.
+ * Results are deduplicated (a platform may have multiple active format versions) and
+ * sorted alphabetically for stable output (T-57-05-02).
+ *
+ * @param input.database - Optional injectable database instance (used in tests).
+ */
+export async function listPdfImportPlatformNames(input?: {
+  database?: ImportFormatDatabase
+}): Promise<string[]> {
+  const database = input?.database ?? db
+
+  const rows = await database
+    .select({ name: platform.name })
+    .from(platform)
+    .innerJoin(importFormatVersion, eq(importFormatVersion.platformId, platform.id))
+    .where(
+      and(
+        eq(platform.isActive, true),
+        eq(importFormatVersion.isActive, true),
+        inArray(platform.slug, [...PDF_IMPORT_PLATFORM_SLUGS]),
+      ),
+    )
+
+  // Deduplicate names and sort alphabetically for stable output
+  const unique = [...new Set(rows.map(r => r.name))].sort()
+  return unique
 }

@@ -35,6 +35,15 @@ import type { ParsedImportFile, ParsedImportRow, ParseImportFileOptions } from '
 export const TR_SYNTHETIC_HEADERS = ['data', 'descrizione', 'importo_entrata', 'importo_uscita'] as const
 
 /**
+ * Stable error code emitted when the PDF is not recognized as a supported format.
+ * Used as both the machine-readable code (detected by analyzeImportAction to enrich
+ * the message with the platform list) and as a user-readable Italian fallback.
+ * Does NOT expose internal document markers (T-57-05-01).
+ */
+export const UNRECOGNIZED_PDF_FORMAT =
+  'Il file PDF non è stato riconosciuto come formato supportato.'
+
+/**
  * Maximum number of PDF pages accepted before rejecting the file.
  * Trade Republic statements are typically 2–10 pages; 50 is a defensive ceiling.
  */
@@ -471,12 +480,11 @@ export async function parseTradeRepublicPdf(
   const fullText = allTokens.map(t => t.str).join(' ')
 
   // D-01: verify both TR markers are present
+  // Emit a stable, generic Italian code (no marker internals — T-57-05-01).
+  // analyzeImportAction detects this code and enriches it with the platform list.
   const missingMarkers = TR_MARKERS.filter(marker => !fullText.includes(marker))
   if (missingMarkers.length > 0) {
-    return errorResult([
-      `This does not appear to be a Trade Republic bank statement. ` +
-        `Missing document markers: ${missingMarkers.join(', ')}.`,
-    ])
+    return errorResult([UNRECOGNIZED_PDF_FORMAT])
   }
 
   // Isolate the movements section items, grouped by page (Pitfall 3)
