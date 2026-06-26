@@ -300,6 +300,67 @@ describe('Trade Republic PDF parser — quantity strip', () => {
 })
 
 // ---------------------------------------------------------------------------
+// parseImportFile dispatch — .pdf routing (Task 1, Plan 57-04)
+// ---------------------------------------------------------------------------
+
+describe('parseImportFile — .pdf dispatch', () => {
+  it('routes a .pdf file to parseTradeRepublicPdf and returns the same ParsedImportFile shape', async () => {
+    const { parseImportFile } = await import('../lib/services/import-parsers')
+
+    const bytes = readFileSync(fixturePath)
+    // Call through parseImportFile with a .pdf fileName
+    const viaDispatch = await parseImportFile(bytes, { fileName: 'trade-republic-sample.pdf' })
+
+    // Must have the TR synthetic headers
+    expect(viaDispatch.headers).toEqual([...TR_SYNTHETIC_HEADERS])
+    // delimiter must be null (Pitfall 5)
+    expect(viaDispatch.delimiter).toBeNull()
+    // Must have rows
+    expect(viaDispatch.rowCount).toBeGreaterThan(0)
+    expect(viaDispatch.rows).toHaveLength(viaDispatch.rowCount)
+    // Must have the correct fileName echoed back
+    expect(viaDispatch.fileName).toBe('trade-republic-sample.pdf')
+    // No errors on the real fixture
+    expect(viaDispatch.errors).toHaveLength(0)
+  })
+
+  it('gives the same rowCount when called via parseImportFile vs parseTradeRepublicPdf directly', async () => {
+    const { parseImportFile } = await import('../lib/services/import-parsers')
+
+    const bytes = readFileSync(fixturePath)
+    const [viaDispatch, viaDirect] = await Promise.all([
+      parseImportFile(bytes, { fileName: 'trade-republic-sample.pdf' }),
+      parseTradeRepublicPdf(bytes, { fileName: 'trade-republic-sample.pdf' }),
+    ])
+
+    expect(viaDispatch.rowCount).toBe(viaDirect.rowCount)
+    expect(viaDispatch.headers).toEqual(viaDirect.headers)
+    expect(viaDispatch.delimiter).toBe(viaDirect.delimiter)
+  })
+
+  it('rejects an oversized .pdf before dispatching to the parser', async () => {
+    const { parseImportFile } = await import('../lib/services/import-parsers')
+
+    const tinyBytes = Buffer.from('fake pdf content')
+    // Pass maxBytes smaller than the buffer so the size cap triggers
+    const result = await parseImportFile(tinyBytes, { fileName: 'big.pdf', maxBytes: 5 })
+
+    expect(result.errors[0]).toContain('exceeds the maximum import size')
+    expect(result.rowCount).toBe(0)
+  })
+
+  it('rejects an empty .pdf before dispatching to the parser', async () => {
+    const { parseImportFile } = await import('../lib/services/import-parsers')
+
+    const emptyBytes = Buffer.alloc(0)
+    const result = await parseImportFile(emptyBytes, { fileName: 'empty.pdf' })
+
+    expect(result.errors[0]).toContain('empty')
+    expect(result.rowCount).toBe(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Validation (page ceiling, output shape)
 // ---------------------------------------------------------------------------
 
