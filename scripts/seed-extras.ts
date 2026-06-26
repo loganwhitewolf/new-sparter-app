@@ -764,28 +764,8 @@ async function insertCartoleriaOggettistica(database: Db): Promise<void> {
 // Run this BEFORE applying the platform-column DROP migration (Plan 03 drop step).
 // ---------------------------------------------------------------------------
 
-async function moveParsingContractToFormatVersion(database: Db): Promise<void> {
-  const result = await database.execute(sql`
-    UPDATE import_format_version ifv
-    SET
-      delimiter              = p.delimiter,
-      description_column     = p.description_column,
-      amount_type            = p.amount_type,
-      amount_column          = p.amount_column,
-      positive_amount_column = p.positive_amount_column,
-      negative_amount_column = p.negative_amount_column,
-      timestamp_column       = p.timestamp_column,
-      date_format            = p.date_format,
-      date_replace           = p.date_replace,
-      decimal_replace        = p.decimal_replace,
-      multiply_by            = p.multiply_by,
-      description_strip_pattern = p.description_strip_pattern
-    FROM platform p
-    WHERE ifv.platform_id = p.id
-      AND ifv.delimiter IS NULL
-  `)
-  const rowCount = result.rowCount ?? 0
-  console.log(`    move-parsing-contract-to-format-version: ${rowCount} row(s) updated`)
+async function moveParsingContractToFormatVersion(_database: Db): Promise<void> {
+  console.log('    move-parsing-contract-to-format-version: no-op (superseded — backfill now runs inline in migration 0022; platform columns dropped)')
 }
 
 // ---------------------------------------------------------------------------
