@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => {
     revalidatePath: vi.fn(),
     analyzeFile: vi.fn(),
     importFile: vi.fn(),
+    listPdfImportPlatformNames: vi.fn(),
   }
 })
 
@@ -56,6 +57,11 @@ vi.mock('@/lib/services/import-deletion', () => ({
 vi.mock('@/lib/services/import', () => ({
   analyzeFile: mocks.analyzeFile,
   importFile: mocks.importFile,
+}))
+
+vi.mock('@/lib/dal/import-formats', () => ({
+  loadImportFormatsForDetection: vi.fn(),
+  listPdfImportPlatformNames: mocks.listPdfImportPlatformNames,
 }))
 
 vi.mock('@/lib/validations/import', async () => {
@@ -158,6 +164,7 @@ describe('import Server Actions', () => {
     })
     mocks.getImportDeletePreview.mockResolvedValue(deletePreview)
     mocks.deleteImport.mockResolvedValue(deleteResult)
+    mocks.listPdfImportPlatformNames.mockResolvedValue(['Trade Republic'])
   })
 
   describe('loadMoreImports', () => {
@@ -452,6 +459,39 @@ describe('import Server Actions', () => {
       expect(mocks.analyzeFile).toHaveBeenCalledWith(expect.objectContaining({
         selectedFormatVersionId: 42,
       }))
+    })
+
+    it('enriches the unrecognized-PDF code with an Italian message listing supported PDF platforms', async () => {
+      // Import the stable error code from the parser
+      const { UNRECOGNIZED_PDF_FORMAT } = await import('../lib/services/trade-republic-pdf-parser')
+
+      mocks.analyzeFile.mockResolvedValueOnce({
+        ...analysisResult,
+        errors: [UNRECOGNIZED_PDF_FORMAT],
+      })
+
+      const result = await analyzeImportAction(validAnalyzeForm())
+
+      // Must be in Italian and mention "riconosciuto"
+      expect(result.error).toContain('riconosciuto')
+      // Must list the supported PDF platform
+      expect(result.error).toContain('Trade Republic')
+      // Must NOT expose internal marker strings
+      expect(result.error).not.toContain('appear')
+      expect(result.error).not.toContain('TRANSAZIONI')
+    })
+
+    it('leaves other detection errors unchanged and does not call listPdfImportPlatformNames', async () => {
+      const genericError = 'No supported import format matched the uploaded file headers and sample rows.'
+      mocks.analyzeFile.mockResolvedValueOnce({
+        ...analysisResult,
+        errors: [genericError],
+      })
+
+      const result = await analyzeImportAction(validAnalyzeForm())
+
+      expect(result.error).toBe(genericError)
+      expect(mocks.listPdfImportPlatformNames).not.toHaveBeenCalled()
     })
   })
 

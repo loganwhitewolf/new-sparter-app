@@ -25,6 +25,7 @@ import {
   parseTradeRepublicPdf,
   validateBalanceChain,
   TR_SYNTHETIC_HEADERS,
+  UNRECOGNIZED_PDF_FORMAT,
   MAX_PDF_PAGES,
   CREDIT_X_MIN,
   CREDIT_X_MAX,
@@ -155,13 +156,32 @@ describe('Trade Republic PDF parser — section extraction', () => {
   })
 
   it('returns error and zero rows for a non-Trade-Republic PDF (missing markers)', async () => {
-    // Use a CSV file as a fake "PDF" that lacks TR markers
-    const fakeBytes = Buffer.from('This is not a Trade Republic PDF document')
+    // Use a minimal valid PDF that opens correctly but lacks TR document markers.
+    // A plain-text buffer would fail at PDF parsing before reaching the marker check,
+    // so we build the smallest valid PDF structure that unpdf can open.
+    const minimalPdf =
+      '%PDF-1.0\n' +
+      '1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n' +
+      '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n' +
+      '3 0 obj<</Type/Page/MediaBox[0 0 612 792]>>endobj\n' +
+      'xref\n0 4\n' +
+      '0000000000 65535 f\n' +
+      '0000000009 00000 n\n' +
+      '0000000051 00000 n\n' +
+      '0000000093 00000 n\n' +
+      'trailer<</Size 4/Root 1 0 R>>\n' +
+      'startxref\n143\n%%EOF'
+    const fakeBytes = Buffer.from(minimalPdf)
     const result = await parseTradeRepublicPdf(fakeBytes, { fileName: 'not-a-tr.pdf' })
 
     expect(result.errors.length).toBeGreaterThan(0)
     expect(result.rows).toHaveLength(0)
     expect(result.rowCount).toBe(0)
+    // Parser must emit UNRECOGNIZED_PDF_FORMAT as the stable error code (no marker internals)
+    expect(result.errors[0]).toBe(UNRECOGNIZED_PDF_FORMAT)
+    // Error must not expose internal document markers
+    expect(result.errors[0]).not.toContain('TRANSAZIONI')
+    expect(result.errors[0]).not.toContain('appear')
   })
 })
 
