@@ -1,9 +1,9 @@
 ---
-status: complete
+status: resolved
 phase: 57-pdf-import-trade-republic
-source: [57-01-SUMMARY.md, 57-02-SUMMARY.md, 57-03-SUMMARY.md, 57-04-SUMMARY.md]
+source: [57-01-SUMMARY.md, 57-02-SUMMARY.md, 57-03-SUMMARY.md, 57-04-SUMMARY.md, 57-05-SUMMARY.md]
 started: 2026-06-26T10:33:17Z
-updated: 2026-06-26T10:45:00Z
+updated: 2026-06-26T14:43:00Z
 ---
 
 ## Current Test
@@ -30,31 +30,20 @@ result: pass
 
 ### 5. PDF non-Trade Republic non causa crash
 expected: Caricare un PDF generico (non un estratto TR — ad es. qualsiasi PDF che non contenga i marker "TRADE REPUBLIC" + "TRANSAZIONI SUL CONTO"). L'import deve fallire in modo controllato con un messaggio di errore leggibile ("formato non riconosciuto" o simile) senza crash o 500.
-result: issue
-reported: "Mostra: 'This does not appear to be a Trade Republic bank statement. Missing document markers: TRADE REPUBLIC, TRANSAZIONI SUL CONTO.' — messaggio troppo tecnico, espone marker interni. Desiderato: messaggio user-friendly in italiano tipo 'Questo file non è stato riconosciuto. Al momento supportiamo solo queste piattaforme con formato PDF: [lista da query platforms con PDF]'"
-severity: minor
+result: pass
+resolved_by: 57-05
 
 ## Summary
 
 total: 5
-passed: 4
-issues: 1
+passed: 5
+issues: 0
 pending: 0
 skipped: 0
 
 ## Gaps
 
 - truth: "Errore PDF non riconosciuto deve essere user-friendly e in italiano, con lista delle piattaforme PDF supportate"
-  status: failed
-  reason: "User reported: messaggio attuale 'This does not appear to be a Trade Republic bank statement. Missing document markers: TRADE REPUBLIC, TRANSAZIONI SUL CONTO.' è troppo tecnico ed espone marker interni. Voluto: messaggio italiano con lista piattaforme da query su platforms con formato PDF"
-  severity: minor
-  test: 5
-  root_cause: "Il messaggio di errore è hardcoded in inglese direttamente in lib/services/trade-republic-pdf-parser.ts:477-479 e viene passato all'UI senza trasformazione da lib/actions/import.ts:294-297. Il parser non ha accesso al DB per listare le piattaforme PDF supportate."
-  artifacts:
-    - path: "lib/services/trade-republic-pdf-parser.ts"
-      issue: "Messaggio errore hardcoded in inglese a riga 477-479, espone marker interni"
-    - path: "lib/actions/import.ts"
-      issue: "errors[0] passato direttamente all'UI senza intercettare e arricchire l'errore"
-  missing:
-    - "Sostituire il messaggio tecnico nel parser con un codice/messaggio generico italiano"
-    - "Nell'action (o in un helper), intercettare l'errore 'formato non riconosciuto' e costruire il messaggio con lista piattaforme PDF da query su platforms/importFormatVersions"
+  status: resolved
+  resolved_by: 57-05
+  reason: "Parser ora emette UNRECOGNIZED_PDF_FORMAT (costante italiana generica, senza marker interni). analyzeImportAction e completeOnboardingPrivateImportAction intercettano la costante e costruiscono il messaggio arricchito con lista piattaforme da listPdfImportPlatformNames()."
