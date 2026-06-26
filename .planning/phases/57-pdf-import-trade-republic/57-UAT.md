@@ -49,5 +49,12 @@ skipped: 0
   reason: "User reported: messaggio attuale 'This does not appear to be a Trade Republic bank statement. Missing document markers: TRADE REPUBLIC, TRANSAZIONI SUL CONTO.' è troppo tecnico ed espone marker interni. Voluto: messaggio italiano con lista piattaforme da query su platforms con formato PDF"
   severity: minor
   test: 5
-  artifacts: []
-  missing: []
+  root_cause: "Il messaggio di errore è hardcoded in inglese direttamente in lib/services/trade-republic-pdf-parser.ts:477-479 e viene passato all'UI senza trasformazione da lib/actions/import.ts:294-297. Il parser non ha accesso al DB per listare le piattaforme PDF supportate."
+  artifacts:
+    - path: "lib/services/trade-republic-pdf-parser.ts"
+      issue: "Messaggio errore hardcoded in inglese a riga 477-479, espone marker interni"
+    - path: "lib/actions/import.ts"
+      issue: "errors[0] passato direttamente all'UI senza intercettare e arricchire l'errore"
+  missing:
+    - "Sostituire il messaggio tecnico nel parser con un codice/messaggio generico italiano"
+    - "Nell'action (o in un helper), intercettare l'errore 'formato non riconosciuto' e costruire il messaggio con lista piattaforme PDF da query su platforms/importFormatVersions"
