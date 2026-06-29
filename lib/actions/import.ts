@@ -190,6 +190,7 @@ export async function createPrivateImportFormatAction(
 ): Promise<ImportActionState<CreatePrivateImportFormatResult>> {
   const parsed = CreatePrivateImportFormatSchema.safeParse({
     fileId: formData.get("fileId") ?? "",
+    existingPlatformId: optionalPositiveInteger(formData, "existingPlatformId"),
     platformName: formData.get("platformName") ?? "",
     delimiter: formString(formData, "delimiter"),
     timestampColumn: formData.get("timestampColumn") ?? "",

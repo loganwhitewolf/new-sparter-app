@@ -212,34 +212,65 @@ async function createPrivateRows(
   database: DbOrTx,
   input: CreatePrivateImportFormatInput & { userId: string; headers: string[] },
 ): Promise<CreatePrivateImportFormatResult> {
-  const slug = privatePlatformSlug(input)
   const header = headerSignature(input.headers, input.delimiter)
 
-  await syncPlatformIdSequence(database)
+  // Fork: attach branch vs create-platform branch (D-06, Plan 59-02)
+  let resolvedPlatformId: number
+  let resolvedPlatformName: string
+  let resolvedPlatformSlug: string
 
-  const createdPlatforms = await database
-    .insert(platform)
-    .values({
-      // Identity only — contract lives on importFormatVersion (ADR 0013)
-      // Platform is never user-owned (ADR 0015): proposedByUserId is provenance, no visibility column
-      proposedByUserId: input.userId,
-      reviewStatus: PENDING_REVIEW_STATUS,
-      name: input.platformName,
-      slug,
-      country: 'IT',
-      isActive: true,
-    })
-    .returning({ id: platform.id, name: platform.name, slug: platform.slug })
+  if (input.existingPlatformId !== undefined) {
+    // Attach branch — reuse an existing platform, no syncPlatformIdSequence, no platform insert.
+    // SELECT to resolve name/slug for the result type and as a TOCTOU guard (T-59-03).
+    const rows = await database
+      .select({ id: platform.id, name: platform.name, slug: platform.slug })
+      .from(platform)
+      .where(eq(platform.id, input.existingPlatformId))
 
-  const createdPlatform = createdPlatforms[0]
-  if (!createdPlatform || typeof createdPlatform.id !== 'number') {
-    throw new ImportFormatWizardError('db_write_failed', 'Impossibile salvare il formato. Riprova.')
+    const existing = rows[0]
+    if (!existing || typeof existing.id !== 'number') {
+      throw new ImportFormatWizardError('db_write_failed', 'Impossibile salvare il formato. Riprova.')
+    }
+
+    resolvedPlatformId = existing.id
+    resolvedPlatformName = existing.name
+    resolvedPlatformSlug = existing.slug
+  } else {
+    // Create-platform branch — existing behaviour unchanged (regression preserved).
+    // Zod superRefine guarantees input.platformName is present here.
+    const platformName = input.platformName!
+    const slug = privatePlatformSlug({ ...input, platformName })
+
+    // Identity only — contract lives on importFormatVersion (ADR 0013)
+    // Platform is never user-owned (ADR 0015): proposedByUserId is provenance, no visibility column
+    await syncPlatformIdSequence(database)
+
+    const createdPlatforms = await database
+      .insert(platform)
+      .values({
+        proposedByUserId: input.userId,
+        reviewStatus: PENDING_REVIEW_STATUS,
+        name: platformName,
+        slug,
+        country: 'IT',
+        isActive: true,
+      })
+      .returning({ id: platform.id, name: platform.name, slug: platform.slug })
+
+    const createdPlatform = createdPlatforms[0]
+    if (!createdPlatform || typeof createdPlatform.id !== 'number') {
+      throw new ImportFormatWizardError('db_write_failed', 'Impossibile salvare il formato. Riprova.')
+    }
+
+    resolvedPlatformId = createdPlatform.id
+    resolvedPlatformName = createdPlatform.name
+    resolvedPlatformSlug = createdPlatform.slug
   }
 
   const createdVersions = await database
     .insert(importFormatVersion)
     .values({
-      platformId: createdPlatform.id,
+      platformId: resolvedPlatformId,
       ownerUserId: input.userId,
       visibility: PRIVATE_VISIBILITY,
       reviewStatus: PENDING_REVIEW_STATUS,
@@ -278,11 +309,21 @@ async function createPrivateRows(
     })
     .where(and(eq(fileTable.id, input.fileId), eq(fileTable.userId, input.userId)))
 
+  // Log on attach branch (after version insert, when all data is resolved)
+  if (input.existingPlatformId !== undefined) {
+    logWizard('info', 'import_format_wizard.attached', {
+      userId: input.userId,
+      fileId: input.fileId,
+      platformId: resolvedPlatformId,
+      formatVersionId: createdVersion.id,
+    })
+  }
+
   return {
     fileId: input.fileId,
-    platformId: createdPlatform.id,
-    platformName: createdPlatform.name,
-    platformSlug: createdPlatform.slug,
+    platformId: resolvedPlatformId,
+    platformName: resolvedPlatformName,
+    platformSlug: resolvedPlatformSlug,
     formatVersionId: createdVersion.id,
     headerSignature: createdVersion.headerSignature,
   }
