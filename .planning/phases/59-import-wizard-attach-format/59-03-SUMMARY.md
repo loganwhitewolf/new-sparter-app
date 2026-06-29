@@ -147,6 +147,8 @@ No new security-relevant surface beyond what is in the plan threat model:
 - [x] components/import/import-format-wizard.tsx exists and modified
 - [x] app/(app)/import/[fileId]/configure/page.tsx exists and modified
 - [x] tests/import-format-wizard-ui.test.tsx exists and modified
+- [x] 59-03-SUMMARY.md exists
 - [x] Commit d29a10c exists: feat(59-03) step 1 UI
 - [x] Commit ec21357 exists: feat(59-03) RSC page preload
 - [x] Commit dfd0f02 exists: test(59-03) test extension
+- [x] Commit 6c8cb0d exists: docs(59-03) planning artifacts
