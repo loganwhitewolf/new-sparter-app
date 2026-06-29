@@ -212,13 +212,13 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
   3. A brand-new Platform is created only when no existing one fits, and it is persisted with `reviewStatus = pending` (visible only to its proposer).
   4. The newly attached private Import Format is immediately usable by its owner for the import that triggered creation.
 
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 **UI hint**: yes
 
 Plans:
 **Wave 1**
 
-- [ ] 59-01-PLAN.md — DAL `listAttachablePlatforms` (approved + own-pending) + tests (Wave 1)
+- [x] 59-01-PLAN.md — DAL `listAttachablePlatforms` (approved + own-pending) + tests (Wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -261,7 +261,7 @@ Plans:
 | 51–55 | v2.1 | 15/15 | Complete | 2026-06-22 |
 | 56–57 | v2.2 | 10/10 | Complete | 2026-06-26 |
 | 58. platform-identity-and-access | v2.3 | 3/3 | Complete   | 2026-06-29 |
-| 59. import-wizard-attach-format | v2.3 | 0/? | Not started | - |
+| 59. import-wizard-attach-format | v2.3 | 1/3 | In Progress|  |
 | 60. seed-slug-linkage-and-docs | v2.3 | 0/? | Not started | - |
 
 **Total shipped: 57 phases · 214 plans complete**

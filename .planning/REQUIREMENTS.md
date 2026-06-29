@@ -17,7 +17,7 @@
 
 ### Import Wizard
 
-- [ ] **PLAT-04**: When format detection fails on upload, the user can attach a new private Import Format to an **existing** Platform. A brand-new Platform is created only when no existing one fits, and it is created `pending`. The wizard no longer silently mints a duplicate Platform for a known bank.
+- [x] **PLAT-04**: When format detection fails on upload, the user can attach a new private Import Format to an **existing** Platform. A brand-new Platform is created only when no existing one fits, and it is created `pending`. The wizard no longer silently mints a duplicate Platform for a known bank.
 
 ### Seed Integrity
 
