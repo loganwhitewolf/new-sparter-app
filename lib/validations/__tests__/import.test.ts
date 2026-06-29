@@ -226,6 +226,78 @@ describe('CreatePrivateImportFormatSchema', () => {
   })
 })
 
+describe('CreatePrivateImportFormatSchema — existingPlatformId optional field (Plan 59-02)', () => {
+  const validFileId = '11111111-1111-4111-8111-111111111111'
+  const baseColumnFields = {
+    delimiter: ',',
+    timestampColumn: 'Data',
+    descriptionColumn: 'Descrizione',
+    amountMode: 'single',
+    amountColumn: 'Importo',
+  }
+
+  it('accepts existingPlatformId without platformName (attach branch)', () => {
+    const result = CreatePrivateImportFormatSchema.safeParse({
+      fileId: validFileId,
+      existingPlatformId: 7,
+      ...baseColumnFields,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects when neither existingPlatformId nor platformName is provided (platformName path)', () => {
+    const result = CreatePrivateImportFormatSchema.safeParse({
+      fileId: validFileId,
+      ...baseColumnFields,
+    })
+    expect(result.success).toBe(false)
+    expect(result.error?.issues.some(i => i.path[0] === 'platformName')).toBe(true)
+  })
+
+  it('accepts platformName without existingPlatformId (create branch regression)', () => {
+    const result = CreatePrivateImportFormatSchema.safeParse({
+      fileId: validFileId,
+      platformName: 'My Bank',
+      ...baseColumnFields,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects non-integer existingPlatformId', () => {
+    const result = CreatePrivateImportFormatSchema.safeParse({
+      fileId: validFileId,
+      existingPlatformId: 1.5,
+      platformName: 'My Bank',
+      ...baseColumnFields,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects non-positive (zero) existingPlatformId', () => {
+    const result = CreatePrivateImportFormatSchema.safeParse({
+      fileId: validFileId,
+      existingPlatformId: 0,
+      platformName: 'My Bank',
+      ...baseColumnFields,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('still fires amountMode superRefine rules in attach branch', () => {
+    const result = CreatePrivateImportFormatSchema.safeParse({
+      fileId: validFileId,
+      existingPlatformId: 7,
+      delimiter: ',',
+      timestampColumn: 'Data',
+      descriptionColumn: 'Descrizione',
+      amountMode: 'single',
+      // amountColumn absent — should trigger amountColumn issue
+    })
+    expect(result.success).toBe(false)
+    expect(result.error?.issues.some(i => i.path[0] === 'amountColumn')).toBe(true)
+  })
+})
+
 describe('UpdateImportDisplayNameSchema', () => {
   const validFileId = '11111111-1111-4111-8111-111111111111'
 

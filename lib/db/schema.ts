@@ -251,12 +251,12 @@ export const nature = pgTable(
 );
 
 // platform holds identity only (ADR 0013). Parsing contract lives on importFormatVersion.
+// ADR 0015: platform is never user-owned — visibility dropped, ownerUserId renamed to proposedByUserId.
 export const platform = pgTable(
   "platform",
   {
     id: serial("id").primaryKey(),
-    ownerUserId: text("owner_user_id").references(() => user.id, { onDelete: "cascade" }),
-    visibility: varchar("visibility", { length: 24 }).default("global").notNull(),
+    proposedByUserId: text("proposed_by_user_id").references(() => user.id, { onDelete: "cascade" }),
     reviewStatus: varchar("review_status", { length: 24 }).default("approved").notNull(),
     name: varchar("name", { length: 100 }).notNull(),
     slug: varchar("slug", { length: 100 }).notNull().unique(),
@@ -270,8 +270,8 @@ export const platform = pgTable(
   },
   (table) => [
     index("platform_slug_idx").on(table.slug),
-    index("platform_ownerUserId_idx").on(table.ownerUserId),
-    index("platform_visibility_reviewStatus_idx").on(table.visibility, table.reviewStatus),
+    index("platform_proposedByUserId_idx").on(table.proposedByUserId),
+    index("platform_reviewStatus_idx").on(table.reviewStatus),
   ],
 );
 
@@ -616,7 +616,7 @@ export const natureRelations = relations(nature, ({ one, many }) => ({
 
 export const platformRelations = relations(platform, ({ one, many }) => ({
   owner: one(user, {
-    fields: [platform.ownerUserId],
+    fields: [platform.proposedByUserId],
     references: [user.id],
   }),
   importFormatVersions: many(importFormatVersion),

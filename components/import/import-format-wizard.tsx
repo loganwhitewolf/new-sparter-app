@@ -20,6 +20,7 @@ import {
   createPrivateImportFormatAction,
   type ImportActionState,
 } from '@/lib/actions/import'
+import type { AttachablePlatform } from '@/lib/dal/import-formats'
 import type {
   CreatePrivateImportFormatResult,
   ImportFormatWizardContext,
@@ -49,8 +50,11 @@ type WizardFieldValues = {
   negativeAmountColumn: string
 }
 
+type SelectedPlatform = number | 'new' | null
+
 type Props = {
   context: ImportFormatWizardContext
+  attachablePlatforms?: AttachablePlatform[]
   from?: string
   createAction?: typeof createPrivateImportFormatAction
   completeOnboardingAction?: typeof completeOnboardingPrivateImportAction
@@ -128,6 +132,7 @@ function readFormValues(form: HTMLFormElement): WizardFieldValues {
 
 export function ImportFormatWizard({
   context,
+  attachablePlatforms = [],
   from,
   createAction = createPrivateImportFormatAction,
   completeOnboardingAction = completeOnboardingPrivateImportAction,
@@ -137,6 +142,15 @@ export function ImportFormatWizard({
   const [amountMode, setAmountMode] = useState<AmountMode>('single')
   const [clientErrors, setClientErrors] = useState<string[]>([])
   const [completionError, setCompletionError] = useState<string | null>(null)
+
+  // Step 1 state — skipped when attachablePlatforms is empty (Pitfall 3)
+  const [currentStep, setCurrentStep] = useState<'platform' | 'columns'>(
+    attachablePlatforms.length === 0 ? 'columns' : 'platform',
+  )
+  const [selectedPlatformId, setSelectedPlatformId] = useState<SelectedPlatform>(
+    attachablePlatforms.length === 0 ? 'new' : null,
+  )
+  const [platformNameInput, setPlatformNameInput] = useState('')
 
   // Controlled values for shadcn Select (needed to populate hidden inputs)
   const [delimiter, setDelimiter] = useState(context.detectedDelimiter ?? ';')
@@ -202,6 +216,21 @@ export function ImportFormatWizard({
 
   const headerSelectOptions = headerOptions.map((header) => ({ value: header, label: header }))
 
+  // Resolve the platform name for step 2 hidden input and read-only header
+  const selectedPlatform =
+    typeof selectedPlatformId === 'number'
+      ? attachablePlatforms.find((p) => p.id === selectedPlatformId)
+      : null
+  const resolvedPlatformName =
+    typeof selectedPlatformId === 'number'
+      ? (selectedPlatform?.name ?? '')
+      : platformNameInput
+
+  // Step 1: platform selection — rendered only when currentStep === 'platform'
+  const step1CanAdvance =
+    selectedPlatformId !== null &&
+    (typeof selectedPlatformId === 'number' || platformNameInput.trim().length > 0)
+
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <Card className="overflow-hidden border-amber-200/60 bg-gradient-to-br from-amber-50/60 via-background to-background shadow-sm dark:border-amber-900/40 dark:from-amber-950/20">
@@ -217,6 +246,84 @@ export function ImportFormatWizard({
           </p>
         </CardHeader>
         <CardContent>
+          {/* Step 1: choose an existing platform or create a new one */}
+          {currentStep === 'platform' && (
+            <div className="space-y-4">
+              <p className="text-sm font-medium">
+                Scegli la piattaforma a cui associare il nuovo formato privato:
+              </p>
+              <div className="space-y-2">
+                {attachablePlatforms.map((platform) => (
+                  <label
+                    key={platform.id}
+                    className={`flex cursor-pointer items-center gap-3 rounded-lg border bg-background p-3 text-sm transition-colors focus-within:ring-[3px] focus-within:ring-ring/50 ${
+                      selectedPlatformId === platform.id
+                        ? 'border-primary bg-primary/5'
+                        : 'hover:bg-muted/40'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="_platformSelection"
+                      value={String(platform.id)}
+                      checked={selectedPlatformId === platform.id}
+                      onChange={() => setSelectedPlatformId(platform.id)}
+                      className="accent-primary"
+                    />
+                    <span className="font-medium">{platform.name}</span>
+                  </label>
+                ))}
+
+                {/* Always-visible "create new" entry */}
+                <div
+                  className={`rounded-lg border ${
+                    selectedPlatformId === 'new'
+                      ? 'border-primary bg-primary/5'
+                      : 'hover:bg-muted/40'
+                  }`}
+                >
+                  <label className="flex cursor-pointer items-center gap-3 p-3 text-sm transition-colors focus-within:ring-[3px] focus-within:ring-ring/50">
+                    <input
+                      type="radio"
+                      name="_platformSelection"
+                      value="new"
+                      checked={selectedPlatformId === 'new'}
+                      onChange={() => setSelectedPlatformId('new')}
+                      className="accent-primary"
+                    />
+                    <span className="font-medium">+ Crea una nuova platform</span>
+                  </label>
+                  {selectedPlatformId === 'new' && (
+                    <div className="space-y-1.5 px-3 pb-3">
+                      <label htmlFor="platformNameStep1" className="text-xs font-medium text-muted-foreground">
+                        Nome piattaforma
+                      </label>
+                      <Input
+                        id="platformNameStep1"
+                        type="text"
+                        maxLength={100}
+                        placeholder="Es. Banca personale"
+                        value={platformNameInput}
+                        onChange={(e) => setPlatformNameInput(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                onClick={() => setCurrentStep('columns')}
+                disabled={!step1CanAdvance}
+              >
+                Continua
+              </Button>
+            </div>
+          )}
+
+          {/* Step 2: column configuration */}
+          {currentStep === 'columns' && (
+          <>
           {!hasHeaders ? (
             <Alert variant="destructive" role="alert">
               <AlertCircle className="h-4 w-4" aria-hidden="true" />
@@ -238,6 +345,12 @@ export function ImportFormatWizard({
               <input type="hidden" name="positiveAmountColumn" value={positiveAmountColumn} />
               <input type="hidden" name="negativeAmountColumn" value={negativeAmountColumn} />
               <input type="hidden" name="amountMode" value={amountMode} />
+
+              {/* Hidden inputs for platform identity (step 1 result) */}
+              {typeof selectedPlatformId === 'number' && (
+                <input type="hidden" name="existingPlatformId" value={String(selectedPlatformId)} />
+              )}
+              <input type="hidden" name="platformName" value={resolvedPlatformName} />
 
               {(clientErrors.length > 0 || state.error || completionError) && (
                 <Alert variant="destructive" role="alert" aria-live="assertive">
@@ -263,29 +376,27 @@ export function ImportFormatWizard({
                   <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                   <AlertDescription>
                     {isOnboardingFlow
-                      ? 'Formato salvato. Importo il file e torno all’onboarding…'
-                      : "Formato salvato. Riprovo l'analisi dello stesso file…"}
+                      ? "Formato salvato. Importo il file e torno all’onboarding…"
+                      : "Formato salvato. Riprovo l’analisi dello stesso file…"}
                   </AlertDescription>
                 </Alert>
               )}
 
+              {/* Read-only platform header in step 2 (D-03) */}
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Piattaforma
+                </p>
+                <p className="mt-0.5 font-medium">
+                  {typeof selectedPlatformId === 'number'
+                    ? `Configura il formato per ${resolvedPlatformName}`
+                    : resolvedPlatformName.trim()
+                      ? `Nuova piattaforma: ${resolvedPlatformName}`
+                      : 'Nuova piattaforma'}
+                </p>
+              </div>
+
               <div className="grid gap-5 md:grid-cols-2">
-                <div className="space-y-1.5 md:col-span-2">
-                  <label htmlFor="platformName" className="text-sm font-medium">
-                    Nome piattaforma
-                  </label>
-                  <Input
-                    id="platformName"
-                    name="platformName"
-                    type="text"
-                    required
-                    maxLength={100}
-                    placeholder="Es. Banca personale"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Questo nome resta privato e ti aiuta a riconoscere il formato in futuro.
-                  </p>
-                </div>
 
                 {!isExcel && (
                   <SelectField
@@ -411,6 +522,8 @@ export function ImportFormatWizard({
                 </Button>
               </div>
             </form>
+          )}
+          </>
           )}
         </CardContent>
       </Card>

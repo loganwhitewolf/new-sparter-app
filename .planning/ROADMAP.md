@@ -14,9 +14,18 @@
 - ✅ **v1.16: Dashboard Overview Redesign** — Phases 42–45 (shipped 2026-06-09)
 - ✅ **v2.0: Nature/Direction Model Realignment** — Phases 46–50 (shipped 2026-06-14)
 - ✅ **v2.1: Regex Discovery & Transaction Unification** — Phases 51–55 (shipped 2026-06-22)
-- ✅ **v2.2: PDF Import** — Phases 56–57 (shipped 2026-06-26)
+- ✅ **v2.2: PDF Import** — Phases 56–57 (shipped 2026-06-26) · [archive](milestones/v2.2-ROADMAP.md)
+- 🚧 **v2.3: Platform Identity & Format Ownership** — Phases 58–60 (in progress)
 
 ## Phases
+
+### v2.3: Platform Identity & Format Ownership (Phases 58–60) — IN PROGRESS
+
+Decision contract LOCKED in `docs/adr/0015-platform-global-moderated-format-private.md` + `CONTEXT.md`. Pure implementation — no discovery to redo.
+
+- [x] **Phase 58: platform-identity-and-access** - Make Platform a never-owned, review-gated identity (drop `visibility`, rename `ownerUserId`→`proposedByUserId`, `reviewStatus` lifecycle) with backfill, and decouple `accessibleWhere` so a private format is visible on a global platform — no regression on the hot platform join
+- [ ] **Phase 59: import-wizard-attach-format** - When detection fails, attach a new private Import Format to an existing Platform; mint a brand-new Platform (born `pending`) only when none fits — no more silently duplicated platforms
+- [ ] **Phase 60: seed-slug-linkage-and-docs** - Seeded formats reference Platform by slug (seeded platforms carry no explicit `id`, runtime FK stays `platformId`), eliminating the Trade Republic id-8 collision; correct the stale DescriptionStripPattern reference in CONTEXT.md and code comments
 
 <details>
 <summary>✅ v2.1: Regex Discovery & Transaction Unification (Phases 51–55) — SHIPPED 2026-06-22</summary>
@@ -157,68 +166,87 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 
 </details>
 
-### v2.2: PDF Import (Phases 56–57) — SHIPPED 2026-06-26
+<details>
+<summary>✅ v2.2: PDF Import (Phases 56–57) — SHIPPED 2026-06-26</summary>
 
-- [x] **Phase 56: import-format-refactor** — Sposta il contratto di parsing da `platform` a `import_format_version`; `platform` diventa pura identità; sblocca il versioning reale dei formati per Platform (completed 2026-06-25)
-- [x] **Phase 57: pdf-import-trade-republic** — Import estratti PDF Trade Republic tramite template per-banca normalizzato a `ParsedImportFile`; segno importi via coordinate X (`unpdf`); solo sezione "TRANSAZIONI SUL CONTO" (completed 2026-06-26)
+- [x] **Phase 56: import-format-refactor** — Parsing contract moved from `platform` to `import_format_version`; behavior-preserving; regression-gated on 7 CSV fixtures (completed 2026-06-25, 5/5 plans)
+- [x] **Phase 57: pdf-import-trade-republic** — Trade Republic PDF import via `unpdf` positional X-coordinate sign detection; balance chain validation; "TRANSAZIONI SUL CONTO" section only (completed 2026-06-26, 5/5 plans)
+
+Full details: `.planning/milestones/v2.2-ROADMAP.md`
+
+</details>
 
 ## Phase Details
 
-### Phase 56: import-format-refactor
+### Phase 58: platform-identity-and-access
 
-**Goal**: Il contratto di parsing (`delimiter`, `*Column`, `dateFormat`, `dateReplace`, `decimalReplace`, `multiplyBy`, `descriptionStripPattern`, `amountType`) vive su `import_format_version`; `platform` è pura identità del fornitore; il versioning reale dei tracciati per Platform è esprimibile e funzionante
-**Depends on**: Phase 55 (nothing new to depend on — first phase of v2.2)
-**Requirements**: IFMT-01, IFMT-02, IFMT-03, IFMT-04, IFMT-05
+**Goal**: Platform becomes a never-owned, review-gated identity, and a private Import Format is decoupled from a private Platform — so a user's private format can live on a global/approved platform without the system needing to duplicate the platform.
+**Depends on**: Phase 57 (v2.2 — `import_format_version` already owns the parsing contract; `platform` is pure identity)
+**Requirements**: PLAT-01, PLAT-02, PLAT-03
 **Success Criteria** (what must be TRUE):
 
-  1. Reimportando un file CSV/XLSX di fixture esistente dopo il refactor, i valori `transactionHash` prodotti sono byte-identici a quelli generati prima — verificato da un test di regressione sulle 6 Platform attive
-  2. Il detector (`scoreCandidate`), `normalizeTransactionRow`/`ImportPlatformConfig`, il DAL di detection, i seed script e il wizard dei formati operano sul nuovo contratto senza regressioni comportamentali
-  3. Le righe già in produzione su `platform` e `import_format_version` sono migrate da uno step `seed-extras` additivo e idempotente (generato con `drizzle-kit generate` + `scripts/migrate.ts`, mai `drizzle-kit push`)
-  4. È possibile aggiungere una seconda `import_format_version` (v2) a una Platform esistente e selezionarla al momento dell'import — il constraint `unique(platformId, version)` è funzionante
-  5. La tabella `platform` non contiene più campi del contratto di parsing; i campi rimasti sono solo identità (`name`, `slug`, `country`, `visibility`, `ownerUserId`)
+  1. A platform has no `visibility` column; its former `ownerUserId` is now `proposedByUserId` (provenance), and existing rows are migrated by an additive, idempotent step — no data lost, applied via `drizzle-kit generate` + `scripts/migrate.ts` (never `drizzle-kit push` in production).
+  2. A platform proposed by a user (`reviewStatus = pending`) is visible only to its `proposedByUserId`; an `approved` platform (including all seeded platforms) is visible to every user.
+  3. A user-owned `import_format_version` is visible to its owner even when its platform is global/approved — `accessibleWhere` no longer requires the platform itself to be private.
+  4. Existing global formats still resolve and import exactly as before: the hot `platform` join used by expenses/transactions/imports for filter/display/sort by `platform.slug`/`platform.name` shows no behavioral regression (guarded by tests over the existing formats).
 
-**Plans**: 5/5 plans complete
-
-- [x] 56-05-PLAN.md
-
+**Plans**: 3/3 plans complete
 **Wave 1**
 
-- [x] 56-01-PLAN.md — Regression baseline: pin transactionHash for all CSV fixtures against current code (IFMT-02)
+- [x] 58-01-PLAN.md — Platform schema rename/drop + migration 0023 (true RENAME, applied via scripts/migrate.ts) [PLAT-01]
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [x] 56-02-PLAN.md — Schema: add the parsing contract (nullable) to import_format_version + generated ADD migration (IFMT-01)
+- [x] 58-02-PLAN.md — Relax accessibleWhere + reviewStatus visibility lifecycle (DAL access boundary, lockstep) [PLAT-02, PLAT-03]
+- [x] 58-03-PLAN.md — Wizard write-path glue: createPrivateRows → proposedByUserId, no visibility, reviewStatus 'pending' [PLAT-01]
+
+### Phase 59: import-wizard-attach-format
+
+**Goal**: When format detection fails on upload, the user attaches a new private Import Format to an existing Platform; a brand-new Platform is created only when none fits, and it is born `pending` — eliminating silently minted duplicate platforms for known banks.
+**Depends on**: Phase 58 (review-gated visibility + decoupled `accessibleWhere` must exist before the wizard can offer an existing platform and create private formats against it)
+**Requirements**: PLAT-04
+**Success Criteria** (what must be TRUE):
+
+  1. On a failed detection, the wizard offers the user existing Platforms to attach a new private Import Format to, instead of always creating a new Platform.
+  2. Attaching a private Import Format to a known bank's existing (approved) Platform reuses that Platform — no duplicate "Fineco"-style row is created.
+  3. A brand-new Platform is created only when no existing one fits, and it is persisted with `reviewStatus = pending` (visible only to its proposer).
+  4. The newly attached private Import Format is immediately usable by its owner for the import that triggered creation.
+
+**Plans**: 3/3 plans complete
+**UI hint**: yes
+
+Plans:
+**Wave 1**
+
+- [x] 59-01-PLAN.md — DAL `listAttachablePlatforms` (approved + own-pending) + tests (Wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 59-02-PLAN.md — Zod `existingPlatformId` + `createPrivateRows` attach fork + action propagation + `listAttachablePlatformsAction` (Wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [x] 56-03-PLAN.md — seed-extras data copy + seed-data/seed.ts rework + drop platform contract columns (IFMT-03, IFMT-05)
+- [x] 59-03-PLAN.md — wizard step 1 UI, configure page wiring, UI tests (Wave 3)
 
-**Wave 4** *(blocked on Wave 3 completion)*
+### Phase 60: seed-slug-linkage-and-docs
 
-- [x] 56-04-PLAN.md — Re-point detector/DAL/type/wizard to the version-owned contract; regression GREEN (IFMT-04, IFMT-05)
-
-### Phase 57: pdf-import-trade-republic
-
-**Goal**: L'utente può caricare un estratto PDF Trade Republic e importare le transazioni della sezione "TRANSAZIONI SUL CONTO" con segni corretti, passando per il pipeline esistente (detector, normalize, dedup, preview) invariato
-**Depends on**: Phase 56
-**Requirements**: PDF-01, PDF-02, PDF-03, PDF-04, PDF-05
+**Goal**: Seeded import formats link to their Platform by slug (not by hardcoded id), removing the Trade Republic id-8 collision that made `onConflictDoNothing` silently skip the TR seed; and the stale DescriptionStripPattern documentation/comments are corrected to reflect ADR 0013.
+**Depends on**: Phase 58 (seeded platforms drop their explicit `id:` only after the identity-model schema is in place; the runtime FK stays `platformId`)
+**Requirements**: PLAT-05, PLAT-06
 **Success Criteria** (what must be TRUE):
 
-  1. Caricando un PDF Trade Republic di esempio, il sistema importa solo le righe della sezione "TRANSAZIONI SUL CONTO" — riepiloghi, posizioni e sezioni-specchio ("PANORAMICA TRANSAZIONI") vengono scartati
-  2. Il segno di ciascun importo è determinato dalla posizione X (`unpdf`, serverless) e verificato contro la catena dei saldi progressivi; un disallineamento produce un errore esplicito e non importa nessun dato
-  3. Un file PDF con estensione `.pdf` / tipo `application/pdf` superiore a 5 MB (o oltre il ceiling di pagine) viene rifiutato con un messaggio d'errore esplicito prima dell'upload R2
-  4. Le righe estratte dal PDF passano invariate per detector, `normalizeTransactionRow`, dedup per hash e preview — le stesse schermate e azioni disponibili per CSV/XLSX funzionano anche per il PDF Trade Republic
-  5. Le descrizioni con parte seriale variabile (es. `quantity: <num>` nei savings plan) aggregano nella stessa Expense dopo il `descriptionStripPattern` minimale configurato per Trade Republic
+  1. Seeded platforms carry no explicit `id:`; the serial assigns it, and conflict resolution is keyed on the unique `slug`.
+  2. Seeded import formats reference their Platform by slug; `seed.ts` resolves slug→id at runtime, and the runtime FK column remains `import_format_version.platformId` (unchanged).
+  3. A clean reseed inserts the Trade Republic format even when a user platform already holds serial id 8 — the id-8 collision no longer skips the TR seed; running `db:migrate → db:seed → db:seed-extras → db:seed-patterns` produces a correctly linked TR format.
+  4. The CONTEXT.md glossary entry and any stale code comments state that DescriptionStripPattern lives on `import_format_version` (ADR 0013), not on `platform`.
 
-**Plans**: 5/5 plans complete
+**Plans**: 2 plans
 
-- [x] 57-01-PLAN.md — Wave 0: install unpdf, obtain TR PDF fixture, calibrate X-coordinate boundaries, seed TR platform + import_format_version (synthetic headers)
-- [x] 57-02-PLAN.md — Wave 1: upload validation — accept .pdf / application/pdf via presigned PUT, keep 5 MB cap
-- [x] 57-03-PLAN.md — Wave 1: TR PDF parser core — marker recognition, section isolation, positional sign, Decimal.js balance chain, page ceiling
-- [x] 57-04-PLAN.md — Wave 2: pipeline integration — .pdf dispatch in parseImportFile, end-to-end detector/normalize verification
-- [x] 57-05-PLAN.md — Wave 1 (gap closure, UAT Test 5): user-friendly Italian "PDF non riconosciuto" message with supported-platform list; no internal markers leaked
+Plans:
+**Wave 1** *(parallel)*
 
-**UI hint**: yes
+- [ ] 60-01-PLAN.md — Remove explicit platform ids from seed-data.ts + slug-to-id resolution in seed.ts (PLAT-05)
+- [ ] 60-02-PLAN.md — Fix stale DescriptionStripPattern attribution in CONTEXT.md and service comments (PLAT-06)
 
 ## Progress
 
@@ -236,13 +264,11 @@ Full detail archived in milestones/v2.0-ROADMAP.md.
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
 | 42–45 | v1.16 | 13/13 | Complete | 2026-06-09 |
 | 46–50 | v2.0 | 22/22 | Complete | 2026-06-14 |
-| 51. discovery-pipeline-reorder | v2.1 | 3/3 | Complete | 2026-06-16 |
-| 52. regex-validity-and-dedup | v2.1 | 3/3 | Complete | 2026-06-16 |
-| 53. retroactive-application | v2.1 | 3/3 | Complete | 2026-06-16 |
-| 54. reusable-trigger | v2.1 | 3/3 | Complete | 2026-06-21 |
-| 55. import-summary-ux | v2.1 | 3/3 | Complete | 2026-06-22 |
-| 56. import-format-refactor | v2.2 | 5/5 | Complete | 2026-06-25 |
-| 57. pdf-import-trade-republic | v2.2 | 5/5 | Complete | 2026-06-26 |
+| 51–55 | v2.1 | 15/15 | Complete | 2026-06-22 |
+| 56–57 | v2.2 | 10/10 | Complete | 2026-06-26 |
+| 58. platform-identity-and-access | v2.3 | 3/3 | Complete   | 2026-06-29 |
+| 59. import-wizard-attach-format | v2.3 | 3/3 | Complete   | 2026-06-29 |
+| 60. seed-slug-linkage-and-docs | v2.3 | 0/? | Not started | - |
 
 **Total shipped: 57 phases · 214 plans complete**
-**Active milestone: v2.2 — 2 phases planned, 2 complete — SHIPPED 2026-06-26**
+**Current milestone: v2.3 — Platform Identity & Format Ownership (Phases 58–60)**

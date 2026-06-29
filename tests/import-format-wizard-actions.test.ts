@@ -17,6 +17,14 @@ const mocks = vi.hoisted(() => ({
   insertedPlatforms: [] as Record<string, unknown>[],
   insertedVersions: [] as Record<string, unknown>[],
   updatedFiles: [] as Record<string, unknown>[],
+  // selectWhere: controls what SELECT...WHERE returns in createPrivateRows.
+  // Default (mockResolvedValue): [] — no duplicates found, TOCTOU fails (platform gone).
+  // Per-test overrides via mockResolvedValueOnce:
+  //   attach branch: [{ id: 301, name: 'Fineco', slug: 'fineco' }]
+  //   duplicate name check: [{ id: 99 }]
+  selectWhere: vi.fn(),
+  // listAttachablePlatforms: mock for the DAL function used by listAttachablePlatformsAction (Plan 59-02)
+  listAttachablePlatforms: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
@@ -35,10 +43,22 @@ vi.mock('@/lib/logger', () => ({
     error: mocks.loggerError,
   },
 }))
+vi.mock('@/lib/dal/import-formats', () => ({
+  listAttachablePlatforms: mocks.listAttachablePlatforms,
+  listPdfImportPlatformNames: vi.fn().mockResolvedValue([]),
+}))
 
 function makeTx() {
   return {
     execute: mocks.txExecute,
+    // select: used by createPrivateRows for the duplicate-name guard (create branch) and the
+    // TOCTOU platform SELECT (attach branch). mocks.selectWhere controls the resolved value per
+    // call — use mockResolvedValueOnce in tests that need specific rows; default is [].
+    select: (_fields: unknown) => ({
+      from: (_table: unknown) => ({
+        where: mocks.selectWhere,
+      }),
+    }),
     insert: () => ({
       values: (value: Record<string, unknown>) => {
         if ('headerSignature' in value) {
@@ -73,6 +93,7 @@ const {
   analyzeImportAction,
   confirmImportAction,
   createPrivateImportFormatAction,
+  listAttachablePlatformsAction,
   loadImportFormatWizardContextAction,
 } = await import('../lib/actions/import')
 
@@ -149,6 +170,13 @@ describe('import format wizard Server Actions', () => {
     mocks.insertedPlatforms.length = 0
     mocks.insertedVersions.length = 0
     mocks.updatedFiles.length = 0
+    // Default: SELECT returns [] — no duplicate found (create branch), platform not found (attach TOCTOU).
+    // Override per-test with mockResolvedValueOnce.
+    mocks.selectWhere.mockResolvedValue([])
+    mocks.listAttachablePlatforms.mockResolvedValue([
+      { id: 1, name: 'Fineco', slug: 'fineco', reviewStatus: 'approved' },
+      { id: 2, name: 'Revolut', slug: 'revolut', reviewStatus: 'approved' },
+    ])
     mocks.verifySession.mockResolvedValue(userSession)
     mocks.getFileForUser.mockResolvedValue(fileRow)
     mocks.readObjectBody.mockResolvedValue(Readable.from([Buffer.from('Data,Descrizione,Importo\n2026-01-01,Coffee,-2.50')]))
@@ -200,25 +228,25 @@ describe('import format wizard Server Actions', () => {
     })
     expect(mocks.txExecute).toHaveBeenCalledTimes(1)
     expect(mocks.insertedPlatforms[0]).not.toHaveProperty('id')
-    // platform holds identity only (ADR 0013) — no contract fields
+    // platform is never user-owned (ADR 0015): proposedByUserId is provenance, no visibility column
     expect(mocks.insertedPlatforms[0]).toMatchObject({
-      ownerUserId: 'user-abc',
-      visibility: 'private',
-      reviewStatus: 'draft',
+      proposedByUserId: 'user-abc',
+      reviewStatus: 'pending',
       name: 'My Bank',
       country: 'IT',
       isActive: true,
     })
+    expect(mocks.insertedPlatforms[0]).not.toHaveProperty('visibility')
     expect(mocks.insertedPlatforms[0]).not.toHaveProperty('delimiter')
     expect(mocks.insertedPlatforms[0]).not.toHaveProperty('timestampColumn')
     expect(mocks.insertedPlatforms[0]).not.toHaveProperty('descriptionColumn')
     expect(mocks.insertedPlatforms[0]).not.toHaveProperty('amountType')
-    // importFormatVersion holds the full parsing contract (ADR 0013)
+    // importFormatVersion holds the full parsing contract (ADR 0013); keeps ownerUserId/visibility (Discretion A3)
     expect(mocks.insertedVersions[0]).toMatchObject({
       platformId: 301,
       ownerUserId: 'user-abc',
       visibility: 'private',
-      reviewStatus: 'draft',
+      reviewStatus: 'pending',
       version: 1,
       headerSignature: 'Data,Descrizione,Importo',
       isActive: true,
@@ -351,5 +379,121 @@ describe('import format wizard Server Actions', () => {
 
     expect(result).toEqual({ error: 'Sessione scaduta. Accedi di nuovo per configurare il formato.' })
     expect(mocks.getFileForUser).not.toHaveBeenCalled()
+  })
+
+  // Plan 59-02: attach branch tests
+  it('attach branch: skips platform insert and syncPlatformIdSequence, inserts version with existingPlatformId', async () => {
+    // Simulate: platform 301 is active and visible to this user (TOCTOU SELECT returns it)
+    mocks.selectWhere.mockResolvedValueOnce([{ id: 301, name: 'Fineco', slug: 'fineco' }])
+
+    const result = await createPrivateImportFormatAction(
+      { error: null },
+      validCreateForm({ existingPlatformId: '301' }),
+    )
+
+    expect(result.error).toBeNull()
+    expect(result.data?.platformId).toBe(301)
+    // No platform insert — the attach branch reuses the existing platform
+    expect(mocks.insertedPlatforms).toHaveLength(0)
+    // syncPlatformIdSequence must NOT run in the attach branch
+    expect(mocks.txExecute).not.toHaveBeenCalled()
+    // importFormatVersion is inserted with platformId = existingPlatformId (301)
+    expect(mocks.insertedVersions[0]).toMatchObject({
+      platformId: 301,
+      ownerUserId: 'user-abc',
+      visibility: 'private',
+      reviewStatus: 'pending',
+    })
+  })
+
+  it('attach branch: throws db_write_failed when platform no longer exists (TOCTOU guard)', async () => {
+    // selectWhere defaults to [] — TOCTOU SELECT finds no active/visible platform with that id
+
+    const result = await createPrivateImportFormatAction(
+      { error: null },
+      validCreateForm({ existingPlatformId: '301' }),
+    )
+
+    expect(result).toEqual({ error: 'Impossibile salvare il formato. Riprova.' })
+    expect(mocks.insertedPlatforms).toHaveLength(0)
+    expect(mocks.insertedVersions).toHaveLength(0)
+  })
+
+  it('attach branch: rejects a forged id for another user\'s pending platform (IDOR fix)', async () => {
+    // TOCTOU SELECT returns [] — the platform exists but is pending and owned by another user,
+    // so the visibility WHERE clause filters it out. The service must throw db_write_failed.
+    // selectWhere defaults to [] — no action needed.
+
+    const result = await createPrivateImportFormatAction(
+      { error: null },
+      validCreateForm({ existingPlatformId: '999' }),
+    )
+
+    expect(result).toEqual({ error: 'Impossibile salvare il formato. Riprova.' })
+    expect(mocks.insertedPlatforms).toHaveLength(0)
+    expect(mocks.insertedVersions).toHaveLength(0)
+  })
+
+  it('create branch: rejects a platform name that duplicates an existing approved platform', async () => {
+    // Duplicate check SELECT returns a row — a platform with the same name is already approved.
+    mocks.selectWhere.mockResolvedValueOnce([{ id: 42 }])
+
+    const result = await createPrivateImportFormatAction(
+      { error: null },
+      validCreateForm({ platformName: 'Fineco' }),
+    )
+
+    expect(result).toEqual({
+      error: 'Esiste già una piattaforma approvata con questo nome. Selezionala dal passo 1 oppure usa un nome diverso.',
+    })
+    expect(mocks.insertedPlatforms).toHaveLength(0)
+    expect(mocks.insertedVersions).toHaveLength(0)
+    expect(mocks.txExecute).not.toHaveBeenCalled()
+  })
+
+  // Plan 59-02: listAttachablePlatformsAction tests
+  it('listAttachablePlatformsAction returns the attachable platform list for authenticated session', async () => {
+    const result = await listAttachablePlatformsAction()
+
+    expect(result.error).toBeNull()
+    expect(result.data).toEqual([
+      { id: 1, name: 'Fineco', slug: 'fineco', reviewStatus: 'approved' },
+      { id: 2, name: 'Revolut', slug: 'revolut', reviewStatus: 'approved' },
+    ])
+    expect(mocks.listAttachablePlatforms).toHaveBeenCalledWith('user-abc')
+  })
+
+  it('listAttachablePlatformsAction returns session-expired error when verifySession rejects', async () => {
+    mocks.verifySession.mockRejectedValueOnce(new Error('missing session'))
+
+    const result = await listAttachablePlatformsAction()
+
+    expect(result.error).toBe('Sessione scaduta. Accedi di nuovo per configurare il formato.')
+    expect(mocks.listAttachablePlatforms).not.toHaveBeenCalled()
+  })
+
+  it('listAttachablePlatformsAction returns error when DAL throws', async () => {
+    mocks.listAttachablePlatforms.mockRejectedValueOnce(new Error('DB connection failed'))
+
+    const result = await listAttachablePlatformsAction()
+
+    expect(result.error).toBe('Impossibile caricare le piattaforme. Riprova.')
+  })
+
+  it('create branch regression: still inserts pending platform and calls syncPlatformIdSequence once', async () => {
+    const result = await createPrivateImportFormatAction({ error: null }, validCreateForm())
+
+    expect(result.error).toBeNull()
+    expect(mocks.txExecute).toHaveBeenCalledTimes(1)
+    expect(mocks.insertedPlatforms[0]).toMatchObject({
+      proposedByUserId: 'user-abc',
+      reviewStatus: 'pending',
+      name: 'My Bank',
+      country: 'IT',
+      isActive: true,
+    })
+    expect(mocks.insertedVersions[0]).toMatchObject({
+      platformId: 301,
+    })
   })
 })

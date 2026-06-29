@@ -19,11 +19,11 @@ Il processo con cui l'utente carica un file CSV/Excel di estratto conto e lo tra
 _Avoid_: upload, sincronizzazione
 
 **Platform** (Piattaforma):
-Un istituto bancario, broker o servizio di pagamento (es. Intesa SP, Revolut, Fineco, Trade Republic) da cui proviene un estratto. La Platform è **identità del fornitore** (nome, slug, paese), non contratto di formato: il come-si-parsa il file appartiene all'**Import Format**. Una Platform può fornire estratti in formati diversi (CSV, XLSX, PDF).
-_Avoid_: banca, conto
+Un istituto bancario, broker o servizio di pagamento (es. Intesa SP, Revolut, Fineco, Trade Republic) da cui proviene un estratto. La Platform è **identità del fornitore** (nome, slug, paese), non contratto di formato: il come-si-parsa il file appartiene all'**Import Format**. Una Platform può fornire estratti in formati diversi (CSV, XLSX, PDF). La Platform **non è mai posseduta da un utente**: un'identità-fornitore posseduta da uno solo è una contraddizione. Ha invece un ciclo di **review**: una Platform proposta da un utente nasce `pending` ed è visibile **solo al proponente**; una volta approvata diventa `approved` e **condivisa con tutti** ("Fineco" è la stessa identità per ogni utente). Ciò che un utente può possedere è solo un **Import Format** privato (vedi sotto).
+_Avoid_: banca, conto, platform privata
 
 **Import Format** (Contratto di import):
-Il contratto **versionato** che descrive come il file di una Platform si mappa in Transaction: quali colonne sono data/descrizione/importo, il segno, l'eventuale `descriptionStripPattern`, e il tipo di sorgente (CSV/XLSX/PDF). Appartiene alla Platform (1:N) ma è proprietà dell'Import Format, non della Platform — più versioni convivono per gestire cambi di tracciato. Per le sorgenti PDF (parsing per-banca via template) le "colonne" sono **sintetiche**: nomi-contratto prodotti dall'estrattore, non intestazioni presenti nel file.
+Il contratto **versionato** che descrive come il file di una Platform si mappa in Transaction: quali colonne sono data/descrizione/importo, il segno, l'eventuale `descriptionStripPattern`, e il tipo di sorgente (CSV/XLSX/PDF). Appartiene alla Platform (1:N) ma è proprietà dell'Import Format, non della Platform — più versioni convivono per gestire cambi di tracciato. A differenza della Platform, un Import Format **può essere privato**: posseduto da un singolo utente (`ownerUserId`) e recuperabile solo da lui, **anche quando è appeso a una Platform globale/approvata**. È il livello dove vive la personalizzazione: es. un file Fineco rielaborato a mano in Excel con un tracciato proprio dell'utente diventa un Import Format privato sotto la Fineco condivisa, senza duplicare la Platform. Per le sorgenti PDF (parsing per-banca via template) le "colonne" sono **sintetiche**: nomi-contratto prodotti dall'estrattore, non intestazioni presenti nel file.
 _Avoid_: tracciato (come sinonimo del solo header), formato file
 
 **Sezione canonica dei movimenti** (regola di dominio per estratti multi-sezione):
@@ -31,7 +31,7 @@ Un estratto — tipicamente PDF — può contenere più tabelle con numeri (riep
 _Avoid_: importare tutte le righe del file
 
 **DescriptionStripPattern** (Pattern di pulizia descrizione):
-Regex nullable configurata per Platform. Quando presente, viene applicata alla descrizione grezza estratta dal CSV prima di `normalizeDescription` e del calcolo degli hash. Rimuove boilerplate prevedibile (es. suffissi con numero carta e data operazione) che altrimenti impedisce l'aggregazione delle transazioni dello stesso esercente e la categorizzazione automatica. Il valore originale è sempre preservato in `rawRow`.
+Regex nullable configurata per Import Format (campo `description_strip_pattern` su `import_format_version`, ADR 0013). Quando presente, viene applicata alla descrizione grezza estratta dal CSV prima di `normalizeDescription` e del calcolo degli hash. Rimuove boilerplate prevedibile (es. suffissi con numero carta e data operazione) che altrimenti impedisce l'aggregazione delle transazioni dello stesso esercente e la categorizzazione automatica. Il valore originale è sempre preservato in `rawRow`.
 _Avoid_: regex di normalizzazione, filtro descrizione
 
 ### Categorizzazione

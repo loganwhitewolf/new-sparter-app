@@ -1,18 +1,19 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: PDF Import
-current_phase: 57
-current_phase_name: pdf-import-trade-republic
-status: "Phase 57 shipped — PR #24"
-stopped_at: Phase 57 verified and complete — milestone v2.2 shipped
-last_updated: "2026-06-26T12:57:26.033Z"
-last_activity: 2026-06-29 - Completed quick task 260629-m9i: detach transaction to dedicated expense
+milestone: v2.3
+milestone_name: Platform Identity & Format Ownership
+current_phase: 59
+current_phase_name: import-wizard-attach-format
+status: complete
+stopped_at: Phase 59 all plans complete — PLAT-04 delivered
+last_updated: "2026-06-29T15:22:00.000Z"
+last_activity: 2026-06-29
+last_activity_desc: Phase 59 Plan 03 complete — attach wizard UI + RSC preload + tests
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 6
+  completed_plans: 6
   percent: 100
 ---
 
@@ -20,69 +21,72 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-25)
+See: .planning/PROJECT.md (updated 2026-06-29)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Milestone v2.2 SHIPPED — PDF Import (Phases 56–57 complete)
+**Current focus:** Phase 59 — import-wizard-attach-format
 
 ## Current Position
 
-Phase: 57 (pdf-import-trade-republic) — COMPLETE
-Plan: 5 of 5
-Status: Phase 57 shipped — PR #24
-Last activity: 2026-06-26
+Phase: 59 (import-wizard-attach-format) — EXECUTING
+Phase: 59 (import-wizard-attach-format) — NEXT
+Status: Executing Phase 59
+Last activity: 2026-06-29 — Phase 59 execution started
 
-Progress bar: `████████████████████` 100% (2/2 phases)
-
-## Roadmap (v2.2 — Phases 56–57)
+## Roadmap (v2.3 — Phases 58–60)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 56 | import-format-refactor | IFMT-01, IFMT-02, IFMT-03, IFMT-04, IFMT-05 | Complete (2026-06-25) |
-| 57 | pdf-import-trade-republic | PDF-01, PDF-02, PDF-03, PDF-04, PDF-05 | Complete (2026-06-26) |
+| 58 | platform-identity-and-access | PLAT-01, PLAT-02, PLAT-03 | Complete (verified 2026-06-29) |
+| 59 | import-wizard-attach-format | PLAT-04 | Not started |
+| 60 | seed-slug-linkage-and-docs | PLAT-05, PLAT-06 | Not started |
 
-**Milestone v2.2 SHIPPED 2026-06-26.**
+**Coverage:** 6/6 PLAT requirements mapped. Decision contract LOCKED (ADR 0015) — pure implementation, no discovery.
 
 ## Accumulated Context
 
 ### Decisions
 
-Design contract is LOCKED. Do not re-derive the approach:
+Design contract is LOCKED (ADR 0015). Do not re-derive the approach:
 
-- ADR 0013: il contratto di parsing (`delimiter`, `*Column`, `dateFormat`, `dateReplace`, `decimalReplace`, `multiplyBy`, `descriptionStripPattern`, `amountType`) si sposta da `platform` a `import_format_version`; `platform` resta pura identità; behavior-preserving, regression-gated su fixture reali.
-- ADR 0014: per-banca, non generico; template deterministico che riconosce il documento per marker ed estrae solo la sezione canonica dei movimenti; normalizzato a `ParsedImportFile` con header sintetici; segno via coordinate X (`unpdf`, serverless); catena saldi come guard esplicita; `pdf-parse` scartato (testo piatto, no coordinate).
-- CONTEXT.md: "Platform" = pura identità fornitore; "Import Format" = contratto versionato; "Sezione canonica dei movimenti" = solo "TRANSAZIONI SUL CONTO" per Trade Republic; "PANORAMICA TRANSAZIONI" e "PANORAMICA DEL SALDO" scartate.
-- Migration path: `drizzle-kit generate` + `scripts/migrate.ts` + step additivo in `seed-extras.ts` — mai `drizzle-kit push` in produzione.
-- `unpdf` scelto per coordinate X (serverless-ready); `pdf-parse` scartato.
-- Categorizzazione automatica delle descrizioni TR è fuori scope — follow-up via `regex-discovery` + `seed-patterns`.
-- OCR/scanned PDF fuori scope.
-- Parser PDF generico fuori scope.
-- [Phase 56]: Regression test written BEFORE any column move — pins transactionHash of all 7 CSV fixtures as static hex literals (IFMT-02)
-- [Phase 56]: Schema transition migration: 12 contract columns added nullable to importFormatVersion; platform columns untouched until Plan 03 data copy
-- [Phase 56]: Migration 0021_glorious_callisto.sql produced via drizzle-kit generate — ADD COLUMN only on import_format_version, no DROP, applied at operator deploy time
-- [Phase 56]: platform Drizzle import removed from seed-extras.ts — no other step references the table object after Step 2 became a no-op (IFMT-05)
-- [Phase 57]: application/octet-stream added as defensive PDF MIME fallback (browser Assumption A5); extension check still constrains file kind
-- [Phase 57]: initiate route required no code change — PDF support flows through InitiateUploadSchema transparently
-- [Phase 57]: 5 MB size cap preserved unchanged per D-05/T-57-02-01
-- [Phase 57]: UNRECOGNIZED_PDF_FORMAT — costante singola nel parser (italiano generico, nessun marker interno esposto)
-- [Phase 57]: PDF_IMPORT_PLATFORM_SLUGS allowlist co-locata con il dispatch .pdf in import-parsers.ts (no fileType column su import_format_version — allowlist approach evita scope creep)
+- **ADR 0015**: Platform is never user-owned — drop `platform.visibility`, rename `platform.ownerUserId` → `proposedByUserId`; visibility governed by `reviewStatus` (`pending` = visible only to proposer; `approved` = shared with all; seeded platforms stay `approved`). Private ownership lives only on `import_format_version` (`ownerUserId`), which can be private even on a global/approved platform. `accessibleWhere` relaxes to "private format visible to owner on any platform," decoupling private-format from private-platform.
+- **ADR 0015 wizard**: on detection failure, first offer an existing Platform to attach a new private Import Format; create a new Platform (born `pending`) only when none fits — no more silently duplicated platforms.
+- **ADR 0015 seed**: seeded platforms carry no explicit `id:` (serial assigns; conflict on unique `slug`); seeded import formats reference `platformSlug`, resolved slug→id at runtime in `seed.ts`. Runtime FK stays `platformId` (surrogate int, hot join) — slug is the seed-linkage key only. This eliminates the Trade Republic id-8 collision (`onConflictDoNothing` silently skipped TR when a user platform held serial id 8).
+- **ADR 0013** (extended by 0015): the parsing contract lives on `import_format_version`, not `platform`; `platform` is pure identity. DescriptionStripPattern lives on `import_format_version` — the CONTEXT.md glossary line ("Regex nullable configurata per Platform") is stale and corrected in PLAT-06.
+- Migration path: `drizzle-kit generate` + `scripts/migrate.ts`; additive idempotent backfill in `seed-extras.ts`; never `drizzle-kit push` in production. Seed run order after migration: `db:migrate → db:seed → db:seed-extras → db:seed-patterns`.
+- **Deferred (not built now)**: operator approval UI to promote `pending` → `approved` (needed only with a second user); multi-user identity dedup. For single-user, `pending` + proposer-visible is already functional.
+- [Phase 58-01]: Migration 0023 via --custom fallback: RENAME COLUMN applied directly via node-pg when drizzle-kit stalled on Supabase pooler; platformRelations.owner key kept (D-06)
+- [Phase 58-02]: PLAT-02/PLAT-03: accessibleWhere relaxed to 2-branch OR — private format on approved platform visible to owner; pending platform visible only to proposedByUserId
+- [Phase 58-03]: Wizard reviewStatus aligned to pending; DRAFT_REVIEW_STATUS → PENDING_REVIEW_STATUS; platform insert uses proposedByUserId, no visibility write
+- [Phase 59-03]: Hidden platformName input carries step-1 result so validateWizardFields needs no change (Pitfall 2 resolution)
+- [Phase 59-03]: Empty attachablePlatforms auto-advances to step 2 (currentStep=columns, selectedPlatformId=new) — zero friction on DB-vergine (Pitfall 3)
+- [Phase 59-03]: Edit tool emits curly quotes in string literals; fix via binary replace + double-quote strings with Italian apostrophes
 
-### Codebase facts rilevanti per la prossima milestone
+### Phase 58 — What was built (foundation for Phase 59)
 
-- TR platform (id 8, slug `trade-republic`) con importFormatVersion seeded in `seed-data.ts` — TR pronto per import in produzione dopo `yarn db:seed`
-- `descriptionStripPattern: "quantity:\\s*[\\d.,]+\\s*"` seeded per TR — savings plan rows si aggregano nella stessa Expense
-- Pipeline `parseImportFile` ha il dispatch `.pdf` prima del path CSV — mai toccare l'ordine
-- `PDF_IMPORT_PLATFORM_SLUGS` è il punto unico di verità per aggiungere nuove banche PDF
+- `platform` table: no `visibility` column, `proposedByUserId` (renamed from `ownerUserId`), `reviewStatus` lifecycle (`pending`/`approved`)
+- Migration 0023 applied to Supabase (RENAME COLUMN, no data loss)
+- `accessibleWhere` 2-branch OR: global-approved formats + owner-format-on-any-visible-platform
+- `createPrivateRows` in wizard: platform insert uses `proposedByUserId`, `reviewStatus: 'pending'`, no `visibility`
+- 16/16 phase tests PASS; zero forbidden column references in DAL and wizard
+
+### Codebase facts rilevanti per la milestone
+
+- `lib/dal/import-formats.ts` `accessibleWhere` (lines 132–158): 2-branch OR — global-approved (branch 1) + format-owner with platform visibility guard (branch 2). `platform.proposedByUserId` referenced correctly.
+- Schema (`lib/db/schema.ts`): `platform.proposedByUserId` (nullable text), `platform.reviewStatus` (default `approved`). No `visibility` on `platform`.
+- `importFormatVersion` keeps `ownerUserId` and `visibility` (Discretion A3 — Phase 59/60 territory).
+- Seed (`scripts/seed-data.ts`): Trade Republic platform hardcodes `id: 8` (slug `trade-republic`) and its import format references `platformId: 8` — the collision PLAT-05 fixes via slug linkage. Remove explicit `id:` from seeded platforms; do NOT change the FK column to slug.
+- CONTEXT.md glossary line 33–34 ("DescriptionStripPattern — Regex nullable configurata per Platform") is the stale reference PLAT-06 corrects (should reference `import_format_version` / ADR 0013).
 
 ### Planning Risk
 
-Nessuno aperto. Milestone v2.2 completata e verificata.
+- **Regression risk on the hot `platform` join (PLAT-04):** Phase 59 must guard against regression on the existing format-detection + import paths. Use existing test harness (`import-detector.test.ts`).
 
 ### Blockers/Concerns
 
 Nessuno.
 
-### Quick Tasks Completati (carryover da v2.1)
+### Quick Tasks Completati (carryover da v2.1/v2.2)
 
 | # | Description | Date | Commit |
 |---|-------------|------|--------|
@@ -103,6 +107,8 @@ Items riconosciuti e posticipati:
 
 | Category | Item | Status |
 |----------|------|--------|
+| v2.3 | Operator approval UI (`pending` → `approved`) | deferred — needed only with a second user |
+| v2.3 | Multi-user platform identity dedup | deferred — multi-user only |
 | verification_gap | 53-VERIFICATION.md | human_needed — 3 browser/visual checks |
 | verification_gap | 55-VERIFICATION.md | human_needed — 2 visual checks |
 | uat_gap | 53-UAT.md | diagnosed — 0 pending scenarios |
@@ -114,23 +120,23 @@ Items riconosciuti e posticipati:
 | v2.2 | TR categorization | regex-discovery + seed-patterns post-import — deferred |
 | operator | R038/R039/R041 | live Vercel/Supabase/R2 deploy operator-pending |
 | backlog | R029 | partial categorization revalidation coverage |
+| check:language | expenses.ts:82, transactions.ts:200 | pre-existing Italian comments — out of scope Phase 58 |
 
 ## Session Continuity
 
-**Resume file:** None
+**Resume file:** .planning/phases/59-import-wizard-attach-format/59-CONTEXT.md
 
-**Stopped at:** Phase 57 verified — milestone v2.2 complete
+**Stopped at:** Phase 59 context gathered
 
-Last session: 2026-06-26T14:50:00Z
-Resume: `/gsd-new-milestone` per avviare la prossima milestone, oppure `/gsd-progress` per verificare lo stato
+Last session: 2026-06-29T13:23:26.707Z
+Resume: `/gsd-plan-phase 59` to plan the import-wizard-attach-format phase.
 
-**Next:** Milestone v2.2 è shipped. Prossima milestone da definire.
+**Next:** Plan Phase 59 (`import-wizard-attach-format`).
 
 ## Operator Next Steps
 
-- Archivio milestone v2.2: `/gsd-complete-milestone`
-- Deploy su Vercel: applicare migration 0022 + `yarn db:seed` per attivare la piattaforma Trade Republic in produzione
-- Prossima milestone: `/gsd-new-milestone`
+- v2.2 PR #24 deploy order (if not yet merged): `yarn db:migrate → yarn db:seed → yarn db:seed-extras → yarn db:seed-patterns` (migration 0022 has critical backfill).
+- After Phase 58 migrations land, the same run order applies; migration 0023 is idempotent post-apply.
 
 ## Performance Metrics
 
@@ -165,3 +171,9 @@ Resume: `/gsd-new-milestone` per avviare la prossima milestone, oppure `/gsd-pro
 | Phase 57 P02 | 2min | 2 tasks | 3 files |
 | Phase 57 P03 | 10min | 2 tasks | 2 files |
 | Phase 57 P05 | 3min | 1 tasks | 6 files |
+| Phase 58 P01 | 5min | 3 tasks | 4 files |
+| Phase 58 P02 | 3min | 2 tasks | 2 files |
+| Phase 58 P03 | 5min | 2 tasks | 2 files |
+| Phase 59 P01 | 2min | 2 tasks | 2 files |
+| Phase 59 P02 | 13min | 5 tasks (TDD RED+GREEN x2 + action) | 5 files |
+| Phase 59 P03 | 8min | 3 tasks | 3 files |

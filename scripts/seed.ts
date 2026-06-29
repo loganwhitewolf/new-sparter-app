@@ -101,12 +101,26 @@ async function seed() {
   await db.execute(sql`select setval('platform_id_seq', coalesce((select max(${platform.id}) from ${platform}), 0) + 1, false)`)
   console.log(`  ${seedPlatforms.length} platforms inserted (or already present).`)
 
+  // Phase 60: resolve slug → integer platformId from the DB after the platform insert.
+  // This avoids hardcoded numeric FKs that collide with user-created platform rows (PLAT-05).
+  const allPlatformRows = await db.select({ id: platform.id, slug: platform.slug }).from(platform)
+  const slugToId = new Map(allPlatformRows.map((row) => [row.slug, row.id]))
+
   console.log('Seeding import format versions...')
-  await db
-    .insert(importFormatVersion)
-    .values(
-      seedFormatVersions.map((fv) => ({
-        platformId: fv.platformId,
+  const resolvedFormats = seedFormatVersions.flatMap((fv) => {
+    const platformId = slugToId.get(fv.platformSlug)
+    if (platformId === undefined) {
+      console.log(
+        JSON.stringify({
+          event: 'seed_warning',
+          message: `Platform slug '${fv.platformSlug}' not found in DB — skipping format version v${fv.version}`,
+        }),
+      )
+      return []
+    }
+    return [
+      {
+        platformId,
         version: fv.version,
         headerSignature: headerSignatureFor(fv),
         notes: fv.notes,
@@ -123,10 +137,14 @@ async function seed() {
         decimalReplace: fv.decimalReplace,
         multiplyBy: fv.multiplyBy,
         descriptionStripPattern: fv.descriptionStripPattern,
-      })),
-    )
-    .onConflictDoNothing()
-  console.log(`  ${seedFormatVersions.length} format versions inserted (or already present).`)
+      },
+    ]
+  })
+
+  if (resolvedFormats.length > 0) {
+    await db.insert(importFormatVersion).values(resolvedFormats).onConflictDoNothing()
+  }
+  console.log(`  ${resolvedFormats.length} format versions inserted (or already present).`)
 
   console.log(JSON.stringify({ event: 'seed_succeeded', target: seedDiagnostics.target }))
 }

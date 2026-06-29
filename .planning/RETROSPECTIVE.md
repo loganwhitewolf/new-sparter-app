@@ -4,6 +4,41 @@ Living retrospective — one section per milestone, newest first.
 
 ---
 
+## Milestone: v2.2 — PDF Import
+
+**Shipped:** 2026-06-26
+**Phases:** 2 (56–57) | **Plans:** 10 | **Timeline:** 2 days (2026-06-25 → 2026-06-26)
+**Files:** 52 changed · +11129 / -235 lines
+
+### What Was Built
+
+- **Phase 56**: Parsing contract moved from `platform` to `import_format_version` via two-step migration (ADD nullable → seed-extras data copy → DROP); 7 CSV fixture regression test pinned static hash literals BEFORE any column move — full ADR 0013 behavior-preserving refactor.
+- **Phase 57**: Trade Republic PDF parser using `unpdf` positional X-coordinate column detection (CREDIT_X_MIN/MAX, DEBIT_X_MIN/MAX calibrated from real fixture); Decimal.js balance chain as explicit sign guard; only "TRANSAZIONI SUL CONTO" section extracted; fused tipo+description tokens handled; minimal `descriptionStripPattern` for savings plan aggregation; user-friendly Italian "PDF non riconosciuto" UX with supported-platform list.
+
+### What Worked
+
+- **Regression-first approach (56-01)**: writing the hash-pinning test BEFORE the column move was the key safety net. The test caught no regressions because the approach was correct — but its presence made every plan 02–04 mechanically verifiable.
+- **Two-step migration**: ADD nullable → data copy → DROP is the safest pattern for moving non-null columns across tables in a live DB. No row locks, no backfill deadlocks, clean rollback at each step.
+- **Calibration-first (57-01)**: obtaining the real Trade Republic PDF fixture and calibrating X-coordinate boundaries before writing any parser code meant Plan 03 had exact constants rather than guesses. The calibration probe test caught fused token issues before the behavioral tests ran.
+- **E2E human verification (57-04)**: the fused tipo+description bug was caught during app-level manual verification, not by unit tests. The fix was applied inline during the E2E step — no separate plan needed.
+- **UAT gap closure as separate plan (57-05)**: isolating the error UX gap into its own atomic plan kept Plans 02–04 scope-clean and made the fix independently reviewable.
+
+### What Was Inefficient
+
+- **No milestone audit**: v2.2 was archived without a formal `/gsd-audit-milestone` run. For a 2-phase milestone with all requirements checked, this was acceptable — but for longer milestones the audit catches cross-phase integration issues that are invisible from individual VERIFICATION.md files.
+
+### Patterns Established
+
+- **PDF parser architecture**: per-bank template (not generic); marker recognition → section extraction → Y-sorted per-page row bucketing → X-coordinate sign classification → Decimal.js balance chain validation → normalize to `ParsedImportFile`. This is the template for future banks.
+- **`PDF_IMPORT_PLATFORM_SLUGS` allowlist pattern**: single constant co-located with `.pdf` dispatch — adding a new bank PDF parser requires adding its slug here and implementing its parse function. No schema change needed.
+
+### Key Lessons
+
+- Calibrate from a real fixture before writing parser code — `unpdf` output varies significantly across PDF generators; hard-coding assumed coordinates without calibration would have produced silent wrong signs.
+- The "almost-right" PDF parser problem is real: a generic extractor that gets 95% of rows correct is worse than no import because incorrect financial data silently corrupts months of history. Per-bank templates with balance chain guards are the correct tradeoff.
+
+---
+
 ## Milestone: v2.1 — Regex Discovery & Transaction Unification
 
 **Shipped:** 2026-06-22

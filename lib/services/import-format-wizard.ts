@@ -1,7 +1,7 @@
 import 'server-only'
 
 import crypto from 'node:crypto'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, ilike, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { file as fileTable, importFormatVersion, platform } from '@/lib/db/schema'
 import { getFileForUser } from '@/lib/dal/files'
@@ -21,6 +21,7 @@ export type ImportFormatWizardErrorCode =
   | 'file_parse_failed'
   | 'column_not_found'
   | 'db_write_failed'
+  | 'duplicate_platform_name'
 
 export class ImportFormatWizardError extends Error {
   constructor(
@@ -55,7 +56,8 @@ export type CreatePrivateImportFormatResult = {
 const SAFE_WIZARD_PARSE_ERROR = 'Impossibile leggere le intestazioni del file. Riprova.'
 const SAFE_WIZARD_READ_ERROR = 'Impossibile leggere il file caricato. Riprova.'
 const PRIVATE_VISIBILITY = 'private'
-const DRAFT_REVIEW_STATUS = 'draft'
+const PENDING_REVIEW_STATUS = 'pending'
+const APPROVED_REVIEW_STATUS = 'approved'
 const HEADER_SAMPLE_ROWS = 5
 const HEADER_MAX_ROWS = 25
 
@@ -212,37 +214,91 @@ async function createPrivateRows(
   database: DbOrTx,
   input: CreatePrivateImportFormatInput & { userId: string; headers: string[] },
 ): Promise<CreatePrivateImportFormatResult> {
-  const slug = privatePlatformSlug(input)
   const header = headerSignature(input.headers, input.delimiter)
 
-  await syncPlatformIdSequence(database)
+  // Fork: attach branch vs create-platform branch (D-06, Plan 59-02)
+  let resolvedPlatformId: number
+  let resolvedPlatformName: string
+  let resolvedPlatformSlug: string
 
-  const createdPlatforms = await database
-    .insert(platform)
-    .values({
-      // Identity only — contract lives on importFormatVersion (ADR 0013)
-      ownerUserId: input.userId,
-      visibility: PRIVATE_VISIBILITY,
-      reviewStatus: DRAFT_REVIEW_STATUS,
-      name: input.platformName,
-      slug,
-      country: 'IT',
-      isActive: true,
-    })
-    .returning({ id: platform.id, name: platform.name, slug: platform.slug })
+  if (input.existingPlatformId !== undefined) {
+    // Attach branch — reuse an existing platform, no syncPlatformIdSequence, no platform insert.
+    // TOCTOU guard (T-59-03): replicate listAttachablePlatforms visibility rule so a forged id
+    // cannot attach to an inactive platform or another user's pending platform.
+    const rows = await database
+      .select({ id: platform.id, name: platform.name, slug: platform.slug })
+      .from(platform)
+      .where(
+        and(
+          eq(platform.id, input.existingPlatformId),
+          eq(platform.isActive, true),
+          or(
+            eq(platform.reviewStatus, APPROVED_REVIEW_STATUS),
+            and(eq(platform.reviewStatus, PENDING_REVIEW_STATUS), eq(platform.proposedByUserId, input.userId)),
+          ),
+        ),
+      )
 
-  const createdPlatform = createdPlatforms[0]
-  if (!createdPlatform || typeof createdPlatform.id !== 'number') {
-    throw new ImportFormatWizardError('db_write_failed', 'Impossibile salvare il formato. Riprova.')
+    const existing = rows[0]
+    if (!existing || typeof existing.id !== 'number') {
+      throw new ImportFormatWizardError('db_write_failed', 'Impossibile salvare il formato. Riprova.')
+    }
+
+    resolvedPlatformId = existing.id
+    resolvedPlatformName = existing.name
+    resolvedPlatformSlug = existing.slug
+  } else {
+    // Create-platform branch — existing behaviour unchanged (regression preserved).
+    // Zod superRefine guarantees input.platformName is present here.
+    const platformName = input.platformName!
+    const slug = privatePlatformSlug({ ...input, platformName })
+
+    // Reject names that duplicate an already-approved platform (case-insensitive).
+    // Prevents shadow-platforms accumulating while the real one is available in step 1.
+    const duplicates = await database
+      .select({ id: platform.id })
+      .from(platform)
+      .where(and(eq(platform.reviewStatus, APPROVED_REVIEW_STATUS), ilike(platform.name, platformName)))
+    if (duplicates.length > 0) {
+      throw new ImportFormatWizardError(
+        'duplicate_platform_name',
+        `Esiste già una piattaforma approvata con questo nome. Selezionala dal passo 1 oppure usa un nome diverso.`,
+      )
+    }
+
+    // Identity only — contract lives on importFormatVersion (ADR 0013)
+    // Platform is never user-owned (ADR 0015): proposedByUserId is provenance, no visibility column
+    await syncPlatformIdSequence(database)
+
+    const createdPlatforms = await database
+      .insert(platform)
+      .values({
+        proposedByUserId: input.userId,
+        reviewStatus: PENDING_REVIEW_STATUS,
+        name: platformName,
+        slug,
+        country: 'IT',
+        isActive: true,
+      })
+      .returning({ id: platform.id, name: platform.name, slug: platform.slug })
+
+    const createdPlatform = createdPlatforms[0]
+    if (!createdPlatform || typeof createdPlatform.id !== 'number') {
+      throw new ImportFormatWizardError('db_write_failed', 'Impossibile salvare il formato. Riprova.')
+    }
+
+    resolvedPlatformId = createdPlatform.id
+    resolvedPlatformName = createdPlatform.name
+    resolvedPlatformSlug = createdPlatform.slug
   }
 
   const createdVersions = await database
     .insert(importFormatVersion)
     .values({
-      platformId: createdPlatform.id,
+      platformId: resolvedPlatformId,
       ownerUserId: input.userId,
       visibility: PRIVATE_VISIBILITY,
-      reviewStatus: DRAFT_REVIEW_STATUS,
+      reviewStatus: PENDING_REVIEW_STATUS,
       version: 1,
       headerSignature: header,
       notes: 'Created from private import format wizard.',
@@ -278,11 +334,21 @@ async function createPrivateRows(
     })
     .where(and(eq(fileTable.id, input.fileId), eq(fileTable.userId, input.userId)))
 
+  // Log on attach branch (after version insert, when all data is resolved)
+  if (input.existingPlatformId !== undefined) {
+    logWizard('info', 'import_format_wizard.attached', {
+      userId: input.userId,
+      fileId: input.fileId,
+      platformId: resolvedPlatformId,
+      formatVersionId: createdVersion.id,
+    })
+  }
+
   return {
     fileId: input.fileId,
-    platformId: createdPlatform.id,
-    platformName: createdPlatform.name,
-    platformSlug: createdPlatform.slug,
+    platformId: resolvedPlatformId,
+    platformName: resolvedPlatformName,
+    platformSlug: resolvedPlatformSlug,
     formatVersionId: createdVersion.id,
     headerSignature: createdVersion.headerSignature,
   }

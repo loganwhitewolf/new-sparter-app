@@ -895,7 +895,6 @@ export type AmountType = "single" | "separate";
 
 export const platforms = [
   {
-    id: 1,
     name: "General",
     slug: "general",
     // ISO 3166-1 alpha-2 placeholder for the catch-all import format.
@@ -903,43 +902,36 @@ export const platforms = [
     country: "ZZ",
   },
   {
-    id: 2,
     name: "Crypto.com",
     slug: "crypto-com",
     country: "IT",
   },
   {
-    id: 3,
     name: "Satispay",
     slug: "satispay",
     country: "IT",
   },
   {
-    id: 4,
     name: "Intesa SP",
     slug: "intesa-sp",
     country: "IT",
   },
   {
-    id: 5,
     name: "Intesa SP Carta Credito",
     slug: "intesa-sp-carta-credito",
     country: "IT",
   },
   {
-    id: 6,
     name: "Revolut",
     slug: "revolut",
     country: "IT",
   },
   {
-    id: 7,
     name: "Fineco",
     slug: "fineco",
     country: "IT",
   },
   {
-    id: 8,
     name: "Trade Republic",
     slug: "trade-republic",
     country: "IT",
@@ -955,7 +947,7 @@ export const platforms = [
 
 export const importFormatVersions = [
   {
-    platformId: 1,
+    platformSlug: 'general',
     version: 1,
     delimiter: ",",
     descriptionColumn: "description",
@@ -972,7 +964,7 @@ export const importFormatVersions = [
     notes: "Initial General CSV import contract",
   },
   {
-    platformId: 2,
+    platformSlug: 'crypto-com',
     version: 1,
     delimiter: ",",
     descriptionColumn: "Transaction Description",
@@ -989,7 +981,7 @@ export const importFormatVersions = [
     notes: "Initial Crypto.com CSV import contract",
   },
   {
-    platformId: 3,
+    platformSlug: 'satispay',
     version: 1,
     delimiter: ",",
     descriptionColumn: "Nome",
@@ -1006,7 +998,7 @@ export const importFormatVersions = [
     notes: "Initial Satispay CSV import contract",
   },
   {
-    platformId: 4,
+    platformSlug: 'intesa-sp',
     version: 1,
     delimiter: ",",
     descriptionColumn: "Operazione",
@@ -1023,7 +1015,7 @@ export const importFormatVersions = [
     notes: "Initial Intesa SP CSV import contract",
   },
   {
-    platformId: 5,
+    platformSlug: 'intesa-sp-carta-credito',
     version: 1,
     delimiter: ",",
     descriptionColumn: "Descrizione",
@@ -1040,7 +1032,7 @@ export const importFormatVersions = [
     notes: "Initial Intesa SP Carta Credito CSV import contract",
   },
   {
-    platformId: 6,
+    platformSlug: 'revolut',
     version: 1,
     delimiter: ",",
     descriptionColumn: "Description",
@@ -1057,7 +1049,7 @@ export const importFormatVersions = [
     notes: "Initial Revolut CSV import contract",
   },
   {
-    platformId: 7,
+    platformSlug: 'fineco',
     version: 1,
     delimiter: ",",
     descriptionColumn: "Descrizione_Completa",
@@ -1081,7 +1073,7 @@ export const importFormatVersions = [
     // headerSignatureFor: [data, descrizione, null, importo_entrata, importo_uscita].filter(Boolean).join(",")
     //   → "data,descrizione,importo_entrata,importo_uscita"
     // delimiter "," is the join character for headerSignatureFor (Pitfall 2: NOT NULL constraint).
-    platformId: 8,
+    platformSlug: 'trade-republic',
     version: 1,
     delimiter: ",",
     descriptionColumn: "descrizione",

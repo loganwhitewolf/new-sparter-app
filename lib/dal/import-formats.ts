@@ -7,6 +7,8 @@ import { PDF_IMPORT_PLATFORM_SLUGS } from '@/lib/services/import-parsers'
 
 export type ImportFormatDatabase = Pick<typeof db, 'select'>
 
+// Surface 1 — Row type: reflects the post-58-01 platform schema
+// proposedByUserId added; dropped columns: none referenced below
 type ImportFormatRow = {
   id: number
   platformId: number
@@ -26,9 +28,8 @@ type ImportFormatRow = {
   negativeAmountColumn: string | null
   multiplyBy: number
   descriptionStripPattern: string | null
-  // Identity fields sourced from platform
-  platformOwnerUserId: string | null
-  platformVisibility: string
+  // Identity fields sourced from platform (proposedByUserId replaces ownerUserId; visibility dropped)
+  platformProposedByUserId: string | null
   platformReviewStatus: string
   platformIsActive: boolean
   platformName: string
@@ -36,10 +37,10 @@ type ImportFormatRow = {
   platformCountry: string
 }
 
-const GLOBAL_VISIBILITY = 'global'
-const PRIVATE_VISIBILITY = 'private'
 const APPROVED_REVIEW_STATUS = 'approved'
 
+// Surface 1 (continued) — Shape guard: fail-closed in-memory check
+// Keys on the post-58-01 column set. Any row missing an expected key is dropped.
 function hasExpectedRowShape(row: Partial<ImportFormatRow>): row is ImportFormatRow {
   return (
     typeof row.id === 'number' &&
@@ -60,9 +61,8 @@ function hasExpectedRowShape(row: Partial<ImportFormatRow>): row is ImportFormat
     (typeof row.negativeAmountColumn === 'string' || row.negativeAmountColumn === null) &&
     typeof row.multiplyBy === 'number' &&
     (typeof row.descriptionStripPattern === 'string' || row.descriptionStripPattern === null) &&
-    // Identity fields (from platform)
-    (typeof row.platformOwnerUserId === 'string' || row.platformOwnerUserId === null) &&
-    typeof row.platformVisibility === 'string' &&
+    // Identity fields (from platform — post-58-01 shape)
+    (typeof row.platformProposedByUserId === 'string' || row.platformProposedByUserId === null) &&
     typeof row.platformReviewStatus === 'string' &&
     typeof row.platformIsActive === 'boolean' &&
     typeof row.platformName === 'string' &&
@@ -71,22 +71,24 @@ function hasExpectedRowShape(row: Partial<ImportFormatRow>): row is ImportFormat
   )
 }
 
+// Surface 2 — In-memory validators (fail-closed re-check, must agree with SQL WHERE)
+//
+// isGlobalApproved: platform "shared identity" is signalled by platformReviewStatus === 'approved'
+// (D-03 lifecycle). ownerUserId === null means the format version is global (not user-owned).
 function isGlobalApproved(row: ImportFormatRow) {
   return (
     row.ownerUserId === null &&
-    row.platformOwnerUserId === null &&
-    row.visibility === GLOBAL_VISIBILITY &&
-    row.platformVisibility === GLOBAL_VISIBILITY &&
     row.reviewStatus === APPROVED_REVIEW_STATUS &&
     row.platformReviewStatus === APPROVED_REVIEW_STATUS
   )
 }
 
+// isOwnedBy: keys solely on importFormatVersion.ownerUserId (D-04 decoupling).
+// Platform is visible when approved (all users) OR when it was proposed by this user (pending lifecycle, D-03).
 function isOwnedBy(row: ImportFormatRow, userId: string) {
   return (
-    (row.ownerUserId === userId || row.platformOwnerUserId === userId) &&
-    row.visibility === PRIVATE_VISIBILITY &&
-    row.platformVisibility === PRIVATE_VISIBILITY
+    row.ownerUserId === userId &&
+    (row.platformReviewStatus === APPROVED_REVIEW_STATUS || row.platformProposedByUserId === userId)
   )
 }
 
@@ -121,25 +123,27 @@ function toCandidate(row: ImportFormatRow): ImportFormatCandidateInput {
   }
 }
 
+// Surface 3 — SQL accessibleWhere: two-branch OR (RESEARCH Pattern 2)
+//
+// Branch 1 — global, approved formats on approved platforms (unchanged hot path)
+// Branch 2 — format owned by this user, on any platform the user may see (D-04 decoupling):
+//   platform is visible when approved (all users) OR proposed by this user (D-03 pending lifecycle).
+// The old platform-owner branch 3 is removed (platform is never user-owned post-58-01).
 function accessibleWhere(userId: string, selectedFormatVersionId?: number) {
   const accessScope = or(
+    // Branch 1 — global approved format on an approved platform (no user ownership)
     and(
       isNull(importFormatVersion.ownerUserId),
-      isNull(platform.ownerUserId),
-      eq(importFormatVersion.visibility, GLOBAL_VISIBILITY),
-      eq(platform.visibility, GLOBAL_VISIBILITY),
       eq(importFormatVersion.reviewStatus, APPROVED_REVIEW_STATUS),
       eq(platform.reviewStatus, APPROVED_REVIEW_STATUS),
     ),
+    // Branch 2 — format owned by this user on any platform the user may see (D-04)
     and(
       eq(importFormatVersion.ownerUserId, userId),
-      eq(importFormatVersion.visibility, PRIVATE_VISIBILITY),
-      eq(platform.visibility, PRIVATE_VISIBILITY),
-    ),
-    and(
-      eq(platform.ownerUserId, userId),
-      eq(importFormatVersion.visibility, PRIVATE_VISIBILITY),
-      eq(platform.visibility, PRIVATE_VISIBILITY),
+      or(
+        eq(platform.reviewStatus, APPROVED_REVIEW_STATUS),
+        eq(platform.proposedByUserId, userId), // pending platform proposed by this user (D-03)
+      ),
     ),
   )
 
@@ -159,6 +163,8 @@ export async function loadImportFormatsForDetection(input: {
   database?: ImportFormatDatabase
 }): Promise<ImportFormatCandidateInput[]> {
   const database = input.database ?? db
+  // Surface 4 — .select({...}): projection aligned to post-58-01 platform column set
+  // proposedByUserId projected; dropped identity columns no longer referenced.
   const rows = await database
     .select({
       id: importFormatVersion.id,
@@ -179,9 +185,8 @@ export async function loadImportFormatsForDetection(input: {
       negativeAmountColumn: importFormatVersion.negativeAmountColumn,
       multiplyBy: importFormatVersion.multiplyBy,
       descriptionStripPattern: importFormatVersion.descriptionStripPattern,
-      // Identity columns from platform
-      platformOwnerUserId: platform.ownerUserId,
-      platformVisibility: platform.visibility,
+      // Identity columns from platform (post-58-01: proposedByUserId replaces ownerUserId, visibility gone)
+      platformProposedByUserId: platform.proposedByUserId,
       platformReviewStatus: platform.reviewStatus,
       platformIsActive: platform.isActive,
       platformName: platform.name,
@@ -196,6 +201,56 @@ export async function loadImportFormatsForDetection(input: {
     .filter((row): row is ImportFormatRow => hasExpectedRowShape(row))
     .filter((row) => isAccessibleImportFormat(row, input.userId))
     .map(toCandidate)
+}
+
+// AttachablePlatform — row type for listAttachablePlatforms (Plan 59-01)
+export type AttachablePlatform = {
+  id: number
+  name: string
+  slug: string
+  reviewStatus: string
+}
+
+/**
+ * Returns the platforms a user may attach a private Import Format to.
+ *
+ * Visibility rule (ADR 0015 D-07):
+ *   - approved platforms are visible to all users
+ *   - pending platforms are visible only to their proposer (proposedByUserId = userId)
+ *   - inactive platforms (isActive = false) are excluded
+ *
+ * Results are ordered alphabetically by platform name (Claude's Discretion).
+ *
+ * @param userId - The authenticated user's id (sourced from verifySession; never client-supplied).
+ * @param database - Optional injectable database instance (used in tests).
+ */
+export async function listAttachablePlatforms(
+  userId: string,
+  database: ImportFormatDatabase = db,
+): Promise<AttachablePlatform[]> {
+  const rows = await database
+    .select({
+      id: platform.id,
+      name: platform.name,
+      slug: platform.slug,
+      reviewStatus: platform.reviewStatus,
+    })
+    .from(platform)
+    .where(
+      and(
+        eq(platform.isActive, true),
+        or(
+          eq(platform.reviewStatus, APPROVED_REVIEW_STATUS),
+          and(
+            eq(platform.reviewStatus, 'pending'),
+            eq(platform.proposedByUserId, userId),
+          ),
+        ),
+      ),
+    )
+    .orderBy(platform.name)
+
+  return rows
 }
 
 /**
@@ -222,7 +277,11 @@ export async function listPdfImportPlatformNames(input?: {
         eq(importFormatVersion.isActive, true),
         eq(platform.reviewStatus, APPROVED_REVIEW_STATUS),
         eq(importFormatVersion.reviewStatus, APPROVED_REVIEW_STATUS),
-        isNull(platform.ownerUserId),
+        // isNull(proposedByUserId) is redundant alongside reviewStatus=approved above (all seeded
+        // global platforms have both), but kept explicit to document intent: this query targets
+        // truly global platforms (no proposer, always seeded). Redundancy is intentional defense
+        // against a future operator INSERT that sets reviewStatus='approved' but a non-null proposer.
+        isNull(platform.proposedByUserId),
         isNull(importFormatVersion.ownerUserId),
         inArray(platform.slug, [...PDF_IMPORT_PLATFORM_SLUGS]),
       ),

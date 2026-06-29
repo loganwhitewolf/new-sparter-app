@@ -1,56 +1,50 @@
-# Requirements — Milestone v2.2: PDF Import
+# Requirements — Milestone v2.3: Platform Identity & Format Ownership
 
-**Defined:** 2026-06-25
-**Source:** Design locked in the 2026-06-25 grill (ADR 0013, ADR 0014, CONTEXT.md, memory `project_pdf_import`)
-**Status:** Scoped — ready for roadmap
+**Defined:** 2026-06-29
+**Decision contract:** LOCKED — `docs/adr/0015-platform-global-moderated-format-private.md` + `CONTEXT.md` (Platform / Import Format glossary entries)
 
-Two ordered capabilities: a behavior-preserving model refactor (Phase 56) that the PDF import (Phase 57) builds on.
+**Goal:** Make Platform a globally shared, moderated identity (never user-owned) and move private ownership onto the Import Format, eliminating duplicate platforms and the seed id collision.
 
-## v2.2 Requirements
+---
 
-### Import Format Model (refactor — behavior-preserving)
+## v2.3 Requirements
 
-The parsing contract is owned by `import_format_version`, not `platform`. See `docs/adr/0013-import-format-owns-parsing-contract.md`.
+### Platform Identity Model
 
-- [x] **IFMT-01**: The parsing contract (`delimiter`, `*Column`, `dateFormat`, `dateReplace`, `decimalReplace`, `multiplyBy`, `descriptionStripPattern`, `amountType`) lives on `import_format_version`; `platform` retains only identity (`name`/`slug`/`country`/`visibility`/`ownerUserId`).
-- [x] **IFMT-02**: The 6 existing CSV/XLSX imports produce identical `transactionHash` values before and after the refactor — proven by a regression test over real fixtures.
-- [x] **IFMT-03**: Existing `platform` / `import_format_version` rows in production are migrated by an additive, idempotent `seed-extras` step (no `drizzle-kit push`; migration via `drizzle-kit generate` + `scripts/migrate.ts`).
-- [x] **IFMT-04**: Multiple format versions per platform become expressible and selectable (versioning works — the `unique(platformId, version)` constraint is now meaningful).
-- [x] **IFMT-05**: The detector (`scoreCandidate`), `normalizeTransactionRow` / `ImportPlatformConfig`, the detection DAL, seed scripts, and the format wizard operate against the moved contract with no behavioral regression.
+- [x] **PLAT-01**: A Platform is never user-owned. `platform.visibility` is removed and `platform.ownerUserId` is renamed to `proposedByUserId` (provenance, not ownership). Existing rows are migrated by an additive, idempotent step — migration via `drizzle-kit generate` + `scripts/migrate.ts`; never `drizzle-kit push` in production.
+- [x] **PLAT-02**: Platform visibility follows a review lifecycle keyed on `reviewStatus`: a user-proposed Platform is `pending` and visible **only** to its `proposedByUserId`; an `approved` Platform is visible to **all** users. Seeded platforms remain `approved`.
+- [x] **PLAT-03**: A private Import Format is decoupled from a private Platform. A user-owned `import_format_version` (`ownerUserId = user`) is visible to its owner **even when attached to a global/approved Platform** — `accessibleWhere` no longer requires the platform to also be private. No behavioral regression for the existing global formats.
 
-### PDF Import (Trade Republic)
+### Import Wizard
 
-Per-bank PDF parsing normalized into the existing tabular pipeline. See `docs/adr/0014-pdf-import-per-bank-template.md`.
+- [x] **PLAT-04**: When format detection fails on upload, the user can attach a new private Import Format to an **existing** Platform. A brand-new Platform is created only when no existing one fits, and it is created `pending`. The wizard no longer silently mints a duplicate Platform for a known bank.
 
-- [x] **PDF-01**: The user can upload a PDF statement (`.pdf` / `application/pdf`) via presigned PUT, with a 5 MB cap and a defensive page ceiling that fail with an explicit error.
-- [x] **PDF-02**: The system recognizes a Trade Republic statement by markers and extracts **only** the "TRANSAZIONI SUL CONTO" section, discarding summaries, positions, and mirror sections (e.g. "PANORAMICA TRANSAZIONI").
-- [x] **PDF-03**: Each amount's sign is determined positionally (X coordinates via `unpdf`) and cross-checked against the running-balance chain; a mismatch produces an explicit error and imports no data.
-- [x] **PDF-04**: PDF-extracted rows pass through the detector, `normalizeTransactionRow`, dedup, and preview unchanged (synthetic headers → `ParsedImportFile`).
-- [x] **PDF-05**: Trade Republic carries a minimal `descriptionStripPattern` (`quantity:`) so recurring rows aggregate into a single Expense.
+### Seed Integrity
+
+- [ ] **PLAT-05**: Seeded import formats reference their Platform by **slug** (no hardcoded platform id); `seed.ts` resolves slug→id at runtime and seeded platforms carry no explicit `id`. The Trade Republic id-8 collision (seed skipped by `onConflictDoNothing` when a user platform already holds id 8) no longer occurs. The runtime FK stays `import_format_version.platformId`.
+
+### Documentation
+
+- [ ] **PLAT-06**: The DescriptionStripPattern reference is corrected wherever stale — the CONTEXT.md glossary (and any stale code comments) state it lives on `import_format_version` (ADR 0013), not `platform`.
 
 ## Future Requirements (deferred)
 
-- Tier-1 categorization patterns for Trade Republic descriptions (Interest payment → income, Stamp Duty → essential, Savings plan Bitcoin → investment) — follow-up via `regex-discovery` + `seed-patterns`.
-- PDF templates for additional banks (the generic abstraction emerges from 2–3 concrete cases).
-- Retroactive re-hash of already-imported history when a `descriptionStripPattern` changes.
+- Operator approval UI to promote a `pending` Platform to `approved` — needed only once a second user exists; until then `pending` + proposer-visible is fully functional for import.
+- Multi-user identity dedup: two users proposing the same bank converge onto one `approved` Platform.
 
 ## Out of Scope
 
-- **OCR / scanned PDFs** (type C) — Trade Republic is a text-layer PDF; image-based statements are a separate, costlier problem.
-- **Generic multi-bank PDF parser** — rejected in ADR 0014; "almost-right" extraction on financial data is worse than no import.
-- **Automatic categorization as part of import** — import only produces correct transactions; nature/subcategory stays downstream as for every Platform.
+- Operator deploy (R038/R039/R041) — an operational action, not a build item for this milestone.
+- Trade Republic auto-categorization — a separate `regex-discovery` + `seed-patterns` follow-up, independent of the platform model.
+- Changing the runtime FK from `platformId` to `platformSlug` — rejected (hot join across expenses/transactions/imports; natural-key cascade cost). Slug is the seed-linkage key only.
 
 ## Traceability
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| IFMT-01 | Phase 56 | Complete |
-| IFMT-02 | Phase 56 | Complete |
-| IFMT-03 | Phase 56 | Complete |
-| IFMT-04 | Phase 56 | Complete |
-| IFMT-05 | Phase 56 | Complete |
-| PDF-01 | Phase 57 | Complete |
-| PDF-02 | Phase 57 | Complete |
-| PDF-03 | Phase 57 | Complete |
-| PDF-04 | Phase 57 | Complete |
-| PDF-05 | Phase 57 | Complete |
+| PLAT-01 | Phase 58 | ⬜ Pending |
+| PLAT-02 | Phase 58 | ⬜ Pending |
+| PLAT-03 | Phase 58 | ⬜ Pending |
+| PLAT-04 | Phase 59 | ⬜ Pending |
+| PLAT-05 | Phase 60 | ⬜ Pending |
+| PLAT-06 | Phase 60 | ⬜ Pending |

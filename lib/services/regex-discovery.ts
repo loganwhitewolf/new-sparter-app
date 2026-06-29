@@ -31,9 +31,9 @@ export type DiscoveryResult = {
 }
 
 /**
- * Applies the platform descriptionStripPattern (a seed/operator-controlled value)
- * to the raw title. The pattern is compiled once per-call in the service and is
- * never derived from user-supplied free text (T-51-07).
+ * Applies the import format version descriptionStripPattern (`import_format_version.description_strip_pattern`, ADR 0013),
+ * a seed/operator-controlled value, to the raw title. The pattern is compiled once per-call
+ * in the service and is never derived from user-supplied free text (T-51-07).
  */
 function applyStrip(rawTitle: string, stripPattern: string | null): string {
   if (!stripPattern) return rawTitle
@@ -84,7 +84,7 @@ export async function discoverRegexCandidates(input: {
   const activePatterns = await loadActivePatterns(db, userId)
 
   // 3. Apply strip normalization and build detector rows (D-03: platform-scoped, PIPE-03)
-  // descriptionStripPattern is identical for all rows (it is a platform-level value)
+  // descriptionStripPattern is identical for all rows (it is an import format version value: `import_format_version.description_strip_pattern`)
   const stripPattern = expenses[0]?.descriptionStripPattern ?? null
 
   const detectorRows: PatternDetectorRowWithMeta[] = expenses.map((e) => {

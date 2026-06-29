@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Sparter is a personal finance app for the Italian market. It supports email/password and Google/GitHub OAuth authentication with account linking, transaction and expense management, import history, CSV/Excel import flows backed by Cloudflare R2, user-managed categories, a year-scoped dashboard overview (grouped bar chart, 4 KPI cards, per-month movers drill-down, filter chips by income type and expense nature, FlowNature education popovers, uncategorized nudge), deviation analysis, a regex discovery pipeline (standalone post-categorization service with dedup gates, IDOR-guarded retroactive platform-scoped apply, and a reusable Files-table trigger), a guided first-import onboarding flow, a unified subcategory picker bottom sheet across all 7 selection surfaces, a collapsible icon-rail sidebar, structured logging, and a health endpoint. The app is deployed on Vercel (operator action) or runnable locally with a Supabase/R2 stack.
+Sparter is a personal finance app for the Italian market. It supports email/password and Google/GitHub OAuth authentication with account linking, transaction and expense management, import history, CSV/Excel/PDF import flows backed by Cloudflare R2, user-managed categories, a year-scoped dashboard overview (grouped bar chart, 4 KPI cards, per-month movers drill-down, filter chips by income type and expense nature, FlowNature education popovers, uncategorized nudge), deviation analysis, a regex discovery pipeline (standalone post-categorization service with dedup gates, IDOR-guarded retroactive platform-scoped apply, and a reusable Files-table trigger), a guided first-import onboarding flow, a unified subcategory picker bottom sheet across all 7 selection surfaces, a collapsible icon-rail sidebar, structured logging, and a health endpoint. The app is deployed on Vercel (operator action) or runnable locally with a Supabase/R2 stack.
 
 ## Core Value
 
@@ -15,7 +15,7 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v2.0 (Phases 1–50) complete. The app now has:
+All milestones M001–v2.2 (Phases 1–57) complete. The app now has:
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
 - Import management, categorization (Tier 1 regex, Tier 2 history, Tier 3 AI gated)
 - Pattern suggestions: detect recurring uncategorized descriptions → review and promote during analysis → re-run post-import from `/import/[fileId]/suggestions`
@@ -31,19 +31,30 @@ All milestones M001–v2.0 (Phases 1–50) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Current Milestone: v2.2 — PDF Import
+## Current Milestone: v2.3 — Platform Identity & Format Ownership
+
+**Goal:** Make Platform a globally shared, moderated identity (never user-owned) and move private ownership onto the Import Format, eliminating duplicate platforms and the seed id collision.
+
+**Target features:**
+- Platform is never user-owned: drop `platform.visibility`, rename `platform.ownerUserId` → `proposedByUserId`; review lifecycle via `reviewStatus` (pending = visible only to proposer; approved = shared with all). Existing private platforms migrated via backfill.
+- Private Import Format decoupled from private Platform: `accessibleWhere` allows a user-owned format to be visible on a global/approved platform.
+- Import wizard attaches a new private Import Format to an existing Platform when format detection fails; a new Platform is created only when none fits, and is born `pending`.
+- Seed linkage by slug: seeded import formats reference the platform by slug (no hardcoded id); the Trade Republic id-8 collision is eliminated; runtime FK stays `platformId`.
+- DescriptionStripPattern reference cleanup: docs/glossary (and any stale code/comments) reflect that the strip pattern lives on `import_format_version` (ADR 0013), not `platform`.
+
+**Decision contract:** LOCKED in `docs/adr/0015-platform-global-moderated-format-private.md` + `CONTEXT.md` (Platform / Import Format entries). No discovery to redo. Deferred: operator approval UI (multi-user only).
+
+## Last Shipped Milestone: v2.2 — PDF Import (shipped 2026-06-26)
 
 **Goal:** Enable importing PDF bank statements (first real case: Trade Republic), starting with a refactor that separates the parsing contract from Platform identity.
 
-**Target features:**
-- **Import Format refactor (behavior-preserving):** move the parsing contract (delimiter, `*Column`, `dateFormat`, `dateReplace`, `decimalReplace`, `multiplyBy`, `descriptionStripPattern`, `amountType`) off `platform` and onto `import_format_version`; `platform` becomes pure identity. Unblocks real per-platform format versioning (today the version table exists but the mapping lives on the non-versioned parent). Invariant: the 6 existing CSV/XLSX imports produce identical `transactionHash` before/after. Contract: `docs/adr/0013-import-format-owns-parsing-contract.md`.
-- **PDF import (Trade Republic):** per-bank template recognized by markers, normalized to `ParsedImportFile` with synthetic headers so detector/normalize/dedup/preview stay unchanged; amount sign via positional X coordinates (`unpdf`, serverless) cross-checked against the running-balance chain; imports only the "TRANSAZIONI SUL CONTO" section; minimal `descriptionStripPattern` so recurring rows aggregate. Contract: `docs/adr/0014-pdf-import-per-bank-template.md`.
+**Delivered:**
+- Import Format refactor: parsing contract moved from `platform` to `import_format_version` (ADR 0013); behavior-preserving — 7 CSV fixture hashes identical before/after regression test; `platform` is now pure identity.
+- Trade Republic PDF import: per-bank template recognized by markers, normalized to `ParsedImportFile` with synthetic headers; amount sign via positional X coordinates (`unpdf`); "TRANSAZIONI SUL CONTO" section only; minimal `descriptionStripPattern` so recurring savings plan rows aggregate.
 
-**Design status:** LOCKED & documented in the 2026-06-25 grill — ADR 0013/0014, `CONTEXT.md` (Platform / Import Format / Sezione canonica dei movimenti), memory `project_pdf_import`. No discovery to redo.
+**Status:** Phases 56–57 complete. All 10 requirements satisfied. PR #24 open — requires `yarn db:migrate → seed → seed-extras → seed-patterns` before merge (migration 0022 has critical backfill).
 
-**Out of scope:** automatic categorization of Trade Republic descriptions (follow-up via regex-discovery), OCR / scanned PDFs, a generic multi-bank PDF parser.
-
-## Last Shipped Milestone: v2.1 — Regex Discovery & Transaction Unification (shipped 2026-06-22)
+## Prior Shipped Milestone: v2.1 — Regex Discovery & Transaction Unification (shipped 2026-06-22)
 
 **Goal:** Re-architect regex discovery as a separate step downstream of auto-categorization, removing duplicate and already-covered proposals, with a reusable trigger and a cleaned-up import summary.
 
@@ -110,7 +121,7 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 - ✓ Collapsible icon-rail sidebar: `SidebarProvider` + `useSidebarCollapsed` (localStorage-backed, SSR-safe); `AppShell` drives `<aside>` width (w-16/w-60); chevron toggle + tooltips in collapsed mode; user Avatar dropdown at bottom; topbar deleted; BottomNav 5th Impostazioni entry; ThemeToggle in SettingsHub Aspetto section (ADR 0011) — v1.15
 - ✓ Dashboard overview redesign: year-scoped overview page with grouped Entrate/Uscite bar chart (variant A, always-on compact labels), 4 KPI cards with YTD delta + sentiment reading lines, FlowNature filter chips (income type + expense nature), ⓘ legend popovers + per-chip tooltips, inline amber uncategorized nudge (localStorage dismiss, lastSeenCount reappear), per-month movers drill-down (click bar → panel, humanized copy, "spesa nuova" for new spend, default = last month with data); `income_extraordinary` FlowNature member added (9 members total) — v1.16
 
-### Validated (v2.0–v2.1)
+### Validated (v2.0–v2.2)
 
 - ✓ NATURE-TABLE-01 — `direction`(4) + `nature`(8) FK-backed lookup tables; `sub_category.nature_id` FK; `category.type`/`flow_nature`/`amount_sign`/`exclude_from_totals` removed; 23-category/87-subcategory reseed; migration 0018 applied; 4-direction dashboard with algebraic-sum aggregation — v2.0
 - ✓ TX-PAIRING-01 — explicit 1:1 order↔refund linking (`transaction_pair`, migration 0020); ownership-validating service; shared `isNotSecondary()`/`effectiveAmount()` fragments at all 8 aggregation sites; picker/badge/popover UI — v2.0
@@ -118,6 +129,8 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 - ✓ Platform-scoped retroactive apply: `promoteSuggestionAction` with IDOR guard (`getPlatformIdForUserFile`); `applyNewPatternToPlatformExpenses`; inline Italian count feedback on suggestion card — v2.1
 - ✓ Reusable discovery trigger: auto post-import non-fatal run with `discoveryCount` CTA (TRIG-01) + per-row "Ricontrolla regex" via `recheckRegexAction` from Files table (TRIG-02) — single service, no divergent implementation — v2.1
 - ✓ Import summary UX: `sampleRows` capped at 10; distinct regex/single-cat section headings with intro text (SUMUI-02); SUMUI-03 discovery-step cue paragraph — v2.1
+- ✓ IFMT-01–05: parsing contract moved from `platform` to `import_format_version` (ADR 0013); `platform` is pure identity; 7 CSV fixture hashes regression-proved identical; format versioning per-platform expressible with `unique(platformId, version)` — v2.2
+- ✓ PDF-01–05: Trade Republic PDF import via `unpdf` positional X-coordinate sign detection, Decimal.js balance chain validation, "TRANSAZIONI SUL CONTO" section extraction; PDF rows normalized to `ParsedImportFile` — detector/normalize/dedup/preview pass unchanged; user-friendly Italian error UX for unrecognized PDF formats — v2.2
 
 ### Active (carryover / operator-pending)
 
@@ -156,7 +169,8 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 - [x] v1.16: Dashboard Overview Redesign — Year-scoped overview redesign: grouped bar chart (variant A), 4 KPI cards with delta + reading lines, filter chips, FlowNature education popovers, uncategorized nudge, per-month movers drill-down. Shipped 2026-06-09.
 - [x] v2.0: Nature/Direction Model Realignment — nature→direction lookup-table model, data migration/recategorization, explicit transaction pairing. Shipped 2026-06-14.
 - [x] v2.1: Regex Discovery & Transaction Unification — standalone discovery service, dedup gates, IDOR-guarded retroactive apply, reusable trigger, cleaned import summary. Shipped 2026-06-22.
-- [ ] v2.2: PDF Import — Import Format refactor (`platform`→`import_format_version`) then per-bank PDF import (Trade Republic) via `unpdf` positional extraction. Design LOCKED (ADR 0013/0014).
+- [x] v2.2: PDF Import — Import Format refactor (`platform`→`import_format_version`) + Trade Republic PDF import via `unpdf` positional extraction (ADR 0013/0014). Shipped 2026-06-26.
+- [ ] v2.3: Platform Identity & Format Ownership — Platform as globally shared moderated identity (pending→approved), private ownership on Import Format only, seed slug-linkage fix (ADR 0015). In progress.
 
 ## Key Decisions
 
@@ -201,6 +215,12 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 | `platformId` resolved server-side from `fileId` in `promoteSuggestionAction` | IDOR guard: client never supplies platformId directly; dead prop removed from client chain | ✓ Good |
 | Post-commit `discoverRegexCandidates` non-fatal (try/catch, `discoveryCount=0` on error) | Import always succeeds; discovery failure is logged but does not surface to user | ✓ Good |
 | `recheckRegexAction` called as plain async fn (not `useActionState`) | Enables `router.push` after await without state machine complexity | ✓ Good |
+| Parsing contract owned by `import_format_version`, not `platform` (ADR 0013) | `platform` = pure identity; real per-platform versioning expressible; two-step migration (ADD nullable → data copy → DROP) is safe | ✓ Good |
+| Per-bank PDF template, not generic parser (ADR 0014) | "Almost-right" extraction on financial data is worse than no import; 2–3 concrete templates → abstraction emerges naturally | ✓ Good |
+| `unpdf` for positional X-coordinate extraction, not `pdf-parse` | Serverless-ready; `pdf-parse` produces flat text with no coordinate info — cannot determine credit/debit sign | ✓ Good |
+| Balance chain as explicit import guard for PDF | Any sign error halts import with explicit error; prevents silent bad data on tampered/malformed PDFs | ✓ Good |
+| `PDF_IMPORT_PLATFORM_SLUGS` allowlist co-located with `.pdf` dispatch | Single source of truth for PDF-capable banks; no `fileType` column on `import_format_version` (avoids scope creep) | ✓ Good |
+| `UNRECOGNIZED_PDF_FORMAT` — single constant for both machine code and Italian fallback | No separate enum; action intercepts the code and enriches with platform list; no internal markers leaked to UI | ✓ Good |
 
 ## Evolution
 
@@ -220,4 +240,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-25 — started milestone v2.2 (PDF Import)*
+*Last updated: 2026-06-29 — started v2.3 milestone (Platform Identity & Format Ownership)*
