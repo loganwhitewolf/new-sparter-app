@@ -41,13 +41,16 @@ function buildConfig(
   slug: string,
   descriptionStripPattern: string | null,
 ): ImportPlatformConfig {
-  const p = seedPlatforms.find((s) => s.slug === slug)
+  const pIdx = seedPlatforms.findIndex((s) => s.slug === slug)
+  const p = seedPlatforms[pIdx]
   if (!p) throw new Error(`Seed platform not found: ${slug}`)
-  const fv = seedFormatVersions.find((v) => v.platformId === p.id)
+  // Synthetic id: index-based since seed-data no longer carries hardcoded ids (ADR 0015).
+  const syntheticId = pIdx + 1
+  const fv = seedFormatVersions.find((v) => v.platformSlug === slug)
   if (!fv) throw new Error(`Seed format version not found for platform: ${slug}`)
   return {
-    id: p.id,
-    platformId: p.id,
+    id: syntheticId,
+    platformId: syntheticId,
     timestampColumn: fv.timestampColumn,
     descriptionColumn: fv.descriptionColumn,
     descriptionStripPattern,

@@ -21,15 +21,17 @@ const expectedFixtureHeaders = [
 ] as const
 
 // Build candidate fixtures from version-sourced contract (ADR 0013).
-// Contract fields come from importFormatVersions; identity (id, name, slug, country) from platforms.
-const formats = seedPlatforms.map((p) => {
-  const fv = seedFormatVersions.find((v) => v.platformId === p.id)
-  if (!fv) throw new Error(`No format version found for platform id ${p.id}`)
+// Contract fields come from importFormatVersions; identity (name, slug, country) from platforms.
+// Platform ids are synthetic (index+1) since seed-data no longer carries hardcoded ids (ADR 0015).
+const formats = seedPlatforms.map((p, idx) => {
+  const syntheticId = idx + 1
+  const fv = seedFormatVersions.find((v) => v.platformSlug === p.slug)
+  if (!fv) throw new Error(`No format version found for platform slug ${p.slug}`)
   return {
-    id: p.id * 10,
-    platformId: p.id,
+    id: syntheticId * 10,
+    platformId: syntheticId,
     platform: {
-      id: p.id,
+      id: syntheticId,
       name: p.name,
       slug: p.slug,
       country: p.country,
@@ -184,9 +186,12 @@ describe('import detector fixture contracts', () => {
 // Trade Republic PDF — detector + normalizeTransactionRow (Task 2, Plan 57-04)
 // ---------------------------------------------------------------------------
 
-// Build the TR format config mirroring the seeded import_format_version for platformId 8.
-const trPlatform = seedPlatforms.find((p) => p.slug === 'trade-republic')!
-const trFormatVersion = seedFormatVersions.find((fv) => fv.platformId === trPlatform.id)!
+// Build the TR format config mirroring the seeded import_format_version for trade-republic.
+// Synthetic id: index-based since seed-data no longer carries hardcoded platform ids (ADR 0015).
+const trPlatformIdx = seedPlatforms.findIndex((p) => p.slug === 'trade-republic')
+const trPlatform = seedPlatforms[trPlatformIdx]!
+const trSyntheticId = trPlatformIdx + 1
+const trFormatVersion = seedFormatVersions.find((fv) => fv.platformSlug === 'trade-republic')!
 
 // headerSignature matches seeded value: "data,descrizione,importo_entrata,importo_uscita"
 const trHeaderSignature = [
@@ -197,13 +202,13 @@ const trHeaderSignature = [
 ].filter((c): c is string => Boolean(c)).join(trFormatVersion.delimiter)
 
 const trFormat = {
-  id: trPlatform.id * 10,
-  platformId: trPlatform.id,
+  id: trSyntheticId * 10,
+  platformId: trSyntheticId,
   version: 1,
   headerSignature: trHeaderSignature,
   isActive: true,
   platform: {
-    id: trPlatform.id,
+    id: trSyntheticId,
     name: trPlatform.name,
     slug: trPlatform.slug,
     country: trPlatform.country,
