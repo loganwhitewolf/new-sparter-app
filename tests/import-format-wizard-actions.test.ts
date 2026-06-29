@@ -17,6 +17,9 @@ const mocks = vi.hoisted(() => ({
   insertedPlatforms: [] as Record<string, unknown>[],
   insertedVersions: [] as Record<string, unknown>[],
   updatedFiles: [] as Record<string, unknown>[],
+  // selectedPlatformRow: returned by the SELECT in createPrivateRows attach branch (Plan 59-02)
+  // Set to null to simulate TOCTOU guard (platform deleted between list and submit).
+  selectedPlatformRow: { id: 301, name: 'Fineco', slug: 'fineco' } as Record<string, unknown> | null,
 }))
 
 vi.mock('server-only', () => ({}))
@@ -39,6 +42,13 @@ vi.mock('@/lib/logger', () => ({
 function makeTx() {
   return {
     execute: mocks.txExecute,
+    // select: used by the attach branch in createPrivateRows to resolve platform name/slug (Plan 59-02)
+    select: (_fields: unknown) => ({
+      from: (_table: unknown) => ({
+        where: (_condition: unknown) =>
+          Promise.resolve(mocks.selectedPlatformRow != null ? [mocks.selectedPlatformRow] : []),
+      }),
+    }),
     insert: () => ({
       values: (value: Record<string, unknown>) => {
         if ('headerSignature' in value) {
@@ -149,6 +159,7 @@ describe('import format wizard Server Actions', () => {
     mocks.insertedPlatforms.length = 0
     mocks.insertedVersions.length = 0
     mocks.updatedFiles.length = 0
+    mocks.selectedPlatformRow = { id: 301, name: 'Fineco', slug: 'fineco' }
     mocks.verifySession.mockResolvedValue(userSession)
     mocks.getFileForUser.mockResolvedValue(fileRow)
     mocks.readObjectBody.mockResolvedValue(Readable.from([Buffer.from('Data,Descrizione,Importo\n2026-01-01,Coffee,-2.50')]))
@@ -351,5 +362,58 @@ describe('import format wizard Server Actions', () => {
 
     expect(result).toEqual({ error: 'Sessione scaduta. Accedi di nuovo per configurare il formato.' })
     expect(mocks.getFileForUser).not.toHaveBeenCalled()
+  })
+
+  // Plan 59-02: attach branch tests
+  it('attach branch: skips platform insert and syncPlatformIdSequence, inserts version with existingPlatformId', async () => {
+    const result = await createPrivateImportFormatAction(
+      { error: null },
+      validCreateForm({ existingPlatformId: '301' }),
+    )
+
+    expect(result.error).toBeNull()
+    expect(result.data?.platformId).toBe(301)
+    // No platform insert — the attach branch reuses the existing platform
+    expect(mocks.insertedPlatforms).toHaveLength(0)
+    // syncPlatformIdSequence must NOT run in the attach branch
+    expect(mocks.txExecute).not.toHaveBeenCalled()
+    // importFormatVersion is inserted with platformId = existingPlatformId (301)
+    expect(mocks.insertedVersions[0]).toMatchObject({
+      platformId: 301,
+      ownerUserId: 'user-abc',
+      visibility: 'private',
+      reviewStatus: 'pending',
+    })
+  })
+
+  it('attach branch: throws db_write_failed when platform no longer exists (TOCTOU guard)', async () => {
+    // Simulate the platform being deleted/deactivated between RSC preload and form submit
+    mocks.selectedPlatformRow = null
+
+    const result = await createPrivateImportFormatAction(
+      { error: null },
+      validCreateForm({ existingPlatformId: '301' }),
+    )
+
+    expect(result).toEqual({ error: 'Impossibile salvare il formato. Riprova.' })
+    expect(mocks.insertedPlatforms).toHaveLength(0)
+    expect(mocks.insertedVersions).toHaveLength(0)
+  })
+
+  it('create branch regression: still inserts pending platform and calls syncPlatformIdSequence once', async () => {
+    const result = await createPrivateImportFormatAction({ error: null }, validCreateForm())
+
+    expect(result.error).toBeNull()
+    expect(mocks.txExecute).toHaveBeenCalledTimes(1)
+    expect(mocks.insertedPlatforms[0]).toMatchObject({
+      proposedByUserId: 'user-abc',
+      reviewStatus: 'pending',
+      name: 'My Bank',
+      country: 'IT',
+      isActive: true,
+    })
+    expect(mocks.insertedVersions[0]).toMatchObject({
+      platformId: 301,
+    })
   })
 })
