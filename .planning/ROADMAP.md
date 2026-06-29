@@ -179,40 +179,54 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 ## Phase Details
 
 ### Phase 58: platform-identity-and-access
+
 **Goal**: Platform becomes a never-owned, review-gated identity, and a private Import Format is decoupled from a private Platform — so a user's private format can live on a global/approved platform without the system needing to duplicate the platform.
 **Depends on**: Phase 57 (v2.2 — `import_format_version` already owns the parsing contract; `platform` is pure identity)
 **Requirements**: PLAT-01, PLAT-02, PLAT-03
 **Success Criteria** (what must be TRUE):
+
   1. A platform has no `visibility` column; its former `ownerUserId` is now `proposedByUserId` (provenance), and existing rows are migrated by an additive, idempotent step — no data lost, applied via `drizzle-kit generate` + `scripts/migrate.ts` (never `drizzle-kit push` in production).
   2. A platform proposed by a user (`reviewStatus = pending`) is visible only to its `proposedByUserId`; an `approved` platform (including all seeded platforms) is visible to every user.
   3. A user-owned `import_format_version` is visible to its owner even when its platform is global/approved — `accessibleWhere` no longer requires the platform itself to be private.
   4. Existing global formats still resolve and import exactly as before: the hot `platform` join used by expenses/transactions/imports for filter/display/sort by `platform.slug`/`platform.name` shows no behavioral regression (guarded by tests over the existing formats).
+
 **Plans**: 3 plans
+**Wave 1**
+
 - [ ] 58-01-PLAN.md — Platform schema rename/drop + migration 0023 (true RENAME, applied via scripts/migrate.ts) [PLAT-01]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 58-02-PLAN.md — Relax accessibleWhere + reviewStatus visibility lifecycle (DAL access boundary, lockstep) [PLAT-02, PLAT-03]
 - [ ] 58-03-PLAN.md — Wizard write-path glue: createPrivateRows → proposedByUserId, no visibility, reviewStatus 'pending' [PLAT-01]
 
 ### Phase 59: import-wizard-attach-format
+
 **Goal**: When format detection fails on upload, the user attaches a new private Import Format to an existing Platform; a brand-new Platform is created only when none fits, and it is born `pending` — eliminating silently minted duplicate platforms for known banks.
 **Depends on**: Phase 58 (review-gated visibility + decoupled `accessibleWhere` must exist before the wizard can offer an existing platform and create private formats against it)
 **Requirements**: PLAT-04
 **Success Criteria** (what must be TRUE):
+
   1. On a failed detection, the wizard offers the user existing Platforms to attach a new private Import Format to, instead of always creating a new Platform.
   2. Attaching a private Import Format to a known bank's existing (approved) Platform reuses that Platform — no duplicate "Fineco"-style row is created.
   3. A brand-new Platform is created only when no existing one fits, and it is persisted with `reviewStatus = pending` (visible only to its proposer).
   4. The newly attached private Import Format is immediately usable by its owner for the import that triggered creation.
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 60: seed-slug-linkage-and-docs
+
 **Goal**: Seeded import formats link to their Platform by slug (not by hardcoded id), removing the Trade Republic id-8 collision that made `onConflictDoNothing` silently skip the TR seed; and the stale DescriptionStripPattern documentation/comments are corrected to reflect ADR 0013.
 **Depends on**: Phase 58 (seeded platforms drop their explicit `id:` only after the identity-model schema is in place; the runtime FK stays `platformId`)
 **Requirements**: PLAT-05, PLAT-06
 **Success Criteria** (what must be TRUE):
+
   1. Seeded platforms carry no explicit `id:`; the serial assigns it, and conflict resolution is keyed on the unique `slug`.
   2. Seeded import formats reference their Platform by slug; `seed.ts` resolves slug→id at runtime, and the runtime FK column remains `import_format_version.platformId` (unchanged).
   3. A clean reseed inserts the Trade Republic format even when a user platform already holds serial id 8 — the id-8 collision no longer skips the TR seed; running `db:migrate → db:seed → db:seed-extras → db:seed-patterns` produces a correctly linked TR format.
   4. The CONTEXT.md glossary entry and any stale code comments state that DescriptionStripPattern lives on `import_format_version` (ADR 0013), not on `platform`.
+
 **Plans**: TBD
 
 ## Progress

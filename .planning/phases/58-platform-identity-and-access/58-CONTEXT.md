@@ -37,48 +37,17 @@ exists on both tables (default `"approved"`) — this phase wires the lifecycle 
 <decisions>
 ## Implementation Decisions
 
-### D-01 — Platform is never user-owned (PLAT-01)
-Drop the `platform.visibility` column. Rename `platform.ownerUserId` → `platform.proposedByUserId`
-(provenance, not ownership). A "private platform owned by a user" is a contradiction — a
-provider identity is shared by nature.
+- **D-01 — Platform is never user-owned (PLAT-01):** Drop the `platform.visibility` column and rename `platform.ownerUserId` → `platform.proposedByUserId` (provenance, not ownership). A "private platform owned by a user" is a contradiction — a provider identity is shared by nature.
 
-### D-02 — Additive, idempotent migration + backfill (PLAT-01)
-Schema change via `drizzle-kit generate` → migration `0023`, applied through `scripts/migrate.ts`.
-**Never `drizzle-kit push` in production.** Existing platform rows are migrated without data loss:
-the value formerly in `ownerUserId` is preserved as `proposedByUserId`. Any row-level backfill
-that touches already-seeded rows is expressed as an idempotent step (append to
-`scripts/seed-extras.ts` STEPS if a data UPDATE on existing rows is needed — never edit
-`seed-data.ts` shapes).
+- **D-02 — Additive, idempotent migration, no data loss (PLAT-01):** Schema change via `drizzle-kit generate` → migration `0023`, applied through `scripts/migrate.ts`; **never `drizzle-kit push` in production**. Existing platform rows are migrated without data loss — the value formerly in `ownerUserId` is preserved as `proposedByUserId` (a true `RENAME COLUMN` carries the data). Any row-level backfill on already-seeded rows is expressed as an idempotent step in `scripts/seed-extras.ts` STEPS — never edit `seed-data.ts` shapes (fallback only if a drop+add is unavoidable).
 
-### D-03 — reviewStatus is the visibility lifecycle (PLAT-02)
-Platform visibility keys on `platform.reviewStatus` (column already present):
-`pending` → visible only to its `proposedByUserId`; `approved` → visible to all users.
-Seeded platforms remain `approved`. (Operator "approve → share" UI is deferred per ADR — see
-Deferred Ideas; single-user, a `pending` platform is already usable by its proposer.)
+- **D-03 — reviewStatus is the visibility lifecycle (PLAT-02):** Platform visibility keys on `platform.reviewStatus` (column already present): `pending` → visible only to its `proposedByUserId`; `approved` → visible to all users. Seeded platforms remain `approved`. (Operator "approve → share" UI is deferred per ADR — see Deferred Ideas; single-user, a `pending` platform is already usable by its proposer.)
 
-### D-04 — Decouple private Import Format from private Platform (PLAT-03)
-Relax `lib/dal/import-formats.ts` `accessibleWhere()`: a user-owned `importFormatVersion`
-(`ownerUserId = user`) is visible to its owner **even when attached to a global/approved
-platform**. Remove the platform-owner OR-branch (branch 3); private-format visibility keys off
-`importFormatVersion.ownerUserId`, not on the platform's visibility. Keep the global-approved
-path intact.
+- **D-04 — Decouple private Import Format from private Platform (PLAT-03):** Relax `lib/dal/import-formats.ts` `accessibleWhere()` so a user-owned `importFormatVersion` (`ownerUserId = user`) is visible to its owner **even when attached to a global/approved platform**. Remove the platform-owner OR-branch (branch 3); private-format visibility keys off `importFormatVersion.ownerUserId`, not on the platform's visibility. Keep the global-approved path intact.
 
-### D-05 — No regression on the hot platform join (PLAT-03 / SC4)
-The `platform` join used by expenses/transactions/imports for filter/display/sort by
-`platform.slug` / `platform.name` must behave identically before and after. Existing global
-formats resolve and import exactly as before. Guard with tests over the existing global formats.
+- **D-05 — No regression on the hot platform join (PLAT-03 / SC4):** The `platform` join used by expenses/transactions/imports for filter/display/sort by `platform.slug` / `platform.name` must behave identically before and after; existing global formats resolve and import exactly as before. Guard with tests over the existing global formats.
 
-### D-06 — Minimal caller adaptation to keep the build green (scope-boundary glue)
-Dropping `platform.visibility` and renaming `ownerUserId` breaks current writers/readers of those
-columns. Phase 58 adapts **only** what is required to keep the app compiling and existing imports
-working — behavior-preserving glue, not feature work:
-- `lib/services/import-format-wizard.ts` `createPrivateRows()` currently writes a new platform with
-  `visibility='private'`, `reviewStatus='draft'` — adapt to the new schema (no `visibility` write;
-  new platform born `reviewStatus='pending'`). The "offer an existing platform / attach a private
-  format" UX is **Phase 59**, not here.
-- `lib/dal/import-formats.ts` validators (`isGlobalApproved`, `isOwnedBy`, `isAccessibleImportFormat`)
-  and any seed reference to the dropped/renamed columns — adapt so reseed and access checks still
-  run. The seed **slug-linkage** refactor is **Phase 60**, not here.
+- **D-06 — Minimal caller adaptation to keep the build green (scope-boundary glue):** Dropping `platform.visibility` and renaming `ownerUserId` breaks current writers/readers of those columns; Phase 58 adapts **only** what keeps the app compiling and existing imports working — behavior-preserving glue, not feature work. Specifically: `lib/services/import-format-wizard.ts` `createPrivateRows()` (drop the `visibility` write; new platform born `reviewStatus='pending'`, not `'draft'`; insert key renamed to `proposedByUserId`) and the readers in `lib/dal/import-formats.ts` (validators `isGlobalApproved`/`isOwnedBy`, the `.select` projection, and `listPdfImportPlatformNames`). The wizard attach-format UX is **Phase 59**; the seed slug-linkage refactor is **Phase 60** — both out of scope here.
 
 ### Claude's Discretion
 - **`importFormatVersion.visibility` handling.** ADR 0015 is silent on whether the format-level
