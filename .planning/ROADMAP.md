@@ -216,8 +216,16 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 **UI hint**: yes
 
 Plans:
+**Wave 1**
+
 - [ ] 59-01-PLAN.md — DAL `listAttachablePlatforms` (approved + own-pending) + tests (Wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 59-02-PLAN.md — Zod `existingPlatformId` + `createPrivateRows` attach fork + action propagation + `listAttachablePlatformsAction` (Wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 59-03-PLAN.md — wizard step 1 UI, configure page wiring, UI tests (Wave 3)
 
 ### Phase 60: seed-slug-linkage-and-docs
