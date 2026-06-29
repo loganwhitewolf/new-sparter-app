@@ -190,7 +190,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
   3. A user-owned `import_format_version` is visible to its owner even when its platform is global/approved — `accessibleWhere` no longer requires the platform itself to be private.
   4. Existing global formats still resolve and import exactly as before: the hot `platform` join used by expenses/transactions/imports for filter/display/sort by `platform.slug`/`platform.name` shows no behavioral regression (guarded by tests over the existing formats).
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 **Wave 1**
 
 - [x] 58-01-PLAN.md — Platform schema rename/drop + migration 0023 (true RENAME, applied via scripts/migrate.ts) [PLAT-01]
@@ -198,7 +198,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 58-02-PLAN.md — Relax accessibleWhere + reviewStatus visibility lifecycle (DAL access boundary, lockstep) [PLAT-02, PLAT-03]
-- [ ] 58-03-PLAN.md — Wizard write-path glue: createPrivateRows → proposedByUserId, no visibility, reviewStatus 'pending' [PLAT-01]
+- [x] 58-03-PLAN.md — Wizard write-path glue: createPrivateRows → proposedByUserId, no visibility, reviewStatus 'pending' [PLAT-01]
 
 ### Phase 59: import-wizard-attach-format
 
@@ -247,7 +247,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 46–50 | v2.0 | 22/22 | Complete | 2026-06-14 |
 | 51–55 | v2.1 | 15/15 | Complete | 2026-06-22 |
 | 56–57 | v2.2 | 10/10 | Complete | 2026-06-26 |
-| 58. platform-identity-and-access | v2.3 | 2/3 | In Progress|  |
+| 58. platform-identity-and-access | v2.3 | 3/3 | Complete   | 2026-06-29 |
 | 59. import-wizard-attach-format | v2.3 | 0/? | Not started | - |
 | 60. seed-slug-linkage-and-docs | v2.3 | 0/? | Not started | - |
 
