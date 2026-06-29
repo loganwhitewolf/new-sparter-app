@@ -200,25 +200,25 @@ describe('import format wizard Server Actions', () => {
     })
     expect(mocks.txExecute).toHaveBeenCalledTimes(1)
     expect(mocks.insertedPlatforms[0]).not.toHaveProperty('id')
-    // platform holds identity only (ADR 0013) — no contract fields
+    // platform is never user-owned (ADR 0015): proposedByUserId is provenance, no visibility column
     expect(mocks.insertedPlatforms[0]).toMatchObject({
-      ownerUserId: 'user-abc',
-      visibility: 'private',
-      reviewStatus: 'draft',
+      proposedByUserId: 'user-abc',
+      reviewStatus: 'pending',
       name: 'My Bank',
       country: 'IT',
       isActive: true,
     })
+    expect(mocks.insertedPlatforms[0]).not.toHaveProperty('visibility')
     expect(mocks.insertedPlatforms[0]).not.toHaveProperty('delimiter')
     expect(mocks.insertedPlatforms[0]).not.toHaveProperty('timestampColumn')
     expect(mocks.insertedPlatforms[0]).not.toHaveProperty('descriptionColumn')
     expect(mocks.insertedPlatforms[0]).not.toHaveProperty('amountType')
-    // importFormatVersion holds the full parsing contract (ADR 0013)
+    // importFormatVersion holds the full parsing contract (ADR 0013); keeps ownerUserId/visibility (Discretion A3)
     expect(mocks.insertedVersions[0]).toMatchObject({
       platformId: 301,
       ownerUserId: 'user-abc',
       visibility: 'private',
-      reviewStatus: 'draft',
+      reviewStatus: 'pending',
       version: 1,
       headerSignature: 'Data,Descrizione,Importo',
       isActive: true,
