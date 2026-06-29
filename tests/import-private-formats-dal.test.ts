@@ -86,7 +86,7 @@ describe('loadImportFormatsForDetection', () => {
       makeRow({
         id: 2,
         ownerUserId: 'user-a',
-        reviewStatus: 'draft',
+        reviewStatus: 'pending',
         platformReviewStatus: 'approved',
         platformProposedByUserId: null,
       }),
@@ -103,7 +103,7 @@ describe('loadImportFormatsForDetection', () => {
       makeRow({
         id: 3,
         ownerUserId: 'user-a',
-        reviewStatus: 'draft',
+        reviewStatus: 'pending',
         platformReviewStatus: 'approved',
         platformProposedByUserId: null,
       }),
@@ -120,7 +120,7 @@ describe('loadImportFormatsForDetection', () => {
       makeRow({
         id: 4,
         ownerUserId: 'user-a',
-        reviewStatus: 'draft',
+        reviewStatus: 'pending',
         platformReviewStatus: 'pending',
         platformProposedByUserId: 'user-a',
       }),
@@ -136,7 +136,7 @@ describe('loadImportFormatsForDetection', () => {
       makeRow({
         id: 5,
         ownerUserId: 'user-a',
-        reviewStatus: 'draft',
+        reviewStatus: 'pending',
         platformReviewStatus: 'pending',
         platformProposedByUserId: 'user-a',
       }),
@@ -149,7 +149,7 @@ describe('loadImportFormatsForDetection', () => {
   // Cross-user isolation with pending platform
   it('returns no candidate for cross-user, inactive, or nonexistent versions', async () => {
     mocks.rows = [
-      makeRow({ id: 6, ownerUserId: 'other-user', reviewStatus: 'draft', platformProposedByUserId: 'other-user', platformReviewStatus: 'pending' }),
+      makeRow({ id: 6, ownerUserId: 'other-user', reviewStatus: 'pending', platformProposedByUserId: 'other-user', platformReviewStatus: 'pending' }),
       makeRow({ id: 7, isActive: false }),
       makeRow({ id: 8, platformIsActive: false }),
     ]
