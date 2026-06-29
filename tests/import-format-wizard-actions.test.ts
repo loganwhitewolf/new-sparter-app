@@ -20,6 +20,8 @@ const mocks = vi.hoisted(() => ({
   // selectedPlatformRow: returned by the SELECT in createPrivateRows attach branch (Plan 59-02)
   // Set to null to simulate TOCTOU guard (platform deleted between list and submit).
   selectedPlatformRow: { id: 301, name: 'Fineco', slug: 'fineco' } as Record<string, unknown> | null,
+  // listAttachablePlatforms: mock for the DAL function used by listAttachablePlatformsAction (Plan 59-02)
+  listAttachablePlatforms: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
@@ -37,6 +39,10 @@ vi.mock('@/lib/logger', () => ({
     warn: mocks.loggerWarn,
     error: mocks.loggerError,
   },
+}))
+vi.mock('@/lib/dal/import-formats', () => ({
+  listAttachablePlatforms: mocks.listAttachablePlatforms,
+  listPdfImportPlatformNames: vi.fn().mockResolvedValue([]),
 }))
 
 function makeTx() {
@@ -83,6 +89,7 @@ const {
   analyzeImportAction,
   confirmImportAction,
   createPrivateImportFormatAction,
+  listAttachablePlatformsAction,
   loadImportFormatWizardContextAction,
 } = await import('../lib/actions/import')
 
@@ -160,6 +167,10 @@ describe('import format wizard Server Actions', () => {
     mocks.insertedVersions.length = 0
     mocks.updatedFiles.length = 0
     mocks.selectedPlatformRow = { id: 301, name: 'Fineco', slug: 'fineco' }
+    mocks.listAttachablePlatforms.mockResolvedValue([
+      { id: 1, name: 'Fineco', slug: 'fineco', reviewStatus: 'approved' },
+      { id: 2, name: 'Revolut', slug: 'revolut', reviewStatus: 'approved' },
+    ])
     mocks.verifySession.mockResolvedValue(userSession)
     mocks.getFileForUser.mockResolvedValue(fileRow)
     mocks.readObjectBody.mockResolvedValue(Readable.from([Buffer.from('Data,Descrizione,Importo\n2026-01-01,Coffee,-2.50')]))
@@ -398,6 +409,35 @@ describe('import format wizard Server Actions', () => {
     expect(result).toEqual({ error: 'Impossibile salvare il formato. Riprova.' })
     expect(mocks.insertedPlatforms).toHaveLength(0)
     expect(mocks.insertedVersions).toHaveLength(0)
+  })
+
+  // Plan 59-02: listAttachablePlatformsAction tests
+  it('listAttachablePlatformsAction returns the attachable platform list for authenticated session', async () => {
+    const result = await listAttachablePlatformsAction()
+
+    expect(result.error).toBeNull()
+    expect(result.data).toEqual([
+      { id: 1, name: 'Fineco', slug: 'fineco', reviewStatus: 'approved' },
+      { id: 2, name: 'Revolut', slug: 'revolut', reviewStatus: 'approved' },
+    ])
+    expect(mocks.listAttachablePlatforms).toHaveBeenCalledWith('user-abc')
+  })
+
+  it('listAttachablePlatformsAction returns session-expired error when verifySession rejects', async () => {
+    mocks.verifySession.mockRejectedValueOnce(new Error('missing session'))
+
+    const result = await listAttachablePlatformsAction()
+
+    expect(result.error).toBe('Sessione scaduta. Accedi di nuovo per configurare il formato.')
+    expect(mocks.listAttachablePlatforms).not.toHaveBeenCalled()
+  })
+
+  it('listAttachablePlatformsAction returns error when DAL throws', async () => {
+    mocks.listAttachablePlatforms.mockRejectedValueOnce(new Error('DB connection failed'))
+
+    const result = await listAttachablePlatformsAction()
+
+    expect(result.error).toBe('Impossibile caricare le piattaforme. Riprova.')
   })
 
   it('create branch regression: still inserts pending platform and calls syncPlatformIdSequence once', async () => {

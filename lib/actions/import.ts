@@ -46,7 +46,7 @@ import {
 } from "@/lib/routes";
 import { ANALYZE_STATUS_ERROR } from "@/lib/utils/import-status";
 import { UNRECOGNIZED_PDF_FORMAT } from "@/lib/services/trade-republic-pdf-parser";
-import { listPdfImportPlatformNames } from "@/lib/dal/import-formats";
+import { listAttachablePlatforms, listPdfImportPlatformNames, type AttachablePlatform } from "@/lib/dal/import-formats";
 
 export type ImportActionState<T = null> = {
   error: string | null;
@@ -191,7 +191,7 @@ export async function createPrivateImportFormatAction(
   const parsed = CreatePrivateImportFormatSchema.safeParse({
     fileId: formData.get("fileId") ?? "",
     existingPlatformId: optionalPositiveInteger(formData, "existingPlatformId"),
-    platformName: formData.get("platformName") ?? "",
+    platformName: formString(formData, "platformName"),
     delimiter: formString(formData, "delimiter"),
     timestampColumn: formData.get("timestampColumn") ?? "",
     descriptionColumn: formData.get("descriptionColumn") ?? "",
@@ -224,6 +224,33 @@ export async function createPrivateImportFormatAction(
     return { error: mapImportFormatWizardError(error) };
   }
   return { error: null, data: result };
+}
+
+/**
+ * Returns the list of platforms a user can attach a private Import Format to.
+ * Used by the RSC page to preload step 1 of the format wizard (D-02, Plan 59-02).
+ * userId is resolved via verifySession — never trusted from the client (T-59-05).
+ */
+export async function listAttachablePlatformsAction(): Promise<ImportActionState<AttachablePlatform[]>> {
+  let userId: string;
+
+  try {
+    const session = await verifySession();
+    userId = session.userId;
+  } catch {
+    return {
+      error: "Sessione scaduta. Accedi di nuovo per configurare il formato.",
+    };
+  }
+
+  try {
+    const data = await listAttachablePlatforms(userId);
+    return { error: null, data };
+  } catch {
+    return {
+      error: "Impossibile caricare le piattaforme. Riprova.",
+    };
+  }
 }
 
 export async function loadMoreImports({
