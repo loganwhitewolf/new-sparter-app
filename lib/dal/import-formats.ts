@@ -227,7 +227,11 @@ export async function listPdfImportPlatformNames(input?: {
         eq(importFormatVersion.isActive, true),
         eq(platform.reviewStatus, APPROVED_REVIEW_STATUS),
         eq(importFormatVersion.reviewStatus, APPROVED_REVIEW_STATUS),
-        isNull(platform.proposedByUserId), // global platforms have no proposer (post-58-01)
+        // isNull(proposedByUserId) is redundant alongside reviewStatus=approved above (all seeded
+        // global platforms have both), but kept explicit to document intent: this query targets
+        // truly global platforms (no proposer, always seeded). Redundancy is intentional defense
+        // against a future operator INSERT that sets reviewStatus='approved' but a non-null proposer.
+        isNull(platform.proposedByUserId),
         isNull(importFormatVersion.ownerUserId),
         inArray(platform.slug, [...PDF_IMPORT_PLATFORM_SLUGS]),
       ),
