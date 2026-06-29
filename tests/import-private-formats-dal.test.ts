@@ -34,24 +34,24 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
     headerSignature: 'Date;Description;Amount',
     isActive: true,
     ownerUserId: null,
-    visibility: 'global',
     reviewStatus: 'approved',
-    platformOwnerUserId: null,
-    platformVisibility: 'global',
+    // Contract fields sourced from importFormatVersion (ADR 0013)
+    delimiter: ';',
+    timestampColumn: 'Date',
+    descriptionColumn: 'Description',
+    amountType: 'single' as const,
+    amountColumn: 'Amount',
+    positiveAmountColumn: null,
+    negativeAmountColumn: null,
+    multiplyBy: 1,
+    descriptionStripPattern: null,
+    // Identity fields sourced from platform (post-58-01: no platformVisibility, no platformOwnerUserId)
+    platformProposedByUserId: null,
     platformReviewStatus: 'approved',
     platformIsActive: true,
     platformName: 'Global Bank',
     platformSlug: 'global-bank',
-    platformDelimiter: ';',
     platformCountry: 'IT',
-    platformTimestampColumn: 'Date',
-    platformDescriptionColumn: 'Description',
-    platformAmountType: 'single',
-    platformAmountColumn: 'Amount',
-    platformPositiveAmountColumn: null,
-    platformNegativeAmountColumn: null,
-    platformMultiplyBy: 1,
-    platformDescriptionStripPattern: null,
     ...overrides,
   }
 }
@@ -62,6 +62,7 @@ describe('loadImportFormatsForDetection', () => {
     mocks.rows = []
   })
 
+  // SC4 / D-05: global-approved path must be unregressed — any user gets all approved formats
   it('returns active global approved formats to any user', async () => {
     mocks.rows = [makeRow()]
 
@@ -78,32 +79,89 @@ describe('loadImportFormatsForDetection', () => {
     })
   })
 
-  it('returns private formats only to the owning user', async () => {
+  // PLAT-03 (D-04): owner sees own private format on an approved platform
+  it('returns owner-owned private format on an approved platform to its owner', async () => {
     mocks.rows = [
-      makeRow({ id: 2, ownerUserId: 'user-a', visibility: 'private', reviewStatus: 'draft', platformOwnerUserId: 'user-a', platformVisibility: 'private', platformReviewStatus: 'draft' }),
-      makeRow({ id: 3, ownerUserId: 'user-b', visibility: 'private', reviewStatus: 'draft', platformOwnerUserId: 'user-b', platformVisibility: 'private', platformReviewStatus: 'draft' }),
+      makeRow({
+        id: 2,
+        ownerUserId: 'user-a',
+        reviewStatus: 'draft',
+        platformReviewStatus: 'approved',
+        platformProposedByUserId: null,
+      }),
     ]
 
     const result = await loadImportFormatsForDetection({ userId: 'user-a' })
 
-    expect(result.map((format) => format.id)).toEqual([2])
+    expect(result.map((f) => f.id)).toEqual([2])
   })
 
-  it('returns no candidate for selected cross-user, inactive, or nonexistent versions', async () => {
+  // PLAT-03 cross-user isolation: non-owner cannot see another user's private format
+  it('does NOT return owner-owned private format to a different user (cross-user isolation)', async () => {
     mocks.rows = [
-      makeRow({ id: 4, ownerUserId: 'other-user', visibility: 'private', platformOwnerUserId: 'other-user', platformVisibility: 'private' }),
-      makeRow({ id: 5, isActive: false }),
-      makeRow({ id: 6, platformIsActive: false }),
+      makeRow({
+        id: 3,
+        ownerUserId: 'user-a',
+        reviewStatus: 'draft',
+        platformReviewStatus: 'approved',
+        platformProposedByUserId: null,
+      }),
     ]
 
-    const result = await loadImportFormatsForDetection({ userId: 'user-a', selectedFormatVersionId: 4 })
+    const result = await loadImportFormatsForDetection({ userId: 'user-b' })
 
     expect(result).toEqual([])
   })
 
-  it('fails closed when ownership columns are missing from an unexpected row shape', async () => {
+  // PLAT-02: pending platform is visible only to its proposer
+  it('returns pending platform format to its proposer only', async () => {
+    mocks.rows = [
+      makeRow({
+        id: 4,
+        ownerUserId: 'user-a',
+        reviewStatus: 'draft',
+        platformReviewStatus: 'pending',
+        platformProposedByUserId: 'user-a',
+      }),
+    ]
+
+    const resultOwner = await loadImportFormatsForDetection({ userId: 'user-a' })
+    expect(resultOwner.map((f) => f.id)).toEqual([4])
+  })
+
+  // PLAT-02: pending platform is NOT visible to other users
+  it('does NOT return pending platform format to another user', async () => {
+    mocks.rows = [
+      makeRow({
+        id: 5,
+        ownerUserId: 'user-a',
+        reviewStatus: 'draft',
+        platformReviewStatus: 'pending',
+        platformProposedByUserId: 'user-a',
+      }),
+    ]
+
+    const resultOther = await loadImportFormatsForDetection({ userId: 'user-b' })
+    expect(resultOther).toEqual([])
+  })
+
+  // Cross-user isolation with pending platform
+  it('returns no candidate for cross-user, inactive, or nonexistent versions', async () => {
+    mocks.rows = [
+      makeRow({ id: 6, ownerUserId: 'other-user', reviewStatus: 'draft', platformProposedByUserId: 'other-user', platformReviewStatus: 'pending' }),
+      makeRow({ id: 7, isActive: false }),
+      makeRow({ id: 8, platformIsActive: false }),
+    ]
+
+    const result = await loadImportFormatsForDetection({ userId: 'user-a', selectedFormatVersionId: 6 })
+
+    expect(result).toEqual([])
+  })
+
+  // Fail-closed: missing a required shape column → row dropped (defense-in-depth)
+  it('fails closed when a required row column is missing from the row shape', async () => {
     const row = makeRow()
-    delete (row as Record<string, unknown>).visibility
+    delete (row as Record<string, unknown>).reviewStatus
     mocks.rows = [row]
 
     await expect(loadImportFormatsForDetection({ userId: 'user-a' })).resolves.toEqual([])
