@@ -167,7 +167,7 @@ export async function applyNewPatternToPlatformExpenses(
 
   const matchingIds = uncategorized
     .filter((e) => {
-      // Mirror the discovery pipeline (CR-02): apply platform descriptionStripPattern before
+      // Mirror the discovery pipeline (CR-02): apply import format version descriptionStripPattern before
       // normalizing so patterns generated from stripped titles continue to match on apply.
       const rawTitle = e.title
       const preStripped = e.descriptionStripPattern
