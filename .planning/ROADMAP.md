@@ -212,8 +212,13 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
   3. A brand-new Platform is created only when no existing one fits, and it is persisted with `reviewStatus = pending` (visible only to its proposer).
   4. The newly attached private Import Format is immediately usable by its owner for the import that triggered creation.
 
-**Plans**: TBD
+**Plans**: 3 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 59-01-PLAN.md — DAL `listAttachablePlatforms` (approved + own-pending) + tests (Wave 1)
+- [ ] 59-02-PLAN.md — Zod `existingPlatformId` + `createPrivateRows` attach fork + action propagation + `listAttachablePlatformsAction` (Wave 2)
+- [ ] 59-03-PLAN.md — wizard step 1 UI, configure page wiring, UI tests (Wave 3)
 
 ### Phase 60: seed-slug-linkage-and-docs
 
