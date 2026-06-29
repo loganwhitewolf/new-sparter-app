@@ -13,19 +13,30 @@ type Props = {
   suggestion: PatternSuggestion
   categories: CategoryWithSubCategories[]
   fileId: string
+  onRegexPromoted?: () => void
   /** @internal test-only: pre-seeds the applyResult state for SSR snapshot tests */
   initialApplyResult?: PatternApplyResult | null
 }
 
-export function SuggestionCard({ suggestion, categories, fileId, initialApplyResult = null }: Props) {
+export function SuggestionCard({
+  suggestion,
+  categories,
+  fileId,
+  onRegexPromoted,
+  initialApplyResult = null,
+}: Props) {
   const [promoted, setPromoted] = useState(initialApplyResult != null)
   const [applyResult, setApplyResult] = useState<PatternApplyResult | null>(initialApplyResult)
   const [showSamples, setShowSamples] = useState(false)
 
-  const handlePromoted = useCallback((result: PatternApplyResult) => {
-    setPromoted(true)
-    setApplyResult(result)
-  }, [])
+  const handlePromoted = useCallback(
+    (result: PatternApplyResult) => {
+      setPromoted(true)
+      setApplyResult(result)
+      onRegexPromoted?.()
+    },
+    [onRegexPromoted],
+  )
 
   const sampleCount = suggestion.sampleDescriptions.length
   const samplesId = `samples-${suggestion.pattern}`

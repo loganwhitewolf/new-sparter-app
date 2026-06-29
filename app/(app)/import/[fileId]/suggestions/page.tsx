@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation'
-import { verifySession } from '@/lib/dal/auth'
-import { getFileForUser, getPlatformIdForUserFile } from '@/lib/dal/files'
-import { getCategories } from '@/lib/dal/categories'
-import { discoverRegexCandidates } from '@/lib/services/regex-discovery'
+import { ProceedToImportsCta } from '@/components/import/proceed-to-imports-cta'
 import { SuggestionSection } from '@/components/import/suggestion-section'
+import { verifySession } from '@/lib/dal/auth'
+import { getCategories } from '@/lib/dal/categories'
+import { getFileForUser, getPlatformIdForUserFile } from '@/lib/dal/files'
+import { discoverRegexCandidates } from '@/lib/services/regex-discovery'
 
 export default async function SuggestionsPage({
   params,
@@ -39,9 +40,12 @@ export default async function SuggestionsPage({
         </p>
       </div>
       {discovery.candidates.length === 0 && discovery.singleCategorizationSuggestions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Nessun suggerimento trovato — tutte le transazioni risultano già categorizzate o non sono stati rilevati pattern ricorrenti.
-        </p>
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Nessun suggerimento trovato — tutte le transazioni risultano già categorizzate o non sono stati rilevati pattern ricorrenti.
+          </p>
+          <ProceedToImportsCta />
+        </div>
       ) : (
         <SuggestionSection
           suggestions={discovery.candidates}
