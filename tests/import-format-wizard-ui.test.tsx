@@ -63,7 +63,7 @@ describe('ImportFormatWizard UI', () => {
     const html = renderToStaticMarkup(createElement(ImportFormatWizard, { context }))
 
     expect(html).toContain('Configura un formato privato')
-    expect(html).toContain('Nome piattaforma')
+    expect(html).toContain('Piattaforma')
     expect(html).toContain('Colonna data')
     expect(html).toContain('Colonna descrizione')
     expect(html).toContain('Modalità importo')
