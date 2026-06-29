@@ -7,7 +7,7 @@ current_phase_name: pdf-import-trade-republic
 status: "Phase 57 shipped — PR #24"
 stopped_at: Phase 57 verified and complete — milestone v2.2 shipped
 last_updated: "2026-06-26T12:57:26.033Z"
-last_activity: 2026-06-29 - Completed quick task 260629-lky: file download + expense details
+last_activity: 2026-06-29 - Completed quick task 260629-m9i: detach transaction to dedicated expense
 progress:
   total_phases: 2
   completed_phases: 2
@@ -95,6 +95,7 @@ Nessuno.
 | 260616-dlw | Fix transaction description sort | 2026-06-16 | c71d32e |
 | 260629-gdp | Pattern suggestions back link + auto-redirect after classify | 2026-06-29 | 4673927 |
 | 260629-lky | File list R2 download + expense details dialog source file | 2026-06-29 | a6d7f95 |
+| 260629-m9i | Detach transaction to dedicated expense + re-import manual lock | 2026-06-29 | 90bfa69 |
 
 ## Deferred Items
 
