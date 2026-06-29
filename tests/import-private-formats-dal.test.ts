@@ -34,6 +34,7 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
     headerSignature: 'Date;Description;Amount',
     isActive: true,
     ownerUserId: null,
+    visibility: 'global',
     reviewStatus: 'approved',
     // Contract fields sourced from importFormatVersion (ADR 0013)
     delimiter: ';',
