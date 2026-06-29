@@ -240,7 +240,13 @@ Plans:
   3. A clean reseed inserts the Trade Republic format even when a user platform already holds serial id 8 — the id-8 collision no longer skips the TR seed; running `db:migrate → db:seed → db:seed-extras → db:seed-patterns` produces a correctly linked TR format.
   4. The CONTEXT.md glossary entry and any stale code comments state that DescriptionStripPattern lives on `import_format_version` (ADR 0013), not on `platform`.
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+**Wave 1** *(parallel)*
+
+- [ ] 60-01-PLAN.md — Remove explicit platform ids from seed-data.ts + slug-to-id resolution in seed.ts (PLAT-05)
+- [ ] 60-02-PLAN.md — Fix stale DescriptionStripPattern attribution in CONTEXT.md and service comments (PLAT-06)
 
 ## Progress
 
