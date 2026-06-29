@@ -63,6 +63,11 @@ export type ExpenseRow = {
   platformName: string | null
 }
 
+export type ExpenseSourceFile = {
+  id: string
+  name: string
+}
+
 /** Matches "Titolo" column label (case-insensitive). */
 export const expenseTitleSortKey = sql<string>`LOWER(${expense.title})`
 
@@ -261,6 +266,29 @@ export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | und
     .where(and(eq(expense.id, id), eq(expense.userId, userId)))
     .limit(1)
   return rows[0]
+})
+
+export const getExpenseSourceFile = cache(async (expenseId: string): Promise<ExpenseSourceFile | null> => {
+  const { userId } = await verifySession()
+
+  const rows = await db
+    .select({
+      id: file.id,
+      displayName: file.displayName,
+      originalName: file.originalName,
+    })
+    .from(expense)
+    .innerJoin(file, eq(expense.importedFromFileId, file.id))
+    .where(and(eq(expense.id, expenseId), eq(expense.userId, userId), eq(file.userId, userId)))
+    .limit(1)
+
+  const row = rows[0]
+  if (!row) return null
+
+  return {
+    id: row.id,
+    name: row.displayName?.trim() || row.originalName,
+  }
 })
 
 export async function insertExpense(data: {

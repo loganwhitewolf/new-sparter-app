@@ -17,8 +17,10 @@ import {
   deleteExpense as deleteExpenseDAL,
   deleteExpenses as deleteExpensesDAL,
   getExpenses,
+  getExpenseSourceFile,
   EXPENSE_LIST_LIMIT,
   type ExpenseFilters,
+  type ExpenseSourceFile,
 } from '@/lib/dal/expenses'
 import {
   getTransactionsByExpenseId,
@@ -319,15 +321,25 @@ export async function categorizeExpense(
 
 export async function fetchExpenseTransactions(
   expenseId: string,
-): Promise<{ transactions: ExpenseTransactionRow[]; error: string | null }> {
-  if (!expenseId) return { transactions: [], error: 'ID spesa mancante.' }
+): Promise<{
+  transactions: ExpenseTransactionRow[]
+  sourceFile: ExpenseSourceFile | null
+  error: string | null
+}> {
+  if (!expenseId) {
+    return { transactions: [], sourceFile: null, error: 'ID spesa mancante.' }
+  }
   try {
-    const transactions = await getTransactionsByExpenseId(expenseId)
-    return { transactions, error: null }
+    const [transactions, sourceFile] = await Promise.all([
+      getTransactionsByExpenseId(expenseId),
+      getExpenseSourceFile(expenseId),
+    ])
+    return { transactions, sourceFile, error: null }
   } catch {
     return {
       transactions: [],
-      error: 'Non è stato possibile caricare le transazioni. Riprova.',
+      sourceFile: null,
+      error: 'Non è stato possibile caricare i dettagli. Riprova.',
     }
   }
 }

@@ -348,7 +348,7 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                             setOpenDropdownId(null)
                           }}
                         >
-                          Vedi transazioni
+                          Dettagli
                         </DropdownMenuItem>
                         <ExpenseFormDialog
                           categories={categories}
