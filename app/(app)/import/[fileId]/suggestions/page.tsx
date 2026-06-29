@@ -1,11 +1,9 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import { ProceedToImportsCta } from '@/components/import/proceed-to-imports-cta'
 import { SuggestionSection } from '@/components/import/suggestion-section'
 import { verifySession } from '@/lib/dal/auth'
 import { getCategories } from '@/lib/dal/categories'
 import { getFileForUser, getPlatformIdForUserFile } from '@/lib/dal/files'
-import { APP_ROUTES } from '@/lib/routes'
 import { discoverRegexCandidates } from '@/lib/services/regex-discovery'
 
 export default async function SuggestionsPage({
@@ -34,22 +32,20 @@ export default async function SuggestionsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Suggerimenti pattern</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            I suggerimenti sono stati rilevati dalle transazioni non categorizzate di questa piattaforma
-            dopo l&apos;importazione. Puoi ricontrollare i pattern in qualsiasi momento dal tab Importazioni.
-          </p>
-        </div>
-        <Button asChild variant="outline" className="shrink-0 self-start">
-          <Link href={APP_ROUTES.import}>Torna alle importazioni</Link>
-        </Button>
+      <div>
+        <h1 className="text-xl font-semibold">Suggerimenti pattern</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          I suggerimenti sono stati rilevati dalle transazioni non categorizzate di questa piattaforma
+          dopo l&apos;importazione. Puoi ricontrollare i pattern in qualsiasi momento dal tab Importazioni.
+        </p>
       </div>
       {discovery.candidates.length === 0 && discovery.singleCategorizationSuggestions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Nessun suggerimento trovato — tutte le transazioni risultano già categorizzate o non sono stati rilevati pattern ricorrenti.
-        </p>
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Nessun suggerimento trovato — tutte le transazioni risultano già categorizzate o non sono stati rilevati pattern ricorrenti.
+          </p>
+          <ProceedToImportsCta />
+        </div>
       ) : (
         <SuggestionSection
           suggestions={discovery.candidates}

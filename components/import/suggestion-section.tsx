@@ -2,12 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { CheckCircle2 } from 'lucide-react'
+import { ProceedToImportsCta } from './proceed-to-imports-cta'
 import { SuggestionCard } from './suggestion-card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import { APP_ROUTES } from '@/lib/routes'
 import type { PatternSuggestion } from '@/lib/utils/pattern-suggestions'
 import type { SingleCategorizationSuggestion } from '@/lib/services/regex-discovery'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
+
+const AUTO_REDIRECT_DELAY_MS = 1500
 
 type Props = {
   suggestions: PatternSuggestion[]
@@ -35,18 +40,20 @@ export function SuggestionSection({ suggestions, singleSuggestions, categories, 
     setPromotedCount((count) => count + 1)
   }, [])
 
+  const allRegexClassified = shouldRedirectToImportList({
+    regexSuggestionCount: suggestions.length,
+    promotedCount,
+  })
+
   useEffect(() => {
-    if (
-      shouldRedirectToImportList({
-        regexSuggestionCount: suggestions.length,
-        promotedCount,
-      }) &&
-      !redirectScheduledRef.current
-    ) {
+    if (allRegexClassified && !redirectScheduledRef.current) {
       redirectScheduledRef.current = true
-      router.push(APP_ROUTES.import)
+      const timeoutId = window.setTimeout(() => {
+        router.push(APP_ROUTES.import)
+      }, AUTO_REDIRECT_DELAY_MS)
+      return () => window.clearTimeout(timeoutId)
     }
-  }, [promotedCount, router, suggestions.length])
+  }, [allRegexClassified, router])
 
   if (suggestions.length === 0 && (singleSuggestions?.length ?? 0) === 0) return null
 
@@ -105,6 +112,19 @@ export function SuggestionSection({ suggestions, singleSuggestions, categories, 
           </ul>
         </section>
       )}
+
+      <div className="flex flex-col gap-4 border-t pt-4">
+        {allRegexClassified && suggestions.length > 0 && (
+          <Alert role="status">
+            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+            <AlertDescription>
+              Tutti i pattern sono stati classificati. Tra pochi secondi tornerai alle importazioni,
+              oppure procedi subito con il pulsante qui sotto.
+            </AlertDescription>
+          </Alert>
+        )}
+        <ProceedToImportsCta />
+      </div>
     </div>
   )
 }

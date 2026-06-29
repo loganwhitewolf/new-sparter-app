@@ -246,10 +246,10 @@ describe('suggestions page', () => {
     expect(html).toContain('tab Importazioni')
   })
 
-  it('navigation: always shows back link to import list', async () => {
+  it('navigation: always shows proceed CTA to import list', async () => {
     const html = await renderPage()
 
-    expect(html).toContain('Torna alle importazioni')
+    expect(html).toContain('Procedi — vai ai file importati')
     expect(html).toContain('href="/import"')
   })
 
