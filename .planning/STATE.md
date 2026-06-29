@@ -4,17 +4,17 @@ milestone: v2.3
 milestone_name: Platform Identity & Format Ownership
 current_phase: 59
 current_phase_name: import-wizard-attach-format
-status: executing
-stopped_at: Phase 59 context gathered
-last_updated: "2026-06-29T13:12:07.730Z"
+status: complete
+stopped_at: Phase 59 all plans complete — PLAT-04 delivered
+last_updated: "2026-06-29T15:22:00.000Z"
 last_activity: 2026-06-29
-last_activity_desc: Phase 59 execution started
+last_activity_desc: Phase 59 Plan 03 complete — attach wizard UI + RSC preload + tests
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 33
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State
@@ -58,6 +58,9 @@ Design contract is LOCKED (ADR 0015). Do not re-derive the approach:
 - [Phase 58-01]: Migration 0023 via --custom fallback: RENAME COLUMN applied directly via node-pg when drizzle-kit stalled on Supabase pooler; platformRelations.owner key kept (D-06)
 - [Phase 58-02]: PLAT-02/PLAT-03: accessibleWhere relaxed to 2-branch OR — private format on approved platform visible to owner; pending platform visible only to proposedByUserId
 - [Phase 58-03]: Wizard reviewStatus aligned to pending; DRAFT_REVIEW_STATUS → PENDING_REVIEW_STATUS; platform insert uses proposedByUserId, no visibility write
+- [Phase 59-03]: Hidden platformName input carries step-1 result so validateWizardFields needs no change (Pitfall 2 resolution)
+- [Phase 59-03]: Empty attachablePlatforms auto-advances to step 2 (currentStep=columns, selectedPlatformId=new) — zero friction on DB-vergine (Pitfall 3)
+- [Phase 59-03]: Edit tool emits curly quotes in string literals; fix via binary replace + double-quote strings with Italian apostrophes
 
 ### Phase 58 — What was built (foundation for Phase 59)
 
@@ -125,7 +128,7 @@ Items riconosciuti e posticipati:
 
 **Stopped at:** Phase 59 context gathered
 
-Last session: 2026-06-29T13:12:07.724Z
+Last session: 2026-06-29T13:23:26.707Z
 Resume: `/gsd-plan-phase 59` to plan the import-wizard-attach-format phase.
 
 **Next:** Plan Phase 59 (`import-wizard-attach-format`).
@@ -172,3 +175,5 @@ Resume: `/gsd-plan-phase 59` to plan the import-wizard-attach-format phase.
 | Phase 58 P02 | 3min | 2 tasks | 2 files |
 | Phase 58 P03 | 5min | 2 tasks | 2 files |
 | Phase 59 P01 | 2min | 2 tasks | 2 files |
+| Phase 59 P02 | 13min | 5 tasks (TDD RED+GREEN x2 + action) | 5 files |
+| Phase 59 P03 | 8min | 3 tasks | 3 files |

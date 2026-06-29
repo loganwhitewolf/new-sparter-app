@@ -212,7 +212,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
   3. A brand-new Platform is created only when no existing one fits, and it is persisted with `reviewStatus = pending` (visible only to its proposer).
   4. The newly attached private Import Format is immediately usable by its owner for the import that triggered creation.
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 **UI hint**: yes
 
 Plans:
@@ -226,7 +226,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 59-03-PLAN.md — wizard step 1 UI, configure page wiring, UI tests (Wave 3)
+- [x] 59-03-PLAN.md — wizard step 1 UI, configure page wiring, UI tests (Wave 3)
 
 ### Phase 60: seed-slug-linkage-and-docs
 
@@ -261,7 +261,7 @@ Plans:
 | 51–55 | v2.1 | 15/15 | Complete | 2026-06-22 |
 | 56–57 | v2.2 | 10/10 | Complete | 2026-06-26 |
 | 58. platform-identity-and-access | v2.3 | 3/3 | Complete   | 2026-06-29 |
-| 59. import-wizard-attach-format | v2.3 | 2/3 | In Progress|  |
+| 59. import-wizard-attach-format | v2.3 | 3/3 | Complete   | 2026-06-29 |
 | 60. seed-slug-linkage-and-docs | v2.3 | 0/? | Not started | - |
 
 **Total shipped: 57 phases · 214 plans complete**
