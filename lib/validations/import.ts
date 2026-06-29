@@ -94,11 +94,16 @@ export const LoadImportFormatWizardContextSchema = z.object({
 export const CreatePrivateImportFormatSchema = z
   .object({
     fileId: FileIdSchema,
+    // existingPlatformId: if provided, attach a new format version to an existing platform (D-06)
+    // without inserting a new platform row. If absent, a new pending platform is created.
+    existingPlatformId: z.number().int().positive().optional(),
+    // platformName is required only when creating a new platform (existingPlatformId absent).
+    // The superRefine guard below enforces this conditional requirement.
     platformName: z
-      .string({ error: 'Platform name is required.' })
+      .string()
       .trim()
-      .min(1, { error: 'Platform name is required.' })
-      .max(100, { error: 'Platform name is too long.' }),
+      .max(100, { error: 'Platform name is too long.' })
+      .optional(),
     delimiter: ImportFormatWizardDelimiterSchema,
     timestampColumn: ImportFormatWizardColumnSchema,
     descriptionColumn: ImportFormatWizardColumnSchema,
@@ -108,6 +113,15 @@ export const CreatePrivateImportFormatSchema = z
     negativeAmountColumn: OptionalImportFormatWizardColumnSchema,
   })
   .superRefine((value, ctx) => {
+    // Guard: platformName is required when creating a new platform (existingPlatformId absent)
+    if (value.existingPlatformId === undefined && !value.platformName?.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['platformName'],
+        message: 'Platform name is required when creating a new platform.',
+      })
+    }
+
     if (value.amountMode === 'single' && !value.amountColumn) {
       ctx.addIssue({
         code: 'custom',
