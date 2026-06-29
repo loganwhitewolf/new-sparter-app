@@ -6,14 +6,14 @@ current_phase: 58
 current_phase_name: platform-identity-and-access
 status: executing
 stopped_at: v2.3 roadmap created (Phases 58–60); requirements mapped 6/6.
-last_updated: "2026-06-29T10:57:42.082Z"
+last_updated: "2026-06-29T11:04:35.845Z"
 last_activity: 2026-06-29
 last_activity_desc: Phase 58 execution started
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-29)
 ## Current Position
 
 Phase: 58 (platform-identity-and-access) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-06-29 — Phase 58 execution started
 
@@ -56,6 +56,7 @@ Design contract is LOCKED (ADR 0015). Do not re-derive the approach:
 - Migration path: `drizzle-kit generate` + `scripts/migrate.ts`; additive idempotent backfill in `seed-extras.ts`; never `drizzle-kit push` in production. Seed run order after migration: `db:migrate → db:seed → db:seed-extras → db:seed-patterns`.
 - **Deferred (not built now)**: operator approval UI to promote `pending` → `approved` (needed only with a second user); multi-user identity dedup. For single-user, `pending` + proposer-visible is already functional.
 - [Phase ?]: Migration 0023 via --custom fallback: RENAME COLUMN applied directly via node-pg when drizzle-kit stalled on Supabase pooler; platformRelations.owner key kept (D-06)
+- [Phase ?]: PLAT-02/PLAT-03: accessibleWhere relaxed to 2-branch OR — private format on approved platform visible to owner; pending platform visible only to proposedByUserId
 
 ### Codebase facts rilevanti per la milestone
 
@@ -113,7 +114,7 @@ Items riconosciuti e posticipati:
 
 **Stopped at:** v2.3 roadmap created (Phases 58–60); requirements mapped 6/6.
 
-Last session: 2026-06-29T10:57:38.777Z
+Last session: 2026-06-29T11:04:30.705Z
 Resume: `/gsd-plan-phase 58` to plan the platform-identity-and-access phase.
 
 **Next:** Plan Phase 58 (`platform-identity-and-access`).
@@ -157,3 +158,4 @@ Resume: `/gsd-plan-phase 58` to plan the platform-identity-and-access phase.
 | Phase 57 P03 | 10min | 2 tasks | 2 files |
 | Phase 57 P05 | 3min | 1 tasks | 6 files |
 | Phase 58 P01 | 5min | 3 tasks | 4 files |
+| Phase 58 P02 | 3min | 2 tasks | 2 files |
