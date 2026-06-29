@@ -68,6 +68,11 @@ export type ExpenseSourceFile = {
   name: string
 }
 
+export type ExpenseImportContext = {
+  sourceFile: ExpenseSourceFile | null
+  platformName: string | null
+}
+
 /** Matches "Titolo" column label (case-insensitive). */
 export const expenseTitleSortKey = sql<string>`LOWER(${expense.title})`
 
@@ -268,26 +273,36 @@ export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | und
   return rows[0]
 })
 
-export const getExpenseSourceFile = cache(async (expenseId: string): Promise<ExpenseSourceFile | null> => {
+export const getExpenseImportContext = cache(async (expenseId: string): Promise<ExpenseImportContext> => {
   const { userId } = await verifySession()
 
   const rows = await db
     .select({
-      id: file.id,
+      fileId: file.id,
       displayName: file.displayName,
       originalName: file.originalName,
+      platformName: platform.name,
     })
     .from(expense)
-    .innerJoin(file, eq(expense.importedFromFileId, file.id))
-    .where(and(eq(expense.id, expenseId), eq(expense.userId, userId), eq(file.userId, userId)))
+    .leftJoin(file, eq(expense.importedFromFileId, file.id))
+    .leftJoin(importFormatVersion, eq(file.importFormatVersionId, importFormatVersion.id))
+    .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
+    .where(and(eq(expense.id, expenseId), eq(expense.userId, userId)))
     .limit(1)
 
   const row = rows[0]
-  if (!row) return null
+  if (!row) {
+    return { sourceFile: null, platformName: null }
+  }
 
   return {
-    id: row.id,
-    name: row.displayName?.trim() || row.originalName,
+    sourceFile: row.fileId
+      ? {
+          id: row.fileId,
+          name: row.displayName?.trim() || row.originalName,
+        }
+      : null,
+    platformName: row.platformName,
   }
 })
 

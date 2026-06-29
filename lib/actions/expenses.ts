@@ -17,7 +17,7 @@ import {
   deleteExpense as deleteExpenseDAL,
   deleteExpenses as deleteExpensesDAL,
   getExpenses,
-  getExpenseSourceFile,
+  getExpenseImportContext,
   EXPENSE_LIST_LIMIT,
   type ExpenseFilters,
   type ExpenseSourceFile,
@@ -324,21 +324,28 @@ export async function fetchExpenseTransactions(
 ): Promise<{
   transactions: ExpenseTransactionRow[]
   sourceFile: ExpenseSourceFile | null
+  platformName: string | null
   error: string | null
 }> {
   if (!expenseId) {
-    return { transactions: [], sourceFile: null, error: 'ID spesa mancante.' }
+    return { transactions: [], sourceFile: null, platformName: null, error: 'ID spesa mancante.' }
   }
   try {
-    const [transactions, sourceFile] = await Promise.all([
+    const [transactions, importContext] = await Promise.all([
       getTransactionsByExpenseId(expenseId),
-      getExpenseSourceFile(expenseId),
+      getExpenseImportContext(expenseId),
     ])
-    return { transactions, sourceFile, error: null }
+    return {
+      transactions,
+      sourceFile: importContext.sourceFile,
+      platformName: importContext.platformName,
+      error: null,
+    }
   } catch {
     return {
       transactions: [],
       sourceFile: null,
+      platformName: null,
       error: 'Non è stato possibile caricare i dettagli. Riprova.',
     }
   }

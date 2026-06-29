@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { ExternalLink, FileText, Loader2 } from 'lucide-react'
+import { Building2, ExternalLink, FileText, Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -31,22 +31,26 @@ type Props = {
 export function ExpenseTransactionsDialog({ open, onOpenChange, expense }: Props) {
   const [transactions, setTransactions] = useState<ExpenseTransactionRow[]>([])
   const [sourceFile, setSourceFile] = useState<ExpenseSourceFile | null>(null)
+  const [platformName, setPlatformName] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
     if (!open || !expense.id) return
 
+    setTransactions([])
+    setSourceFile(null)
+    setPlatformName(null)
+    setError(null)
+
     startTransition(async () => {
       const result = await fetchExpenseTransactions(expense.id)
       if (result.error) {
         setError(result.error)
-        setTransactions([])
-        setSourceFile(null)
       } else {
-        setError(null)
         setTransactions(result.transactions)
         setSourceFile(result.sourceFile)
+        setPlatformName(result.platformName)
       }
     })
   }, [open, expense.id])
@@ -83,18 +87,33 @@ export function ExpenseTransactionsDialog({ open, onOpenChange, expense }: Props
         </DialogHeader>
 
         <div className="flex flex-col gap-4 min-h-0 overflow-hidden">
-          {sourceFile ? (
-            <div className="rounded-md border bg-muted/30 px-3 py-2.5 text-sm">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                File di origine
-              </p>
-              <Link
-                href={`/import?q=${encodeURIComponent(sourceFile.name)}`}
-                className="mt-1 inline-flex items-center gap-1.5 font-medium text-foreground hover:underline"
-              >
-                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <span className="break-all">{sourceFile.name}</span>
-              </Link>
+          {(platformName || sourceFile) && !isPending && !error ? (
+            <div className="rounded-md border bg-muted/30 px-3 py-2.5 text-sm space-y-3">
+              {platformName ? (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Piattaforma
+                  </p>
+                  <p className="mt-1 inline-flex items-center gap-1.5 font-medium text-foreground">
+                    <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    {platformName}
+                  </p>
+                </div>
+              ) : null}
+              {sourceFile ? (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    File di origine
+                  </p>
+                  <Link
+                    href={`/import?q=${encodeURIComponent(sourceFile.name)}`}
+                    className="mt-1 inline-flex items-center gap-1.5 font-medium text-foreground hover:underline"
+                  >
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    <span className="break-all">{sourceFile.name}</span>
+                  </Link>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
