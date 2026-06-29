@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   loadContext: vi.fn(),
   createFormat: vi.fn(),
   completeOnboardingImport: vi.fn(),
+  listPlatforms: vi.fn().mockResolvedValue({ error: null, data: [] }),
   push: vi.fn(),
 }))
 
@@ -16,6 +17,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/actions/import', () => ({
   completeOnboardingPrivateImportAction: mocks.completeOnboardingImport,
   createPrivateImportFormatAction: mocks.createFormat,
+  listAttachablePlatformsAction: mocks.listPlatforms,
   loadImportFormatWizardContextAction: mocks.loadContext,
 }))
 
@@ -46,6 +48,11 @@ const context = {
     },
   ],
 }
+
+const samplePlatforms = [
+  { id: 1, name: 'Fineco', slug: 'fineco', reviewStatus: 'approved' },
+  { id: 2, name: 'Intesa SP', slug: 'intesa-sp', reviewStatus: 'approved' },
+]
 
 const validFields = {
   platformName: 'Banca personale',
@@ -129,6 +136,27 @@ describe('ImportFormatWizard UI', () => {
     expect(html).not.toContain('Salva formato e riprova analisi')
     expect(html).not.toContain('Torna alle importazioni')
   })
+
+  it('renders step 1 platform list with existing platforms and create-new entry', () => {
+    const html = renderToStaticMarkup(
+      createElement(ImportFormatWizard, { context, attachablePlatforms: samplePlatforms }),
+    )
+
+    expect(html).toContain('Fineco')
+    expect(html).toContain('Intesa SP')
+    expect(html).toContain('Crea una nuova platform')
+    // Step 1 is shown; column form (step 2) is not rendered yet
+    expect(html).not.toContain('name="timestampColumn"')
+  })
+
+  it('skips step 1 and renders column form directly when attachablePlatforms is empty', () => {
+    const html = renderToStaticMarkup(
+      createElement(ImportFormatWizard, { context, attachablePlatforms: [] }),
+    )
+
+    expect(html).toContain('Modalità importo')
+    expect(html).not.toContain('Crea una nuova platform')
+  })
 })
 
 describe('ConfigureImportFormatPage', () => {
@@ -136,6 +164,9 @@ describe('ConfigureImportFormatPage', () => {
     mocks.loadContext.mockResolvedValueOnce({
       error: 'Impossibile leggere le intestazioni del file. Riprova.',
     })
+    // listAttachablePlatformsAction is not reached when context load fails (early return)
+    // but the mock is registered globally to prevent accidental unmocked calls
+    mocks.listPlatforms.mockResolvedValueOnce({ error: null, data: [] })
 
     const element = await ConfigureImportFormatPage({
       params: Promise.resolve({ fileId: context.fileId }),
