@@ -5,6 +5,7 @@ import {
   BulkDeleteTransactionsSchema,
   CreateTransactionSchema,
   DeleteTransactionSchema,
+  DetachTransactionSchema,
   parseTransactionFilters,
   UpdateTransactionCustomTitleSchema,
   type TransactionSearchParams,
@@ -17,6 +18,10 @@ import {
   TRANSACTION_LIST_LIMIT,
 } from '@/lib/dal/transactions'
 import { deleteTransactionsAndReconcileExpenses } from '@/lib/services/transaction-deletion'
+import {
+  DetachTransactionError,
+  detachTransactionToDedicatedExpense,
+} from '@/lib/services/transaction-detach'
 import { db } from '@/lib/db'
 import { toDbDecimal } from '@/lib/utils/decimal'
 import type { ActionState } from '@/lib/validations/expense'
@@ -159,6 +164,47 @@ export async function deleteTransaction(
   }
   revalidateCategorizationSurfaces()
   return { error: null }
+}
+
+export type DetachTransactionResult = {
+  newExpenseId: string
+  newExpenseTitle: string
+  error: string | null
+}
+
+export async function detachTransaction(input: {
+  transactionId: string
+  title: string
+}): Promise<DetachTransactionResult> {
+  const parsed = DetachTransactionSchema.safeParse(input)
+  if (!parsed.success) {
+    return {
+      newExpenseId: '',
+      newExpenseTitle: '',
+      error: parsed.error.issues[0]?.message ?? 'Dati non validi.',
+    }
+  }
+
+  const { userId } = await verifySession()
+
+  try {
+    const result = await detachTransactionToDedicatedExpense({
+      userId,
+      transactionId: parsed.data.transactionId,
+      title: parsed.data.title,
+    })
+    revalidateCategorizationSurfaces()
+    return { ...result, error: null }
+  } catch (error) {
+    if (error instanceof DetachTransactionError) {
+      return { newExpenseId: '', newExpenseTitle: '', error: error.message }
+    }
+    return {
+      newExpenseId: '',
+      newExpenseTitle: '',
+      error: 'Si è verificato un errore. Riprova tra qualche secondo.',
+    }
+  }
 }
 
 export async function bulkDeleteTransactions(

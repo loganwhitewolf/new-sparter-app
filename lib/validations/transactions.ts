@@ -43,6 +43,17 @@ export const BulkDeleteTransactionsSchema = z.object({
     .max(500, { error: "Puoi eliminare al massimo 500 transazioni alla volta." }),
 })
 
+export const DetachTransactionSchema = z.object({
+  transactionId: z.string().uuid({ error: "Transazione non valida." }),
+  title: z
+    .string()
+    .trim()
+    .min(1, { error: "Il titolo della spesa è obbligatorio." })
+    .max(120, { error: "Il titolo non può superare i 120 caratteri." }),
+})
+
+export type DetachTransactionInput = z.infer<typeof DetachTransactionSchema>
+
 export type UpdateTransactionCustomTitleInput = z.infer<
   typeof UpdateTransactionCustomTitleSchema
 >

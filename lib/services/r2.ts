@@ -35,7 +35,7 @@ type R2Config = {
   endpoint: string
 }
 
-type R2Operation = 'presign_put' | 'head_object' | 'read_object'
+type R2Operation = 'presign_put' | 'presign_get' | 'head_object' | 'read_object'
 
 type SerializedR2Error = {
   name?: string
@@ -232,6 +232,32 @@ function normalizeR2Error(
   }
 
   throw serviceError
+}
+
+function contentDispositionAttachment(filename: string) {
+  const asciiFallback = filename.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_')
+  const encoded = encodeURIComponent(filename)
+  return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encoded}`
+}
+
+export async function createPresignedGetUrl(input: {
+  objectKey: string
+  downloadFilename: string
+}) {
+  try {
+    const { client, bucketName } = getR2Client('presign_get', input.objectKey)
+    const command = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: input.objectKey,
+      ResponseContentDisposition: contentDispositionAttachment(input.downloadFilename),
+    })
+    const expiresIn = ttlSeconds()
+    const url = await getSignedUrl(client, command, { expiresIn })
+
+    return { url, expiresIn }
+  } catch (error) {
+    normalizeR2Error(error, 'presign_get', input.objectKey, 'r2_presign_failed', 'Could not prepare file download. Please retry.')
+  }
 }
 
 export async function createPresignedPutUrl(input: {

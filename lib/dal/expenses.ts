@@ -63,6 +63,16 @@ export type ExpenseRow = {
   platformName: string | null
 }
 
+export type ExpenseSourceFile = {
+  id: string
+  name: string
+}
+
+export type ExpenseImportContext = {
+  sourceFile: ExpenseSourceFile | null
+  platformName: string | null
+}
+
 /** Matches "Titolo" column label (case-insensitive). */
 export const expenseTitleSortKey = sql<string>`LOWER(${expense.title})`
 
@@ -261,6 +271,39 @@ export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | und
     .where(and(eq(expense.id, id), eq(expense.userId, userId)))
     .limit(1)
   return rows[0]
+})
+
+export const getExpenseImportContext = cache(async (expenseId: string): Promise<ExpenseImportContext> => {
+  const { userId } = await verifySession()
+
+  const rows = await db
+    .select({
+      fileId: file.id,
+      displayName: file.displayName,
+      originalName: file.originalName,
+      platformName: platform.name,
+    })
+    .from(expense)
+    .leftJoin(file, eq(expense.importedFromFileId, file.id))
+    .leftJoin(importFormatVersion, eq(file.importFormatVersionId, importFormatVersion.id))
+    .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
+    .where(and(eq(expense.id, expenseId), eq(expense.userId, userId)))
+    .limit(1)
+
+  const row = rows[0]
+  if (!row) {
+    return { sourceFile: null, platformName: null }
+  }
+
+  return {
+    sourceFile: row.fileId
+      ? {
+          id: row.fileId,
+          name: row.displayName?.trim() || row.originalName,
+        }
+      : null,
+    platformName: row.platformName,
+  }
 })
 
 export async function insertExpense(data: {

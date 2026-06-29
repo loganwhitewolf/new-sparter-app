@@ -40,6 +40,7 @@ const mocks = vi.hoisted(() => ({
   deletePattern: vi.fn(),
   getCategoryTypeForSubCategory: vi.fn(),
   writeClassificationHistory: vi.fn(),
+  getLatestClassificationSource: vi.fn(),
 
   // logger
   loggerInfo: vi.fn(),
@@ -210,6 +211,7 @@ vi.mock('@/lib/dal/import-formats', () => ({
 
 vi.mock('@/lib/dal/classification-history', () => ({
   writeClassificationHistory: mocks.writeClassificationHistory,
+  getLatestClassificationSource: mocks.getLatestClassificationSource,
 }))
 
 vi.mock('@/lib/services/regex-discovery', () => ({
@@ -901,6 +903,7 @@ describe('importFile — lifecycle guards', () => {
     mocks.categorizePipeline.mockResolvedValue(null)
     mocks.insertTransactionBatch.mockResolvedValue([])
     mocks.writeClassificationHistory.mockResolvedValue(undefined)
+    mocks.getLatestClassificationSource.mockResolvedValue(null)
     mocks.updateFileImportState.mockResolvedValue(undefined)
     mocks.dbTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
       const tx = {
@@ -950,6 +953,7 @@ describe('importFile', () => {
     mocks.categorizePipeline.mockResolvedValue(null)
     mocks.insertTransactionBatch.mockResolvedValue([])
     mocks.writeClassificationHistory.mockResolvedValue(undefined)
+    mocks.getLatestClassificationSource.mockResolvedValue(null)
     mocks.parseImportFile.mockResolvedValue(makeParsedImport())
     mocks.loadImportFormatsForDetection.mockResolvedValue([makeFormatCandidate()])
     // Default: return a readable stream from GENERAL_CSV
@@ -1243,6 +1247,95 @@ describe('importFile', () => {
     )
   })
 
+  it('manual-lock: preserves subCategoryId and status when latest history source is manual', async () => {
+    const EXISTING_EXPENSE_ID = 'expense-manual-locked-1'
+    const ORIGINAL_SUBCAT = 42
+    const PIPELINE_SUBCAT = 99
+
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport([
+      { '"Data Movimento"': '2026-01-10', '"Descrizione"': 'Andrea D\'Este', '"Importo"': '-15.00' },
+    ]))
+    mocks.categorizePipeline.mockResolvedValue({
+      subCategoryId: PIPELINE_SUBCAT,
+      confidence: '0.90',
+      patternId: 1,
+      source: 'system_pattern' as const,
+    })
+    mocks.getLatestClassificationSource.mockResolvedValue('manual')
+
+    const expenseUpdates: Array<Record<string, unknown>> = []
+    const txDate = new Date('2026-01-10T00:00:00.000Z')
+    mocks.insertTransactionBatch.mockResolvedValue([
+      {
+        id: 'tx-manual-1',
+        userId: USER_ID,
+        fileId: FILE_ID,
+        expenseId: null,
+        transactionHash: 'hash-manual-1',
+        description: "Andrea D'Este",
+        descriptionHash: 'dh-manual-1',
+        amount: '-15.00',
+        currency: 'EUR',
+        occurredAt: txDate,
+        rowIndex: 1,
+        rawRow: null,
+        createdAt: txDate,
+      },
+    ])
+
+    mocks.dbTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                then: vi.fn((onFulfilled?: (rows: unknown[]) => unknown) => {
+                  const rows = [{
+                    id: EXISTING_EXPENSE_ID,
+                    totalAmount: '30.00',
+                    transactionCount: 2,
+                    subCategoryId: ORIGINAL_SUBCAT,
+                    status: '3',
+                  }]
+                  return Promise.resolve(onFulfilled ? onFulfilled(rows) : rows)
+                }),
+              }),
+            }),
+          }),
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn((payload: Record<string, unknown>) => {
+            expenseUpdates.push(payload)
+            return { where: vi.fn().mockResolvedValue([]) }
+          }),
+        }),
+      }
+      return callback(tx)
+    })
+
+    await importFile({ userId: USER_ID, fileId: FILE_ID, subscriptionPlan: 'basic' })
+
+    const expenseAggregateUpdate = expenseUpdates.find(
+      (payload) => 'totalAmount' in payload && 'transactionCount' in payload,
+    )
+    expect(expenseAggregateUpdate).toMatchObject({
+      totalAmount: '15.00',
+      transactionCount: 3,
+    })
+    expect(expenseAggregateUpdate).not.toHaveProperty('subCategoryId')
+    expect(expenseAggregateUpdate).not.toHaveProperty('status')
+    expect(mocks.writeClassificationHistory).not.toHaveBeenCalled()
+    expect(mocks.getLatestClassificationSource).toHaveBeenCalledWith(
+      expect.anything(),
+      { userId: USER_ID, expenseId: EXISTING_EXPENSE_ID },
+    )
+  })
+
   it('cross-user file access is denied — getFileForUser enforces userId scope', async () => {
     // getFileForUser already scopes by userId AND fileId; returning null = not found / wrong user
     mocks.getFileForUser.mockResolvedValue(null)
@@ -1284,6 +1377,7 @@ describe('importFile — post-commit discovery (TRIG-01)', () => {
     mocks.categorizePipeline.mockResolvedValue(null)
     mocks.insertTransactionBatch.mockResolvedValue([])
     mocks.writeClassificationHistory.mockResolvedValue(undefined)
+    mocks.getLatestClassificationSource.mockResolvedValue(null)
     mocks.parseImportFile.mockResolvedValue(makeParsedImport())
     mocks.loadImportFormatsForDetection.mockResolvedValue([makeFormatCandidate()])
     mocks.readObjectBody.mockResolvedValue(

@@ -219,6 +219,7 @@ describe("ImportRowActions — state matrix", () => {
     const html = render(makeRow({ status: "imported" }));
 
     expect(html).toContain("Vedi transazioni");
+    expect(html).toContain("Scarica file originale");
     expect(html).toContain(`/transactions?importId=${FILE_ID}`);
     expect(html).not.toContain("Analizza");
     expect(html).not.toContain("Configura formato");
@@ -308,6 +309,7 @@ describe("ImportRowActions — state matrix", () => {
     expect(html).not.toContain("Analizza");
     expect(html).not.toContain("Rivedi");
     expect(html).not.toContain("Vedi transazioni");
+    expect(html).not.toContain("Scarica file originale");
   });
 
   it("does not render raw storage diagnostics in non-failed states", () => {

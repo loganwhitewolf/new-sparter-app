@@ -1,7 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { Clock, ExternalLink, MoreHorizontal, Pencil, Settings, Sparkles, Trash2 } from 'lucide-react'
+import { useTransition } from 'react'
+import { Clock, Download, ExternalLink, MoreHorizontal, Pencil, Settings, Sparkles, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -11,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { ImportListRow } from '@/lib/dal/imports'
-import { isInProgress, isUnknownFormatFailed } from '@/lib/utils/import-status'
+import { canDownloadImportFile, isInProgress, isUnknownFormatFailed } from '@/lib/utils/import-status'
 
 type Props = {
   row: ImportListRow
@@ -26,6 +28,29 @@ type Props = {
 }
 
 export function ImportRowActions({ row, displayName, onRename, onDelete, onDeleteStale, onRecheckRegex, isRecheckPending }: Props) {
+  const [isDownloadPending, startDownloadTransition] = useTransition()
+
+  function handleDownload() {
+    startDownloadTransition(async () => {
+      try {
+        const response = await fetch(`/api/files/${encodeURIComponent(row.id)}/download`)
+        const payload = (await response.json()) as {
+          download?: { url: string; filename: string }
+          error?: { message: string }
+        }
+
+        if (!response.ok || !payload.download?.url) {
+          toast.error(payload.error?.message ?? 'Impossibile scaricare il file. Riprova.')
+          return
+        }
+
+        window.open(payload.download.url, '_blank', 'noopener,noreferrer')
+      } catch {
+        toast.error('Impossibile scaricare il file. Riprova.')
+      }
+    })
+  }
+
   if (row.status === 'analyzing') {
     return (
       <div
@@ -101,6 +126,13 @@ export function ImportRowActions({ row, displayName, onRename, onDelete, onDelet
             <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
             Rinomina
           </DropdownMenuItem>
+
+          {canDownloadImportFile(row) && (
+            <DropdownMenuItem onClick={handleDownload} disabled={isDownloadPending}>
+              <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+              {isDownloadPending ? 'Preparazione…' : 'Scarica file originale'}
+            </DropdownMenuItem>
+          )}
 
           {row.status === 'imported' && (
             <DropdownMenuItem asChild>

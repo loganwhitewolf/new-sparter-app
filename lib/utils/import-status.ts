@@ -43,3 +43,17 @@ export const IN_PROGRESS_STATUSES = new Set<ImportListRow['status']>(['analyzing
 export function isInProgress(row: Pick<ImportListRow, 'status'>): boolean {
   return IN_PROGRESS_STATUSES.has(row.status)
 }
+
+const DOWNLOADABLE_STATUSES = new Set<ImportListRow['status']>([
+  'uploaded',
+  'analyzing',
+  'analyzed',
+  'importing',
+  'imported',
+  'failed',
+])
+
+/** Returns true when the original upload should exist in object storage. */
+export function canDownloadImportFile(row: Pick<ImportListRow, 'status'>): boolean {
+  return DOWNLOADABLE_STATUSES.has(row.status)
+}

@@ -78,6 +78,7 @@ export const transactionListSelect = {
   rowIndex: transaction.rowIndex,
   expenseId: expense.id,
   expenseTitle: expense.title,
+  expenseTransactionCount: expense.transactionCount,
   expenseStatus: expense.status,
   expenseCategoryName: category.name,
   expenseSubCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
@@ -164,6 +165,7 @@ export type TransactionListRow = {
   rowIndex: number
   expenseId: string | null
   expenseTitle: string | null
+  expenseTransactionCount: number | null
   expenseStatus: (typeof expense.$inferSelect)['status'] | null
   expenseCategoryName: string | null
   expenseSubCategoryName: string | null

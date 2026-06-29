@@ -33,7 +33,7 @@ vi.mock('@/lib/logger', () => ({
   },
 }))
 
-const { R2ServiceError, REQUIRED_R2_ENV_VARS, getMissingR2EnvVars, createPresignedPutUrl, headObject, readObjectBody } = await import('../lib/services/r2')
+const { R2ServiceError, REQUIRED_R2_ENV_VARS, getMissingR2EnvVars, createPresignedPutUrl, createPresignedGetUrl, headObject, readObjectBody } = await import('../lib/services/r2')
 
 function setR2Env(overrides: Record<string, string | undefined> = {}) {
   vi.stubEnv('R2_ACCOUNT_ID', overrides.R2_ACCOUNT_ID ?? 'account-id')
@@ -124,6 +124,22 @@ describe('R2 service diagnostics', () => {
     }))
     expect(JSON.stringify(mocks.loggerError.mock.calls)).not.toContain('access-key-id')
     expect(JSON.stringify(mocks.loggerError.mock.calls)).not.toContain('secret-access-key')
+  })
+
+  it('presigns GET with attachment content disposition for the original filename', async () => {
+    await expect(createPresignedGetUrl({
+      objectKey: 'users/user-1/imports/file.csv',
+      downloadFilename: 'estratto conto.csv',
+    })).resolves.toEqual({ url: 'https://r2.example.test/object.csv?signature=secret', expiresIn: 600 })
+
+    expect(mocks.getSignedUrl).toHaveBeenCalledTimes(1)
+    const command = mocks.getSignedUrl.mock.calls[0]?.[1] as { input?: Record<string, unknown> }
+    expect(command.input).toEqual(expect.objectContaining({
+      Bucket: 'bucket-name',
+      Key: 'users/user-1/imports/file.csv',
+      ResponseContentDisposition: expect.stringContaining('attachment; filename='),
+    }))
+    expect(String(command.input?.ResponseContentDisposition)).toContain('estratto%20conto.csv')
   })
 
   it('logs missing configuration names without secret values before failing presign', async () => {
