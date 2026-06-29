@@ -7,7 +7,7 @@ current_phase_name: pdf-import-trade-republic
 status: "Phase 57 shipped — PR #24"
 stopped_at: Phase 57 verified and complete — milestone v2.2 shipped
 last_updated: "2026-06-26T12:57:26.033Z"
-last_activity: 2026-06-26
+last_activity: 2026-06-29 - Completed quick task 260629-gdp: pattern suggestions navigation UX
 progress:
   total_phases: 2
   completed_phases: 2
@@ -93,6 +93,7 @@ Nessuno.
 | 260615-n3t | Onboarding step-4 fix | 2026-06-15 | 1434308 |
 | 260615-oiq | Onboarding private platform creation | 2026-06-15 | d5b590c |
 | 260616-dlw | Fix transaction description sort | 2026-06-16 | c71d32e |
+| 260629-gdp | Pattern suggestions back link + auto-redirect after classify | 2026-06-29 | 4673927 |
 
 ## Deferred Items
 
