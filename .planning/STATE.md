@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Platform Identity & Format Ownership
-current_phase: 58
-current_phase_name: platform-identity-and-access
-status: verifying
-stopped_at: v2.3 roadmap created (Phases 58–60); requirements mapped 6/6.
-last_updated: "2026-06-29T11:08:45.500Z"
+current_phase: 59
+current_phase_name: import-wizard-attach-format
+status: planning
+stopped_at: Phase 58 verified and complete (8/8 must-haves, 16/16 tests). Ready for Phase 59.
+last_updated: "2026-06-29T13:20:00.000Z"
 last_activity: 2026-06-29
-last_activity_desc: Phase 58 execution started
+last_activity_desc: Phase 58 verification passed
 progress:
   total_phases: 3
   completed_phases: 1
@@ -24,20 +24,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-29)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 58 — platform-identity-and-access
+**Current focus:** Phase 59 — import-wizard-attach-format
 
 ## Current Position
 
-Phase: 58 (platform-identity-and-access) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-06-29 — Phase 58 execution started
+Phase: 58 (platform-identity-and-access) — COMPLETE (verified 2026-06-29)
+Phase: 59 (import-wizard-attach-format) — NEXT
+Status: Phase 58 verified — 8/8 must-haves, 16/16 tests PASS
+Last activity: 2026-06-29 — Phase 58 verification passed
 
 ## Roadmap (v2.3 — Phases 58–60)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 58 | platform-identity-and-access | PLAT-01, PLAT-02, PLAT-03 | Not started |
+| 58 | platform-identity-and-access | PLAT-01, PLAT-02, PLAT-03 | Complete (verified 2026-06-29) |
 | 59 | import-wizard-attach-format | PLAT-04 | Not started |
 | 60 | seed-slug-linkage-and-docs | PLAT-05, PLAT-06 | Not started |
 
@@ -55,21 +55,29 @@ Design contract is LOCKED (ADR 0015). Do not re-derive the approach:
 - **ADR 0013** (extended by 0015): the parsing contract lives on `import_format_version`, not `platform`; `platform` is pure identity. DescriptionStripPattern lives on `import_format_version` — the CONTEXT.md glossary line ("Regex nullable configurata per Platform") is stale and corrected in PLAT-06.
 - Migration path: `drizzle-kit generate` + `scripts/migrate.ts`; additive idempotent backfill in `seed-extras.ts`; never `drizzle-kit push` in production. Seed run order after migration: `db:migrate → db:seed → db:seed-extras → db:seed-patterns`.
 - **Deferred (not built now)**: operator approval UI to promote `pending` → `approved` (needed only with a second user); multi-user identity dedup. For single-user, `pending` + proposer-visible is already functional.
-- [Phase ?]: Migration 0023 via --custom fallback: RENAME COLUMN applied directly via node-pg when drizzle-kit stalled on Supabase pooler; platformRelations.owner key kept (D-06)
-- [Phase ?]: PLAT-02/PLAT-03: accessibleWhere relaxed to 2-branch OR — private format on approved platform visible to owner; pending platform visible only to proposedByUserId
-- [Phase ?]: Wizard reviewStatus aligned to pending
-- [Phase ?]: Platform insert adapted to new schema
+- [Phase 58-01]: Migration 0023 via --custom fallback: RENAME COLUMN applied directly via node-pg when drizzle-kit stalled on Supabase pooler; platformRelations.owner key kept (D-06)
+- [Phase 58-02]: PLAT-02/PLAT-03: accessibleWhere relaxed to 2-branch OR — private format on approved platform visible to owner; pending platform visible only to proposedByUserId
+- [Phase 58-03]: Wizard reviewStatus aligned to pending; DRAFT_REVIEW_STATUS → PENDING_REVIEW_STATUS; platform insert uses proposedByUserId, no visibility write
+
+### Phase 58 — What was built (foundation for Phase 59)
+
+- `platform` table: no `visibility` column, `proposedByUserId` (renamed from `ownerUserId`), `reviewStatus` lifecycle (`pending`/`approved`)
+- Migration 0023 applied to Supabase (RENAME COLUMN, no data loss)
+- `accessibleWhere` 2-branch OR: global-approved formats + owner-format-on-any-visible-platform
+- `createPrivateRows` in wizard: platform insert uses `proposedByUserId`, `reviewStatus: 'pending'`, no `visibility`
+- 16/16 phase tests PASS; zero forbidden column references in DAL and wizard
 
 ### Codebase facts rilevanti per la milestone
 
-- `lib/dal/import-formats.ts` `accessibleWhere` (≈lines 124–142) currently couples private format ⇒ private platform: the private branch requires `eq(platform.visibility, PRIVATE_VISIBILITY)` and `eq(platform.ownerUserId, userId)` alongside the format being private. Decoupling this is the core of PLAT-03 — and it is regression-sensitive because `platform` is joined on a hot path (filter/display/sort by `platform.slug`/`platform.name`) in expenses/transactions/imports DAL.
-- Schema (`lib/db/schema.ts`): `platform.visibility` (varchar, default `global`), `platform.review_status` (default `approved`), `platform.owner_user_id` — PLAT-01 drops `visibility` and renames `owner_user_id` → `proposed_by_user_id`.
+- `lib/dal/import-formats.ts` `accessibleWhere` (lines 132–158): 2-branch OR — global-approved (branch 1) + format-owner with platform visibility guard (branch 2). `platform.proposedByUserId` referenced correctly.
+- Schema (`lib/db/schema.ts`): `platform.proposedByUserId` (nullable text), `platform.reviewStatus` (default `approved`). No `visibility` on `platform`.
+- `importFormatVersion` keeps `ownerUserId` and `visibility` (Discretion A3 — Phase 59/60 territory).
 - Seed (`scripts/seed-data.ts`): Trade Republic platform hardcodes `id: 8` (slug `trade-republic`) and its import format references `platformId: 8` — the collision PLAT-05 fixes via slug linkage. Remove explicit `id:` from seeded platforms; do NOT change the FK column to slug.
 - CONTEXT.md glossary line 33–34 ("DescriptionStripPattern — Regex nullable configurata per Platform") is the stale reference PLAT-06 corrects (should reference `import_format_version` / ADR 0013).
 
 ### Planning Risk
 
-- **Regression risk on the hot `platform` join (PLAT-03):** decoupling `accessibleWhere` must not change resolution/import behavior for existing global formats. Plans touching it must guard against regression (tests over existing formats), consistent with the behavior-preserving discipline used in Phase 56.
+- **Regression risk on the hot `platform` join (PLAT-04):** Phase 59 must guard against regression on the existing format-detection + import paths. Use existing test harness (`import-detector.test.ts`).
 
 ### Blockers/Concerns
 
@@ -109,22 +117,23 @@ Items riconosciuti e posticipati:
 | v2.2 | TR categorization | regex-discovery + seed-patterns post-import — deferred |
 | operator | R038/R039/R041 | live Vercel/Supabase/R2 deploy operator-pending |
 | backlog | R029 | partial categorization revalidation coverage |
+| check:language | expenses.ts:82, transactions.ts:200 | pre-existing Italian comments — out of scope Phase 58 |
 
 ## Session Continuity
 
 **Resume file:** None
 
-**Stopped at:** v2.3 roadmap created (Phases 58–60); requirements mapped 6/6.
+**Stopped at:** Phase 58 verified (8/8 must-haves, 16/16 tests). ROADMAP updated. Ready for Phase 59.
 
-Last session: 2026-06-29T11:08:41.494Z
-Resume: `/gsd-plan-phase 58` to plan the platform-identity-and-access phase.
+Last session: 2026-06-29T13:20:00.000Z
+Resume: `/gsd-plan-phase 59` to plan the import-wizard-attach-format phase.
 
-**Next:** Plan Phase 58 (`platform-identity-and-access`).
+**Next:** Plan Phase 59 (`import-wizard-attach-format`).
 
 ## Operator Next Steps
 
 - v2.2 PR #24 deploy order (if not yet merged): `yarn db:migrate → yarn db:seed → yarn db:seed-extras → yarn db:seed-patterns` (migration 0022 has critical backfill).
-- After v2.3 migrations land, the same run order applies; PLAT-01 backfill is additive and idempotent.
+- After Phase 58 migrations land, the same run order applies; migration 0023 is idempotent post-apply.
 
 ## Performance Metrics
 
