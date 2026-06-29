@@ -6,14 +6,14 @@ current_phase: 59
 current_phase_name: import-wizard-attach-format
 status: executing
 stopped_at: Phase 59 context gathered
-last_updated: "2026-06-29T12:31:27.836Z"
+last_updated: "2026-06-29T13:12:07.730Z"
 last_activity: 2026-06-29
 last_activity_desc: Phase 59 execution started
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 33
 ---
 
@@ -125,7 +125,7 @@ Items riconosciuti e posticipati:
 
 **Stopped at:** Phase 59 context gathered
 
-Last session: 2026-06-29T12:31:27.831Z
+Last session: 2026-06-29T13:12:07.724Z
 Resume: `/gsd-plan-phase 59` to plan the import-wizard-attach-format phase.
 
 **Next:** Plan Phase 59 (`import-wizard-attach-format`).
