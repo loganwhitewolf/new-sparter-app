@@ -1,13 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ExternalLink, MoreHorizontal, Tag, Unlink } from 'lucide-react'
+import { ExternalLink, MoreHorizontal, Split, Tag, Unlink } from 'lucide-react'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 import { toast } from 'sonner'
 import { BulkDeleteTransactionsDialog } from '@/components/transactions/bulk-delete-transactions-dialog'
 import { TransactionBulkActionBar } from '@/components/transactions/transaction-bulk-action-bar'
 import { TransactionTitleEdit } from '@/components/transactions/transaction-title-edit'
 import { CounterpartPickerDialog } from '@/components/transactions/counterpart-picker-dialog'
+import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
 import { TransactionPairPopover } from '@/components/transactions/transaction-pair-popover'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -119,6 +120,10 @@ export function TransactionTable({ transactions, route, searchParams, categories
   const [categorizeTarget, setCategorizeTarget] = useState<{ id: string; title: string } | null>(null)
   // Pair target: set when "Collega rimborso" is selected (D-09, PAIR-01)
   const [pairTarget, setPairTarget] = useState<{ id: string; amount: string; occurredAt: Date } | null>(null)
+  const [detachTarget, setDetachTarget] = useState<{
+    transactionId: string
+    defaultTitle: string
+  } | null>(null)
 
   const { activeSort, activeDir, onSort } = useToolbarSort(route)
 
@@ -231,6 +236,27 @@ export function TransactionTable({ transactions, route, searchParams, categories
         ),
       )
     }
+  }
+
+  function markExpenseDetached(
+    transactionId: string,
+    newExpense: { id: string; title: string },
+  ) {
+    setLoadedTransactions((prev) =>
+      prev.map((t) =>
+        t.id === transactionId
+          ? {
+              ...t,
+              expenseId: newExpense.id,
+              expenseTitle: newExpense.title,
+              expenseStatus: '1' as const,
+              expenseCategoryName: null,
+              expenseSubCategoryName: null,
+              expenseTransactionCount: 1,
+            }
+          : t,
+      ),
+    )
   }
 
   function markExpenseCategorized(transactionId: string, subCategoryId?: string) {
@@ -560,6 +586,26 @@ export function TransactionTable({ transactions, route, searchParams, categories
                           Collega rimborso
                         </DropdownMenuItem>
                       )}
+                      {transaction.expenseId &&
+                        (transaction.expenseTransactionCount ?? 0) > 1 && (
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault()
+                              const prefill = (
+                                transaction.customTitle?.trim() || transaction.description
+                              ).slice(0, 120)
+                              setDetachTarget({
+                                transactionId: transaction.id,
+                                defaultTitle: prefill,
+                              })
+                              setOpenDropdownId(null)
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            <Split className="h-4 w-4" />
+                            Separa in spesa dedicata
+                          </DropdownMenuItem>
+                        )}
                       <DropdownMenuSeparator />
                       <DeleteTransactionMenuItem
                         transactionId={transaction.id}
@@ -643,6 +689,23 @@ export function TransactionTable({ transactions, route, searchParams, categories
       transactionAmount={pairTarget?.amount ?? ''}
       transactionOccurredAt={pairTarget?.occurredAt ?? new Date()}
     />
+
+    {detachTarget && (
+      <DetachExpenseDialog
+        open={Boolean(detachTarget)}
+        onOpenChange={(open) => { if (!open) setDetachTarget(null) }}
+        transactionId={detachTarget.transactionId}
+        defaultTitle={detachTarget.defaultTitle}
+        onSuccess={({ newExpenseId, newExpenseTitle }) => {
+          markExpenseDetached(detachTarget.transactionId, {
+            id: newExpenseId,
+            title: newExpenseTitle,
+          })
+          setDetachTarget(null)
+          setCategorizeTarget({ id: newExpenseId, title: newExpenseTitle })
+        }}
+      />
+    )}
     </>
   )
 }
