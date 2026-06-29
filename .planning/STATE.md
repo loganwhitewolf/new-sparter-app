@@ -5,8 +5,8 @@ milestone_name: Platform Identity & Format Ownership
 current_phase: 58
 current_phase_name: platform-identity-and-access
 status: "Phase 58 shipped — PR #26"
-stopped_at: Phase 58 verified and complete (8/8 must-haves, 16/16 tests). Ready for Phase 59.
-last_updated: "2026-06-29T11:47:02.701Z"
+stopped_at: Phase 59 context gathered
+last_updated: "2026-06-29T12:08:28.718Z"
 last_activity: 2026-06-29
 progress:
   total_phases: 3
@@ -120,11 +120,11 @@ Items riconosciuti e posticipati:
 
 ## Session Continuity
 
-**Resume file:** None
+**Resume file:** .planning/phases/59-import-wizard-attach-format/59-CONTEXT.md
 
-**Stopped at:** Phase 58 verified (8/8 must-haves, 16/16 tests). ROADMAP updated. Ready for Phase 59.
+**Stopped at:** Phase 59 context gathered
 
-Last session: 2026-06-29T13:20:00.000Z
+Last session: 2026-06-29T12:08:28.712Z
 Resume: `/gsd-plan-phase 59` to plan the import-wizard-attach-format phase.
 
 **Next:** Plan Phase 59 (`import-wizard-attach-format`).
