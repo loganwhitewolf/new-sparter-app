@@ -24,7 +24,7 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-const { loadImportFormatsForDetection } = await import('../lib/dal/import-formats')
+const { loadImportFormatsForDetection, listAttachablePlatforms } = await import('../lib/dal/import-formats')
 
 function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -56,6 +56,37 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
     ...overrides,
   }
 }
+
+describe('listAttachablePlatforms', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.rows = []
+  })
+
+  it('returns both approved and own-pending platforms to their owner', async () => {
+    const approvedRow = { id: 1, name: 'Fineco', slug: 'fineco', reviewStatus: 'approved' }
+    const ownPendingRow = { id: 2, name: 'My Bank', slug: 'my-bank', reviewStatus: 'pending' }
+    mocks.rows = [approvedRow, ownPendingRow]
+
+    const result = await listAttachablePlatforms('user-a')
+
+    expect(result).toHaveLength(2)
+    expect(result).toEqual([approvedRow, ownPendingRow])
+  })
+
+  it('returns an empty array when no platforms are available', async () => {
+    mocks.rows = []
+
+    const result = await listAttachablePlatforms('user-a')
+
+    expect(result).toEqual([])
+  })
+
+  // NOTE: cross-user-pending and isActive=false exclusion are enforced at the SQL WHERE
+  // layer and are NOT verified by this mock (makeQueryChain always resolves all rows
+  // regardless of SQL predicates). SQL-layer isolation of these cases is covered by
+  // integration tests against a real DB.
+})
 
 describe('loadImportFormatsForDetection', () => {
   beforeEach(() => {
