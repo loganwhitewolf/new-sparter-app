@@ -31,6 +31,19 @@ All milestones M001–v2.2 (Phases 1–57) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
+## Current Milestone: v2.3 — Platform Identity & Format Ownership
+
+**Goal:** Make Platform a globally shared, moderated identity (never user-owned) and move private ownership onto the Import Format, eliminating duplicate platforms and the seed id collision.
+
+**Target features:**
+- Platform is never user-owned: drop `platform.visibility`, rename `platform.ownerUserId` → `proposedByUserId`; review lifecycle via `reviewStatus` (pending = visible only to proposer; approved = shared with all). Existing private platforms migrated via backfill.
+- Private Import Format decoupled from private Platform: `accessibleWhere` allows a user-owned format to be visible on a global/approved platform.
+- Import wizard attaches a new private Import Format to an existing Platform when format detection fails; a new Platform is created only when none fits, and is born `pending`.
+- Seed linkage by slug: seeded import formats reference the platform by slug (no hardcoded id); the Trade Republic id-8 collision is eliminated; runtime FK stays `platformId`.
+- DescriptionStripPattern reference cleanup: docs/glossary (and any stale code/comments) reflect that the strip pattern lives on `import_format_version` (ADR 0013), not `platform`.
+
+**Decision contract:** LOCKED in `docs/adr/0015-platform-global-moderated-format-private.md` + `CONTEXT.md` (Platform / Import Format entries). No discovery to redo. Deferred: operator approval UI (multi-user only).
+
 ## Last Shipped Milestone: v2.2 — PDF Import (shipped 2026-06-26)
 
 **Goal:** Enable importing PDF bank statements (first real case: Trade Republic), starting with a refactor that separates the parsing contract from Platform identity.
@@ -157,6 +170,7 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 - [x] v2.0: Nature/Direction Model Realignment — nature→direction lookup-table model, data migration/recategorization, explicit transaction pairing. Shipped 2026-06-14.
 - [x] v2.1: Regex Discovery & Transaction Unification — standalone discovery service, dedup gates, IDOR-guarded retroactive apply, reusable trigger, cleaned import summary. Shipped 2026-06-22.
 - [x] v2.2: PDF Import — Import Format refactor (`platform`→`import_format_version`) + Trade Republic PDF import via `unpdf` positional extraction (ADR 0013/0014). Shipped 2026-06-26.
+- [ ] v2.3: Platform Identity & Format Ownership — Platform as globally shared moderated identity (pending→approved), private ownership on Import Format only, seed slug-linkage fix (ADR 0015). In progress.
 
 ## Key Decisions
 
@@ -226,4 +240,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-26 after v2.2 milestone (PDF Import)*
+*Last updated: 2026-06-29 — started v2.3 milestone (Platform Identity & Format Ownership)*

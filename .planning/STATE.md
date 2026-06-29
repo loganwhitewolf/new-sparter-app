@@ -1,19 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: PDF Import
-current_phase: 57
-current_phase_name: pdf-import-trade-republic
-status: "v2.2 archived — milestone complete"
-stopped_at: Milestone v2.2 archived 2026-06-26
-last_updated: "2026-06-26T16:00:00.000Z"
-last_activity: 2026-06-26
+milestone: v2.3
+milestone_name: Platform Identity & Format Ownership
+status: planning
+last_updated: "2026-06-29T09:40:08.902Z"
+last_activity: 2026-06-29
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 10
-  completed_plans: 10
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -27,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-25)
 
 ## Current Position
 
-Phase: 57 (pdf-import-trade-republic) — COMPLETE
-Plan: 5 of 5
-Status: Phase 57 shipped — PR #24
-Last activity: 2026-06-26
-
-Progress bar: `████████████████████` 100% (2/2 phases)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-29 — Milestone v2.3 started
 
 ## Roadmap (v2.2 — Phases 56–57)
 
