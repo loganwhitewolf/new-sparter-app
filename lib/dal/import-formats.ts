@@ -203,6 +203,56 @@ export async function loadImportFormatsForDetection(input: {
     .map(toCandidate)
 }
 
+// AttachablePlatform — row type for listAttachablePlatforms (Plan 59-01)
+export type AttachablePlatform = {
+  id: number
+  name: string
+  slug: string
+  reviewStatus: string
+}
+
+/**
+ * Returns the platforms a user may attach a private Import Format to.
+ *
+ * Visibility rule (ADR 0015 D-07):
+ *   - approved platforms are visible to all users
+ *   - pending platforms are visible only to their proposer (proposedByUserId = userId)
+ *   - inactive platforms (isActive = false) are excluded
+ *
+ * Results are ordered alphabetically by platform name (Claude's Discretion).
+ *
+ * @param userId - The authenticated user's id (sourced from verifySession; never client-supplied).
+ * @param database - Optional injectable database instance (used in tests).
+ */
+export async function listAttachablePlatforms(
+  userId: string,
+  database: ImportFormatDatabase = db,
+): Promise<AttachablePlatform[]> {
+  const rows = await database
+    .select({
+      id: platform.id,
+      name: platform.name,
+      slug: platform.slug,
+      reviewStatus: platform.reviewStatus,
+    })
+    .from(platform)
+    .where(
+      and(
+        eq(platform.isActive, true),
+        or(
+          eq(platform.reviewStatus, APPROVED_REVIEW_STATUS),
+          and(
+            eq(platform.reviewStatus, 'pending'),
+            eq(platform.proposedByUserId, userId),
+          ),
+        ),
+      ),
+    )
+    .orderBy(platform.name)
+
+  return rows
+}
+
 /**
  * Returns the display names of all active platforms that support PDF import.
  * Filters by PDF_IMPORT_PLATFORM_SLUGS (the allowlist co-located with the .pdf dispatch
