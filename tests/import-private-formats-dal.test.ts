@@ -147,6 +147,11 @@ describe('loadImportFormatsForDetection', () => {
   })
 
   // Cross-user isolation with pending platform
+  // NOTE: selectedFormatVersionId filtering is delegated to the SQL WHERE clause and is NOT
+  // verified by this mock (makeQueryChain always resolves all rows regardless of SQL predicates).
+  // The result is [] here because each row is rejected by in-memory guards (isOwnedBy /
+  // isAccessibleImportFormat), not because the mock filtered on selectedFormatVersionId.
+  // SQL-layer isolation of selectedFormatVersionId is tested by integration tests against a real DB.
   it('returns no candidate for cross-user, inactive, or nonexistent versions', async () => {
     mocks.rows = [
       makeRow({ id: 6, ownerUserId: 'other-user', reviewStatus: 'pending', platformProposedByUserId: 'other-user', platformReviewStatus: 'pending' }),
