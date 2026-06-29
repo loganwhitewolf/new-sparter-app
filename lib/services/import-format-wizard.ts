@@ -1,7 +1,7 @@
 import 'server-only'
 
 import crypto from 'node:crypto'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, ilike, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { file as fileTable, importFormatVersion, platform } from '@/lib/db/schema'
 import { getFileForUser } from '@/lib/dal/files'
@@ -21,6 +21,7 @@ export type ImportFormatWizardErrorCode =
   | 'file_parse_failed'
   | 'column_not_found'
   | 'db_write_failed'
+  | 'duplicate_platform_name'
 
 export class ImportFormatWizardError extends Error {
   constructor(
@@ -56,6 +57,7 @@ const SAFE_WIZARD_PARSE_ERROR = 'Impossibile leggere le intestazioni del file. R
 const SAFE_WIZARD_READ_ERROR = 'Impossibile leggere il file caricato. Riprova.'
 const PRIVATE_VISIBILITY = 'private'
 const PENDING_REVIEW_STATUS = 'pending'
+const APPROVED_REVIEW_STATUS = 'approved'
 const HEADER_SAMPLE_ROWS = 5
 const HEADER_MAX_ROWS = 25
 
@@ -221,11 +223,21 @@ async function createPrivateRows(
 
   if (input.existingPlatformId !== undefined) {
     // Attach branch — reuse an existing platform, no syncPlatformIdSequence, no platform insert.
-    // SELECT to resolve name/slug for the result type and as a TOCTOU guard (T-59-03).
+    // TOCTOU guard (T-59-03): replicate listAttachablePlatforms visibility rule so a forged id
+    // cannot attach to an inactive platform or another user's pending platform.
     const rows = await database
       .select({ id: platform.id, name: platform.name, slug: platform.slug })
       .from(platform)
-      .where(eq(platform.id, input.existingPlatformId))
+      .where(
+        and(
+          eq(platform.id, input.existingPlatformId),
+          eq(platform.isActive, true),
+          or(
+            eq(platform.reviewStatus, APPROVED_REVIEW_STATUS),
+            and(eq(platform.reviewStatus, PENDING_REVIEW_STATUS), eq(platform.proposedByUserId, input.userId)),
+          ),
+        ),
+      )
 
     const existing = rows[0]
     if (!existing || typeof existing.id !== 'number') {
@@ -240,6 +252,19 @@ async function createPrivateRows(
     // Zod superRefine guarantees input.platformName is present here.
     const platformName = input.platformName!
     const slug = privatePlatformSlug({ ...input, platformName })
+
+    // Reject names that duplicate an already-approved platform (case-insensitive).
+    // Prevents shadow-platforms accumulating while the real one is available in step 1.
+    const duplicates = await database
+      .select({ id: platform.id })
+      .from(platform)
+      .where(and(eq(platform.reviewStatus, APPROVED_REVIEW_STATUS), ilike(platform.name, platformName)))
+    if (duplicates.length > 0) {
+      throw new ImportFormatWizardError(
+        'duplicate_platform_name',
+        `Esiste già una piattaforma approvata con questo nome. Selezionala dal passo 1 oppure usa un nome diverso.`,
+      )
+    }
 
     // Identity only — contract lives on importFormatVersion (ADR 0013)
     // Platform is never user-owned (ADR 0015): proposedByUserId is provenance, no visibility column

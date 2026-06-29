@@ -17,9 +17,12 @@ const mocks = vi.hoisted(() => ({
   insertedPlatforms: [] as Record<string, unknown>[],
   insertedVersions: [] as Record<string, unknown>[],
   updatedFiles: [] as Record<string, unknown>[],
-  // selectedPlatformRow: returned by the SELECT in createPrivateRows attach branch (Plan 59-02)
-  // Set to null to simulate TOCTOU guard (platform deleted between list and submit).
-  selectedPlatformRow: { id: 301, name: 'Fineco', slug: 'fineco' } as Record<string, unknown> | null,
+  // selectWhere: controls what SELECT...WHERE returns in createPrivateRows.
+  // Default (mockResolvedValue): [] — no duplicates found, TOCTOU fails (platform gone).
+  // Per-test overrides via mockResolvedValueOnce:
+  //   attach branch: [{ id: 301, name: 'Fineco', slug: 'fineco' }]
+  //   duplicate name check: [{ id: 99 }]
+  selectWhere: vi.fn(),
   // listAttachablePlatforms: mock for the DAL function used by listAttachablePlatformsAction (Plan 59-02)
   listAttachablePlatforms: vi.fn(),
 }))
@@ -48,11 +51,12 @@ vi.mock('@/lib/dal/import-formats', () => ({
 function makeTx() {
   return {
     execute: mocks.txExecute,
-    // select: used by the attach branch in createPrivateRows to resolve platform name/slug (Plan 59-02)
+    // select: used by createPrivateRows for the duplicate-name guard (create branch) and the
+    // TOCTOU platform SELECT (attach branch). mocks.selectWhere controls the resolved value per
+    // call — use mockResolvedValueOnce in tests that need specific rows; default is [].
     select: (_fields: unknown) => ({
       from: (_table: unknown) => ({
-        where: (_condition: unknown) =>
-          Promise.resolve(mocks.selectedPlatformRow != null ? [mocks.selectedPlatformRow] : []),
+        where: mocks.selectWhere,
       }),
     }),
     insert: () => ({
@@ -166,7 +170,9 @@ describe('import format wizard Server Actions', () => {
     mocks.insertedPlatforms.length = 0
     mocks.insertedVersions.length = 0
     mocks.updatedFiles.length = 0
-    mocks.selectedPlatformRow = { id: 301, name: 'Fineco', slug: 'fineco' }
+    // Default: SELECT returns [] — no duplicate found (create branch), platform not found (attach TOCTOU).
+    // Override per-test with mockResolvedValueOnce.
+    mocks.selectWhere.mockResolvedValue([])
     mocks.listAttachablePlatforms.mockResolvedValue([
       { id: 1, name: 'Fineco', slug: 'fineco', reviewStatus: 'approved' },
       { id: 2, name: 'Revolut', slug: 'revolut', reviewStatus: 'approved' },
@@ -377,6 +383,9 @@ describe('import format wizard Server Actions', () => {
 
   // Plan 59-02: attach branch tests
   it('attach branch: skips platform insert and syncPlatformIdSequence, inserts version with existingPlatformId', async () => {
+    // Simulate: platform 301 is active and visible to this user (TOCTOU SELECT returns it)
+    mocks.selectWhere.mockResolvedValueOnce([{ id: 301, name: 'Fineco', slug: 'fineco' }])
+
     const result = await createPrivateImportFormatAction(
       { error: null },
       validCreateForm({ existingPlatformId: '301' }),
@@ -398,8 +407,7 @@ describe('import format wizard Server Actions', () => {
   })
 
   it('attach branch: throws db_write_failed when platform no longer exists (TOCTOU guard)', async () => {
-    // Simulate the platform being deleted/deactivated between RSC preload and form submit
-    mocks.selectedPlatformRow = null
+    // selectWhere defaults to [] — TOCTOU SELECT finds no active/visible platform with that id
 
     const result = await createPrivateImportFormatAction(
       { error: null },
@@ -409,6 +417,38 @@ describe('import format wizard Server Actions', () => {
     expect(result).toEqual({ error: 'Impossibile salvare il formato. Riprova.' })
     expect(mocks.insertedPlatforms).toHaveLength(0)
     expect(mocks.insertedVersions).toHaveLength(0)
+  })
+
+  it('attach branch: rejects a forged id for another user\'s pending platform (IDOR fix)', async () => {
+    // TOCTOU SELECT returns [] — the platform exists but is pending and owned by another user,
+    // so the visibility WHERE clause filters it out. The service must throw db_write_failed.
+    // selectWhere defaults to [] — no action needed.
+
+    const result = await createPrivateImportFormatAction(
+      { error: null },
+      validCreateForm({ existingPlatformId: '999' }),
+    )
+
+    expect(result).toEqual({ error: 'Impossibile salvare il formato. Riprova.' })
+    expect(mocks.insertedPlatforms).toHaveLength(0)
+    expect(mocks.insertedVersions).toHaveLength(0)
+  })
+
+  it('create branch: rejects a platform name that duplicates an existing approved platform', async () => {
+    // Duplicate check SELECT returns a row — a platform with the same name is already approved.
+    mocks.selectWhere.mockResolvedValueOnce([{ id: 42 }])
+
+    const result = await createPrivateImportFormatAction(
+      { error: null },
+      validCreateForm({ platformName: 'Fineco' }),
+    )
+
+    expect(result).toEqual({
+      error: 'Esiste già una piattaforma approvata con questo nome. Selezionala dal passo 1 oppure usa un nome diverso.',
+    })
+    expect(mocks.insertedPlatforms).toHaveLength(0)
+    expect(mocks.insertedVersions).toHaveLength(0)
+    expect(mocks.txExecute).not.toHaveBeenCalled()
   })
 
   // Plan 59-02: listAttachablePlatformsAction tests

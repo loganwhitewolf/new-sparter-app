@@ -122,6 +122,8 @@ function mapImportFormatWizardError(error: unknown) {
         return "Una o più colonne selezionate non esistono nel file caricato.";
       case "db_write_failed":
         return "Impossibile salvare il formato. Riprova.";
+      case "duplicate_platform_name":
+        return "Esiste già una piattaforma approvata con questo nome. Selezionala dal passo 1 oppure usa un nome diverso.";
     }
   }
 
