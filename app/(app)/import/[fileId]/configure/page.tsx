@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ImportFormatWizard } from '@/components/import/import-format-wizard'
-import { loadImportFormatWizardContextAction } from '@/lib/actions/import'
+import { listAttachablePlatformsAction, loadImportFormatWizardContextAction } from '@/lib/actions/import'
 import { APP_ROUTES } from '@/lib/routes'
 
 export default async function ConfigureImportFormatPage({
@@ -50,16 +50,24 @@ export default async function ConfigureImportFormatPage({
     )
   }
 
+  // Preload the platform list server-side (D-02). On error, fall back to [] so the
+  // wizard opens directly in create-new mode (Pitfall 3) instead of blocking the page.
+  const platformsResult = await listAttachablePlatformsAction()
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold">Configura formato importazione</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Completa il formato privato e riprova l’analisi dello stesso file.
+          Completa il formato privato e riprova l'analisi dello stesso file.
         </p>
       </div>
 
-      <ImportFormatWizard context={result.data} from={from} />
+      <ImportFormatWizard
+        context={result.data}
+        attachablePlatforms={platformsResult.data ?? []}
+        from={from}
+      />
     </div>
   )
 }
