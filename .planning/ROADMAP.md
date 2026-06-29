@@ -15,8 +15,17 @@
 - ✅ **v2.0: Nature/Direction Model Realignment** — Phases 46–50 (shipped 2026-06-14)
 - ✅ **v2.1: Regex Discovery & Transaction Unification** — Phases 51–55 (shipped 2026-06-22)
 - ✅ **v2.2: PDF Import** — Phases 56–57 (shipped 2026-06-26) · [archive](milestones/v2.2-ROADMAP.md)
+- 🚧 **v2.3: Platform Identity & Format Ownership** — Phases 58–60 (in progress)
 
 ## Phases
+
+### v2.3: Platform Identity & Format Ownership (Phases 58–60) — IN PROGRESS
+
+Decision contract LOCKED in `docs/adr/0015-platform-global-moderated-format-private.md` + `CONTEXT.md`. Pure implementation — no discovery to redo.
+
+- [ ] **Phase 58: platform-identity-and-access** - Make Platform a never-owned, review-gated identity (drop `visibility`, rename `ownerUserId`→`proposedByUserId`, `reviewStatus` lifecycle) with backfill, and decouple `accessibleWhere` so a private format is visible on a global platform — no regression on the hot platform join
+- [ ] **Phase 59: import-wizard-attach-format** - When detection fails, attach a new private Import Format to an existing Platform; mint a brand-new Platform (born `pending`) only when none fits — no more silently duplicated platforms
+- [ ] **Phase 60: seed-slug-linkage-and-docs** - Seeded formats reference Platform by slug (seeded platforms carry no explicit `id`, runtime FK stays `platformId`), eliminating the Trade Republic id-8 collision; correct the stale DescriptionStripPattern reference in CONTEXT.md and code comments
 
 <details>
 <summary>✅ v2.1: Regex Discovery & Transaction Unification (Phases 51–55) — SHIPPED 2026-06-22</summary>
@@ -167,6 +176,42 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 
 </details>
 
+## Phase Details
+
+### Phase 58: platform-identity-and-access
+**Goal**: Platform becomes a never-owned, review-gated identity, and a private Import Format is decoupled from a private Platform — so a user's private format can live on a global/approved platform without the system needing to duplicate the platform.
+**Depends on**: Phase 57 (v2.2 — `import_format_version` already owns the parsing contract; `platform` is pure identity)
+**Requirements**: PLAT-01, PLAT-02, PLAT-03
+**Success Criteria** (what must be TRUE):
+  1. A platform has no `visibility` column; its former `ownerUserId` is now `proposedByUserId` (provenance), and existing rows are migrated by an additive, idempotent step — no data lost, applied via `drizzle-kit generate` + `scripts/migrate.ts` (never `drizzle-kit push` in production).
+  2. A platform proposed by a user (`reviewStatus = pending`) is visible only to its `proposedByUserId`; an `approved` platform (including all seeded platforms) is visible to every user.
+  3. A user-owned `import_format_version` is visible to its owner even when its platform is global/approved — `accessibleWhere` no longer requires the platform itself to be private.
+  4. Existing global formats still resolve and import exactly as before: the hot `platform` join used by expenses/transactions/imports for filter/display/sort by `platform.slug`/`platform.name` shows no behavioral regression (guarded by tests over the existing formats).
+**Plans**: TBD
+
+### Phase 59: import-wizard-attach-format
+**Goal**: When format detection fails on upload, the user attaches a new private Import Format to an existing Platform; a brand-new Platform is created only when none fits, and it is born `pending` — eliminating silently minted duplicate platforms for known banks.
+**Depends on**: Phase 58 (review-gated visibility + decoupled `accessibleWhere` must exist before the wizard can offer an existing platform and create private formats against it)
+**Requirements**: PLAT-04
+**Success Criteria** (what must be TRUE):
+  1. On a failed detection, the wizard offers the user existing Platforms to attach a new private Import Format to, instead of always creating a new Platform.
+  2. Attaching a private Import Format to a known bank's existing (approved) Platform reuses that Platform — no duplicate "Fineco"-style row is created.
+  3. A brand-new Platform is created only when no existing one fits, and it is persisted with `reviewStatus = pending` (visible only to its proposer).
+  4. The newly attached private Import Format is immediately usable by its owner for the import that triggered creation.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 60: seed-slug-linkage-and-docs
+**Goal**: Seeded import formats link to their Platform by slug (not by hardcoded id), removing the Trade Republic id-8 collision that made `onConflictDoNothing` silently skip the TR seed; and the stale DescriptionStripPattern documentation/comments are corrected to reflect ADR 0013.
+**Depends on**: Phase 58 (seeded platforms drop their explicit `id:` only after the identity-model schema is in place; the runtime FK stays `platformId`)
+**Requirements**: PLAT-05, PLAT-06
+**Success Criteria** (what must be TRUE):
+  1. Seeded platforms carry no explicit `id:`; the serial assigns it, and conflict resolution is keyed on the unique `slug`.
+  2. Seeded import formats reference their Platform by slug; `seed.ts` resolves slug→id at runtime, and the runtime FK column remains `import_format_version.platformId` (unchanged).
+  3. A clean reseed inserts the Trade Republic format even when a user platform already holds serial id 8 — the id-8 collision no longer skips the TR seed; running `db:migrate → db:seed → db:seed-extras → db:seed-patterns` produces a correctly linked TR format.
+  4. The CONTEXT.md glossary entry and any stale code comments state that DescriptionStripPattern lives on `import_format_version` (ADR 0013), not on `platform`.
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans | Status | Completed |
@@ -183,13 +228,11 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 41 | v1.15 | 3/3 | Complete | 2026-06-07 |
 | 42–45 | v1.16 | 13/13 | Complete | 2026-06-09 |
 | 46–50 | v2.0 | 22/22 | Complete | 2026-06-14 |
-| 51. discovery-pipeline-reorder | v2.1 | 3/3 | Complete | 2026-06-16 |
-| 52. regex-validity-and-dedup | v2.1 | 3/3 | Complete | 2026-06-16 |
-| 53. retroactive-application | v2.1 | 3/3 | Complete | 2026-06-16 |
-| 54. reusable-trigger | v2.1 | 3/3 | Complete | 2026-06-21 |
-| 55. import-summary-ux | v2.1 | 3/3 | Complete | 2026-06-22 |
-| 56. import-format-refactor | v2.2 | 5/5 | Complete | 2026-06-25 |
-| 57. pdf-import-trade-republic | v2.2 | 5/5 | Complete | 2026-06-26 |
+| 51–55 | v2.1 | 15/15 | Complete | 2026-06-22 |
+| 56–57 | v2.2 | 10/10 | Complete | 2026-06-26 |
+| 58. platform-identity-and-access | v2.3 | 0/? | Not started | - |
+| 59. import-wizard-attach-format | v2.3 | 0/? | Not started | - |
+| 60. seed-slug-linkage-and-docs | v2.3 | 0/? | Not started | - |
 
 **Total shipped: 57 phases · 214 plans complete**
-**Last milestone: v2.2 — SHIPPED 2026-06-26**
+**Current milestone: v2.3 — Platform Identity & Format Ownership (Phases 58–60)**

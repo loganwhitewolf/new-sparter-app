@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Platform Identity & Format Ownership
 status: planning
-last_updated: "2026-06-29T09:40:08.902Z"
+last_updated: "2026-06-29T10:15:00.000Z"
 last_activity: 2026-06-29
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,67 +17,57 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-25)
+See: .planning/PROJECT.md (updated 2026-06-29)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Milestone v2.2 archived — next milestone da definire con `/gsd-new-milestone`
+**Current focus:** Milestone v2.3 — Platform as globally shared moderated identity (never user-owned); private ownership on Import Format; seed slug-linkage fix. Roadmap drafted (Phases 58–60). Next: `/gsd-plan-phase 58`.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 58 — platform-identity-and-access (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-29 — Milestone v2.3 started
+Status: Roadmap created — awaiting phase planning
+Last activity: 2026-06-29 — v2.3 roadmap created (3 phases, 6/6 requirements mapped)
 
-## Roadmap (v2.2 — Phases 56–57)
+## Roadmap (v2.3 — Phases 58–60)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 56 | import-format-refactor | IFMT-01, IFMT-02, IFMT-03, IFMT-04, IFMT-05 | Complete (2026-06-25) |
-| 57 | pdf-import-trade-republic | PDF-01, PDF-02, PDF-03, PDF-04, PDF-05 | Complete (2026-06-26) |
+| 58 | platform-identity-and-access | PLAT-01, PLAT-02, PLAT-03 | Not started |
+| 59 | import-wizard-attach-format | PLAT-04 | Not started |
+| 60 | seed-slug-linkage-and-docs | PLAT-05, PLAT-06 | Not started |
 
-**Milestone v2.2 SHIPPED 2026-06-26.**
+**Coverage:** 6/6 PLAT requirements mapped. Decision contract LOCKED (ADR 0015) — pure implementation, no discovery.
 
 ## Accumulated Context
 
 ### Decisions
 
-Design contract is LOCKED. Do not re-derive the approach:
+Design contract is LOCKED (ADR 0015). Do not re-derive the approach:
 
-- ADR 0013: il contratto di parsing (`delimiter`, `*Column`, `dateFormat`, `dateReplace`, `decimalReplace`, `multiplyBy`, `descriptionStripPattern`, `amountType`) si sposta da `platform` a `import_format_version`; `platform` resta pura identità; behavior-preserving, regression-gated su fixture reali.
-- ADR 0014: per-banca, non generico; template deterministico che riconosce il documento per marker ed estrae solo la sezione canonica dei movimenti; normalizzato a `ParsedImportFile` con header sintetici; segno via coordinate X (`unpdf`, serverless); catena saldi come guard esplicita; `pdf-parse` scartato (testo piatto, no coordinate).
-- CONTEXT.md: "Platform" = pura identità fornitore; "Import Format" = contratto versionato; "Sezione canonica dei movimenti" = solo "TRANSAZIONI SUL CONTO" per Trade Republic; "PANORAMICA TRANSAZIONI" e "PANORAMICA DEL SALDO" scartate.
-- Migration path: `drizzle-kit generate` + `scripts/migrate.ts` + step additivo in `seed-extras.ts` — mai `drizzle-kit push` in produzione.
-- `unpdf` scelto per coordinate X (serverless-ready); `pdf-parse` scartato.
-- Categorizzazione automatica delle descrizioni TR è fuori scope — follow-up via `regex-discovery` + `seed-patterns`.
-- OCR/scanned PDF fuori scope.
-- Parser PDF generico fuori scope.
-- [Phase 56]: Regression test written BEFORE any column move — pins transactionHash of all 7 CSV fixtures as static hex literals (IFMT-02)
-- [Phase 56]: Schema transition migration: 12 contract columns added nullable to importFormatVersion; platform columns untouched until Plan 03 data copy
-- [Phase 56]: Migration 0021_glorious_callisto.sql produced via drizzle-kit generate — ADD COLUMN only on import_format_version, no DROP, applied at operator deploy time
-- [Phase 56]: platform Drizzle import removed from seed-extras.ts — no other step references the table object after Step 2 became a no-op (IFMT-05)
-- [Phase 57]: application/octet-stream added as defensive PDF MIME fallback (browser Assumption A5); extension check still constrains file kind
-- [Phase 57]: initiate route required no code change — PDF support flows through InitiateUploadSchema transparently
-- [Phase 57]: 5 MB size cap preserved unchanged per D-05/T-57-02-01
-- [Phase 57]: UNRECOGNIZED_PDF_FORMAT — costante singola nel parser (italiano generico, nessun marker interno esposto)
-- [Phase 57]: PDF_IMPORT_PLATFORM_SLUGS allowlist co-locata con il dispatch .pdf in import-parsers.ts (no fileType column su import_format_version — allowlist approach evita scope creep)
+- **ADR 0015**: Platform is never user-owned — drop `platform.visibility`, rename `platform.ownerUserId` → `proposedByUserId`; visibility governed by `reviewStatus` (`pending` = visible only to proposer; `approved` = shared with all; seeded platforms stay `approved`). Private ownership lives only on `import_format_version` (`ownerUserId`), which can be private even on a global/approved platform. `accessibleWhere` relaxes to "private format visible to owner on any platform," decoupling private-format from private-platform.
+- **ADR 0015 wizard**: on detection failure, first offer an existing Platform to attach a new private Import Format; create a new Platform (born `pending`) only when none fits — no more silently duplicated platforms.
+- **ADR 0015 seed**: seeded platforms carry no explicit `id:` (serial assigns; conflict on unique `slug`); seeded import formats reference `platformSlug`, resolved slug→id at runtime in `seed.ts`. Runtime FK stays `platformId` (surrogate int, hot join) — slug is the seed-linkage key only. This eliminates the Trade Republic id-8 collision (`onConflictDoNothing` silently skipped TR when a user platform held serial id 8).
+- **ADR 0013** (extended by 0015): the parsing contract lives on `import_format_version`, not `platform`; `platform` is pure identity. DescriptionStripPattern lives on `import_format_version` — the CONTEXT.md glossary line ("Regex nullable configurata per Platform") is stale and corrected in PLAT-06.
+- Migration path: `drizzle-kit generate` + `scripts/migrate.ts`; additive idempotent backfill in `seed-extras.ts`; never `drizzle-kit push` in production. Seed run order after migration: `db:migrate → db:seed → db:seed-extras → db:seed-patterns`.
+- **Deferred (not built now)**: operator approval UI to promote `pending` → `approved` (needed only with a second user); multi-user identity dedup. For single-user, `pending` + proposer-visible is already functional.
 
-### Codebase facts rilevanti per la prossima milestone
+### Codebase facts rilevanti per la milestone
 
-- TR platform (id 8, slug `trade-republic`) con importFormatVersion seeded in `seed-data.ts` — TR pronto per import in produzione dopo `yarn db:seed`
-- `descriptionStripPattern: "quantity:\\s*[\\d.,]+\\s*"` seeded per TR — savings plan rows si aggregano nella stessa Expense
-- Pipeline `parseImportFile` ha il dispatch `.pdf` prima del path CSV — mai toccare l'ordine
-- `PDF_IMPORT_PLATFORM_SLUGS` è il punto unico di verità per aggiungere nuove banche PDF
+- `lib/dal/import-formats.ts` `accessibleWhere` (≈lines 124–142) currently couples private format ⇒ private platform: the private branch requires `eq(platform.visibility, PRIVATE_VISIBILITY)` and `eq(platform.ownerUserId, userId)` alongside the format being private. Decoupling this is the core of PLAT-03 — and it is regression-sensitive because `platform` is joined on a hot path (filter/display/sort by `platform.slug`/`platform.name`) in expenses/transactions/imports DAL.
+- Schema (`lib/db/schema.ts`): `platform.visibility` (varchar, default `global`), `platform.review_status` (default `approved`), `platform.owner_user_id` — PLAT-01 drops `visibility` and renames `owner_user_id` → `proposed_by_user_id`.
+- Seed (`scripts/seed-data.ts`): Trade Republic platform hardcodes `id: 8` (slug `trade-republic`) and its import format references `platformId: 8` — the collision PLAT-05 fixes via slug linkage. Remove explicit `id:` from seeded platforms; do NOT change the FK column to slug.
+- CONTEXT.md glossary line 33–34 ("DescriptionStripPattern — Regex nullable configurata per Platform") is the stale reference PLAT-06 corrects (should reference `import_format_version` / ADR 0013).
 
 ### Planning Risk
 
-Nessuno aperto. Milestone v2.2 completata e verificata.
+- **Regression risk on the hot `platform` join (PLAT-03):** decoupling `accessibleWhere` must not change resolution/import behavior for existing global formats. Plans touching it must guard against regression (tests over existing formats), consistent with the behavior-preserving discipline used in Phase 56.
 
 ### Blockers/Concerns
 
 Nessuno.
 
-### Quick Tasks Completati (carryover da v2.1)
+### Quick Tasks Completati (carryover da v2.1/v2.2)
 
 | # | Description | Date | Commit |
 |---|-------------|------|--------|
@@ -98,6 +88,8 @@ Items riconosciuti e posticipati:
 
 | Category | Item | Status |
 |----------|------|--------|
+| v2.3 | Operator approval UI (`pending` → `approved`) | deferred — needed only with a second user |
+| v2.3 | Multi-user platform identity dedup | deferred — multi-user only |
 | verification_gap | 53-VERIFICATION.md | human_needed — 3 browser/visual checks |
 | verification_gap | 55-VERIFICATION.md | human_needed — 2 visual checks |
 | uat_gap | 53-UAT.md | diagnosed — 0 pending scenarios |
@@ -114,17 +106,17 @@ Items riconosciuti e posticipati:
 
 **Resume file:** None
 
-**Stopped at:** Phase 57 verified — milestone v2.2 complete
+**Stopped at:** v2.3 roadmap created (Phases 58–60); requirements mapped 6/6.
 
-Last session: 2026-06-26T14:50:00Z
-Resume: `/gsd-new-milestone` per avviare la prossima milestone, oppure `/gsd-progress` per verificare lo stato
+Last session: 2026-06-29T10:15:00Z
+Resume: `/gsd-plan-phase 58` to plan the platform-identity-and-access phase.
 
-**Next:** Milestone v2.2 è shipped. Prossima milestone da definire.
+**Next:** Plan Phase 58 (`platform-identity-and-access`).
 
 ## Operator Next Steps
 
-- Deploy su Vercel: `yarn db:migrate → yarn db:seed → yarn db:seed-extras → yarn db:seed-patterns` (migration 0022 ha backfill critico — fare prima del merge PR #24)
-- Prossima milestone: `/gsd-new-milestone`
+- v2.2 PR #24 deploy order (if not yet merged): `yarn db:migrate → yarn db:seed → yarn db:seed-extras → yarn db:seed-patterns` (migration 0022 has critical backfill).
+- After v2.3 migrations land, the same run order applies; PLAT-01 backfill is additive and idempotent.
 
 ## Performance Metrics
 

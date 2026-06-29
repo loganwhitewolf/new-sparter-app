@@ -42,9 +42,9 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| PLAT-01 | TBD | ⬜ Pending |
-| PLAT-02 | TBD | ⬜ Pending |
-| PLAT-03 | TBD | ⬜ Pending |
-| PLAT-04 | TBD | ⬜ Pending |
-| PLAT-05 | TBD | ⬜ Pending |
-| PLAT-06 | TBD | ⬜ Pending |
+| PLAT-01 | Phase 58 | ⬜ Pending |
+| PLAT-02 | Phase 58 | ⬜ Pending |
+| PLAT-03 | Phase 58 | ⬜ Pending |
+| PLAT-04 | Phase 59 | ⬜ Pending |
+| PLAT-05 | Phase 60 | ⬜ Pending |
+| PLAT-06 | Phase 60 | ⬜ Pending |
