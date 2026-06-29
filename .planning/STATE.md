@@ -2,14 +2,18 @@
 gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Platform Identity & Format Ownership
-status: planning
-last_updated: "2026-06-29T10:15:00.000Z"
+current_phase: 58
+current_phase_name: platform-identity-and-access
+status: executing
+stopped_at: v2.3 roadmap created (Phases 58–60); requirements mapped 6/6.
+last_updated: "2026-06-29T10:57:42.082Z"
 last_activity: 2026-06-29
+last_activity_desc: Phase 58 execution started
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -20,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-29)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Milestone v2.3 — Platform as globally shared moderated identity (never user-owned); private ownership on Import Format; seed slug-linkage fix. Roadmap drafted (Phases 58–60). Next: `/gsd-plan-phase 58`.
+**Current focus:** Phase 58 — platform-identity-and-access
 
 ## Current Position
 
-Phase: 58 — platform-identity-and-access (not started)
-Plan: —
-Status: Roadmap created — awaiting phase planning
-Last activity: 2026-06-29 — v2.3 roadmap created (3 phases, 6/6 requirements mapped)
+Phase: 58 (platform-identity-and-access) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-06-29 — Phase 58 execution started
 
 ## Roadmap (v2.3 — Phases 58–60)
 
@@ -51,6 +55,7 @@ Design contract is LOCKED (ADR 0015). Do not re-derive the approach:
 - **ADR 0013** (extended by 0015): the parsing contract lives on `import_format_version`, not `platform`; `platform` is pure identity. DescriptionStripPattern lives on `import_format_version` — the CONTEXT.md glossary line ("Regex nullable configurata per Platform") is stale and corrected in PLAT-06.
 - Migration path: `drizzle-kit generate` + `scripts/migrate.ts`; additive idempotent backfill in `seed-extras.ts`; never `drizzle-kit push` in production. Seed run order after migration: `db:migrate → db:seed → db:seed-extras → db:seed-patterns`.
 - **Deferred (not built now)**: operator approval UI to promote `pending` → `approved` (needed only with a second user); multi-user identity dedup. For single-user, `pending` + proposer-visible is already functional.
+- [Phase ?]: Migration 0023 via --custom fallback: RENAME COLUMN applied directly via node-pg when drizzle-kit stalled on Supabase pooler; platformRelations.owner key kept (D-06)
 
 ### Codebase facts rilevanti per la milestone
 
@@ -108,7 +113,7 @@ Items riconosciuti e posticipati:
 
 **Stopped at:** v2.3 roadmap created (Phases 58–60); requirements mapped 6/6.
 
-Last session: 2026-06-29T10:15:00Z
+Last session: 2026-06-29T10:57:38.777Z
 Resume: `/gsd-plan-phase 58` to plan the platform-identity-and-access phase.
 
 **Next:** Plan Phase 58 (`platform-identity-and-access`).
@@ -151,3 +156,4 @@ Resume: `/gsd-plan-phase 58` to plan the platform-identity-and-access phase.
 | Phase 57 P02 | 2min | 2 tasks | 3 files |
 | Phase 57 P03 | 10min | 2 tasks | 2 files |
 | Phase 57 P05 | 3min | 1 tasks | 6 files |
+| Phase 58 P01 | 5min | 3 tasks | 4 files |

@@ -11,7 +11,7 @@
 
 ### Platform Identity Model
 
-- [ ] **PLAT-01**: A Platform is never user-owned. `platform.visibility` is removed and `platform.ownerUserId` is renamed to `proposedByUserId` (provenance, not ownership). Existing rows are migrated by an additive, idempotent step — migration via `drizzle-kit generate` + `scripts/migrate.ts`; never `drizzle-kit push` in production.
+- [x] **PLAT-01**: A Platform is never user-owned. `platform.visibility` is removed and `platform.ownerUserId` is renamed to `proposedByUserId` (provenance, not ownership). Existing rows are migrated by an additive, idempotent step — migration via `drizzle-kit generate` + `scripts/migrate.ts`; never `drizzle-kit push` in production.
 - [ ] **PLAT-02**: Platform visibility follows a review lifecycle keyed on `reviewStatus`: a user-proposed Platform is `pending` and visible **only** to its `proposedByUserId`; an `approved` Platform is visible to **all** users. Seeded platforms remain `approved`.
 - [ ] **PLAT-03**: A private Import Format is decoupled from a private Platform. A user-owned `import_format_version` (`ownerUserId = user`) is visible to its owner **even when attached to a global/approved Platform** — `accessibleWhere` no longer requires the platform to also be private. No behavioral regression for the existing global formats.
 
