@@ -55,7 +55,7 @@ export type CreatePrivateImportFormatResult = {
 const SAFE_WIZARD_PARSE_ERROR = 'Impossibile leggere le intestazioni del file. Riprova.'
 const SAFE_WIZARD_READ_ERROR = 'Impossibile leggere il file caricato. Riprova.'
 const PRIVATE_VISIBILITY = 'private'
-const DRAFT_REVIEW_STATUS = 'draft'
+const PENDING_REVIEW_STATUS = 'pending'
 const HEADER_SAMPLE_ROWS = 5
 const HEADER_MAX_ROWS = 25
 
@@ -221,9 +221,9 @@ async function createPrivateRows(
     .insert(platform)
     .values({
       // Identity only — contract lives on importFormatVersion (ADR 0013)
-      ownerUserId: input.userId,
-      visibility: PRIVATE_VISIBILITY,
-      reviewStatus: DRAFT_REVIEW_STATUS,
+      // Platform is never user-owned (ADR 0015): proposedByUserId is provenance, no visibility column
+      proposedByUserId: input.userId,
+      reviewStatus: PENDING_REVIEW_STATUS,
       name: input.platformName,
       slug,
       country: 'IT',
@@ -242,7 +242,7 @@ async function createPrivateRows(
       platformId: createdPlatform.id,
       ownerUserId: input.userId,
       visibility: PRIVATE_VISIBILITY,
-      reviewStatus: DRAFT_REVIEW_STATUS,
+      reviewStatus: PENDING_REVIEW_STATUS,
       version: 1,
       headerSignature: header,
       notes: 'Created from private import format wizard.',
