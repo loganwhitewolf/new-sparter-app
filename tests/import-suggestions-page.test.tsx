@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({
   notFound: mocks.notFound,
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }))
 
 vi.mock('@/lib/dal/auth', () => ({
@@ -243,6 +244,13 @@ describe('suggestions page', () => {
     // SUMUI-03: sub-heading communicates platform scope and re-check entry point
     expect(html).toContain('rilevati dalle transazioni non categorizzate di questa piattaforma')
     expect(html).toContain('tab Importazioni')
+  })
+
+  it('navigation: always shows back link to import list', async () => {
+    const html = await renderPage()
+
+    expect(html).toContain('Torna alle importazioni')
+    expect(html).toContain('href="/import"')
   })
 
   // --- SUMUI-02: SuggestionSection distinct headings ---

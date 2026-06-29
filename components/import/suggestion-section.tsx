@@ -1,7 +1,10 @@
 'use client'
 
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { SuggestionCard } from './suggestion-card'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
+import { APP_ROUTES } from '@/lib/routes'
 import type { PatternSuggestion } from '@/lib/utils/pattern-suggestions'
 import type { SingleCategorizationSuggestion } from '@/lib/services/regex-discovery'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
@@ -13,7 +16,38 @@ type Props = {
   fileId: string
 }
 
+export function shouldRedirectToImportList({
+  regexSuggestionCount,
+  promotedCount,
+}: {
+  regexSuggestionCount: number
+  promotedCount: number
+}) {
+  return regexSuggestionCount > 0 && promotedCount >= regexSuggestionCount
+}
+
 export function SuggestionSection({ suggestions, singleSuggestions, categories, fileId }: Props) {
+  const router = useRouter()
+  const [promotedCount, setPromotedCount] = useState(0)
+  const redirectScheduledRef = useRef(false)
+
+  const handleRegexPromoted = useCallback(() => {
+    setPromotedCount((count) => count + 1)
+  }, [])
+
+  useEffect(() => {
+    if (
+      shouldRedirectToImportList({
+        regexSuggestionCount: suggestions.length,
+        promotedCount,
+      }) &&
+      !redirectScheduledRef.current
+    ) {
+      redirectScheduledRef.current = true
+      router.push(APP_ROUTES.import)
+    }
+  }, [promotedCount, router, suggestions.length])
+
   if (suggestions.length === 0 && (singleSuggestions?.length ?? 0) === 0) return null
 
   return (
@@ -33,6 +67,7 @@ export function SuggestionSection({ suggestions, singleSuggestions, categories, 
                 suggestion={suggestion}
                 categories={categories}
                 fileId={fileId}
+                onRegexPromoted={handleRegexPromoted}
               />
             ))}
           </div>
