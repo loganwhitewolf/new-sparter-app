@@ -14,7 +14,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { detachTransaction } from '@/lib/actions/transactions'
 
 type Props = {
@@ -73,7 +72,9 @@ export function DetachExpenseDialog({
         </DialogHeader>
 
         <div className="space-y-2">
-          <Label htmlFor="detach-expense-title">Titolo spesa</Label>
+          <label className="text-sm font-medium" htmlFor="detach-expense-title">
+            Titolo spesa
+          </label>
           <Input
             id="detach-expense-title"
             value={title}

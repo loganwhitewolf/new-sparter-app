@@ -27,7 +27,7 @@ import {
 } from '@/lib/services/categorization'
 import { normalizeTransactionRow } from '@/lib/utils/import'
 import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
-import { writeClassificationHistory } from '@/lib/dal/classification-history'
+import { getLatestClassificationSource, writeClassificationHistory } from '@/lib/dal/classification-history'
 import { loadImportFormatsForDetection } from '@/lib/dal/import-formats'
 import { logger } from '@/lib/logger'
 import { discoverRegexCandidates } from '@/lib/services/regex-discovery'
@@ -531,25 +531,50 @@ export async function importFile(input: {
 
         // Upsert expense by (userId, descriptionHash) — check-then-update-or-insert
         const existing = await tx
-          .select({ id: expense.id, totalAmount: expense.totalAmount, transactionCount: expense.transactionCount, subCategoryId: expense.subCategoryId })
+          .select({
+            id: expense.id,
+            totalAmount: expense.totalAmount,
+            transactionCount: expense.transactionCount,
+            subCategoryId: expense.subCategoryId,
+            status: expense.status,
+          })
           .from(expense)
           .where(and(eq(expense.userId, input.userId), eq(expense.descriptionHash, descHash)))
           .limit(1)
           .then((rows) => rows[0] ?? null)
 
         let expenseId: string
+        let isManuallyLocked = false
         if (existing) {
           expenseId = existing.id
+          const latestSource = await getLatestClassificationSource(tx, {
+            userId: input.userId,
+            expenseId,
+          })
+          isManuallyLocked = existing.status === '3' && latestSource === 'manual'
+
+          const updatePayload: {
+            totalAmount: string
+            transactionCount: number
+            lastTransactionAt: Date
+            updatedAt: Date
+            subCategoryId?: number | null
+            status?: '1' | '2' | '3' | '4'
+          } = {
+            totalAmount: toDbDecimal(toDecimal(existing.totalAmount).plus(toDecimal(acc.totalAmount))),
+            transactionCount: (existing.transactionCount ?? 0) + acc.txIds.length,
+            lastTransactionAt: acc.lastOccurredAt,
+            updatedAt: new Date(),
+          }
+
+          if (!isManuallyLocked) {
+            updatePayload.subCategoryId = catResult?.subCategoryId ?? existing.subCategoryId ?? null
+            updatePayload.status = catResult ? '3' : existing.subCategoryId ? '3' : '1'
+          }
+
           await tx
             .update(expense)
-            .set({
-              totalAmount: toDbDecimal(toDecimal(existing.totalAmount).plus(toDecimal(acc.totalAmount))),
-              transactionCount: (existing.transactionCount ?? 0) + acc.txIds.length,
-              lastTransactionAt: acc.lastOccurredAt,
-              subCategoryId: catResult?.subCategoryId ?? existing.subCategoryId ?? null,
-              status: catResult ? '3' : existing.subCategoryId ? '3' : '1',
-              updatedAt: new Date(),
-            })
+            .set(updatePayload)
             .where(and(eq(expense.id, expenseId), eq(expense.userId, input.userId)))
         } else {
           expenseId = crypto.randomUUID()
@@ -570,7 +595,7 @@ export async function importFile(input: {
 
         expenseIdMap.set(descHash, expenseId)
 
-        if (catResult) {
+        if (catResult && !isManuallyLocked) {
           try {
             await writeClassificationHistory(tx, {
               userId: input.userId,
