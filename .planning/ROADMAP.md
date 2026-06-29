@@ -187,7 +187,10 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
   2. A platform proposed by a user (`reviewStatus = pending`) is visible only to its `proposedByUserId`; an `approved` platform (including all seeded platforms) is visible to every user.
   3. A user-owned `import_format_version` is visible to its owner even when its platform is global/approved — `accessibleWhere` no longer requires the platform itself to be private.
   4. Existing global formats still resolve and import exactly as before: the hot `platform` join used by expenses/transactions/imports for filter/display/sort by `platform.slug`/`platform.name` shows no behavioral regression (guarded by tests over the existing formats).
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 58-01-PLAN.md — Platform schema rename/drop + migration 0023 (true RENAME, applied via scripts/migrate.ts) [PLAT-01]
+- [ ] 58-02-PLAN.md — Relax accessibleWhere + reviewStatus visibility lifecycle (DAL access boundary, lockstep) [PLAT-02, PLAT-03]
+- [ ] 58-03-PLAN.md — Wizard write-path glue: createPrivateRows → proposedByUserId, no visibility, reviewStatus 'pending' [PLAT-01]
 
 ### Phase 59: import-wizard-attach-format
 **Goal**: When format detection fails on upload, the user attaches a new private Import Format to an existing Platform; a brand-new Platform is created only when none fits, and it is born `pending` — eliminating silently minted duplicate platforms for known banks.
@@ -230,7 +233,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 46–50 | v2.0 | 22/22 | Complete | 2026-06-14 |
 | 51–55 | v2.1 | 15/15 | Complete | 2026-06-22 |
 | 56–57 | v2.2 | 10/10 | Complete | 2026-06-26 |
-| 58. platform-identity-and-access | v2.3 | 0/? | Not started | - |
+| 58. platform-identity-and-access | v2.3 | 0/3 | Not started | - |
 | 59. import-wizard-attach-format | v2.3 | 0/? | Not started | - |
 | 60. seed-slug-linkage-and-docs | v2.3 | 0/? | Not started | - |
 
