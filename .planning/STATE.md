@@ -100,6 +100,7 @@ Nessuno.
 | 260629-gdp | Pattern suggestions back link + auto-redirect after classify | 2026-06-29 | 4673927 |
 | 260629-lky | File list R2 download + expense details dialog source file | 2026-06-29 | a6d7f95 |
 | 260629-m9i | Detach transaction to dedicated expense + re-import manual lock | 2026-06-29 | 90bfa69 |
+| 260630-dd7 | Delete stuck analyzing imports from file table | 2026-06-30 | 60ee221 |
 
 ## Deferred Items
 
