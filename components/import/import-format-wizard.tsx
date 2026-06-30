@@ -353,13 +353,20 @@ export function ImportFormatWizard({
                 )}
               </div>
 
-              <Button
-                type="button"
-                onClick={() => setCurrentStep('columns')}
-                disabled={!step1CanAdvance}
-              >
-                Continua
-              </Button>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  onClick={() => setCurrentStep('columns')}
+                  disabled={!step1CanAdvance}
+                >
+                  Continua
+                </Button>
+                {!isOnboardingFlow && (
+                  <Button asChild variant="ghost">
+                    <Link href={APP_ROUTES.import}>Torna alle importazioni</Link>
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 

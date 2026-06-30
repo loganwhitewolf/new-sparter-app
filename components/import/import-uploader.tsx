@@ -6,6 +6,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { UploadPutError, uploadFileToPresignedUrl } from '@/components/import/upload-put'
+import { analyzeImportAction } from '@/lib/actions/import'
+import { isUnknownFormatAnalysis } from '@/lib/utils/import-status'
 import {
   MAX_IMPORT_FILE_SIZE_BYTES,
   IMPORT_CONTENT_TYPES,
@@ -14,7 +16,7 @@ import {
 const ACCEPTED_EXTENSIONS = ['.csv', '.xlsx', '.pdf']
 const ACCEPTED_TYPES = IMPORT_CONTENT_TYPES as readonly string[]
 
-type UploadStage = 'idle' | 'hashing' | 'initiating' | 'uploading' | 'confirming' | 'done'
+type UploadStage = 'idle' | 'hashing' | 'initiating' | 'uploading' | 'confirming' | 'analyzing' | 'done'
 
 async function sha256Hex(file: File): Promise<string> {
   const buffer = await file.arrayBuffer()
@@ -48,6 +50,7 @@ function stageLabel(stage: UploadStage): string {
     case 'initiating': return 'Preparazione upload…'
     case 'uploading': return 'Caricamento file…'
     case 'confirming': return 'Verifica…'
+    case 'analyzing': return 'Analisi formato…'
     case 'done': return 'Reindirizzamento…'
     default: return 'Carica file'
   }
@@ -176,7 +179,25 @@ export function ImportUploader() {
       return
     }
 
-    // Step 5: Redirect to analyze page
+    // Step 5: Analyze and route to configure (unknown format) or preview (recognized format)
+    setStage('analyzing')
+    const fd = new FormData()
+    fd.set('fileId', fileId)
+
+    const analyzeResult = await analyzeImportAction(fd)
+
+    if (!analyzeResult.data) {
+      setError(analyzeResult.error ?? 'Impossibile analizzare il file. Riprova tra qualche secondo.')
+      setStage('idle')
+      return
+    }
+
+    if (isUnknownFormatAnalysis(analyzeResult.data)) {
+      setStage('done')
+      router.push(`/import/${fileId}/configure`)
+      return
+    }
+
     setStage('done')
     router.push(`/import/${fileId}/analyze`)
   }

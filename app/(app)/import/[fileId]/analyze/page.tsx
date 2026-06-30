@@ -1,16 +1,10 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ImportPreview } from '@/components/import/import-preview'
 import { analyzeImportAction } from '@/lib/actions/import'
-import type { ImportAnalysisResult } from '@/lib/services/import'
-import { ANALYZE_STATUS_ERROR, UNKNOWN_FORMAT_ERROR } from '@/lib/utils/import-status'
-
-function isUnknownFormatAnalysis(result: ImportAnalysisResult) {
-  return result.formatVersionId === null && result.errors.some((error) => error.includes(UNKNOWN_FORMAT_ERROR))
-}
+import { ANALYZE_STATUS_ERROR, isUnknownFormatAnalysis } from '@/lib/utils/import-status'
 
 function firstSearchParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
@@ -64,6 +58,9 @@ export default async function AnalyzePage({
           </CardHeader>
           <CardContent>
             <p className="text-sm text-destructive">{displayAnalysisError(result.error)}</p>
+            <Button asChild variant="outline" className="mt-4">
+              <Link href="/import">Torna alle importazioni</Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -74,60 +71,31 @@ export default async function AnalyzePage({
     notFound()
   }
 
-  const isUnknownFormat = Boolean(result.data && isUnknownFormatAnalysis(result.data))
+  if (isUnknownFormatAnalysis(result.data)) {
+    const configureUrl = `/import/${encodeURIComponent(fileId)}/configure${
+      from ? `?from=${encodeURIComponent(from)}` : ''
+    }`
+    redirect(configureUrl)
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold">Analisi file</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Verifica i dettagli prima di confermare l&apos;importazione
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold">Analisi file</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Verifica i dettagli prima di confermare l&apos;importazione
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/import">Torna alle importazioni</Link>
+        </Button>
       </div>
 
-      {isUnknownFormat && (
-        <Card className="max-w-2xl overflow-hidden border-border bg-card shadow-sm">
-          <CardHeader className="space-y-3 pb-3">
-            <div className="flex items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20 dark:text-amber-400">
-                <AlertCircle className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                  Formato file
-                </p>
-                <CardTitle className="text-lg">Formato non riconosciuto</CardTitle>
-                <CardDescription>
-                  Il file è leggibile, ma non corrisponde ancora ai formati disponibili.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground">
-              Crea un formato privato usando le intestazioni del file: salveremo la configurazione
-              solo per il tuo account e riproveremo subito l&apos;analisi dello stesso documento.
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button asChild>
-                <Link href={`/import/${encodeURIComponent(fileId)}/configure${from ? `?from=${encodeURIComponent(from)}` : ''}`}>
-                  Configura formato privato
-                </Link>
-              </Button>
-              <Button asChild variant="ghost">
-                <Link href="/import">Torna alle importazioni</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {!isUnknownFormat && (
-        <ImportPreview
-          result={result.data}
-          returnTo={from === 'onboarding' ? '/onboarding?step=2' : undefined}
-        />
-      )}
+      <ImportPreview
+        result={result.data}
+        returnTo={from === 'onboarding' ? '/onboarding?step=2' : undefined}
+      />
     </div>
   )
 }

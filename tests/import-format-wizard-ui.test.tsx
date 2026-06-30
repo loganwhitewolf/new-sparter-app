@@ -182,4 +182,18 @@ describe('ConfigureImportFormatPage', () => {
     expect(html).not.toContain('objectKey')
     expect(html).not.toContain('presigned')
   })
+
+  it('shows unknown-format guidance and a back link when wizard context loads', async () => {
+    mocks.loadContext.mockResolvedValueOnce({ error: null, data: context })
+    mocks.listPlatforms.mockResolvedValueOnce({ error: null, data: samplePlatforms })
+
+    const element = await ConfigureImportFormatPage({
+      params: Promise.resolve({ fileId: context.fileId }),
+    })
+    const html = renderToStaticMarkup(element)
+
+    expect(html).toContain('non corrisponde ancora ai formati disponibili')
+    expect(html).toContain('Torna alle importazioni')
+    expect(html).toContain('Configura un formato privato')
+  })
 })
