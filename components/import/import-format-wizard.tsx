@@ -227,8 +227,15 @@ export function ImportFormatWizard({
       : platformNameInput
 
   // Step 1: platform selection — rendered only when currentStep === 'platform'
+  const isDuplicateName =
+    selectedPlatformId === 'new' &&
+    attachablePlatforms.some(
+      (p) => p.name.toLowerCase() === platformNameInput.trim().toLowerCase(),
+    )
+
   const step1CanAdvance =
     selectedPlatformId !== null &&
+    !isDuplicateName &&
     (typeof selectedPlatformId === 'number' || platformNameInput.trim().length > 0)
 
   return (
@@ -306,6 +313,11 @@ export function ImportFormatWizard({
                         value={platformNameInput}
                         onChange={(e) => setPlatformNameInput(e.target.value)}
                       />
+                      {isDuplicateName && (
+                        <p className="text-xs text-destructive" role="alert">
+                          Esiste già una piattaforma con questo nome. Selezionala dalla lista sopra.
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
