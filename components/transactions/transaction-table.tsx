@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ExternalLink, MoreHorizontal, Split, Tag, Unlink } from 'lucide-react'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 import { toast } from 'sonner'
@@ -11,6 +11,7 @@ import { CounterpartPickerDialog } from '@/components/transactions/counterpart-p
 import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
 import { TransactionPairPopover } from '@/components/transactions/transaction-pair-popover'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
+import { BulkCategorizeDialog } from '@/components/expenses/bulk-categorize-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -116,6 +117,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkCategorizeOpen, setBulkCategorizeOpen] = useState(false)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const [categorizeTarget, setCategorizeTarget] = useState<{ id: string; title: string } | null>(null)
   // Pair target: set when "Collega rimborso" is selected (D-09, PAIR-01)
@@ -126,6 +128,16 @@ export function TransactionTable({ transactions, route, searchParams, categories
   } | null>(null)
 
   const { activeSort, activeDir, onSort } = useToolbarSort(route)
+
+  const selectedExpenseIds = useMemo(() => {
+    const idSet = new Set<string>()
+    for (const transaction of loadedTransactions) {
+      if (selectedIds.includes(transaction.id) && transaction.expenseId) {
+        idSet.add(transaction.expenseId)
+      }
+    }
+    return [...idSet]
+  }, [loadedTransactions, selectedIds])
 
   const allSelected =
     loadedTransactions.length > 0 && selectedIds.length === loadedTransactions.length
@@ -260,6 +272,14 @@ export function TransactionTable({ transactions, route, searchParams, categories
   }
 
   function markExpenseCategorized(transactionId: string, subCategoryId?: string) {
+    const transaction = loadedTransactions.find((t) => t.id === transactionId)
+    if (transaction?.expenseId) {
+      markExpensesCategorized([transaction.expenseId], subCategoryId)
+    }
+  }
+
+  function markExpensesCategorized(expenseIds: string[], subCategoryId?: string) {
+    const expenseIdSet = new Set(expenseIds)
     const selectedSubCategory = subCategoryId
       ? categories
           .flatMap((category) =>
@@ -270,16 +290,24 @@ export function TransactionTable({ transactions, route, searchParams, categories
 
     setLoadedTransactions((prev) =>
       prev.map((t) =>
-        t.id === transactionId
+        t.expenseId && expenseIdSet.has(t.expenseId)
           ? {
               ...t,
-              expenseStatus: '2' as const,
+              expenseStatus: '3' as const,
               expenseCategoryName: selectedSubCategory?.category.name ?? t.expenseCategoryName,
               expenseSubCategoryName: selectedSubCategory?.subCategory.name ?? t.expenseSubCategoryName,
             }
           : t,
       ),
     )
+  }
+
+  function openBulkCategorize() {
+    if (selectedExpenseIds.length === 0) {
+      toast.error('Nessuna delle transazioni selezionate ha una spesa collegata.')
+      return
+    }
+    setBulkCategorizeOpen(true)
   }
 
   if (loadedTransactions.length === 0) {
@@ -649,7 +677,24 @@ export function TransactionTable({ transactions, route, searchParams, categories
 
     <TransactionBulkActionBar
       selectedIds={selectedIds}
+      canBulkCategorize={selectedExpenseIds.length > 0}
+      onBulkCategorize={openBulkCategorize}
       onBulkDelete={() => setBulkDeleteOpen(true)}
+    />
+
+    <BulkCategorizeDialog
+      open={bulkCategorizeOpen}
+      onOpenChange={setBulkCategorizeOpen}
+      selectedIds={selectedExpenseIds}
+      categories={categories}
+      mostUsed={mostUsed}
+      successCount={selectedIds.length}
+      successNoun="transazioni"
+        onSuccess={(subCategoryId) => {
+          markExpensesCategorized(selectedExpenseIds, subCategoryId)
+          setSelectedIds([])
+          setBulkCategorizeOpen(false)
+        }}
     />
 
     <BulkDeleteTransactionsDialog
