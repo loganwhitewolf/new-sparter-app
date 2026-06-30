@@ -8,17 +8,18 @@ import { PDF_IMPORT_PLATFORM_SLUGS } from '@/lib/services/import-parsers'
 export type ImportFormatDatabase = Pick<typeof db, 'select'>
 
 // Surface 1 — Row type: reflects the post-58-01 platform schema
-// proposedByUserId added; dropped columns: none referenced below
+// platform.visibility was dropped (ADR 0015); importFormatVersion.visibility is retained.
 type ImportFormatRow = {
+  // Fields sourced from importFormatVersion
   id: number
   platformId: number
   version: number
   headerSignature: string
   isActive: boolean
   ownerUserId: string | null
-  visibility: string
+  visibility: string      // importFormatVersion.visibility — still present post-58-01
   reviewStatus: string
-  // Contract fields sourced from importFormatVersion (ADR 0013)
+  // Parsing contract fields (ADR 0013)
   delimiter: string
   timestampColumn: string
   descriptionColumn: string
@@ -28,7 +29,7 @@ type ImportFormatRow = {
   negativeAmountColumn: string | null
   multiplyBy: number
   descriptionStripPattern: string | null
-  // Identity fields sourced from platform (proposedByUserId replaces ownerUserId; visibility dropped)
+  // Identity fields sourced from platform (post-58-01: proposedByUserId added, platform.visibility removed)
   platformProposedByUserId: string | null
   platformReviewStatus: string
   platformIsActive: boolean
