@@ -144,7 +144,10 @@ describe('ImportFormatWizard UI', () => {
 
     expect(html).toContain('Fineco')
     expect(html).toContain('Intesa SP')
+    expect(html).toContain('Cerca piattaforma')
     expect(html).toContain('Crea una nuova platform')
+    expect(html).toContain('xl:grid-cols-5')
+    expect(html).toContain('border-t pt-4')
     // Step 1 is shown; column form (step 2) is not rendered yet
     expect(html).not.toContain('name="timestampColumn"')
   })
