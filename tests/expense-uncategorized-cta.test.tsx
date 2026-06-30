@@ -33,8 +33,10 @@ describe('ExpenseUncategorizedCta', () => {
     const html = renderToStaticMarkup(
       <ExpenseUncategorizedCta uncategorizedCount={12} route="/expenses" />,
     )
-    expect(html).toContain('Da categorizzare (12)')
+    expect(html).toContain('Da categorizzare')
+    expect(html).toContain('>12<')
     expect(html).toContain('aria-pressed="false"')
+    expect(html).toContain('data-size="sm"')
   })
 
   it('renders active state when status=uncategorized is in the URL', () => {
@@ -43,7 +45,8 @@ describe('ExpenseUncategorizedCta', () => {
       <ExpenseUncategorizedCta uncategorizedCount={5} route="/expenses" />,
     )
     expect(html).toContain('aria-pressed="true"')
-    expect(html).toContain('border-amber-400')
+    expect(html).toContain('ring-primary/20')
+    expect(html).toContain('bg-primary/10')
   })
 
   it('still renders when count is 0 but filter is active (toggle off)', () => {
@@ -51,7 +54,8 @@ describe('ExpenseUncategorizedCta', () => {
     const html = renderToStaticMarkup(
       <ExpenseUncategorizedCta uncategorizedCount={0} route="/expenses" />,
     )
-    expect(html).toContain('Da categorizzare (0)')
+    expect(html).toContain('Da categorizzare')
+    expect(html).toContain('>0<')
     expect(html).toContain('aria-pressed="true"')
   })
 })
