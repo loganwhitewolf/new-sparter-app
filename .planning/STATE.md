@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-06-29)
 
 ## Current Position
 
-Phase: 59 (import-wizard-attach-format) — EXECUTING
-Phase: 59 (import-wizard-attach-format) — NEXT
-Status: Executing Phase 59
+Phase: 59 (import-wizard-attach-format) — COMPLETE
+Phase: 60 (seed-slug-linkage-and-docs) — NEXT
+Status: Phase 59 complete — verified 2026-06-30
 Last activity: 2026-06-30 — Phase 59 execution resumed (wave continue)
 
 ## Roadmap (v2.3 — Phases 58–60)
@@ -38,7 +38,7 @@ Last activity: 2026-06-30 — Phase 59 execution resumed (wave continue)
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
 | 58 | platform-identity-and-access | PLAT-01, PLAT-02, PLAT-03 | Complete (verified 2026-06-29) |
-| 59 | import-wizard-attach-format | PLAT-04 | Not started |
+| 59 | import-wizard-attach-format | PLAT-04 | Complete (verified 2026-06-30) |
 | 60 | seed-slug-linkage-and-docs | PLAT-05, PLAT-06 | Not started |
 
 **Coverage:** 6/6 PLAT requirements mapped. Decision contract LOCKED (ADR 0015) — pure implementation, no discovery.
