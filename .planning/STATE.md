@@ -7,7 +7,7 @@ current_phase_name: import-wizard-attach-format
 status: complete
 stopped_at: Phase 59 all plans complete — PLAT-04 delivered
 last_updated: "2026-06-29T15:22:00.000Z"
-last_activity: 2026-06-30 - Completed quick task 260630-h1j: Nome file cliccabile → filtro import
+last_activity: 2026-06-30 - Completed quick task 260630-mkf: Platform picker card grid in import wizard
 progress:
   total_phases: 3
   completed_phases: 2
@@ -105,6 +105,7 @@ Nessuno.
 | 260630-gbv | Rinomina import inline con matita come expenses/transazioni | 2026-06-30 | 7927bf8 |
 | 260630-gy0 | Bulk categorizzazione massiva nella vista Transazioni | 2026-06-30 | a85a0ec |
 | 260630-h1j | Nome file cliccabile in transazioni → filtro tabella import | 2026-06-30 | a85fb27 |
+| 260630-mkf | Platform picker card grid con ricerca nel wizard import step 1 | 2026-06-30 | 380e4a4 |
 
 ## Deferred Items
 
