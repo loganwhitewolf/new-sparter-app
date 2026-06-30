@@ -1,5 +1,9 @@
 'use client'
 
+import { Tag } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { ClientMountIcon } from '@/components/ui/client-mount-icon'
 import { useTableUrl } from '@/components/data-table/use-table-url'
 import { cn } from '@/lib/utils'
 
@@ -9,8 +13,7 @@ type Props = {
 }
 
 /**
- * One-click toggle for ?status=uncategorized on the expenses list.
- * Pill in the page header — replaces the categorization filter in the toolbar.
+ * Toggle for ?status=uncategorized — styled as a header action beside "Nuova spesa".
  */
 export function ExpenseUncategorizedCta({ uncategorizedCount, route }: Props) {
   const { searchParams, isPending, updateParam } = useTableUrl(route)
@@ -23,20 +26,31 @@ export function ExpenseUncategorizedCta({ uncategorizedCount, route }: Props) {
   }
 
   return (
-    <button
+    <Button
       type="button"
+      size="sm"
+      variant="outline"
       onClick={handleClick}
       disabled={isPending}
       aria-pressed={isActive}
-      className={cn(
-        'rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors',
+      aria-label={
         isActive
-          ? 'border-amber-400 bg-amber-100 text-amber-900'
-          : 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:text-amber-900',
-        isPending && 'opacity-60',
+          ? 'Mostra tutte le spese — filtro da categorizzare attivo'
+          : 'Mostra solo le spese da categorizzare'
+      }
+      className={cn(
+        isActive &&
+          'border-primary bg-primary/10 text-primary shadow-none ring-2 ring-primary/20 hover:bg-primary/15 hover:text-primary',
       )}
     >
-      Da categorizzare ({uncategorizedCount})
-    </button>
+      <ClientMountIcon icon={Tag} ariaHidden className="size-4" />
+      <span>Da categorizzare</span>
+      <Badge
+        variant={isActive ? 'default' : 'secondary'}
+        className="h-5 min-w-5 justify-center px-1.5 tabular-nums"
+      >
+        {uncategorizedCount}
+      </Badge>
+    </Button>
   )
 }
