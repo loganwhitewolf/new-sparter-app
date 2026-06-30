@@ -127,7 +127,6 @@ function makeRow(
 }
 
 const DISPLAY_NAME = "Gennaio 2026";
-const onRename = vi.fn();
 const onDelete = vi.fn();
 const onDeleteStale = vi.fn();
 // Added with TRIG-02 (Plan 54-03): recheckRegexAction per-row re-check
@@ -138,7 +137,6 @@ function render(row: ReturnType<typeof makeRow>, displayName = DISPLAY_NAME) {
     createElement(ImportRowActions, {
       row,
       displayName,
-      onRename,
       onDelete,
       onDeleteStale,
       onRecheckRegex,
@@ -229,6 +227,12 @@ describe("ImportRowActions — state matrix", () => {
     const html = render(makeRow({ status: "imported" }));
 
     expect(html).toContain("Elimina");
+  });
+
+  it("imported: overflow menu does not expose rename (inline edit on file name)", () => {
+    const html = render(makeRow({ status: "imported" }));
+
+    expect(html).not.toContain("Rinomina");
   });
 
   it("imported: overflow menu trigger has accessible aria-label", () => {
