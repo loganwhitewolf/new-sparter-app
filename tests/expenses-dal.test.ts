@@ -47,6 +47,20 @@ vi.mock('@/lib/db', () => ({
   db: {
     select: (shape: unknown) => {
       mocks.selectedShapes.push(shape)
+      if (
+        typeof shape === 'object' &&
+        shape !== null &&
+        'total' in (shape as Record<string, unknown>)
+      ) {
+        return {
+          from: vi.fn(() => ({
+            where: vi.fn((arg: unknown) => {
+              mocks.whereArgs.push(arg)
+              return Promise.resolve([{ total: 7 }])
+            }),
+          })),
+        }
+      }
       return makeQueryChain([])
     },
   },
@@ -58,6 +72,7 @@ function mockSql(strings: TemplateStringsArray, ...values: unknown[]) {
 vi.mock('drizzle-orm', () => ({
   and: (...args: unknown[]) => ({ op: 'and', args }),
   asc: (column: unknown) => ({ op: 'asc', column }),
+  count: () => ({ op: 'count' }),
   desc: (column: unknown) => ({ op: 'desc', column }),
   eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
   gte: (left: unknown, right: unknown) => ({ op: 'gte', left, right }),
@@ -130,6 +145,7 @@ const {
   expenseTotalAmountAbsSortKey,
   getExpenseSortColumn,
   getExpenses,
+  getUncategorizedExpenseCount,
 } = await import('../lib/dal/expenses')
 
 describe('expense DAL list pagination', () => {
@@ -368,5 +384,26 @@ describe('expense DAL list pagination', () => {
       left: 'subCategory.id',
       right: 42,
     })
+  })
+})
+
+describe('getUncategorizedExpenseCount', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.whereArgs.length = 0
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+  })
+
+  it("counts expenses with status in ['1','4'] for the current user", async () => {
+    const total = await getUncategorizedExpenseCount()
+
+    expect(total).toBe(7)
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    expect(where.args).toEqual(
+      expect.arrayContaining([
+        { op: 'eq', left: 'expense.userId', right: 'user-1' },
+        { op: 'inArray', left: 'expense.status', right: ['1', '4'] },
+      ]),
+    )
   })
 })

@@ -21,7 +21,7 @@ const DIRECTION_LABELS: Record<string, string> = {
  *   - category: select (via subCategory → category join)
  *   - subCategory: select (dependsOn:'category')
  *   - platform: select (via file join)
- *   - status: categorization — 2 states (D-21/D-23)
+ *   - status: removed from toolbar — quick CTA in page header (quick-260630-dhw)
  *   - NO month-multi filter (D-11 — Expenses have no temporal filter; aggregate entity)
  *   - sortable: every displayed column (D-17)
  */
@@ -72,13 +72,6 @@ export const expensesTableConfig: TableConfig = {
       type: 'select',
       options: [],
       toChip: (v) => `Piattaforma: ${v}`,
-    },
-    {
-      key: 'status',
-      label: 'Categorizzazione',
-      type: 'status',
-      toChip: (v) =>
-        v === 'categorized' ? 'Solo categorizzate' : 'Solo da categorizzare',
     },
   ],
   sortable: [

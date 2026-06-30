@@ -53,12 +53,35 @@ export function ImportRowActions({ row, displayName, onRename, onDelete, onDelet
 
   if (row.status === 'analyzing') {
     return (
-      <div
-        className="flex items-center justify-end gap-1.5 text-sm text-muted-foreground"
-        aria-label="Analisi in corso, nessuna azione disponibile"
-      >
-        <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-        <span>Analisi…</span>
+      <div className="flex items-center justify-end gap-1">
+        <div
+          className="flex items-center gap-1.5 text-sm text-muted-foreground"
+          aria-label="Analisi in corso"
+        >
+          <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>Analisi…</span>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label={`Altre azioni per ${displayName}`}
+            >
+              <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem
+              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+              onClick={() => onDeleteStale(row)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+              Elimina
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     )
   }
