@@ -7,7 +7,7 @@ current_phase_name: import-wizard-attach-format
 status: complete
 stopped_at: Phase 59 all plans complete — PLAT-04 delivered
 last_updated: "2026-06-29T15:22:00.000Z"
-last_activity: 2026-06-30 - Completed quick task 260630-dhw: CTA da categorizzare su vista Spese
+last_activity: 2026-06-30 - Completed quick task 260630-fdt: Unifica CTA step 4 onboarding
 progress:
   total_phases: 3
   completed_phases: 2
@@ -101,6 +101,7 @@ Nessuno.
 | 260629-m9i | Detach transaction to dedicated expense + re-import manual lock | 2026-06-29 | 90bfa69 |
 | 260630-dd7 | Delete stuck analyzing imports from file table | 2026-06-30 | 60ee221 |
 | 260630-dhw | CTA da categorizzare su vista Spese (pill header, rimuovi filtro toolbar) | 2026-06-30 | cc09ab3 |
+| 260630-fdt | Unifica CTA step 4 onboarding — un solo pulsante verde | 2026-06-30 | 522522a |
 
 ## Deferred Items
 
