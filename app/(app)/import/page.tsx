@@ -11,7 +11,7 @@ import { APP_ROUTES } from '@/lib/routes'
 /** Returns true when any filter param that narrows results is active */
 function hasActiveImportFilters(params: ImportSearchParams): boolean {
   const keys = [
-    'q', 'platform', 'statusBucket', 'months', 'amountMin', 'amountMax',
+    'q', 'fileId', 'platform', 'statusBucket', 'months', 'amountMin', 'amountMax',
     // Legacy date params — still recognized as "active" for empty-state variant
     'importedFrom', 'importedTo', 'referenceFrom', 'referenceTo',
   ]
@@ -36,6 +36,7 @@ function buildImportTableKey(
 ) {
   const filterKey = [
     filters.q ?? '',
+    filters.fileId ?? '',
     filters.platform ?? '',
     filters.statusBucket ?? '',
     (filters.months ?? []).join(','),

@@ -94,6 +94,7 @@ function hasActiveFilters(filters: ParsedImportFilters) {
   // Check only the canonical Wave 4+ filter keys.
   return Boolean(
     filters.q ||
+    filters.fileId ||
     filters.platform ||
     filters.statusBucket ||
     (filters.months && filters.months.length > 0) ||

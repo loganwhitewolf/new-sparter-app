@@ -155,6 +155,13 @@ describe('parseImportFilters', () => {
     })
     expect(parseImportFilters({ sort: 'bogus', dir: 'sideways' })).toEqual({})
   })
+
+  it('accepts a valid fileId UUID and rejects malformed values', () => {
+    const uuid = '11111111-1111-4111-8111-111111111111'
+    expect(parseImportFilters({ fileId: uuid })).toEqual({ fileId: uuid })
+    expect(parseImportFilters({ fileId: 'not-a-uuid' })).toEqual({})
+    expect(parseImportFilters({ fileId: '' })).toEqual({})
+  })
 })
 
 describe('CreatePrivateImportFormatSchema', () => {

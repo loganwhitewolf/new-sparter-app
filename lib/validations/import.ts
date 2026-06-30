@@ -198,6 +198,7 @@ export type ImportSearchParams = Record<string, string | string[] | undefined>
 
 export type ParsedImportFilters = {
   q?: string
+  fileId?: string
   importedFrom?: string
   importedTo?: string
   importedFromDate?: Date
@@ -301,6 +302,9 @@ const PLATFORM_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 export function parseImportFilters(input: ImportSearchParams): ParsedImportFilters {
   const q = firstTrimmed(input.q)
+  const rawFileId = firstTrimmed(input.fileId)
+  const parsedFileId = rawFileId ? FileIdSchema.safeParse(rawFileId) : null
+  const fileId = parsedFileId?.success ? parsedFileId.data : undefined
 
   const importedFromDate = parseDateOnly(firstTrimmed(input.importedFrom))
   const importedToDate = getInclusiveDate(firstTrimmed(input.importedTo))
@@ -328,6 +332,7 @@ export function parseImportFilters(input: ImportSearchParams): ParsedImportFilte
 
   return {
     ...(q && q.length <= MAX_IMPORT_QUERY_LENGTH ? { q } : {}),
+    ...(fileId ? { fileId } : {}),
     ...(importedFromStr ? { importedFrom: importedFromStr, importedFromDate } : {}),
     ...(importedToStr ? { importedTo: importedToStr, importedToDate } : {}),
     ...(referenceFromStr ? { referenceFrom: referenceFromStr, referenceFromDate } : {}),

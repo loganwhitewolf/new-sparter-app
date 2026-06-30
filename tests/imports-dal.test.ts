@@ -263,6 +263,19 @@ describe('imports DAL read model', () => {
     expect(mocks.offsetArgs).toEqual([0])
   })
 
+  it('scopes imports to a single file when fileId filter is set', async () => {
+    const fileId = '11111111-1111-4111-8111-111111111111'
+    await getImportRows({ fileId })
+
+    expect(mocks.whereArgs[0]).toEqual({
+      op: 'and',
+      args: [
+        { op: 'eq', left: 'file.userId', right: 'user-1' },
+        { op: 'eq', left: 'file.id', right: fileId },
+      ],
+    })
+  })
+
   it('orders newest imports first using imported, uploaded, then created timestamps, with file.id as tiebreaker', async () => {
     expect(importListOrderTimestamp).toEqual({
       op: 'sql',

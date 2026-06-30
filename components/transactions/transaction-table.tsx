@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { ExternalLink, MoreHorizontal, Split, Tag, Unlink } from 'lucide-react'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 import { toast } from 'sonner'
@@ -49,6 +50,7 @@ import type { TransactionListRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import type { TransactionSearchParams } from '@/lib/validations/transactions'
+import { APP_ROUTES } from '@/lib/routes'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -472,12 +474,13 @@ export function TransactionTable({ transactions, route, searchParams, categories
                       <span className="truncate text-sm">
                         {transaction.platformName ?? 'Piattaforma non disponibile'}
                       </span>
-                      <span
-                        className="truncate text-xs text-muted-foreground"
-                        title={transaction.fileName ?? undefined}
+                      <Link
+                        href={`${APP_ROUTES.import}?fileId=${encodeURIComponent(transaction.fileId)}`}
+                        className="truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
+                        title={`Apri importazione: ${transaction.fileName ?? `Riga ${transaction.rowIndex + 1}`}`}
                       >
                         {transaction.fileName ?? `Riga ${transaction.rowIndex + 1}`}
-                      </span>
+                      </Link>
                     </div>
                   ) : (
                     <Badge variant="outline" className="w-fit">
