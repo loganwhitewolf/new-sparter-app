@@ -7,7 +7,7 @@ current_phase_name: import-wizard-attach-format
 status: complete
 stopped_at: Phase 59 all plans complete — PLAT-04 delivered
 last_updated: "2026-06-30T09:42:31.986Z"
-last_activity: 2026-06-30 - Completed quick task 260630-mpw: Compattare flusso import skip analyze per formato sconosciuto
+last_activity: 2026-06-30 - Completed quick task 260630-opy: Ereditare campi parsing da global format version
 last_activity_desc: Phase 59 complete; quick-task branch merged into main
 progress:
   total_phases: 3
@@ -108,6 +108,7 @@ Nessuno.
 | 260630-h1j | Nome file cliccabile in transazioni → filtro tabella import | 2026-06-30 | a85fb27 |
 | 260630-mkf | Platform picker card grid con ricerca nel wizard import step 1 | 2026-06-30 | 380e4a4 |
 | 260630-mpw | Skip analyze per formato sconosciuto, redirect a configure | 2026-06-30 | f525630 |
+| 260630-opy | Ereditare campi parsing da global format version nel wizard privato | 2026-06-30 | 364b553 |
 
 ## Deferred Items
 
