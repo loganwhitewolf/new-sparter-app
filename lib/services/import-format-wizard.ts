@@ -1,7 +1,7 @@
 import 'server-only'
 
 import crypto from 'node:crypto'
-import { and, eq, ilike, or, sql } from 'drizzle-orm'
+import { and, eq, ilike, max, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { file as fileTable, importFormatVersion, platform } from '@/lib/db/schema'
 import { getFileForUser } from '@/lib/dal/files'
@@ -292,6 +292,14 @@ async function createPrivateRows(
     resolvedPlatformSlug = createdPlatform.slug
   }
 
+  // Determine next version number: MAX(version) for this platform + 1.
+  // Needed for the attach branch where the platform may already have version 1 (system format).
+  const maxVersionRows = await database
+    .select({ v: max(importFormatVersion.version) })
+    .from(importFormatVersion)
+    .where(eq(importFormatVersion.platformId, resolvedPlatformId))
+  const nextVersion = (maxVersionRows[0]?.v ?? 0) + 1
+
   const createdVersions = await database
     .insert(importFormatVersion)
     .values({
@@ -299,7 +307,7 @@ async function createPrivateRows(
       ownerUserId: input.userId,
       visibility: PRIVATE_VISIBILITY,
       reviewStatus: PENDING_REVIEW_STATUS,
-      version: 1,
+      version: nextVersion,
       headerSignature: header,
       notes: 'Created from private import format wizard.',
       isActive: true,

@@ -196,3 +196,172 @@ _Files reviewed list:_
   - lib/actions/import.ts
   - components/import/import-format-wizard.tsx
   - app/(app)/import/[fileId]/configure/page.tsx
+
+---
+
+---
+phase: 59
+plan: 04
+status: issues-found
+reviewed_files:
+  - components/import/import-format-wizard.tsx
+  - tests/import-format-wizard-ui.test.tsx
+---
+
+## Code Review — Phase 59, Plan 04 (isDuplicateName gap closure)
+
+### Summary
+
+La logica `isDuplicateName` e il gate `step1CanAdvance` sono implementati correttamente per il caso base. Due warning: il messaggio dell'hint non nomina la piattaforma corrispondente (deviazione dalla `<behavior>` spec del piano) e il path `isDuplicateName=true` non è coperto da nessun test automatizzato per limitazione strutturale di `renderToStaticMarkup` con componenti `useState`.
+
+---
+
+### Findings
+
+---
+
+#### Critical
+
+None.
+
+---
+
+#### Warning
+
+**WR-01 — Hint message non nomina la piattaforma duplicata (deviazione dalla spec `<behavior>`)**
+
+**File:** `components/import/import-format-wizard.tsx:317-319`
+
+**Issue:**
+La sezione `<behavior>` del plan 04 specifica esplicitamente: _"An inline hint paragraph is rendered below the Input when isDuplicateName is true, **naming the matching platform** so the user knows to select it from the list instead."_ L'implementazione mostra solo il messaggio generico:
+
+```
+Esiste già una piattaforma con questo nome. Selezionala dalla lista sopra.
+```
+
+Il nome della piattaforma corrispondente non è incluso nel testo. L'utente con molte piattaforme nella lista potrebbe non individuare subito quale sia il duplicato — la spec richiedeva questa informazione esplicitamente per ridurre la frizione UX.
+
+(Nota: la sezione `<action>` del piano riporta il messaggio senza il nome, in contraddizione con `<behavior>`. L'implementazione ha seguito `<action>`, ma il requisito UAT originale e la `<behavior>` section sono più autorevoli per la feature completa.)
+
+**Fix:**
+Estrarre il nome della piattaforma corrispondente e includerlo nel messaggio:
+
+```tsx
+// Aggiungere nella sezione computed values (riga ~230)
+const duplicatePlatform = selectedPlatformId === 'new'
+  ? attachablePlatforms.find(
+      (p) => p.name.toLowerCase() === platformNameInput.trim().toLowerCase(),
+    )
+  : undefined
+
+// Aggiornare isDuplicateName
+const isDuplicateName = duplicatePlatform !== undefined
+
+// Aggiornare il messaggio (riga 317-319)
+{isDuplicateName && (
+  <p className="text-xs text-destructive" role="alert">
+    Esiste già una piattaforma con questo nome ({duplicatePlatform!.name}). Selezionala dalla lista sopra.
+  </p>
+)}
+```
+
+---
+
+**WR-02 — Path `isDuplicateName=true` non testato: nessun test verifica la visibilità dell'hint nel markup**
+
+**File:** `tests/import-format-wizard-ui.test.tsx`
+
+**Issue:**
+La feature principale del plan 04 è che il testo `"Esiste già una piattaforma con questo nome"` appaia nel markup quando `isDuplicateName` è `true`. Nessun test del file verifica questa asserzione positiva. I test aggiunti coprono solo:
+- Il pulsante disabled nel render iniziale (stato `platformNameInput=''`, `isDuplicateName` sempre `false`)
+- L'assenza dell'hint quando `attachablePlatforms=[]` (no-false-positive)
+- La validazione server-side `validateWizardFields` (ortogonale)
+
+La limitazione è strutturale: `renderToStaticMarkup` esegue solo il render iniziale e non può simulare input dell'utente (`useState` inizializzato a `''`). Il path positivo (`isDuplicateName=true`) richiede `@testing-library/react` con `userEvent.type` oppure un refactoring che esponga `isDuplicateName` come prop controllata per i test.
+
+**Fix (opzione A — raccomandata, minimal):**
+Estrarre `isDuplicateName` come prop opzionale iniettabile per i test:
+
+```tsx
+type Props = {
+  // ...existing props...
+  _testIsDuplicateName?: boolean  // test-only override
+}
+
+// Nel componente:
+const isDuplicateName =
+  props._testIsDuplicateName ??
+  (selectedPlatformId === 'new' &&
+    attachablePlatforms.some(
+      (p) => p.name.toLowerCase() === platformNameInput.trim().toLowerCase(),
+    ))
+```
+
+Aggiungere nel test:
+
+```tsx
+it('shows duplicate-name hint and disables Continua when isDuplicateName is true', () => {
+  const html = renderToStaticMarkup(
+    createElement(ImportFormatWizard, {
+      context,
+      attachablePlatforms: samplePlatforms,
+      _testIsDuplicateName: true,
+    }),
+  )
+  expect(html).toContain('Esiste già una piattaforma con questo nome')
+  expect(html).toContain('disabled')
+})
+```
+
+**Fix (opzione B):**
+Migrare i test a `@testing-library/react` + `userEvent` per testare il comportamento dinamico reale senza prop di test.
+
+---
+
+#### Info
+
+**IN-01 — Stringa UI "nuova platform" non tradotta (preesistente)**
+
+**File:** `components/import/import-format-wizard.tsx:301`
+
+**Issue:**
+`"+ Crea una nuova platform"` — "platform" è inglese. Il progetto usa l'italiano per tutte le superfici utente. L'issue è preesistente al plan 04 ma è presente nei file modificati.
+
+**Fix:**
+```tsx
+<span className="font-medium">+ Crea una nuova piattaforma</span>
+```
+
+---
+
+**IN-02 — Nessun test per la scomparsa dell'hint dopo correzione del nome**
+
+**File:** `tests/import-format-wizard-ui.test.tsx`
+
+**Issue:**
+Il piano specifica: _"The duplicate warning disappears as soon as the input no longer collides."_ Questo comportamento dinamico non è coperto da nessun test. È correlato alla stessa limitazione strutturale di WR-02 (render statico), ma vale la pena tracciarlo separatamente come gap di coverage per futura migrazione a `@testing-library/react`.
+
+**Fix:**
+Aggiungere al backlog di coverage quando i test vengono migrati a `@testing-library/react`:
+```tsx
+it('hides duplicate-name hint when name is changed to non-colliding value', async () => {
+  // userEvent.type → 'fineco' → hint visible
+  // userEvent.clear + userEvent.type → 'MioBank' → hint hidden
+})
+```
+
+---
+
+### Verdict
+
+**Issues found** — nessun CRITICAL. I due WARNING (WR-01: messaggio senza nome piattaforma; WR-02: path positivo non testato) dovrebbero essere risolti prima del merge per rispettare la spec e la coverage. I due INFO sono cleanup raccomandati.
+
+---
+
+_Reviewed: 2026-06-30_
+_Reviewer: Claude (gsd-code-reviewer)_
+_Depth: standard_
+_Files reviewed: 2 (plan 04 scope)_
+_Files reviewed list:_
+  - components/import/import-format-wizard.tsx
+  - tests/import-format-wizard-ui.test.tsx

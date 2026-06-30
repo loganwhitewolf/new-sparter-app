@@ -58,6 +58,10 @@ type Props = {
   from?: string
   createAction?: typeof createPrivateImportFormatAction
   completeOnboardingAction?: typeof completeOnboardingPrivateImportAction
+  /** Test-only override — bypasses state-based isDuplicateName computation in static-render tests. */
+  _testIsDuplicateName?: boolean
+  /** Test-only override — sets the initial selectedPlatformId for static-render tests. */
+  _testInitialSelectedPlatformId?: SelectedPlatform
 }
 
 function emptyState(): ImportActionState<CreatePrivateImportFormatResult> {
@@ -72,12 +76,19 @@ export function getVisibleHeaderOptions(headers: readonly string[]) {
   return headers.slice(0, MAX_HEADER_OPTIONS)
 }
 
-export function validateWizardFields(values: WizardFieldValues, headers: readonly string[], isExcel = false) {
+export function validateWizardFields(
+  values: WizardFieldValues,
+  headers: readonly string[],
+  isExcel = false,
+  existingPlatformId?: number,
+) {
   const errors: string[] = []
   const availableHeaders = new Set(headers)
   const requiredColumns = [values.timestampColumn, values.descriptionColumn]
 
-  if (!values.platformName.trim()) errors.push('Inserisci il nome della piattaforma.')
+  if (existingPlatformId === undefined && !values.platformName.trim()) {
+    errors.push('Inserisci il nome della piattaforma.')
+  }
   if (!isExcel && !values.delimiter) errors.push('Seleziona il separatore del file.')
   if (!values.timestampColumn) errors.push('Seleziona la colonna della data.')
   if (!values.descriptionColumn) errors.push('Seleziona la colonna della descrizione.')
@@ -136,6 +147,8 @@ export function ImportFormatWizard({
   from,
   createAction = createPrivateImportFormatAction,
   completeOnboardingAction = completeOnboardingPrivateImportAction,
+  _testIsDuplicateName,
+  _testInitialSelectedPlatformId,
 }: Props) {
   const router = useRouter()
   const [state, formAction, isPending] = useActionState(createAction, emptyState())
@@ -148,7 +161,11 @@ export function ImportFormatWizard({
     attachablePlatforms.length === 0 ? 'columns' : 'platform',
   )
   const [selectedPlatformId, setSelectedPlatformId] = useState<SelectedPlatform>(
-    attachablePlatforms.length === 0 ? 'new' : null,
+    _testInitialSelectedPlatformId !== undefined
+      ? _testInitialSelectedPlatformId
+      : attachablePlatforms.length === 0
+        ? 'new'
+        : null,
   )
   const [platformNameInput, setPlatformNameInput] = useState('')
 
@@ -206,7 +223,12 @@ export function ImportFormatWizard({
   }, [completeOnboardingAction, context.fileId, createdFormatVersionId, from, isOnboardingFlow, router])
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    const errors = validateWizardFields(readFormValues(event.currentTarget), context.headers, isExcel)
+    const errors = validateWizardFields(
+      readFormValues(event.currentTarget),
+      context.headers,
+      isExcel,
+      typeof selectedPlatformId === 'number' ? selectedPlatformId : undefined,
+    )
     setClientErrors(errors)
     setCompletionError(null)
     if (errors.length > 0) {
@@ -227,8 +249,18 @@ export function ImportFormatWizard({
       : platformNameInput
 
   // Step 1: platform selection — rendered only when currentStep === 'platform'
+  const duplicatePlatform =
+    selectedPlatformId === 'new'
+      ? attachablePlatforms.find(
+          (p) => p.name.toLowerCase() === platformNameInput.trim().toLowerCase(),
+        )
+      : undefined
+
+  const isDuplicateName = _testIsDuplicateName ?? duplicatePlatform !== undefined
+
   const step1CanAdvance =
     selectedPlatformId !== null &&
+    !isDuplicateName &&
     (typeof selectedPlatformId === 'number' || platformNameInput.trim().length > 0)
 
   return (
@@ -306,6 +338,13 @@ export function ImportFormatWizard({
                         value={platformNameInput}
                         onChange={(e) => setPlatformNameInput(e.target.value)}
                       />
+                      {isDuplicateName && (
+                        <p className="text-xs text-destructive" role="alert">
+                          {duplicatePlatform
+                            ? `Esiste già una piattaforma con questo nome (${duplicatePlatform.name}). Selezionala dalla lista sopra.`
+                            : 'Esiste già una piattaforma con questo nome. Selezionala dalla lista sopra.'}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

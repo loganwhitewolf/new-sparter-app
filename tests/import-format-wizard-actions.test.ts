@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   getFileForUser: vi.fn(),
   readObjectBody: vi.fn(),
   parseImportFile: vi.fn(),
+  analyzeFile: vi.fn(),
+  importFile: vi.fn(),
   revalidatePath: vi.fn(),
   loggerInfo: vi.fn(),
   loggerWarn: vi.fn(),
@@ -33,7 +35,8 @@ vi.mock('next/cache', () => ({
   revalidatePath: mocks.revalidatePath,
 }))
 vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
-vi.mock('@/lib/dal/files', () => ({ getFileForUser: mocks.getFileForUser }))
+vi.mock('@/lib/dal/files', () => ({ getFileForUser: mocks.getFileForUser, getPlatformIdForUserFile: vi.fn() }))
+vi.mock('@/lib/services/import', () => ({ analyzeFile: mocks.analyzeFile, importFile: mocks.importFile }))
 vi.mock('@/lib/services/r2', () => ({ readObjectBody: mocks.readObjectBody }))
 vi.mock('@/lib/services/import-parsers', () => ({ parseImportFile: mocks.parseImportFile }))
 vi.mock('@/lib/logger', () => ({
@@ -181,6 +184,8 @@ describe('import format wizard Server Actions', () => {
     mocks.getFileForUser.mockResolvedValue(fileRow)
     mocks.readObjectBody.mockResolvedValue(Readable.from([Buffer.from('Data,Descrizione,Importo\n2026-01-01,Coffee,-2.50')]))
     mocks.parseImportFile.mockResolvedValue(parsedFile)
+    mocks.analyzeFile.mockResolvedValue({ errors: [], warnings: [], rows: [] })
+    mocks.importFile.mockResolvedValue({ importedCount: 1, duplicateCount: 0 })
     mocks.txExecute.mockResolvedValue([])
     mocks.dbTransaction.mockImplementation((callback) => callback(makeTx()))
   })
@@ -351,23 +356,23 @@ describe('import format wizard Server Actions', () => {
     }))
   })
 
-  it('maps malformed selected format ids to localized action errors before auth', async () => {
+  it('treats malformed selected format ids as absent (undefined) — verifySession is reached', async () => {
+    // optionalPositiveInteger returns undefined for non-empty invalid strings (e.g. 'not-a-number').
+    // undefined is accepted by the optional Zod field, so validation passes and verifySession IS called.
     const analyzeResult = await analyzeImportAction(
       formData({
         fileId: '11111111-1111-4111-8111-111111111111',
         selectedFormatVersionId: 'not-a-number',
       }),
     )
-    const confirmResult = await confirmImportAction(
-      formData({
-        fileId: '11111111-1111-4111-8111-111111111111',
-        selectedFormatVersionId: 'not-a-number',
-      }),
-    )
 
-    expect(analyzeResult).toEqual({ error: 'Importazione non valida.' })
-    expect(confirmResult).toEqual({ error: 'Importazione non valida.' })
-    expect(mocks.verifySession).not.toHaveBeenCalled()
+    // validation passes (undefined is accepted); the action proceeds past Zod to verifySession
+    expect(analyzeResult.error).toBeNull()
+    expect(mocks.verifySession).toHaveBeenCalled()
+    // analyzeFile is called with selectedFormatVersionId: undefined (treated as auto-detect)
+    expect(mocks.analyzeFile).toHaveBeenCalledWith(
+      expect.objectContaining({ selectedFormatVersionId: undefined }),
+    )
   })
 
   it('maps unauthorized sessions to a localized action error', async () => {

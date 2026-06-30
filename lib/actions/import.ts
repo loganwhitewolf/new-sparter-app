@@ -146,7 +146,7 @@ function optionalPositiveInteger(formData: FormData, key: string) {
   const numericValue = Number(value);
   return Number.isInteger(numericValue) && numericValue > 0
     ? numericValue
-    : Number.NaN;
+    : undefined;
 }
 
 function invalidImportError() {

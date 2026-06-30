@@ -157,6 +157,46 @@ describe('ImportFormatWizard UI', () => {
     expect(html).toContain('Modalità importo')
     expect(html).not.toContain('Crea una nuova platform')
   })
+
+  it('initial step-1 render has Continua button disabled when no platform is selected', () => {
+    const html = renderToStaticMarkup(
+      createElement(ImportFormatWizard, { context, attachablePlatforms: samplePlatforms }),
+    )
+
+    // step 1 is shown
+    expect(html).toContain('Crea una nuova platform')
+    // Continua button is disabled (selectedPlatformId=null, step1CanAdvance=false)
+    expect(html).toContain('disabled')
+  })
+
+  it('no false-positive duplicate hint when attachablePlatforms is empty', () => {
+    const html = renderToStaticMarkup(
+      createElement(ImportFormatWizard, { context, attachablePlatforms: [] }),
+    )
+
+    expect(html).not.toContain('Esiste già una piattaforma con questo nome')
+  })
+
+  it('validateWizardFields accepts a non-empty platformName without errors (orthogonal to client duplicate check)', () => {
+    const errors = validateWizardFields(
+      { ...validFields, platformName: 'Fineco' },
+      context.headers,
+    )
+    expect(errors).toEqual([])
+  })
+
+  it('shows duplicate-name hint and disables Continua when isDuplicateName is true', () => {
+    const html = renderToStaticMarkup(
+      createElement(ImportFormatWizard, {
+        context,
+        attachablePlatforms: samplePlatforms,
+        _testIsDuplicateName: true,
+        _testInitialSelectedPlatformId: 'new',
+      }),
+    )
+    expect(html).toContain('Esiste già una piattaforma con questo nome')
+    expect(html).toContain('disabled')
+  })
 })
 
 describe('ConfigureImportFormatPage', () => {
