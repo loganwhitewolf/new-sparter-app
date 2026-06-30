@@ -299,7 +299,7 @@ export const getExpenseImportContext = cache(async (expenseId: string): Promise<
     sourceFile: row.fileId
       ? {
           id: row.fileId,
-          name: row.displayName?.trim() || row.originalName,
+          name: row.displayName?.trim() || row.originalName || '',
         }
       : null,
     platformName: row.platformName,
