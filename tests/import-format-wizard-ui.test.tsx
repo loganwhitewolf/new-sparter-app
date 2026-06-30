@@ -184,6 +184,19 @@ describe('ImportFormatWizard UI', () => {
     )
     expect(errors).toEqual([])
   })
+
+  it('shows duplicate-name hint and disables Continua when isDuplicateName is true', () => {
+    const html = renderToStaticMarkup(
+      createElement(ImportFormatWizard, {
+        context,
+        attachablePlatforms: samplePlatforms,
+        _testIsDuplicateName: true,
+        _testInitialSelectedPlatformId: 'new',
+      }),
+    )
+    expect(html).toContain('Esiste già una piattaforma con questo nome')
+    expect(html).toContain('disabled')
+  })
 })
 
 describe('ConfigureImportFormatPage', () => {

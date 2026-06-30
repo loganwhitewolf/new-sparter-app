@@ -58,6 +58,10 @@ type Props = {
   from?: string
   createAction?: typeof createPrivateImportFormatAction
   completeOnboardingAction?: typeof completeOnboardingPrivateImportAction
+  /** Test-only override — bypasses state-based isDuplicateName computation in static-render tests. */
+  _testIsDuplicateName?: boolean
+  /** Test-only override — sets the initial selectedPlatformId for static-render tests. */
+  _testInitialSelectedPlatformId?: SelectedPlatform
 }
 
 function emptyState(): ImportActionState<CreatePrivateImportFormatResult> {
@@ -143,6 +147,8 @@ export function ImportFormatWizard({
   from,
   createAction = createPrivateImportFormatAction,
   completeOnboardingAction = completeOnboardingPrivateImportAction,
+  _testIsDuplicateName,
+  _testInitialSelectedPlatformId,
 }: Props) {
   const router = useRouter()
   const [state, formAction, isPending] = useActionState(createAction, emptyState())
@@ -155,7 +161,11 @@ export function ImportFormatWizard({
     attachablePlatforms.length === 0 ? 'columns' : 'platform',
   )
   const [selectedPlatformId, setSelectedPlatformId] = useState<SelectedPlatform>(
-    attachablePlatforms.length === 0 ? 'new' : null,
+    _testInitialSelectedPlatformId !== undefined
+      ? _testInitialSelectedPlatformId
+      : attachablePlatforms.length === 0
+        ? 'new'
+        : null,
   )
   const [platformNameInput, setPlatformNameInput] = useState('')
 
@@ -246,7 +256,7 @@ export function ImportFormatWizard({
         )
       : undefined
 
-  const isDuplicateName = duplicatePlatform !== undefined
+  const isDuplicateName = _testIsDuplicateName ?? duplicatePlatform !== undefined
 
   const step1CanAdvance =
     selectedPlatformId !== null &&
@@ -330,7 +340,9 @@ export function ImportFormatWizard({
                       />
                       {isDuplicateName && (
                         <p className="text-xs text-destructive" role="alert">
-                          Esiste già una piattaforma con questo nome ({duplicatePlatform!.name}). Selezionala dalla lista sopra.
+                          {duplicatePlatform
+                            ? `Esiste già una piattaforma con questo nome (${duplicatePlatform.name}). Selezionala dalla lista sopra.`
+                            : 'Esiste già una piattaforma con questo nome. Selezionala dalla lista sopra.'}
                         </p>
                       )}
                     </div>
