@@ -2,7 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { db } from '@/lib/db'
 import { category, direction, expense, file, importFormatVersion, nature, platform, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
-import { eq, and, gte, ilike, inArray, isNull, lte, or, asc, desc, sql } from 'drizzle-orm'
+import { eq, and, count, gte, ilike, inArray, isNull, lte, or, asc, desc, sql } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { periodToDateRange } from '@/lib/utils/date'
 
@@ -132,6 +132,22 @@ export function buildExpenseOrderBy({
     ? [asc(column), asc(expense.id)]
     : [desc(column), desc(expense.id)]
 }
+
+/** All-time uncategorized bucket — same status set as getExpenses status=uncategorized (O-01). */
+export const getUncategorizedExpenseCount = cache(async (): Promise<number> => {
+  const { userId } = await verifySession()
+  const rows = await db
+    .select({ total: count() })
+    .from(expense)
+    .where(
+      and(
+        eq(expense.userId, userId),
+        inArray(expense.status, ['1', '4']),
+      ),
+    )
+
+  return Number(rows[0]?.total ?? 0)
+})
 
 export const getExpenses = cache(async (
   filters: ExpenseFilters = {},

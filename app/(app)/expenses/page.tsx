@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { getExpenses } from '@/lib/dal/expenses'
+import { getExpenses, getUncategorizedExpenseCount } from '@/lib/dal/expenses'
 import { getCategories } from '@/lib/dal/categories'
 import { getTransactionPlatforms } from '@/lib/dal/transactions'
 import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/data-table/EmptyState'
 import { ExpenseTable } from '@/components/expenses/expense-table'
 import { ExpenseFormDialog } from '@/components/expenses/expense-form-dialog'
 import { ExpensesToolbar } from '@/app/(app)/expenses/ExpensesToolbar'
+import { ExpenseUncategorizedCta } from '@/components/expenses/expense-uncategorized-cta'
 import { APP_ROUTES } from '@/lib/routes'
 
 /** Returns true when any filter param that narrows results is active */
@@ -73,11 +74,12 @@ export default async function ExpensesPage({
     subCategoryId: parsed.subCategoryId,
   }
 
-  const [expenses, categories, platforms, mostUsed] = await Promise.all([
+  const [expenses, categories, platforms, mostUsed, uncategorizedCount] = await Promise.all([
     getExpenses(filters),
     getCategories(),
     getTransactionPlatforms(),
     getMostUsedSubcategories(['in', 'out', 'transfer', 'allocation']),
+    getUncategorizedExpenseCount(),
   ])
 
   const categoryOptions = categories
@@ -111,14 +113,22 @@ export default async function ExpensesPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div>
           <h1 className="text-xl font-semibold">Spese</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Gestisci le tue spese
           </p>
         </div>
-        <ExpenseFormDialog categories={categories} mostUsed={mostUsed} mode="create" />
+        <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
+          <Suspense fallback={null}>
+            <ExpenseUncategorizedCta
+              uncategorizedCount={uncategorizedCount}
+              route={APP_ROUTES.expenses}
+            />
+          </Suspense>
+          <ExpenseFormDialog categories={categories} mostUsed={mostUsed} mode="create" />
+        </div>
       </div>
 
       <Suspense fallback={<div className="h-10 rounded-md bg-muted animate-pulse" />}>
