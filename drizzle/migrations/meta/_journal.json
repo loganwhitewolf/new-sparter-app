@@ -169,13 +169,6 @@
       "when": 1782730302408,
       "tag": "0023_rename_platform_owner",
       "breakpoints": true
-    },
-    {
-      "idx": 23,
-      "version": "7",
-      "when": 1782730340277,
-      "tag": "0023_rename_platform_owner",
-      "breakpoints": true
     }
   ]
 }
