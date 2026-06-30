@@ -205,9 +205,10 @@ describe('OnboardingPage routing (R-OB-03, R-OB-04, R-OB-06, R-OB-09)', () => {
     expect(html).not.toContain('data-testid="sticky-cta"')
   })
 
-  it("step=4 renders the secondary 'Categorizza il resto dopo' button (D-07)", async () => {
+  it("step=4 renders a single skip CTA 'Categorizza il resto dopo' (D-07)", async () => {
     const html = await renderPageHtml('4')
     expect(html).toContain('Categorizza il resto dopo')
+    expect(html).not.toMatch(/data-testid="sticky-cta"[^>]*>[\s\S]*Continua/)
   })
 
   it("Step1Upload shows file accept hint 'CSV, XLS, XLSX · max 10 MB' (R-OB-04)", async () => {
