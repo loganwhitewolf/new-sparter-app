@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   selectWhere: vi.fn(),
   // listAttachablePlatforms: mock for the DAL function used by listAttachablePlatformsAction (Plan 59-02)
   listAttachablePlatforms: vi.fn(),
+  getLatestGlobalImportFormatDefaults: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
@@ -49,6 +50,7 @@ vi.mock('@/lib/logger', () => ({
 vi.mock('@/lib/dal/import-formats', () => ({
   listAttachablePlatforms: mocks.listAttachablePlatforms,
   listPdfImportPlatformNames: vi.fn().mockResolvedValue([]),
+  getLatestGlobalImportFormatDefaults: mocks.getLatestGlobalImportFormatDefaults,
 }))
 
 function makeTx() {
@@ -180,6 +182,13 @@ describe('import format wizard Server Actions', () => {
       { id: 1, name: 'Fineco', slug: 'fineco', reviewStatus: 'approved' },
       { id: 2, name: 'Revolut', slug: 'revolut', reviewStatus: 'approved' },
     ])
+    mocks.getLatestGlobalImportFormatDefaults.mockResolvedValue({
+      multiplyBy: 1,
+      dateFormat: null,
+      dateReplace: false,
+      decimalReplace: false,
+      descriptionStripPattern: null,
+    })
     mocks.verifySession.mockResolvedValue(userSession)
     mocks.getFileForUser.mockResolvedValue(fileRow)
     mocks.readObjectBody.mockResolvedValue(Readable.from([Buffer.from('Data,Descrizione,Importo\n2026-01-01,Coffee,-2.50')]))
@@ -408,6 +417,34 @@ describe('import format wizard Server Actions', () => {
       ownerUserId: 'user-abc',
       visibility: 'private',
       reviewStatus: 'pending',
+    })
+  })
+
+  it('attach branch: inherits ancillary parsing fields from the latest global format version', async () => {
+    mocks.selectWhere.mockResolvedValueOnce([{ id: 301, name: 'Fineco', slug: 'fineco' }])
+    mocks.getLatestGlobalImportFormatDefaults.mockResolvedValueOnce({
+      multiplyBy: -1,
+      dateFormat: 'DD/MM/YYYY',
+      dateReplace: true,
+      decimalReplace: true,
+      descriptionStripPattern: String.raw`\s+Carta N\..*$`,
+    })
+
+    const result = await createPrivateImportFormatAction(
+      { error: null },
+      validCreateForm({ existingPlatformId: '301' }),
+    )
+
+    expect(result.error).toBeNull()
+    expect(mocks.getLatestGlobalImportFormatDefaults).toHaveBeenCalledWith(301, expect.anything())
+    expect(mocks.insertedVersions[0]).toMatchObject({
+      platformId: 301,
+      timestampColumn: 'Data',
+      multiplyBy: -1,
+      dateFormat: 'DD/MM/YYYY',
+      dateReplace: true,
+      decimalReplace: true,
+      descriptionStripPattern: String.raw`\s+Carta N\..*$`,
     })
   })
 

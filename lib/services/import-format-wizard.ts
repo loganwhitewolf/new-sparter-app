@@ -5,6 +5,9 @@ import { and, eq, ilike, max, or, sql } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { file as fileTable, importFormatVersion, platform } from '@/lib/db/schema'
 import { getFileForUser } from '@/lib/dal/files'
+import {
+  getLatestGlobalImportFormatDefaults,
+} from '@/lib/dal/import-formats'
 import { logger } from '@/lib/logger'
 import { parseImportFile, type ParsedImportFile } from '@/lib/services/import-parsers'
 import { readObjectBody } from '@/lib/services/r2'
@@ -300,6 +303,8 @@ async function createPrivateRows(
     .where(eq(importFormatVersion.platformId, resolvedPlatformId))
   const nextVersion = (maxVersionRows[0]?.v ?? 0) + 1
 
+  const inheritedDefaults = await getLatestGlobalImportFormatDefaults(resolvedPlatformId, database)
+
   const createdVersions = await database
     .insert(importFormatVersion)
     .values({
@@ -311,7 +316,7 @@ async function createPrivateRows(
       headerSignature: header,
       notes: 'Created from private import format wizard.',
       isActive: true,
-      // Parsing contract (ADR 0013)
+      // Parsing contract (ADR 0013) — mapping columns from wizard; ancillary fields from latest global version
       delimiter: input.delimiter,
       timestampColumn: input.timestampColumn,
       descriptionColumn: input.descriptionColumn,
@@ -319,11 +324,11 @@ async function createPrivateRows(
       amountColumn: input.amountMode === 'single' ? (input.amountColumn ?? null) : null,
       positiveAmountColumn: input.amountMode === 'separate' ? (input.positiveAmountColumn ?? null) : null,
       negativeAmountColumn: input.amountMode === 'separate' ? (input.negativeAmountColumn ?? null) : null,
-      multiplyBy: 1,
-      dateFormat: null,
-      dateReplace: false,
-      decimalReplace: false,
-      descriptionStripPattern: null,
+      multiplyBy: inheritedDefaults.multiplyBy,
+      dateFormat: inheritedDefaults.dateFormat,
+      dateReplace: inheritedDefaults.dateReplace,
+      decimalReplace: inheritedDefaults.decimalReplace,
+      descriptionStripPattern: inheritedDefaults.descriptionStripPattern,
     })
     .returning({ id: importFormatVersion.id, headerSignature: importFormatVersion.headerSignature })
 

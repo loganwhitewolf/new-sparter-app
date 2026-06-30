@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, eq, inArray, isNull, or } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { importFormatVersion, platform } from '@/lib/db/schema'
 import type { ImportFormatCandidateInput } from '@/lib/services/import-format-detector'
@@ -291,4 +291,52 @@ export async function listPdfImportPlatformNames(input?: {
   // Deduplicate names and sort alphabetically for stable output
   const unique = [...new Set(rows.map(r => r.name))].sort()
   return unique
+}
+
+export type ImportFormatInheritedDefaults = {
+  multiplyBy: number
+  dateFormat: string | null
+  dateReplace: boolean
+  decimalReplace: boolean
+  descriptionStripPattern: string | null
+}
+
+export const IMPORT_FORMAT_INHERITED_FALLBACK_DEFAULTS: ImportFormatInheritedDefaults = {
+  multiplyBy: 1,
+  dateFormat: null,
+  dateReplace: false,
+  decimalReplace: false,
+  descriptionStripPattern: null,
+}
+
+/**
+ * Returns parsing-contract fields not collected by the private format wizard from the
+ * latest approved global format version for a platform. Falls back to safe defaults when
+ * the platform has no global version yet (e.g. brand-new pending platform).
+ */
+export async function getLatestGlobalImportFormatDefaults(
+  platformId: number,
+  database: ImportFormatDatabase = db,
+): Promise<ImportFormatInheritedDefaults> {
+  const rows = await database
+    .select({
+      multiplyBy: importFormatVersion.multiplyBy,
+      dateFormat: importFormatVersion.dateFormat,
+      dateReplace: importFormatVersion.dateReplace,
+      decimalReplace: importFormatVersion.decimalReplace,
+      descriptionStripPattern: importFormatVersion.descriptionStripPattern,
+    })
+    .from(importFormatVersion)
+    .where(
+      and(
+        eq(importFormatVersion.platformId, platformId),
+        isNull(importFormatVersion.ownerUserId),
+        eq(importFormatVersion.reviewStatus, APPROVED_REVIEW_STATUS),
+        eq(importFormatVersion.isActive, true),
+      ),
+    )
+    .orderBy(desc(importFormatVersion.version))
+    .limit(1)
+
+  return rows[0] ?? IMPORT_FORMAT_INHERITED_FALLBACK_DEFAULTS
 }
