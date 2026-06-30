@@ -556,17 +556,7 @@ export async function deleteImportAction(
   }
 }
 
-const STALE_DELETABLE_STATUSES = [
-  "pending_upload",
-  "uploaded",
-  "analyzed",
-  "failed",
-] as const;
-type StaleDeletableStatus = (typeof STALE_DELETABLE_STATUSES)[number];
-
-function isStaleDeletable(status: string): status is StaleDeletableStatus {
-  return (STALE_DELETABLE_STATUSES as readonly string[]).includes(status);
-}
+import { isStaleDeletableStatus } from "@/lib/utils/import-status";
 
 export async function deleteStaleFileAction(
   _prev: ImportActionState,
@@ -598,7 +588,7 @@ export async function deleteStaleFileAction(
     return { error: "Importazione non trovata o accesso negato." };
   }
 
-  if (!isStaleDeletable(fileRow.status)) {
+  if (!isStaleDeletableStatus(fileRow.status)) {
     return {
       error: "Questa importazione non può essere eliminata in questo stato.",
     };

@@ -197,22 +197,21 @@ describe("ImportRowActions — state matrix", () => {
     );
   });
 
-  it("analyzing: renders disabled pending copy, no active CTAs", () => {
+  it("analyzing: shows in-progress copy and delete in overflow menu", () => {
     const html = render(makeRow({ status: "analyzing" }));
 
     expect(html).toContain("Analisi");
+    expect(html).toContain("Elimina");
+    expect(html).toContain(`aria-label="Altre azioni per ${DISPLAY_NAME}"`);
     expect(html).not.toContain("href=");
-    expect(html).not.toContain("Elimina");
     expect(html).not.toContain("Rivedi e importa");
     expect(html).not.toContain("Vedi transazioni");
   });
 
-  it("analyzing: pending copy has accessible aria-label", () => {
+  it("analyzing: in-progress copy has accessible aria-label", () => {
     const html = render(makeRow({ status: "analyzing" }));
 
-    expect(html).toContain(
-      'aria-label="Analisi in corso, nessuna azione disponibile"',
-    );
+    expect(html).toContain('aria-label="Analisi in corso"');
   });
 
   it("imported: shows Vedi transazioni link scoped to exact importId in dropdown", () => {
@@ -384,12 +383,11 @@ describe("ImportRowActions — Rivedi suggerimenti dropdown item (POST-01)", () 
 });
 
 describe("ImportRowActions — in-progress states do not expose duplicate-operation CTAs", () => {
-  it("analyzing row: no analyze, import, delete, or configure links", () => {
+  it("analyzing row: no analyze, import, or configure links", () => {
     const html = render(makeRow({ status: "analyzing" }));
 
     expect(html).not.toContain("/analyze");
     expect(html).not.toContain("/configure");
-    expect(html).not.toContain("Elimina");
     expect(html).not.toContain("Importa");
     expect(html).not.toContain("Analizza");
   });

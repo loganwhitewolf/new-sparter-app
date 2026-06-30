@@ -39,9 +39,22 @@ export const ANALYZE_STATUS_ERROR =
 /** Statuses where the file is actively being processed server-side. */
 export const IN_PROGRESS_STATUSES = new Set<ImportListRow['status']>(['analyzing', 'importing'])
 
-/** Returns true when a file is actively being processed and no user action is possible. */
+/** Returns true when a file is actively being processed (primary CTAs hidden). */
 export function isInProgress(row: Pick<ImportListRow, 'status'>): boolean {
   return IN_PROGRESS_STATUSES.has(row.status)
+}
+
+/** Non-imported file statuses that can be removed via deleteStaleFileAction. */
+export const STALE_DELETABLE_STATUSES = [
+  'pending_upload',
+  'uploaded',
+  'analyzed',
+  'failed',
+  'analyzing',
+] as const satisfies readonly ImportListRow['status'][]
+
+export function isStaleDeletableStatus(status: ImportListRow['status']): boolean {
+  return (STALE_DELETABLE_STATUSES as readonly string[]).includes(status)
 }
 
 const DOWNLOADABLE_STATUSES = new Set<ImportListRow['status']>([
