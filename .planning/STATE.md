@@ -7,7 +7,7 @@ current_phase_name: import-wizard-attach-format
 status: complete
 stopped_at: Phase 59 all plans complete — PLAT-04 delivered
 last_updated: "2026-06-29T15:22:00.000Z"
-last_activity: 2026-06-30 - Completed quick task 260630-gbv: Rinomina import inline con matita
+last_activity: 2026-06-30 - Completed quick task 260630-gy0: Bulk categorizzazione in Transazioni
 progress:
   total_phases: 3
   completed_phases: 2
@@ -103,6 +103,7 @@ Nessuno.
 | 260630-dhw | CTA da categorizzare su vista Spese (pill header, rimuovi filtro toolbar) | 2026-06-30 | cc09ab3 |
 | 260630-fdt | Unifica CTA step 4 onboarding — un solo pulsante verde | 2026-06-30 | 522522a |
 | 260630-gbv | Rinomina import inline con matita come expenses/transazioni | 2026-06-30 | 7927bf8 |
+| 260630-gy0 | Bulk categorizzazione massiva nella vista Transazioni | 2026-06-30 | a85a0ec |
 
 ## Deferred Items
 
