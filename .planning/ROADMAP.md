@@ -24,7 +24,7 @@
 
 Decision contract LOCKED in `docs/adr/0016-shared-costs-net-by-subcategory-inflows-isolated-per-transaction.md` + `CONTEXT.md` (Standalone Expense entry). Pure implementation — no discovery to redo. Small, cohesive scope: a single phase.
 
-- [ ] **Phase 61: standalone-expense** - Add an inline "standalone expense / do not aggregate" action in the categorization flow (title + subcategory → synthetic `descriptionHash`), lift the `SINGLE_TRANSACTION_EXPENSE` guard via in-place re-hash (no orphan), and keep isolation per-transaction (excluded from `descriptionHash` aggregation and Tier 2 history)
+- [x] **Phase 61: standalone-expense** - Add an inline "standalone expense / do not aggregate" action in the categorization flow (title + subcategory → synthetic `descriptionHash`), lift the `SINGLE_TRANSACTION_EXPENSE` guard via in-place re-hash (no orphan), and keep isolation per-transaction (excluded from `descriptionHash` aggregation and Tier 2 history) (completed 2026-07-01)
 
 **Plans:** 2 plans
 
@@ -254,7 +254,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 Plans:
 
 - [x] 61-01-PLAN.md
-- [ ] 61-02-PLAN.md
+- [x] 61-02-PLAN.md
 
 - [x] 59-04-PLAN.md
 
@@ -311,7 +311,7 @@ Plans:
 | 58. platform-identity-and-access | v2.3 | 3/3 | Complete   | 2026-06-29 |
 | 59. import-wizard-attach-format | v2.3 | 4/4 | Complete   | 2026-06-30 |
 | 60. seed-slug-linkage-and-docs | v2.3 | 2/2 | Complete   | 2026-06-30 |
-| 61. standalone-expense | v2.4 | 2/2 | Complete   | 2026-07-01 |
+| 61. standalone-expense | v2.4 | 2/2 | Complete    | 2026-07-01 |
 
 **Total shipped: 60 phases · 223 plans complete**
 **Current milestone: v2.4 — Standalone Expense (Phase 61)**
