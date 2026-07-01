@@ -203,6 +203,10 @@ export const getImportRows = cache(
       conditions.push(or(ilike(file.displayName, pattern), ilike(file.originalName, pattern)))
     }
 
+    if (filters.fileId) {
+      conditions.push(eq(file.id, filters.fileId))
+    }
+
     if (filters.importedFromDate) {
       conditions.push(gte(file.importedAt, filters.importedFromDate))
     }

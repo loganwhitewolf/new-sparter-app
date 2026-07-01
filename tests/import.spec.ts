@@ -279,7 +279,6 @@ test.describe('Import - IMP-03: Filter, rename, and pagination UI', () => {
       await renameButton.focus()
       await expect(renameButton).toBeFocused()
       await page.keyboard.press('Enter')
-      await expect(page.getByRole('dialog', { name: /rinomina importazione/i })).toBeVisible()
       await expect(page.getByLabel(/nome importazione/i)).toBeVisible()
       await page.keyboard.press('Escape')
 

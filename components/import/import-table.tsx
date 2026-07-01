@@ -6,7 +6,7 @@ import { AlertCircle } from "lucide-react";
 import { formatAbsoluteAmount } from "@/lib/utils/format-amount";
 import { toast } from "sonner";
 import { ImportDeleteDialog } from "@/components/import/import-delete-dialog";
-import { ImportRenameDialog } from "@/components/import/import-rename-dialog";
+import { ImportDisplayNameEdit } from "@/components/import/import-display-name-edit";
 import { ImportRowActions } from "@/components/import/import-row-actions";
 import { ImportStaleDeleteDialog } from "@/components/import/import-stale-delete-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -94,6 +94,7 @@ function hasActiveFilters(filters: ParsedImportFilters) {
   // Check only the canonical Wave 4+ filter keys.
   return Boolean(
     filters.q ||
+    filters.fileId ||
     filters.platform ||
     filters.statusBucket ||
     (filters.months && filters.months.length > 0) ||
@@ -113,7 +114,6 @@ export function ImportTable({
   const [hasMore, setHasMore] = useState(imports.length === PAGE_SIZE);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [renameImport, setRenameImport] = useState<ImportListRow | null>(null);
   const [deleteImport, setDeleteImport] = useState<ImportListRow | null>(null);
   const [staleDeleteImport, setStaleDeleteImport] =
     useState<ImportListRow | null>(null);
@@ -343,22 +343,14 @@ export function ImportTable({
               return (
                 <TableRow key={row.id} className="group hover:bg-muted/50">
                   <TableCell className="max-w-[20rem]">
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <span
-                        className="truncate font-medium"
-                        title={displayName}
-                      >
-                        {displayName}
-                      </span>
-                      {row.displayName ? (
-                        <span
-                          className="truncate text-xs text-muted-foreground"
-                          title={row.originalName}
-                        >
-                          {row.originalName}
-                        </span>
-                      ) : null}
-                    </div>
+                    <ImportDisplayNameEdit
+                      fileId={row.id}
+                      displayName={row.displayName}
+                      originalName={row.originalName}
+                      onSuccess={(nextDisplayName) =>
+                        handleRenameSuccess(row.id, nextDisplayName)
+                      }
+                    />
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -399,7 +391,6 @@ export function ImportTable({
                     <ImportRowActions
                       row={row}
                       displayName={displayName}
-                      onRename={setRenameImport}
                       onDelete={setDeleteImport}
                       onDeleteStale={setStaleDeleteImport}
                       onRecheckRegex={handleRecheckRegex}
@@ -445,20 +436,6 @@ export function ImportTable({
           </div>
         ) : null}
       </div>
-
-      {renameImport ? (
-        <ImportRenameDialog
-          key={renameImport.id}
-          importRow={renameImport}
-          open={true}
-          onOpenChange={(open) => {
-            if (!open) {
-              setRenameImport(null);
-            }
-          }}
-          onSuccess={handleRenameSuccess}
-        />
-      ) : null}
 
       {deleteImport ? (
         <ImportDeleteDialog

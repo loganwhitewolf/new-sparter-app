@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useTransition } from 'react'
-import { Clock, Download, ExternalLink, MoreHorizontal, Pencil, Settings, Sparkles, Trash2 } from 'lucide-react'
+import { Clock, Download, ExternalLink, MoreHorizontal, Settings, Sparkles, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,7 +18,6 @@ import { canDownloadImportFile, isInProgress, isUnknownFormatFailed } from '@/li
 type Props = {
   row: ImportListRow
   displayName: string
-  onRename: (row: ImportListRow) => void
   onDelete: (row: ImportListRow) => void
   onDeleteStale: (row: ImportListRow) => void
   /** Callback for the per-row on-demand regex re-check (TRIG-02, D-01). */
@@ -27,7 +26,7 @@ type Props = {
   isRecheckPending?: boolean
 }
 
-export function ImportRowActions({ row, displayName, onRename, onDelete, onDeleteStale, onRecheckRegex, isRecheckPending }: Props) {
+export function ImportRowActions({ row, displayName, onDelete, onDeleteStale, onRecheckRegex, isRecheckPending }: Props) {
   const [isDownloadPending, startDownloadTransition] = useTransition()
 
   function handleDownload() {
@@ -145,11 +144,6 @@ export function ImportRowActions({ row, displayName, onRename, onDelete, onDelet
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuItem onClick={() => onRename(row)}>
-            <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
-            Rinomina
-          </DropdownMenuItem>
-
           {canDownloadImportFile(row) && (
             <DropdownMenuItem onClick={handleDownload} disabled={isDownloadPending}>
               <Download className="mr-2 h-4 w-4" aria-hidden="true" />

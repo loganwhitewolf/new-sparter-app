@@ -5,6 +5,9 @@ import { describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   analyzeImport: vi.fn(),
   push: vi.fn(),
+  redirect: vi.fn((url: string) => {
+    throw new Error(`redirect:${url}`)
+  }),
   notFound: vi.fn(() => {
     throw new Error('notFound')
   }),
@@ -12,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({
   notFound: mocks.notFound,
+  redirect: mocks.redirect,
   useRouter: () => ({ push: mocks.push }),
 }))
 
@@ -49,19 +53,19 @@ function analysisResult(overrides = {}) {
   }
 }
 
-async function renderPage() {
+async function renderPage(searchParams: Record<string, string> = {}) {
   const element = await AnalyzePage({
     params: Promise.resolve({ fileId: FILE_ID }),
-    searchParams: Promise.resolve({}),
+    searchParams: Promise.resolve(searchParams),
   })
 
   return renderToStaticMarkup(createElement(() => element))
 }
 
 describe('AnalyzePage', () => {
-  it('does not show the transaction preview when analysis failed because no platform format matched', async () => {
+  it('redirects to configure when analysis failed because no platform format matched', async () => {
     mocks.analyzeImport.mockResolvedValueOnce({
-      error: null,
+      error: 'No supported import format matched the uploaded file headers and sample rows.',
       data: analysisResult({
         formatVersionId: null,
         platformName: null,
@@ -69,13 +73,9 @@ describe('AnalyzePage', () => {
       }),
     })
 
-    const html = await renderPage()
-
-    expect(html).toContain('Formato non riconosciuto')
-    expect(html).toContain('Configura formato privato')
-    expect(html).not.toContain('Anteprima transazioni')
-    expect(html).not.toContain('Conferma importazione')
-    expect(html).not.toContain('Righe trovate')
+    await expect(renderPage()).rejects.toThrow(
+      `redirect:/import/${encodeURIComponent(FILE_ID)}/configure`,
+    )
   })
 
   it('shows the preview for a recognized import format', async () => {
@@ -88,7 +88,7 @@ describe('AnalyzePage', () => {
 
     expect(html).toContain('Anteprima transazioni')
     expect(html).toContain('Conferma importazione')
+    expect(html).toContain('Torna alle importazioni')
     expect(html).not.toContain('Formato non riconosciuto')
   })
-
 })

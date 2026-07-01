@@ -12,7 +12,11 @@ type Props = {
   selectedIds: string[]
   categories: CategoryWithSubCategories[]
   mostUsed: MostUsedSubcategory[]
-  onSuccess: () => void
+  onSuccess: (subCategoryId: string) => void
+  /** Toast count — defaults to selectedIds.length */
+  successCount?: number
+  /** Toast noun — defaults to "spese" */
+  successNoun?: string
 }
 
 export function BulkCategorizeDialog({
@@ -22,6 +26,8 @@ export function BulkCategorizeDialog({
   categories,
   mostUsed,
   onSuccess,
+  successCount,
+  successNoun = 'spese',
 }: Props) {
   const [isPending, startTransition] = useTransition()
 
@@ -35,8 +41,9 @@ export function BulkCategorizeDialog({
       if (result.error) {
         toast.error(result.error)
       } else {
-        toast.success(`${selectedIds.length} spese categorizzate.`)
-        onSuccess()
+        const count = successCount ?? selectedIds.length
+        toast.success(`${count} ${successNoun} categorizzate.`)
+        onSuccess(subCategoryId)
         onOpenChange(false)
       }
     })

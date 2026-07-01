@@ -7,8 +7,8 @@ current_phase_name: import-wizard-attach-format
 status: complete
 stopped_at: Phase 59 all plans complete — PLAT-04 delivered
 last_updated: "2026-06-30T09:42:31.986Z"
-last_activity: 2026-06-30
-last_activity_desc: Phase 59 execution resumed (wave continue)
+last_activity: 2026-06-30 - Completed quick task 260630-mpw: Compattare flusso import skip analyze per formato sconosciuto
+last_activity_desc: Phase 59 complete; quick-task branch merged into main
 progress:
   total_phases: 3
   completed_phases: 3
@@ -102,6 +102,12 @@ Nessuno.
 | 260629-m9i | Detach transaction to dedicated expense + re-import manual lock | 2026-06-29 | 90bfa69 |
 | 260630-dd7 | Delete stuck analyzing imports from file table | 2026-06-30 | 60ee221 |
 | 260630-dhw | CTA da categorizzare su vista Spese (pill header, rimuovi filtro toolbar) | 2026-06-30 | cc09ab3 |
+| 260630-fdt | Unifica CTA step 4 onboarding — un solo pulsante verde | 2026-06-30 | 522522a |
+| 260630-gbv | Rinomina import inline con matita come expenses/transazioni | 2026-06-30 | 7927bf8 |
+| 260630-gy0 | Bulk categorizzazione massiva nella vista Transazioni | 2026-06-30 | a85a0ec |
+| 260630-h1j | Nome file cliccabile in transazioni → filtro tabella import | 2026-06-30 | a85fb27 |
+| 260630-mkf | Platform picker card grid con ricerca nel wizard import step 1 | 2026-06-30 | 380e4a4 |
+| 260630-mpw | Skip analyze per formato sconosciuto, redirect a configure | 2026-06-30 | f525630 |
 
 ## Deferred Items
 

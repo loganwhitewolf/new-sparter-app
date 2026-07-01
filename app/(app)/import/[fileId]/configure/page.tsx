@@ -56,11 +56,18 @@ export default async function ConfigureImportFormatPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold">Configura formato importazione</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Completa il formato privato e riprova l'analisi dello stesso file.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="max-w-2xl space-y-1">
+          <h1 className="text-xl font-semibold">Configura formato importazione</h1>
+          <p className="text-sm text-muted-foreground">
+            Il file è leggibile, ma non corrisponde ancora ai formati disponibili. Crea un formato
+            privato usando le intestazioni del file: salveremo la configurazione solo per il tuo
+            account e riproveremo subito l&apos;analisi dello stesso documento.
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link href={APP_ROUTES.import}>Torna alle importazioni</Link>
+        </Button>
       </div>
 
       <ImportFormatWizard

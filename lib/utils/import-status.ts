@@ -28,6 +28,17 @@ export function isUnknownFormatFailed(row: Pick<ImportListRow, 'status' | 'error
   )
 }
 
+/** True when analysis parsed the file but no import format matched. */
+export function isUnknownFormatAnalysis(result: {
+  formatVersionId: number | null
+  errors: string[]
+}): boolean {
+  return (
+    result.formatVersionId === null &&
+    result.errors.some((error) => error.includes(UNKNOWN_FORMAT_ERROR))
+  )
+}
+
 /**
  * The error message thrown when analyze is attempted on a file in a non-analyzable
  * status (e.g. already 'imported'). Surfaced by analyzeImportAction so callers

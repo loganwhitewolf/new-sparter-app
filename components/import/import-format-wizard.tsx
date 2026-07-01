@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Loader2, Plus, Search } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -29,6 +29,7 @@ import {
   APP_ROUTES,
   ONBOARDING_AFTER_PRIVATE_PLATFORM_CREATION_ROUTE,
 } from '@/lib/routes'
+import { cn } from '@/lib/utils'
 
 const MAX_HEADER_OPTIONS = 80
 const DEFAULT_DELIMITERS = [
@@ -168,6 +169,7 @@ export function ImportFormatWizard({
         : null,
   )
   const [platformNameInput, setPlatformNameInput] = useState('')
+  const [platformSearch, setPlatformSearch] = useState('')
 
   // Controlled values for shadcn Select (needed to populate hidden inputs)
   const [delimiter, setDelimiter] = useState(context.detectedDelimiter ?? ';')
@@ -238,6 +240,16 @@ export function ImportFormatWizard({
 
   const headerSelectOptions = headerOptions.map((header) => ({ value: header, label: header }))
 
+  const filteredPlatforms = useMemo(() => {
+    const query = platformSearch.trim().toLowerCase()
+    if (!query) return attachablePlatforms
+    return attachablePlatforms.filter(
+      (platform) =>
+        platform.name.toLowerCase().includes(query) ||
+        platform.slug.toLowerCase().includes(query),
+    )
+  }, [attachablePlatforms, platformSearch])
+
   // Resolve the platform name for step 2 hidden input and read-only header
   const selectedPlatform =
     typeof selectedPlatformId === 'number'
@@ -284,15 +296,34 @@ export function ImportFormatWizard({
               <p className="text-sm font-medium">
                 Scegli la piattaforma a cui associare il nuovo formato privato:
               </p>
-              <div className="space-y-2">
-                {attachablePlatforms.map((platform) => (
+
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <Input
+                  type="search"
+                  value={platformSearch}
+                  onChange={(event) => setPlatformSearch(event.target.value)}
+                  placeholder="Cerca piattaforma..."
+                  className="pl-9"
+                  aria-label="Cerca piattaforma"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {filteredPlatforms.map((platform) => (
                   <label
                     key={platform.id}
-                    className={`flex cursor-pointer items-center gap-3 rounded-lg border bg-background p-3 text-sm transition-colors focus-within:ring-[3px] focus-within:ring-ring/50 ${
+                    className={cn(
+                      'flex cursor-pointer rounded-lg border bg-background text-sm transition-colors focus-within:ring-[3px] focus-within:ring-ring/50',
+                      'items-center gap-3 p-3',
+                      'sm:min-h-24 sm:flex-col sm:items-start sm:justify-center sm:gap-2 sm:p-4',
                       selectedPlatformId === platform.id
                         ? 'border-primary bg-primary/5'
-                        : 'hover:bg-muted/40'
-                    }`}
+                        : 'hover:bg-muted/40',
+                    )}
                   >
                     <input
                       type="radio"
@@ -300,63 +331,81 @@ export function ImportFormatWizard({
                       value={String(platform.id)}
                       checked={selectedPlatformId === platform.id}
                       onChange={() => setSelectedPlatformId(platform.id)}
-                      className="accent-primary"
+                      className="accent-primary sm:sr-only"
                     />
                     <span className="font-medium">{platform.name}</span>
                   </label>
                 ))}
-
-                {/* Always-visible "create new" entry */}
-                <div
-                  className={`rounded-lg border ${
-                    selectedPlatformId === 'new'
-                      ? 'border-primary bg-primary/5'
-                      : 'hover:bg-muted/40'
-                  }`}
-                >
-                  <label className="flex cursor-pointer items-center gap-3 p-3 text-sm transition-colors focus-within:ring-[3px] focus-within:ring-ring/50">
-                    <input
-                      type="radio"
-                      name="_platformSelection"
-                      value="new"
-                      checked={selectedPlatformId === 'new'}
-                      onChange={() => setSelectedPlatformId('new')}
-                      className="accent-primary"
-                    />
-                    <span className="font-medium">+ Crea una nuova platform</span>
-                  </label>
-                  {selectedPlatformId === 'new' && (
-                    <div className="space-y-1.5 px-3 pb-3">
-                      <label htmlFor="platformNameStep1" className="text-xs font-medium text-muted-foreground">
-                        Nome piattaforma
-                      </label>
-                      <Input
-                        id="platformNameStep1"
-                        type="text"
-                        maxLength={100}
-                        placeholder="Es. Banca personale"
-                        value={platformNameInput}
-                        onChange={(e) => setPlatformNameInput(e.target.value)}
-                      />
-                      {isDuplicateName && (
-                        <p className="text-xs text-destructive" role="alert">
-                          {duplicatePlatform
-                            ? `Esiste già una piattaforma con questo nome (${duplicatePlatform.name}). Selezionala dalla lista sopra.`
-                            : 'Esiste già una piattaforma con questo nome. Selezionala dalla lista sopra.'}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
               </div>
 
-              <Button
-                type="button"
-                onClick={() => setCurrentStep('columns')}
-                disabled={!step1CanAdvance}
+              {filteredPlatforms.length === 0 && platformSearch.trim().length > 0 && (
+                <p className="text-sm text-muted-foreground">Nessuna piattaforma trovata.</p>
+              )}
+
+              <div
+                className={cn(
+                  'space-y-3 border-t pt-4',
+                  selectedPlatformId === 'new' ? 'border-primary/40' : 'border-border',
+                )}
               >
-                Continua
-              </Button>
+                <label
+                  className={cn(
+                    'flex cursor-pointer items-center gap-3 rounded-lg border bg-background p-3 text-sm transition-colors focus-within:ring-[3px] focus-within:ring-ring/50',
+                    selectedPlatformId === 'new'
+                      ? 'border-primary bg-primary/5'
+                      : 'hover:bg-muted/40',
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="_platformSelection"
+                    value="new"
+                    checked={selectedPlatformId === 'new'}
+                    onChange={() => setSelectedPlatformId('new')}
+                    className="accent-primary"
+                  />
+                  <Plus className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <span className="font-medium">Crea una nuova platform</span>
+                </label>
+
+                {selectedPlatformId === 'new' && (
+                  <div className="space-y-1.5">
+                    <label htmlFor="platformNameStep1" className="text-xs font-medium text-muted-foreground">
+                      Nome piattaforma
+                    </label>
+                    <Input
+                      id="platformNameStep1"
+                      type="text"
+                      maxLength={100}
+                      placeholder="Es. Banca personale"
+                      value={platformNameInput}
+                      onChange={(event) => setPlatformNameInput(event.target.value)}
+                    />
+                    {isDuplicateName && (
+                      <p className="text-xs text-destructive" role="alert">
+                        {duplicatePlatform
+                          ? `Esiste già una piattaforma con questo nome (${duplicatePlatform.name}). Selezionala dalla lista sopra.`
+                          : 'Esiste già una piattaforma con questo nome. Selezionala dalla lista sopra.'}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  onClick={() => setCurrentStep('columns')}
+                  disabled={!step1CanAdvance}
+                >
+                  Continua
+                </Button>
+                {!isOnboardingFlow && (
+                  <Button asChild variant="ghost">
+                    <Link href={APP_ROUTES.import}>Torna alle importazioni</Link>
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 
