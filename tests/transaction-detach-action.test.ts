@@ -57,6 +57,7 @@ describe('detachTransaction action', () => {
       userId: USER_ID,
       transactionId: TX_ID,
       title: 'Pranzo',
+      subCategoryId: undefined,
     })
     expect(mocks.revalidateCategorizationSurfaces).toHaveBeenCalled()
     expect(result).toEqual({
@@ -64,6 +65,23 @@ describe('detachTransaction action', () => {
       newExpenseTitle: 'Pranzo',
       error: null,
     })
+  })
+
+  it('forwards subCategoryId to the service when supplied', async () => {
+    const result = await detachTransaction({
+      transactionId: TX_ID,
+      title: 'Rimborso Netflix',
+      subCategoryId: 42,
+    })
+
+    expect(mocks.verifySession).toHaveBeenCalled()
+    expect(mocks.detachTransactionToDedicatedExpense).toHaveBeenCalledWith({
+      userId: USER_ID,
+      transactionId: TX_ID,
+      title: 'Rimborso Netflix',
+      subCategoryId: 42,
+    })
+    expect(result.error).toBeNull()
   })
 
   it('returns validation error for invalid transaction id', async () => {
