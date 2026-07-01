@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { computeDescriptionHash } from '@/lib/utils/import'
 
 const mocks = vi.hoisted(() => ({
   reconcileExpensesAfterTransactionRemoval: vi.fn(),
@@ -84,6 +85,7 @@ const OCCURRED_AT = new Date('2026-01-15T12:00:00.000Z')
 const {
   DetachTransactionError,
   detachTransactionToDedicatedExpense,
+  syntheticDescriptionHash,
 } = await import('@/lib/services/transaction-detach')
 
 describe('detachTransactionToDedicatedExpense', () => {
@@ -299,5 +301,44 @@ describe('detachTransactionToDedicatedExpense', () => {
         title: '   ',
       }),
     ).rejects.toBeInstanceOf(DetachTransactionError)
+  })
+})
+
+// STEXP-03 isolation property (hash-level, no DB required):
+//
+// A standalone expense's descriptionHash is derived from the transaction id
+// (`sha256("detached:{transactionId}")`), not from the bank description. This means:
+//
+// (a) a future transaction sharing the ORIGINAL bank description computes the
+//     ordinary description-based hash (`computeDescriptionHash`), which differs
+//     from the synthetic hash — so it cannot satisfy `expense_userId_descriptionHash_unique`
+//     against the standalone row and instead aggregates into its own fresh expense.
+// (b) `applyTier2History` (lib/services/categorization.ts) queries
+//     `expenseClassificationHistory` joined on `expense.descriptionHash` using the
+//     ORIGINAL hash for an incoming transaction — it never matches the standalone
+//     expense's synthetic hash, so the standalone expense's manual classification
+//     does not leak into Tier 2 for the original description.
+//
+// This test asserts the invariant the isolation relies on: the synthetic hash is
+// deterministic per transaction id, distinct across transaction ids, and distinct
+// from the description-based hash for a representative bank description.
+describe('syntheticDescriptionHash isolation property (STEXP-03)', () => {
+  const SAMPLE_DESCRIPTION = 'BONIFICO SEPA DA MARIO ROSSI RIF QUOTA NETFLIX'
+  const TX_ID_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  const TX_ID_B = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+
+  it('differs from the original-description hash', () => {
+    const originalHash = computeDescriptionHash(SAMPLE_DESCRIPTION)
+    const synthetic = syntheticDescriptionHash(TX_ID_A)
+
+    expect(synthetic).not.toBe(originalHash)
+  })
+
+  it('is deterministic per transaction id', () => {
+    expect(syntheticDescriptionHash(TX_ID_A)).toBe(syntheticDescriptionHash(TX_ID_A))
+  })
+
+  it('is distinct across different transaction ids', () => {
+    expect(syntheticDescriptionHash(TX_ID_A)).not.toBe(syntheticDescriptionHash(TX_ID_B))
   })
 })
