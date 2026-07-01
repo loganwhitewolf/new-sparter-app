@@ -31,7 +31,7 @@ Decision contract LOCKED in `docs/adr/0016-shared-costs-net-by-subcategory-inflo
 Plans:
 **Wave 1**
 
-- [ ] 61-01-PLAN.md — Subcategory-aware detach service + single-transaction in-place re-hash branch (guard lifted) + isolation property test [STEXP-01, STEXP-02, STEXP-03]
+- [x] 61-01-PLAN.md — Subcategory-aware detach service + single-transaction in-place re-hash branch (guard lifted) + isolation property test [STEXP-01, STEXP-02, STEXP-03]
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -200,6 +200,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 ## Phase Details
 
 ### Phase 61: standalone-expense
+
 **Goal**: The user can peel a single ambiguous inflow (or any transaction) out of its shared-`descriptionHash` aggregate and categorize it on its own — capturing a title and a subcategory — without polluting the sender's aggregate or the Tier 2 history. This surfaces the existing `detachTransactionToDedicatedExpense` capability inline and extends it to the single-transaction case.
 **Depends on**: Phase 50 (transaction identity + expense aggregation and the existing `detachTransactionToDedicatedExpense` service this phase surfaces and extends)
 **Requirements**: STEXP-01, STEXP-02, STEXP-03
@@ -209,7 +210,8 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
   2. The action works even when the transaction's expense holds only that one transaction: the existing expense row is re-hashed in place (same id) — the `SINGLE_TRANSACTION_EXPENSE` guard in `lib/services/transaction-detach.ts` is lifted, and no new expense and no orphaned empty source is created. [STEXP-02]
   3. A standalone expense is excluded from `descriptionHash` aggregation: a later transaction sharing the original bank description does not collapse into the standalone expense but arrives as its own fresh, uncategorized expense. [STEXP-03]
   4. A standalone expense does not teach Tier 2 history: the isolation is per-transaction, so the same description is not auto-categorized on future imports (no standing per-sender rule is persisted). [STEXP-03]
-**Plans**: 2 plans (61-01 backend service+action+tests · 61-02 inline UI + subcategory capture)
+
+**Plans**: 1/2 plans executed
 **UI hint**: yes
 
 ### Phase 58: platform-identity-and-access
@@ -250,6 +252,9 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 **UI hint**: yes
 
 Plans:
+
+- [x] 61-01-PLAN.md
+- [ ] 61-02-PLAN.md
 
 - [x] 59-04-PLAN.md
 
@@ -306,7 +311,7 @@ Plans:
 | 58. platform-identity-and-access | v2.3 | 3/3 | Complete   | 2026-06-29 |
 | 59. import-wizard-attach-format | v2.3 | 4/4 | Complete   | 2026-06-30 |
 | 60. seed-slug-linkage-and-docs | v2.3 | 2/2 | Complete   | 2026-06-30 |
-| 61. standalone-expense | v2.4 | 0/2 | Planned | - |
+| 61. standalone-expense | v2.4 | 1/2 | In Progress|  |
 
 **Total shipped: 60 phases · 223 plans complete**
 **Current milestone: v2.4 — Standalone Expense (Phase 61)**

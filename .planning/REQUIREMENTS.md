@@ -13,9 +13,9 @@
 
 ### Standalone Expense
 
-- [ ] **STEXP-01**: In the categorization flow, the user can mark a single transaction as a standalone expense ("do not aggregate"), supplying a title and a subcategory; the transaction is detached into a dedicated expense with a synthetic `descriptionHash` (`sha256("detached:{id}")`). The action is general — available on any transaction — not a counterparty-specific category.
-- [ ] **STEXP-02**: The standalone action works on an expense that already holds a single transaction, by re-hashing the existing expense row in place (same id) — lifting the `SINGLE_TRANSACTION_EXPENSE` guard in `lib/services/transaction-detach.ts` without creating a new expense or leaving an orphaned empty source.
-- [ ] **STEXP-03**: A standalone expense is excluded from both `descriptionHash` aggregation and Tier 2 history learning; a future transaction sharing the original description arrives fresh and uncategorized (isolation is per-transaction, not a standing per-sender rule).
+- [x] **STEXP-01**: In the categorization flow, the user can mark a single transaction as a standalone expense ("do not aggregate"), supplying a title and a subcategory; the transaction is detached into a dedicated expense with a synthetic `descriptionHash` (`sha256("detached:{id}")`). The action is general — available on any transaction — not a counterparty-specific category.
+- [x] **STEXP-02**: The standalone action works on an expense that already holds a single transaction, by re-hashing the existing expense row in place (same id) — lifting the `SINGLE_TRANSACTION_EXPENSE` guard in `lib/services/transaction-detach.ts` without creating a new expense or leaving an orphaned empty source.
+- [x] **STEXP-03**: A standalone expense is excluded from both `descriptionHash` aggregation and Tier 2 history learning; a future transaction sharing the original description arrives fresh and uncategorized (isolation is per-transaction, not a standing per-sender rule).
 
 ---
 
@@ -33,8 +33,8 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| STEXP-01 | Phase 61 | Pending |
-| STEXP-02 | Phase 61 | Pending |
-| STEXP-03 | Phase 61 | Pending |
+| STEXP-01 | Phase 61 | Complete |
+| STEXP-02 | Phase 61 | Complete |
+| STEXP-03 | Phase 61 | Complete |
 
 **Coverage:** 3/3 requirements mapped — no orphans, no duplicates. All v2.4 scope lands in a single phase (Phase 61: standalone-expense).

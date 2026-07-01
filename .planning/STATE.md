@@ -2,14 +2,18 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: Standalone Expense
-status: planning
-last_updated: "2026-07-01T00:00:00.000Z"
+current_phase: 61
+current_phase_name: standalone-expense
+status: executing
+stopped_at: Completed 61-01-PLAN.md
+last_updated: "2026-07-01T08:00:55.002Z"
 last_activity: 2026-07-01
+last_activity_desc: Phase 61 execution started
 progress:
-  total_phases: 1
+  total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
 ---
 
@@ -20,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-01)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 61 — standalone-expense (v2.4)
+**Current focus:** Phase 61 — standalone-expense
 
 ## Current Position
 
-Phase: 61 — standalone-expense (roadmap drafted, not yet planned)
-Plan: —
-Status: Roadmap created — ready to plan Phase 61
-Last activity: 2026-07-01 — v2.4 roadmap created (single phase); v2.3 shipped and archived (tag v2.3)
+Phase: 61 (standalone-expense) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-07-01 — Phase 61 execution started
 Progress: [                    ] 0/1 phases
 
 ## Roadmap (v2.4 — Phase 61)
@@ -49,6 +53,8 @@ Design contract is LOCKED (ADR 0016). Do not re-derive the approach:
 - **ADR 0016 (decision 3) — isolation is per-transaction, not a standing rule.** Detaching frees the original `descriptionHash`; the next same-description transaction arrives fresh and uncategorized. No persisted "never aggregate this sender" flag — the same description legitimately means different things. The recurring manual cost is accepted; relieving it is the job of the deferred Subscriptions view.
 - **ADR 0016 (decision 4) — single-transaction path re-hashes in place; the guard is lifted, not patched.** The `SINGLE_TRANSACTION_EXPENSE` guard in `lib/services/transaction-detach.ts` exists to avoid orphaning an empty source in the multi-transaction detach path. For the single-transaction case, rewrite the existing expense's `description_hash` to the synthetic value in place — same row, same id, no new expense, no orphan, classification history preserved. Observable outcome identical to a normal detach.
 - Layers / hard rules still apply: Decimal.js for amounts, writes inside `db.transaction`, DAL/services/actions separation, English dev-facing code, Italian only for product surfaces.
+- [Phase 61]: In-place detach branch never calls reconcileExpensesAfterTransactionRemoval — no separate source row exists once the branch is taken (ADR 0016 decision 4) — Prevents reconciling the wrong row or a no-op call
+- [Phase 61]: hasSubCategoryId = input.subCategoryId !== undefined distinguishes omitted from explicitly-null across both detach branches — Backward compatibility: omitted stays untouched on in-place branch, defaults to null/status 1 on insert branch
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -89,11 +95,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** .planning/ROADMAP.md (v2.4 — Phase 61 standalone-expense)
+**Resume file:** None
 
-**Stopped at:** v2.4 roadmap created — single phase, 3/3 requirements mapped, coverage 100%.
+**Stopped at:** Completed 61-01-PLAN.md
 
-Last session: 2026-07-01
+Last session: 2026-07-01T08:00:54.996Z
 
 **Next:** Plan Phase 61 (`/gsd-plan-phase 61`).
 
@@ -112,3 +118,4 @@ Last session: 2026-07-01
 | Phase 59 P02 | 13min | 5 tasks (TDD RED+GREEN x2 + action) | 5 files |
 | Phase 59 P03 | 8min | 3 tasks | 3 files |
 | Phase 59 P04 | 2min | 2 tasks | 2 files |
+| Phase 61 P01 | 6min | 3 tasks | 5 files |
