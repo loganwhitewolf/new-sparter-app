@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: Standalone Expense
-current_phase: 61
-status: verifying
+current_phase: 4
+status: Awaiting next milestone
 stopped_at: Completed 61-02-PLAN.md
-last_updated: "2026-07-01T10:06:20.530Z"
+last_updated: "2026-07-01T10:34:17.836Z"
 last_activity: 2026-07-01
-last_activity_desc: Phase 61 complete
+last_activity_desc: Milestone v2.4 completed and archived
 progress:
-  total_phases: 4
+  total_phases: 1
   completed_phases: 1
   total_plans: 2
   completed_plans: 2
-  percent: 25
+  percent: 100
 current_phase_name: standalone-expense
 ---
 
@@ -28,11 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 
 ## Current Position
 
-Phase: 61
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-07-01 — Phase 61 complete
-Progress: [                    ] 0/1 phases
+Phase: Milestone v2.4 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-01 — Milestone v2.4 completed and archived
 
 ## Roadmap (v2.4 — Phase 61)
 
@@ -108,7 +107,7 @@ Last session: 2026-07-01T09:41:27.043Z
 
 ## Operator Next Steps
 
-- No migration expected for v2.4 (ADR 0016 requires no schema change — the synthetic-hash mechanism and columns already exist). Confirm during planning; if a migration is introduced, apply the standard order `yarn db:migrate → yarn db:seed → yarn db:seed-extras → yarn db:seed-patterns`.
+- Start the next milestone with /gsd-new-milestone
 
 ## Performance Metrics
 
