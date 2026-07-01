@@ -242,7 +242,7 @@ describe('detachTransactionToDedicatedExpense', () => {
     mocks.dbSelectChain.mockReturnValue(
       makeSelectChain([makeLoadedRow({ expenseTransactionCount: 0 })]),
     )
-    const updateSet = vi.fn(() => ({
+    const updateSet = vi.fn((_payload: Record<string, unknown>) => ({
       where: vi.fn(() => Promise.resolve([])),
     }))
     mocks.dbUpdateChain.mockReturnValue({ set: updateSet })
