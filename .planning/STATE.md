@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.3
-milestone_name: Platform Identity & Format Ownership
-current_phase: 59
-current_phase_name: import-wizard-attach-format
-status: complete
-stopped_at: Phase 59 all plans complete — PLAT-04 delivered
-last_updated: "2026-06-30T09:42:31.986Z"
-last_activity: 2026-06-30 - Completed quick task 260630-mpw: Compattare flusso import skip analyze per formato sconosciuto
-last_activity_desc: Phase 59 complete; quick-task branch merged into main
+milestone: v2.4
+milestone_name: Standalone Expense
+status: planning
+last_updated: "2026-07-01T06:57:51.926Z"
+last_activity: 2026-07-01
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -28,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-29)
 
 ## Current Position
 
-Phase: 59 (import-wizard-attach-format) — COMPLETE
-Phase: 60 (seed-slug-linkage-and-docs) — NEXT
-Status: Phase 59 complete — verified 2026-06-30
-Last activity: 2026-06-30 — Phase 59 execution resumed (wave continue)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-01 — Milestone v2.4 started
 
 ## Roadmap (v2.3 — Phases 58–60)
 

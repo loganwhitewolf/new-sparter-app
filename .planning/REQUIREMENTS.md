@@ -1,50 +1,40 @@
-# Requirements — Milestone v2.3: Platform Identity & Format Ownership
+# Requirements — Milestone v2.4: Standalone Expense
 
-**Defined:** 2026-06-29
-**Decision contract:** LOCKED — `docs/adr/0015-platform-global-moderated-format-private.md` + `CONTEXT.md` (Platform / Import Format glossary entries)
+**Defined:** 2026-07-01
+**Decision contract:** LOCKED — `docs/adr/0016-shared-costs-net-by-subcategory-inflows-isolated-per-transaction.md` + `CONTEXT.md` (Standalone Expense glossary entry)
 
-**Goal:** Make Platform a globally shared, moderated identity (never user-owned) and move private ownership onto the Import Format, eliminating duplicate platforms and the seed id collision.
+**Goal:** Give the user a way to isolate a single transaction from `descriptionHash` aggregation at categorization time — a general "treat as a standalone expense / do not aggregate" action — so shared-subscription reimbursements and other ambiguous person-to-person inflows can be categorized correctly without polluting the sender's aggregate or the Tier 2 history.
+
+**Context:** The option-A netting doctrine (a reimbursement for a shared expense is categorized under the spend's subcategory and nets by algebraic sum, ADR 0004) is already usable today with zero code. What is missing is the ability to peel one transaction out of its `descriptionHash`-keyed expense, because a person is not a merchant: the same sender's transfers collapse into one expense and cannot carry different subcategories. This milestone builds only that isolation capability.
 
 ---
 
-## v2.3 Requirements
+## v2.4 Requirements
 
-### Platform Identity Model
+### Standalone Expense
 
-- [x] **PLAT-01**: A Platform is never user-owned. `platform.visibility` is removed and `platform.ownerUserId` is renamed to `proposedByUserId` (provenance, not ownership). Existing rows are migrated by an additive, idempotent step — migration via `drizzle-kit generate` + `scripts/migrate.ts`; never `drizzle-kit push` in production.
-- [x] **PLAT-02**: Platform visibility follows a review lifecycle keyed on `reviewStatus`: a user-proposed Platform is `pending` and visible **only** to its `proposedByUserId`; an `approved` Platform is visible to **all** users. Seeded platforms remain `approved`.
-- [x] **PLAT-03**: A private Import Format is decoupled from a private Platform. A user-owned `import_format_version` (`ownerUserId = user`) is visible to its owner **even when attached to a global/approved Platform** — `accessibleWhere` no longer requires the platform to also be private. No behavioral regression for the existing global formats.
+- [ ] **STEXP-01**: In the categorization flow, the user can mark a single transaction as a standalone expense ("do not aggregate"), supplying a title and a subcategory; the transaction is detached into a dedicated expense with a synthetic `descriptionHash` (`sha256("detached:{id}")`). The action is general — available on any transaction — not a counterparty-specific category.
+- [ ] **STEXP-02**: The standalone action works on an expense that already holds a single transaction, by re-hashing the existing expense row in place (same id) — lifting the `SINGLE_TRANSACTION_EXPENSE` guard in `lib/services/transaction-detach.ts` without creating a new expense or leaving an orphaned empty source.
+- [ ] **STEXP-03**: A standalone expense is excluded from both `descriptionHash` aggregation and Tier 2 history learning; a future transaction sharing the original description arrives fresh and uncategorized (isolation is per-transaction, not a standing per-sender rule).
 
-### Import Wizard
-
-- [x] **PLAT-04**: When format detection fails on upload, the user can attach a new private Import Format to an **existing** Platform. A brand-new Platform is created only when no existing one fits, and it is created `pending`. The wizard no longer silently mints a duplicate Platform for a known bank.
-
-### Seed Integrity
-
-- [ ] **PLAT-05**: Seeded import formats reference their Platform by **slug** (no hardcoded platform id); `seed.ts` resolves slug→id at runtime and seeded platforms carry no explicit `id`. The Trade Republic id-8 collision (seed skipped by `onConflictDoNothing` when a user platform already holds id 8) no longer occurs. The runtime FK stays `import_format_version.platformId`.
-
-### Documentation
-
-- [ ] **PLAT-06**: The DescriptionStripPattern reference is corrected wherever stale — the CONTEXT.md glossary (and any stale code comments) state it lives on `import_format_version` (ADR 0013), not `platform`.
+---
 
 ## Future Requirements (deferred)
 
-- Operator approval UI to promote a `pending` Platform to `approved` — needed only once a second user exists; until then `pending` + proposer-visible is fully functional for import.
-- Multi-user identity dedup: two users proposing the same bank converge onto one `approved` Platform.
+- **SUBS-VIEW** — Normalized "Subscriptions" view showing net cost per covered month for shared/recurring expenses. Explicitly deferred by ADR 0016; the main entrate/uscite dashboard stays cash-basis and is not amortized.
+- **SPLIT-01** — Split a single inflow across multiple subcategories (e.g. €50 subscription + €20 pizza in one transfer). Out of scope for v2.4; the one-transaction → one-subcategory limit holds.
 
 ## Out of Scope
 
-- Operator deploy (R038/R039/R041) — an operational action, not a build item for this milestone.
-- Trade Republic auto-categorization — a separate `regex-discovery` + `seed-patterns` follow-up, independent of the platform model.
-- Changing the runtime FK from `platformId` to `platformSlug` — rejected (hot join across expenses/transactions/imports; natural-key cascade cost). Slug is the seed-linkage key only.
+- A "money received from a person" (counterparty) category — rejected by ADR 0016; violates the categorization doctrine (classify by purpose, not by who) and is not reliably auto-detectable.
+- Amortizing a lump-sum reimbursement across the months it covers in the monthly cashflow chart — rejected by ADR 0016 (would break the cash-basis main dashboard).
 
 ## Traceability
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| PLAT-01 | Phase 58 | ⬜ Pending |
-| PLAT-02 | Phase 58 | ⬜ Pending |
-| PLAT-03 | Phase 58 | ⬜ Pending |
-| PLAT-04 | Phase 59 | ⬜ Pending |
-| PLAT-05 | Phase 60 | ⬜ Pending |
-| PLAT-06 | Phase 60 | ⬜ Pending |
+| STEXP-01 | — | Pending |
+| STEXP-02 | — | Pending |
+| STEXP-03 | — | Pending |
+
+*(Traceability filled by roadmap.)*
