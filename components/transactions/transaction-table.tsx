@@ -106,7 +106,8 @@ function isExpenseCategorized(status: TransactionListRow['expenseStatus']) {
 
 
 function transactionRowLabel(transaction: TransactionListRow) {
-  const raw = transaction.customTitle?.trim() || transaction.description
+  const raw =
+    transaction.customTitle?.trim() || transaction.expenseTitle?.trim() || transaction.description
   return raw.length > 80 ? `${raw.slice(0, 77)}…` : raw
 }
 
@@ -436,6 +437,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
                       id={transaction.id}
                       description={transaction.description}
                       customTitle={transaction.customTitle}
+                      fallbackTitle={transaction.expenseTitle}
                       onSuccess={(newTitle) => updateTransactionTitle(transaction.id, newTitle)}
                     />
                     {/* Inline pair badge — shown when the row is paired (D-15, PAIR-02).
