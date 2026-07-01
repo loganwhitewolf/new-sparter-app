@@ -1,0 +1,1 @@
+ALTER TABLE "import_format_version" ADD COLUMN "secondary_description_column" varchar(120);
