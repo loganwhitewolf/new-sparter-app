@@ -28,10 +28,24 @@ All milestones M001–v2.2 (Phases 1–57) complete. The app now has:
 - Collapsible icon-rail sidebar with localStorage-persisted state; Topbar removed; BottomNav 5th Impostazioni entry; ThemeToggle in SettingsHub
 - R2 upload services, Drizzle migrations, operational health diagnostics
 - Zero-cost deploy runbook at `docs/deploy/vercel-supabase-r2.md`
+- Standalone Expense (v2.4): inline "spesa a sé / non aggregare" action in the categorization flow on any transaction; `detachTransactionToDedicatedExpense` accepts `subCategoryId` and persists it on both the multi-tx and new single-tx in-place re-hash paths; `SINGLE_TRANSACTION_EXPENSE` guard removed; row-title display precedence fixed to `customTitle → expenseTitle → description` (checkpoint bug fix, `transaction.description`/hash/aggregation/Tier 2 untouched)
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Current Milestone: v2.3 — Platform Identity & Format Ownership
+## Current Milestone: v2.4 — Standalone Expense (Phase 61 complete — ready to ship)
+
+**Goal:** Give the user a way to isolate a single transaction from `descriptionHash` aggregation at categorization time — a general "treat as a standalone expense / do not aggregate" action — so shared-subscription reimbursements and ambiguous person-to-person inflows are categorized correctly without polluting the sender's aggregate or the Tier 2 history.
+
+**Delivered (Phase 61, verified 2026-07-01, 8/8 must-haves):**
+- Inline "standalone expense" action in the categorization flow: captures a title + subcategory and detaches the transaction into a dedicated expense with a synthetic `descriptionHash`. General — available on any transaction — not a counterparty category.
+- Single-transaction in-place path that lifts the `SINGLE_TRANSACTION_EXPENSE` guard in `lib/services/transaction-detach.ts` by re-hashing the existing expense row (no new expense, no orphan).
+- Checkpoint bug fix: row title now falls back `customTitle → expenseTitle → description` so a renamed standalone expense's title is reflected on the transaction row (previously stuck on the raw bank description).
+
+**Decision contract:** LOCKED in `docs/adr/0016-shared-costs-net-by-subcategory-inflows-isolated-per-transaction.md` + `CONTEXT.md` (Standalone Expense entry). The option-A netting doctrine is already usable with zero code; this milestone builds only the isolation capability. Deferred: normalized Subscriptions view; split of a single inflow across subcategories.
+
+**Status:** Phase 61 complete and verified. Milestone ready for `/gsd-complete-milestone v2.4` (tag) when desired — same pattern as v2.3.
+
+## Last Shipped Milestone: v2.3 — Platform Identity & Format Ownership (shipped 2026-06-30)
 
 **Goal:** Make Platform a globally shared, moderated identity (never user-owned) and move private ownership onto the Import Format, eliminating duplicate platforms and the seed id collision.
 
@@ -170,7 +184,8 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 - [x] v2.0: Nature/Direction Model Realignment — nature→direction lookup-table model, data migration/recategorization, explicit transaction pairing. Shipped 2026-06-14.
 - [x] v2.1: Regex Discovery & Transaction Unification — standalone discovery service, dedup gates, IDOR-guarded retroactive apply, reusable trigger, cleaned import summary. Shipped 2026-06-22.
 - [x] v2.2: PDF Import — Import Format refactor (`platform`→`import_format_version`) + Trade Republic PDF import via `unpdf` positional extraction (ADR 0013/0014). Shipped 2026-06-26.
-- [ ] v2.3: Platform Identity & Format Ownership — Platform as globally shared moderated identity (pending→approved), private ownership on Import Format only, seed slug-linkage fix (ADR 0015). In progress.
+- [x] v2.3: Platform Identity & Format Ownership — Platform as globally shared moderated identity (pending→approved), private ownership on Import Format only, seed slug-linkage fix (ADR 0015). Shipped 2026-06-30 (PR #31, tag v2.3).
+- [x] v2.4: Standalone Expense — general "treat as standalone / don't aggregate" action in categorization + in-place single-transaction isolation, lifting the SINGLE_TRANSACTION_EXPENSE guard (ADR 0016). Phase 61 verified 2026-07-01; milestone tag pending.
 
 ## Key Decisions
 
@@ -221,6 +236,9 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 | Balance chain as explicit import guard for PDF | Any sign error halts import with explicit error; prevents silent bad data on tampered/malformed PDFs | ✓ Good |
 | `PDF_IMPORT_PLATFORM_SLUGS` allowlist co-located with `.pdf` dispatch | Single source of truth for PDF-capable banks; no `fileType` column on `import_format_version` (avoids scope creep) | ✓ Good |
 | `UNRECOGNIZED_PDF_FORMAT` — single constant for both machine code and Italian fallback | No separate enum; action intercepts the code and enriches with platform list; no internal markers leaked to UI | ✓ Good |
+| Single-transaction detach re-hashes the existing expense row in place (no new expense) (ADR 0016) | Multi-tx detach path would leave the source expense orphaned when it held only one transaction; in-place UPDATE avoids the orphan by construction, preserving classification history on the same row/id | ✓ Good |
+| Standalone-expense isolation is a general categorization action, not a "money from a person" category | Classifying by counterparty violates CONTEXT.md's categorization rule #1 (by purpose, not by who) and isn't reliably auto-detectable | ✓ Good |
+| Row title display precedence: `customTitle → expenseTitle → description` | Latent gap surfaced by v2.4: expense.title updates on standalone-rename but the row kept showing raw bank description, since TransactionTitleEdit never read expenseTitle. Fixed display-only; `transaction.description`/descriptionHash/aggregation/Tier 2 untouched | ✓ Good |
 
 ## Evolution
 
@@ -240,4 +258,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-29 — started v2.3 milestone (Platform Identity & Format Ownership)*
+*Last updated: 2026-07-01 — Phase 61 complete, v2.4 Standalone Expense verified and ready to ship*

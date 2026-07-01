@@ -9,6 +9,7 @@ export type ImportPlatformConfig = {
   id?: number
   timestampColumn: string
   descriptionColumn: string
+  secondaryDescriptionColumn?: string | null
   descriptionStripPattern: string | null
   amountType: AmountType
   amountColumn: string | null
@@ -200,9 +201,18 @@ export function normalizeTransactionRow(
   const errors: string[] = []
   const warnings: string[] = []
   const rawDescription = String(row[platform.descriptionColumn] ?? '').trim()
-  const description = platform.descriptionStripPattern
+  let description = platform.descriptionStripPattern
     ? rawDescription.replace(new RegExp(platform.descriptionStripPattern, 'i'), '').trim()
     : rawDescription
+  // Compose an optional secondary column as `Primary — @secondary` when present and distinct.
+  // Applied after the strip pattern (primary only) and before all hashes derive from `description`,
+  // so the combined string flows through the single existing code path. Secondary is not stripped.
+  if (platform.secondaryDescriptionColumn) {
+    const secondary = String(row[platform.secondaryDescriptionColumn] ?? '').trim()
+    if (secondary && secondary !== description) {
+      description = `${description} — ${secondary}`
+    }
+  }
   const normalizedDescription = normalizeDescription(description)
   const occurredAt = parseBankDate(row[platform.timestampColumn] as string | number | null | undefined as string | null | undefined)
 

@@ -106,7 +106,8 @@ function isExpenseCategorized(status: TransactionListRow['expenseStatus']) {
 
 
 function transactionRowLabel(transaction: TransactionListRow) {
-  const raw = transaction.customTitle?.trim() || transaction.description
+  const raw =
+    transaction.customTitle?.trim() || transaction.expenseTitle?.trim() || transaction.description
   return raw.length > 80 ? `${raw.slice(0, 77)}…` : raw
 }
 
@@ -436,6 +437,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
                       id={transaction.id}
                       description={transaction.description}
                       customTitle={transaction.customTitle}
+                      fallbackTitle={transaction.expenseTitle}
                       onSuccess={(newTitle) => updateTransactionTitle(transaction.id, newTitle)}
                     />
                     {/* Inline pair badge — shown when the row is paired (D-15, PAIR-02).
@@ -617,26 +619,25 @@ export function TransactionTable({ transactions, route, searchParams, categories
                           Collega rimborso
                         </DropdownMenuItem>
                       )}
-                      {transaction.expenseId &&
-                        (transaction.expenseTransactionCount ?? 0) > 1 && (
-                          <DropdownMenuItem
-                            onSelect={(e) => {
-                              e.preventDefault()
-                              const prefill = (
-                                transaction.customTitle?.trim() || transaction.description
-                              ).slice(0, 120)
-                              setDetachTarget({
-                                transactionId: transaction.id,
-                                defaultTitle: prefill,
-                              })
-                              setOpenDropdownId(null)
-                            }}
-                            className="flex items-center gap-2"
-                          >
-                            <Split className="h-4 w-4" />
-                            Separa in spesa dedicata
-                          </DropdownMenuItem>
-                        )}
+                      {transaction.expenseId && (
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault()
+                            const prefill = (
+                              transaction.customTitle?.trim() || transaction.description
+                            ).slice(0, 120)
+                            setDetachTarget({
+                              transactionId: transaction.id,
+                              defaultTitle: prefill,
+                            })
+                            setOpenDropdownId(null)
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <Split className="h-4 w-4" />
+                          Spesa a sé (non aggregare)
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       <DeleteTransactionMenuItem
                         transactionId={transaction.id}
@@ -744,13 +745,17 @@ export function TransactionTable({ transactions, route, searchParams, categories
         onOpenChange={(open) => { if (!open) setDetachTarget(null) }}
         transactionId={detachTarget.transactionId}
         defaultTitle={detachTarget.defaultTitle}
-        onSuccess={({ newExpenseId, newExpenseTitle }) => {
+        categories={categories}
+        mostUsed={mostUsed}
+        onSuccess={({ newExpenseId, newExpenseTitle, subCategoryId }) => {
           markExpenseDetached(detachTarget.transactionId, {
             id: newExpenseId,
             title: newExpenseTitle,
           })
+          if (subCategoryId !== undefined) {
+            markExpensesCategorized([newExpenseId], String(subCategoryId))
+          }
           setDetachTarget(null)
-          setCategorizeTarget({ id: newExpenseId, title: newExpenseTitle })
         }}
       />
     )}

@@ -32,6 +32,8 @@ import {
 import { cn } from '@/lib/utils'
 
 const MAX_HEADER_OPTIONS = 80
+// shadcn SelectItem cannot carry an empty-string value — sentinel maps back to '' on submit.
+const NO_SECONDARY_VALUE = '__none__'
 const DEFAULT_DELIMITERS = [
   { value: ',', label: 'Virgola (,)' },
   { value: ';', label: 'Punto e virgola (;)' },
@@ -175,6 +177,7 @@ export function ImportFormatWizard({
   const [delimiter, setDelimiter] = useState(context.detectedDelimiter ?? ';')
   const [timestampColumn, setTimestampColumn] = useState('')
   const [descriptionColumn, setDescriptionColumn] = useState('')
+  const [secondaryDescriptionColumn, setSecondaryDescriptionColumn] = useState(NO_SECONDARY_VALUE)
   const [amountColumn, setAmountColumn] = useState('')
   const [positiveAmountColumn, setPositiveAmountColumn] = useState('')
   const [negativeAmountColumn, setNegativeAmountColumn] = useState('')
@@ -429,6 +432,11 @@ export function ImportFormatWizard({
               <input type="hidden" name="delimiter" value={delimiter} />
               <input type="hidden" name="timestampColumn" value={timestampColumn} />
               <input type="hidden" name="descriptionColumn" value={descriptionColumn} />
+              <input
+                type="hidden"
+                name="secondaryDescriptionColumn"
+                value={secondaryDescriptionColumn === NO_SECONDARY_VALUE ? '' : secondaryDescriptionColumn}
+              />
               <input type="hidden" name="amountColumn" value={amountColumn} />
               <input type="hidden" name="positiveAmountColumn" value={positiveAmountColumn} />
               <input type="hidden" name="negativeAmountColumn" value={negativeAmountColumn} />
@@ -512,6 +520,20 @@ export function ImportFormatWizard({
                   options={headerSelectOptions}
                   placeholder="Seleziona colonna…"
                 />
+                <div className="space-y-1.5">
+                  <SelectField
+                    id="secondaryDescriptionColumn"
+                    label="Colonna descrizione secondaria (opzionale)"
+                    value={secondaryDescriptionColumn}
+                    onValueChange={setSecondaryDescriptionColumn}
+                    options={[{ value: NO_SECONDARY_VALUE, label: 'Nessuna' }, ...headerSelectOptions]}
+                    placeholder="Seleziona colonna…"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Combinata come <span className="font-medium">Descrizione — secondaria</span> per i pagamenti tra
+                    persone (es. Satispay).
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-3 rounded-xl border bg-muted/30 p-4">

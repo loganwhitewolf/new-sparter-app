@@ -1,6 +1,6 @@
 {
-  "id": "4ef3ae0d-31f6-4530-adb7-133a484581bf",
-  "prevId": "dcb735d2-8a57-4c0f-b432-4548b99b8764",
+  "id": "e86d1360-dd83-4951-b128-57e032d4a435",
+  "prevId": "4ef3ae0d-31f6-4530-adb7-133a484581bf",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1372,6 +1372,12 @@
           "type": "varchar(120)",
           "primaryKey": false,
           "notNull": true
+        },
+        "secondary_description_column": {
+          "name": "secondary_description_column",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false
         },
         "amount_type": {
           "name": "amount_type",

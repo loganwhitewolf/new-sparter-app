@@ -295,6 +295,9 @@ export const importFormatVersion = pgTable(
     // nullable: amountColumn, positiveAmountColumn, negativeAmountColumn, dateFormat, descriptionStripPattern
     delimiter: varchar("delimiter", { length: 4 }).notNull(),
     descriptionColumn: varchar("description_column", { length: 120 }).notNull(),
+    // Optional secondary description column composed as `Primary — @secondary` when present
+    // (opt-in per format; nullable, no backfill). Disambiguates person-to-person rows.
+    secondaryDescriptionColumn: varchar("secondary_description_column", { length: 120 }),
     amountType: amountTypeEnum("amount_type").notNull(),
     amountColumn: varchar("amount_column", { length: 120 }),
     positiveAmountColumn: varchar("positive_amount_column", { length: 120 }),

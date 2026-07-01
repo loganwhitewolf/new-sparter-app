@@ -1,5 +1,16 @@
 # Milestones
 
+## v2.4 Standalone Expense (Shipped: 2026-07-01)
+
+**Phases completed:** 1 phases, 2 plans, 6 tasks
+
+**Key accomplishments:**
+
+- Subcategory capture and single-transaction in-place re-hash added to `detachTransactionToDedicatedExpense`, replacing the `SINGLE_TRANSACTION_EXPENSE` guard, with a hash-level test proving the standalone expense stays out of aggregation and Tier 2.
+- Inline "Spesa a sé (non aggregare)" action wired into the transactions table row menu on any transaction with a linked expense, capturing title + subcategory in one dialog flow via the reused SubcategoryPicker, landing the detached expense already categorized without a second dialog step — human-verified in-browser on both multi- and single-transaction cases.
+
+---
+
 ## v2.2 PDF Import (Shipped: 2026-06-26)
 
 **Phases completed:** 2 phases (56–57), 10 plans
