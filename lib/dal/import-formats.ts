@@ -23,6 +23,7 @@ type ImportFormatRow = {
   delimiter: string
   timestampColumn: string
   descriptionColumn: string
+  secondaryDescriptionColumn: string | null
   amountType: 'single' | 'separate'
   amountColumn: string | null
   positiveAmountColumn: string | null
@@ -56,6 +57,7 @@ function hasExpectedRowShape(row: Partial<ImportFormatRow>): row is ImportFormat
     typeof row.delimiter === 'string' &&
     typeof row.timestampColumn === 'string' &&
     typeof row.descriptionColumn === 'string' &&
+    (typeof row.secondaryDescriptionColumn === 'string' || row.secondaryDescriptionColumn === null) &&
     (row.amountType === 'single' || row.amountType === 'separate') &&
     (typeof row.amountColumn === 'string' || row.amountColumn === null) &&
     (typeof row.positiveAmountColumn === 'string' || row.positiveAmountColumn === null) &&
@@ -114,6 +116,7 @@ function toCandidate(row: ImportFormatRow): ImportFormatCandidateInput {
       delimiter: row.delimiter,
       timestampColumn: row.timestampColumn,
       descriptionColumn: row.descriptionColumn,
+      secondaryDescriptionColumn: row.secondaryDescriptionColumn,
       amountType: row.amountType,
       amountColumn: row.amountColumn,
       positiveAmountColumn: row.positiveAmountColumn,
@@ -180,6 +183,7 @@ export async function loadImportFormatsForDetection(input: {
       delimiter: importFormatVersion.delimiter,
       timestampColumn: importFormatVersion.timestampColumn,
       descriptionColumn: importFormatVersion.descriptionColumn,
+      secondaryDescriptionColumn: importFormatVersion.secondaryDescriptionColumn,
       amountType: importFormatVersion.amountType,
       amountColumn: importFormatVersion.amountColumn,
       positiveAmountColumn: importFormatVersion.positiveAmountColumn,

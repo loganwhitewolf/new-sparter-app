@@ -315,6 +315,7 @@ async function createPrivateRows(
       delimiter: input.delimiter,
       timestampColumn: input.timestampColumn,
       descriptionColumn: input.descriptionColumn,
+      secondaryDescriptionColumn: input.secondaryDescriptionColumn ?? null,
       amountType: input.amountMode,
       amountColumn: input.amountMode === 'single' ? (input.amountColumn ?? null) : null,
       positiveAmountColumn: input.amountMode === 'separate' ? (input.positiveAmountColumn ?? null) : null,

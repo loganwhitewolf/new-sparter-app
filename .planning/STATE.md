@@ -94,6 +94,12 @@ Items acknowledged and postponed:
 | operator | R038/R039/R041 | live Vercel/Supabase/R2 deploy operator-pending |
 | backlog | R029 | partial categorization revalidation coverage |
 
+## Quick Tasks Completed
+
+| Date | Quick ID | Task | Result |
+|------|----------|------|--------|
+| 2026-07-01 | 260701-ki4 | Generic `secondaryDescriptionColumn` — combine two columns as `Primary — @secondary` (Satispay person payments) | ✓ 8 commits; migration 0024; unit test green; verify gates clean (pre-existing failures excluded) |
+
 ## Session Continuity
 
 **Resume file:** None
