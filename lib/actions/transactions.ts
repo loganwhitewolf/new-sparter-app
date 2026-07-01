@@ -175,6 +175,7 @@ export type DetachTransactionResult = {
 export async function detachTransaction(input: {
   transactionId: string
   title: string
+  subCategoryId?: number
 }): Promise<DetachTransactionResult> {
   const parsed = DetachTransactionSchema.safeParse(input)
   if (!parsed.success) {
@@ -192,6 +193,7 @@ export async function detachTransaction(input: {
       userId,
       transactionId: parsed.data.transactionId,
       title: parsed.data.title,
+      subCategoryId: parsed.data.subCategoryId,
     })
     revalidateCategorizationSurfaces()
     return { ...result, error: null }

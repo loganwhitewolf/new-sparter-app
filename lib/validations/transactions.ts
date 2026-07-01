@@ -50,6 +50,7 @@ export const DetachTransactionSchema = z.object({
     .trim()
     .min(1, { error: "Il titolo della spesa è obbligatorio." })
     .max(120, { error: "Il titolo non può superare i 120 caratteri." }),
+  subCategoryId: z.number().int().positive().optional(),
 })
 
 export type DetachTransactionInput = z.infer<typeof DetachTransactionSchema>
