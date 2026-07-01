@@ -3,11 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: Standalone Expense
 current_phase: 4
-status: Awaiting next milestone
+status: "Phase 61 shipped — PR #32"
 stopped_at: Completed 61-02-PLAN.md
-last_updated: "2026-07-01T10:34:17.836Z"
+last_updated: "2026-07-01T10:49:05.574Z"
 last_activity: 2026-07-01
-last_activity_desc: Milestone v2.4 completed and archived
 progress:
   total_phases: 1
   completed_phases: 1
@@ -30,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 
 Phase: Milestone v2.4 complete
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-01 — Milestone v2.4 completed and archived
+Status: Phase 61 shipped — PR #32
+Last activity: 2026-07-01
 
 ## Roadmap (v2.4 — Phase 61)
 
