@@ -33,8 +33,8 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| STEXP-01 | — | Pending |
-| STEXP-02 | — | Pending |
-| STEXP-03 | — | Pending |
+| STEXP-01 | Phase 61 | Pending |
+| STEXP-02 | Phase 61 | Pending |
+| STEXP-03 | Phase 61 | Pending |
 
-*(Traceability filled by roadmap.)*
+**Coverage:** 3/3 requirements mapped — no orphans, no duplicates. All v2.4 scope lands in a single phase (Phase 61: standalone-expense).

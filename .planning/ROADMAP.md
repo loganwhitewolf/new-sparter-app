@@ -15,17 +15,27 @@
 - ✅ **v2.0: Nature/Direction Model Realignment** — Phases 46–50 (shipped 2026-06-14)
 - ✅ **v2.1: Regex Discovery & Transaction Unification** — Phases 51–55 (shipped 2026-06-22)
 - ✅ **v2.2: PDF Import** — Phases 56–57 (shipped 2026-06-26) · [archive](milestones/v2.2-ROADMAP.md)
-- 🚧 **v2.3: Platform Identity & Format Ownership** — Phases 58–60 (in progress)
+- ✅ **v2.3: Platform Identity & Format Ownership** — Phases 58–60 (shipped 2026-06-30, tag v2.3)
+- 🚧 **v2.4: Standalone Expense** — Phase 61 (in progress)
 
 ## Phases
 
-### v2.3: Platform Identity & Format Ownership (Phases 58–60) — IN PROGRESS
+### v2.4: Standalone Expense (Phase 61) — IN PROGRESS
 
-Decision contract LOCKED in `docs/adr/0015-platform-global-moderated-format-private.md` + `CONTEXT.md`. Pure implementation — no discovery to redo.
+Decision contract LOCKED in `docs/adr/0016-shared-costs-net-by-subcategory-inflows-isolated-per-transaction.md` + `CONTEXT.md` (Standalone Expense entry). Pure implementation — no discovery to redo. Small, cohesive scope: a single phase.
 
-- [x] **Phase 58: platform-identity-and-access** - Make Platform a never-owned, review-gated identity (drop `visibility`, rename `ownerUserId`→`proposedByUserId`, `reviewStatus` lifecycle) with backfill, and decouple `accessibleWhere` so a private format is visible on a global platform — no regression on the hot platform join
-- [x] **Phase 59: import-wizard-attach-format** - When detection fails, attach a new private Import Format to an existing Platform; mint a brand-new Platform (born `pending`) only when none fits — no more silently duplicated platforms
-- [ ] **Phase 60: seed-slug-linkage-and-docs** - Seeded formats reference Platform by slug (seeded platforms carry no explicit `id`, runtime FK stays `platformId`), eliminating the Trade Republic id-8 collision; correct the stale DescriptionStripPattern reference in CONTEXT.md and code comments
+- [ ] **Phase 61: standalone-expense** - Add an inline "standalone expense / do not aggregate" action in the categorization flow (title + subcategory → synthetic `descriptionHash`), lift the `SINGLE_TRANSACTION_EXPENSE` guard via in-place re-hash (no orphan), and keep isolation per-transaction (excluded from `descriptionHash` aggregation and Tier 2 history)
+
+<details>
+<summary>✅ v2.3: Platform Identity & Format Ownership (Phases 58–60) — SHIPPED 2026-06-30 (tag v2.3)</summary>
+
+Decision contract LOCKED in `docs/adr/0015-platform-global-moderated-format-private.md` + `CONTEXT.md`. Pure implementation — no discovery.
+
+- [x] **Phase 58: platform-identity-and-access** - Make Platform a never-owned, review-gated identity (drop `visibility`, rename `ownerUserId`→`proposedByUserId`, `reviewStatus` lifecycle) with backfill, and decouple `accessibleWhere` so a private format is visible on a global platform — no regression on the hot platform join *(complete 2026-06-29, 3/3 plans)*
+- [x] **Phase 59: import-wizard-attach-format** - When detection fails, attach a new private Import Format to an existing Platform; mint a brand-new Platform (born `pending`) only when none fits — no more silently duplicated platforms *(complete 2026-06-30, 4/4 plans)*
+- [x] **Phase 60: seed-slug-linkage-and-docs** - Seeded formats reference Platform by slug (seeded platforms carry no explicit `id`, runtime FK stays `platformId`), eliminating the Trade Republic id-8 collision; correct the stale DescriptionStripPattern reference in CONTEXT.md and code comments *(complete 2026-06-30, 2/2 plans)*
+
+</details>
 
 <details>
 <summary>✅ v2.1: Regex Discovery & Transaction Unification (Phases 51–55) — SHIPPED 2026-06-22</summary>
@@ -178,6 +188,19 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 
 ## Phase Details
 
+### Phase 61: standalone-expense
+**Goal**: The user can peel a single ambiguous inflow (or any transaction) out of its shared-`descriptionHash` aggregate and categorize it on its own — capturing a title and a subcategory — without polluting the sender's aggregate or the Tier 2 history. This surfaces the existing `detachTransactionToDedicatedExpense` capability inline and extends it to the single-transaction case.
+**Depends on**: Phase 50 (transaction identity + expense aggregation and the existing `detachTransactionToDedicatedExpense` service this phase surfaces and extends)
+**Requirements**: STEXP-01, STEXP-02, STEXP-03
+**Success Criteria** (what must be TRUE):
+
+  1. In the categorization flow, on **any** transaction, the user can invoke a "standalone expense / do not aggregate" action, supply a title and pick a subcategory, and the transaction is detached into a dedicated expense with a synthetic `descriptionHash` (`sha256("detached:{id}")`) — the action is general, not a counterparty-specific category. [STEXP-01]
+  2. The action works even when the transaction's expense holds only that one transaction: the existing expense row is re-hashed in place (same id) — the `SINGLE_TRANSACTION_EXPENSE` guard in `lib/services/transaction-detach.ts` is lifted, and no new expense and no orphaned empty source is created. [STEXP-02]
+  3. A standalone expense is excluded from `descriptionHash` aggregation: a later transaction sharing the original bank description does not collapse into the standalone expense but arrives as its own fresh, uncategorized expense. [STEXP-03]
+  4. A standalone expense does not teach Tier 2 history: the isolation is per-transaction, so the same description is not auto-categorized on future imports (no standing per-sender rule is persisted). [STEXP-03]
+**Plans**: TBD
+**UI hint**: yes
+
 ### Phase 58: platform-identity-and-access
 
 **Goal**: Platform becomes a never-owned, review-gated identity, and a private Import Format is decoupled from a private Platform — so a user's private format can live on a global/approved platform without the system needing to duplicate the platform.
@@ -271,7 +294,8 @@ Plans:
 | 56–57 | v2.2 | 10/10 | Complete | 2026-06-26 |
 | 58. platform-identity-and-access | v2.3 | 3/3 | Complete   | 2026-06-29 |
 | 59. import-wizard-attach-format | v2.3 | 4/4 | Complete   | 2026-06-30 |
-| 60. seed-slug-linkage-and-docs | v2.3 | 0/? | Not started | - |
+| 60. seed-slug-linkage-and-docs | v2.3 | 2/2 | Complete   | 2026-06-30 |
+| 61. standalone-expense | v2.4 | 0/? | Not started | - |
 
-**Total shipped: 57 phases · 214 plans complete**
-**Current milestone: v2.3 — Platform Identity & Format Ownership (Phases 58–60)**
+**Total shipped: 60 phases · 223 plans complete**
+**Current milestone: v2.4 — Standalone Expense (Phase 61)**
