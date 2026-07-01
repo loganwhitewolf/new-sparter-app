@@ -6,5 +6,6 @@
   "workflow": {
     "ui_safety_gate": false,
     "_auto_chain_active": false
-  }
+  },
+  "model_profile": "budget"
 }

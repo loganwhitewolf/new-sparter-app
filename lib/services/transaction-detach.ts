@@ -7,10 +7,7 @@ import { expense, transaction as transactionTable } from '@/lib/db/schema'
 import { reconcileExpensesAfterTransactionRemoval } from '@/lib/services/expense-reconciliation'
 import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
 
-export type DetachTransactionErrorCode =
-  | 'TRANSACTION_NOT_FOUND'
-  | 'NO_EXPENSE_LINKED'
-  | 'SINGLE_TRANSACTION_EXPENSE'
+export type DetachTransactionErrorCode = 'TRANSACTION_NOT_FOUND' | 'NO_EXPENSE_LINKED'
 
 export class DetachTransactionError extends Error {
   readonly code: DetachTransactionErrorCode
@@ -22,7 +19,7 @@ export class DetachTransactionError extends Error {
   }
 }
 
-function syntheticDescriptionHash(transactionId: string): string {
+export function syntheticDescriptionHash(transactionId: string): string {
   return createHash('sha256').update(`detached:${transactionId}`).digest('hex')
 }
 
@@ -35,6 +32,7 @@ export async function detachTransactionToDedicatedExpense(input: {
   userId: string
   transactionId: string
   title: string
+  subCategoryId?: number | null
 }): Promise<DetachTransactionResult> {
   const trimmedTitle = input.title.trim().slice(0, 120)
   if (!trimmedTitle) {
@@ -78,29 +76,44 @@ export async function detachTransactionToDedicatedExpense(input: {
       )
     }
 
+    const sourceExpenseId = row.expenseId
+    const descriptionHash = syntheticDescriptionHash(input.transactionId)
+    const hasSubCategoryId = input.subCategoryId !== undefined
+
     if ((row.expenseTransactionCount ?? 0) <= 1) {
-      throw new DetachTransactionError(
-        'SINGLE_TRANSACTION_EXPENSE',
-        'Non è possibile separare l\'unica transazione della spesa.',
-      )
+      // Single-transaction source: re-hash the existing expense row in place.
+      // No new expense is created and no reconcile is needed — the transaction
+      // already points at this expense id, so there is no separate source to
+      // clean up (ADR 0016 decision 4).
+      await tx
+        .update(expense)
+        .set({
+          descriptionHash,
+          title: trimmedTitle,
+          updatedAt: new Date(),
+          ...(hasSubCategoryId
+            ? { subCategoryId: input.subCategoryId, status: '3' as const }
+            : {}),
+        })
+        .where(and(eq(expense.id, sourceExpenseId), eq(expense.userId, input.userId)))
+
+      return { newExpenseId: sourceExpenseId, newExpenseTitle: trimmedTitle }
     }
 
-    const sourceExpenseId = row.expenseId
     const newExpenseId = crypto.randomUUID()
-    const descriptionHash = syntheticDescriptionHash(input.transactionId)
 
     await tx.insert(expense).values({
       id: newExpenseId,
       userId: input.userId,
       title: trimmedTitle,
       descriptionHash,
-      subCategoryId: null,
+      subCategoryId: hasSubCategoryId ? input.subCategoryId : null,
       totalAmount: toDbDecimal(toDecimal(row.transactionAmount)),
       transactionCount: 1,
       importedFromFileId: null,
       firstTransactionAt: row.transactionOccurredAt,
       lastTransactionAt: row.transactionOccurredAt,
-      status: '1',
+      status: hasSubCategoryId ? '3' : '1',
     })
 
     await tx

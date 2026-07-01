@@ -7,11 +7,19 @@ type Props = {
   id: string
   description: string
   customTitle: string | null
+  /** Title of the linked expense (transaction.expenseTitle) — display fallback between customTitle and the raw bank description. */
+  fallbackTitle?: string | null
   onSuccess?: (newTitle: string) => void
 }
 
-export function TransactionTitleEdit({ id, description, customTitle, onSuccess }: Props) {
-  const displayTitle = customTitle ?? description
+export function TransactionTitleEdit({
+  id,
+  description,
+  customTitle,
+  fallbackTitle,
+  onSuccess,
+}: Props) {
+  const displayTitle = customTitle ?? fallbackTitle ?? description
   const [isEditing, setIsEditing] = useState(false)
   const [value, setValue] = useState(displayTitle)
   const [state, formAction, isPending] = useActionState(updateTransactionCustomTitle, {
@@ -35,7 +43,7 @@ export function TransactionTitleEdit({ id, description, customTitle, onSuccess }
           type="button"
           className="flex min-w-0 items-center gap-1 text-left"
           onClick={() => {
-            setValue(customTitle ?? description)
+            setValue(customTitle ?? fallbackTitle ?? description)
             setIsEditing(true)
           }}
           title="Clicca per modificare il titolo di questa transazione"
