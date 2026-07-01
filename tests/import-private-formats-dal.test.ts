@@ -40,6 +40,7 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
     delimiter: ';',
     timestampColumn: 'Date',
     descriptionColumn: 'Description',
+    secondaryDescriptionColumn: null,
     amountType: 'single' as const,
     amountColumn: 'Amount',
     positiveAmountColumn: null,
