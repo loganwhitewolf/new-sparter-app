@@ -185,4 +185,42 @@ describe('import utility fixture contracts', () => {
     expect(row.description).toBe('AMAZON MARKETPLACE')
     expect(row.rawRow['Descrizione_Completa']).toBe('AMAZON MARKETPLACE Carta N. ***** 114 Data operazione 28/04/26')
   })
+
+  it('composes Primary — @secondary and yields distinct hashes for shared Nome with differing username', () => {
+    const satispayConfig = {
+      platformId: 4,
+      timestampColumn: 'Data',
+      descriptionColumn: 'Nome',
+      secondaryDescriptionColumn: 'Descrizione',
+      descriptionStripPattern: null,
+      amountType: 'single' as const,
+      amountColumn: 'Importo',
+      positiveAmountColumn: null,
+      negativeAmountColumn: null,
+      multiplyBy: 1,
+    }
+
+    const rowA = normalizeTransactionRow(
+      { Nome: 'Federico P.', Descrizione: '@federicopiazza82', Importo: '-50', Data: '2026-01-02' },
+      satispayConfig,
+      { userId: 'user-1', rowIndex: 1 },
+    )
+    const rowB = normalizeTransactionRow(
+      { Nome: 'Federico P.', Descrizione: '@piseddu_f', Importo: '-16', Data: '2026-01-02' },
+      satispayConfig,
+      { userId: 'user-1', rowIndex: 2 },
+    )
+    const shopRow = normalizeTransactionRow(
+      { Nome: '🏬 a un Negozio', Descrizione: '', Importo: '-8', Data: '2026-01-02' },
+      satispayConfig,
+      { userId: 'user-1', rowIndex: 3 },
+    )
+
+    // Combined title carries the disambiguating username
+    expect(rowA.description).toBe('Federico P. — @federicopiazza82')
+    // Two "Federico P." with different usernames → distinct expenses (distinct descriptionHash)
+    expect(rowA.descriptionHash).not.toBe(rowB.descriptionHash)
+    // Empty secondary → primary only, behaviour unchanged
+    expect(shopRow.description).toBe('🏬 a un Negozio')
+  })
 })
