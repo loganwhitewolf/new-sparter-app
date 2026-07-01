@@ -4,17 +4,17 @@ milestone: v2.4
 milestone_name: Standalone Expense
 current_phase: 61
 current_phase_name: standalone-expense
-status: executing
-stopped_at: Completed 61-01-PLAN.md
-last_updated: "2026-07-01T08:00:55.002Z"
+status: verifying
+stopped_at: Completed 61-02-PLAN.md
+last_updated: "2026-07-01T09:41:27.048Z"
 last_activity: 2026-07-01
 last_activity_desc: Phase 61 execution started
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 0
+  completed_plans: 2
+  percent: 25
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 
 Phase: 61 (standalone-expense) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-01 — Phase 61 execution started
 Progress: [                    ] 0/1 phases
 
@@ -55,6 +55,9 @@ Design contract is LOCKED (ADR 0016). Do not re-derive the approach:
 - Layers / hard rules still apply: Decimal.js for amounts, writes inside `db.transaction`, DAL/services/actions separation, English dev-facing code, Italian only for product surfaces.
 - [Phase 61]: In-place detach branch never calls reconcileExpensesAfterTransactionRemoval — no separate source row exists once the branch is taken (ADR 0016 decision 4) — Prevents reconciling the wrong row or a no-op call
 - [Phase 61]: hasSubCategoryId = input.subCategoryId !== undefined distinguishes omitted from explicitly-null across both detach branches — Backward compatibility: omitted stays untouched on in-place branch, defaults to null/status 1 on insert branch
+- [Phase ?]: Phase 61 (61-02): standalone menu item gated only on transaction.expenseId (STEXP-02 count gate removed); relabeled to 'Spesa a se (non aggregare)' to read as one-off/do-not-aggregate, not a mechanical split
+- [Phase ?]: Phase 61 (61-02): DetachExpenseDialog onSuccess payload gains subCategoryId; table applies markExpensesCategorized(String(subCategoryId)) immediately instead of opening a second ExpenseCategorizeDialog step
+- [Phase ?]: Phase 61 (61-02): TransactionTitleEdit row title precedence fixed to customTitle -> expenseTitle -> description (fallbackTitle prop) so a renamed standalone expense shows its chosen title, not the raw bank description
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -97,9 +100,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 61-01-PLAN.md
+**Stopped at:** Completed 61-02-PLAN.md
 
-Last session: 2026-07-01T08:00:54.996Z
+Last session: 2026-07-01T09:41:27.043Z
 
 **Next:** Plan Phase 61 (`/gsd-plan-phase 61`).
 
@@ -119,3 +122,4 @@ Last session: 2026-07-01T08:00:54.996Z
 | Phase 59 P03 | 8min | 3 tasks | 3 files |
 | Phase 59 P04 | 2min | 2 tasks | 2 files |
 | Phase 61 P01 | 6min | 3 tasks | 5 files |
+| Phase 61 P02 | 90min | 3 tasks | 5 files |

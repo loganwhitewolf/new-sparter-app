@@ -35,7 +35,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 61-02-PLAN.md — Inline standalone action on any transaction + title/subcategory capture via reused SubcategoryPicker (count gate removed) [STEXP-01, STEXP-02]
+- [x] 61-02-PLAN.md — Inline standalone action on any transaction + title/subcategory capture via reused SubcategoryPicker (count gate removed) [STEXP-01, STEXP-02]
 
 <details>
 <summary>✅ v2.3: Platform Identity & Format Ownership (Phases 58–60) — SHIPPED 2026-06-30 (tag v2.3)</summary>
@@ -211,7 +211,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
   3. A standalone expense is excluded from `descriptionHash` aggregation: a later transaction sharing the original bank description does not collapse into the standalone expense but arrives as its own fresh, uncategorized expense. [STEXP-03]
   4. A standalone expense does not teach Tier 2 history: the isolation is per-transaction, so the same description is not auto-categorized on future imports (no standing per-sender rule is persisted). [STEXP-03]
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans complete
 **UI hint**: yes
 
 ### Phase 58: platform-identity-and-access
@@ -311,7 +311,7 @@ Plans:
 | 58. platform-identity-and-access | v2.3 | 3/3 | Complete   | 2026-06-29 |
 | 59. import-wizard-attach-format | v2.3 | 4/4 | Complete   | 2026-06-30 |
 | 60. seed-slug-linkage-and-docs | v2.3 | 2/2 | Complete   | 2026-06-30 |
-| 61. standalone-expense | v2.4 | 1/2 | In Progress|  |
+| 61. standalone-expense | v2.4 | 2/2 | Complete   | 2026-07-01 |
 
 **Total shipped: 60 phases · 223 plans complete**
 **Current milestone: v2.4 — Standalone Expense (Phase 61)**
