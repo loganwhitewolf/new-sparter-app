@@ -13,7 +13,9 @@ import {
   categorizationPattern,
   category,
   expense,
+  importFormatVersion,
   nature,
+  platform,
   subCategory,
 } from '../lib/db/schema'
 import {
@@ -769,6 +771,41 @@ async function moveParsingContractToFormatVersion(_database: Db): Promise<void> 
 }
 
 // ---------------------------------------------------------------------------
+// Step: set-satispay-secondary-description-column
+// Sets secondary_description_column = 'Descrizione' on the active global Satispay import
+// format version (matched by platform slug). Combines Nome + @username so person-to-person
+// rows sharing a display name split into distinct expenses. Idempotent (re-runs set the same
+// value). 'Descrizione' is a Satispay CSV header value (product/domain surface), not a dev string.
+// ---------------------------------------------------------------------------
+
+async function setSatispaySecondaryDescriptionColumn(database: Db): Promise<void> {
+  const satispayRows = await database
+    .select({ id: platform.id })
+    .from(platform)
+    .where(and(eq(platform.slug, 'satispay'), isNull(platform.proposedByUserId)))
+    .limit(1)
+
+  const satispayId = satispayRows[0]?.id
+  if (satispayId == null) {
+    console.log('    set-satispay-secondary-description-column: skipped (Satispay platform absent)')
+    return
+  }
+
+  const result = await database
+    .update(importFormatVersion)
+    .set({ secondaryDescriptionColumn: 'Descrizione' })
+    .where(
+      and(
+        eq(importFormatVersion.platformId, satispayId),
+        eq(importFormatVersion.isActive, true),
+        isNull(importFormatVersion.ownerUserId),
+      ),
+    )
+  const count = (result as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(`    set-satispay-secondary-description-column: ${count} rows updated`)
+}
+
+// ---------------------------------------------------------------------------
 // Registry — append new taxonomy migration steps here (not regex patterns — see seed-patterns.ts)
 // ---------------------------------------------------------------------------
 
@@ -787,6 +824,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'v2-backfill-override-nature-id', run: v2BackfillOverrideNatureId },
   { name: 'insert-cartoleria-oggettistica', run: insertCartoleriaOggettistica },
   { name: 'move-parsing-contract-to-format-version', run: moveParsingContractToFormatVersion },
+  { name: 'set-satispay-secondary-description-column', run: setSatispaySecondaryDescriptionColumn },
 ]
 
 export const STEP_NAMES = STEPS.map((step) => step.name)
