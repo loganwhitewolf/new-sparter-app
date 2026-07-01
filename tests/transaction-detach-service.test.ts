@@ -154,6 +154,119 @@ describe('detachTransactionToDedicatedExpense', () => {
     )
   })
 
+  it('persists the supplied subCategoryId and status "3" on the new expense (multi-tx path)', async () => {
+    mocks.dbSelectChain.mockReturnValue(makeSelectChain([makeLoadedRow()]))
+    const insertValues = vi.fn(() => Promise.resolve([]))
+    mocks.dbInsertChain.mockReturnValue({ values: insertValues })
+    const updateSet = vi.fn(() => ({
+      where: vi.fn(() => Promise.resolve([])),
+    }))
+    mocks.dbUpdateChain.mockReturnValue({ set: updateSet })
+
+    const result = await detachTransactionToDedicatedExpense({
+      userId: USER_ID,
+      transactionId: TX_ID,
+      title: 'Rimborso Netflix',
+      subCategoryId: 42,
+    })
+
+    expect(result.newExpenseId).toBe('cccccccc-cccc-4ccc-8ccc-cccccccccccc')
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subCategoryId: 42,
+        status: '3',
+      }),
+    )
+  })
+
+  it('defaults subCategoryId to null and status to "1" when omitted (multi-tx, backward compatible)', async () => {
+    mocks.dbSelectChain.mockReturnValue(makeSelectChain([makeLoadedRow()]))
+    const insertValues = vi.fn(() => Promise.resolve([]))
+    mocks.dbInsertChain.mockReturnValue({ values: insertValues })
+    const updateSet = vi.fn(() => ({
+      where: vi.fn(() => Promise.resolve([])),
+    }))
+    mocks.dbUpdateChain.mockReturnValue({ set: updateSet })
+
+    await detachTransactionToDedicatedExpense({
+      userId: USER_ID,
+      transactionId: TX_ID,
+      title: 'Pranzo con amici',
+    })
+
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subCategoryId: null,
+        status: '1',
+      }),
+    )
+  })
+
+  it('re-hashes the source expense in place for a single-transaction expense, without inserting or reconciling', async () => {
+    mocks.dbSelectChain.mockReturnValue(
+      makeSelectChain([makeLoadedRow({ expenseTransactionCount: 1 })]),
+    )
+    const updateSet = vi.fn(() => ({
+      where: vi.fn(() => Promise.resolve([])),
+    }))
+    mocks.dbUpdateChain.mockReturnValue({ set: updateSet })
+
+    const result = await detachTransactionToDedicatedExpense({
+      userId: USER_ID,
+      transactionId: TX_ID,
+      title: '  Rimborso amico  ',
+      subCategoryId: 7,
+    })
+
+    expect(result).toEqual({
+      newExpenseId: SOURCE_EXPENSE_ID,
+      newExpenseTitle: 'Rimborso amico',
+    })
+
+    expect(mocks.dbInsertChain).not.toHaveBeenCalled()
+
+    const expectedHash = createHash('sha256').update(`detached:${TX_ID}`).digest('hex')
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        descriptionHash: expectedHash,
+        title: 'Rimborso amico',
+        subCategoryId: 7,
+        status: '3',
+      }),
+    )
+
+    expect(mocks.reconcileExpensesAfterTransactionRemoval).not.toHaveBeenCalled()
+  })
+
+  it('re-hashes the source expense in place with expenseTransactionCount 0 and no subCategoryId (status/subCategoryId left unchanged)', async () => {
+    mocks.dbSelectChain.mockReturnValue(
+      makeSelectChain([makeLoadedRow({ expenseTransactionCount: 0 })]),
+    )
+    const updateSet = vi.fn(() => ({
+      where: vi.fn(() => Promise.resolve([])),
+    }))
+    mocks.dbUpdateChain.mockReturnValue({ set: updateSet })
+
+    const result = await detachTransactionToDedicatedExpense({
+      userId: USER_ID,
+      transactionId: TX_ID,
+      title: 'Rimborso amico',
+    })
+
+    expect(result).toEqual({
+      newExpenseId: SOURCE_EXPENSE_ID,
+      newExpenseTitle: 'Rimborso amico',
+    })
+
+    expect(mocks.dbInsertChain).not.toHaveBeenCalled()
+
+    const updateSetPayload = updateSet.mock.calls[0][0]
+    expect(updateSetPayload).not.toHaveProperty('subCategoryId')
+    expect(updateSetPayload).not.toHaveProperty('status')
+
+    expect(mocks.reconcileExpensesAfterTransactionRemoval).not.toHaveBeenCalled()
+  })
+
   it('rejects when transaction is not found', async () => {
     await expect(
       detachTransactionToDedicatedExpense({
@@ -162,20 +275,6 @@ describe('detachTransactionToDedicatedExpense', () => {
         title: 'Titolo',
       }),
     ).rejects.toMatchObject({ code: 'TRANSACTION_NOT_FOUND' })
-  })
-
-  it('rejects when source expense has only one transaction', async () => {
-    mocks.dbSelectChain.mockReturnValue(
-      makeSelectChain([makeLoadedRow({ expenseTransactionCount: 1 })]),
-    )
-
-    await expect(
-      detachTransactionToDedicatedExpense({
-        userId: USER_ID,
-        transactionId: TX_ID,
-        title: 'Titolo',
-      }),
-    ).rejects.toMatchObject({ code: 'SINGLE_TRANSACTION_EXPENSE' })
   })
 
   it('rejects when transaction has no linked expense', async () => {
