@@ -107,6 +107,8 @@ export const CreatePrivateImportFormatSchema = z
     delimiter: ImportFormatWizardDelimiterSchema,
     timestampColumn: ImportFormatWizardColumnSchema,
     descriptionColumn: ImportFormatWizardColumnSchema,
+    // Optional secondary description column — empty string preprocesses to undefined; never required.
+    secondaryDescriptionColumn: OptionalImportFormatWizardColumnSchema,
     amountMode: z.enum(['single', 'separate'], { error: 'Amount mode is required.' }),
     amountColumn: OptionalImportFormatWizardColumnSchema,
     positiveAmountColumn: OptionalImportFormatWizardColumnSchema,
@@ -163,6 +165,10 @@ export function getPrivateImportFormatColumnValidationError(
   const requiredColumns = [
     input.timestampColumn,
     input.descriptionColumn,
+    // Secondary column is optional: validate its existence only when provided.
+    ...(typeof input.secondaryDescriptionColumn === 'string' && input.secondaryDescriptionColumn.length > 0
+      ? [input.secondaryDescriptionColumn]
+      : []),
     ...(input.amountMode === 'single'
       ? [input.amountColumn]
       : [input.positiveAmountColumn, input.negativeAmountColumn]),
