@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   dbSelectChain: vi.fn(),
   dbInsertChain: vi.fn(),
   dbDeleteChain: vi.fn(),
+  applyDetachCleanupTx: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
@@ -19,11 +20,24 @@ vi.mock('@/lib/db/schema', () => ({
     userId: 'transaction.userId',
     amount: 'transaction.amount',
     occurredAt: 'transaction.occurredAt',
+    expenseId: 'transaction.expenseId',
   },
   transactionPair: {
     transactionAId: 'transactionPair.transactionAId',
     transactionBId: 'transactionPair.transactionBId',
   },
+  expense: {
+    id: 'expense.id',
+    userId: 'expense.userId',
+    subCategoryId: 'expense.subCategoryId',
+    title: 'expense.title',
+  },
+}))
+
+// Mock the detach cleanup core: createPair calls applyDetachCleanupTx to
+// categorize the refund (secondary) expense under the primary's subcategory.
+vi.mock('@/lib/services/transaction-detach', () => ({
+  applyDetachCleanupTx: mocks.applyDetachCleanupTx,
 }))
 
 vi.mock('drizzle-orm', () => ({
@@ -42,6 +56,7 @@ vi.mock('drizzle-orm', () => ({
 function makeSelectChain(rows: unknown[]) {
   const chain = {
     from: vi.fn(() => chain),
+    innerJoin: vi.fn(() => chain),
     where: vi.fn(() => chain),
     limit: vi.fn(() => Promise.resolve(rows)),
   }
@@ -453,6 +468,224 @@ describe('createPair', () => {
 })
 
 // ---------------------------------------------------------------------------
+// createPair — refund cleanup on pairing (decision 2)
+// After the pair insert, the refund (secondary) expense inherits the refunded
+// spend's (primary's) subcategory via applyDetachCleanupTx — but only when the
+// primary is categorized and the secondary has its own distinct expense.
+// ---------------------------------------------------------------------------
+// A transaction leg row as loaded by createPair (now includes expenseId).
+function makeLeg(
+  id: string,
+  amount: string,
+  occurredAt: Date,
+  expenseId: string | null,
+  userId = 'user-1',
+) {
+  return { id, amount, occurredAt, userId, expenseId }
+}
+
+// Drive the sequential selects createPair performs: legA, legB, the primary-expense
+// join, then (only on the cleanup path) the secondary-expense title lookup used to
+// compose the refund title. Promise.all preserves array order, so legA is call 1
+// (transactionId) and legB is call 2 (counterpartId); primary-expense is call 3 and
+// the secondary-expense title is call 4.
+function mockPairSelects(
+  legA: unknown,
+  legB: unknown,
+  primaryExpenseRow: unknown | null,
+  secondaryExpenseTitle?: string,
+) {
+  let callCount = 0
+  mocks.dbSelectChain.mockImplementation(() => {
+    callCount += 1
+    if (callCount === 1) return makeSelectChain([legA])
+    if (callCount === 2) return makeSelectChain([legB])
+    if (callCount === 3) return makeSelectChain(primaryExpenseRow ? [primaryExpenseRow] : [])
+    return makeSelectChain(secondaryExpenseTitle != null ? [{ title: secondaryExpenseTitle }] : [])
+  })
+}
+
+describe('createPair — refund cleanup (decision 2)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.dbInsertChain.mockReturnValue(makeInsertChain())
+    mocks.dbDeleteChain.mockReturnValue(makeDeleteChain())
+    mocks.applyDetachCleanupTx.mockResolvedValue({
+      newExpenseId: 'exp-refund',
+      newExpenseTitle: 'Spesa X',
+    })
+  })
+
+  it('inherits the spend subcategory onto the refund expense (1:1 inherit path)', async () => {
+    // Spend -100.00 (primary, categorized), refund +50.00 (secondary, own expense).
+    const spend = makeLeg('tx-spend', '-100.00', new Date('2026-01-10'), 'exp-spend')
+    const refund = makeLeg('tx-refund', '+50.00', new Date('2026-01-15'), 'exp-refund')
+    mockPairSelects(
+      spend,
+      refund,
+      { expenseId: 'exp-spend', subCategoryId: 7, title: 'Spesa X' },
+      'Giulia Bianchi',
+    )
+
+    const result = await createPair({
+      userId: 'user-1',
+      transactionId: 'tx-spend',
+      counterpartId: 'tx-refund',
+    })
+
+    expect(mocks.applyDetachCleanupTx).toHaveBeenCalledTimes(1)
+    // Title composed as "{refund's own title} — rimborso {spend title}".
+    expect(mocks.applyDetachCleanupTx).toHaveBeenCalledWith(expect.anything(), {
+      userId: 'user-1',
+      transactionId: 'tx-refund',
+      title: 'Giulia Bianchi — rimborso Spesa X',
+      subCategoryId: 7,
+    })
+    // The service surfaces the resolved secondary + inherited subcategory for the UI.
+    expect(result).toEqual({
+      secondaryTransactionId: 'tx-refund',
+      inheritedSubCategoryId: 7,
+    })
+  })
+
+  it('skips cleanup when the refunded spend is uncategorized (donor uncategorized)', async () => {
+    const spend = makeLeg('tx-spend', '-100.00', new Date('2026-01-10'), 'exp-spend')
+    const refund = makeLeg('tx-refund', '+50.00', new Date('2026-01-15'), 'exp-refund')
+    mockPairSelects(spend, refund, {
+      expenseId: 'exp-spend',
+      subCategoryId: null,
+      title: 'Spesa X',
+    })
+
+    const insertChain = { values: vi.fn(() => Promise.resolve([])) }
+    mocks.dbInsertChain.mockReturnValue(insertChain)
+
+    const result = await createPair({
+      userId: 'user-1',
+      transactionId: 'tx-spend',
+      counterpartId: 'tx-refund',
+    })
+
+    expect(mocks.applyDetachCleanupTx).not.toHaveBeenCalled()
+    // The pair is still inserted.
+    expect(insertChain.values).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({ secondaryTransactionId: 'tx-refund' })
+  })
+
+  it('skips cleanup when primary and secondary share the same expense', async () => {
+    const spend = makeLeg('tx-spend', '-100.00', new Date('2026-01-10'), 'exp-shared')
+    const refund = makeLeg('tx-refund', '+50.00', new Date('2026-01-15'), 'exp-shared')
+    mockPairSelects(spend, refund, {
+      expenseId: 'exp-shared',
+      subCategoryId: 7,
+      title: 'Spesa X',
+    })
+
+    await createPair({
+      userId: 'user-1',
+      transactionId: 'tx-spend',
+      counterpartId: 'tx-refund',
+    })
+
+    expect(mocks.applyDetachCleanupTx).not.toHaveBeenCalled()
+  })
+
+  it('skips cleanup when the secondary has no linked expense', async () => {
+    const spend = makeLeg('tx-spend', '-100.00', new Date('2026-01-10'), 'exp-spend')
+    const refund = makeLeg('tx-refund', '+50.00', new Date('2026-01-15'), null)
+    mockPairSelects(spend, refund, {
+      expenseId: 'exp-spend',
+      subCategoryId: 7,
+      title: 'Spesa X',
+    })
+
+    await createPair({
+      userId: 'user-1',
+      transactionId: 'tx-spend',
+      counterpartId: 'tx-refund',
+    })
+
+    expect(mocks.applyDetachCleanupTx).not.toHaveBeenCalled()
+  })
+
+  it('targets the secondary (refund) even when initiated from the smaller-|amount| leg', async () => {
+    // User initiates from the refund (+50.00, smaller). The spend (-100.00) is
+    // still resolved as primary; cleanup targets the refund as secondary.
+    const refund = makeLeg('tx-refund', '+50.00', new Date('2026-01-15'), 'exp-refund')
+    const spend = makeLeg('tx-spend', '-100.00', new Date('2026-01-10'), 'exp-spend')
+    // call 1 = transactionId (tx-refund), call 2 = counterpartId (tx-spend)
+    mockPairSelects(
+      refund,
+      spend,
+      { expenseId: 'exp-spend', subCategoryId: 9, title: 'Spesa Y' },
+      'Marco Rossi',
+    )
+
+    const result = await createPair({
+      userId: 'user-1',
+      transactionId: 'tx-refund',
+      counterpartId: 'tx-spend',
+    })
+
+    expect(mocks.applyDetachCleanupTx).toHaveBeenCalledTimes(1)
+    expect(mocks.applyDetachCleanupTx).toHaveBeenCalledWith(expect.anything(), {
+      userId: 'user-1',
+      transactionId: 'tx-refund',
+      title: 'Marco Rossi — rimborso Spesa Y',
+      subCategoryId: 9,
+    })
+    expect(result.secondaryTransactionId).toBe('tx-refund')
+  })
+
+  it('resolves primary by earlier occurredAt on an |amount| tie and cleans up the later leg', async () => {
+    // Equal |amount|: earlier date is primary (the spend), later is the refund.
+    const spend = makeLeg('tx-early', '-75.00', new Date('2026-01-05'), 'exp-spend')
+    const refund = makeLeg('tx-late', '+75.00', new Date('2026-01-20'), 'exp-refund')
+    mockPairSelects(
+      spend,
+      refund,
+      { expenseId: 'exp-spend', subCategoryId: 3, title: 'Spesa Z' },
+      'Anna Verdi',
+    )
+
+    await createPair({
+      userId: 'user-1',
+      transactionId: 'tx-early',
+      counterpartId: 'tx-late',
+    })
+
+    expect(mocks.applyDetachCleanupTx).toHaveBeenCalledWith(expect.anything(), {
+      userId: 'user-1',
+      transactionId: 'tx-late',
+      title: 'Anna Verdi — rimborso Spesa Z',
+      subCategoryId: 3,
+    })
+  })
+
+  it('never calls cleanup when the opposite-sign guard rejects', async () => {
+    const spend = makeLeg('tx-1', '-100.00', new Date('2026-01-10'), 'exp-a')
+    const alsoSpend = makeLeg('tx-2', '-40.00', new Date('2026-01-15'), 'exp-b')
+    mockPairSelects(spend, alsoSpend, null)
+
+    await expect(
+      createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+    ).rejects.toThrow('segno opposto')
+    expect(mocks.applyDetachCleanupTx).not.toHaveBeenCalled()
+  })
+
+  it('never calls cleanup when the ownership guard rejects', async () => {
+    const spend = makeLeg('tx-1', '-100.00', new Date('2026-01-10'), 'exp-a', 'user-ATTACKER')
+    const refund = makeLeg('tx-2', '+50.00', new Date('2026-01-15'), 'exp-b', 'user-1')
+    mockPairSelects(spend, refund, null)
+
+    await expect(
+      createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+    ).rejects.toThrow('Non sei autorizzato')
+    expect(mocks.applyDetachCleanupTx).not.toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
 // deletePairByTransactionId — ownership validation + or-predicate delete (PAIR-03)
 // ---------------------------------------------------------------------------
 describe('deletePairByTransactionId', () => {
@@ -478,6 +711,18 @@ describe('deletePairByTransactionId', () => {
       await expect(
         deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-missing' }),
       ).rejects.toThrow()
+    })
+
+    // Unpair regression (decision 4): unlinking only removes the pair — it never
+    // runs the detach cleanup, so the inherited subcategory + synthetic hash persist.
+    it('never invokes the detach cleanup when unlinking', async () => {
+      const tx = makeTx('tx-1', '-100.00', new Date('2026-01-10'), 'user-1')
+      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([tx]))
+      mocks.dbDeleteChain.mockReturnValue(makeDeleteChain())
+
+      await deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-1' })
+
+      expect(mocks.applyDetachCleanupTx).not.toHaveBeenCalled()
     })
   })
 
