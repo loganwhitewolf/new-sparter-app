@@ -484,21 +484,24 @@ function makeLeg(
   return { id, amount, occurredAt, userId, expenseId }
 }
 
-// Drive the three sequential selects createPair performs: legA, legB, then the
-// primary-expense join. Promise.all preserves array order, so legA is call 1
-// (transactionId) and legB is call 2 (counterpartId); the primary-expense
-// select is call 3.
+// Drive the sequential selects createPair performs: legA, legB, the primary-expense
+// join, then (only on the cleanup path) the secondary-expense title lookup used to
+// compose the refund title. Promise.all preserves array order, so legA is call 1
+// (transactionId) and legB is call 2 (counterpartId); primary-expense is call 3 and
+// the secondary-expense title is call 4.
 function mockPairSelects(
   legA: unknown,
   legB: unknown,
   primaryExpenseRow: unknown | null,
+  secondaryExpenseTitle?: string,
 ) {
   let callCount = 0
   mocks.dbSelectChain.mockImplementation(() => {
     callCount += 1
     if (callCount === 1) return makeSelectChain([legA])
     if (callCount === 2) return makeSelectChain([legB])
-    return makeSelectChain(primaryExpenseRow ? [primaryExpenseRow] : [])
+    if (callCount === 3) return makeSelectChain(primaryExpenseRow ? [primaryExpenseRow] : [])
+    return makeSelectChain(secondaryExpenseTitle != null ? [{ title: secondaryExpenseTitle }] : [])
   })
 }
 
@@ -517,11 +520,12 @@ describe('createPair — refund cleanup (decision 2)', () => {
     // Spend -100.00 (primary, categorized), refund +50.00 (secondary, own expense).
     const spend = makeLeg('tx-spend', '-100.00', new Date('2026-01-10'), 'exp-spend')
     const refund = makeLeg('tx-refund', '+50.00', new Date('2026-01-15'), 'exp-refund')
-    mockPairSelects(spend, refund, {
-      expenseId: 'exp-spend',
-      subCategoryId: 7,
-      title: 'Spesa X',
-    })
+    mockPairSelects(
+      spend,
+      refund,
+      { expenseId: 'exp-spend', subCategoryId: 7, title: 'Spesa X' },
+      'Giulia Bianchi',
+    )
 
     const result = await createPair({
       userId: 'user-1',
@@ -530,10 +534,11 @@ describe('createPair — refund cleanup (decision 2)', () => {
     })
 
     expect(mocks.applyDetachCleanupTx).toHaveBeenCalledTimes(1)
+    // Title composed as "{refund's own title} — rimborso {spend title}".
     expect(mocks.applyDetachCleanupTx).toHaveBeenCalledWith(expect.anything(), {
       userId: 'user-1',
       transactionId: 'tx-refund',
-      title: 'Spesa X',
+      title: 'Giulia Bianchi — rimborso Spesa X',
       subCategoryId: 7,
     })
     // The service surfaces the resolved secondary + inherited subcategory for the UI.
@@ -609,11 +614,12 @@ describe('createPair — refund cleanup (decision 2)', () => {
     const refund = makeLeg('tx-refund', '+50.00', new Date('2026-01-15'), 'exp-refund')
     const spend = makeLeg('tx-spend', '-100.00', new Date('2026-01-10'), 'exp-spend')
     // call 1 = transactionId (tx-refund), call 2 = counterpartId (tx-spend)
-    mockPairSelects(refund, spend, {
-      expenseId: 'exp-spend',
-      subCategoryId: 9,
-      title: 'Spesa Y',
-    })
+    mockPairSelects(
+      refund,
+      spend,
+      { expenseId: 'exp-spend', subCategoryId: 9, title: 'Spesa Y' },
+      'Marco Rossi',
+    )
 
     const result = await createPair({
       userId: 'user-1',
@@ -625,7 +631,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
     expect(mocks.applyDetachCleanupTx).toHaveBeenCalledWith(expect.anything(), {
       userId: 'user-1',
       transactionId: 'tx-refund',
-      title: 'Spesa Y',
+      title: 'Marco Rossi — rimborso Spesa Y',
       subCategoryId: 9,
     })
     expect(result.secondaryTransactionId).toBe('tx-refund')
@@ -635,11 +641,12 @@ describe('createPair — refund cleanup (decision 2)', () => {
     // Equal |amount|: earlier date is primary (the spend), later is the refund.
     const spend = makeLeg('tx-early', '-75.00', new Date('2026-01-05'), 'exp-spend')
     const refund = makeLeg('tx-late', '+75.00', new Date('2026-01-20'), 'exp-refund')
-    mockPairSelects(spend, refund, {
-      expenseId: 'exp-spend',
-      subCategoryId: 3,
-      title: 'Spesa Z',
-    })
+    mockPairSelects(
+      spend,
+      refund,
+      { expenseId: 'exp-spend', subCategoryId: 3, title: 'Spesa Z' },
+      'Anna Verdi',
+    )
 
     await createPair({
       userId: 'user-1',
@@ -650,7 +657,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
     expect(mocks.applyDetachCleanupTx).toHaveBeenCalledWith(expect.anything(), {
       userId: 'user-1',
       transactionId: 'tx-late',
-      title: 'Spesa Z',
+      title: 'Anna Verdi — rimborso Spesa Z',
       subCategoryId: 3,
     })
   })

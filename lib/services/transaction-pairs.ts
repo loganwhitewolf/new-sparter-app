@@ -192,10 +192,31 @@ export async function createPair(input: {
       secondaryExpenseId &&
       secondaryExpenseId !== primaryExpense.expenseId
     ) {
+      // Compose the refund title as "{refund's own title} — rimborso {spend title}"
+      // so the refund row keeps the sender's name and reads as a refund of that
+      // specific spend, instead of looking like a duplicate of the original spend.
+      const secondaryExpenseRows = await tx
+        .select({ title: expense.title })
+        .from(transaction)
+        .innerJoin(expense, eq(transaction.expenseId, expense.id))
+        .where(
+          and(
+            eq(transaction.id, secondaryId),
+            eq(transaction.userId, input.userId),
+            eq(expense.userId, input.userId),
+          ),
+        )
+        .limit(1)
+
+      const refundOwnTitle = secondaryExpenseRows[0]?.title?.trim() ?? ''
+      const refundTitle = refundOwnTitle
+        ? `${refundOwnTitle} — rimborso ${primaryExpense.title}`
+        : `Rimborso ${primaryExpense.title}`
+
       await applyDetachCleanupTx(tx, {
         userId: input.userId,
         transactionId: secondaryId,
-        title: primaryExpense.title,
+        title: refundTitle,
         subCategoryId: primaryExpense.subCategoryId,
       })
 

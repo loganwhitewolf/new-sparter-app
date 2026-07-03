@@ -401,17 +401,18 @@ export function TransactionTable({ transactions, route, searchParams, categories
             // categoryType is a direction code from the nature→direction join (Plan 03)
             const isTransfer = transaction.categoryType === 'transfer'
 
-            // Amount color derived from direction code; fall back to sign for uncategorized rows
+            // Amount color follows the REAL amount sign for in/out/uncategorized rows,
+            // so a refund (positive amount categorized under an OUT subcategory) still
+            // reads as an inflow in the list — CONTEXT.md: "in lista si mostra per
+            // l'importo reale, nel grafico netta". Allocation and transfer keep their
+            // neutral direction styling regardless of sign.
             const amountColorClass =
-              transaction.categoryType === 'in'
-                ? 'text-total-in'
-                : transaction.categoryType === 'out' ||
-                    transaction.categoryType === 'allocation' ||
-                    transaction.categoryType === 'transfer'
+              transaction.categoryType === 'allocation' ||
+              transaction.categoryType === 'transfer'
+                ? 'text-total-out'
+                : transaction.amount.trim().startsWith('-')
                   ? 'text-total-out'
-                  : transaction.amount.trim().startsWith('-')
-                    ? 'text-total-out'
-                    : 'text-total-in'
+                  : 'text-total-in'
 
             return (
               <TableRow
