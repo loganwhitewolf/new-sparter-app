@@ -805,6 +805,33 @@ async function setSatispaySecondaryDescriptionColumn(database: Db): Promise<void
   console.log(`    set-satispay-secondary-description-column: ${count} rows updated`)
 }
 
+// Backfill expense titles that were truncated to 120 chars by the old
+// varchar(120) write path (import + detach). Rewrites `expense.title` to the full
+// description of a linked transaction, but ONLY for expenses whose current title is
+// exactly the 120-char truncation AND that have a linked transaction with a longer
+// description — so short, manually-edited, or standalone titles are never touched.
+// Idempotent: once lengthened, a row no longer has char_length(title) = 120 with a
+// longer linked description, so re-runs match nothing. Data backfill on existing rows
+// → belongs in seed-extras, not seed-data (project rule).
+async function backfillTruncatedExpenseTitles(database: Db): Promise<void> {
+  const result = await database.execute(sql`
+    UPDATE expense e
+    SET title = t.description
+    FROM (
+      SELECT expense_id, MIN(description) AS description
+      FROM transaction
+      WHERE expense_id IS NOT NULL
+      GROUP BY expense_id
+    ) t
+    WHERE t.expense_id = e.id
+      AND char_length(e.title) = 120
+      AND char_length(t.description) > 120
+  `)
+  console.log(
+    `    backfill-truncated-expense-titles: ${(result as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`,
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Registry — append new taxonomy migration steps here (not regex patterns — see seed-patterns.ts)
 // ---------------------------------------------------------------------------
@@ -825,6 +852,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'insert-cartoleria-oggettistica', run: insertCartoleriaOggettistica },
   { name: 'move-parsing-contract-to-format-version', run: moveParsingContractToFormatVersion },
   { name: 'set-satispay-secondary-description-column', run: setSatispaySecondaryDescriptionColumn },
+  { name: 'backfill-truncated-expense-titles', run: backfillTruncatedExpenseTitles },
 ]
 
 export const STEP_NAMES = STEPS.map((step) => step.name)
