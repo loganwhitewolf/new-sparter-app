@@ -25,6 +25,13 @@ type Props = {
   transactionId: string
   transactionAmount: string
   transactionOccurredAt: Date
+  /**
+   * Fired after a successful pairing with the server-resolved secondary (refund)
+   * transaction id and, when the refund expense inherited the spend's subcategory
+   * (decision 2), that subCategoryId. Lets the table repaint the refund row as
+   * categorized without a full reload.
+   */
+  onPaired?: (payload: { secondaryTransactionId: string; subCategoryId?: number }) => void
 }
 
 /** Format absolute amount for display (display-only, never written back to DB). */
@@ -73,6 +80,7 @@ export function CounterpartPickerDialog({
   transactionId,
   transactionAmount,
   transactionOccurredAt,
+  onPaired,
 }: Props) {
   const [state, formAction, isPending] = useActionState(createTransactionPairAction, { error: null })
   const submittedRef = useRef(false)
@@ -130,8 +138,16 @@ export function CounterpartPickerDialog({
       onOpenChange(false)
       toast.success('Transazione collegata.')
       submittedRef.current = false
+      // Repaint the refund row: the server resolves which leg is the refund
+      // (secondary) and whether its expense inherited a subcategory (decision 2).
+      if (state.pairedSecondaryId) {
+        onPaired?.({
+          secondaryTransactionId: state.pairedSecondaryId,
+          subCategoryId: state.pairedSubCategoryId,
+        })
+      }
     }
-  }, [state, onOpenChange])
+  }, [state, onOpenChange, onPaired])
 
   // Re-fetch when date range changes (only while open).
   function handleDateFromChange(value: string) {

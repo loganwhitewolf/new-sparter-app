@@ -751,6 +751,14 @@ export function TransactionTable({ transactions, route, searchParams, categories
       transactionId={pairTarget?.id ?? ''}
       transactionAmount={pairTarget?.amount ?? ''}
       transactionOccurredAt={pairTarget?.occurredAt ?? new Date()}
+      onPaired={({ secondaryTransactionId, subCategoryId }) => {
+        // Repaint the refund (secondary) row as categorized when the server
+        // inherited the spend's subcategory (decision 2). When subCategoryId is
+        // undefined the refund was left untouched — nothing to repaint.
+        if (subCategoryId !== undefined) {
+          markExpenseCategorized(secondaryTransactionId, String(subCategoryId))
+        }
+      }}
     />
 
     {detachTarget && (

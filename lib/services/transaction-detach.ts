@@ -36,9 +36,10 @@ export type DetachCleanupInput = {
 }
 
 /**
- * Tx-accepting core of the "spesa a sé" cleanup. Runs against a passed-in tx
- * handle so callers can compose it inside a larger db.transaction (project hard
- * rule: ownership-validating writes run inside db.transaction; helpers accept a tx).
+ * Tx-accepting core of the standalone-expense (detach) cleanup. Runs against a
+ * passed-in tx handle so callers can compose it inside a larger db.transaction
+ * (project hard rule: ownership-validating writes run inside db.transaction;
+ * helpers accept a tx).
  *
  * Behavior (unchanged from the original inline body):
  *  - Trims/validates the title (empty after trim throws before any write).

@@ -37,11 +37,19 @@ function errorCauseCode(error: unknown): string {
  * The silent swap handles the case where the user initiates from the
  * smaller-amount side.
  */
+export type CreatePairResult = {
+  /** The resolved secondary (refund) transaction id — used by the UI to repaint the row. */
+  secondaryTransactionId: string
+  /** The subcategory inherited by the refund expense, or undefined when the refund
+   *  cleanup was skipped (donor uncategorized / defensive skip — decision 2). */
+  inheritedSubCategoryId?: number
+}
+
 export async function createPair(input: {
   userId: string
   transactionId: string
   counterpartId: string
-}): Promise<void> {
+}): Promise<CreatePairResult> {
   // 0. Self-pair guard (CR-01): a transaction cannot be paired with itself.
   //    The picker UI excludes self, but the action reads counterpartId from raw
   //    FormData, so the only reliable enforcement point is here. A (X, X) pair
@@ -55,7 +63,7 @@ export async function createPair(input: {
   // writes run inside db.transaction). transaction_pair has no userId column, so the
   // delete/insert relies on the ownership read — that read and the write must not be
   // separated by a window in which another request mutates the rows (CR-02).
-  await db.transaction(async (tx) => {
+  return db.transaction(async (tx): Promise<CreatePairResult> => {
     // 1. Load both transaction rows — select only the columns needed for ownership
     //    check, sign validation, and primary resolution.
     const [rowsA, rowsB] = await Promise.all([
@@ -153,10 +161,10 @@ export async function createPair(input: {
 
     // 6. Refund cleanup (decision 2): categorize the refund (secondary) expense
     //    under the refunded spend's (primary's) subcategory, isolating it as a
-    //    "spesa a sé" via the detach cleanup core — inside this same transaction.
-    //    Only when the primary has a categorized expense (subCategoryId not null)
-    //    and the secondary has its own distinct expense. If the primary is
-    //    uncategorized, the refund is left untouched (no worse than today).
+    //    standalone expense via the detach cleanup core — inside this same
+    //    transaction. Only when the primary has a categorized expense
+    //    (subCategoryId not null) and the secondary has its own distinct expense.
+    //    If the primary is uncategorized, the refund is left untouched.
     const secondaryExpenseId = secondaryId === t1.id ? t1.expenseId : t2.expenseId
 
     const primaryExpenseRows = await tx
@@ -190,7 +198,14 @@ export async function createPair(input: {
         title: primaryExpense.title,
         subCategoryId: primaryExpense.subCategoryId,
       })
+
+      return {
+        secondaryTransactionId: secondaryId,
+        inheritedSubCategoryId: primaryExpense.subCategoryId,
+      }
     }
+
+    return { secondaryTransactionId: secondaryId }
   })
 }
 
