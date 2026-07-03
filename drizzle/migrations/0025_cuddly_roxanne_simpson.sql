@@ -1,0 +1,1 @@
+ALTER TABLE "expense" ALTER COLUMN "title" SET DATA TYPE text;
