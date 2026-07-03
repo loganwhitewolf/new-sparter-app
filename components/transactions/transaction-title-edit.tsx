@@ -48,7 +48,7 @@ export function TransactionTitleEdit({
           }}
           title="Clicca per modificare il titolo di questa transazione"
         >
-          <span className="truncate font-medium tracking-tight" title={displayTitle}>
+          <span className="truncate font-medium tracking-tight" title={description}>
             {displayTitle}
           </span>
           <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
