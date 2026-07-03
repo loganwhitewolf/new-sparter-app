@@ -7,8 +7,8 @@ current_phase_name: standalone-expense
 status: "Phase 61 shipped — PR #32"
 stopped_at: Completed 61-02-PLAN.md
 last_updated: "2026-07-01T14:22:11.084Z"
-last_activity: 2026-07-03 - Completed quick task 260703-l2b: Conferma cancellazione entità collegate su delete spese/transazioni
-last_activity_desc: Checkbox cascade su delete singolo/bulk — transazioni collegate (spese) e spese 1:1 (transazioni)
+last_activity: 2026-07-03 - Completed quick task 260703-leo: Fix filtro descrizione (substring search + focus debounce)
+last_activity_desc: DataTableToolbar draft locale + debounce 500ms; transazioni cercano anche expense.title
 progress:
   total_phases: 1
   completed_phases: 1
@@ -101,6 +101,7 @@ None. Scope is small, cohesive, and fully specified by ADR 0016.
 | 260701-ki4 | Generic secondaryDescriptionColumn — combine two columns as Primary — @secondary (Satispay) | 2026-07-01 | 7feb756 |
 | 260701-mqh | Expand Italian supermarket regex patterns (Penny, NaturaSì, DPiù, regional GDO) | 2026-07-01 | 75bb0ef |
 | 260703-l2b | Conferma cancellazione entità collegate su delete spese/transazioni | 2026-07-03 | 8209a9f |
+| 260703-leo | Fix filtro descrizione spese/transazioni (substring + focus) | 2026-07-03 | e947a16 |
 
 ## Deferred Items
 
