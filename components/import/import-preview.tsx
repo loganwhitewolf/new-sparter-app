@@ -282,9 +282,11 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
         </Card>
       )}
 
-      {/* Confirm button — hidden when analysis has fatal errors */}
+      {/* Confirm button — hidden when analysis has fatal errors.
+          Sticky to the viewport bottom so it stays reachable while the expanded
+          row list scrolls, without jumping to the end of a long import. */}
       {!hasErrors && !confirmDisabledReason && (
-        <div className="flex flex-col gap-3">
+        <div className="sticky bottom-0 z-10 flex flex-col gap-3 border-t bg-background/95 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           {error && (
             <Alert variant="destructive" role="alert">
               <AlertCircle className="h-4 w-4" />
