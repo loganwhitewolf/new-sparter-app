@@ -5,7 +5,7 @@ export const CreateExpenseSchema = z.object({
   title: z
     .string()
     .min(2, { error: 'Il titolo deve contenere almeno 2 caratteri.' })
-    .max(120, { error: 'Il titolo non può superare i 120 caratteri.' }),
+    .max(500, { error: 'Il titolo non può superare i 500 caratteri.' }),
   subCategoryId: z.number().int().positive().optional(),
   notes: z.string().max(500, { error: 'Le note non possono superare i 500 caratteri.' }).optional(),
 })
@@ -20,7 +20,7 @@ export const UpdateExpenseTitleSchema = z.object({
     .string()
     .trim()
     .min(2, { error: 'Il titolo deve contenere almeno 2 caratteri.' })
-    .max(120, { error: 'Il titolo non può superare i 120 caratteri.' }),
+    .max(500, { error: 'Il titolo non può superare i 500 caratteri.' }),
 })
 
 export const BulkCategorizeSchema = z.object({
