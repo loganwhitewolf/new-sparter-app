@@ -303,6 +303,8 @@ export const getTransactions = cache(
         or(
           ilike(transaction.description, pattern),
           ilike(transaction.customTitle, pattern),
+          // Matches table label: customTitle → expense title → bank description
+          ilike(expense.title, pattern),
         ),
       )
     }
