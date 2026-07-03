@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   dbSelectChain: vi.fn(),
   dbInsertChain: vi.fn(),
   dbDeleteChain: vi.fn(),
+  applyDetachCleanupTx: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
@@ -19,11 +20,24 @@ vi.mock('@/lib/db/schema', () => ({
     userId: 'transaction.userId',
     amount: 'transaction.amount',
     occurredAt: 'transaction.occurredAt',
+    expenseId: 'transaction.expenseId',
   },
   transactionPair: {
     transactionAId: 'transactionPair.transactionAId',
     transactionBId: 'transactionPair.transactionBId',
   },
+  expense: {
+    id: 'expense.id',
+    userId: 'expense.userId',
+    subCategoryId: 'expense.subCategoryId',
+    title: 'expense.title',
+  },
+}))
+
+// Mock the detach cleanup core: createPair calls applyDetachCleanupTx to
+// categorize the refund (secondary) expense under the primary's subcategory.
+vi.mock('@/lib/services/transaction-detach', () => ({
+  applyDetachCleanupTx: mocks.applyDetachCleanupTx,
 }))
 
 vi.mock('drizzle-orm', () => ({
@@ -42,6 +56,7 @@ vi.mock('drizzle-orm', () => ({
 function makeSelectChain(rows: unknown[]) {
   const chain = {
     from: vi.fn(() => chain),
+    innerJoin: vi.fn(() => chain),
     where: vi.fn(() => chain),
     limit: vi.fn(() => Promise.resolve(rows)),
   }

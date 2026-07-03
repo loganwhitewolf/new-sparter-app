@@ -1,8 +1,9 @@
 import 'server-only'
 
-import { eq, or } from 'drizzle-orm'
+import { and, eq, or } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { transaction, transactionPair } from '@/lib/db/schema'
+import { expense, transaction, transactionPair } from '@/lib/db/schema'
+import { applyDetachCleanupTx } from '@/lib/services/transaction-detach'
 import { toDecimal } from '@/lib/utils/decimal'
 
 /**
@@ -64,6 +65,7 @@ export async function createPair(input: {
           amount: transaction.amount,
           occurredAt: transaction.occurredAt,
           userId: transaction.userId,
+          expenseId: transaction.expenseId,
         })
         .from(transaction)
         .where(eq(transaction.id, input.transactionId))
@@ -74,6 +76,7 @@ export async function createPair(input: {
           amount: transaction.amount,
           occurredAt: transaction.occurredAt,
           userId: transaction.userId,
+          expenseId: transaction.expenseId,
         })
         .from(transaction)
         .where(eq(transaction.id, input.counterpartId))
@@ -146,6 +149,47 @@ export async function createPair(input: {
         throw new Error('Una delle transazioni è già collegata a un’altra.')
       }
       throw e
+    }
+
+    // 6. Refund cleanup (decision 2): categorize the refund (secondary) expense
+    //    under the refunded spend's (primary's) subcategory, isolating it as a
+    //    "spesa a sé" via the detach cleanup core — inside this same transaction.
+    //    Only when the primary has a categorized expense (subCategoryId not null)
+    //    and the secondary has its own distinct expense. If the primary is
+    //    uncategorized, the refund is left untouched (no worse than today).
+    const secondaryExpenseId = secondaryId === t1.id ? t1.expenseId : t2.expenseId
+
+    const primaryExpenseRows = await tx
+      .select({
+        expenseId: expense.id,
+        subCategoryId: expense.subCategoryId,
+        title: expense.title,
+      })
+      .from(transaction)
+      .innerJoin(expense, eq(transaction.expenseId, expense.id))
+      .where(
+        and(
+          eq(transaction.id, primaryId),
+          eq(transaction.userId, input.userId),
+          eq(expense.userId, input.userId),
+        ),
+      )
+      .limit(1)
+
+    const primaryExpense = primaryExpenseRows[0]
+
+    if (
+      primaryExpense &&
+      primaryExpense.subCategoryId !== null &&
+      secondaryExpenseId &&
+      secondaryExpenseId !== primaryExpense.expenseId
+    ) {
+      await applyDetachCleanupTx(tx, {
+        userId: input.userId,
+        transactionId: secondaryId,
+        title: primaryExpense.title,
+        subCategoryId: primaryExpense.subCategoryId,
+      })
     }
   })
 }
