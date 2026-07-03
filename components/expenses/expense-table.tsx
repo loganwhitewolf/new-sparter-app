@@ -420,6 +420,9 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
         open={bulkDeleteOpen}
         onOpenChange={setBulkDeleteOpen}
         selectedIds={selectedIds}
+        linkedTransactionCount={loadedExpenses
+          .filter((expense) => selectedIds.includes(expense.id))
+          .reduce((sum, expense) => sum + expense.transactionCount, 0)}
         onSuccess={() => {
           const idSet = new Set(selectedIds)
           setLoadedExpenses((prev) => prev.filter((e) => !idSet.has(e.id)))
@@ -507,11 +510,19 @@ function DeleteExpenseMenuItem({
 }) {
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
+  const [deleteLinkedTransactions, setDeleteLinkedTransactions] = useState(false)
+
+  useEffect(() => {
+    if (!open) {
+      setDeleteLinkedTransactions(false)
+    }
+  }, [open])
 
   async function handleDelete() {
     setPending(true)
     const fd = new FormData()
     fd.set('id', expense.id)
+    fd.set('deleteLinkedTransactions', deleteLinkedTransactions ? 'true' : 'false')
     const result = await deleteExpense({ error: null }, fd)
     setPending(false)
     if (result.error) {
@@ -537,13 +548,31 @@ function DeleteExpenseMenuItem({
         <DialogHeader>
           <DialogTitle>Elimina spesa</DialogTitle>
           <DialogDescription className="sr-only">
-            Conferma l&apos;eliminazione della spesa selezionata.
+            Conferma l&apos;eliminazione della spesa selezionata e, opzionalmente, delle transazioni
+            collegate.
           </DialogDescription>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Sei sicuro di voler eliminare &ldquo;{expense.title}&rdquo;? Questa azione non
-          può essere annullata.
+          Sei sicuro di voler eliminare &ldquo;{expense.title}&rdquo;? Questa azione non può essere
+          annullata.
         </p>
+        {expense.transactionCount > 0 ? (
+          <label className="flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={deleteLinkedTransactions}
+              onChange={(event) => setDeleteLinkedTransactions(event.target.checked)}
+            />
+            <span>
+              Elimina anche{' '}
+              <strong>
+                {expense.transactionCount}{' '}
+                {expense.transactionCount === 1 ? 'transazione collegata' : 'transazioni collegate'}
+              </strong>
+            </span>
+          </label>
+        ) : null}
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="ghost">Annulla</Button>

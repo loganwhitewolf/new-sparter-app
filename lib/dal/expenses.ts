@@ -56,6 +56,7 @@ export type ExpenseRow = {
   notes: string | null
   createdAt: Date
   totalAmount: string
+  transactionCount: number
   subCategoryId: number | null
   subCategoryName: string | null
   categoryName: string | null
@@ -226,6 +227,7 @@ export const getExpenses = cache(async (
       notes: expense.notes,
       createdAt: expense.createdAt,
       totalAmount: expense.totalAmount,
+      transactionCount: expense.transactionCount,
       subCategoryId: expense.subCategoryId,
       subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
       categoryName: category.name,
@@ -264,6 +266,7 @@ export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | und
       notes: expense.notes,
       createdAt: expense.createdAt,
       totalAmount: expense.totalAmount,
+      transactionCount: expense.transactionCount,
       subCategoryId: expense.subCategoryId,
       subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
       categoryName: category.name,

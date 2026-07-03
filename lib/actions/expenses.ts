@@ -6,6 +6,7 @@ import {
   UpdateExpenseTitleSchema,
   BulkCategorizeSchema,
   BulkDeleteExpensesSchema,
+  DeleteExpenseSchema,
   SingleCategorizeSchema,
   IgnoreExpenseSchema,
   ActionState,
@@ -14,14 +15,13 @@ import {
   insertExpense,
   updateExpense as updateExpenseDAL,
   updateExpenseTitle as updateExpenseTitleDAL,
-  deleteExpense as deleteExpenseDAL,
-  deleteExpenses as deleteExpensesDAL,
   getExpenses,
   getExpenseImportContext,
   EXPENSE_LIST_LIMIT,
   type ExpenseFilters,
   type ExpenseSourceFile,
 } from '@/lib/dal/expenses'
+import { deleteExpensesWithOptions } from '@/lib/services/expense-deletion'
 import {
   getTransactionsByExpenseId,
   type ExpenseTransactionRow,
@@ -149,11 +149,23 @@ export async function deleteExpense(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const id = formData.get('id') as string
-  if (!id) return { error: 'ID spesa mancante.' }
+  const parsed = DeleteExpenseSchema.safeParse({
+    id: formData.get('id'),
+    deleteLinkedTransactions: formData.get('deleteLinkedTransactions'),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Spesa non valida.' }
+  }
   const { userId } = await verifySession()
   try {
-    await deleteExpenseDAL(id, userId)
+    const result = await deleteExpensesWithOptions({
+      userId,
+      expenseIds: [parsed.data.id],
+      deleteLinkedTransactions: parsed.data.deleteLinkedTransactions,
+    })
+    if (result.deletedExpenseIds.length === 0) {
+      return { error: 'Spesa non trovata o già eliminata.' }
+    }
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
@@ -171,13 +183,20 @@ export async function bulkDeleteExpenses(
   } catch {
     return { error: 'Selezione non valida.' }
   }
-  const parsed = BulkDeleteExpensesSchema.safeParse({ ids })
+  const parsed = BulkDeleteExpensesSchema.safeParse({
+    ids,
+    deleteLinkedTransactions: formData.get('deleteLinkedTransactions'),
+  })
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Selezione non valida.' }
   }
   const { userId } = await verifySession()
   try {
-    await deleteExpensesDAL(parsed.data.ids, userId)
+    await deleteExpensesWithOptions({
+      userId,
+      expenseIds: parsed.data.ids,
+      deleteLinkedTransactions: parsed.data.deleteLinkedTransactions,
+    })
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useRef } from 'react'
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { bulkDeleteTransactions } from '@/lib/actions/transactions'
@@ -20,6 +20,7 @@ type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   selectedIds: string[]
+  oneToOneExpenseCount: number
   onSuccess: () => void
 }
 
@@ -27,10 +28,23 @@ export function BulkDeleteTransactionsDialog({
   open,
   onOpenChange,
   selectedIds,
+  oneToOneExpenseCount,
   onSuccess,
 }: Props) {
+  const [deleteLinkedExpenses, setDeleteLinkedExpenses] = useState(false)
   const [state, formAction, isPending] = useActionState(bulkDeleteTransactions, { error: null })
   const submittedRef = useRef(false)
+
+  useEffect(() => {
+    if (!open) {
+      setDeleteLinkedExpenses(false)
+    }
+  }, [open])
+
+  const transactionLabel = useMemo(
+    () => (selectedIds.length === 1 ? 'transazione' : 'transazioni'),
+    [selectedIds.length],
+  )
 
   useEffect(() => {
     if (submittedRef.current && state.error === null) {
@@ -50,8 +64,8 @@ export function BulkDeleteTransactionsDialog({
         <DialogHeader>
           <DialogTitle>Elimina transazioni</DialogTitle>
           <DialogDescription className="sr-only">
-            Conferma l&apos;eliminazione delle transazioni selezionate. Le spese collegate verranno
-            aggiornate o rimosse se non restano movimenti.
+            Conferma l&apos;eliminazione delle transazioni selezionate e, opzionalmente, delle spese
+            collegate in rapporto 1:1.
           </DialogDescription>
         </DialogHeader>
 
@@ -63,12 +77,36 @@ export function BulkDeleteTransactionsDialog({
           className="flex flex-col gap-4"
         >
           <input type="hidden" name="ids" value={JSON.stringify(selectedIds)} />
+          <input
+            type="hidden"
+            name="deleteLinkedExpenses"
+            value={deleteLinkedExpenses ? 'true' : 'false'}
+          />
 
           <p className="text-sm text-muted-foreground">
-            Stai per eliminare <strong>{selectedIds.length} transazioni</strong>. Le spese
-            aggregate collegate verranno ricalcolate; se non restano movimenti, la spesa può essere
-            rimossa (tranne i casi con categorizzazione manuale registrata).
+            Stai per eliminare <strong>{selectedIds.length} {transactionLabel}</strong>. Le spese
+            aggregate con più movimenti verranno ricalcolate; se non restano movimenti, la spesa può
+            essere rimossa (tranne i casi con categorizzazione manuale registrata).
           </p>
+
+          {oneToOneExpenseCount > 0 ? (
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={deleteLinkedExpenses}
+                onChange={(event) => setDeleteLinkedExpenses(event.target.checked)}
+              />
+              <span>
+                Elimina anche{' '}
+                <strong>
+                  {oneToOneExpenseCount}{' '}
+                  {oneToOneExpenseCount === 1 ? 'spesa dedicata (1:1)' : 'spese dedicate (1:1)'}
+                </strong>{' '}
+                collegate alle transazioni selezionate
+              </span>
+            </label>
+          ) : null}
 
           {state.error ? (
             <Alert variant="destructive">

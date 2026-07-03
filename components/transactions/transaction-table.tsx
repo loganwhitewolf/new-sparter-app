@@ -642,6 +642,8 @@ export function TransactionTable({ transactions, route, searchParams, categories
                       <DeleteTransactionMenuItem
                         transactionId={transaction.id}
                         label={rowLabel}
+                        expenseTitle={transaction.expenseTitle}
+                        expenseTransactionCount={transaction.expenseTransactionCount}
                         onDeleted={() => {
                           removeTransactionsFromList([transaction.id])
                           setOpenDropdownId(null)
@@ -705,6 +707,18 @@ export function TransactionTable({ transactions, route, searchParams, categories
       open={bulkDeleteOpen}
       onOpenChange={setBulkDeleteOpen}
       selectedIds={selectedIds}
+      oneToOneExpenseCount={
+        new Set(
+          loadedTransactions
+            .filter(
+              (transaction) =>
+                selectedIds.includes(transaction.id) &&
+                transaction.expenseId &&
+                transaction.expenseTransactionCount === 1,
+            )
+            .map((transaction) => transaction.expenseId as string),
+        ).size
+      }
       onSuccess={() => {
         removeTransactionsFromList(selectedIds)
         setBulkDeleteOpen(false)
@@ -766,19 +780,32 @@ export function TransactionTable({ transactions, route, searchParams, categories
 function DeleteTransactionMenuItem({
   transactionId,
   label,
+  expenseTitle,
+  expenseTransactionCount,
   onDeleted,
 }: {
   transactionId: string
   label: string
+  expenseTitle: string | null
+  expenseTransactionCount: number | null
   onDeleted: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
+  const [deleteLinkedExpenses, setDeleteLinkedExpenses] = useState(false)
+  const isOneToOne = Boolean(expenseTitle) && expenseTransactionCount === 1
+
+  useEffect(() => {
+    if (!open) {
+      setDeleteLinkedExpenses(false)
+    }
+  }, [open])
 
   async function handleDelete() {
     setPending(true)
     const fd = new FormData()
     fd.set('id', transactionId)
+    fd.set('deleteLinkedExpenses', deleteLinkedExpenses ? 'true' : 'false')
     const result = await deleteTransaction({ error: null }, fd)
     setPending(false)
     if (result.error) {
@@ -804,13 +831,28 @@ function DeleteTransactionMenuItem({
         <DialogHeader>
           <DialogTitle>Elimina transazione</DialogTitle>
           <DialogDescription className="sr-only">
-            Conferma l&apos;eliminazione della transazione selezionata.
+            Conferma l&apos;eliminazione della transazione selezionata e, opzionalmente, della spesa
+            collegata in rapporto 1:1.
           </DialogDescription>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
           Sei sicuro di voler eliminare questa transazione
-          {label ? ` (“${label}”)` : ''}? Le spese collegate verranno aggiornate di conseguenza.
+          {label ? ` (“${label}”)` : ''}? Le spese aggregate collegate verranno aggiornate di
+          conseguenza.
         </p>
+        {isOneToOne ? (
+          <label className="flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={deleteLinkedExpenses}
+              onChange={(event) => setDeleteLinkedExpenses(event.target.checked)}
+            />
+            <span>
+              Elimina anche la spesa collegata &ldquo;{expenseTitle}&rdquo;
+            </span>
+          </label>
+        ) : null}
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="ghost">

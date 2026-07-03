@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   updateExpense: vi.fn(),
   deleteExpense: vi.fn(),
   deleteExpenses: vi.fn(),
+  deleteExpensesWithOptions: vi.fn(),
   getExpenses: vi.fn(),
   writeClassificationHistory: vi.fn(),
   insertManualTransaction: vi.fn(),
@@ -70,6 +71,10 @@ vi.mock('@/lib/dal/transactions', () => ({
   insertManualTransaction: mocks.insertManualTransaction,
   updateTransactionCustomTitle: mocks.updateTransactionCustomTitle,
   getTransactions: mocks.getTransactions,
+}))
+
+vi.mock('@/lib/services/expense-deletion', () => ({
+  deleteExpensesWithOptions: mocks.deleteExpensesWithOptions,
 }))
 
 vi.mock('@/lib/services/transaction-deletion', () => ({
@@ -258,8 +263,10 @@ describe('categorization-related action route revalidation', () => {
     mocks.verifySession.mockResolvedValue(session)
     mocks.insertExpense.mockResolvedValue({ id: expenseId })
     mocks.updateExpense.mockResolvedValue({ id: expenseId })
-    mocks.deleteExpense.mockResolvedValue({ id: expenseId })
-    mocks.deleteExpenses.mockResolvedValue([expenseId])
+    mocks.deleteExpensesWithOptions.mockResolvedValue({
+      deletedExpenseIds: [expenseId],
+      deletedTransactionIds: [],
+    })
     mocks.writeClassificationHistory.mockResolvedValue(undefined)
     mocks.dbTransaction.mockImplementation(async (callback) => callback(makeTx()))
     mocks.dbUpdate.mockReturnValue(makeDbUpdateChain())
@@ -382,6 +389,7 @@ describe('categorization-related action route revalidation', () => {
       expect(mocks.deleteTransactionsAndReconcileExpenses).toHaveBeenCalledWith({
         userId: 'session-user-id',
         transactionIds: [transactionId],
+        deleteLinkedExpenses: false,
       })
       expectExactCategoryRevalidationRoutes()
     })

@@ -33,6 +33,18 @@ export const BulkDeleteExpensesSchema = z.object({
     .array(z.string().uuid())
     .min(1, { error: 'Seleziona almeno una spesa per continuare.' })
     .max(500, { error: 'Puoi eliminare al massimo 500 spese alla volta.' }),
+  deleteLinkedTransactions: z
+    .preprocess((value) => value === 'true' || value === true, z.boolean())
+    .optional()
+    .default(false),
+})
+
+export const DeleteExpenseSchema = z.object({
+  id: z.string().uuid({ error: 'Spesa non valida.' }),
+  deleteLinkedTransactions: z
+    .preprocess((value) => value === 'true' || value === true, z.boolean())
+    .optional()
+    .default(false),
 })
 
 export const SingleCategorizeSchema = z.object({

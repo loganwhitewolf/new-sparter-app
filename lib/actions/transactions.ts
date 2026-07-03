@@ -146,6 +146,7 @@ export async function deleteTransaction(
 ): Promise<ActionState> {
   const parsed = DeleteTransactionSchema.safeParse({
     id: formData.get('id'),
+    deleteLinkedExpenses: formData.get('deleteLinkedExpenses'),
   })
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Transazione non valida.' }
@@ -155,6 +156,7 @@ export async function deleteTransaction(
     const result = await deleteTransactionsAndReconcileExpenses({
       userId,
       transactionIds: [parsed.data.id],
+      deleteLinkedExpenses: parsed.data.deleteLinkedExpenses,
     })
     if (result.deletedTransactionIds.length === 0) {
       return { error: 'Transazione non trovata o già eliminata.' }
@@ -219,7 +221,10 @@ export async function bulkDeleteTransactions(
   } catch {
     return { error: 'Selezione non valida.' }
   }
-  const parsed = BulkDeleteTransactionsSchema.safeParse({ ids })
+  const parsed = BulkDeleteTransactionsSchema.safeParse({
+    ids,
+    deleteLinkedExpenses: formData.get('deleteLinkedExpenses'),
+  })
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Selezione non valida.' }
   }
@@ -228,6 +233,7 @@ export async function bulkDeleteTransactions(
     await deleteTransactionsAndReconcileExpenses({
       userId,
       transactionIds: parsed.data.ids,
+      deleteLinkedExpenses: parsed.data.deleteLinkedExpenses,
     })
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
