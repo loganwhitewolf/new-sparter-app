@@ -8,6 +8,17 @@ import { getEligibleCounterparts, type CounterpartRow } from '@/lib/dal/transact
 import type { ActionState } from '@/lib/validations/expense'
 
 /**
+ * ActionState-compatible result for pair creation. On success it also carries the
+ * resolved secondary (refund) transaction id and, when the refund expense inherited
+ * the spend's subcategory (decision 2), that subCategoryId — so the client can
+ * repaint the refund row as categorized without a full reload.
+ */
+export type CreatePairActionState = ActionState & {
+  pairedSecondaryId?: string
+  pairedSubCategoryId?: number
+}
+
+/**
  * Server action: link two transactions as a 1:1 pair (e.g. expense ↔ reimbursement).
  *
  * Security gates (T-50-03, T-50-04):
@@ -18,9 +29,9 @@ import type { ActionState } from '@/lib/validations/expense'
  * Surfaces ownership / double-link error messages to the caller via `{ error }`.
  */
 export async function createTransactionPairAction(
-  _prev: ActionState,
+  _prev: CreatePairActionState,
   formData: FormData,
-): Promise<ActionState> {
+): Promise<CreatePairActionState> {
   const parsed = CreatePairSchema.safeParse({
     transactionId: formData.get('transactionId'),
     counterpartId: formData.get('counterpartId'),
@@ -31,8 +42,9 @@ export async function createTransactionPairAction(
 
   const { userId } = await verifySession()
 
+  let result: Awaited<ReturnType<typeof createPair>>
   try {
-    await createPair({
+    result = await createPair({
       userId,
       transactionId: parsed.data.transactionId,
       counterpartId: parsed.data.counterpartId,
@@ -45,7 +57,11 @@ export async function createTransactionPairAction(
   revalidatePath('/transactions')
   revalidatePath('/overview')
 
-  return { error: null }
+  return {
+    error: null,
+    pairedSecondaryId: result.secondaryTransactionId,
+    pairedSubCategoryId: result.inheritedSubCategoryId,
+  }
 }
 
 /**

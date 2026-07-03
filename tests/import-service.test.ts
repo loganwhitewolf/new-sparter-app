@@ -1515,7 +1515,9 @@ describe('analyzeFile', () => {
     const result = await analyzeFile({ userId: USER_ID, fileId: FILE_ID })
 
     expect(result.rowCount).toBe(3)
-    expect(result.sampleRows).toHaveLength(2)
+    // sampleRows now sources from the full normalized-rows pass (all 3), not the
+    // detector's capped preview sample.
+    expect(result.sampleRows).toHaveLength(3)
     expect(latestFileAnalysisUpdate()).toMatchObject({
       status: 'analyzed',
       rowCount: 3,
@@ -1527,6 +1529,36 @@ describe('analyzeFile', () => {
       referenceEndedAt: new Date('2026-01-12T00:00:00.000Z'),
       errorMessage: null,
     })
+  })
+
+  it('returns all preview rows (no 25-cap) with bucket counts that partition the set', async () => {
+    // 28 distinct valid rows + one duplicate pair (2 identical rows, flagged via
+    // repeatedInFileHashes) + one invalid row (empty amount) = 31 rows total.
+    const distinctRows = Array.from({ length: 28 }, (_, i) => ({
+      '"Data Movimento"': `2026-02-${String((i % 27) + 1).padStart(2, '0')}`,
+      '"Descrizione"': `Acquisto ${i}`,
+      '"Importo"': `-${(i + 1).toFixed(2)}`,
+    }))
+    const dupRow = { '"Data Movimento"': '2026-03-01', '"Descrizione"': 'Ripetuto', '"Importo"': '-10.00' }
+    const invalidRow = { '"Data Movimento"': '2026-03-02', '"Descrizione"': 'Senza importo', '"Importo"': '' }
+    const rows = [...distinctRows, dupRow, { ...dupRow }, invalidRow]
+
+    mocks.readObjectBody.mockResolvedValue(await makeReadableStream(GENERAL_CSV))
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport(rows))
+
+    const result = await analyzeFile({ userId: USER_ID, fileId: FILE_ID })
+
+    // The 25-cap is lifted: every parsed row is returned.
+    expect(result.sampleRows).toHaveLength(31)
+    expect(result.previewBuckets).toBeDefined()
+    expect(result.previewBuckets?.all).toBe(31)
+    // Both identical rows are flagged duplicate (in-file repeat); the empty-amount
+    // row is invalid → error bucket. The three buckets partition the set exactly.
+    expect(result.previewBuckets?.duplicate).toBe(2)
+    expect(result.previewBuckets?.error).toBe(1)
+    expect(result.previewBuckets?.valid).toBe(28)
+    const b = result.previewBuckets!
+    expect(b.valid + b.duplicate + b.error).toBe(b.all)
   })
 
   it('loads analysis candidates through the ownership-aware DAL with user scope', async () => {
