@@ -26,6 +26,7 @@ import {
   type SubscriptionPlan,
 } from '@/lib/services/categorization'
 import { normalizeTransactionRow } from '@/lib/utils/import'
+import { countPreviewBuckets, type PreviewBucketCounts } from '@/lib/utils/import-preview-buckets'
 import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
 import { getLatestClassificationSource, writeClassificationHistory } from '@/lib/dal/classification-history'
 import { loadImportFormatsForDetection } from '@/lib/dal/import-formats'
@@ -50,6 +51,7 @@ export type ImportAnalysisResult = {
     errors: string[]
     warnings: string[]
   }[]
+  previewBuckets?: PreviewBucketCounts
 }
 
 export type ImportFileResult = {
@@ -291,16 +293,42 @@ export async function analyzeFile(input: {
     ? applyExistingHashesToStats(provisionalStats, existingHashes)
     : { ...EMPTY_IMPORT_STATS, rowCount: parsed.rowCount }
 
-  const sampleRows = detected.preview.sampleRows.map((r) => ({
-    rowIndex: r.rowIndex,
-    description: r.description,
-    amount: r.amount,
-    occurredAt: r.occurredAt,
-    duplicate: Boolean(r.transactionHash && (existingHashes.has(r.transactionHash) || provisionalStats.repeatedInFileHashes.has(r.transactionHash))),
-    valid: r.valid,
-    errors: r.errors,
-    warnings: r.warnings,
-  }))
+  // Preview rows: when a format matched, expose EVERY normalized row (already
+  // bounded by the parser's DEFAULT_MAX_ROWS) so the UI can show/filter the full
+  // set — not just the detector's 25-row scoring sample. The `duplicate` flag uses
+  // the same formula as the commit path. When no format matched, keep today's
+  // behavior (the detector preview sample, shown alongside the error alert).
+  const sampleRows = best
+    ? provisionalStats.normalizedRows.map((r) => ({
+        rowIndex: r.rowIndex,
+        description: r.description,
+        amount: r.amount,
+        occurredAt: r.occurredAt ? r.occurredAt.toISOString() : null,
+        duplicate: Boolean(
+          r.transactionHash &&
+            (existingHashes.has(r.transactionHash) ||
+              provisionalStats.repeatedInFileHashes.has(r.transactionHash)),
+        ),
+        valid: r.valid,
+        errors: r.errors,
+        warnings: r.warnings,
+      }))
+    : detected.preview.sampleRows.map((r) => ({
+        rowIndex: r.rowIndex,
+        description: r.description,
+        amount: r.amount,
+        occurredAt: r.occurredAt,
+        duplicate: Boolean(
+          r.transactionHash &&
+            (existingHashes.has(r.transactionHash) ||
+              provisionalStats.repeatedInFileHashes.has(r.transactionHash)),
+        ),
+        valid: r.valid,
+        errors: r.errors,
+        warnings: r.warnings,
+      }))
+
+  const previewBuckets = countPreviewBuckets(sampleRows)
 
   const safeErrorMessage = detected.errors[0] ? safeImportErrorMessage(detected.errors[0], 'Analysis failed.') : null
 
@@ -345,6 +373,7 @@ export async function analyzeFile(input: {
     warnings: detected.warnings,
     errors: detected.errors,
     sampleRows,
+    previewBuckets,
   }
 }
 
