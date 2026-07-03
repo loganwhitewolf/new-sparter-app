@@ -85,6 +85,7 @@ vi.mock("drizzle-orm", () => ({
   desc: (column: unknown) => ({ op: "desc", column }),
   eq: (left: unknown, right: unknown) => ({ op: "eq", left, right }),
   gte: (left: unknown, right: unknown) => ({ op: "gte", left, right }),
+  ilike: (left: unknown, right: unknown) => ({ op: "ilike", left, right }),
   inArray: (left: unknown, right: unknown) => ({ op: "inArray", left, right }),
   isNull: (column: unknown) => ({ op: "isNull", column }),
   isNotNull: (column: unknown) => ({ op: "isNotNull", column }),
@@ -651,6 +652,34 @@ describe("transaction DAL query helpers", () => {
 
     expect(amountMaxCondition).toBeDefined();
     expect(amountMaxCondition!.values).toContain("200");
+  });
+
+  it("name filter uses substring ILIKE on description, customTitle, and expense title", async () => {
+    await getTransactions({ name: "esselunga" });
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] };
+    const nameCondition = where.args.find(
+      (arg) =>
+        typeof arg === "object" &&
+        arg !== null &&
+        (arg as { op?: string }).op === "or" &&
+        (arg as { args?: unknown[] }).args?.some(
+          (inner) =>
+            typeof inner === "object" &&
+            inner !== null &&
+            (inner as { op?: string }).op === "ilike" &&
+            (inner as { right?: string }).right === "%esselunga%",
+        ),
+    ) as { op: string; args: { op: string; left: string; right: string }[] } | undefined;
+
+    expect(nameCondition).toBeDefined();
+    expect(nameCondition!.args).toEqual(
+      expect.arrayContaining([
+        { op: "ilike", left: "transaction.description", right: "%esselunga%" },
+        { op: "ilike", left: "transaction.customTitle", right: "%esselunga%" },
+        { op: "ilike", left: "expense.title", right: "%esselunga%" },
+      ]),
+    );
   });
 
   it("status uncategorized adds isNull(expense.subCategoryId)", async () => {

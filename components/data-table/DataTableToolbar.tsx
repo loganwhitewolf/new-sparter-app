@@ -4,7 +4,7 @@
  * DataTableToolbar — shared, config-driven toolbar (Variant A, LOCKED).
  *
  * Layout:
- *   1. Inline search <Input> (when config.search is non-null), debounced 300ms
+ *   1. Inline search <Input> (when config.search is non-null), debounced 500ms
  *   2. "Filtri (n)" <Popover> trigger — count = active non-search filter params
  *   3. <PopoverContent> renders one control per config.filters entry
  *   4. <ChipsRow> below, one chip per active filter param, "Cancella tutto" batch-clears
@@ -15,7 +15,9 @@
  * All state lives in the URL via useTableUrl(route); zero server state in this component.
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+
+const SEARCH_DEBOUNCE_MS = 500
 import { SlidersHorizontal, ArrowUpDown, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -298,9 +300,22 @@ function FilterPanel({
 export function DataTableToolbar({ config, route, monthsWithData, filterOptions, dependentOptions }: Props) {
   const { searchParams, isPending, updateParam, updateParams } = useTableUrl(route)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchKey = config.search?.key ?? 'q'
+  const urlSearchValue = config.search ? (searchParams.get(searchKey) ?? '') : ''
+  const [searchDraft, setSearchDraft] = useState(urlSearchValue)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [sortSheetOpen, setSortSheetOpen] = useState(false)
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false)
+
+  useEffect(() => {
+    setSearchDraft(urlSearchValue)
+  }, [urlSearchValue])
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
 
   // Active filter count (excludes q/sort/dir)
   const activeCount = countActiveFilters(searchParams, config.filters)
@@ -360,12 +375,16 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions,
     updateParams(entries)
   }
 
-  // Search input handler (debounced 300ms)
-  function handleSearch(value: string) {
+  // Search: local draft + debounced URL commit (avoids remount/focus loss on each keystroke)
+  function handleSearchChange(value: string) {
+    setSearchDraft(value)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      updateParam('q', value.trim() || null)
-    }, 300)
+      const committed = value.trim() || null
+      const current = searchParams.get(searchKey)
+      if ((committed ?? '') === (current ?? '')) return
+      updateParam(searchKey, committed)
+    }, SEARCH_DEBOUNCE_MS)
   }
 
   // Current sort state
@@ -389,12 +408,10 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions,
         {/* Search input (desktop + mobile) */}
         {config.search && (
           <Input
-            key={searchParams.get('q') ?? ''}
             type="search"
             placeholder={config.search.placeholder}
-            defaultValue={searchParams.get('q') ?? ''}
-            onChange={(e) => handleSearch(e.currentTarget.value)}
-            disabled={isPending}
+            value={searchDraft}
+            onChange={(e) => handleSearchChange(e.currentTarget.value)}
             className="min-w-[200px] flex-1"
           />
         )}
