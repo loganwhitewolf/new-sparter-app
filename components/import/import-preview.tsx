@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, CheckCircle2, Loader2, Sparkles } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -25,6 +25,11 @@ import { confirmImportAction } from '@/lib/actions/import'
 import type { ImportAnalysisResult } from '@/lib/services/import'
 import { APP_ROUTES } from '@/lib/routes'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
+import { bucketOfPreviewRow, countPreviewBuckets } from '@/lib/utils/import-preview-buckets'
+
+type PreviewFilter = 'all' | 'valid' | 'duplicate' | 'error'
+
+const PREVIEW_COLLAPSED_COUNT = 10
 type FormatCandidate = {
   formatVersionId: number
   platformName: string
@@ -50,8 +55,29 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
   const [importedFileId, setImportedFileId] = useState<string | null>(null)
   const submitLock = useRef(false)
 
+  const [activeFilter, setActiveFilter] = useState<PreviewFilter>('all')
+  const [expanded, setExpanded] = useState(false)
+
   const hasErrors = result.errors.length > 0
   const hasWarnings = result.warnings.length > 0
+
+  // Authoritative counts come from the server; fall back to a client count for
+  // older payloads / fixtures that omit previewBuckets.
+  const buckets = result.previewBuckets ?? countPreviewBuckets(result.sampleRows)
+
+  const filteredRows = useMemo(
+    () =>
+      activeFilter === 'all'
+        ? result.sampleRows
+        : result.sampleRows.filter((r) => bucketOfPreviewRow(r) === activeFilter),
+    [result.sampleRows, activeFilter],
+  )
+  const visibleRows = expanded ? filteredRows : filteredRows.slice(0, PREVIEW_COLLAPSED_COUNT)
+
+  function selectFilter(filter: PreviewFilter) {
+    setActiveFilter(filter)
+    setExpanded(false)
+  }
 
   const confidencePct =
     candidates.length > 0 ? Math.round((candidates[0]?.confidence ?? 0) * 100) : null
@@ -166,8 +192,29 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
           <CardHeader>
             <CardTitle className="text-base">Anteprima transazioni</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
+          <CardContent className="flex flex-col gap-3 p-0">
+            {/* Filter chips with per-bucket counts */}
+            <div className="flex flex-wrap gap-2 px-6 pt-1">
+              {([
+                { key: 'all', label: `Tutte (${buckets.all})` },
+                { key: 'valid', label: `Valide (${buckets.valid})` },
+                { key: 'duplicate', label: `Duplicate (${buckets.duplicate})` },
+                { key: 'error', label: `Errori (${buckets.error})` },
+              ] as const).map((chip) => (
+                <Button
+                  key={chip.key}
+                  type="button"
+                  size="sm"
+                  variant={activeFilter === chip.key ? 'default' : 'outline'}
+                  aria-pressed={activeFilter === chip.key}
+                  onClick={() => selectFilter(chip.key)}
+                >
+                  {chip.label}
+                </Button>
+              ))}
+            </div>
+
+            <div className="max-h-96 overflow-x-auto overflow-y-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -178,35 +225,59 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {result.sampleRows.slice(0, 10).map((row) => (
-                    <TableRow key={row.rowIndex}>
-                      <TableCell className="whitespace-nowrap text-sm">
-                        {row.occurredAt ?? '—'}
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-sm">
-                        {row.description}
-                      </TableCell>
-                      <TableCell className="text-right text-sm tabular-nums">
-                        {row.amount != null ? (
-                          <span className={Number(row.amount) < 0 ? 'text-destructive' : 'text-green-600'}>
-                            {(Number(row.amount) < 0 ? '−' : '+') + ' ' + formatAbsoluteAmount(row.amount)}
-                          </span>
-                        ) : '—'}
-                      </TableCell>
-                      <TableCell>
-                        {row.duplicate ? (
-                          <Badge variant="secondary">Duplicato</Badge>
-                        ) : row.valid ? (
-                          <Badge variant="default">Valida</Badge>
-                        ) : (
-                          <Badge variant="destructive">Errore</Badge>
-                        )}
+                  {visibleRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
+                        Nessuna riga in questa vista.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    visibleRows.map((row) => (
+                      <TableRow key={row.rowIndex}>
+                        <TableCell className="whitespace-nowrap text-sm">
+                          {row.occurredAt ?? '—'}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate text-sm">
+                          {row.description}
+                        </TableCell>
+                        <TableCell className="text-right text-sm tabular-nums">
+                          {row.amount != null ? (
+                            <span className={Number(row.amount) < 0 ? 'text-destructive' : 'text-green-600'}>
+                              {(Number(row.amount) < 0 ? '−' : '+') + ' ' + formatAbsoluteAmount(row.amount)}
+                            </span>
+                          ) : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap items-center gap-1">
+                            {row.duplicate ? (
+                              <Badge variant="secondary">Duplicato</Badge>
+                            ) : row.valid ? (
+                              <Badge variant="default">Valida</Badge>
+                            ) : (
+                              <Badge variant="destructive">Errore</Badge>
+                            )}
+                            {row.warnings.length > 0 && <Badge variant="outline">Avviso</Badge>}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
+
+            {filteredRows.length > PREVIEW_COLLAPSED_COUNT && (
+              <div className="px-6 pb-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setExpanded((v) => !v)}
+                >
+                  {expanded ? 'Mostra meno' : `Mostra tutte (${filteredRows.length})`}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
