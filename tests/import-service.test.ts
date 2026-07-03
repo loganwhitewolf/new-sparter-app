@@ -1515,7 +1515,9 @@ describe('analyzeFile', () => {
     const result = await analyzeFile({ userId: USER_ID, fileId: FILE_ID })
 
     expect(result.rowCount).toBe(3)
-    expect(result.sampleRows).toHaveLength(2)
+    // sampleRows now sources from the full normalized-rows pass (all 3), not the
+    // detector's capped preview sample.
+    expect(result.sampleRows).toHaveLength(3)
     expect(latestFileAnalysisUpdate()).toMatchObject({
       status: 'analyzed',
       rowCount: 3,
