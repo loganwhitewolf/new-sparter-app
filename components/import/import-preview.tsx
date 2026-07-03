@@ -214,7 +214,7 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
               ))}
             </div>
 
-            <div className="max-h-96 overflow-x-auto overflow-y-auto">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
