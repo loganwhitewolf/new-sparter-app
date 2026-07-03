@@ -84,6 +84,7 @@ const OCCURRED_AT = new Date('2026-01-15T12:00:00.000Z')
 
 const {
   DetachTransactionError,
+  applyDetachCleanupTx,
   detachTransactionToDedicatedExpense,
   syntheticDescriptionHash,
 } = await import('@/lib/services/transaction-detach')
@@ -301,6 +302,115 @@ describe('detachTransactionToDedicatedExpense', () => {
         title: '   ',
       }),
     ).rejects.toBeInstanceOf(DetachTransactionError)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// applyDetachCleanupTx — the tx-accepting core, exercised directly with a mock
+// tx handle (the mocked db). Confirms the cleanup logic itself, not only the
+// db.transaction wrapper above.
+// ---------------------------------------------------------------------------
+describe('applyDetachCleanupTx (tx-accepting core)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.dbSelectChain.mockReturnValue(makeSelectChain([]))
+    mocks.dbInsertChain.mockReturnValue(makeInsertChain())
+    mocks.dbUpdateChain.mockReturnValue(makeUpdateChain())
+    mocks.reconcileExpensesAfterTransactionRemoval.mockResolvedValue(undefined)
+    vi.stubGlobal('crypto', {
+      randomUUID: () => 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+    })
+  })
+
+  function makeLoadedRow(overrides: Record<string, unknown> = {}) {
+    return {
+      transactionId: TX_ID,
+      transactionUserId: USER_ID,
+      transactionAmount: '-25.50',
+      transactionOccurredAt: OCCURRED_AT,
+      expenseId: SOURCE_EXPENSE_ID,
+      expenseUserId: USER_ID,
+      expenseTransactionCount: 3,
+      ...overrides,
+    }
+  }
+
+  it('re-hashes a single-transaction source in place with synthetic hash + subCategoryId + status "3"', async () => {
+    mocks.dbSelectChain.mockReturnValue(
+      makeSelectChain([makeLoadedRow({ expenseTransactionCount: 1 })]),
+    )
+    const updateSet = vi.fn(() => ({ where: vi.fn(() => Promise.resolve([])) }))
+    mocks.dbUpdateChain.mockReturnValue({ set: updateSet })
+
+    const { db } = await import('@/lib/db')
+    const result = await applyDetachCleanupTx(db as never, {
+      userId: USER_ID,
+      transactionId: TX_ID,
+      title: 'Rimborso amico',
+      subCategoryId: 7,
+    })
+
+    expect(result).toEqual({
+      newExpenseId: SOURCE_EXPENSE_ID,
+      newExpenseTitle: 'Rimborso amico',
+    })
+    expect(mocks.dbInsertChain).not.toHaveBeenCalled()
+
+    const expectedHash = createHash('sha256').update(`detached:${TX_ID}`).digest('hex')
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        descriptionHash: expectedHash,
+        title: 'Rimborso amico',
+        subCategoryId: 7,
+        status: '3',
+      }),
+    )
+    expect(mocks.reconcileExpensesAfterTransactionRemoval).not.toHaveBeenCalled()
+  })
+
+  it('inserts a new dedicated expense (status "3", synthetic hash, count 1) and reconciles the multi-transaction source', async () => {
+    mocks.dbSelectChain.mockReturnValue(makeSelectChain([makeLoadedRow()]))
+    const insertValues = vi.fn(() => Promise.resolve([]))
+    mocks.dbInsertChain.mockReturnValue({ values: insertValues })
+    const updateSet = vi.fn(() => ({ where: vi.fn(() => Promise.resolve([])) }))
+    mocks.dbUpdateChain.mockReturnValue({ set: updateSet })
+
+    const { db } = await import('@/lib/db')
+    const result = await applyDetachCleanupTx(db as never, {
+      userId: USER_ID,
+      transactionId: TX_ID,
+      title: 'Rimborso Netflix',
+      subCategoryId: 42,
+    })
+
+    expect(result.newExpenseId).toBe('cccccccc-cccc-4ccc-8ccc-cccccccccccc')
+
+    const expectedHash = createHash('sha256').update(`detached:${TX_ID}`).digest('hex')
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        descriptionHash: expectedHash,
+        subCategoryId: 42,
+        status: '3',
+        transactionCount: 1,
+      }),
+    )
+    expect(mocks.reconcileExpensesAfterTransactionRemoval).toHaveBeenCalledWith(
+      expect.anything(),
+      { userId: USER_ID, affectedExpenseIds: [SOURCE_EXPENSE_ID] },
+    )
+  })
+
+  it('rejects an empty title before any write', async () => {
+    const { db } = await import('@/lib/db')
+    await expect(
+      applyDetachCleanupTx(db as never, {
+        userId: USER_ID,
+        transactionId: TX_ID,
+        title: '   ',
+      }),
+    ).rejects.toBeInstanceOf(DetachTransactionError)
+    expect(mocks.dbInsertChain).not.toHaveBeenCalled()
+    expect(mocks.dbUpdateChain).not.toHaveBeenCalled()
   })
 })
 
