@@ -157,6 +157,26 @@ describe('detachTransactionToDedicatedExpense', () => {
     )
   })
 
+  it('preserves a >120-char title in full (trims only, no 120 truncation)', async () => {
+    mocks.dbSelectChain.mockReturnValue(makeSelectChain([makeLoadedRow()]))
+    const insertValues = vi.fn(() => Promise.resolve([]))
+    mocks.dbInsertChain.mockReturnValue({ values: insertValues })
+    mocks.dbUpdateChain.mockReturnValue({ set: vi.fn(() => ({ where: vi.fn(() => Promise.resolve([])) })) })
+
+    const longTitle = `  ${'A'.repeat(185)}  `
+    const expectedTitle = 'A'.repeat(185)
+
+    const result = await detachTransactionToDedicatedExpense({
+      userId: USER_ID,
+      transactionId: TX_ID,
+      title: longTitle,
+    })
+
+    expect(result.newExpenseTitle).toBe(expectedTitle)
+    expect(result.newExpenseTitle.length).toBe(185)
+    expect(insertValues).toHaveBeenCalledWith(expect.objectContaining({ title: expectedTitle }))
+  })
+
   it('persists the supplied subCategoryId and status "3" on the new expense (multi-tx path)', async () => {
     mocks.dbSelectChain.mockReturnValue(makeSelectChain([makeLoadedRow()]))
     const insertValues = vi.fn(() => Promise.resolve([]))
