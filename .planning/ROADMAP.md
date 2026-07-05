@@ -67,7 +67,14 @@ Plans:
 2. `/expenses/[id]` merges today's "dettagli" + "modifica" dialogs: pencil-inline edit for title/notes/category, readonly derived totals; actions: cerca su internet, categorizza, elimina; cross-refs: linked transactions list (each linking to its page), source file, platform.
 3. The old expense edit/details dialogs are removed or redirected; no dead menu entries; tables link to the new pages.
 
-**Plans:** TBD
+**Plans:** 4 plans
+
+Plans:
+
+- [ ] 63-01-PLAN.md — DAL (getTransactionForDetail, getExpenseForDetail) + DetailPageShell + route builders
+- [ ] 63-02-PLAN.md — /transactions/[id] page + client wrapper (amount/date/title edit, category, actions, cross-refs)
+- [ ] 63-03-PLAN.md — /expenses/[id] page + client wrapper (title/notes/category edit, linked transactions, actions)
+- [ ] 63-04-PLAN.md — Table menu wiring: transaction "Dettagli" entry; expense "Dettagli"+"Modifica" collapsed to one link
 
 ### Phase 64: file-detail-and-navigation
 
