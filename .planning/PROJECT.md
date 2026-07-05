@@ -54,6 +54,12 @@ DET-05..07) → 64 (file-detail-and-navigation, DET-08..09).
 
 **Deferred:** description editing, bulk edit, revision history, SPLIT-01.
 
+**Validated in Phase 62 (transaction-edit-core, 2026-07-05):** DET-01..04 — `updateTransaction`
+service (amount/occurredAt/customTitle edit, hashes/description frozen, atomic expense
+reconciliation, pair-guard blocking with Italian message) and `updateExpense` DAL extended
+to be atomic and classification-history-aware, matching the categorize flow's semantics.
+Backend + tests only, 16/16 must-haves verified. No UI yet — that's Phase 63.
+
 ## Last Shipped Milestone: v2.4 — Standalone Expense (shipped 2026-07-01, tag v2.4)
 
 **Goal:** Give the user a way to isolate a single transaction from `descriptionHash` aggregation at categorization time — a general "treat as a standalone expense / do not aggregate" action — so shared-subscription reimbursements and ambiguous person-to-person inflows are categorized correctly without polluting the sender's aggregate or the Tier 2 history.
@@ -280,4 +286,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-05 — v2.5 Detail Pages milestone opened (Phases 62–64); v2.4 shipped and tagged*
+*Last updated: 2026-07-05 — Phase 62 (transaction-edit-core) complete, verified 16/16; v2.5 Detail Pages Phases 63–64 remain*
