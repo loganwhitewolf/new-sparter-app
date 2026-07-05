@@ -72,7 +72,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 63-01-PLAN.md — DAL (getTransactionForDetail, getExpenseForDetail) + DetailPageShell + route builders
+- [x] 63-01-PLAN.md — DAL (getTransactionForDetail, getExpenseForDetail) + DetailPageShell + route builders
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -293,7 +293,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 61. standalone-expense | v2.4 | 2/2 | Complete    | 2026-07-01 |
 
 | 62. transaction-edit-core | v2.5 | 2/2 | Complete    | 2026-07-05 |
-| 63. detail-pages-tx-expense | v2.5 | 0/? | Not started | - |
+| 63. detail-pages-tx-expense | v2.5 | 1/4 | In Progress|  |
 | 64. file-detail-and-navigation | v2.5 | 0/? | Not started | - |
 
 **Total shipped: 61 phases · 222 plans complete**
