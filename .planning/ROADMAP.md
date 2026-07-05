@@ -81,7 +81,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 63-04-PLAN.md — Table menu wiring: transaction "Dettagli" entry; expense "Dettagli"+"Modifica" collapsed to one link
+- [x] 63-04-PLAN.md — Table menu wiring: transaction "Dettagli" entry; expense "Dettagli"+"Modifica" collapsed to one link
 
 ### Phase 64: file-detail-and-navigation
 
@@ -293,7 +293,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 61. standalone-expense | v2.4 | 2/2 | Complete    | 2026-07-01 |
 
 | 62. transaction-edit-core | v2.5 | 2/2 | Complete    | 2026-07-05 |
-| 63. detail-pages-tx-expense | v2.5 | 3/4 | In Progress|  |
+| 63. detail-pages-tx-expense | v2.5 | 4/4 | Complete   | 2026-07-05 |
 | 64. file-detail-and-navigation | v2.5 | 0/? | Not started | - |
 
 **Total shipped: 61 phases · 222 plans complete**

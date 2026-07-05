@@ -4,17 +4,17 @@ milestone: v2.5
 milestone_name: Detail Pages
 current_phase: 63
 current_phase_name: detail-pages-tx-expense
-status: executing
-stopped_at: Completed 63-03-PLAN.md
-last_updated: "2026-07-05T21:25:01.050Z"
+status: verifying
+stopped_at: Completed 63-04-PLAN.md — Phase 63 ready for verification
+last_updated: "2026-07-05T21:32:14.660Z"
 last_activity: 2026-07-05
 last_activity_desc: Phase 63 execution started
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 33
+  completed_plans: 6
+  percent: 67
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 
 Phase: 63 (detail-pages-tx-expense) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-05 — Phase 63 execution started
 
 ## Roadmap (v2.5 — Phases 62–64)
@@ -91,6 +91,7 @@ Last activity: 2026-07-05 — Phase 63 execution started
 - [Phase ?]: [Phase 63]: Category edit on /transactions/[id] reuses ExpenseCategorizeDialog/categorizeExpense directly instead of updateExpense — UpdateExpenseSchema requires title, categorizeExpense's narrower {id, subCategoryId} contract matches D-12's single edit-point requirement
 - [Phase ?]: Expense detail page category edit reuses categorizeExpense directly (not updateExpense) — matches the 63-02 transaction-page deviation; UpdateExpenseSchema requires title, categorizeExpense's {id, subCategoryId} contract is the correct minimal action
 - [Phase ?]: Expense Riepilogo card renders only fields ExpenseRow/getExpenseForDetail expose (totalAmount, transactionCount, createdAt) — no first/last transaction date field exists on the DAL row, none invented
+- [Phase 63]: Table component tests (full render, not per-row extraction) require mocking next/navigation (useRouter/useSearchParams/usePathname) in addition to @/components/ui/dropdown-menu, because useToolbarSort/useTableUrl call next/navigation hooks directly — Established pattern from tests/data-table-toolbar.test.tsx; without it renderToStaticMarkup throws 'invariant expected app router to be mounted'
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -163,11 +164,11 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 63-03-PLAN.md
+**Stopped at:** Completed 63-04-PLAN.md — Phase 63 ready for verification
 
-Last session: 2026-07-05T21:25:01.045Z
+Last session: 2026-07-05T21:32:14.655Z
 
-**Next:** Plan the first phase with `/gsd-plan-phase 62`
+**Next:** Verify Phase 63 (detail-pages-tx-expense), then plan Phase 64 (file-detail-and-navigation) with `/gsd-plan-phase 64`
 
 ## Operator Next Steps
 
@@ -192,3 +193,4 @@ Last session: 2026-07-05T21:25:01.045Z
 | Phase 63 P01 | 15min | 2 tasks | 7 files |
 | Phase 63 P02 | 12min | 2 tasks | 5 files |
 | Phase 63 P03 | 12min | 2 tasks | 4 files |
+| Phase 63 P04 | 6min | 2 tasks | 4 files |

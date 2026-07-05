@@ -71,7 +71,7 @@ transaction to the importer.
   actions: cerca su internet, categorizza, elimina; cross-refs: linked
   transactions list (each linking to its page), source file, platform.
 
-- [ ] **DET-07** — The old expense edit/details dialogs are removed/redirected;
+- [x] **DET-07** — The old expense edit/details dialogs are removed/redirected;
   no dead menu entries; tables link to the new pages.
 
 ### File page + navigation (Phase 64)
