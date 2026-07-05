@@ -5,15 +5,15 @@ milestone_name: Detail Pages
 current_phase: 63
 current_phase_name: detail-pages-tx-expense
 status: executing
-stopped_at: Completed 63-01-PLAN.md
-last_updated: "2026-07-05T21:11:11.832Z"
+stopped_at: Completed 63-02-PLAN.md
+last_updated: "2026-07-05T21:18:43.693Z"
 last_activity: 2026-07-05
 last_activity_desc: Phase 63 execution started
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
   percent: 33
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 ## Current Position
 
 Phase: 63 (detail-pages-tx-expense) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-07-05 — Phase 63 execution started
 
@@ -88,6 +88,7 @@ Last activity: 2026-07-05 — Phase 63 execution started
 - [Phase 62]: History write failure inside updateExpense's transaction is non-fatal — Matches existing categorizeExpense/bulkCategorize behavior — consistency with the categorize flow is the DET-04 requirement itself
 - [Phase 63]: getExpenseForDetail accepts userId as a parameter instead of self-calling verifySession() — The RSC page already verifies the session once and passes it down
 - [Phase 63]: transactionDetailHref/expenseDetailHref are standalone functions in lib/routes.ts, not APP_ROUTES keys — Preserves the APP_ROUTES object's as-const static-string shape
+- [Phase ?]: [Phase 63]: Category edit on /transactions/[id] reuses ExpenseCategorizeDialog/categorizeExpense directly instead of updateExpense — UpdateExpenseSchema requires title, categorizeExpense's narrower {id, subCategoryId} contract matches D-12's single edit-point requirement
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -160,9 +161,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 63-01-PLAN.md
+**Stopped at:** Completed 63-02-PLAN.md
 
-Last session: 2026-07-05T21:11:11.825Z
+Last session: 2026-07-05T21:18:43.688Z
 
 **Next:** Plan the first phase with `/gsd-plan-phase 62`
 
@@ -187,3 +188,4 @@ Last session: 2026-07-05T21:11:11.825Z
 | Phase 62 P01 | 5min | 2 tasks | 4 files |
 | Phase 62 P02 | 3min | 2 tasks | 2 files |
 | Phase 63 P01 | 15min | 2 tasks | 7 files |
+| Phase 63 P02 | 12min | 2 tasks | 5 files |

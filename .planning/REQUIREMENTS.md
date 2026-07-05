@@ -60,7 +60,7 @@ transaction to the importer.
 
 ### Detail pages (Phase 63 — transactions + expenses)
 
-- [ ] **DET-05** — `/transactions/[id]`: all fields shown; pencil-inline edit for
+- [x] **DET-05** — `/transactions/[id]`: all fields shown; pencil-inline edit for
   amount/date/title; category assign/change via `SubcategoryPicker`; immutable
   fields visibly readonly (description, hashes never shown as editable); actions:
   cerca su internet, collega/scollega rimborso, spesa a sé, elimina; cross-refs:
