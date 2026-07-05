@@ -29,7 +29,7 @@ are immutable (dedup/grouping keys); derived expense aggregates reconcile
 automatically. Decisions locked in `.planning/REQUIREMENTS.md` (grill 2026-07-05).
 
 - [x] **Phase 62: transaction-edit-core** — `updateTransaction` (amount/date/customTitle, Decimal.js, ownership, hashes frozen), atomic expense reconciliation after amount/date edits, pair-coherence guard (block with message), `updateExpense` extended. Backend + tests, no UI. (DET-01..04) (completed 2026-07-05)
-- [ ] **Phase 63: detail-pages-tx-expense** — `/transactions/[id]` + `/expenses/[id]` pages with pencil-inline editing, SubcategoryPicker, cerca su internet, cross-refs; expense "dettagli"+"modifica" dialogs collapse into the page. (DET-05..07)
+- [x] **Phase 63: detail-pages-tx-expense** — `/transactions/[id]` + `/expenses/[id]` pages with pencil-inline editing, SubcategoryPicker, cerca su internet, cross-refs; expense "dettagli"+"modifica" dialogs collapse into the page. (DET-05..07) (completed 2026-07-05)
 - [ ] **Phase 64: file-detail-and-navigation** — `/import/[fileId]` page (displayName editable, stats readonly, transactions list) + row-click/menu navigation wiring across all three tables. (DET-08..09)
 
 ### Phase 62: transaction-edit-core
@@ -67,7 +67,7 @@ Plans:
 2. `/expenses/[id]` merges today's "dettagli" + "modifica" dialogs: pencil-inline edit for title/notes/category, readonly derived totals; actions: cerca su internet, categorizza, elimina; cross-refs: linked transactions list (each linking to its page), source file, platform.
 3. The old expense edit/details dialogs are removed or redirected; no dead menu entries; tables link to the new pages.
 
-**Plans:** 4 plans
+**Plans:** 4/4 plans complete
 
 Plans:
 **Wave 1**
@@ -293,7 +293,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 61. standalone-expense | v2.4 | 2/2 | Complete    | 2026-07-01 |
 
 | 62. transaction-edit-core | v2.5 | 2/2 | Complete    | 2026-07-05 |
-| 63. detail-pages-tx-expense | v2.5 | 4/4 | Complete   | 2026-07-05 |
+| 63. detail-pages-tx-expense | v2.5 | 4/4 | Complete    | 2026-07-05 |
 | 64. file-detail-and-navigation | v2.5 | 0/? | Not started | - |
 
 **Total shipped: 61 phases · 222 plans complete**
