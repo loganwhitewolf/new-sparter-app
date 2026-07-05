@@ -383,7 +383,7 @@ export const expense = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    title: varchar("title", { length: 120 }).notNull(),
+    title: text("title").notNull(),
     descriptionHash: varchar("description_hash", { length: 64 }),
     subCategoryId: integer("sub_category_id").references(() => subCategory.id, {
       onDelete: "set null",

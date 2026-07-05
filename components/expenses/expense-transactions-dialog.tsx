@@ -135,6 +135,9 @@ export function ExpenseTransactionsDialog({ open, onOpenChange, expense }: Props
                     <TableHead className="w-10 text-xs uppercase tracking-wide text-muted-foreground font-normal">
                       #
                     </TableHead>
+                    <TableHead className="text-xs uppercase tracking-wide text-muted-foreground font-normal">
+                      Descrizione
+                    </TableHead>
                     <TableHead className="text-right text-xs uppercase tracking-wide text-muted-foreground font-normal">
                       Importo
                     </TableHead>
@@ -146,13 +149,16 @@ export function ExpenseTransactionsDialog({ open, onOpenChange, expense }: Props
                 <TableBody>
                   {transactions.map((tx, index) => (
                     <TableRow key={tx.id}>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="text-sm text-muted-foreground align-top">
                         {index + 1}
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums text-sm whitespace-nowrap">
+                      <TableCell className="text-sm whitespace-normal break-words align-top">
+                        {tx.description}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums text-sm whitespace-nowrap align-top">
                         {formatAmount(tx.amount, tx.currency)}
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums text-sm whitespace-nowrap">
+                      <TableCell className="text-right font-mono tabular-nums text-sm whitespace-nowrap align-top">
                         {formatDate(tx.occurredAt)}
                       </TableCell>
                     </TableRow>

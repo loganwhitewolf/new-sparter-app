@@ -610,7 +610,7 @@ export async function importFile(input: {
           await tx.insert(expense).values({
             id: expenseId,
             userId: input.userId,
-            title: acc.description.slice(0, 120),
+            title: acc.description,
             descriptionHash: descHash,
             subCategoryId: catResult?.subCategoryId ?? null,
             totalAmount: acc.totalAmount,

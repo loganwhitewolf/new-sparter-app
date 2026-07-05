@@ -47,4 +47,9 @@ describe('seed-extras STEPS registry', () => {
     )
     expect(incomeExtraordinarySlugs.length).toBeGreaterThan(0)
   })
+
+  it('registers backfill-truncated-expense-titles LAST (append-only invariant)', () => {
+    expect(STEP_NAMES).toContain('backfill-truncated-expense-titles')
+    expect(STEP_NAMES.indexOf('backfill-truncated-expense-titles')).toBe(STEP_NAMES.length - 1)
+  })
 })

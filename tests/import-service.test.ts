@@ -1002,6 +1002,48 @@ describe('importFile', () => {
     expect(mocks.markFileFailed).not.toHaveBeenCalled()
   })
 
+  it('stores a >120-char bank description as the full expense.title (no write-time truncation)', async () => {
+    const longDescription = `Beneficiario Andrea Bernardini ${'X'.repeat(160)}`
+    expect(longDescription.length).toBeGreaterThan(120)
+
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport([
+      { '"Data Movimento"': '2026-01-10', '"Descrizione"': longDescription, '"Importo"': '-45.50' },
+    ]))
+
+    // Capture every expense insert (identified by a title + descriptionHash payload).
+    const expenseInsertValues: Array<Record<string, unknown>> = []
+    mocks.dbTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn((v: Record<string, unknown>) => {
+            if (v && typeof v === 'object' && 'title' in v && 'descriptionHash' in v) {
+              expenseInsertValues.push(v)
+            }
+            return { returning: vi.fn().mockResolvedValue([{ id: 'exp-1' }]) }
+          }),
+        }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }),
+        }),
+      }
+      return callback(tx)
+    })
+
+    await importFile({ userId: USER_ID, fileId: FILE_ID }).catch(() => null)
+
+    const inserted = expenseInsertValues.find((v) => typeof v.title === 'string')
+    expect(inserted).toBeDefined()
+    expect((inserted!.title as string).length).toBeGreaterThan(120)
+    expect(inserted!.title).toBe(longDescription)
+  })
+
   it('loads import formats through the ownership-aware DAL with the selected format id', async () => {
     await importFile({ userId: USER_ID, fileId: FILE_ID, selectedFormatVersionId: 7 }).catch(() => null)
 

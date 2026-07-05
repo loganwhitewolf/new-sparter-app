@@ -53,7 +53,7 @@ export async function applyDetachCleanupTx(
   tx: DbOrTx,
   input: DetachCleanupInput,
 ): Promise<DetachTransactionResult> {
-  const trimmedTitle = input.title.trim().slice(0, 120)
+  const trimmedTitle = input.title.trim()
   if (!trimmedTitle) {
     throw new DetachTransactionError('TRANSACTION_NOT_FOUND', 'Titolo spesa obbligatorio.')
   }

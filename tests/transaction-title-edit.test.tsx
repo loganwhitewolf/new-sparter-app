@@ -31,7 +31,7 @@ describe('TransactionTitleEdit', () => {
     expect(html).not.toContain('Rimborso YouTube')
   })
 
-  it('falls back to the expense title (fallbackTitle) when customTitle is absent — STEXP display fix', () => {
+  it('shows the expense title as visible label but the full description in the hover tooltip', () => {
     const html = renderToStaticMarkup(
       createElement(TransactionTitleEdit, {
         id: TX_ID,
@@ -41,8 +41,11 @@ describe('TransactionTitleEdit', () => {
       }),
     )
 
-    expect(html).toContain('Rimborso YouTube')
-    expect(html).not.toContain('BONIFICO SEPA DA MARIO ROSSI')
+    // Visible label is the expense title (fallbackTitle) — STEXP display fix …
+    expect(html).toContain('>Rimborso YouTube<')
+    // … while the native title="" tooltip carries the full raw bank description
+    // so hover always reveals it (the fix for this task).
+    expect(html).toContain('title="BONIFICO SEPA DA MARIO ROSSI"')
   })
 
   it('falls back to the raw description when both customTitle and fallbackTitle are absent', () => {
