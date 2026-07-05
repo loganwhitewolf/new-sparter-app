@@ -1,11 +1,13 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import reactHooks from "eslint-plugin-react-hooks";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    plugins: { "react-hooks": reactHooks },
     rules: {
       // eslint-plugin-react 7.x is still pulled by eslint-config-next 16 and
       // its recommended rules use an ESLint API removed in ESLint 10. Keep
@@ -32,6 +34,13 @@ const eslintConfig = defineConfig([
       "react/prop-types": "off",
       "react/react-in-jsx-scope": "off",
       "react/require-render-return": "off",
+      // react-hooks 6 (via eslint-config-next 16) promoted these to errors. They
+      // fire on legitimate, intentional patterns already used across the app —
+      // reset-on-close dialogs (`if (!open) setState(...)`), SSR-safe
+      // localStorage-on-mount reads, and test mocks reassigning outer vars.
+      // Keep them as warnings: surfaced, but not build-blocking.
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/globals": "warn",
     },
   },
   {
