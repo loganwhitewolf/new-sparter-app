@@ -70,6 +70,50 @@ describe('TransactionAmountEdit', () => {
   })
 })
 
+describe('TransactionAmountEdit — editable value round-trips through UpdateTransactionSchema', () => {
+  it('seeds the input with a plain decimal (no currency symbol/spacing) that the amount refine accepts unmodified', async () => {
+    vi.resetModules()
+    let editingState = true
+    vi.doMock('react', async () => {
+      const actual = await vi.importActual<typeof import('react')>('react')
+      return {
+        ...actual,
+        useState: vi.fn((initial: unknown) => {
+          const resolved = typeof initial === 'function' ? (initial as () => unknown)() : initial
+          if (typeof resolved === 'boolean') {
+            return [editingState, vi.fn()]
+          }
+          return [resolved, vi.fn()]
+        }),
+        useActionState: vi.fn(() => [{ error: null }, vi.fn(), false]),
+      }
+    })
+    const { TransactionAmountEdit } = await import(
+      '../components/transactions/transaction-amount-edit'
+    )
+    const { UpdateTransactionSchema } = await import('../lib/validations/transaction-edit')
+
+    const html = renderToStaticMarkup(
+      createElement(TransactionAmountEdit, {
+        id: TX_ID,
+        amount: '-45.30',
+        currency: 'EUR',
+      }),
+    )
+
+    const inputValueMatch = html.match(/name="amount"[^>]*value="([^"]*)"/)
+    expect(inputValueMatch).not.toBeNull()
+    const seededValue = inputValueMatch![1]
+
+    // Reproduces CR-01: a currency-formatted seed (e.g. "-45,30 €") fails this
+    // refine on an unmodified re-save. The seeded value must parse cleanly.
+    const result = UpdateTransactionSchema.safeParse({ id: TX_ID, amount: seededValue })
+    expect(result.success).toBe(true)
+    editingState = false
+    vi.doUnmock('react')
+  })
+})
+
 describe('TransactionAmountEdit — pair-guard error markup', () => {
   it('renders the exact pair-guard error string under the input while remaining in edit mode', async () => {
     vi.resetModules()

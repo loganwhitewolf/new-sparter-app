@@ -36,8 +36,9 @@ import { deleteTransactionPairAction } from '@/lib/actions/transaction-pairs'
 import type { TransactionDetailRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
-import { APP_ROUTES, transactionDetailHref } from '@/lib/routes'
+import { APP_ROUTES, expenseDetailHref, transactionDetailHref } from '@/lib/routes'
 import { toDecimal } from '@/lib/utils/decimal'
+import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 
 type Props = {
   transaction: TransactionDetailRow
@@ -62,14 +63,10 @@ function formatSignedAmount(amount: string, currency: string): string {
   }
 }
 
-function formatAbsoluteSigned(amount: string): string {
-  try {
-    const d = toDecimal(amount)
-    const sign = d.isNegative() ? '-' : '+'
-    return `${sign}€${d.abs().toFixed(2).replace('.', ',')}`
-  } catch {
-    return amount
-  }
+function formatAbsoluteSigned(amount: string, currency: string): string {
+  const d = toDecimal(amount)
+  const sign = d.isNegative() ? '-' : '+'
+  return `${sign}${formatAbsoluteAmount(amount, currency)}`
 }
 
 function formatDate(date: Date): string {
@@ -84,6 +81,7 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteLinkedExpenses, setDeleteLinkedExpenses] = useState(false)
   const [deletePending, setDeletePending] = useState(false)
+  const [unpairPending, setUnpairPending] = useState(false)
 
   const displayTitle =
     transaction.customTitle ?? transaction.expenseTitle ?? transaction.description
@@ -91,12 +89,15 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
     Boolean(transaction.expenseTitle) && transaction.expenseTransactionCount === 1
 
   async function handleUnpair() {
+    setUnpairPending(true)
     const fd = new FormData()
     fd.set('transactionId', transaction.id)
     const result = await deleteTransactionPairAction({ error: null }, fd)
+    setUnpairPending(false)
     if (result.error) {
       toast.error(result.error)
     } else {
+      toast.success('Collegamento rimosso.')
       router.refresh()
     }
   }
@@ -219,7 +220,7 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm text-muted-foreground">Spesa collegata</span>
           <Link
-            href={`/expenses/${encodeURIComponent(transaction.expenseId)}`}
+            href={expenseDetailHref(transaction.expenseId)}
             className="text-sm text-primary underline-offset-4 hover:underline"
           >
             {transaction.expenseTitle ?? 'Vedi spesa'}
@@ -257,7 +258,7 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Importo</span>
             <span className="font-mono tabular-nums">
-              {formatAbsoluteSigned(transaction.pairedAmount)}
+              {formatAbsoluteSigned(transaction.pairedAmount, transaction.currency)}
             </span>
           </div>
           <div className="flex items-center justify-between text-sm">
@@ -267,7 +268,7 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
           <div className="flex items-center justify-between border-t pt-1 text-sm font-medium">
             <span>Netto</span>
             <span className="font-mono tabular-nums">
-              {formatAbsoluteSigned(transaction.pairedNetAmount)}
+              {formatAbsoluteSigned(transaction.pairedNetAmount, transaction.currency)}
             </span>
           </div>
           <Link
@@ -305,6 +306,7 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
             <DropdownMenuContent align="end">
               {transaction.pairedWithId ? (
                 <DropdownMenuItem
+                  disabled={unpairPending}
                   onSelect={(e) => {
                     e.preventDefault()
                     void handleUnpair()

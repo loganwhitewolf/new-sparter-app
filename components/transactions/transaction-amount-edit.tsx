@@ -26,10 +26,18 @@ function formatSignedAmount(amount: string, currency: string): string {
   }
 }
 
+/**
+ * Plain decimal string (no currency symbol/spacing) for seeding the editable
+ * input — must round-trip through UpdateTransactionSchema's comma-to-dot refine.
+ */
+function toEditableAmount(amount: string): string {
+  return toDecimal(amount).toFixed(2).replace('.', ',')
+}
+
 export function TransactionAmountEdit({ id, amount, currency, onSuccess }: Props) {
   const displayAmount = formatSignedAmount(amount, currency)
   const [isEditing, setIsEditing] = useState(false)
-  const [value, setValue] = useState(displayAmount)
+  const [value, setValue] = useState(() => toEditableAmount(amount))
   const [state, formAction, isPending] = useActionState(updateTransactionAction, {
     error: null,
   })
@@ -50,7 +58,7 @@ export function TransactionAmountEdit({ id, amount, currency, onSuccess }: Props
         type="button"
         className="flex items-center gap-1.5 text-left"
         onClick={() => {
-          setValue(displayAmount)
+          setValue(toEditableAmount(amount))
           setIsEditing(true)
         }}
         title="Clicca per modificare l'importo"
