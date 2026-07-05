@@ -50,7 +50,7 @@ import type { TransactionListRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import type { TransactionSearchParams } from '@/lib/validations/transactions'
-import { APP_ROUTES } from '@/lib/routes'
+import { APP_ROUTES, transactionDetailHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -543,6 +543,9 @@ export function TransactionTable({ transactions, route, searchParams, categories
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={transactionDetailHref(transaction.id)}>Dettagli</Link>
+                      </DropdownMenuItem>
                       {/* Categorized rows: show only Ricategorizza (no Google search) */}
                       {isCategorized ? (
                         <DropdownMenuItem
