@@ -32,7 +32,29 @@ All milestones M001–v2.2 (Phases 1–57) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Current Milestone: v2.4 — Standalone Expense (Phase 61 complete — ready to ship)
+## Current Milestone: v2.5 — Detail Pages
+
+**Goal:** Uniform detail pages for the three core entities — `/transactions/[id]`,
+`/expenses/[id]`, `/import/[fileId]` — as the single place to view and edit
+everything editable (amount, date, title, category, notes, displayName), with
+cross-references between entities and existing actions (cerca su internet,
+categorizza, collega rimborso, spesa a sé) surfaced in place.
+
+**Domain contract (grill 2026-07-05, locked in REQUIREMENTS.md):**
+- `transactionHash`/`descriptionHash`/`description` are **immutable** — an edited
+  transaction is still the same transaction to the importer (re-import dedups);
+  `customTitle` is the rename mechanism.
+- Amount/date edits **auto-reconcile** the linked expense's derived aggregates
+  atomically; derived fields are never directly writable.
+- Edits that would break a refund pair's opposite-sign invariant are **blocked
+  with a message**, never silently unlinked.
+
+**Phases:** 62 (transaction-edit-core, DET-01..04) → 63 (detail-pages-tx-expense,
+DET-05..07) → 64 (file-detail-and-navigation, DET-08..09).
+
+**Deferred:** description editing, bulk edit, revision history, SPLIT-01.
+
+## Last Shipped Milestone: v2.4 — Standalone Expense (shipped 2026-07-01, tag v2.4)
 
 **Goal:** Give the user a way to isolate a single transaction from `descriptionHash` aggregation at categorization time — a general "treat as a standalone expense / do not aggregate" action — so shared-subscription reimbursements and ambiguous person-to-person inflows are categorized correctly without polluting the sender's aggregate or the Tier 2 history.
 
@@ -258,4 +280,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-01 — Phase 61 complete, v2.4 Standalone Expense verified and ready to ship*
+*Last updated: 2026-07-05 — v2.5 Detail Pages milestone opened (Phases 62–64); v2.4 shipped and tagged*

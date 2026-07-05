@@ -1,20 +1,20 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.4
-milestone_name: Standalone Expense
-current_phase: 4
-current_phase_name: standalone-expense
-status: "Phase 61 shipped — PR #32"
-stopped_at: Completed 61-02-PLAN.md
-last_updated: "2026-07-01T14:22:11.084Z"
-last_activity: 2026-07-03 - Completed quick task 260703-leo: Fix filtro descrizione (substring search + focus debounce)
-last_activity_desc: DataTableToolbar draft locale + debounce 500ms; transazioni cercano anche expense.title
+milestone: v2.5
+milestone_name: Detail Pages
+current_phase: 62
+current_phase_name: transaction-edit-core
+status: "v2.5 opened — Phases 62–64 planned, ready for /gsd-plan-phase 62"
+stopped_at: Milestone v2.5 requirements + roadmap written
+last_updated: "2026-07-05T00:00:00.000Z"
+last_activity: 2026-07-05 - Opened milestone v2.5 (Detail Pages); requirements DET-01..09, phases 62-64
+last_activity_desc: Grill locked - hashes/description immutable, auto-reconcile derived aggregates, pair-guard blocks, route pages; branch gsd/v2.5-detail-pages
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -23,29 +23,51 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-07-01)
 
-**Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 61 — standalone-expense
+**Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
+**Current focus:** v2.5 — Detail Pages, Phase 62 (transaction-edit-core)
 
 ## Current Position
 
-Phase: Milestone v2.4 complete
+Phase: v2.5 Phase 62 — transaction-edit-core (not started)
 Plan: —
-Status: Phase 61 shipped — PR #32
-Last activity: 2026-07-01 — quick task 260701-mqh (supermarket regex patterns)
+Status: Milestone v2.5 opened; requirements + roadmap written on branch `gsd/v2.5-detail-pages`
+Last activity: 2026-07-05 — grill session locked the edit-domain contract
 
-## Roadmap (v2.4 — Phase 61)
+## Roadmap (v2.5 — Phases 62–64)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 61 | standalone-expense | STEXP-01, STEXP-02, STEXP-03 | Complete (PR #32) |
+| 62 | transaction-edit-core | DET-01, DET-02, DET-03, DET-04 | Not started |
+| 63 | detail-pages-tx-expense | DET-05, DET-06, DET-07 | Not started |
+| 64 | file-detail-and-navigation | DET-08, DET-09 | Not started |
 
-**Coverage:** 3/3 STEXP requirements mapped to Phase 61. Decision contract LOCKED (ADR 0016) — pure implementation, no discovery to redo.
+**Coverage:** 9/9 DET requirements mapped across Phases 62–64. Edit-domain contract locked (grill 2026-07-05): hashes/description immutable, auto-reconcile, pair-guard blocks, route pages.
 
 ## Accumulated Context
 
 ### Decisions
 
-Design contract is LOCKED (ADR 0016). Do not re-derive the approach:
+**v2.5 milestone decisions (locked in grill 2026-07-05):**
+
+- **Immutability boundary.** `transactionHash`, `descriptionHash`, and
+  `transaction.description` are never editable. Description is the raw bank key
+  (sha256 → descriptionHash, Tier 2); `customTitle` is the rename mechanism.
+  Frozen `transactionHash` means an edited transaction still dedups on re-import.
+- **Editable sets.** Transaction: `amount` (Decimal.js, signed), `occurredAt`,
+  `customTitle`, category via linked expense. Expense: `title`, `notes`,
+  `subCategoryId`; derived aggregates (`totalAmount`, count, first/last dates)
+  are NEVER directly writable — they reconcile automatically after transaction
+  edits, in the same `db.transaction`. File: `displayName` only.
+- **Pair guard.** An amount edit that breaks a refund pair's opposite-sign/nonzero
+  invariant is rejected with an Italian message ("Scollega prima il rimborso") —
+  never auto-unlinked.
+- **Route pages** (`/transactions/[id]`, `/expenses/[id]`, `/import/[fileId]`),
+  pencil-inline editing, SubcategoryPicker reuse, cerca-su-internet on tx+expense
+  pages; the expense "dettagli"+"modifica" dialogs collapse into the page.
+
+---
+
+**v2.4 historical decisions (ADR 0016 — shipped, kept for reference):**
 
 - **ADR 0016 (decision 1) — netting doctrine already usable, zero code.** A reimbursement for a shared/recurring cost is categorized under the *same* subcategory as the spend it offsets (option A, per ADR 0004) and nets by algebraic sum. The month a lump sum lands showing a net-positive OUT segment is accepted cash-basis behavior, not a bug. This milestone builds **no** new income/transfer classification for reimbursements.
 - **ADR 0016 (decision 2) — general "standalone expense" action, not a counterparty category.** The categorization flow gains an explicit "treat as a standalone expense / do not aggregate" option that captures a **title + subcategory** and detaches the single transaction into its own expense with a synthetic `descriptionHash` (`sha256("detached:{id}")`). It is deliberately general — available on any transaction — never a "money from a person" feature (classifying by counterparty is forbidden by the CONTEXT.md doctrine: classify by purpose, not by who).
@@ -129,16 +151,16 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 61-02-PLAN.md
+**Stopped at:** Milestone v2.5 requirements + roadmap written (branch `gsd/v2.5-detail-pages`)
 
-Last session: 2026-07-01T09:41:27.043Z
+Last session: 2026-07-05
 
-**Next:** Start the next milestone with `/gsd-new-milestone`
+**Next:** Plan the first phase with `/gsd-plan-phase 62`
 
 ## Operator Next Steps
 
-- Run `yarn db:seed-patterns` to apply supermarket regex changes from quick task 260701-mqh
-- Start the next milestone with `/gsd-new-milestone`
+- Run `yarn db:seed-patterns` to apply supermarket regex changes from quick task 260701-mqh (if still pending)
+- Plan v2.5 Phase 62 with `/gsd-plan-phase 62`
 
 ## Performance Metrics
 
