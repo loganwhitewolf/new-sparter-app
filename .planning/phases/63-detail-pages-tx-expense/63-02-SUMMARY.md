@@ -165,3 +165,9 @@ Plan 03 (`/expenses/[id]`) can proceed independently against `getExpenseForDetai
 ---
 *Phase: 63-detail-pages-tx-expense*
 *Completed: 2026-07-05*
+
+## Self-Check: PASSED
+
+All created files (page.tsx, transaction-detail-client.tsx, transaction-amount-edit.tsx,
+transaction-date-edit.tsx, transaction-detail-page.test.tsx, this SUMMARY.md) and commit
+hashes (e16ff5e, 72a4da8, 524b04e) verified present on disk and in git history.
