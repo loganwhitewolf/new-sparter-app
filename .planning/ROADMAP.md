@@ -28,7 +28,7 @@ view and edit everything editable, with cross-references. Hashes and `descriptio
 are immutable (dedup/grouping keys); derived expense aggregates reconcile
 automatically. Decisions locked in `.planning/REQUIREMENTS.md` (grill 2026-07-05).
 
-- [ ] **Phase 62: transaction-edit-core** — `updateTransaction` (amount/date/customTitle, Decimal.js, ownership, hashes frozen), atomic expense reconciliation after amount/date edits, pair-coherence guard (block with message), `updateExpense` extended. Backend + tests, no UI. (DET-01..04)
+- [x] **Phase 62: transaction-edit-core** — `updateTransaction` (amount/date/customTitle, Decimal.js, ownership, hashes frozen), atomic expense reconciliation after amount/date edits, pair-coherence guard (block with message), `updateExpense` extended. Backend + tests, no UI. (DET-01..04) (completed 2026-07-05)
 - [ ] **Phase 63: detail-pages-tx-expense** — `/transactions/[id]` + `/expenses/[id]` pages with pencil-inline editing, SubcategoryPicker, cerca su internet, cross-refs; expense "dettagli"+"modifica" dialogs collapse into the page. (DET-05..07)
 - [ ] **Phase 64: file-detail-and-navigation** — `/import/[fileId]` page (displayName editable, stats readonly, transactions list) + row-click/menu navigation wiring across all three tables. (DET-08..09)
 
@@ -46,7 +46,7 @@ automatically. Decisions locked in `.planning/REQUIREMENTS.md` (grill 2026-07-05
 4. `updateExpense` covers `title`, `notes`, `subCategoryId` with status transitions consistent with the categorize flow; derived expense fields are never writable through it.
 5. Tests cover edit, reconciliation, and pair guard paths.
 
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 
@@ -278,7 +278,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 60. seed-slug-linkage-and-docs | v2.3 | 2/2 | Complete   | 2026-06-30 |
 | 61. standalone-expense | v2.4 | 2/2 | Complete    | 2026-07-01 |
 
-| 62. transaction-edit-core | v2.5 | 2/2 | Complete   | 2026-07-05 |
+| 62. transaction-edit-core | v2.5 | 2/2 | Complete    | 2026-07-05 |
 | 63. detail-pages-tx-expense | v2.5 | 0/? | Not started | - |
 | 64. file-detail-and-navigation | v2.5 | 0/? | Not started | - |
 
