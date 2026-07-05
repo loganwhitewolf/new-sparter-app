@@ -51,7 +51,7 @@ automatically. Decisions locked in `.planning/REQUIREMENTS.md` (grill 2026-07-05
 Plans:
 
 - [x] 62-01-PLAN.md — updateTransaction service + action: amount/date/customTitle edit, atomic expense reconciliation, pair guard (DET-01, DET-02, DET-03)
-- [ ] 62-02-PLAN.md — updateExpense DAL made atomic + history-aware: title/notes/subCategoryId edit, categorize-flow-consistent status transitions (DET-04)
+- [x] 62-02-PLAN.md — updateExpense DAL made atomic + history-aware: title/notes/subCategoryId edit, categorize-flow-consistent status transitions (DET-04)
 
 ### Phase 63: detail-pages-tx-expense
 
@@ -278,7 +278,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 60. seed-slug-linkage-and-docs | v2.3 | 2/2 | Complete   | 2026-06-30 |
 | 61. standalone-expense | v2.4 | 2/2 | Complete    | 2026-07-01 |
 
-| 62. transaction-edit-core | v2.5 | 1/2 | In Progress|  |
+| 62. transaction-edit-core | v2.5 | 2/2 | Complete   | 2026-07-05 |
 | 63. detail-pages-tx-expense | v2.5 | 0/? | Not started | - |
 | 64. file-detail-and-navigation | v2.5 | 0/? | Not started | - |
 

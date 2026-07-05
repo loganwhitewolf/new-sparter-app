@@ -54,7 +54,7 @@ transaction to the importer.
   with an Italian message when the result breaks the opposite-sign/nonzero
   invariant; unpaired transactions are unaffected.
 
-- [ ] **DET-04** — `updateExpense` covers `title`, `notes`, `subCategoryId`
+- [x] **DET-04** — `updateExpense` covers `title`, `notes`, `subCategoryId`
   (status transitions consistent with categorize flow); derived fields are never
   writable.
 

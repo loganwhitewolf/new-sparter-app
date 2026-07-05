@@ -4,17 +4,17 @@ milestone: v2.5
 milestone_name: Detail Pages
 current_phase: 62
 current_phase_name: transaction-edit-core
-status: executing
+status: verifying
 stopped_at: Milestone v2.5 requirements + roadmap written
-last_updated: "2026-07-05T14:44:17.792Z"
+last_updated: "2026-07-05T14:49:29.992Z"
 last_activity: 2026-07-05
 last_activity_desc: Phase 62 execution started
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 0
+  completed_plans: 2
+  percent: 33
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 
 Phase: 62 (transaction-edit-core) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-05 — Phase 62 execution started
 
 ## Roadmap (v2.5 — Phases 62–64)
@@ -84,6 +84,8 @@ Last activity: 2026-07-05 — Phase 62 execution started
 - [Phase ?]: Phase 61 (61-02): TransactionTitleEdit row title precedence fixed to customTitle -> expenseTitle -> description (fallbackTitle prop) so a renamed standalone expense shows its chosen title, not the raw bank description
 - [Phase ?]: transaction table has no updatedAt column (schema.ts) — removed the updatedAt field from the .set() payload described in the plan/research skeleton (Rule 1 bug fix)
 - [Phase ?]: Select-chain test mock made thenable so awaited .where() calls without a following .limit()/.groupBy() resolve correctly, matching Drizzle's real query builder shape
+- [Phase 62]: updateExpense subCategoryId three-state contract: undefined leaves category/status untouched, null clears (status 1, no history), positive number assigns (status 3, history written) — Matches categorizeExpense semantics for DET-04 without a separate schema; consistent status/history behavior across all manual-categorization entry points
+- [Phase 62]: History write failure inside updateExpense's transaction is non-fatal — Matches existing categorizeExpense/bulkCategorize behavior — consistency with the categorize flow is the DET-04 requirement itself
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -158,7 +160,7 @@ Items acknowledged and postponed:
 
 **Stopped at:** Milestone v2.5 requirements + roadmap written (branch `gsd/v2.5-detail-pages`)
 
-Last session: 2026-07-05T14:43:31.620Z
+Last session: 2026-07-05T14:48:25.280Z
 
 **Next:** Plan the first phase with `/gsd-plan-phase 62`
 
@@ -181,3 +183,4 @@ Last session: 2026-07-05T14:43:31.620Z
 | Phase 61 P01 | 6min | 3 tasks | 5 files |
 | Phase 61 P02 | 90min | 3 tasks | 5 files |
 | Phase 62 P01 | 5min | 2 tasks | 4 files |
+| Phase 62 P02 | 3min | 2 tasks | 2 files |
