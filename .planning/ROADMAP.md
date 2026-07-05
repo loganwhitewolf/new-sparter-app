@@ -45,7 +45,11 @@ automatically. Decisions locked in `.planning/REQUIREMENTS.md` (grill 2026-07-05
 4. `updateExpense` covers `title`, `notes`, `subCategoryId` with status transitions consistent with the categorize flow; derived expense fields are never writable through it.
 5. Tests cover edit, reconciliation, and pair guard paths.
 
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 62-01-PLAN.md — updateTransaction service + action: amount/date/customTitle edit, atomic expense reconciliation, pair guard (DET-01, DET-02, DET-03)
+- [ ] 62-02-PLAN.md — updateExpense DAL made atomic + history-aware: title/notes/subCategoryId edit, categorize-flow-consistent status transitions (DET-04)
 
 ### Phase 63: detail-pages-tx-expense
 
@@ -270,7 +274,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 60. seed-slug-linkage-and-docs | v2.3 | 2/2 | Complete   | 2026-06-30 |
 | 61. standalone-expense | v2.4 | 2/2 | Complete    | 2026-07-01 |
 
-| 62. transaction-edit-core | v2.5 | 0/? | Not started | - |
+| 62. transaction-edit-core | v2.5 | 0/2 | Not started | - |
 | 63. detail-pages-tx-expense | v2.5 | 0/? | Not started | - |
 | 64. file-detail-and-navigation | v2.5 | 0/? | Not started | - |
 
