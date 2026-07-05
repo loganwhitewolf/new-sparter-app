@@ -27,60 +27,60 @@ pair-guard blocks with Italian message, never auto-unlinks; pencil-inline editin
 ## Implementation Decisions
 
 ### Layout
-- **D-01 Stacked cards, single column, mobile-first.** Header with title + signed amount +
+- **D-01 — Stacked cards, single column, mobile-first.** Header with title + signed amount +
   actions, then cards: Dati, Categoria, Collegamenti (and, on the expense page, Riepilogo +
   Transazioni). No two-column sidebar layout.
-- **D-02 Shared shell.** A shared `DetailPageShell` component (header + card-section slots)
+- **D-02 — Shared shell.** A shared `DetailPageShell` component (header + card-section slots)
   used by both pages — designed so the Phase 64 file page can adopt it too. Uniformity across
   the three detail pages is a milestone goal.
-- **D-03 Immutable fields: description visible with lock, hashes hidden.** The bank
+- **D-03 — Immutable fields: description visible with lock, hashes hidden.** The bank
   description is shown as readonly text with a lock badge/icon + tooltip ("chiave di
   deduplicazione/riconciliazione bancaria — non modificabile"). `transactionHash`/
   `descriptionHash` do NOT appear anywhere on the page.
-- **D-04 Expense page linked transactions: inline table in a card** (date, description,
+- **D-04 — Expense page linked transactions: inline table in a card** (date, description,
   amount; each row links to `/transactions/[id]`) — reuse the structure from
   `expense-transactions-dialog`. Readonly derived totals (totalAmount, count, first/last
   dates) live in a Riepilogo card or the header.
 
 ### Inline edit mechanics
-- **D-05 Per-field immediate save.** Each pencil edits one field; Enter/blur saves via
+- **D-05 — Per-field immediate save.** Each pencil edits one field; Enter/blur saves via
   server action, Esc cancels — same pattern as the existing `transaction-title-edit` /
   `expense-title-edit`. No aggregate edit-mode/Save button.
-- **D-06 Amount edit: free signed input** (accepts `-12,99` / `12,99`; sign is part of the
+- **D-06 — Amount edit: free signed input** (accepts `-12,99` / `12,99`; sign is part of the
   value, like `transaction-form-dialog`). Zod validation server-side; Italian display format.
-- **D-07 Errors inline under the field.** Pair-guard and validation errors render in red
+- **D-07 — Errors inline under the field.** Pair-guard and validation errors render in red
   under the failed field, field stays in edit with the attempted value; the service's Italian
   message (e.g. "Scollega prima il rimborso") is shown as-is.
-- **D-08 Silent refresh after reconciliation.** After an amount/date edit, `router.refresh()`
+- **D-08 — Silent refresh after reconciliation.** After an amount/date edit, `router.refresh()`
   updates the page; no toast/notice about the linked expense reconciliation — it's an
   internal detail.
 
 ### Actions & post-action
-- **D-09 Buttons + overflow menu.** 1–2 frequent actions as visible header buttons
+- **D-09 — Buttons + overflow menu.** 1–2 frequent actions as visible header buttons
   (Cerca su internet; Categorizza CTA per D-12); the rest (collega/scollega rimborso,
   spesa a sé) in a "⋯" overflow menu. Elimina always in the menu, styled destructive/red,
   keeping the existing confirmation dialog.
-- **D-10 Full reuse of existing dialogs.** `counterpart-picker-dialog`,
+- **D-10 — Full reuse of existing dialogs.** `counterpart-picker-dialog`,
   `detach-expense-dialog`, and `SubcategoryPicker` are invoked from the page exactly as from
   the tables — zero duplication, identical behavior; `router.refresh()` on completion.
-- **D-11 Delete → redirect to the origin table** (`/transactions` or `/expenses`) with a
+- **D-11 — Delete → redirect to the origin table** (`/transactions` or `/expenses`) with a
   confirmation toast. The linked-entities delete confirmation dialog (quick task 260703-l2b)
   stays unchanged.
-- **D-12 Category has one edit point.** The Categoria card opens `SubcategoryPicker` on tap.
+- **D-12 — Category has one edit point.** The Categoria card opens `SubcategoryPicker` on tap.
   No duplicate "Categorizza" header button — EXCEPT when the expense is uncategorized, where
   an amber "Categorizza" CTA in the header opens the same picker.
 
 ### Transition from dialogs (DET-07)
-- **D-13 Expense table menu: single "Dettagli" entry navigating to `/expenses/[id]`.**
+- **D-13 — Expense table menu: single "Dettagli" entry navigating to `/expenses/[id]`.**
   "Modifica" menu entry removed. `expense-form-dialog` survives only for "Nuova spesa"
   (mode `create`); `expense-transactions-dialog` is deleted.
-- **D-14 Table→page wiring in this phase is menu-entry only** (tx + expense tables get a
+- **D-14 — Table→page wiring in this phase is menu-entry only** (tx + expense tables get a
   "Dettagli" entry to the new pages). Row-title click navigation, breadcrumbs, and
   consistent back behavior are Phase 64 scope (DET-09) — no overlap.
-- **D-15 Table quick flows all stay:** inline title-edit, quick categorize via picker, bulk
+- **D-15 — Table quick flows all stay:** inline title-edit, quick categorize via picker, bulk
   actions, spesa a sé from the categorization flow. DET-07 removes only the expense
   "dettagli"+"modifica" dialogs.
-- **D-16 File cross-ref keeps pointing at the filtered import table** (`/import?file=…`,
+- **D-16 — File cross-ref keeps pointing at the filtered import table** (`/import?file=…`,
   current behavior from quick task 260630-h1j). Phase 64 introduces `/import/[fileId]` and
   repoints the link there — route it through a single constant so the change is one-line.
 

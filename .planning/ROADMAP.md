@@ -70,10 +70,17 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
+**Wave 1**
 
 - [ ] 63-01-PLAN.md — DAL (getTransactionForDetail, getExpenseForDetail) + DetailPageShell + route builders
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 63-02-PLAN.md — /transactions/[id] page + client wrapper (amount/date/title edit, category, actions, cross-refs)
 - [ ] 63-03-PLAN.md — /expenses/[id] page + client wrapper (title/notes/category edit, linked transactions, actions)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 63-04-PLAN.md — Table menu wiring: transaction "Dettagli" entry; expense "Dettagli"+"Modifica" collapsed to one link
 
 ### Phase 64: file-detail-and-navigation
