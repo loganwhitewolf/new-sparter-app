@@ -39,6 +39,7 @@ automatically. Decisions locked in `.planning/REQUIREMENTS.md` (grill 2026-07-05
 **Requirements:** DET-01, DET-02, DET-03, DET-04
 
 **Success Criteria**:
+
 1. `updateTransaction` service + thin `"use server"` action edit `amount` (Decimal.js, signed), `occurredAt`, `customTitle` inside `db.transaction`, Zod-validated and ownership-gated; `transactionHash`, `descriptionHash`, and `description` are never modified by any edit path.
 2. After an amount/date edit, the linked expense's `totalAmount`, `transactionCount`, `firstTransactionAt`, `lastTransactionAt` are recomputed atomically in the same transaction (reuse/generalize the existing expense-reconciliation service).
 3. Editing a paired transaction's amount so the pair would break the opposite-sign/nonzero invariant is rejected with an Italian message ("Scollega prima il rimborso"); edits to unpaired transactions are unaffected.
@@ -48,7 +49,8 @@ automatically. Decisions locked in `.planning/REQUIREMENTS.md` (grill 2026-07-05
 **Plans:** 2 plans
 
 Plans:
-- [ ] 62-01-PLAN.md — updateTransaction service + action: amount/date/customTitle edit, atomic expense reconciliation, pair guard (DET-01, DET-02, DET-03)
+
+- [x] 62-01-PLAN.md — updateTransaction service + action: amount/date/customTitle edit, atomic expense reconciliation, pair guard (DET-01, DET-02, DET-03)
 - [ ] 62-02-PLAN.md — updateExpense DAL made atomic + history-aware: title/notes/subCategoryId edit, categorize-flow-consistent status transitions (DET-04)
 
 ### Phase 63: detail-pages-tx-expense
@@ -60,6 +62,7 @@ Plans:
 **Requirements:** DET-05, DET-06, DET-07
 
 **Success Criteria**:
+
 1. `/transactions/[id]` shows all fields; pencil-inline edit for amount/date/title; category assign/change via `SubcategoryPicker`; immutable fields visibly readonly (description, hashes never editable); actions: cerca su internet, collega/scollega rimborso, spesa a sé, elimina; cross-refs: linked expense (link), source file (link) or "Manuale".
 2. `/expenses/[id]` merges today's "dettagli" + "modifica" dialogs: pencil-inline edit for title/notes/category, readonly derived totals; actions: cerca su internet, categorizza, elimina; cross-refs: linked transactions list (each linking to its page), source file, platform.
 3. The old expense edit/details dialogs are removed or redirected; no dead menu entries; tables link to the new pages.
@@ -75,6 +78,7 @@ Plans:
 **Requirements:** DET-08, DET-09
 
 **Success Criteria**:
+
 1. `/import/[fileId]` shows `displayName` editable inline; platform/format/stats readonly; the file's transactions are listed, each linking to its detail page; existing actions preserved (R2 download, suggestions, delete).
 2. Row-title click navigates to the detail page on Transactions, Expenses, and Files tables; menu "Dettagli" entries exist; breadcrumb/back behavior is consistent.
 
@@ -274,7 +278,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 60. seed-slug-linkage-and-docs | v2.3 | 2/2 | Complete   | 2026-06-30 |
 | 61. standalone-expense | v2.4 | 2/2 | Complete    | 2026-07-01 |
 
-| 62. transaction-edit-core | v2.5 | 0/2 | Not started | - |
+| 62. transaction-edit-core | v2.5 | 1/2 | In Progress|  |
 | 63. detail-pages-tx-expense | v2.5 | 0/? | Not started | - |
 | 64. file-detail-and-navigation | v2.5 | 0/? | Not started | - |
 

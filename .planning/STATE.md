@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: Detail Pages
-current_phase: 5
-status: v2.5 opened — Phases 62–64 planned, ready for /gsd-plan-phase 62
+current_phase: 62
+current_phase_name: transaction-edit-core
+status: executing
 stopped_at: Milestone v2.5 requirements + roadmap written
-last_updated: "2026-07-05T14:19:23.947Z"
+last_updated: "2026-07-05T14:44:17.792Z"
 last_activity: 2026-07-05
-last_activity_desc: grill session locked the edit-domain contract
+last_activity_desc: Phase 62 execution started
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
-current_phase_name: transaction-edit-core
 ---
 
 # Project State
@@ -24,14 +24,14 @@ current_phase_name: transaction-edit-core
 See: .planning/PROJECT.md (updated 2026-07-01)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** v2.5 — Detail Pages, Phase 62 (transaction-edit-core)
+**Current focus:** Phase 62 — transaction-edit-core
 
 ## Current Position
 
-Phase: v2.5 Phase 62 — transaction-edit-core (not started)
-Plan: —
-Status: Milestone v2.5 opened; requirements + roadmap written on branch `gsd/v2.5-detail-pages`
-Last activity: 2026-07-05 — grill session locked the edit-domain contract
+Phase: 62 (transaction-edit-core) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-07-05 — Phase 62 execution started
 
 ## Roadmap (v2.5 — Phases 62–64)
 
@@ -82,6 +82,8 @@ Last activity: 2026-07-05 — grill session locked the edit-domain contract
 - [Phase ?]: Phase 61 (61-02): standalone menu item gated only on transaction.expenseId (STEXP-02 count gate removed); relabeled to 'Spesa a se (non aggregare)' to read as one-off/do-not-aggregate, not a mechanical split
 - [Phase ?]: Phase 61 (61-02): DetachExpenseDialog onSuccess payload gains subCategoryId; table applies markExpensesCategorized(String(subCategoryId)) immediately instead of opening a second ExpenseCategorizeDialog step
 - [Phase ?]: Phase 61 (61-02): TransactionTitleEdit row title precedence fixed to customTitle -> expenseTitle -> description (fallbackTitle prop) so a renamed standalone expense shows its chosen title, not the raw bank description
+- [Phase ?]: transaction table has no updatedAt column (schema.ts) — removed the updatedAt field from the .set() payload described in the plan/research skeleton (Rule 1 bug fix)
+- [Phase ?]: Select-chain test mock made thenable so awaited .where() calls without a following .limit()/.groupBy() resolve correctly, matching Drizzle's real query builder shape
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -156,7 +158,7 @@ Items acknowledged and postponed:
 
 **Stopped at:** Milestone v2.5 requirements + roadmap written (branch `gsd/v2.5-detail-pages`)
 
-Last session: 2026-07-05
+Last session: 2026-07-05T14:43:31.620Z
 
 **Next:** Plan the first phase with `/gsd-plan-phase 62`
 
@@ -178,3 +180,4 @@ Last session: 2026-07-05
 | Phase 59 P04 | 2min | 2 tasks | 2 files |
 | Phase 61 P01 | 6min | 3 tasks | 5 files |
 | Phase 61 P02 | 90min | 3 tasks | 5 files |
+| Phase 62 P01 | 5min | 2 tasks | 4 files |
