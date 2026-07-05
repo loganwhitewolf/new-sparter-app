@@ -5,6 +5,7 @@ import { category, direction, expense, file, importFormatVersion, nature, platfo
 import { eq, and, count, gte, ilike, inArray, isNull, lte, or, asc, desc, sql } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { periodToDateRange } from '@/lib/utils/date'
+import { writeClassificationHistory } from '@/lib/dal/classification-history'
 
 export { periodToDateRange } from '@/lib/utils/date'
 
@@ -345,19 +346,60 @@ export async function updateExpense(data: {
   id: string
   userId: string
   title: string
-  subCategoryId?: number
+  /**
+   * Three-state contract (DET-04): `undefined` = field not present in this
+   * edit, leave subCategoryId/status untouched; `null` = explicit clear
+   * (status -> '1', no history write); positive number = assign category
+   * (status -> '3', classification-history row written with source 'manual').
+   */
+  subCategoryId?: number | null
   notes?: string
 }): Promise<void> {
-  await db
-    .update(expense)
-    .set({
+  await db.transaction(async (tx) => {
+    const before = await tx
+      .select({ subCategoryId: expense.subCategoryId, status: expense.status })
+      .from(expense)
+      .where(and(eq(expense.id, data.id), eq(expense.userId, data.userId)))
+      .limit(1)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateSet: Record<string, any> = {
       title: data.title,
-      subCategoryId: data.subCategoryId ?? null,
-      status: data.subCategoryId ? '3' : '1',
       notes: data.notes ?? null,
       updatedAt: new Date(),
-    })
-    .where(and(eq(expense.id, data.id), eq(expense.userId, data.userId)))
+    }
+
+    if (data.subCategoryId === undefined) {
+      // Omitted — leave subCategoryId/status untouched (title/notes-only edit).
+    } else if (data.subCategoryId === null) {
+      updateSet.subCategoryId = null
+      updateSet.status = '1'
+    } else {
+      updateSet.subCategoryId = data.subCategoryId
+      updateSet.status = '3'
+    }
+
+    await tx
+      .update(expense)
+      .set(updateSet)
+      .where(and(eq(expense.id, data.id), eq(expense.userId, data.userId)))
+
+    if (typeof data.subCategoryId === 'number') {
+      try {
+        await writeClassificationHistory(tx, {
+          userId: data.userId,
+          expenseId: data.id,
+          fromSubCategoryId: before[0]?.subCategoryId ?? null,
+          toSubCategoryId: data.subCategoryId,
+          fromStatus: before[0]?.status ?? null,
+          toStatus: '3',
+          source: 'manual',
+        })
+      } catch {
+        // history write failure is non-fatal
+      }
+    }
+  })
 }
 
 export async function updateExpenseTitle(data: {
