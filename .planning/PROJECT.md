@@ -60,6 +60,14 @@ reconciliation, pair-guard blocking with Italian message) and `updateExpense` DA
 to be atomic and classification-history-aware, matching the categorize flow's semantics.
 Backend + tests only, 16/16 must-haves verified. No UI yet — that's Phase 63.
 
+**Validated in Phase 63 (detail-pages-tx-expense, 2026-07-05):** DET-05..07 — `/transactions/[id]`
+and `/expenses/[id]` pages with pencil-inline editing (amount, date, title, notes, category),
+ownership-scoped DAL queries returning 404-as-undefined, shared `DetailPageShell` layout, and
+both tables' row menus wired to the new pages (old expense "dettagli"/"modifica" dialogs
+retired). 9/9 must-haves verified, 48/48 tests passing. Code review found and fixed one blocker
+(amount edit input seeded a currency-formatted string that failed re-save validation) plus four
+smaller consistency issues. Next: Phase 64 (`/import/[fileId]`).
+
 ## Last Shipped Milestone: v2.4 — Standalone Expense (shipped 2026-07-01, tag v2.4)
 
 **Goal:** Give the user a way to isolate a single transaction from `descriptionHash` aggregation at categorization time — a general "treat as a standalone expense / do not aggregate" action — so shared-subscription reimbursements and ambiguous person-to-person inflows are categorized correctly without polluting the sender's aggregate or the Tier 2 history.
@@ -286,4 +294,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-05 — Phase 62 (transaction-edit-core) complete, verified 16/16; v2.5 Detail Pages Phases 63–64 remain*
+*Last updated: 2026-07-05 — Phase 63 (detail-pages-tx-expense) complete, verified 9/9; v2.5 Detail Pages Phase 64 remains*
