@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: Detail Pages
-current_phase: 62
-current_phase_name: transaction-edit-core
-status: "v2.5 opened — Phases 62–64 planned, ready for /gsd-plan-phase 62"
+current_phase: 5
+status: v2.5 opened — Phases 62–64 planned, ready for /gsd-plan-phase 62
 stopped_at: Milestone v2.5 requirements + roadmap written
-last_updated: "2026-07-05T00:00:00.000Z"
-last_activity: 2026-07-05 - Opened milestone v2.5 (Detail Pages); requirements DET-01..09, phases 62-64
-last_activity_desc: Grill locked - hashes/description immutable, auto-reconcile derived aggregates, pair-guard blocks, route pages; branch gsd/v2.5-detail-pages
+last_updated: "2026-07-05T14:19:23.947Z"
+last_activity: 2026-07-05
+last_activity_desc: grill session locked the edit-domain contract
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
   percent: 0
+current_phase_name: transaction-edit-core
 ---
 
 # Project State
@@ -53,14 +53,17 @@ Last activity: 2026-07-05 — grill session locked the edit-domain contract
   `transaction.description` are never editable. Description is the raw bank key
   (sha256 → descriptionHash, Tier 2); `customTitle` is the rename mechanism.
   Frozen `transactionHash` means an edited transaction still dedups on re-import.
+
 - **Editable sets.** Transaction: `amount` (Decimal.js, signed), `occurredAt`,
   `customTitle`, category via linked expense. Expense: `title`, `notes`,
   `subCategoryId`; derived aggregates (`totalAmount`, count, first/last dates)
   are NEVER directly writable — they reconcile automatically after transaction
   edits, in the same `db.transaction`. File: `displayName` only.
+
 - **Pair guard.** An amount edit that breaks a refund pair's opposite-sign/nonzero
   invariant is rejected with an Italian message ("Scollega prima il rimborso") —
   never auto-unlinked.
+
 - **Route pages** (`/transactions/[id]`, `/expenses/[id]`, `/import/[fileId]`),
   pencil-inline editing, SubcategoryPicker reuse, cerca-su-internet on tx+expense
   pages; the expense "dettagli"+"modifica" dialogs collapse into the page.
