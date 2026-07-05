@@ -60,18 +60,22 @@ vi.mock('drizzle-orm', () => ({
 // (mirrors tests/transaction-pairs-service.test.ts).
 // ---------------------------------------------------------------------------
 function makeSelectChain(rows: unknown[]) {
-  const chain = {
+  // Thenable chain: `.where()` alone must be awaitable (as Drizzle's real
+  // query builder is), while `.limit()`/`.groupBy()` remain chainable steps
+  // that also resolve to the same rows.
+  const chain: Record<string, unknown> = {
     from: vi.fn(() => chain),
     where: vi.fn(() => chain),
     limit: vi.fn(() => Promise.resolve(rows)),
     groupBy: vi.fn(() => Promise.resolve(rows)),
+    then: (resolve: (value: unknown[]) => void) => resolve(rows),
   }
   return chain
 }
 
 function makeUpdateChain() {
   const chain = {
-    set: vi.fn(() => chain),
+    set: vi.fn((_payload: Record<string, unknown>) => chain),
     where: vi.fn(() => Promise.resolve([])),
   }
   return chain
@@ -115,7 +119,12 @@ describe('updateTransaction', () => {
   describe('DET-01 — amount, date, title edits', () => {
     it('updates amount without touching transactionHash/descriptionHash/description', async () => {
       const row = makeTxRow()
-      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([row]))
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        // 1: transaction row load; 2: transactionPair lookup — unpaired, returns [].
+        return callCount === 1 ? makeSelectChain([row]) : makeSelectChain([])
+      })
       const updateChain = makeUpdateChain()
       mocks.dbUpdateChain.mockReturnValue(updateChain)
 
@@ -185,8 +194,10 @@ describe('updateTransaction', () => {
         callCount += 1
         // 1: transaction row load
         if (callCount === 1) return makeSelectChain([row])
-        // 2: loadAggregatesForExpenses (grouped select)
-        if (callCount === 2) {
+        // 2: transactionPair lookup — unpaired, returns [].
+        if (callCount === 2) return makeSelectChain([])
+        // 3: loadAggregatesForExpenses (grouped select)
+        if (callCount === 3) {
           return makeSelectChain([
             {
               expenseId: 'exp-1',
@@ -197,7 +208,7 @@ describe('updateTransaction', () => {
             },
           ])
         }
-        // 3: loadManualOrOverrideExpenseIds
+        // 4: loadManualOrOverrideExpenseIds
         return makeSelectChain([])
       })
 
@@ -219,7 +230,12 @@ describe('updateTransaction', () => {
 
     it('does not touch expense when no expense is linked', async () => {
       const row = makeTxRow({ expenseId: null })
-      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([row]))
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        // 1: transaction row load; 2: transactionPair lookup — unpaired, returns [].
+        return callCount === 1 ? makeSelectChain([row]) : makeSelectChain([])
+      })
       const updateChain = makeUpdateChain()
       mocks.dbUpdateChain.mockReturnValue(updateChain)
 
