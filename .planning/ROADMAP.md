@@ -32,6 +32,49 @@ automatically. Decisions locked in `.planning/REQUIREMENTS.md` (grill 2026-07-05
 - [ ] **Phase 63: detail-pages-tx-expense** — `/transactions/[id]` + `/expenses/[id]` pages with pencil-inline editing, SubcategoryPicker, cerca su internet, cross-refs; expense "dettagli"+"modifica" dialogs collapse into the page. (DET-05..07)
 - [ ] **Phase 64: file-detail-and-navigation** — `/import/[fileId]` page (displayName editable, stats readonly, transactions list) + row-click/menu navigation wiring across all three tables. (DET-08..09)
 
+### Phase 62: transaction-edit-core
+
+**Goal:** A transaction's `amount`, `occurredAt`, and `customTitle` can be edited safely from the service layer — hashes and `description` stay frozen, the linked expense's derived aggregates reconcile atomically in the same `db.transaction`, and pair-breaking edits are blocked with a clear Italian message. Backend + tests only, no UI.
+
+**Requirements:** DET-01, DET-02, DET-03, DET-04
+
+**Success Criteria**:
+1. `updateTransaction` service + thin `"use server"` action edit `amount` (Decimal.js, signed), `occurredAt`, `customTitle` inside `db.transaction`, Zod-validated and ownership-gated; `transactionHash`, `descriptionHash`, and `description` are never modified by any edit path.
+2. After an amount/date edit, the linked expense's `totalAmount`, `transactionCount`, `firstTransactionAt`, `lastTransactionAt` are recomputed atomically in the same transaction (reuse/generalize the existing expense-reconciliation service).
+3. Editing a paired transaction's amount so the pair would break the opposite-sign/nonzero invariant is rejected with an Italian message ("Scollega prima il rimborso"); edits to unpaired transactions are unaffected.
+4. `updateExpense` covers `title`, `notes`, `subCategoryId` with status transitions consistent with the categorize flow; derived expense fields are never writable through it.
+5. Tests cover edit, reconciliation, and pair guard paths.
+
+**Plans:** TBD
+
+### Phase 63: detail-pages-tx-expense
+
+**Goal:** `/transactions/[id]` and `/expenses/[id]` become the single place to view and edit everything editable about a transaction/expense, with cross-references between entities; the expense "dettagli" and "modifica" dialogs collapse into the page.
+
+**Depends on:** Phase 62
+
+**Requirements:** DET-05, DET-06, DET-07
+
+**Success Criteria**:
+1. `/transactions/[id]` shows all fields; pencil-inline edit for amount/date/title; category assign/change via `SubcategoryPicker`; immutable fields visibly readonly (description, hashes never editable); actions: cerca su internet, collega/scollega rimborso, spesa a sé, elimina; cross-refs: linked expense (link), source file (link) or "Manuale".
+2. `/expenses/[id]` merges today's "dettagli" + "modifica" dialogs: pencil-inline edit for title/notes/category, readonly derived totals; actions: cerca su internet, categorizza, elimina; cross-refs: linked transactions list (each linking to its page), source file, platform.
+3. The old expense edit/details dialogs are removed or redirected; no dead menu entries; tables link to the new pages.
+
+**Plans:** TBD
+
+### Phase 64: file-detail-and-navigation
+
+**Goal:** `/import/[fileId]` detail page (editable `displayName`, readonly platform/format/stats, file transactions listed) plus consistent row-click/menu navigation wiring across all three tables.
+
+**Depends on:** Phase 63
+
+**Requirements:** DET-08, DET-09
+
+**Success Criteria**:
+1. `/import/[fileId]` shows `displayName` editable inline; platform/format/stats readonly; the file's transactions are listed, each linking to its detail page; existing actions preserved (R2 download, suggestions, delete).
+2. Row-title click navigates to the detail page on Transactions, Expenses, and Files tables; menu "Dettagli" entries exist; breadcrumb/back behavior is consistent.
+
+**Plans:** TBD
 
 <details>
 <summary>✅ v2.4: Standalone Expense (Phase 61) — SHIPPED 2026-07-01</summary>
