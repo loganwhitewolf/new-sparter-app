@@ -66,7 +66,7 @@ transaction to the importer.
   cerca su internet, collega/scollega rimborso, spesa a sé, elimina; cross-refs:
   linked expense (link), source file (link) or "Manuale".
 
-- [ ] **DET-06** — `/expenses/[id]`: merges today's "dettagli" + "modifica"
+- [x] **DET-06** — `/expenses/[id]`: merges today's "dettagli" + "modifica"
   dialogs; pencil-inline edit for title/notes/category; readonly derived totals;
   actions: cerca su internet, categorizza, elimina; cross-refs: linked
   transactions list (each linking to its page), source file, platform.

@@ -5,15 +5,15 @@ milestone_name: Detail Pages
 current_phase: 63
 current_phase_name: detail-pages-tx-expense
 status: executing
-stopped_at: Completed 63-02-PLAN.md
-last_updated: "2026-07-05T21:18:43.693Z"
+stopped_at: Completed 63-03-PLAN.md
+last_updated: "2026-07-05T21:25:01.050Z"
 last_activity: 2026-07-05
 last_activity_desc: Phase 63 execution started
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 33
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 ## Current Position
 
 Phase: 63 (detail-pages-tx-expense) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-07-05 — Phase 63 execution started
 
@@ -89,6 +89,8 @@ Last activity: 2026-07-05 — Phase 63 execution started
 - [Phase 63]: getExpenseForDetail accepts userId as a parameter instead of self-calling verifySession() — The RSC page already verifies the session once and passes it down
 - [Phase 63]: transactionDetailHref/expenseDetailHref are standalone functions in lib/routes.ts, not APP_ROUTES keys — Preserves the APP_ROUTES object's as-const static-string shape
 - [Phase ?]: [Phase 63]: Category edit on /transactions/[id] reuses ExpenseCategorizeDialog/categorizeExpense directly instead of updateExpense — UpdateExpenseSchema requires title, categorizeExpense's narrower {id, subCategoryId} contract matches D-12's single edit-point requirement
+- [Phase ?]: Expense detail page category edit reuses categorizeExpense directly (not updateExpense) — matches the 63-02 transaction-page deviation; UpdateExpenseSchema requires title, categorizeExpense's {id, subCategoryId} contract is the correct minimal action
+- [Phase ?]: Expense Riepilogo card renders only fields ExpenseRow/getExpenseForDetail expose (totalAmount, transactionCount, createdAt) — no first/last transaction date field exists on the DAL row, none invented
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -161,9 +163,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 63-02-PLAN.md
+**Stopped at:** Completed 63-03-PLAN.md
 
-Last session: 2026-07-05T21:18:43.688Z
+Last session: 2026-07-05T21:25:01.045Z
 
 **Next:** Plan the first phase with `/gsd-plan-phase 62`
 
@@ -189,3 +191,4 @@ Last session: 2026-07-05T21:18:43.688Z
 | Phase 62 P02 | 3min | 2 tasks | 2 files |
 | Phase 63 P01 | 15min | 2 tasks | 7 files |
 | Phase 63 P02 | 12min | 2 tasks | 5 files |
+| Phase 63 P03 | 12min | 2 tasks | 4 files |

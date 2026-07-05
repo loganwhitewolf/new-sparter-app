@@ -77,7 +77,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 63-02-PLAN.md — /transactions/[id] page + client wrapper (amount/date/title edit, category, actions, cross-refs)
-- [ ] 63-03-PLAN.md — /expenses/[id] page + client wrapper (title/notes/category edit, linked transactions, actions)
+- [x] 63-03-PLAN.md — /expenses/[id] page + client wrapper (title/notes/category edit, linked transactions, actions)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -293,7 +293,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 61. standalone-expense | v2.4 | 2/2 | Complete    | 2026-07-01 |
 
 | 62. transaction-edit-core | v2.5 | 2/2 | Complete    | 2026-07-05 |
-| 63. detail-pages-tx-expense | v2.5 | 2/4 | In Progress|  |
+| 63. detail-pages-tx-expense | v2.5 | 3/4 | In Progress|  |
 | 64. file-detail-and-navigation | v2.5 | 0/? | Not started | - |
 
 **Total shipped: 61 phases · 222 plans complete**
