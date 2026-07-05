@@ -140,3 +140,7 @@ Plans 02 and 03 can now build `/transactions/[id]` and `/expenses/[id]` RSC page
 ---
 *Phase: 63-detail-pages-tx-expense*
 *Completed: 2026-07-05*
+
+## Self-Check: PASSED
+
+All created/modified files and commit hashes verified present on disk and in git history.
