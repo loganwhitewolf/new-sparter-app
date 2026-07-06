@@ -5,15 +5,15 @@ milestone_name: Detail Pages
 current_phase: 64
 current_phase_name: file-detail-and-navigation
 status: executing
-stopped_at: Phase 64 context gathered
-last_updated: "2026-07-06T13:42:49.690Z"
+stopped_at: Phase 64 Plan 07 (gap closure CR-01 + WR-02) executed
+last_updated: "2026-07-06T17:05:00.000Z"
 last_activity: 2026-07-06
-last_activity_desc: Phase 64 Plan 06 (smart-back Client Cache fix) executed
+last_activity_desc: Phase 64 Plan 07 (gap closure CR-01 pencil visibility + WR-02 smart-back reliability) executed
 progress:
   total_phases: 3
-  completed_phases: 3
-  total_plans: 12
-  completed_plans: 12
+  completed_phases: 2
+  total_plans: 13
+  completed_plans: 13
   percent: 100
 ---
 
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 
 ## Current Position
 
-Phase: 64 (file-detail-and-navigation) — EXECUTED (6 of 6 plans complete)
-Plan: 6 of 6
-Status: Awaiting human UAT verification (64-06 human-check: smart-back filter/scroll preservation across /transactions, /expenses, /import/[fileId])
-Last activity: 2026-07-06 — Phase 64 Plan 06 (smart-back Client Cache fix) executed
+Phase: 64 (file-detail-and-navigation) — EXECUTED (7 of 7 plans complete)
+Plan: 7 of 7
+Status: Gap closure done (CR-01 pencil visibility + WR-02 smart-back reliability). Two human_judgment checks remain per 64-07-SUMMARY.md — visual hover-reveal on all three detail pages, and real-browser smart-back from a tab with an external referrer.
+Last activity: 2026-07-06 — Phase 64 Plan 07 (gap closure CR-01 + WR-02) executed
 
 ## Roadmap (v2.5 — Phases 62–64)
 
@@ -100,6 +100,8 @@ Last activity: 2026-07-06 — Phase 64 Plan 06 (smart-back Client Cache fix) exe
 - [Phase ?]: [Phase 64]: Components calling useRouter and tested via renderToStaticMarkup must mock next/navigation (precedent: tests/transaction-table-menu.test.tsx) — applied to tests/detail-page-shell.test.tsx
 - [Phase 64]: [Phase 64-06] Fix scoped to router.back() call site in handleBackClick's else branch only; use-table-url.ts's router.replace() writes untouched (switching to push() rejected as worse tradeoff)
 - [Phase 64]: [Phase 64-06] attachPopstateRefresh is a standalone hook-free export so it is unit-testable with a plain mock object, no jsdom needed
+- [Phase 64]: [Phase 64-07] CR-01 fixed via ancestor-only `.group` addition on the three detail-page title wrappers, not a rewrite of the shared pencil components — keeps the fix isolated from the already-correct table-row hover behavior
+- [Phase 64]: [Phase 64-07] WR-02: hasInAppHistory(historyLength) replaces document.referrer entirely as handleBackClick's sole branch signal — referrer is fixed at hard navigation and never updated by client-side App Router transitions, so it silently and permanently disabled smart-back for any tab that ever loaded from an external link
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -207,3 +209,4 @@ Last session: 2026-07-06T13:42:19.436Z
 | Phase 64 P04 | 10min | 2 tasks | 9 files |
 | Phase 64 P05 | 8min | 1 tasks | 2 files |
 | Phase 64 P06 | 5min | 1 tasks | 2 files |
+| Phase 64 P07 | 12min | 2 tasks | 4 files |

@@ -104,7 +104,7 @@ Plans:
 - [x] 64-01-PLAN.md — importFileDetailHref route builder + getTransactionsByFileId DAL query (DET-08, DET-09)
 - [x] 64-02-PLAN.md — Title-link/pencil split on TransactionTitleEdit + ExpenseTitleEdit (DET-09)
 - [x] 64-06-PLAN.md — Gap closure: bust back/forward Client Cache after router.back() via attachPopstateRefresh (DET-09)
-- [ ] 64-07-PLAN.md — Gap closure: `.group` ancestor for pencil visibility (CR-01) + hasInAppHistory replaces broken referrer check (WR-02) (DET-08, DET-09)
+- [x] 64-07-PLAN.md — Gap closure: `.group` ancestor for pencil visibility (CR-01) + hasInAppHistory replaces broken referrer check (WR-02) (DET-08, DET-09)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -311,7 +311,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 
 | 62. transaction-edit-core | v2.5 | 2/2 | Complete    | 2026-07-05 |
 | 63. detail-pages-tx-expense | v2.5 | 4/4 | Complete    | 2026-07-05 |
-| 64. file-detail-and-navigation | v2.5 | 6/6 | Complete   | 2026-07-06 |
+| 64. file-detail-and-navigation | v2.5 | 7/7 | Complete   | 2026-07-06 |
 
 **Total shipped: 61 phases · 222 plans complete**
 **Current milestone: v2.5 Detail Pages — Phases 62–64 planned**
