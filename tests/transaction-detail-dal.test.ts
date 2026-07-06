@@ -125,7 +125,7 @@ vi.mock('@/lib/db', () => {
   return { db }
 })
 
-const { getTransactionForDetail } = await import('@/lib/dal/transactions')
+const { getTransactionForDetail, getTransactionsByFileId } = await import('@/lib/dal/transactions')
 
 function makeDetailRow(overrides: Record<string, unknown> = {}) {
   return {
@@ -212,5 +212,91 @@ describe('getTransactionForDetail', () => {
         (c) => c.op === 'eq' && c.left === 'transaction.userId' && c.right === 'user-1',
       ),
     ).toBe(true)
+  })
+})
+
+function makeFileTransactionRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'tx-1',
+    description: 'SUPERMERCATO CENTRALE',
+    customTitle: null,
+    amount: '-45.30',
+    currency: 'EUR',
+    occurredAt: new Date('2026-01-10'),
+    ...overrides,
+  }
+}
+
+describe('getTransactionsByFileId', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns the file transactions owned by the user, ordered by occurredAt desc', async () => {
+    const row = makeFileTransactionRow()
+    const chain = makeSelectChain([row])
+    mocks.dbSelectChain.mockReturnValue(chain)
+
+    const result = await getTransactionsByFileId({ userId: 'user-1', fileId: 'file-1' })
+
+    expect(result).toEqual([row])
+    expect(chain.orderBy).toHaveBeenCalledTimes(1)
+    const orderByArg = (chain.orderBy as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
+      op: string
+      col: unknown
+    }
+    expect(orderByArg.op).toBe('desc')
+    expect(orderByArg.col).toBe('transaction.occurredAt')
+  })
+
+  it('returns an empty array for a fileId the user does not own', async () => {
+    mocks.dbSelectChain.mockReturnValue(makeSelectChain([]))
+
+    await expect(
+      getTransactionsByFileId({ userId: 'user-OTHER', fileId: 'file-1' }),
+    ).resolves.toEqual([])
+  })
+
+  it('scopes the query WHERE to both fileId and userId (ownership guard present)', async () => {
+    const chain = makeSelectChain([makeFileTransactionRow()])
+    mocks.dbSelectChain.mockReturnValue(chain)
+
+    await getTransactionsByFileId({ userId: 'user-1', fileId: 'file-1' })
+
+    expect(chain.where).toHaveBeenCalledTimes(1)
+    const whereArg = (chain.where as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
+      op: string
+      args: Array<{ op: string; left: unknown; right: unknown }>
+    }
+    expect(whereArg.op).toBe('and')
+    const conditions = whereArg.args
+    expect(
+      conditions.some(
+        (c) => c.op === 'eq' && c.left === 'transaction.fileId' && c.right === 'file-1',
+      ),
+    ).toBe(true)
+    expect(
+      conditions.some(
+        (c) => c.op === 'eq' && c.left === 'transaction.userId' && c.right === 'user-1',
+      ),
+    ).toBe(true)
+  })
+
+  it('applies a default limit of 10 when limit is omitted', async () => {
+    const chain = makeSelectChain([makeFileTransactionRow()])
+    mocks.dbSelectChain.mockReturnValue(chain)
+
+    await getTransactionsByFileId({ userId: 'user-1', fileId: 'file-1' })
+
+    expect(chain.limit).toHaveBeenCalledWith(10)
+  })
+
+  it('respects an explicit limit override', async () => {
+    const chain = makeSelectChain([makeFileTransactionRow()])
+    mocks.dbSelectChain.mockReturnValue(chain)
+
+    await getTransactionsByFileId({ userId: 'user-1', fileId: 'file-1', limit: 20 })
+
+    expect(chain.limit).toHaveBeenCalledWith(20)
   })
 })

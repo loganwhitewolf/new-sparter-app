@@ -677,6 +677,47 @@ export const getTransactionsByExpenseId = cache(
   },
 )
 
+export type FileTransactionRow = {
+  id: string
+  description: string
+  customTitle: string | null
+  amount: string
+  currency: string
+  occurredAt: Date
+}
+
+/**
+ * Ownership-scoped preview query for the file detail page's transactions card
+ * (D-01, DET-08). Capped by `limit` (default 10) so a file with hundreds of
+ * rows never renders an unbounded list here — "Vedi tutte" links to the full
+ * filtered `/transactions` view instead.
+ */
+export const getTransactionsByFileId = cache(
+  async ({
+    userId,
+    fileId,
+    limit,
+  }: {
+    userId: string
+    fileId: string
+    limit?: number
+  }): Promise<FileTransactionRow[]> => {
+    return db
+      .select({
+        id: transaction.id,
+        description: transaction.description,
+        customTitle: transaction.customTitle,
+        amount: transaction.amount,
+        currency: transaction.currency,
+        occurredAt: transaction.occurredAt,
+      })
+      .from(transaction)
+      .where(and(eq(transaction.fileId, fileId), eq(transaction.userId, userId)))
+      .orderBy(desc(transaction.occurredAt))
+      .limit(limit ?? 10)
+  },
+)
+
 const UNCATEGORIZED_TX_LIMIT = 2000
 
 export async function getUncategorizedTransactionsByFileId(
