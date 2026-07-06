@@ -23,6 +23,19 @@ type Props = {
 }
 
 /**
+ * Registers a single-use 'popstate' listener on `target` that invokes
+ * `onPopstate` once, then self-removes. Used to bust Next.js's back/forward
+ * Client Cache exactly once per router.back() call, without accumulating
+ * listeners across repeated back-navigations (T-64-11).
+ */
+export function attachPopstateRefresh(
+  target: Pick<Window, 'addEventListener'>,
+  onPopstate: () => void,
+): void {
+  target.addEventListener('popstate', onPopstate, { once: true })
+}
+
+/**
  * Shared header + card-section shell for the transaction and expense detail
  * pages (D-02). Mobile-first single column, no sidebar grid (D-01). Card
  * slots render only when provided, in a fixed stacking order: core fields,
@@ -70,6 +83,15 @@ export function DetailPageShell({
     if (hasNoHistory || isExternalReferrer) {
       router.push(backHref)
     } else {
+      // Next.js's back/forward Client Cache unconditionally reuses the
+      // destination route's previously-rendered RSC payload (independent of
+      // staleTimes.dynamic), so a filtered table can render a stale
+      // pre-filter snapshot even though the URL is restored correctly. Arm a
+      // one-time popstate listener BEFORE calling router.back() so it fires
+      // after Next's own app-router popstate listener has already updated
+      // the router's internal route state, then bust the cache for the
+      // destination route with router.refresh() (preserves scroll position).
+      attachPopstateRefresh(window, () => router.refresh())
       router.back()
     }
   }
