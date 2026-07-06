@@ -115,3 +115,11 @@ The automated half of this gap-closure plan is complete and verified (10/10 test
 ---
 *Phase: 64-file-detail-and-navigation*
 *Completed: 2026-07-06*
+
+## Self-Check: PASSED
+
+- FOUND: components/detail-pages/detail-page-shell.tsx
+- FOUND: tests/detail-page-shell.test.tsx
+- FOUND: .planning/phases/64-file-detail-and-navigation/64-06-SUMMARY.md
+- FOUND: 1be469c (test commit)
+- FOUND: ad94b3d (feat commit)
