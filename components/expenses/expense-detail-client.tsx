@@ -126,7 +126,7 @@ export function ExpenseDetailClient({ expense, categories, mostUsed }: Props) {
 
   const datiCard = (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
+      <div className="group flex flex-col gap-1">
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Titolo
         </span>
