@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, test } from 'vitest'
 import { DetailPageShell } from '@/components/detail-pages/detail-page-shell'
-import { expenseDetailHref, transactionDetailHref } from '@/lib/routes'
+import { expenseDetailHref, importFileDetailHref, transactionDetailHref } from '@/lib/routes'
 
 describe('DetailPageShell', () => {
   test('renders header (title, amount, actions) with only datiCard set', () => {
@@ -73,8 +73,16 @@ describe('route builders', () => {
     expect(expenseDetailHref('abc')).toBe('/expenses/abc')
   })
 
+  test('importFileDetailHref builds an encoded import file detail path', () => {
+    expect(importFileDetailHref('abc')).toBe('/import/abc')
+  })
+
   test('both href builders encode special characters in the id', () => {
     expect(transactionDetailHref('a/b')).toBe('/transactions/a%2Fb')
     expect(expenseDetailHref('a/b')).toBe('/expenses/a%2Fb')
+  })
+
+  test('importFileDetailHref encodes special characters in the id', () => {
+    expect(importFileDetailHref('a/b')).toBe('/import/a%2Fb')
   })
 })

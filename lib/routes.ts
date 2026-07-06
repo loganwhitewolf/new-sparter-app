@@ -59,6 +59,10 @@ export function expenseDetailHref(id: string) {
   return `${APP_ROUTES.expenses}/${encodeURIComponent(id)}`
 }
 
+export function importFileDetailHref(fileId: string): string {
+  return `${APP_ROUTES.import}/${encodeURIComponent(fileId)}`
+}
+
 export function buildDashboardCategoryDetailHref(
   id: number | string,
   filters: DashboardCategoryFilters = {}
