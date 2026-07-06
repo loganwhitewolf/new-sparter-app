@@ -36,6 +36,19 @@ export function attachPopstateRefresh(
 }
 
 /**
+ * Pure signal for D-08 smart back: true when the browser session has more
+ * than one history entry, meaning genuine in-app navigation history exists
+ * to go back to. `document.referrer` is deliberately NOT used as a signal
+ * here — it is set once at the tab's original hard navigation and never
+ * updated by client-side App Router transitions, so it would silently and
+ * permanently disable smart back for any tab that ever arrived from outside
+ * the app, even once real in-app history has since accumulated (WR-02).
+ */
+export function hasInAppHistory(historyLength: number): boolean {
+  return historyLength > 1
+}
+
+/**
  * Shared header + card-section shell for the transaction and expense detail
  * pages (D-02). Mobile-first single column, no sidebar grid (D-01). Card
  * slots render only when provided, in a fixed stacking order: core fields,
@@ -57,10 +70,14 @@ export function DetailPageShell({
 
   // D-08 smart back: prefer in-app history (preserves the origin table's
   // filters/sort/scroll position) and fall back to the static `backHref`
-  // route only when there is no usable in-app history — a fresh tab, an
-  // external referrer, or a directly-opened URL. The underlying element
-  // stays a real `<a href={backHref}>` so SSR/no-JS clients and a failed/
-  // missed JS path still degrade to a normal navigable link (T-64-10).
+  // route only when there is no usable in-app history — a fresh tab or a
+  // directly-opened URL. A browser's document-referrer signal is deliberately
+  // not consulted: it is fixed at the tab's original hard navigation and
+  // never updated by this framework's client-side route transitions, so
+  // relying on it would silently and permanently disable smart back for any
+  // tab that ever arrived from outside the app (WR-02). The underlying
+  // element stays a real `<a href={backHref}>` so SSR/no-JS clients and a
+  // failed/missed JS path still degrade to a normal navigable link (T-64-10).
   function handleBackClick(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault()
 
@@ -69,18 +86,7 @@ export function DetailPageShell({
       return
     }
 
-    const hasNoHistory = window.history.length <= 1
-    const referrer = document.referrer
-    const isExternalReferrer = (() => {
-      if (referrer === '') return false
-      try {
-        return new URL(referrer).origin !== window.location.origin
-      } catch {
-        return true
-      }
-    })()
-
-    if (hasNoHistory || isExternalReferrer) {
+    if (!hasInAppHistory(window.history.length)) {
       router.push(backHref)
     } else {
       // Next.js's back/forward Client Cache unconditionally reuses the
