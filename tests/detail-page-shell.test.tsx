@@ -1,6 +1,10 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, test, vi } from 'vitest'
-import { attachPopstateRefresh, DetailPageShell } from '@/components/detail-pages/detail-page-shell'
+import {
+  attachPopstateRefresh,
+  DetailPageShell,
+  hasInAppHistory,
+} from '@/components/detail-pages/detail-page-shell'
 import { expenseDetailHref, importFileDetailHref, transactionDetailHref } from '@/lib/routes'
 
 // DetailPageShell's smart-back control (D-08) calls useRouter from next/navigation.
@@ -125,5 +129,19 @@ describe('attachPopstateRefresh', () => {
     registeredHandler()
 
     expect(onPopstate).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('hasInAppHistory', () => {
+  test('returns false when historyLength is 0 (no in-app history)', () => {
+    expect(hasInAppHistory(0)).toBe(false)
+  })
+
+  test('returns false when historyLength is 1 (fresh tab / directly-opened URL)', () => {
+    expect(hasInAppHistory(1)).toBe(false)
+  })
+
+  test('returns true when historyLength is 2 (genuine in-app history exists)', () => {
+    expect(hasInAppHistory(2)).toBe(true)
   })
 })
