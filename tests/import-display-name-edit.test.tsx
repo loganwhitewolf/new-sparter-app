@@ -44,4 +44,34 @@ describe('ImportDisplayNameEdit', () => {
     expect(html).toContain('estratto.csv')
     expect(html).toContain('aria-label="Rinomina importazione estratto.csv"')
   })
+
+  it('renders the title inside a Link when linkHref is provided', () => {
+    const html = renderToStaticMarkup(
+      createElement(ImportDisplayNameEdit, {
+        fileId: FILE_ID,
+        displayName: 'Gennaio 2026',
+        originalName: 'estratto.csv',
+        linkHref: `/import/${FILE_ID}`,
+      }),
+    )
+
+    expect(html).toContain(`href="/import/${FILE_ID}"`)
+    expect(html).toContain('Gennaio 2026')
+    // Pencil button remains an independent edit trigger, unaffected by the link.
+    expect(html).toContain('aria-label="Rinomina importazione Gennaio 2026"')
+  })
+
+  it('renders the title as plain (non-link) text when linkHref is omitted', () => {
+    const html = renderToStaticMarkup(
+      createElement(ImportDisplayNameEdit, {
+        fileId: FILE_ID,
+        displayName: 'Gennaio 2026',
+        originalName: 'estratto.csv',
+      }),
+    )
+
+    expect(html).not.toContain('<a ')
+    expect(html).toContain('Gennaio 2026')
+    expect(html).toContain('aria-label="Rinomina importazione Gennaio 2026"')
+  })
 })

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useTransition } from 'react'
-import { Clock, Download, ExternalLink, MoreHorizontal, Settings, Sparkles, Trash2 } from 'lucide-react'
+import { Clock, Download, ExternalLink, FileText, MoreHorizontal, Settings, Sparkles, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { ImportListRow } from '@/lib/dal/imports'
+import { importFileDetailHref } from '@/lib/routes'
 import { canDownloadImportFile, isInProgress, isUnknownFormatFailed } from '@/lib/utils/import-status'
 
 type Props = {
@@ -144,6 +145,15 @@ export function ImportRowActions({ row, displayName, onDelete, onDeleteStale, on
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
+          {row.status === 'imported' && (
+            <DropdownMenuItem asChild>
+              <Link href={importFileDetailHref(row.id)}>
+                <FileText className="mr-2 h-4 w-4" aria-hidden="true" />
+                Dettagli
+              </Link>
+            </DropdownMenuItem>
+          )}
+
           {canDownloadImportFile(row) && (
             <DropdownMenuItem onClick={handleDownload} disabled={isDownloadPending}>
               <Download className="mr-2 h-4 w-4" aria-hidden="true" />

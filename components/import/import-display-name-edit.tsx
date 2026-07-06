@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Pencil } from 'lucide-react'
 import { updateImportDisplayNameAction } from '@/lib/actions/import'
 
@@ -9,6 +10,8 @@ type Props = {
   displayName: string | null
   originalName: string
   onSuccess?: (displayName: string | null) => void
+  /** When provided, the title text links here (D-04). Omitted on the file's own detail page (Plan 64-03), where the title renders as plain text. */
+  linkHref?: string
 }
 
 function getDisplayTitle(displayName: string | null, originalName: string) {
@@ -20,6 +23,7 @@ export function ImportDisplayNameEdit({
   displayName,
   originalName,
   onSuccess,
+  linkHref,
 }: Props) {
   const displayTitle = getDisplayTitle(displayName, originalName)
   const hasCustomName = Boolean(displayName?.trim())
@@ -40,23 +44,34 @@ export function ImportDisplayNameEdit({
   }, [state, onSuccess])
 
   if (!isEditing) {
+    const titleContent = linkHref ? (
+      <Link href={linkHref} className="min-w-0 truncate">
+        <span className="truncate font-medium tracking-tight" title={displayTitle}>
+          {displayTitle}
+        </span>
+      </Link>
+    ) : (
+      <span className="truncate font-medium tracking-tight" title={displayTitle}>
+        {displayTitle}
+      </span>
+    )
+
     return (
       <div className="flex min-w-0 flex-col gap-1">
-        <button
-          type="button"
-          className="flex min-w-0 items-center gap-1 text-left"
-          onClick={() => {
-            setValue(displayName?.trim() ?? '')
-            setIsEditing(true)
-          }}
-          title="Clicca per modificare il nome di questa importazione"
-          aria-label={`Rinomina importazione ${displayTitle}`}
-        >
-          <span className="truncate font-medium tracking-tight" title={displayTitle}>
-            {displayTitle}
-          </span>
-          <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100" />
-        </button>
+        <div className="flex min-w-0 items-center gap-1">
+          {titleContent}
+          <button
+            type="button"
+            onClick={() => {
+              setValue(displayName?.trim() ?? '')
+              setIsEditing(true)
+            }}
+            title="Clicca per modificare il nome di questa importazione"
+            aria-label={`Rinomina importazione ${displayTitle}`}
+          >
+            <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100" />
+          </button>
+        </div>
         {hasCustomName ? (
           <span className="truncate text-xs text-muted-foreground" title={originalName}>
             {originalName}
