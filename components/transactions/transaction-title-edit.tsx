@@ -1,7 +1,9 @@
 'use client'
 import { useActionState, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Pencil } from 'lucide-react'
 import { updateTransactionCustomTitle } from '@/lib/actions/transactions'
+import { transactionDetailHref } from '@/lib/routes'
 
 type Props = {
   id: string
@@ -39,20 +41,24 @@ export function TransactionTitleEdit({
   if (!isEditing) {
     return (
       <div className="flex min-w-0 flex-col gap-1">
-        <button
-          type="button"
-          className="flex min-w-0 items-center gap-1 text-left"
-          onClick={() => {
-            setValue(customTitle ?? fallbackTitle ?? description)
-            setIsEditing(true)
-          }}
-          title="Clicca per modificare il titolo di questa transazione"
-        >
-          <span className="truncate font-medium tracking-tight" title={description}>
-            {displayTitle}
-          </span>
-          <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-        </button>
+        <div className="flex min-w-0 items-center gap-1">
+          <Link href={transactionDetailHref(id)} className="min-w-0">
+            <span className="truncate font-medium tracking-tight" title={description}>
+              {displayTitle}
+            </span>
+          </Link>
+          <button
+            type="button"
+            aria-label="Modifica titolo"
+            onClick={() => {
+              setValue(customTitle ?? fallbackTitle ?? description)
+              setIsEditing(true)
+            }}
+            title="Clicca per modificare il titolo di questa transazione"
+          >
+            <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+          </button>
+        </div>
         {customTitle ? (
           <span
             className="truncate text-xs text-muted-foreground"

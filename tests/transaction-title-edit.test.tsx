@@ -13,6 +13,7 @@ vi.mock('react', async () => {
 const { TransactionTitleEdit } = await import(
   '../components/transactions/transaction-title-edit'
 )
+const { transactionDetailHref } = await import('../lib/routes')
 
 const TX_ID = '11111111-1111-4111-8111-111111111111'
 
@@ -73,5 +74,35 @@ describe('TransactionTitleEdit', () => {
 
     expect(html).toContain('Originale: BONIFICO SEPA DA MARIO ROSSI')
     expect(html).not.toContain('Originale: Rimborso YouTube')
+  })
+
+  it('renders the title as a link to the transaction detail page', () => {
+    const html = renderToStaticMarkup(
+      createElement(TransactionTitleEdit, {
+        id: TX_ID,
+        description: 'PAGAMENTO POS BAR ROMA',
+        customTitle: null,
+        fallbackTitle: null,
+      }),
+    )
+
+    expect(html).toContain(`href="${transactionDetailHref(TX_ID)}"`)
+  })
+
+  it('renders the pencil trigger as a plain button, not wrapped in the link', () => {
+    const html = renderToStaticMarkup(
+      createElement(TransactionTitleEdit, {
+        id: TX_ID,
+        description: 'PAGAMENTO POS BAR ROMA',
+        customTitle: null,
+        fallbackTitle: null,
+      }),
+    )
+
+    const pencilButtonMatch = html.match(
+      /<button[^>]*aria-label="Modifica titolo"[^>]*>/,
+    )
+    expect(pencilButtonMatch).not.toBeNull()
+    expect(pencilButtonMatch?.[0]).not.toContain('href')
   })
 })
