@@ -1,7 +1,13 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { DetailPageShell } from '@/components/detail-pages/detail-page-shell'
 import { expenseDetailHref, importFileDetailHref, transactionDetailHref } from '@/lib/routes'
+
+// DetailPageShell's smart-back control (D-08) calls useRouter from next/navigation.
+// Pattern matches tests/transaction-table-menu.test.tsx / tests/data-table-toolbar.test.tsx.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ back: vi.fn(), push: vi.fn() }),
+}))
 
 describe('DetailPageShell', () => {
   test('renders header (title, amount, actions) with only datiCard set', () => {
@@ -61,6 +67,14 @@ describe('DetailPageShell', () => {
     )
 
     expect(html).toContain('href="/transactions"')
+  })
+
+  test('renders a back link to backHref for the file detail page fallback route (D-08 applies to all three detail pages)', () => {
+    const html = renderToStaticMarkup(
+      <DetailPageShell backHref="/import" title="report.csv" />,
+    )
+
+    expect(html).toContain('href="/import"')
   })
 })
 

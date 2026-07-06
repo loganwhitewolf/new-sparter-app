@@ -1,7 +1,7 @@
 'use client'
 import { ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
-import type { ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
+import type { MouseEvent, ReactNode } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 
 type Props = {
@@ -40,15 +40,50 @@ export function DetailPageShell({
   riepilogoCard,
   transactionsCard,
 }: Props) {
+  const router = useRouter()
+
+  // D-08 smart back: prefer in-app history (preserves the origin table's
+  // filters/sort/scroll position) and fall back to the static `backHref`
+  // route only when there is no usable in-app history — a fresh tab, an
+  // external referrer, or a directly-opened URL. The underlying element
+  // stays a real `<a href={backHref}>` so SSR/no-JS clients and a failed/
+  // missed JS path still degrade to a normal navigable link (T-64-10).
+  function handleBackClick(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault()
+
+    if (typeof window === 'undefined') {
+      router.push(backHref)
+      return
+    }
+
+    const hasNoHistory = window.history.length <= 1
+    const referrer = document.referrer
+    const isExternalReferrer = (() => {
+      if (referrer === '') return false
+      try {
+        return new URL(referrer).origin !== window.location.origin
+      } catch {
+        return true
+      }
+    })()
+
+    if (hasNoHistory || isExternalReferrer) {
+      router.push(backHref)
+    } else {
+      router.back()
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6 pb-8">
-      <Link
+      <a
         href={backHref}
+        onClick={handleBackClick}
         className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         Indietro
-      </Link>
+      </a>
 
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
