@@ -1,12 +1,12 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, test, vi } from 'vitest'
-import { DetailPageShell } from '@/components/detail-pages/detail-page-shell'
+import { attachPopstateRefresh, DetailPageShell } from '@/components/detail-pages/detail-page-shell'
 import { expenseDetailHref, importFileDetailHref, transactionDetailHref } from '@/lib/routes'
 
 // DetailPageShell's smart-back control (D-08) calls useRouter from next/navigation.
 // Pattern matches tests/transaction-table-menu.test.tsx / tests/data-table-toolbar.test.tsx.
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ back: vi.fn(), push: vi.fn() }),
+  useRouter: () => ({ back: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
 }))
 
 describe('DetailPageShell', () => {
@@ -98,5 +98,24 @@ describe('route builders', () => {
 
   test('importFileDetailHref encodes special characters in the id', () => {
     expect(importFileDetailHref('a/b')).toBe('/import/a%2Fb')
+  })
+})
+
+describe('attachPopstateRefresh', () => {
+  test('registers a once-only popstate listener that invokes the callback', () => {
+    const target = { addEventListener: vi.fn() }
+    const onPopstate = vi.fn()
+
+    attachPopstateRefresh(target, onPopstate)
+
+    expect(target.addEventListener).toHaveBeenCalledTimes(1)
+    expect(target.addEventListener).toHaveBeenCalledWith('popstate', expect.any(Function), {
+      once: true,
+    })
+
+    const registeredHandler = target.addEventListener.mock.calls[0][1] as () => void
+    registeredHandler()
+
+    expect(onPopstate).toHaveBeenCalledTimes(1)
   })
 })
