@@ -76,6 +76,14 @@ describe('DetailPageShell', () => {
 
     expect(html).toContain('href="/import"')
   })
+
+  test('header title wrapper carries the .group class so the inline-edit pencil can reveal on hover (CR-01)', () => {
+    const html = renderToStaticMarkup(
+      <DetailPageShell backHref="/import" title="report.csv" />,
+    )
+
+    expect(html).toContain('class="group min-w-0 flex-1"')
+  })
 })
 
 describe('route builders', () => {
