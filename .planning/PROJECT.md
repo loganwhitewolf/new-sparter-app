@@ -66,7 +66,19 @@ ownership-scoped DAL queries returning 404-as-undefined, shared `DetailPageShell
 both tables' row menus wired to the new pages (old expense "dettagli"/"modifica" dialogs
 retired). 9/9 must-haves verified, 48/48 tests passing. Code review found and fixed one blocker
 (amount edit input seeded a currency-formatted string that failed re-save validation) plus four
-smaller consistency issues. Next: Phase 64 (`/import/[fileId]`).
+smaller consistency issues.
+
+**Validated in Phase 64 (file-detail-and-navigation, 2026-07-06):** DET-08..09 — `/import/[fileId]`
+detail page (editable displayName, readonly platform/format/stats, linked transactions preview,
+existing actions preserved) plus row-click/menu navigation wiring across all three tables and
+consistent smart-back behavior. Shipped across 7 plans including two gap-closure rounds: 64-06
+fixed a Client Cache reuse bug on `router.back()`, 64-07 fixed a code-review blocker (inline-edit
+pencil invisible on all three detail pages — missing Tailwind `.group` ancestor) plus a bundled
+smart-back reliability bug (`document.referrer` never updates across SPA navigations). 7/7
+must-haves verified, all UAT passed, 13/13 security threats closed (0 open).
+
+**v2.5 Detail Pages milestone shipped 2026-07-06** — all 3 phases (62-64) complete, 13/13 plans,
+9/9 DET requirements validated.
 
 ## Last Shipped Milestone: v2.4 — Standalone Expense (shipped 2026-07-01, tag v2.4)
 
@@ -294,4 +306,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-05 — Phase 63 (detail-pages-tx-expense) complete, verified 9/9; v2.5 Detail Pages Phase 64 remains*
+*Last updated: 2026-07-06 — Phase 64 (file-detail-and-navigation) complete, verified 7/7; v2.5 Detail Pages milestone shipped (3/3 phases, 13/13 plans)*
