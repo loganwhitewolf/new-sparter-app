@@ -6,14 +6,14 @@ current_phase: 64
 current_phase_name: file-detail-and-navigation
 status: executing
 stopped_at: Phase 64 context gathered
-last_updated: "2026-07-06T12:00:06.939Z"
+last_updated: "2026-07-06T13:42:49.690Z"
 last_activity: 2026-07-06
-last_activity_desc: Phase 64 execution started
+last_activity_desc: Phase 64 Plan 06 (smart-back Client Cache fix) executed
 progress:
   total_phases: 3
   completed_phases: 3
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 12
+  completed_plans: 12
   percent: 100
 ---
 
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 
 ## Current Position
 
-Phase: 64 (file-detail-and-navigation) — EXECUTING
-Plan: 5 of 5
-Status: Ready to execute
-Last activity: 2026-07-06 — Phase 64 execution started
+Phase: 64 (file-detail-and-navigation) — EXECUTED (6 of 6 plans complete)
+Plan: 6 of 6
+Status: Awaiting human UAT verification (64-06 human-check: smart-back filter/scroll preservation across /transactions, /expenses, /import/[fileId])
+Last activity: 2026-07-06 — Phase 64 Plan 06 (smart-back Client Cache fix) executed
 
 ## Roadmap (v2.5 — Phases 62–64)
 
@@ -98,6 +98,8 @@ Last activity: 2026-07-06 — Phase 64 execution started
 - [Phase 64]: Removed the now-unused APP_ROUTES import from transaction-table.tsx once its only remaining use (?fileId= href) was replaced by importFileDetailHref
 - [Phase ?]: [Phase 64]: DetailPageShell smart-back fallback triggers on window.history.length <= 1 OR cross-origin document.referrer; otherwise prefers router.back() to preserve in-app history
 - [Phase ?]: [Phase 64]: Components calling useRouter and tested via renderToStaticMarkup must mock next/navigation (precedent: tests/transaction-table-menu.test.tsx) — applied to tests/detail-page-shell.test.tsx
+- [Phase 64]: [Phase 64-06] Fix scoped to router.back() call site in handleBackClick's else branch only; use-table-url.ts's router.replace() writes untouched (switching to push() rejected as worse tradeoff)
+- [Phase 64]: [Phase 64-06] attachPopstateRefresh is a standalone hook-free export so it is unit-testable with a plain mock object, no jsdom needed
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -172,7 +174,7 @@ Items acknowledged and postponed:
 
 **Stopped at:** Phase 64 context gathered
 
-Last session: 2026-07-06T11:58:16.577Z
+Last session: 2026-07-06T13:42:19.436Z
 
 **Next:** Verify Phase 63 (detail-pages-tx-expense), then plan Phase 64 (file-detail-and-navigation) with `/gsd-plan-phase 64`
 
@@ -204,3 +206,4 @@ Last session: 2026-07-06T11:58:16.577Z
 | Phase 64 P02 | 8min | 2 tasks | 4 files |
 | Phase 64 P04 | 10min | 2 tasks | 9 files |
 | Phase 64 P05 | 8min | 1 tasks | 2 files |
+| Phase 64 P06 | 5min | 1 tasks | 2 files |
