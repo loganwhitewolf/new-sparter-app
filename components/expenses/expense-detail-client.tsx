@@ -38,7 +38,7 @@ import { categorizeExpense, deleteExpense } from '@/lib/actions/expenses'
 import type { ExpenseDetailRow } from '@/lib/dal/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
-import { APP_ROUTES, transactionDetailHref } from '@/lib/routes'
+import { APP_ROUTES, importFileDetailHref, transactionDetailHref } from '@/lib/routes'
 import { toDecimal } from '@/lib/utils/decimal'
 import { cn } from '@/lib/utils'
 
@@ -186,7 +186,7 @@ export function ExpenseDetailClient({ expense, categories, mostUsed }: Props) {
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm text-muted-foreground">File di origine</span>
           <Link
-            href={`${APP_ROUTES.import}?fileId=${encodeURIComponent(expense.sourceFile.id)}`}
+            href={importFileDetailHref(expense.sourceFile.id)}
             className="text-sm text-primary underline-offset-4 hover:underline"
           >
             {expense.sourceFile.name}

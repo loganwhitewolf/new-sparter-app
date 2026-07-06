@@ -36,7 +36,7 @@ import { deleteTransactionPairAction } from '@/lib/actions/transaction-pairs'
 import type { TransactionDetailRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
-import { APP_ROUTES, expenseDetailHref, transactionDetailHref } from '@/lib/routes'
+import { APP_ROUTES, expenseDetailHref, importFileDetailHref, transactionDetailHref } from '@/lib/routes'
 import { toDecimal } from '@/lib/utils/decimal'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 
@@ -231,7 +231,7 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm text-muted-foreground">File di origine</span>
           <Link
-            href={`${APP_ROUTES.import}?fileId=${encodeURIComponent(transaction.fileId)}`}
+            href={importFileDetailHref(transaction.fileId)}
             className="text-sm text-primary underline-offset-4 hover:underline"
           >
             {transaction.fileName ?? 'Apri importazione'}

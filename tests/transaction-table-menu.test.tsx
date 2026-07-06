@@ -67,7 +67,7 @@ vi.mock('@/components/ui/dropdown-menu', async () => {
 })
 
 const { TransactionTable } = await import('../components/transactions/transaction-table')
-const { transactionDetailHref } = await import('../lib/routes')
+const { transactionDetailHref, importFileDetailHref } = await import('../lib/routes')
 import type { TransactionListRow } from '../lib/dal/transactions'
 
 const TRANSACTION_ID = 'aabbccdd-0000-4000-8000-aabbccddeeff'
@@ -149,5 +149,20 @@ describe('TransactionTable — row menu Dettagli entry (DET-07)', () => {
     const html = render([makeTransaction()])
 
     expect(html).toContain('Elimina')
+  })
+})
+
+describe('TransactionTable — file column link (D-05/D-16 repoint)', () => {
+  it('links the file name to importFileDetailHref(transaction.fileId) instead of the legacy ?fileId= filter', () => {
+    const html = render([
+      makeTransaction({
+        fileId: 'file-1',
+        fileName: 'estratto.csv',
+        platformName: 'Fineco',
+      }),
+    ])
+
+    expect(html).toContain(`href="${importFileDetailHref('file-1')}"`)
+    expect(html).not.toContain('?fileId=')
   })
 })
