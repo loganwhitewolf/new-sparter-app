@@ -99,13 +99,21 @@ Plans:
 **Plans:** 7 plans
 
 Plans:
+**Wave 1**
+
 - [x] 64-01-PLAN.md — importFileDetailHref route builder + getTransactionsByFileId DAL query (DET-08, DET-09)
 - [x] 64-02-PLAN.md — Title-link/pencil split on TransactionTitleEdit + ExpenseTitleEdit (DET-09)
-- [x] 64-03-PLAN.md — `/import/[fileId]` detail page: displayName inline edit, readonly stats, transactions preview, actions lifted in (DET-08)
-- [x] 64-04-PLAN.md — Import table title-link + Dettagli entry; repoint remaining `/import?fileId=…` cross-refs (DET-09)
-- [x] 64-05-PLAN.md — DetailPageShell smart-back: router.back() with static-route fallback (DET-09)
 - [x] 64-06-PLAN.md — Gap closure: bust back/forward Client Cache after router.back() via attachPopstateRefresh (DET-09)
 - [ ] 64-07-PLAN.md — Gap closure: `.group` ancestor for pencil visibility (CR-01) + hasInAppHistory replaces broken referrer check (WR-02) (DET-08, DET-09)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 64-03-PLAN.md — `/import/[fileId]` detail page: displayName inline edit, readonly stats, transactions preview, actions lifted in (DET-08)
+- [x] 64-04-PLAN.md — Import table title-link + Dettagli entry; repoint remaining `/import?fileId=…` cross-refs (DET-09)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 64-05-PLAN.md — DetailPageShell smart-back: router.back() with static-route fallback (DET-09)
 
 <details>
 <summary>✅ v2.4: Standalone Expense (Phase 61) — SHIPPED 2026-07-01</summary>
