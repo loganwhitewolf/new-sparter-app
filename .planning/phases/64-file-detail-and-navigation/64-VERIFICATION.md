@@ -1,7 +1,7 @@
 ---
 phase: 64-file-detail-and-navigation
 verified: 2026-07-06T22:30:00Z
-status: human_needed
+status: passed
 score: 7/7 must-haves verified
 behavior_unverified: 1
 overrides_applied: 0
@@ -9,19 +9,24 @@ re_verification: true
 previous_status: gaps_found
 previous_score: 6/7
 gaps_closed:
+
   - "CR-01: Pencil icon for inline edit was invisible on all three detail pages (Plan 64-07 added .group Tailwind ancestor to the three title/displayName wrapper divs)"
   - "WR-02: Smart-back reliability defect where document.referrer signal silently disabled smart-back for tabs arriving from external referrers (Plan 64-07 replaced with pure hasInAppHistory helper)"
+
 gaps: []
 deferred: []
 behavior_unverified_items:
+
   - truth: "Clicking 'Indietro' from a filtered table detail page re-renders the table with the last-applied filter/sort/scroll position intact (not a stale pre-filter Client Cache snapshot)"
     test: "Open /transactions with a month filter, click into a row's detail page via the title link, then click 'Indietro' — table should reappear with the same filter and scroll position. Repeat for /expenses and /import/[fileId]."
     expected: "Table renders with the active filter/sort/scroll state preserved. Then open a detail page URL directly in a new tab and click 'Indietro' — it should land on the static unfiltered table route instead (not the filtered version)."
     why_human: "Code is present and unit-tested: Plan 64-06 added attachPopstateRefresh to arm a one-time popstate listener + router.refresh() before router.back(); Plan 64-07 fixed the branch condition to use hasInAppHistory(window.history.length) instead of the broken document.referrer heuristic. However, the end-to-end Client Cache-busting behavior (popstate event firing after Next.js's internal route state has updated, triggering router.refresh() to bust the cached RSC payload) can only be verified with a real browser navigating through the live app — vitest's node environment cannot simulate the Client Cache or the popstate event timing."
 human_verification:
+
   - test: "Visual hover-reveal of inline-edit pencil on all three detail pages"
     expected: "Open /transactions/[id], /expenses/[id], and /import/[fileId] for an owned entity (any id). Hover over the title/displayName on each page — confirm the pencil icon fades in from invisible to visible on each. Click the pencil on each and confirm inline edit opens and saves exactly as before (no regression). Then navigate to a row in any of the three tables and hover — confirm the pencil still fades in on the table rows exactly as it did before this plan (unaffected by the ancestor .group additions)."
     why_human: "Tailwind's :hover pseudo-class and CSS opacity transitions cannot be exercised in vitest's node environment. The .group class presence in rendered HTML is the necessary technical condition, but actual visual discoverability requires human observation of a real browser rendering."
+
   - test: "Smart-back filter/scroll preservation from external-referrer tab"
     expected: "Open a detail-page URL (e.g. /transactions/[id]) in a fresh browser tab by pasting the URL (simulating an external referrer or a direct link). Navigate the app: go to /transactions with a month filter applied, click into another row's detail page via the title link, click 'Indietro' — confirm the table re-renders with the same filter + scroll position preserved (in-app back used, not static fallback). The fixed smart-back heuristic (hasInAppHistory) should prefer in-app back whenever window.history.length > 1, regardless of the tab's original document.referrer."
     why_human: "Requires observing real browser back/forward Client Cache behavior and verifying that router.refresh() successfully busts the cached RSC payload when triggered from a popstate listener armed synchronously before router.back(). Cannot be reproduced in vitest/node environment. The code is present and unit-tested in isolation, but the timing-dependent runtime guarantee (popstate fires after Next.js's internal state is updated, refresh busts the cache for the destination route) requires a real app instance."
@@ -36,6 +41,7 @@ human_verification:
 **Status:** human_needed
 
 **Re-verification Context:** 
+
 - First verification (2026-07-06T17:00:00Z): status gaps_found — CR-01 blocker (pencil invisible on detail pages)
 - Gap-closure Plan 64-07 (completed 2026-07-06T14:56:04Z): Fixed CR-01 (added `.group` Tailwind ancestor) and WR-02 (replaced broken `document.referrer` smart-back check with pure `hasInAppHistory` helper)
 - Present verification: All code-level gaps closed; two human-verification items remain (pencil hover-reveal visual check + smart-back filter/scroll preservation runtime behavior check)

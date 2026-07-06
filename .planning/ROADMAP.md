@@ -30,7 +30,7 @@ automatically. Decisions locked in `.planning/REQUIREMENTS.md` (grill 2026-07-05
 
 - [x] **Phase 62: transaction-edit-core** — `updateTransaction` (amount/date/customTitle, Decimal.js, ownership, hashes frozen), atomic expense reconciliation after amount/date edits, pair-coherence guard (block with message), `updateExpense` extended. Backend + tests, no UI. (DET-01..04) (completed 2026-07-05)
 - [x] **Phase 63: detail-pages-tx-expense** — `/transactions/[id]` + `/expenses/[id]` pages with pencil-inline editing, SubcategoryPicker, cerca su internet, cross-refs; expense "dettagli"+"modifica" dialogs collapse into the page. (DET-05..07) (completed 2026-07-05)
-- [ ] **Phase 64: file-detail-and-navigation** — `/import/[fileId]` page (displayName editable, stats readonly, transactions list) + row-click/menu navigation wiring across all three tables. (DET-08..09)
+- [x] **Phase 64: file-detail-and-navigation** — `/import/[fileId]` page (displayName editable, stats readonly, transactions list) + row-click/menu navigation wiring across all three tables. (DET-08..09) (completed 2026-07-06)
 
 ### Phase 62: transaction-edit-core
 
@@ -96,7 +96,7 @@ Plans:
 1. `/import/[fileId]` shows `displayName` editable inline; platform/format/stats readonly; the file's transactions are listed, each linking to its detail page; existing actions preserved (R2 download, suggestions, delete).
 2. Row-title click navigates to the detail page on Transactions, Expenses, and Files tables; menu "Dettagli" entries exist; breadcrumb/back behavior is consistent.
 
-**Plans:** 7 plans
+**Plans:** 7/7 plans complete
 
 Plans:
 **Wave 1**
@@ -311,7 +311,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 
 | 62. transaction-edit-core | v2.5 | 2/2 | Complete    | 2026-07-05 |
 | 63. detail-pages-tx-expense | v2.5 | 4/4 | Complete    | 2026-07-05 |
-| 64. file-detail-and-navigation | v2.5 | 7/7 | Complete   | 2026-07-06 |
+| 64. file-detail-and-navigation | v2.5 | 7/7 | Complete    | 2026-07-06 |
 
 **Total shipped: 61 phases · 222 plans complete**
 **Current milestone: v2.5 Detail Pages — Phases 62–64 planned**

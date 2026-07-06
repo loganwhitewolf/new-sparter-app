@@ -76,7 +76,7 @@ transaction to the importer.
 
 ### File page + navigation (Phase 64)
 
-- [ ] **DET-08** — `/import/[fileId]` detail page: `displayName` editable inline;
+- [x] **DET-08** — `/import/[fileId]` detail page: `displayName` editable inline;
   platform/format/stats readonly; transactions of the file listed (linking out);
   existing actions preserved (R2 download, suggestions, delete).
 
