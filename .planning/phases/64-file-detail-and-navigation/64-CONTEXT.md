@@ -64,8 +64,8 @@ navigation wiring across all three tables (DET-09): row-title click → detail p
   get the same behavior (this IS the "consistent back" of DET-09).
 
 ### Non-imported file states
-- **D-09 — Detail page only for `imported` files; others redirect to their workflow
-  step.** For `pending_upload`/`uploaded`/`analyzing`/`analyzed`/`importing` the RSC
+- **D-09 — Detail page only for `imported` files; others redirect to their workflow step.**
+  For `pending_upload`/`uploaded`/`analyzing`/`analyzed`/`importing` the RSC
   redirects to the corresponding wizard step (analyze/configure), matching the existing
   import-flow routing; `failed` stays handled by the table (delete). The title link in the
   import table follows the same logic.
