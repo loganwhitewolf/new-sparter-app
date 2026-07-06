@@ -6,15 +6,15 @@ current_phase: 64
 current_phase_name: file-detail-and-navigation
 status: executing
 stopped_at: Phase 64 context gathered
-last_updated: "2026-07-06T11:52:24.156Z"
+last_updated: "2026-07-06T12:00:06.939Z"
 last_activity: 2026-07-06
 last_activity_desc: Phase 64 execution started
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 11
-  completed_plans: 10
-  percent: 67
+  completed_plans: 11
+  percent: 100
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 ## Current Position
 
 Phase: 64 (file-detail-and-navigation) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-07-06 — Phase 64 execution started
 
@@ -96,6 +96,8 @@ Last activity: 2026-07-06 — Phase 64 execution started
 - [Phase 64]: getFileDetailForUser supersedes getFileForUser for the file detail page; returns platformName: null when importFormatVersionId is absent
 - [Phase 64]: Expense pencil aria-label changed to 'Rinomina spesa' to avoid colliding with the pre-existing 'never renders a Modifica menu entry' guard test (Rule 1 bug fix)
 - [Phase 64]: Removed the now-unused APP_ROUTES import from transaction-table.tsx once its only remaining use (?fileId= href) was replaced by importFileDetailHref
+- [Phase ?]: [Phase 64]: DetailPageShell smart-back fallback triggers on window.history.length <= 1 OR cross-origin document.referrer; otherwise prefers router.back() to preserve in-app history
+- [Phase ?]: [Phase 64]: Components calling useRouter and tested via renderToStaticMarkup must mock next/navigation (precedent: tests/transaction-table-menu.test.tsx) — applied to tests/detail-page-shell.test.tsx
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -170,7 +172,7 @@ Items acknowledged and postponed:
 
 **Stopped at:** Phase 64 context gathered
 
-Last session: 2026-07-06T11:51:18.732Z
+Last session: 2026-07-06T11:58:16.577Z
 
 **Next:** Verify Phase 63 (detail-pages-tx-expense), then plan Phase 64 (file-detail-and-navigation) with `/gsd-plan-phase 64`
 
@@ -201,3 +203,4 @@ Last session: 2026-07-06T11:51:18.732Z
 | Phase 64 P01 | 5min | 3 tasks | 6 files |
 | Phase 64 P02 | 8min | 2 tasks | 4 files |
 | Phase 64 P04 | 10min | 2 tasks | 9 files |
+| Phase 64 P05 | 8min | 1 tasks | 2 files |

@@ -125,3 +125,5 @@ This was the final plan of Phase 64. All three detail pages (`/transactions/[id]
 ---
 *Phase: 64-file-detail-and-navigation*
 *Completed: 2026-07-06*
+
+## Self-Check: PASSED
