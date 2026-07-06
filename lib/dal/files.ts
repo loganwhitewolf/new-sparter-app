@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { and, eq, isNotNull } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { file, importFormatVersion, platform } from '@/lib/db/schema'
@@ -92,6 +93,62 @@ export async function getPlatformIdForUserFile(
 
   return rows[0]?.platformId ?? null
 }
+
+export type FileDetailContextRow = FileRow & { platformName: string | null }
+
+/**
+ * Ownership-scoped detail query for `/import/[fileId]` (DET-08, DET-09).
+ * Returns every `FileRow` column plus the resolved platform name in one
+ * round-trip via the same file → importFormatVersion → platform join chain
+ * as `getPlatformIdForUserFile`, so the file detail page never needs a
+ * second query to display platform context. Supersedes `getFileForUser` for
+ * that page.
+ */
+export const getFileDetailForUser = cache(
+  async ({
+    userId,
+    fileId,
+  }: {
+    userId: string
+    fileId: string
+  }): Promise<FileDetailContextRow | null> => {
+    const rows = await db
+      .select({
+        id: file.id,
+        userId: file.userId,
+        importFormatVersionId: file.importFormatVersionId,
+        originalName: file.originalName,
+        displayName: file.displayName,
+        contentHash: file.contentHash,
+        objectKey: file.objectKey,
+        mimeType: file.mimeType,
+        sizeBytes: file.sizeBytes,
+        status: file.status,
+        uploadedAt: file.uploadedAt,
+        analyzedAt: file.analyzedAt,
+        importStartedAt: file.importStartedAt,
+        importedAt: file.importedAt,
+        rowCount: file.rowCount,
+        importedCount: file.importedCount,
+        duplicateCount: file.duplicateCount,
+        positiveTotal: file.positiveTotal,
+        negativeTotal: file.negativeTotal,
+        referenceStartedAt: file.referenceStartedAt,
+        referenceEndedAt: file.referenceEndedAt,
+        errorMessage: file.errorMessage,
+        createdAt: file.createdAt,
+        updatedAt: file.updatedAt,
+        platformName: platform.name,
+      })
+      .from(file)
+      .leftJoin(importFormatVersion, eq(file.importFormatVersionId, importFormatVersion.id))
+      .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
+      .where(and(eq(file.id, fileId), eq(file.userId, userId)))
+      .limit(1)
+
+    return rows[0] ?? null
+  },
+)
 
 export async function findFileByContentHash(
   input: { userId: string; contentHash: string },
