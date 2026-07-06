@@ -80,7 +80,7 @@ transaction to the importer.
   platform/format/stats readonly; transactions of the file listed (linking out);
   existing actions preserved (R2 download, suggestions, delete).
 
-- [ ] **DET-09** — Navigation wiring: row-title click → detail page on all three
+- [x] **DET-09** — Navigation wiring: row-title click → detail page on all three
   tables; menu "Dettagli" entries; breadcrumb/back behavior consistent.
 
 ## Out of scope
