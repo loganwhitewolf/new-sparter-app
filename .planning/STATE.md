@@ -6,15 +6,15 @@ current_phase: 64
 current_phase_name: file-detail-and-navigation
 status: executing
 stopped_at: Phase 64 context gathered
-last_updated: "2026-07-06T10:54:06.811Z"
+last_updated: "2026-07-06T10:59:07.006Z"
 last_activity: 2026-07-06
 last_activity_desc: Phase 64 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 11
-  completed_plans: 7
-  percent: 64
+  completed_plans: 8
+  percent: 67
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 ## Current Position
 
 Phase: 64 (file-detail-and-navigation) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-07-06 — Phase 64 execution started
 
@@ -94,6 +94,7 @@ Last activity: 2026-07-06 — Phase 64 execution started
 - [Phase 63]: Table component tests (full render, not per-row extraction) require mocking next/navigation (useRouter/useSearchParams/usePathname) in addition to @/components/ui/dropdown-menu, because useToolbarSort/useTableUrl call next/navigation hooks directly — Established pattern from tests/data-table-toolbar.test.tsx; without it renderToStaticMarkup throws 'invariant expected app router to be mounted'
 - [Phase 64]: importFileDetailHref is a standalone function, not added to APP_ROUTES, per the Phase 63 precedent
 - [Phase 64]: getFileDetailForUser supersedes getFileForUser for the file detail page; returns platformName: null when importFormatVersionId is absent
+- [Phase 64]: Expense pencil aria-label changed to 'Rinomina spesa' to avoid colliding with the pre-existing 'never renders a Modifica menu entry' guard test (Rule 1 bug fix)
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -168,7 +169,7 @@ Items acknowledged and postponed:
 
 **Stopped at:** Phase 64 context gathered
 
-Last session: 2026-07-06T10:51:33.084Z
+Last session: 2026-07-06T10:58:42.810Z
 
 **Next:** Verify Phase 63 (detail-pages-tx-expense), then plan Phase 64 (file-detail-and-navigation) with `/gsd-plan-phase 64`
 
@@ -197,3 +198,4 @@ Last session: 2026-07-06T10:51:33.084Z
 | Phase 63 P03 | 12min | 2 tasks | 4 files |
 | Phase 63 P04 | 6min | 2 tasks | 4 files |
 | Phase 64 P01 | 5min | 3 tasks | 6 files |
+| Phase 64 P02 | 8min | 2 tasks | 4 files |

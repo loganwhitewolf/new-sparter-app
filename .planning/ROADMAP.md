@@ -294,7 +294,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 
 | 62. transaction-edit-core | v2.5 | 2/2 | Complete    | 2026-07-05 |
 | 63. detail-pages-tx-expense | v2.5 | 4/4 | Complete    | 2026-07-05 |
-| 64. file-detail-and-navigation | v2.5 | 1/5 | In Progress|  |
+| 64. file-detail-and-navigation | v2.5 | 2/5 | In Progress|  |
 
 **Total shipped: 61 phases · 222 plans complete**
 **Current milestone: v2.5 Detail Pages — Phases 62–64 planned**
