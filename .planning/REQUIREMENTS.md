@@ -96,4 +96,4 @@ transaction to the importer.
 |-------------|-------|--------|
 | DET-01..04 | 62 | Not started |
 | DET-05..07 | 63 | Not started |
-| DET-08..09 | 64 | Not started |
+| DET-08..09 | 64 | In progress (Plan 01/5: foundations landed) |
