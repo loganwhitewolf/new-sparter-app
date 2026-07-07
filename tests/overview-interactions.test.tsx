@@ -5,6 +5,7 @@ import {
   deriveNatureBreakdown,
   OUT_KEYS,
   INCOME_KEYS,
+  ALLOCATION_KEYS,
 } from '@/components/dashboard/overview/overview-chart-utils'
 import type { OverviewChartPoint } from '@/lib/dal/overview'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -258,8 +259,10 @@ describe('overview chart education (EDU-01, EDU-02)', () => {
   const allOnProps = {
     includedIncome: new Set(INCOME_KEYS),
     includedOut: new Set(OUT_KEYS),
+    includedAllocation: new Set(ALLOCATION_KEYS),
     onToggleIncome: () => {},
     onToggleOut: () => {},
+    onToggleAllocation: () => {},
   }
 
   // EDU-01: group info popovers have accessible aria-labels on their triggers

@@ -26,12 +26,13 @@ describe('CreateExpenseSchema', () => {
     }
   })
 
-  it('Test 3: fails for title exceeding 120 chars with "120 caratteri" message', () => {
-    const result = CreateExpenseSchema.safeParse({ title: 'X'.repeat(121) })
+  it('Test 3: fails for title exceeding 500 chars with "500 caratteri" message', () => {
+    // Limit widened from 120 to 500 in 19143a8 (stop truncating title at write time)
+    const result = CreateExpenseSchema.safeParse({ title: 'X'.repeat(501) })
     expect(result.success).toBe(false)
     if (!result.success) {
       const messages = result.error.issues.map((i) => i.message).join(' ')
-      expect(messages).toMatch(/120 caratteri/)
+      expect(messages).toMatch(/500 caratteri/)
     }
   })
 })
