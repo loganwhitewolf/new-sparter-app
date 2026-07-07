@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToolbarSort } from "@/components/data-table/DataTableToolbar";
+import { TableRestoreSkeleton } from "@/components/data-table/table-restore-skeleton";
 import { HeaderSortButton } from "@/components/data-table/HeaderSortButton";
 import { loadMoreImports, recheckRegexAction } from "@/lib/actions/import";
 import type { ImportListRow } from "@/lib/dal/imports";
@@ -125,7 +126,7 @@ export function ImportTable({
   const isLoadingMoreRef = useRef(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const filtered = hasActiveFilters(filters);
-  const { activeSort, activeDir, onSort } = useToolbarSort(route);
+  const { activeSort, activeDir, onSort, isRestoring } = useToolbarSort(route);
 
   const loadNextPage = useCallback(async () => {
     if (isLoadingMoreRef.current || !hasMore) {
@@ -226,6 +227,12 @@ export function ImportTable({
 
     // D-03: navigate to the suggestions page when candidates are found
     router.push(`/import/${encodeURIComponent(row.id)}/suggestions`);
+  }
+
+  // Gate both the unfiltered rows and the empty state while a saved filter
+  // set is being restored into the URL — either would be a wrong flash.
+  if (isRestoring) {
+    return <TableRestoreSkeleton />;
   }
 
   if (loadError) {

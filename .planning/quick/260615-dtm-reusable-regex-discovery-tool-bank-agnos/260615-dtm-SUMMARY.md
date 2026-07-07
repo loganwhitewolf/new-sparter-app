@@ -1,6 +1,7 @@
 ---
 phase: quick-260615-dtm
 plan: 01
+status: complete
 subsystem: tooling
 tags: [categorization, regex, import, drizzle, decimal, tsx-script]
 

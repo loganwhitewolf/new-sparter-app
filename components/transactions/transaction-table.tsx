@@ -43,6 +43,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useToolbarSort } from '@/components/data-table/DataTableToolbar'
+import { TableRestoreSkeleton } from '@/components/data-table/table-restore-skeleton'
 import { HeaderSortButton } from '@/components/data-table/HeaderSortButton'
 import { deleteTransaction, loadMoreTransactions } from '@/lib/actions/transactions'
 import { deleteTransactionPairAction } from '@/lib/actions/transaction-pairs'
@@ -130,7 +131,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
     defaultTitle: string
   } | null>(null)
 
-  const { activeSort, activeDir, onSort } = useToolbarSort(route)
+  const { activeSort, activeDir, onSort, isRestoring } = useToolbarSort(route)
 
   const selectedExpenseIds = useMemo(() => {
     const idSet = new Set<string>()
@@ -311,6 +312,12 @@ export function TransactionTable({ transactions, route, searchParams, categories
       return
     }
     setBulkCategorizeOpen(true)
+  }
+
+  // Gate both the unfiltered rows and the empty state while a saved filter
+  // set is being restored into the URL — either would be a wrong flash.
+  if (isRestoring) {
+    return <TableRestoreSkeleton />
   }
 
   if (loadedTransactions.length === 0) {

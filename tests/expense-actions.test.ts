@@ -36,13 +36,28 @@ vi.mock('@/lib/db/schema', () => ({
     subCategoryId: 'expense.subCategoryId',
     status: 'expense.status',
     title: 'expense.title',
+    totalAmount: 'expense.totalAmount',
     updatedAt: 'expense.updatedAt',
   },
+  // Referenced by module-scope sort keys in lib/dal/expenses.ts
+  category: { name: 'category.name' },
+  subCategory: { name: 'subCategory.name' },
+  userSubcategoryOverride: { customName: 'userSubcategoryOverride.customName' },
+  direction: {},
+  file: {},
+  importFormatVersion: {},
+  nature: {},
+  platform: {},
+  transaction: {},
 }))
 vi.mock('drizzle-orm', () => ({
   and: (...args: unknown[]) => ({ op: 'and', args }),
   eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
   inArray: (col: unknown, vals: unknown) => ({ op: 'inArray', col, vals }),
+  sql: Object.assign(
+    (strings: TemplateStringsArray, ...values: unknown[]) => ({ op: 'sql', strings, values }),
+    { raw: (query: string) => ({ op: 'sql.raw', query }) },
+  ),
 }))
 
 const { categorizeExpense, bulkCategorize, updateExpenseTitle } = await import('@/lib/actions/expenses')

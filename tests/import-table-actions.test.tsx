@@ -386,9 +386,11 @@ describe("ImportRowActions — Dettagli dropdown item (DET-09)", () => {
 
 describe("ImportRowActions — Rivedi suggerimenti dropdown item (POST-01)", () => {
   it('shows "Rivedi suggerimenti" dropdown item only for status=imported', () => {
+    // Since TRIG-02 the item is an onClick button (recheckRegexAction), not a link
+    // to /import/[fileId]/suggestions — navigation happens client-side on success.
     const importedHtml = render(makeRow({ status: "imported", id: "file-42" }));
     expect(importedHtml).toContain("Rivedi suggerimenti");
-    expect(importedHtml).toContain('href="/import/file-42/suggestions"');
+    expect(importedHtml).not.toContain('href="/import/file-42/suggestions"');
 
     const uploadedHtml = render(makeRow({ status: "uploaded", id: "file-43" }));
     expect(uploadedHtml).not.toContain("Rivedi suggerimenti");

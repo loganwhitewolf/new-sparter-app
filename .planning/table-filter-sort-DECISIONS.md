@@ -11,7 +11,7 @@ One coherent filtering + sorting system across all tables (Transactions, Expense
 
 ### Architecture
 - **Harmonize, not a filter engine.** Shared UI + per-table declarative config. No per-field operators, no AND/OR query builder. (ADR 0010)
-- **URL = single source of truth.** Filters **ephemeral** (no localStorage). Share link = share view; refresh/back preserve filters.
+- **URL = single source of truth** (unchanged); sessionStorage is a per-tab restore layer for bare navigation only (quick task 260707-fy4) — saved on every filter/sort change per table, restored via `router.replace` only when the URL has no search params. A URL with params (shared link, refresh, back/forward) always wins; localStorage still rejected.
 - **Server-side filtering** in the DAL (unchanged). Zod-validated searchParams → DAL conditions.
 - **Pagination unchanged:** offset + infinite-scroll (IntersectionObserver) + "Carica altre 50" fallback + "tutte caricate" end state + `aria-live`. Offset is client state, **not** in the URL.
 - **Default view everywhere:** no filters applied, newest-first, streamed. Removes the Expenses `this-month` default.

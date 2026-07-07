@@ -33,6 +33,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { useToolbarSort } from '@/components/data-table/DataTableToolbar'
+import { TableRestoreSkeleton } from '@/components/data-table/table-restore-skeleton'
 import { HeaderSortButton } from '@/components/data-table/HeaderSortButton'
 import { deleteExpense, ignoreExpense, loadMoreExpenses } from '@/lib/actions/expenses'
 import { BulkActionBar } from './bulk-action-bar'
@@ -83,7 +84,7 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
     title: string
   } | null>(null)
 
-  const { activeSort, activeDir, onSort } = useToolbarSort(route)
+  const { activeSort, activeDir, onSort, isRestoring } = useToolbarSort(route)
 
   const allSelected = loadedExpenses.length > 0 && selectedIds.length === loadedExpenses.length
   const someSelected = selectedIds.length > 0 && selectedIds.length < loadedExpenses.length
@@ -165,6 +166,12 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
   // Display-only; never use for values written back to the DB.
   function formatAmount(amount: string): string {
     return formatAbsoluteAmount(amount)
+  }
+
+  // Gate both the unfiltered rows and the empty state while a saved filter
+  // set is being restored into the URL — either would be a wrong flash.
+  if (isRestoring) {
+    return <TableRestoreSkeleton />
   }
 
   if (loadedExpenses.length === 0) {

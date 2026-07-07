@@ -199,7 +199,7 @@ export const transactionDisplayTitleSortKey = sql<string>`LOWER(COALESCE(NULLIF(
 /** Amount column is rendered with formatAbsoluteAmount — sort by magnitude, not sign (D-20). */
 export const transactionAmountAbsSortKey = sql`ABS(${transaction.amount}::numeric)`
 
-/** Matches "Spesa collegata" cell labels (categorized / da categorizzare / nessuna spesa). */
+/** Matches "Spesa collegata" cell labels (categorized, "da categorizzare", "nessuna spesa"). */
 export const transactionLinkedExpenseCategorySortKey = sql<string>`LOWER(
   CASE
     WHEN ${expense.id} IS NULL THEN 'nessuna spesa collegata'

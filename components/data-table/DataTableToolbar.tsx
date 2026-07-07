@@ -536,9 +536,11 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions,
  * useToolbarSort — returns the current sort state + an onSort handler that
  * implements the ASC→DESC→off cycle via updateParams.
  * To be consumed by the page-level component alongside HeaderSortButton.
+ * Also surfaces isRestoring so tables can gate behind a skeleton while a
+ * sessionStorage filter restore is in flight (quick task 260707-fy4).
  */
 export function useToolbarSort(route: string) {
-  const { searchParams, updateParams } = useTableUrl(route)
+  const { searchParams, updateParams, isRestoring } = useTableUrl(route)
   const activeSort = searchParams.get('sort') ?? undefined
   const activeDir = (searchParams.get('dir') ?? 'desc') as 'asc' | 'desc'
 
@@ -550,5 +552,5 @@ export function useToolbarSort(route: string) {
     })
   }
 
-  return { activeSort, activeDir, onSort }
+  return { activeSort, activeDir, onSort, isRestoring }
 }

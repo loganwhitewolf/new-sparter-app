@@ -125,7 +125,10 @@ for (const filePath of files) {
 
   if ((isSourceFile(filePath) || activeDocs.has(filePath)) && !isDomainFixture(filePath)) {
     lines.forEach((line, index) => {
-      if (lineHasComment(line) && (/[àèéìòù]/i.test(line) || containsItalianTerm(line))) {
+      // Double-quoted spans quote product/UI strings (allowed to be Italian
+      // per the language convention) — strip them before the heuristic runs.
+      const unquoted = line.replace(/"[^"]*"/g, '""')
+      if (lineHasComment(unquoted) && (/[àèéìòù]/i.test(unquoted) || containsItalianTerm(unquoted))) {
         failures.push(`${filePath}:${index + 1}: developer-facing comment should be English`)
       }
     })
