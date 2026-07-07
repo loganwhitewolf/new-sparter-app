@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 
 /**
  * tableUrlStorageKey — derives the sessionStorage key for a table's route.
@@ -83,6 +83,9 @@ export function readRestorableQuery(
  * Returns:
  *   searchParams  — current URLSearchParams (read-only snapshot)
  *   isPending     — true while the URL transition is in flight
+ *   isRestoring   — true from mount until a pending sessionStorage restore has
+ *                   landed in the URL; consumers gate the table behind a
+ *                   skeleton to avoid flashing the unfiltered SSR render
  *   replaceWith   — replace all search params at once
  *   updateParam   — set or delete a single key
  *   updateParams  — set/delete multiple keys in one replace (used by "Cancella tutto")
@@ -91,6 +94,7 @@ export function useTableUrl(route: string) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
+  const [isRestoring, setIsRestoring] = useState(false)
   const storageKey = tableUrlStorageKey(route)
 
   function replaceWith(params: URLSearchParams) {
@@ -105,11 +109,26 @@ export function useTableUrl(route: string) {
   useEffect(() => {
     const restored = readRestorableQuery(safeSessionStorage(), storageKey, searchParams.toString())
     if (restored) {
+      setIsRestoring(true)
       startTransition(() => {
         router.replace(`${route}?${restored}`, { scroll: false })
       })
     }
   }, [])
+
+  // Restore only fires on a bare URL, so any non-empty params mean the
+  // replace has landed. The timeout is a failsafe against a replace that
+  // never lands (e.g. navigation aborted) — a stuck skeleton is worse than
+  // a one-off blink.
+  useEffect(() => {
+    if (!isRestoring) return
+    if (searchParams.toString() !== '') {
+      setIsRestoring(false)
+      return
+    }
+    const failsafe = setTimeout(() => setIsRestoring(false), 4000)
+    return () => clearTimeout(failsafe)
+  }, [isRestoring, searchParams])
 
   function updateParam(key: string, value: string | null) {
     const params = new URLSearchParams(searchParams.toString())
@@ -133,5 +152,5 @@ export function useTableUrl(route: string) {
     replaceWith(params)
   }
 
-  return { searchParams, isPending, replaceWith, updateParam, updateParams }
+  return { searchParams, isPending, isRestoring, replaceWith, updateParam, updateParams }
 }
