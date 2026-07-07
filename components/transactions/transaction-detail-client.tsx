@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ExternalLink, Link2, Lock, MoreHorizontal, Split, Unlink } from 'lucide-react'
+import { ExternalLink, Link2, Lock, Split, Tag, Trash2, Unlink } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,13 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { DetailPageShell } from '@/components/detail-pages/detail-page-shell'
 import { TransactionAmountEdit } from '@/components/transactions/transaction-amount-edit'
@@ -37,6 +30,8 @@ import type { TransactionDetailRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import { APP_ROUTES, expenseDetailHref, importFileDetailHref, transactionDetailHref } from '@/lib/routes'
+import { cn } from '@/lib/utils'
+import { amountToneClass } from '@/lib/utils/amount-tone'
 import { toDecimal } from '@/lib/utils/decimal'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 
@@ -119,6 +114,43 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
 
   const searchQuery = transaction.customTitle?.trim() || transaction.description
   const searchHref = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`
+  const headerAmount = formatSignedAmount(transaction.amount, transaction.currency)
+  const headerAmountClass = amountToneClass(transaction.amount, transaction.categoryType)
+
+  const categoriaSection = transaction.expenseId ? (
+    <div className="mt-2 flex flex-col gap-3 rounded-md border bg-muted/30 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Categoria
+        </span>
+        <Button type="button" variant="outline" size="sm" onClick={() => setCategoryPickerOpen(true)}>
+          <Tag className="h-4 w-4" />
+          {transaction.subCategoryName ? 'Cambia categoria' : 'Assegna categoria'}
+        </Button>
+      </div>
+      {transaction.subCategoryName ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-base font-semibold">{transaction.subCategoryName}</span>
+          {transaction.categoryName ? (
+            <span className="text-sm text-muted-foreground">{transaction.categoryName}</span>
+          ) : null}
+        </div>
+      ) : (
+        <Badge
+          variant="outline"
+          className="w-fit border-0 bg-amber-100 text-amber-700 transition-colors"
+        >
+          Non assegnata
+        </Badge>
+      )}
+      {transaction.expenseTransactionCount && transaction.expenseTransactionCount > 1 ? (
+        <p className="text-xs text-muted-foreground">
+          La categoria è assegnata alla spesa aggregata. Modificarla qui modifica la spesa per
+          tutte le transazioni collegate.
+        </p>
+      ) : null}
+    </div>
+  ) : null
 
   const datiCard = (
     <div className="flex flex-col gap-4">
@@ -171,45 +203,67 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
           </div>
         </TooltipProvider>
       </div>
+      {categoriaSection}
     </div>
   )
 
-  const categoriaCard = transaction.expenseId ? (
+  const azioniCard = (
     <div className="flex flex-col gap-2">
       <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Categoria
+        Azioni
       </span>
-      {transaction.subCategoryName ? (
-        <button
-          type="button"
-          className="w-fit text-left"
-          onClick={() => setCategoryPickerOpen(true)}
-        >
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium">{transaction.subCategoryName}</span>
-            {transaction.categoryName ? (
-              <span className="text-xs text-muted-foreground">{transaction.categoryName}</span>
-            ) : null}
-          </div>
-        </button>
-      ) : (
-        <button type="button" className="w-fit" onClick={() => setCategoryPickerOpen(true)}>
-          <Badge
+      <div className="flex flex-col gap-2">
+        <Button variant="outline" className="w-full justify-start" asChild>
+          <a href={searchHref} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-4 w-4" />
+            Cerca su internet
+          </a>
+        </Button>
+        {transaction.pairedWithId ? (
+          <Button
+            type="button"
             variant="outline"
-            className="border-0 bg-amber-100 text-amber-700 cursor-pointer hover:bg-amber-200 transition-colors"
+            className="w-full justify-start"
+            disabled={unpairPending}
+            onClick={() => void handleUnpair()}
           >
-            Categorizza
-          </Badge>
-        </button>
-      )}
-      {transaction.expenseTransactionCount && transaction.expenseTransactionCount > 1 ? (
-        <p className="text-xs text-muted-foreground">
-          La categoria è assegnata alla spesa aggregata. Modificarla qui modifica la spesa per
-          tutte le transazioni collegate.
-        </p>
-      ) : null}
+            <Unlink className="h-4 w-4" />
+            Scollega rimborso
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-start"
+            onClick={() => setPairPickerOpen(true)}
+          >
+            <Unlink className="h-4 w-4 rotate-45" />
+            Collega rimborso
+          </Button>
+        )}
+        {transaction.expenseId ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-start"
+            onClick={() => setDetachOpen(true)}
+          >
+            <Split className="h-4 w-4" />
+            Spesa a sé (non aggregare)
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full justify-start text-destructive hover:text-destructive"
+          onClick={() => setDeleteOpen(true)}
+        >
+          <Trash2 className="h-4 w-4" />
+          Elimina
+        </Button>
+      </div>
     </div>
-  ) : null
+  )
 
   const collegamentiCard = (
     <div className="flex flex-col gap-4">
@@ -287,75 +341,13 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
       <DetailPageShell
         backHref={APP_ROUTES.transactions}
         title={displayTitle}
-        amount={formatSignedAmount(transaction.amount, transaction.currency)}
-        primaryAction={
-          <Button variant="outline" size="sm" asChild>
-            <a href={searchHref} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4" />
-              Cerca su internet
-            </a>
-          </Button>
-        }
-        overflowMenu={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Altre azioni">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {transaction.pairedWithId ? (
-                <DropdownMenuItem
-                  disabled={unpairPending}
-                  onSelect={(e) => {
-                    e.preventDefault()
-                    void handleUnpair()
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <Unlink className="h-4 w-4" />
-                  Scollega rimborso
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault()
-                    setPairPickerOpen(true)
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <Unlink className="h-4 w-4 rotate-45" />
-                  Collega rimborso
-                </DropdownMenuItem>
-              )}
-              {transaction.expenseId ? (
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault()
-                    setDetachOpen(true)
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <Split className="h-4 w-4" />
-                  Spesa a sé (non aggregare)
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault()
-                  setDeleteOpen(true)
-                }}
-                className="text-destructive focus:text-destructive"
-              >
-                Elimina
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        }
+        amount={headerAmount}
+        amountInline
+        amountToneClassName={cn(headerAmountClass)}
+        layout="two-column"
         datiCard={datiCard}
-        categoriaCard={categoriaCard}
         collegamentiCard={collegamentiCard}
+        azioniCard={azioniCard}
       />
 
       <CounterpartPickerDialog

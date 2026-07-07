@@ -52,6 +52,7 @@ import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import type { TransactionSearchParams } from '@/lib/validations/transactions'
 import { importFileDetailHref, transactionDetailHref } from '@/lib/routes'
+import { amountToneClass } from '@/lib/utils/amount-tone'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -408,18 +409,8 @@ export function TransactionTable({ transactions, route, searchParams, categories
             // categoryType is a direction code from the nature→direction join (Plan 03)
             const isTransfer = transaction.categoryType === 'transfer'
 
-            // Amount color follows the REAL amount sign for in/out/uncategorized rows,
-            // so a refund (positive amount categorized under an OUT subcategory) still
-            // reads as an inflow in the list — CONTEXT.md: "in lista si mostra per
-            // l'importo reale, nel grafico netta". Allocation and transfer keep their
-            // neutral direction styling regardless of sign.
-            const amountColorClass =
-              transaction.categoryType === 'allocation' ||
-              transaction.categoryType === 'transfer'
-                ? 'text-total-out'
-                : transaction.amount.trim().startsWith('-')
-                  ? 'text-total-out'
-                  : 'text-total-in'
+            // Keep transfer rows neutral regardless of sign; all other rows follow sign.
+            const amountColorClass = amountToneClass(transaction.amount, transaction.categoryType)
 
             return (
               <TableRow

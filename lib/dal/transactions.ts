@@ -1,6 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm'
+import { DETAIL_LINKED_TRANSACTIONS_PREVIEW_LIMIT } from '@/lib/constants/detail-page-limits'
 import { db, type DbOrTx } from '@/lib/db'
 import { toDecimal } from '@/lib/utils/decimal'
 import { verifySession } from '@/lib/dal/auth'
@@ -16,11 +17,14 @@ import {
   transaction,
   userSubcategoryOverride,
 } from '@/lib/db/schema'
+import type { FileTransactionRow } from '@/lib/types/file-detail'
 import type {
   ParsedTransactionFilters,
   TransactionSort,
   TransactionSortDirection,
 } from '@/lib/validations/transactions'
+
+export type { FileTransactionRow }
 
 function escapeLikePattern(input: string): string {
   return input.replace(/[\\%_]/g, '\\$&')
@@ -90,7 +94,7 @@ export const transactionListSelect = {
   platformName: platform.name,
   platformSlug: platform.slug,
   // Direction code from the nature→direction join (replaces the category.id placeholder)
-  categoryType: direction.code,
+  categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
   // Phase 50: pairing fields — correlated subqueries (no LEFT JOIN to preserve buildTransactionOrderBy)
   pairedWithId: sql<string | null>`(
     SELECT CASE
@@ -176,7 +180,7 @@ export type TransactionListRow = {
   platformName: string | null
   platformSlug: string | null
   // Direction code from the nature→direction join
-  categoryType: string | null
+  categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
   // Phase 50: pairing fields (nullable — null when transaction is unpaired)
   pairedWithId: string | null
   pairedNetAmount: string | null
@@ -572,6 +576,7 @@ export type TransactionDetailRow = {
   subCategoryName: string | null
   categoryName: string | null
   categorySlug: string | null
+  categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
   expenseTransactionCount: number | null
   fileId: string | null
   fileName: string | null
@@ -617,6 +622,7 @@ export const getTransactionForDetail = cache(
         subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
         categoryName: category.name,
         categorySlug: category.slug,
+        categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
         expenseTransactionCount: expense.transactionCount,
         fileId: importFile.id,
         fileName: sql<string | null>`coalesce(nullif(trim(coalesce(${importFile.displayName}, '')), ''), ${importFile.originalName})`,
@@ -637,6 +643,8 @@ export const getTransactionForDetail = cache(
       .leftJoin(expense, eq(transaction.expenseId, expense.id))
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
+      .leftJoin(nature, eq(subCategory.natureId, nature.id))
+      .leftJoin(direction, eq(nature.directionId, direction.id))
       .leftJoin(
         userSubcategoryOverride,
         and(
@@ -677,18 +685,9 @@ export const getTransactionsByExpenseId = cache(
   },
 )
 
-export type FileTransactionRow = {
-  id: string
-  description: string
-  customTitle: string | null
-  amount: string
-  currency: string
-  occurredAt: Date
-}
-
 /**
  * Ownership-scoped preview query for the file detail page's transactions card
- * (D-01, DET-08). Capped by `limit` (default 10) so a file with hundreds of
+ * (D-01, DET-08). Capped by `limit` (default 8) so a file with hundreds of
  * rows never renders an unbounded list here — "Vedi tutte" links to the full
  * filtered `/transactions` view instead.
  */
@@ -710,11 +709,16 @@ export const getTransactionsByFileId = cache(
         amount: transaction.amount,
         currency: transaction.currency,
         occurredAt: transaction.occurredAt,
+        categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
       })
       .from(transaction)
+      .leftJoin(expense, eq(transaction.expenseId, expense.id))
+      .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+      .leftJoin(nature, eq(subCategory.natureId, nature.id))
+      .leftJoin(direction, eq(nature.directionId, direction.id))
       .where(and(eq(transaction.fileId, fileId), eq(transaction.userId, userId)))
       .orderBy(desc(transaction.occurredAt))
-      .limit(limit ?? 10)
+      .limit(limit ?? DETAIL_LINKED_TRANSACTIONS_PREVIEW_LIMIT)
   },
 )
 

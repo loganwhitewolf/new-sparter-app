@@ -282,13 +282,13 @@ describe('getTransactionsByFileId', () => {
     ).toBe(true)
   })
 
-  it('applies a default limit of 10 when limit is omitted', async () => {
+  it('applies a default limit of 8 when limit is omitted', async () => {
     const chain = makeSelectChain([makeFileTransactionRow()])
     mocks.dbSelectChain.mockReturnValue(chain)
 
     await getTransactionsByFileId({ userId: 'user-1', fileId: 'file-1' })
 
-    expect(chain.limit).toHaveBeenCalledWith(10)
+    expect(chain.limit).toHaveBeenCalledWith(8)
   })
 
   it('respects an explicit limit override', async () => {

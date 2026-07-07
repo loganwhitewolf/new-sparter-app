@@ -277,6 +277,7 @@ function makeTransactionDetailRow(overrides: Record<string, unknown> = {}) {
     subCategoryName: 'Supermercato',
     categoryName: 'Spesa',
     categorySlug: 'spesa',
+    categoryType: 'out' as const,
     expenseTransactionCount: 1,
     fileId: 'file-1',
     fileName: 'estratto_conto.csv',
@@ -367,12 +368,13 @@ describe('/transactions/[id] page', () => {
     expect(htmlMulti).toContain('La categoria è assegnata alla spesa aggregata')
   })
 
-  it('shows the amber "Categorizza" CTA when the linked expense has no subCategoryId', async () => {
+  it('shows the "Assegna categoria" action when the linked expense has no subCategoryId', async () => {
     pageMocks.getTransactionForDetail.mockResolvedValue(
       makeTransactionDetailRow({ subCategoryName: null, categoryName: null }),
     )
     const html = await renderTransactionPage()
-    expect(html).toContain('Categorizza')
+    expect(html).toContain('Assegna categoria')
+    expect(html).toContain('Non assegnata')
   })
 
   it('shows a "Manuale" badge when fileId is null', async () => {
@@ -381,5 +383,24 @@ describe('/transactions/[id] page', () => {
     )
     const html = await renderTransactionPage()
     expect(html).toContain('Manuale')
+  })
+
+  it('renders transfer amounts with neutral transfer tone in the detail header', async () => {
+    pageMocks.getTransactionForDetail.mockResolvedValue(
+      makeTransactionDetailRow({ categoryType: 'transfer', amount: '45.30' }),
+    )
+    const html = await renderTransactionPage()
+    expect(html).toContain('text-total-transfer/80')
+  })
+
+  it('renders visible action buttons in the Azioni card instead of an overflow menu', async () => {
+    const html = await renderTransactionPage()
+
+    expect(html).toContain('Azioni')
+    expect(html).toContain('Cerca su internet')
+    expect(html).toContain('Collega rimborso')
+    expect(html).toContain('Spesa a sé (non aggregare)')
+    expect(html).toContain('Elimina')
+    expect(html).not.toContain('Altre azioni')
   })
 })

@@ -116,6 +116,7 @@
 
   --color-total-in: var(--total-in);
   --color-total-out: var(--total-out);
+  --color-total-transfer: var(--total-transfer);
   --color-balance: var(--balance);
 
   --color-sidebar: var(--sidebar);

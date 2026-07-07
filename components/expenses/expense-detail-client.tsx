@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ExternalLink, MoreHorizontal } from 'lucide-react'
+import { ExternalLink, Tag, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,12 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -39,6 +33,7 @@ import type { ExpenseDetailRow } from '@/lib/dal/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import { APP_ROUTES, importFileDetailHref, transactionDetailHref } from '@/lib/routes'
+import { amountToneClass } from '@/lib/utils/amount-tone'
 import { toDecimal } from '@/lib/utils/decimal'
 import { cn } from '@/lib/utils'
 
@@ -47,6 +42,8 @@ type Props = {
   categories: CategoryWithSubCategories[]
   mostUsed: MostUsedSubcategory[]
 }
+
+const LINKED_TRANSACTIONS_PREVIEW_LIMIT = 8
 
 const dateFormatter = new Intl.DateTimeFormat('it-IT', {
   day: '2-digit',
@@ -86,7 +83,7 @@ export function ExpenseDetailClient({ expense, categories, mostUsed }: Props) {
   const [deletePending, setDeletePending] = useState(false)
   const [categoryPending, setCategoryPending] = useState(false)
 
-  const isNegative = expense.totalAmount.trim().startsWith('-')
+  const amountClass = amountToneClass(expense.totalAmount, expense.categoryType)
 
   function handleCategoryChange(subCategoryId: string) {
     const fd = new FormData()
@@ -123,6 +120,37 @@ export function ExpenseDetailClient({ expense, categories, mostUsed }: Props) {
 
   const searchQuery = expense.title
   const searchHref = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`
+  const previewTransactions = expense.transactions.slice(0, LINKED_TRANSACTIONS_PREVIEW_LIMIT)
+  const hiddenTransactionsCount = Math.max(0, expense.transactions.length - LINKED_TRANSACTIONS_PREVIEW_LIMIT)
+
+  const categoriaSection = (
+    <div className="mt-2 flex flex-col gap-3 rounded-md border bg-muted/30 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Categoria
+        </span>
+        <Button type="button" variant="outline" size="sm" onClick={() => setCategoryPickerOpen(true)}>
+          <Tag className="h-4 w-4" />
+          {expense.subCategoryName ? 'Cambia categoria' : 'Assegna categoria'}
+        </Button>
+      </div>
+      {expense.subCategoryName ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-base font-semibold">{expense.subCategoryName}</span>
+          {expense.categoryName ? (
+            <span className="text-sm text-muted-foreground">{expense.categoryName}</span>
+          ) : null}
+        </div>
+      ) : (
+        <Badge
+          variant="outline"
+          className="w-fit border-0 bg-amber-100 text-amber-700 transition-colors"
+        >
+          Non assegnata
+        </Badge>
+      )}
+    </div>
+  )
 
   const datiCard = (
     <div className="flex flex-col gap-4">
@@ -143,37 +171,32 @@ export function ExpenseDetailClient({ expense, categories, mostUsed }: Props) {
           onSuccess={() => router.refresh()}
         />
       </div>
+      {categoriaSection}
     </div>
   )
 
-  const categoriaCard = (
+  const azioniCard = (
     <div className="flex flex-col gap-2">
       <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Categoria
+        Azioni
       </span>
-      {expense.subCategoryName ? (
-        <button
+      <div className="flex flex-col gap-2">
+        <Button variant="outline" className="w-full justify-start" asChild>
+          <a href={searchHref} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-4 w-4" />
+            Cerca su internet
+          </a>
+        </Button>
+        <Button
           type="button"
-          className="w-fit text-left"
-          onClick={() => setCategoryPickerOpen(true)}
+          variant="outline"
+          className="w-full justify-start text-destructive hover:text-destructive"
+          onClick={() => setDeleteOpen(true)}
         >
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium">{expense.subCategoryName}</span>
-            {expense.categoryName ? (
-              <span className="text-xs text-muted-foreground">{expense.categoryName}</span>
-            ) : null}
-          </div>
-        </button>
-      ) : (
-        <button type="button" className="w-fit" onClick={() => setCategoryPickerOpen(true)}>
-          <Badge
-            variant="outline"
-            className="border-0 bg-amber-100 text-amber-700 cursor-pointer hover:bg-amber-200 transition-colors"
-          >
-            Categorizza
-          </Badge>
-        </button>
-      )}
+          <Trash2 className="h-4 w-4" />
+          Elimina
+        </Button>
+      </div>
     </div>
   )
 
@@ -212,7 +235,7 @@ export function ExpenseDetailClient({ expense, categories, mostUsed }: Props) {
         <span
           className={cn(
             'font-mono text-sm font-medium tabular-nums',
-            isNegative ? 'text-total-out' : 'text-total-in',
+            amountClass,
           )}
         >
           {formatSignedAmount(expense.totalAmount)}
@@ -256,7 +279,7 @@ export function ExpenseDetailClient({ expense, categories, mostUsed }: Props) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {expense.transactions.map((tx, index) => (
+              {previewTransactions.map((tx, index) => (
                 <TableRow key={tx.id}>
                   <TableCell className="text-sm text-muted-foreground align-top">
                     {index + 1}
@@ -281,6 +304,12 @@ export function ExpenseDetailClient({ expense, categories, mostUsed }: Props) {
           </Table>
         </div>
       )}
+      {hiddenTransactionsCount > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Mostrate {LINKED_TRANSACTIONS_PREVIEW_LIMIT} di {expense.transactions.length} transazioni
+          collegate.
+        </p>
+      ) : null}
     </div>
   )
 
@@ -289,44 +318,16 @@ export function ExpenseDetailClient({ expense, categories, mostUsed }: Props) {
       <DetailPageShell
         backHref={APP_ROUTES.expenses}
         title={expense.title}
-        amount={
-          <span className={cn('font-mono', isNegative ? 'text-total-out' : 'text-total-in')}>
-            {formatSignedAmount(expense.totalAmount)}
-          </span>
-        }
-        primaryAction={
-          <Button variant="outline" size="sm" asChild>
-            <a href={searchHref} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4" />
-              Cerca su internet
-            </a>
-          </Button>
-        }
-        overflowMenu={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Altre azioni">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault()
-                  setDeleteOpen(true)
-                }}
-                className="text-destructive focus:text-destructive"
-              >
-                Elimina
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        }
+        amount={formatSignedAmount(expense.totalAmount)}
+        amountInline
+        amountToneClassName={amountClass}
+        layout="two-column"
         datiCard={datiCard}
-        categoriaCard={categoriaCard}
         collegamentiCard={collegamentiCard}
+        azioniCard={azioniCard}
         riepilogoCard={riepilogoCard}
         transactionsCard={transactionsCard}
+        bottomCardsSideBySide
       />
 
       <SubcategoryPicker

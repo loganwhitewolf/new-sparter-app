@@ -3,23 +3,42 @@ import { ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import type { MouseEvent, ReactNode } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
+
+export type DetailPageLayout = 'stacked' | 'two-column' | 'file-detail'
 
 type Props = {
   backHref: string
   title: ReactNode
   amount?: ReactNode
+  amountInline?: boolean
+  amountToneClassName?: string
   primaryAction?: ReactNode
   overflowMenu?: ReactNode
+  /** `stacked` (default): single column. `two-column`: dati left, sidebar right on lg+. */
+  layout?: DetailPageLayout
   /** Core-fields card slot — first in the fixed stacking order (D-01). */
   datiCard?: ReactNode
   /** Category card slot. */
   categoriaCard?: ReactNode
   /** Cross-references card slot. */
   collegamentiCard?: ReactNode
+  /** Visible actions card — transaction detail page (replaces overflow menu). */
+  azioniCard?: ReactNode
   /** Summary card slot — expense page only. */
   riepilogoCard?: ReactNode
   /** Linked transactions card slot — expense page only. */
   transactionsCard?: ReactNode
+  /** In two-column mode, place summary + transactions side by side on lg+. */
+  bottomCardsSideBySide?: boolean
+}
+
+function DetailCard({ children }: { children: ReactNode }) {
+  return (
+    <Card>
+      <CardContent>{children}</CardContent>
+    </Card>
+  )
 }
 
 /**
@@ -50,21 +69,28 @@ export function hasInAppHistory(historyLength: number): boolean {
 
 /**
  * Shared header + card-section shell for the transaction and expense detail
- * pages (D-02). Mobile-first single column, no sidebar grid (D-01). Card
- * slots render only when provided, in a fixed stacking order: core fields,
- * category, cross-references, summary, linked transactions.
+ * pages (D-02). Mobile-first single column by default (D-01). Optional
+ * `two-column` layout places dati on the left and a sidebar (category,
+ * cross-references, actions) on the right at lg+. Card slots render only when
+ * provided, in a fixed stacking order: core fields, category, cross-references,
+ * actions, summary, linked transactions.
  */
 export function DetailPageShell({
   backHref,
   title,
   amount,
+  amountInline = false,
+  amountToneClassName,
   primaryAction,
   overflowMenu,
+  layout = 'stacked',
   datiCard,
   categoriaCard,
   collegamentiCard,
+  azioniCard,
   riepilogoCard,
   transactionsCard,
+  bottomCardsSideBySide = false,
 }: Props) {
   const router = useRouter()
 
@@ -115,8 +141,25 @@ export function DetailPageShell({
 
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="group min-w-0 flex-1">
-          <h1 className="truncate text-2xl font-bold tracking-tight">{title}</h1>
-          {amount ? <div className="mt-1 text-lg font-semibold">{amount}</div> : null}
+          <h1
+            className={cn(
+              'truncate text-2xl font-bold tracking-tight',
+              amountInline && 'flex items-baseline gap-2'
+            )}
+          >
+            <span className="truncate">{title}</span>
+            {amount && amountInline ? (
+              <span
+                className={cn(
+                  'shrink-0 font-mono text-xl font-semibold tabular-nums',
+                  amountToneClassName
+                )}
+              >
+                {amount}
+              </span>
+            ) : null}
+          </h1>
+          {amount && !amountInline ? <div className="mt-1 text-lg font-semibold">{amount}</div> : null}
         </div>
         {primaryAction || overflowMenu ? (
           <div className="flex shrink-0 items-center gap-2">
@@ -126,32 +169,70 @@ export function DetailPageShell({
         ) : null}
       </header>
 
-      <div className="flex flex-col gap-4">
+      <div
+        className={cn(
+          'flex flex-col gap-4',
+          layout === 'two-column' && 'lg:grid lg:grid-cols-5 lg:items-start',
+          layout === 'file-detail' && 'lg:grid lg:grid-cols-5 lg:items-start',
+        )}
+      >
         {datiCard ? (
-          <Card>
-            <CardContent>{datiCard}</CardContent>
-          </Card>
+          <div
+            className={cn(
+              layout === 'two-column' && 'lg:col-span-3',
+              layout === 'file-detail' && 'lg:col-span-3 lg:row-start-1',
+            )}
+          >
+            <DetailCard>{datiCard}</DetailCard>
+          </div>
         ) : null}
-        {categoriaCard ? (
-          <Card>
-            <CardContent>{categoriaCard}</CardContent>
-          </Card>
-        ) : null}
-        {collegamentiCard ? (
-          <Card>
-            <CardContent>{collegamentiCard}</CardContent>
-          </Card>
-        ) : null}
-        {riepilogoCard ? (
-          <Card>
-            <CardContent>{riepilogoCard}</CardContent>
-          </Card>
-        ) : null}
-        {transactionsCard ? (
-          <Card>
-            <CardContent>{transactionsCard}</CardContent>
-          </Card>
-        ) : null}
+        {layout === 'file-detail' ? (
+          <>
+            {collegamentiCard ? (
+              <div className="lg:col-span-2 lg:row-start-1">
+                <DetailCard>{collegamentiCard}</DetailCard>
+              </div>
+            ) : null}
+            {riepilogoCard || azioniCard ? (
+              <div className="flex flex-col gap-4 lg:col-span-3 lg:row-start-2">
+                {riepilogoCard ? <DetailCard>{riepilogoCard}</DetailCard> : null}
+                {azioniCard ? <DetailCard>{azioniCard}</DetailCard> : null}
+              </div>
+            ) : null}
+            {transactionsCard ? (
+              <div className="lg:col-span-2 lg:row-start-2">
+                <DetailCard>{transactionsCard}</DetailCard>
+              </div>
+            ) : null}
+          </>
+        ) : layout === 'two-column' ? (
+          <>
+            <div className="flex flex-col gap-4 lg:col-span-2">
+              {categoriaCard ? <DetailCard>{categoriaCard}</DetailCard> : null}
+              {collegamentiCard ? <DetailCard>{collegamentiCard}</DetailCard> : null}
+              {azioniCard ? <DetailCard>{azioniCard}</DetailCard> : null}
+            </div>
+            {riepilogoCard || transactionsCard ? (
+              <div
+                className={cn(
+                  'lg:col-span-5 grid gap-4',
+                  bottomCardsSideBySide ? 'lg:grid-cols-2' : 'grid-cols-1',
+                )}
+              >
+                {riepilogoCard ? <DetailCard>{riepilogoCard}</DetailCard> : null}
+                {transactionsCard ? <DetailCard>{transactionsCard}</DetailCard> : null}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <>
+            {categoriaCard ? <DetailCard>{categoriaCard}</DetailCard> : null}
+            {collegamentiCard ? <DetailCard>{collegamentiCard}</DetailCard> : null}
+            {azioniCard ? <DetailCard>{azioniCard}</DetailCard> : null}
+            {riepilogoCard ? <DetailCard>{riepilogoCard}</DetailCard> : null}
+            {transactionsCard ? <DetailCard>{transactionsCard}</DetailCard> : null}
+          </>
+        )}
       </div>
     </div>
   )

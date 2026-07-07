@@ -3,6 +3,9 @@ import { cache } from 'react'
 import { and, eq, isNotNull } from 'drizzle-orm'
 import { db, type DbOrTx } from '@/lib/db'
 import { file, importFormatVersion, platform } from '@/lib/db/schema'
+import type { FileDetailContextRow } from '@/lib/types/file-detail'
+
+export type { FileDetailContextRow }
 
 export type FileRow = typeof file.$inferSelect
 export type FileStatus = FileRow['status']
@@ -93,8 +96,6 @@ export async function getPlatformIdForUserFile(
 
   return rows[0]?.platformId ?? null
 }
-
-export type FileDetailContextRow = FileRow & { platformName: string | null }
 
 /**
  * Ownership-scoped detail query for `/import/[fileId]` (DET-08, DET-09).
