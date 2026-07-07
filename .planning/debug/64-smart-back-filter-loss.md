@@ -1,8 +1,13 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "History-based back (filters/sort/scroll preserved) when arriving from the entity's own table is not working — user reports the previous filter is not preserved when navigating back from a detail page. (goal: find_root_cause_only)"
 created: 2026-07-06T15:45:00Z
-updated: 2026-07-06T16:10:00Z
+updated: 2026-07-07T00:00:00Z
+resolution: >
+  Fix shipped in Phase 64 gap-closure plans: 64-06 (attachPopstateRefresh busts
+  the back/forward Client Cache after router.back(), commit ad94b3d) and 64-07
+  (hasInAppHistory replaces the broken document.referrer smart-back check,
+  commit 4cb5a82). UAT re-run 2026-07-06: 2/2 passed (64-UAT.md).
 ---
 
 ## Current Focus

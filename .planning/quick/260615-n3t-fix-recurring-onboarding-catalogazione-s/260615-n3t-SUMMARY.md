@@ -1,6 +1,7 @@
 ---
 phase: 260615-n3t
 plan: 01
+status: complete
 subsystem: onboarding
 tags: [onboarding, categorization, theme, dal, regression-guard]
 requires:

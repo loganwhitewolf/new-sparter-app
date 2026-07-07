@@ -131,6 +131,7 @@ None. Scope is small, cohesive, and fully specified by ADR 0016.
 | 260615-n3t | Onboarding step-4 fix | 2026-06-15 | 1434308 |
 | 260615-oiq | Onboarding private platform creation | 2026-06-15 | d5b590c |
 | 260616-dlw | Fix transaction description sort | 2026-06-16 | c71d32e |
+| 20260622-allocation | Dashboard allocation chips (Risparmio/Investimento) filterable (reconciled 2026-07-07) | 2026-06-22 | 3d99988 |
 | 260629-gdp | Pattern suggestions back link + auto-redirect after classify | 2026-06-29 | 4673927 |
 | 260629-lky | File list R2 download + expense details dialog source file | 2026-06-29 | a6d7f95 |
 | 260629-m9i | Detach transaction to dedicated expense + re-import manual lock | 2026-06-29 | 90bfa69 |
@@ -172,10 +173,10 @@ Items acknowledged and postponed:
 | v2.2 | TR categorization | regex-discovery + seed-patterns post-import — deferred |
 | operator | R038/R039/R041 | live Vercel/Supabase/R2 deploy operator-pending |
 | backlog | R029 | partial categorization revalidation coverage |
-| debug | 64-smart-back-filter-loss | diagnosed — hypothesis CONFIRMED (Next.js App Router Client Cache reused on back/forward), fix deferred |
-| quick_task | allocation-filter-dashboard (20260622) | missing — acknowledged at v2.5 close |
-| quick_task | 260615-dtm-reusable-regex-discovery-tool-bank-agnos | unknown — acknowledged at v2.5 close |
-| quick_task | 260615-n3t-fix-recurring-onboarding-catalogazione-s | unknown — acknowledged at v2.5 close |
+| debug | 64-smart-back-filter-loss | resolved — fix shipped in 64-06/64-07, UAT 2/2 passed; status reconciled 2026-07-07 |
+| quick_task | allocation-filter-dashboard (20260622) | reconciled 2026-07-07 — executed 2026-06-22 (3d99988), SUMMARY was missing |
+| quick_task | 260615-dtm-reusable-regex-discovery-tool-bank-agnos | reconciled 2026-07-07 — complete (d737b8e), SUMMARY lacked status field |
+| quick_task | 260615-n3t-fix-recurring-onboarding-catalogazione-s | reconciled 2026-07-07 — complete (1434308), SUMMARY lacked status field |
 | quick_task | 260703-na4-full-description-tooltip-widen-expense-t | reconciled 2026-07-07 — was fully executed 2026-07-03, SUMMARY.md was missing |
 
 ## Session Continuity
