@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 Phase: Milestone v2.5 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-07-07 — Milestone v2.5 completed and archived
+Last activity: 2026-07-07 — Completed quick task 260707-fy4: persistent table filters via sessionStorage URL restore
 
 ## Roadmap (v2.5 — Phases 62–64)
 
@@ -149,6 +149,7 @@ None. Scope is small, cohesive, and fully specified by ADR 0016.
 | 260703-kzg | Import preview: view all rows + filter by valid/duplicate/error | 2026-07-03 | ecc2665 |
 | 260703-gwa | Pairing a refund categorizes+isolates its expense under the spend's subcategory (decision 2); repaint refund row | 2026-07-03 | 3816800 |
 | 260703-leo | Fix filtro descrizione spese/transazioni (substring + focus) | 2026-07-03 | e947a16 |
+| 260707-fy4 | Persistent table filters via sessionStorage URL restore (bare-navigation restore layer, URL stays source of truth) | 2026-07-07 | def3f4b |
 
 ## Deferred Items
 
