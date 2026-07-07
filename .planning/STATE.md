@@ -149,6 +149,7 @@ None. Scope is small, cohesive, and fully specified by ADR 0016.
 | 260703-kzg | Import preview: view all rows + filter by valid/duplicate/error | 2026-07-03 | ecc2665 |
 | 260703-gwa | Pairing a refund categorizes+isolates its expense under the spend's subcategory (decision 2); repaint refund row | 2026-07-03 | 3816800 |
 | 260703-leo | Fix filtro descrizione spese/transazioni (substring + focus) | 2026-07-03 | e947a16 |
+| 260703-na4 | Full description tooltip: widen expense.title to text, de-truncate writes, backfill, wrapped dialog column (reconciled 2026-07-07) | 2026-07-03 | 2ffbb4d |
 | 260707-fy4 | Persistent table filters via sessionStorage URL restore (bare-navigation restore layer, URL stays source of truth) | 2026-07-07 | def3f4b |
 | 260707-fast | Fix pre-existing test failures (expense-actions mock, import-table stale assertion, overview fixtures, expense title 500) + language-check quoted-string false positives | 2026-07-07 | c9dc08a |
 
@@ -175,7 +176,7 @@ Items acknowledged and postponed:
 | quick_task | allocation-filter-dashboard (20260622) | missing — acknowledged at v2.5 close |
 | quick_task | 260615-dtm-reusable-regex-discovery-tool-bank-agnos | unknown — acknowledged at v2.5 close |
 | quick_task | 260615-n3t-fix-recurring-onboarding-catalogazione-s | unknown — acknowledged at v2.5 close |
-| quick_task | 260703-na4-full-description-tooltip-widen-expense-t | missing — acknowledged at v2.5 close |
+| quick_task | 260703-na4-full-description-tooltip-widen-expense-t | reconciled 2026-07-07 — was fully executed 2026-07-03, SUMMARY.md was missing |
 
 ## Session Continuity
 
@@ -190,6 +191,7 @@ Last session: 2026-07-06T22:45:00.000Z
 ## Operator Next Steps
 
 - Start the next milestone with /gsd-new-milestone
+- On the live DB (if not yet applied): `yarn db:migrate && yarn db:seed-extras` — migration 0025 (expense.title → text) + backfill-truncated-expense-titles step from quick task 260703-na4
 
 ## Performance Metrics
 
