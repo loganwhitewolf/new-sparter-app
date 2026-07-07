@@ -36,6 +36,7 @@ import { useToolbarSort } from '@/components/data-table/DataTableToolbar'
 import { TableRestoreSkeleton } from '@/components/data-table/table-restore-skeleton'
 import { HeaderSortButton } from '@/components/data-table/HeaderSortButton'
 import { deleteExpense, ignoreExpense, loadMoreExpenses } from '@/lib/actions/expenses'
+import { amountToneClass } from '@/lib/utils/amount-tone'
 import { BulkActionBar } from './bulk-action-bar'
 import { BulkCategorizeDialog } from './bulk-categorize-dialog'
 import { BulkDeleteExpensesDialog } from './bulk-delete-expenses-dialog'
@@ -283,7 +284,12 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                       }}
                     />
                   </TableCell>
-                  <TableCell className={cn('text-right font-mono tabular-nums text-sm', exp.totalAmount.trim().startsWith('-') ? 'text-total-out' : 'text-total-in')}>
+                  <TableCell
+                    className={cn(
+                      'text-right font-mono tabular-nums text-sm',
+                      amountToneClass(exp.totalAmount, exp.categoryType),
+                    )}
+                  >
                     {formatAmount(exp.totalAmount)}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums text-sm">

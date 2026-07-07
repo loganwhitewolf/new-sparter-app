@@ -3,15 +3,9 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MoreHorizontal, Sparkles, Trash2 } from 'lucide-react'
+import { Download, Sparkles, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -24,15 +18,19 @@ import { DetailPageShell } from '@/components/detail-pages/detail-page-shell'
 import { ImportDeleteDialog } from '@/components/import/import-delete-dialog'
 import { ImportDisplayNameEdit } from '@/components/import/import-display-name-edit'
 import { recheckRegexAction } from '@/lib/actions/import'
-import type { FileDetailContextRow } from '@/lib/dal/files'
-import type { FileTransactionRow } from '@/lib/dal/transactions'
+import type { FileDetailContextRow, FileTransactionRow } from '@/lib/types/file-detail'
+import { DETAIL_LINKED_TRANSACTIONS_PREVIEW_LIMIT } from '@/lib/constants/detail-page-limits'
 import { APP_ROUTES, transactionDetailHref } from '@/lib/routes'
+import { AMOUNT_TONE_CLASS, amountToneClass } from '@/lib/utils/amount-tone'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
+import { cn } from '@/lib/utils'
 
 type Props = {
   file: FileDetailContextRow
   transactions: FileTransactionRow[]
 }
+
+const LINKED_TRANSACTIONS_PREVIEW_LIMIT = DETAIL_LINKED_TRANSACTIONS_PREVIEW_LIMIT
 
 const dateFormatter = new Intl.DateTimeFormat('it-IT', {
   day: '2-digit',
@@ -65,7 +63,9 @@ export function FileDetailClient({ file, transactions }: Props) {
   const [isDownloadPending, startDownloadTransition] = useTransition()
   const [isRecheckPending, setIsRecheckPending] = useState(false)
 
-  const displayTitle = file.displayName?.trim() || file.originalName
+  const previewTransactions = transactions.slice(0, LINKED_TRANSACTIONS_PREVIEW_LIMIT)
+  const totalLinkedCount = file.importedCount
+  const hiddenTransactionsCount = Math.max(0, totalLinkedCount - previewTransactions.length)
 
   function handleDownload() {
     startDownloadTransition(async () => {
@@ -119,17 +119,79 @@ export function FileDetailClient({ file, transactions }: Props) {
 
   const datiCard = (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm text-muted-foreground">Piattaforma</span>
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Piattaforma
+        </span>
         <span className="text-sm">{file.platformName ?? '—'}</span>
       </div>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm text-muted-foreground">Importato il</span>
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Importato il
+        </span>
         <span className="text-sm">{formatDate(file.importedAt)}</span>
       </div>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm text-muted-foreground">Periodo coperto</span>
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Periodo coperto
+        </span>
         <span className="text-sm">{formatPeriod(file.referenceStartedAt, file.referenceEndedAt)}</span>
+      </div>
+    </div>
+  )
+
+  const collegamentiCard = (
+    <div className="flex flex-col gap-4">
+      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Collegamenti
+      </span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm text-muted-foreground">Transazioni importate</span>
+        <Link
+          href={`/transactions?importId=${encodeURIComponent(file.id)}`}
+          className="text-sm text-primary underline-offset-4 hover:underline"
+        >
+          Vedi tutte ({totalLinkedCount})
+        </Link>
+      </div>
+    </div>
+  )
+
+  const azioniCard = (
+    <div className="flex flex-col gap-2">
+      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Azioni
+      </span>
+      <div className="flex flex-col gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full justify-start"
+          onClick={handleDownload}
+          disabled={isDownloadPending}
+        >
+          <Download className="h-4 w-4" />
+          {isDownloadPending ? 'Preparazione…' : 'Scarica file'}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full justify-start"
+          onClick={() => void handleRecheckRegex()}
+          disabled={isRecheckPending}
+        >
+          <Sparkles className="h-4 w-4" />
+          {isRecheckPending ? 'Ricerca in corso…' : 'Rivedi suggerimenti'}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full justify-start text-destructive hover:text-destructive"
+          onClick={() => setDeleteOpen(true)}
+        >
+          <Trash2 className="h-4 w-4" />
+          Elimina
+        </Button>
       </div>
     </div>
   )
@@ -153,13 +215,13 @@ export function FileDetailClient({ file, transactions }: Props) {
       </div>
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm text-muted-foreground">Entrate</span>
-        <span className="font-mono text-sm tabular-nums text-total-in">
+        <span className={cn('font-mono text-sm tabular-nums', AMOUNT_TONE_CLASS.positive)}>
           {formatAbsoluteAmount(file.positiveTotal)}
         </span>
       </div>
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm text-muted-foreground">Uscite</span>
-        <span className="font-mono text-sm tabular-nums text-total-out">
+        <span className={cn('font-mono text-sm tabular-nums', AMOUNT_TONE_CLASS.negative)}>
           {formatAbsoluteAmount(file.negativeTotal)}
         </span>
       </div>
@@ -168,17 +230,9 @@ export function FileDetailClient({ file, transactions }: Props) {
 
   const transactionsCard = (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Transazioni
-        </span>
-        <Link
-          href={`/transactions?importId=${encodeURIComponent(file.id)}`}
-          className="text-sm text-primary underline-offset-4 hover:underline"
-        >
-          Vedi tutte
-        </Link>
-      </div>
+      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Transazioni
+      </span>
       {transactions.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nessuna transazione collegata.</p>
       ) : (
@@ -198,7 +252,7 @@ export function FileDetailClient({ file, transactions }: Props) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.map((tx) => (
+              {previewTransactions.map((tx) => (
                 <TableRow key={tx.id}>
                   <TableCell className="text-sm whitespace-normal break-words align-top">
                     <Link
@@ -208,7 +262,12 @@ export function FileDetailClient({ file, transactions }: Props) {
                       {tx.customTitle ?? tx.description}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums text-sm whitespace-nowrap align-top">
+                  <TableCell
+                    className={cn(
+                      'text-right font-mono tabular-nums text-sm whitespace-nowrap align-top',
+                      amountToneClass(tx.amount, tx.categoryType),
+                    )}
+                  >
                     {formatTransactionAmount(tx.amount, tx.currency)}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums text-sm whitespace-nowrap align-top">
@@ -220,6 +279,11 @@ export function FileDetailClient({ file, transactions }: Props) {
           </Table>
         </div>
       )}
+      {hiddenTransactionsCount > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Mostrate {previewTransactions.length} di {totalLinkedCount} transazioni importate.
+        </p>
+      ) : null}
     </div>
   )
 
@@ -235,42 +299,10 @@ export function FileDetailClient({ file, transactions }: Props) {
             onSuccess={() => router.refresh()}
           />
         }
-        primaryAction={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownload}
-            disabled={isDownloadPending}
-          >
-            {isDownloadPending ? 'Preparazione…' : 'Scarica file'}
-          </Button>
-        }
-        overflowMenu={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Altre azioni">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleRecheckRegex} disabled={isRecheckPending}>
-                <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
-                {isRecheckPending ? 'Ricerca in corso…' : 'Rivedi suggerimenti'}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault()
-                  setDeleteOpen(true)
-                }}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
-                Elimina
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        }
+        layout="file-detail"
         datiCard={datiCard}
+        collegamentiCard={collegamentiCard}
+        azioniCard={azioniCard}
         riepilogoCard={riepilogoCard}
         transactionsCard={transactionsCard}
       />

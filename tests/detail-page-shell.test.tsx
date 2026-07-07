@@ -88,6 +88,63 @@ describe('DetailPageShell', () => {
 
     expect(html).toContain('class="group min-w-0 flex-1"')
   })
+
+  test('two-column layout renders lg grid and places azioniCard in the sidebar column', () => {
+    const html = renderToStaticMarkup(
+      <DetailPageShell
+        backHref="/transactions"
+        title="Titolo"
+        layout="two-column"
+        datiCard={<div>Dati card content</div>}
+        categoriaCard={<div>Categoria card content</div>}
+        collegamentiCard={<div>Collegamenti card content</div>}
+        azioniCard={<div>Azioni card content</div>}
+      />,
+    )
+
+    expect(html).toContain('lg:grid-cols-5')
+    expect(html).toContain('lg:col-span-3')
+    expect(html).toContain('lg:col-span-2')
+    expect(html).toContain('Azioni card content')
+
+    const datiIdx = html.indexOf('Dati card content')
+    const azioniIdx = html.indexOf('Azioni card content')
+    expect(datiIdx).toBeGreaterThan(-1)
+    expect(azioniIdx).toBeGreaterThan(datiIdx)
+  })
+
+  test('file-detail layout places collegamenti on row 1 and stacks riepilogo with azioni beside transactions', () => {
+    const html = renderToStaticMarkup(
+      <DetailPageShell
+        backHref="/import"
+        title="report.csv"
+        layout="file-detail"
+        datiCard={<div>Dati card content</div>}
+        collegamentiCard={<div>Collegamenti card content</div>}
+        azioniCard={<div>Azioni card content</div>}
+        riepilogoCard={<div>Riepilogo card content</div>}
+        transactionsCard={<div>Transactions card content</div>}
+      />,
+    )
+
+    expect(html).toContain('lg:grid-cols-5')
+    expect(html).toContain('lg:row-start-2')
+
+    const indices = [
+      'Dati card content',
+      'Collegamenti card content',
+      'Riepilogo card content',
+      'Azioni card content',
+      'Transactions card content',
+    ].map((marker) => html.indexOf(marker))
+
+    for (const idx of indices) {
+      expect(idx).toBeGreaterThan(-1)
+    }
+    for (let i = 1; i < indices.length; i += 1) {
+      expect(indices[i]).toBeGreaterThan(indices[i - 1])
+    }
+  })
 })
 
 describe('route builders', () => {

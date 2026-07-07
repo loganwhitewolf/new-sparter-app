@@ -63,6 +63,7 @@ export type ExpenseRow = {
   subCategoryName: string | null
   categoryName: string | null
   categorySlug: string | null
+  categoryType?: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
   platformName: string | null
 }
 
@@ -234,6 +235,7 @@ export const getExpenses = cache(async (
       subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
       categoryName: category.name,
       categorySlug: category.slug,
+      categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
       platformName: platform.name,
     })
     .from(expense)
@@ -273,11 +275,14 @@ export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | und
       subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
       categoryName: category.name,
       categorySlug: category.slug,
+      categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
       platformName: platform.name,
     })
     .from(expense)
     .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
     .leftJoin(category, eq(subCategory.categoryId, category.id))
+    .leftJoin(nature, eq(subCategory.natureId, nature.id))
+    .leftJoin(direction, eq(nature.directionId, direction.id))
     .leftJoin(
       userSubcategoryOverride,
       and(
@@ -362,6 +367,7 @@ export const getExpenseForDetail = cache(
         subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
         categoryName: category.name,
         categorySlug: category.slug,
+        categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
         platformName: platform.name,
         fileId: file.id,
         displayName: file.displayName,
@@ -370,6 +376,8 @@ export const getExpenseForDetail = cache(
       .from(expense)
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
+      .leftJoin(nature, eq(subCategory.natureId, nature.id))
+      .leftJoin(direction, eq(nature.directionId, direction.id))
       .leftJoin(
         userSubcategoryOverride,
         and(

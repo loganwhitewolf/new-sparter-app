@@ -274,18 +274,26 @@ describe('/expenses/[id] page', () => {
     await expect(renderExpensePage()).rejects.toThrow('notFound')
   })
 
-  it('shows the amber "Categorizza" CTA when subCategoryId is null', async () => {
+  it('shows the "Assegna categoria" action when subCategoryId is null', async () => {
     pageMocks.getExpenseForDetail.mockResolvedValue(
       makeExpenseDetailRow({ subCategoryId: null, subCategoryName: null, categoryName: null }),
     )
     const html = await renderExpensePage()
-    expect(html).toContain('Categorizza')
+    expect(html).toContain('Assegna categoria')
+    expect(html).toContain('Non assegnata')
   })
 
-  it('does not show the amber "Categorizza" CTA when subCategoryId is set', async () => {
+  it('shows "Cambia categoria" action when subCategoryId is set', async () => {
     const html = await renderExpensePage()
-    // "Categorizza" as a header CTA should be absent; the category card itself may say "Supermercato".
-    expect(html).not.toMatch(/Categorizza<\/button>|>Categorizza</)
+    expect(html).toContain('Cambia categoria')
+  })
+
+  it('renders visible actions card instead of overflow menu', async () => {
+    const html = await renderExpensePage()
+    expect(html).toContain('Azioni')
+    expect(html).toContain('Cerca su internet')
+    expect(html).toContain('Elimina')
+    expect(html).not.toContain('Altre azioni')
   })
 
   it('renders each linked-transaction row as a link to /transactions/[id]', async () => {
