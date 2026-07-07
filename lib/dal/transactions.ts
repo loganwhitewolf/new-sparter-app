@@ -554,6 +554,103 @@ export type ExpenseTransactionRow = {
   occurredAt: Date
 }
 
+export type TransactionDetailRow = {
+  id: string
+  description: string
+  transactionHash: string
+  descriptionHash: string
+  customTitle: string | null
+  amount: string
+  currency: string
+  occurredAt: Date
+  rowIndex: number
+  expenseId: string | null
+  expenseTitle: string | null
+  expenseStatus: (typeof expense.$inferSelect)['status'] | null
+  expenseNotes: string | null
+  expenseSubCategoryId: number | null
+  subCategoryName: string | null
+  categoryName: string | null
+  categorySlug: string | null
+  expenseTransactionCount: number | null
+  fileId: string | null
+  fileName: string | null
+  platformName: string | null
+  pairedWithId: string | null
+  pairedAmount: string | null
+  pairedDescription: string | null
+  pairedOccurredAt: Date | null
+  pairedNetAmount: string | null
+}
+
+/**
+ * Ownership-scoped detail query for `/transactions/[id]` (DET-05). Reuses the
+ * pairing sub-queries from `transactionListSelect` and adds the fields the
+ * detail page needs beyond the list view (hashes, expense notes/subCategoryId,
+ * categorySlug). Returns `undefined` — never throws — for a missing or
+ * non-owned id (T-63-01).
+ */
+export const getTransactionForDetail = cache(
+  async ({
+    userId,
+    id,
+  }: {
+    userId: string
+    id: string
+  }): Promise<TransactionDetailRow | undefined> => {
+    const rows = await db
+      .select({
+        id: transaction.id,
+        description: transaction.description,
+        transactionHash: transaction.transactionHash,
+        descriptionHash: transaction.descriptionHash,
+        customTitle: transaction.customTitle,
+        amount: transaction.amount,
+        currency: transaction.currency,
+        occurredAt: transaction.occurredAt,
+        rowIndex: transaction.rowIndex,
+        expenseId: expense.id,
+        expenseTitle: expense.title,
+        expenseStatus: expense.status,
+        expenseNotes: expense.notes,
+        expenseSubCategoryId: expense.subCategoryId,
+        subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
+        categoryName: category.name,
+        categorySlug: category.slug,
+        expenseTransactionCount: expense.transactionCount,
+        fileId: importFile.id,
+        fileName: sql<string | null>`coalesce(nullif(trim(coalesce(${importFile.displayName}, '')), ''), ${importFile.originalName})`,
+        platformName: platform.name,
+        pairedWithId: transactionListSelect.pairedWithId,
+        pairedAmount: transactionListSelect.pairedAmount,
+        pairedDescription: transactionListSelect.pairedDescription,
+        pairedOccurredAt: transactionListSelect.pairedOccurredAt,
+        pairedNetAmount: transactionListSelect.pairedNetAmount,
+      })
+      .from(transaction)
+      .leftJoin(importFile, eq(transaction.fileId, importFile.id))
+      .leftJoin(
+        importFormatVersion,
+        eq(importFile.importFormatVersionId, importFormatVersion.id),
+      )
+      .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
+      .leftJoin(expense, eq(transaction.expenseId, expense.id))
+      .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+      .leftJoin(category, eq(subCategory.categoryId, category.id))
+      .leftJoin(
+        userSubcategoryOverride,
+        and(
+          eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+          eq(userSubcategoryOverride.userId, userId),
+        ),
+      )
+      .where(and(eq(transaction.id, id), eq(transaction.userId, userId)))
+      .limit(1)
+
+    return rows[0]
+  },
+)
+
 export const getTransactionsByExpenseId = cache(
   async (expenseId: string): Promise<ExpenseTransactionRow[]> => {
     const { userId } = await verifySession()
@@ -577,6 +674,47 @@ export const getTransactionsByExpenseId = cache(
         ),
       )
       .orderBy(desc(transaction.occurredAt))
+  },
+)
+
+export type FileTransactionRow = {
+  id: string
+  description: string
+  customTitle: string | null
+  amount: string
+  currency: string
+  occurredAt: Date
+}
+
+/**
+ * Ownership-scoped preview query for the file detail page's transactions card
+ * (D-01, DET-08). Capped by `limit` (default 10) so a file with hundreds of
+ * rows never renders an unbounded list here — "Vedi tutte" links to the full
+ * filtered `/transactions` view instead.
+ */
+export const getTransactionsByFileId = cache(
+  async ({
+    userId,
+    fileId,
+    limit,
+  }: {
+    userId: string
+    fileId: string
+    limit?: number
+  }): Promise<FileTransactionRow[]> => {
+    return db
+      .select({
+        id: transaction.id,
+        description: transaction.description,
+        customTitle: transaction.customTitle,
+        amount: transaction.amount,
+        currency: transaction.currency,
+        occurredAt: transaction.occurredAt,
+      })
+      .from(transaction)
+      .where(and(eq(transaction.fileId, fileId), eq(transaction.userId, userId)))
+      .orderBy(desc(transaction.occurredAt))
+      .limit(limit ?? 10)
   },
 )
 

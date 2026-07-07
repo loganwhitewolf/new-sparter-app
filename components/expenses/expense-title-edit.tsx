@@ -1,8 +1,10 @@
 'use client'
 
 import { useActionState, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Pencil } from 'lucide-react'
 import { updateExpenseTitle } from '@/lib/actions/expenses'
+import { expenseDetailHref } from '@/lib/routes'
 
 const MIN_TITLE_LENGTH = 2
 
@@ -31,20 +33,24 @@ export function ExpenseTitleEdit({ id, title, onSuccess }: Props) {
 
   if (!isEditing) {
     return (
-      <button
-        type="button"
-        className="flex min-w-0 max-w-full items-center gap-1 text-left"
-        onClick={() => {
-          setValue(title)
-          setIsEditing(true)
-        }}
-        title="Clicca per modificare il nome di questa spesa"
-      >
-        <span className="min-w-0 truncate font-mono text-sm tracking-tight" title={title}>
-          {title}
-        </span>
-        <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100" />
-      </button>
+      <div className="flex min-w-0 max-w-full items-center gap-1">
+        <Link href={expenseDetailHref(id)} className="min-w-0">
+          <span className="min-w-0 truncate font-mono text-sm tracking-tight" title={title}>
+            {title}
+          </span>
+        </Link>
+        <button
+          type="button"
+          aria-label="Rinomina spesa"
+          onClick={() => {
+            setValue(title)
+            setIsEditing(true)
+          }}
+          title="Clicca per modificare il nome di questa spesa"
+        >
+          <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100" />
+        </button>
+      </div>
     )
   }
 

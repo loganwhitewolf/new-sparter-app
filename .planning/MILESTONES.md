@@ -1,5 +1,27 @@
 # Milestones
 
+## v2.5 Detail Pages (Shipped: 2026-07-07)
+
+**Phases completed:** 3 phases, 13 plans, 23 tasks
+
+**Key accomplishments:**
+
+- `updateTransaction` service — atomic amount/date/title edit with frozen hashes, same-transaction expense reconciliation, and a pre-write pair-invariant guard (Italian "Scollega prima il rimborso")
+- 1. [Rule 3 - blocking] Widened drizzle-orm and schema mocks beyond the plan's minimal shape
+- Ownership-scoped `getTransactionForDetail`/`getExpenseForDetail` DAL queries plus a shared `DetailPageShell` layout component and route builders — the read-side foundation Plans 02/03 will wire into `/transactions/[id]` and `/expenses/[id]`.
+- `/transactions/[id]` — ownership-gated RSC page with pencil-inline amount/date/title editing wired to Phase 62's `updateTransactionAction`, category editing via the existing `ExpenseCategorizeDialog`, and full reuse of `CounterpartPickerDialog`/`DetachExpenseDialog`/delete confirmation with zero new server actions.
+- `/expenses/[id]` — ownership-gated RSC page merging the existing "dettagli" and "modifica" expense dialogs into one route page, with pencil-inline title/notes editing, category editing via the existing `categorizeExpense` action, readonly derived totals, and a linked-transactions table cross-referencing `/transactions/[id]`.
+- Transaction table row menu gains a "Dettagli" entry linking to `/transactions/[id]`; expense table's "Dettagli"+"Modifica" pair collapses into a single "Dettagli" link to `/expenses/[id]`, retiring the table's edit-dialog and transactions-dialog call sites (DET-07).
+- Canonical `importFileDetailHref` route builder plus two ownership-scoped DAL queries (`getTransactionsByFileId`, `getFileDetailForUser`) that later Phase 64 plans build the file detail page and cross-references on.
+- TransactionTitleEdit and ExpenseTitleEdit now render the row title as a genuine `next/link` Link to the entity's detail page, with the pencil icon split into its own independent edit-trigger button — closing the DET-09 gap where clicking a row title never navigated anywhere.
+- `/import/[fileId]` RSC route with exhaustive ownership+status gating plus `FileDetailClient`, the third and final detail page in the v2.5 trilogy — files are now navigable first-class entities with editable displayName, readonly stats, a linked transactions preview, and lifted download/suggestions/delete actions.
+- Import table file names are now real links to `/import/[fileId]` with a "Dettagli" menu entry, and every remaining `/import?fileId=` cross-reference in the codebase (transaction table, transaction detail, expense detail) is repointed to `importFileDetailHref`.
+- DetailPageShell's back control now tries `router.back()` first (preserving the origin table's ephemeral filters/sort/scroll) and falls back to the static `backHref` route only when there's no usable in-app history — retroactively completing "consistent back behavior" (DET-09) for all three detail pages (transaction, expense, file) from one shared implementation.
+- DetailPageShell arms a one-time popstate listener before router.back() to force-refresh the destination table's RSC payload, closing the UAT-reported "filter lost on Indietro" defect without touching the static-fallback path.
+- Added `.group` Tailwind ancestor to the three detail-page title wrappers so the shared inline-edit pencil is finally discoverable on hover, and replaced the broken `document.referrer` smart-back check with a pure `hasInAppHistory(historyLength)` helper.
+
+---
+
 ## v2.4 Standalone Expense (Shipped: 2026-07-01)
 
 **Phases completed:** 1 phases, 2 plans, 6 tasks

@@ -17,8 +17,25 @@
 - ✅ **v2.2: PDF Import** — Phases 56–57 (shipped 2026-06-26) · [archive](milestones/v2.2-ROADMAP.md)
 - ✅ **v2.3: Platform Identity & Format Ownership** — Phases 58–60 (shipped 2026-06-30, tag v2.3)
 - ✅ **v2.4: Standalone Expense** — Phase 61 (shipped 2026-07-01) · [archive](milestones/v2.4-ROADMAP.md)
+- ✅ **v2.5: Detail Pages** — Phases 62–64 (shipped 2026-07-07, tag v2.5) · [archive](milestones/v2.5-ROADMAP.md)
 
 ## Phases
+
+<details>
+<summary>✅ v2.5: Detail Pages (Phases 62–64) — SHIPPED 2026-07-07 (tag v2.5)</summary>
+
+Uniform detail pages for transaction / expense / import file: the single place to
+view and edit everything editable, with cross-references. Hashes and `description`
+are immutable (dedup/grouping keys); derived expense aggregates reconcile
+automatically. Decisions locked (grill 2026-07-05).
+
+- [x] **Phase 62: transaction-edit-core** — `updateTransaction` (amount/date/customTitle, Decimal.js, ownership, hashes frozen), atomic expense reconciliation after amount/date edits, pair-coherence guard (block with message), `updateExpense` extended. Backend + tests, no UI. (DET-01..04) (completed 2026-07-05)
+- [x] **Phase 63: detail-pages-tx-expense** — `/transactions/[id]` + `/expenses/[id]` pages with pencil-inline editing, SubcategoryPicker, cerca su internet, cross-refs; expense "dettagli"+"modifica" dialogs collapse into the page. (DET-05..07) (completed 2026-07-05)
+- [x] **Phase 64: file-detail-and-navigation** — `/import/[fileId]` page (displayName editable, stats readonly, transactions list) + row-click/menu navigation wiring across all three tables. (DET-08..09) (completed 2026-07-06)
+
+Full details: `.planning/milestones/v2.5-ROADMAP.md`
+
+</details>
 
 <details>
 <summary>✅ v2.4: Standalone Expense (Phase 61) — SHIPPED 2026-07-01</summary>
@@ -214,5 +231,9 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 60. seed-slug-linkage-and-docs | v2.3 | 2/2 | Complete   | 2026-06-30 |
 | 61. standalone-expense | v2.4 | 2/2 | Complete    | 2026-07-01 |
 
-**Total shipped: 61 phases · 222 plans complete**
+| 62. transaction-edit-core | v2.5 | 2/2 | Complete    | 2026-07-05 |
+| 63. detail-pages-tx-expense | v2.5 | 4/4 | Complete    | 2026-07-05 |
+| 64. file-detail-and-navigation | v2.5 | 7/7 | Complete    | 2026-07-06 |
+
+**Total shipped: 64 phases · 235 plans complete**
 **Current milestone: none — planning next milestone**

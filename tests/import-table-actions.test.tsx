@@ -366,6 +366,24 @@ describe("ImportRowActions — state matrix", () => {
   });
 });
 
+describe("ImportRowActions — Dettagli dropdown item (DET-09)", () => {
+  it('shows "Dettagli" dropdown item only for status=imported, linking to importFileDetailHref(row.id)', () => {
+    const importedHtml = render(makeRow({ status: "imported", id: "file-42" }));
+    expect(importedHtml).toContain("Dettagli");
+    expect(importedHtml).toContain('href="/import/file-42"');
+
+    const uploadedHtml = render(makeRow({ status: "uploaded", id: "file-43" }));
+    expect(uploadedHtml).not.toContain("Dettagli");
+  });
+
+  it("does not show Dettagli for non-imported statuses", () => {
+    for (const status of ["analyzed", "failed", "pending_upload"] as const) {
+      const html = render(makeRow({ status }));
+      expect(html).not.toContain("Dettagli");
+    }
+  });
+});
+
 describe("ImportRowActions — Rivedi suggerimenti dropdown item (POST-01)", () => {
   it('shows "Rivedi suggerimenti" dropdown item only for status=imported', () => {
     const importedHtml = render(makeRow({ status: "imported", id: "file-42" }));

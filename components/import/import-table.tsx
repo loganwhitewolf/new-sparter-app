@@ -26,6 +26,7 @@ import { useToolbarSort } from "@/components/data-table/DataTableToolbar";
 import { HeaderSortButton } from "@/components/data-table/HeaderSortButton";
 import { loadMoreImports, recheckRegexAction } from "@/lib/actions/import";
 import type { ImportListRow } from "@/lib/dal/imports";
+import { importFileDetailHref } from "@/lib/routes";
 import type {
   ImportSearchParams,
   ParsedImportFilters,
@@ -347,6 +348,11 @@ export function ImportTable({
                       fileId={row.id}
                       displayName={row.displayName}
                       originalName={row.originalName}
+                      linkHref={
+                        row.status === "imported"
+                          ? importFileDetailHref(row.id)
+                          : undefined
+                      }
                       onSuccess={(nextDisplayName) =>
                         handleRenameSuccess(row.id, nextDisplayName)
                       }

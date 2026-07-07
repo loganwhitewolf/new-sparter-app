@@ -1,20 +1,20 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.4
-milestone_name: Standalone Expense
-current_phase: 4
-current_phase_name: standalone-expense
-status: "Phase 61 shipped — PR #32"
-stopped_at: Completed 61-02-PLAN.md
-last_updated: "2026-07-01T14:22:11.084Z"
-last_activity: 2026-07-03 - Completed quick task 260703-leo: Fix filtro descrizione (substring search + focus debounce)
-last_activity_desc: DataTableToolbar draft locale + debounce 500ms; transazioni cercano anche expense.title
+milestone: v2.5
+milestone_name: Detail Pages
+current_phase: 5
+status: Awaiting next milestone
+stopped_at: v2.5 milestone complete, ready to plan next milestone
+last_updated: "2026-07-07T06:54:03.129Z"
+last_activity: 2026-07-07
+last_activity_desc: Milestone v2.5 completed and archived
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_phases: 3
+  completed_phases: 3
+  total_plans: 13
+  completed_plans: 13
   percent: 100
+current_phase_name: file-detail-and-navigation
 ---
 
 # Project State
@@ -23,29 +23,54 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-07-01)
 
-**Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending — all running on a zero-cost personal deploy.
-**Current focus:** Phase 61 — standalone-expense
+**Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
+**Current focus:** v2.5 milestone complete — ready to start next milestone
 
 ## Current Position
 
-Phase: Milestone v2.4 complete
+Phase: Milestone v2.5 complete
 Plan: —
-Status: Phase 61 shipped — PR #32
-Last activity: 2026-07-01 — quick task 260701-mqh (supermarket regex patterns)
+Status: Awaiting next milestone
+Last activity: 2026-07-07 — Milestone v2.5 completed and archived
 
-## Roadmap (v2.4 — Phase 61)
+## Roadmap (v2.5 — Phases 62–64)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 61 | standalone-expense | STEXP-01, STEXP-02, STEXP-03 | Complete (PR #32) |
+| 62 | transaction-edit-core | DET-01, DET-02, DET-03, DET-04 | Complete |
+| 63 | detail-pages-tx-expense | DET-05, DET-06, DET-07 | Complete |
+| 64 | file-detail-and-navigation | DET-08, DET-09 | Complete |
 
-**Coverage:** 3/3 STEXP requirements mapped to Phase 61. Decision contract LOCKED (ADR 0016) — pure implementation, no discovery to redo.
+**Coverage:** 9/9 DET requirements mapped across Phases 62–64, all shipped. Edit-domain contract locked (grill 2026-07-05): hashes/description immutable, auto-reconcile, pair-guard blocks, route pages.
 
 ## Accumulated Context
 
 ### Decisions
 
-Design contract is LOCKED (ADR 0016). Do not re-derive the approach:
+**v2.5 milestone decisions (locked in grill 2026-07-05):**
+
+- **Immutability boundary.** `transactionHash`, `descriptionHash`, and
+  `transaction.description` are never editable. Description is the raw bank key
+  (sha256 → descriptionHash, Tier 2); `customTitle` is the rename mechanism.
+  Frozen `transactionHash` means an edited transaction still dedups on re-import.
+
+- **Editable sets.** Transaction: `amount` (Decimal.js, signed), `occurredAt`,
+  `customTitle`, category via linked expense. Expense: `title`, `notes`,
+  `subCategoryId`; derived aggregates (`totalAmount`, count, first/last dates)
+  are NEVER directly writable — they reconcile automatically after transaction
+  edits, in the same `db.transaction`. File: `displayName` only.
+
+- **Pair guard.** An amount edit that breaks a refund pair's opposite-sign/nonzero
+  invariant is rejected with an Italian message ("Scollega prima il rimborso") —
+  never auto-unlinked.
+
+- **Route pages** (`/transactions/[id]`, `/expenses/[id]`, `/import/[fileId]`),
+  pencil-inline editing, SubcategoryPicker reuse, cerca-su-internet on tx+expense
+  pages; the expense "dettagli"+"modifica" dialogs collapse into the page.
+
+---
+
+**v2.4 historical decisions (ADR 0016 — shipped, kept for reference):**
 
 - **ADR 0016 (decision 1) — netting doctrine already usable, zero code.** A reimbursement for a shared/recurring cost is categorized under the *same* subcategory as the spend it offsets (option A, per ADR 0004) and nets by algebraic sum. The month a lump sum lands showing a net-positive OUT segment is accepted cash-basis behavior, not a bug. This milestone builds **no** new income/transfer classification for reimbursements.
 - **ADR 0016 (decision 2) — general "standalone expense" action, not a counterparty category.** The categorization flow gains an explicit "treat as a standalone expense / do not aggregate" option that captures a **title + subcategory** and detaches the single transaction into its own expense with a synthetic `descriptionHash` (`sha256("detached:{id}")`). It is deliberately general — available on any transaction — never a "money from a person" feature (classifying by counterparty is forbidden by the CONTEXT.md doctrine: classify by purpose, not by who).
@@ -57,6 +82,26 @@ Design contract is LOCKED (ADR 0016). Do not re-derive the approach:
 - [Phase ?]: Phase 61 (61-02): standalone menu item gated only on transaction.expenseId (STEXP-02 count gate removed); relabeled to 'Spesa a se (non aggregare)' to read as one-off/do-not-aggregate, not a mechanical split
 - [Phase ?]: Phase 61 (61-02): DetachExpenseDialog onSuccess payload gains subCategoryId; table applies markExpensesCategorized(String(subCategoryId)) immediately instead of opening a second ExpenseCategorizeDialog step
 - [Phase ?]: Phase 61 (61-02): TransactionTitleEdit row title precedence fixed to customTitle -> expenseTitle -> description (fallbackTitle prop) so a renamed standalone expense shows its chosen title, not the raw bank description
+- [Phase ?]: transaction table has no updatedAt column (schema.ts) — removed the updatedAt field from the .set() payload described in the plan/research skeleton (Rule 1 bug fix)
+- [Phase ?]: Select-chain test mock made thenable so awaited .where() calls without a following .limit()/.groupBy() resolve correctly, matching Drizzle's real query builder shape
+- [Phase 62]: updateExpense subCategoryId three-state contract: undefined leaves category/status untouched, null clears (status 1, no history), positive number assigns (status 3, history written) — Matches categorizeExpense semantics for DET-04 without a separate schema; consistent status/history behavior across all manual-categorization entry points
+- [Phase 62]: History write failure inside updateExpense's transaction is non-fatal — Matches existing categorizeExpense/bulkCategorize behavior — consistency with the categorize flow is the DET-04 requirement itself
+- [Phase 63]: getExpenseForDetail accepts userId as a parameter instead of self-calling verifySession() — The RSC page already verifies the session once and passes it down
+- [Phase 63]: transactionDetailHref/expenseDetailHref are standalone functions in lib/routes.ts, not APP_ROUTES keys — Preserves the APP_ROUTES object's as-const static-string shape
+- [Phase ?]: [Phase 63]: Category edit on /transactions/[id] reuses ExpenseCategorizeDialog/categorizeExpense directly instead of updateExpense — UpdateExpenseSchema requires title, categorizeExpense's narrower {id, subCategoryId} contract matches D-12's single edit-point requirement
+- [Phase ?]: Expense detail page category edit reuses categorizeExpense directly (not updateExpense) — matches the 63-02 transaction-page deviation; UpdateExpenseSchema requires title, categorizeExpense's {id, subCategoryId} contract is the correct minimal action
+- [Phase ?]: Expense Riepilogo card renders only fields ExpenseRow/getExpenseForDetail expose (totalAmount, transactionCount, createdAt) — no first/last transaction date field exists on the DAL row, none invented
+- [Phase 63]: Table component tests (full render, not per-row extraction) require mocking next/navigation (useRouter/useSearchParams/usePathname) in addition to @/components/ui/dropdown-menu, because useToolbarSort/useTableUrl call next/navigation hooks directly — Established pattern from tests/data-table-toolbar.test.tsx; without it renderToStaticMarkup throws 'invariant expected app router to be mounted'
+- [Phase 64]: importFileDetailHref is a standalone function, not added to APP_ROUTES, per the Phase 63 precedent
+- [Phase 64]: getFileDetailForUser supersedes getFileForUser for the file detail page; returns platformName: null when importFormatVersionId is absent
+- [Phase 64]: Expense pencil aria-label changed to 'Rinomina spesa' to avoid colliding with the pre-existing 'never renders a Modifica menu entry' guard test (Rule 1 bug fix)
+- [Phase 64]: Removed the now-unused APP_ROUTES import from transaction-table.tsx once its only remaining use (?fileId= href) was replaced by importFileDetailHref
+- [Phase ?]: [Phase 64]: DetailPageShell smart-back fallback triggers on window.history.length <= 1 OR cross-origin document.referrer; otherwise prefers router.back() to preserve in-app history
+- [Phase ?]: [Phase 64]: Components calling useRouter and tested via renderToStaticMarkup must mock next/navigation (precedent: tests/transaction-table-menu.test.tsx) — applied to tests/detail-page-shell.test.tsx
+- [Phase 64]: [Phase 64-06] Fix scoped to router.back() call site in handleBackClick's else branch only; use-table-url.ts's router.replace() writes untouched (switching to push() rejected as worse tradeoff)
+- [Phase 64]: [Phase 64-06] attachPopstateRefresh is a standalone hook-free export so it is unit-testable with a plain mock object, no jsdom needed
+- [Phase 64]: [Phase 64-07] CR-01 fixed via ancestor-only `.group` addition on the three detail-page title wrappers, not a rewrite of the shared pencil components — keeps the fix isolated from the already-correct table-row hover behavior
+- [Phase 64]: [Phase 64-07] WR-02: hasInAppHistory(historyLength) replaces document.referrer entirely as handleBackClick's sole branch signal — referrer is fixed at hard navigation and never updated by client-side App Router transitions, so it silently and permanently disabled smart-back for any tab that ever loaded from an external link
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -124,21 +169,25 @@ Items acknowledged and postponed:
 | v2.2 | TR categorization | regex-discovery + seed-patterns post-import — deferred |
 | operator | R038/R039/R041 | live Vercel/Supabase/R2 deploy operator-pending |
 | backlog | R029 | partial categorization revalidation coverage |
+| debug | 64-smart-back-filter-loss | diagnosed — hypothesis CONFIRMED (Next.js App Router Client Cache reused on back/forward), fix deferred |
+| quick_task | allocation-filter-dashboard (20260622) | missing — acknowledged at v2.5 close |
+| quick_task | 260615-dtm-reusable-regex-discovery-tool-bank-agnos | unknown — acknowledged at v2.5 close |
+| quick_task | 260615-n3t-fix-recurring-onboarding-catalogazione-s | unknown — acknowledged at v2.5 close |
+| quick_task | 260703-na4-full-description-tooltip-widen-expense-t | missing — acknowledged at v2.5 close |
 
 ## Session Continuity
 
 **Resume file:** None
 
-**Stopped at:** Completed 61-02-PLAN.md
+**Stopped at:** v2.5 milestone complete, ready to plan next milestone
 
-Last session: 2026-07-01T09:41:27.043Z
+Last session: 2026-07-06T22:45:00.000Z
 
-**Next:** Start the next milestone with `/gsd-new-milestone`
+**Next:** `/gsd-complete-milestone v2.5` to archive, then `/gsd-new-milestone` to start the next cycle
 
 ## Operator Next Steps
 
-- Run `yarn db:seed-patterns` to apply supermarket regex changes from quick task 260701-mqh
-- Start the next milestone with `/gsd-new-milestone`
+- Start the next milestone with /gsd-new-milestone
 
 ## Performance Metrics
 
@@ -153,3 +202,15 @@ Last session: 2026-07-01T09:41:27.043Z
 | Phase 59 P04 | 2min | 2 tasks | 2 files |
 | Phase 61 P01 | 6min | 3 tasks | 5 files |
 | Phase 61 P02 | 90min | 3 tasks | 5 files |
+| Phase 62 P01 | 5min | 2 tasks | 4 files |
+| Phase 62 P02 | 3min | 2 tasks | 2 files |
+| Phase 63 P01 | 15min | 2 tasks | 7 files |
+| Phase 63 P02 | 12min | 2 tasks | 5 files |
+| Phase 63 P03 | 12min | 2 tasks | 4 files |
+| Phase 63 P04 | 6min | 2 tasks | 4 files |
+| Phase 64 P01 | 5min | 3 tasks | 6 files |
+| Phase 64 P02 | 8min | 2 tasks | 4 files |
+| Phase 64 P04 | 10min | 2 tasks | 9 files |
+| Phase 64 P05 | 8min | 1 tasks | 2 files |
+| Phase 64 P06 | 5min | 1 tasks | 2 files |
+| Phase 64 P07 | 12min | 2 tasks | 4 files |

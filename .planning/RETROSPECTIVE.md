@@ -4,6 +4,42 @@ Living retrospective — one section per milestone, newest first.
 
 ---
 
+## Milestone: v2.5 — Detail Pages
+
+**Shipped:** 2026-07-07
+**Phases:** 3 (62–64) | **Plans:** 13 | **Timeline:** 4 days (2026-07-03 → 2026-07-06)
+**Files:** 50 changed · +5446 / -91 lines
+
+### What Was Built
+
+- **Phase 62**: `updateTransaction` service — atomic amount/date/customTitle edit inside `db.transaction`, hashes/description frozen, same-transaction expense reconciliation, pre-write pair-invariant guard. `updateExpense` DAL rewritten to wrap ownership-scoped read/update/history-write in a single transaction, matching `categorizeExpense`'s status semantics.
+- **Phase 63**: `/transactions/[id]` and `/expenses/[id]` ownership-gated RSC pages built on a shared `DetailPageShell` layout; pencil-inline editing reuses existing dialogs (`ExpenseCategorizeDialog`, `CounterpartPickerDialog`, `DetachExpenseDialog`) with zero new server actions; old expense "dettagli"/"modifica" dialogs retired.
+- **Phase 64**: `/import/[fileId]` — the third and final detail page — with editable `displayName`, readonly stats, linked transactions preview, and lifted download/suggestions/delete actions; row-title-as-link + independent pencil button split across all three tables; smart-back navigation (`router.back()` with static-route fallback).
+
+### What Worked
+
+- **Reuse over rebuild (Phase 63)**: both detail pages wired pencil-inline editing straight into existing dialogs and actions instead of writing new ones — zero new server actions for the entire phase.
+- **DAL-first foundation (63-01)**: landing `getTransactionForDetail`/`getExpenseForDetail` + `DetailPageShell` as its own plan let Plans 02/03 run as parallel waves against a stable shared layout.
+- **Backend-then-UI split (Phase 62 → 63)**: locking `updateTransaction`/`updateExpense` with full test coverage before any page existed meant the UI plans had zero backend surprises.
+
+### What Was Inefficient
+
+- **Two gap-closure rounds in Phase 64**: 64-06 fixed a Client Cache reuse bug on `router.back()` (UAT-reported "filter lost on Indietro") and 64-07 fixed a code-review blocker (inline-edit pencil invisible on all three detail pages — missing Tailwind `.group` ancestor) bundled with a `document.referrer`-never-updates smart-back reliability bug. Both were real defects, but the `document.referrer` issue in particular was a known-fragile signal (fixed at hard navigation, never updated by client-side App Router transitions) that could have been flagged at design time rather than discovered via UAT.
+- **No formal milestone audit**: v2.5 was archived without a `/gsd-audit-milestone` run — same pattern as v2.2/v2.4. Acceptable given STATE.md already documented UAT-passed + security-threat-verified (0 open) status, but a 3-phase/13-plan milestone is at the upper edge of where skipping the audit stays low-risk.
+
+### Patterns Established
+
+- **Route pages over dialogs for entity detail**: shareable URLs, native back/forward, and room for cross-refs — the deciding factor over extending the existing dialog-based UX.
+- **Title-link + independent pencil split**: `TransactionTitleEdit`/`ExpenseTitleEdit` render the row title as a genuine `next/link` and the pencil as a separate button, so navigation and inline-edit no longer compete for the same click target.
+- **`hasInAppHistory(historyLength)` over `document.referrer`** for smart-back branching: a pure, testable signal that doesn't silently degrade across SPA navigations.
+
+### Key Lessons
+
+- A signal fixed at hard-navigation time (`document.referrer`) is the wrong thing to branch on for client-side SPA behavior that changes on every route transition — prefer state that the router itself updates (`window.history.length`).
+- When a shared layout component (`DetailPageShell`) gains a new interactive affordance (inline-edit pencil), CSS ancestor scoping (`.group`) needs an explicit regression check across every page that reuses the layout — a fix on one page silently doesn't apply to siblings.
+
+---
+
 ## Milestone: v2.2 — PDF Import
 
 **Shipped:** 2026-06-26

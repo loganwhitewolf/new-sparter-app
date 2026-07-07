@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import Link from 'next/link'
 import { MoreHorizontal } from 'lucide-react'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 import { toast } from 'sonner'
@@ -38,12 +39,11 @@ import { BulkActionBar } from './bulk-action-bar'
 import { BulkCategorizeDialog } from './bulk-categorize-dialog'
 import { BulkDeleteExpensesDialog } from './bulk-delete-expenses-dialog'
 import { ExpenseCategorizeDialog } from './expense-categorize-dialog'
-import { ExpenseFormDialog } from './expense-form-dialog'
 import { ExpenseTitleEdit } from './expense-title-edit'
-import { ExpenseTransactionsDialog } from './expense-transactions-dialog'
 import type { ExpenseFilters, ExpenseRow } from '@/lib/dal/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
+import { expenseDetailHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -79,10 +79,6 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const [categorizeDialogExpense, setCategorizeDialogExpense] = useState<{
-    id: string
-    title: string
-  } | null>(null)
-  const [transactionsDialogExpense, setTransactionsDialogExpense] = useState<{
     id: string
     title: string
   } | null>(null)
@@ -342,33 +338,9 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onSelect={() => {
-                            setTransactionsDialogExpense({ id: exp.id, title: exp.title })
-                            setOpenDropdownId(null)
-                          }}
-                        >
-                          Dettagli
+                        <DropdownMenuItem asChild>
+                          <Link href={expenseDetailHref(exp.id)}>Dettagli</Link>
                         </DropdownMenuItem>
-                        <ExpenseFormDialog
-                          categories={categories}
-                          mostUsed={mostUsed}
-                          mode="edit"
-                          expense={exp}
-                          onSuccess={(updatedTitle) => {
-                            setLoadedExpenses((prev) =>
-                              prev.map((e) =>
-                                e.id === exp.id ? { ...e, title: updatedTitle } : e
-                              )
-                            )
-                            setOpenDropdownId(null)
-                          }}
-                          trigger={
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                              Modifica
-                            </DropdownMenuItem>
-                          }
-                        />
                         <IgnoreExpenseMenuItem
                           expense={exp}
                           onIgnored={() => setOpenDropdownId(null)}
@@ -452,14 +424,6 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
         categories={categories}
         mostUsed={mostUsed}
         onSuccess={() => setCategorizeDialogExpense(null)}
-      />
-
-      <ExpenseTransactionsDialog
-        open={transactionsDialogExpense !== null}
-        onOpenChange={(o) => {
-          if (!o) setTransactionsDialogExpense(null)
-        }}
-        expense={transactionsDialogExpense ?? { id: '', title: '' }}
       />
     </>
   )

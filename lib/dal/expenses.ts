@@ -1,10 +1,12 @@
 import 'server-only'
 import { cache } from 'react'
 import { db } from '@/lib/db'
-import { category, direction, expense, file, importFormatVersion, nature, platform, subCategory, userSubcategoryOverride } from '@/lib/db/schema'
+import { category, direction, expense, file, importFormatVersion, nature, platform, subCategory, transaction, userSubcategoryOverride } from '@/lib/db/schema'
 import { eq, and, count, gte, ilike, inArray, isNull, lte, or, asc, desc, sql } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { periodToDateRange } from '@/lib/utils/date'
+import { writeClassificationHistory } from '@/lib/dal/classification-history'
+import type { ExpenseTransactionRow } from '@/lib/dal/transactions'
 
 export { periodToDateRange } from '@/lib/utils/date'
 
@@ -325,6 +327,102 @@ export const getExpenseImportContext = cache(async (expenseId: string): Promise<
   }
 })
 
+export type ExpenseDetailRow = ExpenseRow & {
+  sourceFile: ExpenseSourceFile | null
+  transactions: ExpenseTransactionRow[]
+}
+
+/**
+ * Ownership-scoped detail query for `/expenses/[id]` (DET-06). Accepts `userId`
+ * as an argument instead of calling `verifySession()` internally — the RSC
+ * page already verifies the session once. Folds `getExpenseImportContext`'s
+ * sourceFile resolution into the same row query to avoid a second round-trip,
+ * then loads linked transactions scoped to both `expenseId` and `userId`
+ * (T-63-02), matching `getTransactionsByExpenseId`'s double-userId guard.
+ * Returns `undefined` — never throws — for a missing or non-owned id (T-63-01).
+ */
+export const getExpenseForDetail = cache(
+  async ({
+    userId,
+    id,
+  }: {
+    userId: string
+    id: string
+  }): Promise<ExpenseDetailRow | undefined> => {
+    const rows = await db
+      .select({
+        id: expense.id,
+        title: expense.title,
+        status: expense.status,
+        notes: expense.notes,
+        createdAt: expense.createdAt,
+        totalAmount: expense.totalAmount,
+        transactionCount: expense.transactionCount,
+        subCategoryId: expense.subCategoryId,
+        subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
+        categoryName: category.name,
+        categorySlug: category.slug,
+        platformName: platform.name,
+        fileId: file.id,
+        displayName: file.displayName,
+        originalName: file.originalName,
+      })
+      .from(expense)
+      .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+      .leftJoin(category, eq(subCategory.categoryId, category.id))
+      .leftJoin(
+        userSubcategoryOverride,
+        and(
+          eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+          eq(userSubcategoryOverride.userId, userId),
+        ),
+      )
+      .leftJoin(file, eq(expense.importedFromFileId, file.id))
+      .leftJoin(importFormatVersion, eq(file.importFormatVersionId, importFormatVersion.id))
+      .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
+      .where(and(eq(expense.id, id), eq(expense.userId, userId)))
+      .limit(1)
+
+    const row = rows[0]
+    if (!row) return undefined
+
+    const transactions = await db
+      .select({
+        id: transaction.id,
+        description: transaction.description,
+        customTitle: transaction.customTitle,
+        amount: transaction.amount,
+        currency: transaction.currency,
+        occurredAt: transaction.occurredAt,
+      })
+      .from(transaction)
+      .where(and(eq(transaction.expenseId, id), eq(transaction.userId, userId)))
+      .orderBy(desc(transaction.occurredAt))
+
+    return {
+      id: row.id,
+      title: row.title,
+      status: row.status,
+      notes: row.notes,
+      createdAt: row.createdAt,
+      totalAmount: row.totalAmount,
+      transactionCount: row.transactionCount,
+      subCategoryId: row.subCategoryId,
+      subCategoryName: row.subCategoryName,
+      categoryName: row.categoryName,
+      categorySlug: row.categorySlug,
+      platformName: row.platformName,
+      sourceFile: row.fileId
+        ? {
+            id: row.fileId,
+            name: row.displayName?.trim() || row.originalName || '',
+          }
+        : null,
+      transactions,
+    }
+  },
+)
+
 export async function insertExpense(data: {
   userId: string
   title: string
@@ -345,19 +443,60 @@ export async function updateExpense(data: {
   id: string
   userId: string
   title: string
-  subCategoryId?: number
+  /**
+   * Three-state contract (DET-04): `undefined` = field not present in this
+   * edit, leave subCategoryId/status untouched; `null` = explicit clear
+   * (status -> '1', no history write); positive number = assign category
+   * (status -> '3', classification-history row written with source 'manual').
+   */
+  subCategoryId?: number | null
   notes?: string
 }): Promise<void> {
-  await db
-    .update(expense)
-    .set({
+  await db.transaction(async (tx) => {
+    const before = await tx
+      .select({ subCategoryId: expense.subCategoryId, status: expense.status })
+      .from(expense)
+      .where(and(eq(expense.id, data.id), eq(expense.userId, data.userId)))
+      .limit(1)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateSet: Record<string, any> = {
       title: data.title,
-      subCategoryId: data.subCategoryId ?? null,
-      status: data.subCategoryId ? '3' : '1',
       notes: data.notes ?? null,
       updatedAt: new Date(),
-    })
-    .where(and(eq(expense.id, data.id), eq(expense.userId, data.userId)))
+    }
+
+    if (data.subCategoryId === undefined) {
+      // Omitted — leave subCategoryId/status untouched (title/notes-only edit).
+    } else if (data.subCategoryId === null) {
+      updateSet.subCategoryId = null
+      updateSet.status = '1'
+    } else {
+      updateSet.subCategoryId = data.subCategoryId
+      updateSet.status = '3'
+    }
+
+    await tx
+      .update(expense)
+      .set(updateSet)
+      .where(and(eq(expense.id, data.id), eq(expense.userId, data.userId)))
+
+    if (typeof data.subCategoryId === 'number') {
+      try {
+        await writeClassificationHistory(tx, {
+          userId: data.userId,
+          expenseId: data.id,
+          fromSubCategoryId: before[0]?.subCategoryId ?? null,
+          toSubCategoryId: data.subCategoryId,
+          fromStatus: before[0]?.status ?? null,
+          toStatus: '3',
+          source: 'manual',
+        })
+      } catch {
+        // history write failure is non-fatal
+      }
+    }
+  })
 }
 
 export async function updateExpenseTitle(data: {

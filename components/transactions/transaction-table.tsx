@@ -50,7 +50,7 @@ import type { TransactionListRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import type { TransactionSearchParams } from '@/lib/validations/transactions'
-import { APP_ROUTES } from '@/lib/routes'
+import { importFileDetailHref, transactionDetailHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -478,7 +478,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
                         {transaction.platformName ?? 'Piattaforma non disponibile'}
                       </span>
                       <Link
-                        href={`${APP_ROUTES.import}?fileId=${encodeURIComponent(transaction.fileId)}`}
+                        href={importFileDetailHref(transaction.fileId)}
                         className="truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
                         title={`Apri importazione: ${transaction.fileName ?? `Riga ${transaction.rowIndex + 1}`}`}
                       >
@@ -543,6 +543,9 @@ export function TransactionTable({ transactions, route, searchParams, categories
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={transactionDetailHref(transaction.id)}>Dettagli</Link>
+                      </DropdownMenuItem>
                       {/* Categorized rows: show only Ricategorizza (no Google search) */}
                       {isCategorized ? (
                         <DropdownMenuItem
