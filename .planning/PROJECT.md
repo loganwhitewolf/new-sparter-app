@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Sparter is a personal finance app for the Italian market. It supports email/password and Google/GitHub OAuth authentication with account linking, transaction and expense management, import history, CSV/Excel/PDF import flows backed by Cloudflare R2, user-managed categories, a year-scoped dashboard overview (grouped bar chart, 4 KPI cards, per-month movers drill-down, filter chips by income type and expense nature, FlowNature education popovers, uncategorized nudge), deviation analysis, a regex discovery pipeline (standalone post-categorization service with dedup gates, IDOR-guarded retroactive platform-scoped apply, and a reusable Files-table trigger), a guided first-import onboarding flow, a unified subcategory picker bottom sheet across all 7 selection surfaces, a collapsible icon-rail sidebar, structured logging, and a health endpoint. The app is deployed on Vercel (operator action) or runnable locally with a Supabase/R2 stack.
+Sparter is a personal finance app for the Italian market. It supports email/password and Google/GitHub OAuth authentication with account linking, transaction and expense management, import history, CSV/Excel/PDF import flows backed by Cloudflare R2, user-managed categories, a year-scoped dashboard overview (grouped bar chart, 4 KPI cards, per-month movers drill-down, filter chips by income type and expense nature, FlowNature education popovers, uncategorized nudge), deviation analysis, a regex discovery pipeline (standalone post-categorization service with dedup gates, IDOR-guarded retroactive platform-scoped apply, and a reusable Files-table trigger), a guided first-import onboarding flow, a unified subcategory picker bottom sheet across all 7 selection surfaces, a collapsible icon-rail sidebar, uniform detail pages for transaction/expense/import-file entities (`/transactions/[id]`, `/expenses/[id]`, `/import/[fileId]`) with pencil-inline editing and cross-references, structured logging, and a health endpoint. The app is deployed on Vercel (operator action) or runnable locally with a Supabase/R2 stack.
 
 ## Core Value
 
@@ -15,7 +15,8 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v2.2 (Phases 1–57) complete. The app now has:
+All milestones M001–v2.5 (Phases 1–64) complete. The app now has:
+- Uniform detail pages (v2.5): `/transactions/[id]`, `/expenses/[id]`, `/import/[fileId]` as the single place to view and edit everything editable about each entity, with pencil-inline editing, cross-references between entities, atomic derived-field reconciliation, and a pair-coherence guard that blocks amount edits breaking a refund pair
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
 - Import management, categorization (Tier 1 regex, Tier 2 history, Tier 3 AI gated)
 - Pattern suggestions: detect recurring uncategorized descriptions → review and promote during analysis → re-run post-import from `/import/[fileId]/suggestions`
@@ -32,7 +33,7 @@ All milestones M001–v2.2 (Phases 1–57) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Current Milestone: v2.5 — Detail Pages
+## Last Shipped Milestone: v2.5 — Detail Pages (shipped 2026-07-07, tag v2.5)
 
 **Goal:** Uniform detail pages for the three core entities — `/transactions/[id]`,
 `/expenses/[id]`, `/import/[fileId]` — as the single place to view and edit
@@ -40,7 +41,7 @@ everything editable (amount, date, title, category, notes, displayName), with
 cross-references between entities and existing actions (cerca su internet,
 categorizza, collega rimborso, spesa a sé) surfaced in place.
 
-**Domain contract (grill 2026-07-05, locked in REQUIREMENTS.md):**
+**Domain contract (grill 2026-07-05):**
 - `transactionHash`/`descriptionHash`/`description` are **immutable** — an edited
   transaction is still the same transaction to the importer (re-import dedups);
   `customTitle` is the rename mechanism.
@@ -49,36 +50,21 @@ categorizza, collega rimborso, spesa a sé) surfaced in place.
 - Edits that would break a refund pair's opposite-sign invariant are **blocked
   with a message**, never silently unlinked.
 
-**Phases:** 62 (transaction-edit-core, DET-01..04) → 63 (detail-pages-tx-expense,
-DET-05..07) → 64 (file-detail-and-navigation, DET-08..09).
+**Delivered (Phases 62-64, 13/13 plans):**
+- Phase 62 (transaction-edit-core): `updateTransaction` service (amount/occurredAt/customTitle
+  edit, hashes/description frozen, atomic expense reconciliation, pair-guard blocking with
+  Italian message) and `updateExpense` DAL extended to be atomic and classification-history-aware.
+- Phase 63 (detail-pages-tx-expense): `/transactions/[id]` and `/expenses/[id]` pages with
+  pencil-inline editing (amount, date, title, notes, category), ownership-scoped DAL queries,
+  shared `DetailPageShell` layout; old expense "dettagli"/"modifica" dialogs retired.
+- Phase 64 (file-detail-and-navigation): `/import/[fileId]` detail page (editable displayName,
+  readonly platform/format/stats, linked transactions preview) plus row-click/menu navigation
+  wiring across all three tables and consistent smart-back behavior (Client Cache busting on
+  `router.back()`, `hasInAppHistory` replacing an unreliable `document.referrer` check).
 
-**Deferred:** description editing, bulk edit, revision history, SPLIT-01.
-
-**Validated in Phase 62 (transaction-edit-core, 2026-07-05):** DET-01..04 — `updateTransaction`
-service (amount/occurredAt/customTitle edit, hashes/description frozen, atomic expense
-reconciliation, pair-guard blocking with Italian message) and `updateExpense` DAL extended
-to be atomic and classification-history-aware, matching the categorize flow's semantics.
-Backend + tests only, 16/16 must-haves verified. No UI yet — that's Phase 63.
-
-**Validated in Phase 63 (detail-pages-tx-expense, 2026-07-05):** DET-05..07 — `/transactions/[id]`
-and `/expenses/[id]` pages with pencil-inline editing (amount, date, title, notes, category),
-ownership-scoped DAL queries returning 404-as-undefined, shared `DetailPageShell` layout, and
-both tables' row menus wired to the new pages (old expense "dettagli"/"modifica" dialogs
-retired). 9/9 must-haves verified, 48/48 tests passing. Code review found and fixed one blocker
-(amount edit input seeded a currency-formatted string that failed re-save validation) plus four
-smaller consistency issues.
-
-**Validated in Phase 64 (file-detail-and-navigation, 2026-07-06):** DET-08..09 — `/import/[fileId]`
-detail page (editable displayName, readonly platform/format/stats, linked transactions preview,
-existing actions preserved) plus row-click/menu navigation wiring across all three tables and
-consistent smart-back behavior. Shipped across 7 plans including two gap-closure rounds: 64-06
-fixed a Client Cache reuse bug on `router.back()`, 64-07 fixed a code-review blocker (inline-edit
-pencil invisible on all three detail pages — missing Tailwind `.group` ancestor) plus a bundled
-smart-back reliability bug (`document.referrer` never updates across SPA navigations). 7/7
-must-haves verified, all UAT passed, 13/13 security threats closed (0 open).
-
-**v2.5 Detail Pages milestone shipped 2026-07-06** — all 3 phases (62-64) complete, 13/13 plans,
-9/9 DET requirements validated.
+**Status:** All 9 DET requirements validated. UAT passed (2/2), 13/13 security threats closed
+(0 open). One debug session (`64-smart-back-filter-loss`, root cause confirmed) and 4 stale
+quick-task entries acknowledged as deferred at milestone close — see STATE.md Deferred Items.
 
 ## Last Shipped Milestone: v2.4 — Standalone Expense (shipped 2026-07-01, tag v2.4)
 
@@ -194,6 +180,14 @@ must-haves verified, all UAT passed, 13/13 security threats closed (0 open).
 - ✓ IFMT-01–05: parsing contract moved from `platform` to `import_format_version` (ADR 0013); `platform` is pure identity; 7 CSV fixture hashes regression-proved identical; format versioning per-platform expressible with `unique(platformId, version)` — v2.2
 - ✓ PDF-01–05: Trade Republic PDF import via `unpdf` positional X-coordinate sign detection, Decimal.js balance chain validation, "TRANSAZIONI SUL CONTO" section extraction; PDF rows normalized to `ParsedImportFile` — detector/normalize/dedup/preview pass unchanged; user-friendly Italian error UX for unrecognized PDF formats — v2.2
 
+### Validated (v2.3–v2.5)
+
+- ✓ Platform as globally shared moderated identity (pending→approved), private ownership on Import Format only, seed slug-linkage fix (ADR 0015) — v2.3
+- ✓ Standalone Expense: general "spesa a sé / non aggregare" categorization action, in-place single-transaction isolation lifting `SINGLE_TRANSACTION_EXPENSE` guard (ADR 0016) — v2.4
+- ✓ DET-01..04: `updateTransaction` service (amount/occurredAt/customTitle, Decimal.js, hashes frozen) + atomic expense reconciliation + pair-coherence guard; `updateExpense` DAL atomic + history-aware — v2.5
+- ✓ DET-05..07: `/transactions/[id]` + `/expenses/[id]` detail pages with pencil-inline editing, `SubcategoryPicker` reuse, cross-refs; old expense dialogs retired — v2.5
+- ✓ DET-08..09: `/import/[fileId]` detail page (editable displayName, readonly stats) + row-click/menu navigation wiring across all three tables, consistent smart-back — v2.5
+
 ### Active (carryover / operator-pending)
 
 - [ ] R029 — Categorization revalidation for all entrypoints (partial, M005 covered existing ones)
@@ -233,7 +227,8 @@ must-haves verified, all UAT passed, 13/13 security threats closed (0 open).
 - [x] v2.1: Regex Discovery & Transaction Unification — standalone discovery service, dedup gates, IDOR-guarded retroactive apply, reusable trigger, cleaned import summary. Shipped 2026-06-22.
 - [x] v2.2: PDF Import — Import Format refactor (`platform`→`import_format_version`) + Trade Republic PDF import via `unpdf` positional extraction (ADR 0013/0014). Shipped 2026-06-26.
 - [x] v2.3: Platform Identity & Format Ownership — Platform as globally shared moderated identity (pending→approved), private ownership on Import Format only, seed slug-linkage fix (ADR 0015). Shipped 2026-06-30 (PR #31, tag v2.3).
-- [x] v2.4: Standalone Expense — general "treat as standalone / don't aggregate" action in categorization + in-place single-transaction isolation, lifting the SINGLE_TRANSACTION_EXPENSE guard (ADR 0016). Phase 61 verified 2026-07-01; milestone tag pending.
+- [x] v2.4: Standalone Expense — general "treat as standalone / don't aggregate" action in categorization + in-place single-transaction isolation, lifting the SINGLE_TRANSACTION_EXPENSE guard (ADR 0016). Shipped 2026-07-01, tag v2.4.
+- [x] v2.5: Detail Pages — uniform `/transactions/[id]`, `/expenses/[id]`, `/import/[fileId]` detail pages with pencil-inline editing, atomic derived-field reconciliation, pair-coherence guard, and consistent navigation wiring across all three tables. Shipped 2026-07-07, tag v2.5.
 
 ## Key Decisions
 
@@ -287,6 +282,11 @@ must-haves verified, all UAT passed, 13/13 security threats closed (0 open).
 | Single-transaction detach re-hashes the existing expense row in place (no new expense) (ADR 0016) | Multi-tx detach path would leave the source expense orphaned when it held only one transaction; in-place UPDATE avoids the orphan by construction, preserving classification history on the same row/id | ✓ Good |
 | Standalone-expense isolation is a general categorization action, not a "money from a person" category | Classifying by counterparty violates CONTEXT.md's categorization rule #1 (by purpose, not by who) and isn't reliably auto-detectable | ✓ Good |
 | Row title display precedence: `customTitle → expenseTitle → description` | Latent gap surfaced by v2.4: expense.title updates on standalone-rename but the row kept showing raw bank description, since TransactionTitleEdit never read expenseTitle. Fixed display-only; `transaction.description`/descriptionHash/aggregation/Tier 2 untouched | ✓ Good |
+| Hashes/`description` frozen on transaction edit (v2.5) | `customTitle` is the sole rename mechanism; re-imported rows still dedup against an edited transaction via unchanged `transactionHash` | ✓ Good |
+| Derived expense aggregates never directly writable, only reconciled (v2.5) | Single source of truth stays the linked transactions; `updateExpense`/`updateTransaction` both reconcile atomically in the same `db.transaction` | ✓ Good |
+| Pair-breaking amount edits blocked, not auto-unlinked (v2.5) | Silent unlinking would hide a state change from the user; explicit Italian message ("Scollega prima il rimborso") forces an intentional action | ✓ Good |
+| Route pages instead of dialogs for entity detail (v2.5) | Shareable URLs, browser back/forward, room for cross-refs and actions that dialogs couldn't accommodate | ✓ Good |
+| `router.back()` + Client Cache popstate busting for smart-back (v2.5) | Static fallback alone loses origin table's ephemeral filter/sort/scroll state; a bare `router.back()` alone re-served stale cached RSC payload | ✓ Good |
 
 ## Evolution
 
@@ -306,4 +306,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-06 — Phase 64 (file-detail-and-navigation) complete, verified 7/7; v2.5 Detail Pages milestone shipped (3/3 phases, 13/13 plans)*
+*Last updated: 2026-07-07 after v2.5 milestone — Detail Pages shipped (3/3 phases, 13/13 plans, 9/9 DET requirements validated)*

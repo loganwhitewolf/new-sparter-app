@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: Detail Pages
-current_phase: 64
-current_phase_name: file-detail-and-navigation
-status: completed
-stopped_at: v2.5 milestone complete — all 3 phases (62-64) shipped
-last_updated: "2026-07-06T17:15:58.221Z"
-last_activity: 2026-07-06
-last_activity_desc: Phase 64 complete
+current_phase: 5
+status: Awaiting next milestone
+stopped_at: v2.5 milestone complete, ready to plan next milestone
+last_updated: "2026-07-07T06:54:03.129Z"
+last_activity: 2026-07-07
+last_activity_desc: Milestone v2.5 completed and archived
 progress:
   total_phases: 3
   completed_phases: 3
   total_plans: 13
   completed_plans: 13
   percent: 100
+current_phase_name: file-detail-and-navigation
 ---
 
 # Project State
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 
 ## Current Position
 
-Milestone: v2.5 Detail Pages — COMPLETE (3/3 phases, 13/13 plans)
-Plan: Not started
-Status: v2.5 shipped. All UAT tests passed (2/2), security threat-verified (13/13 closed, 0 open), no regressions across 62/63/64 test suites.
-Last activity: 2026-07-06 — Phase 64 UAT passed, milestone complete
+Phase: Milestone v2.5 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-07 — Milestone v2.5 completed and archived
 
 ## Roadmap (v2.5 — Phases 62–64)
 
@@ -169,6 +169,11 @@ Items acknowledged and postponed:
 | v2.2 | TR categorization | regex-discovery + seed-patterns post-import — deferred |
 | operator | R038/R039/R041 | live Vercel/Supabase/R2 deploy operator-pending |
 | backlog | R029 | partial categorization revalidation coverage |
+| debug | 64-smart-back-filter-loss | diagnosed — hypothesis CONFIRMED (Next.js App Router Client Cache reused on back/forward), fix deferred |
+| quick_task | allocation-filter-dashboard (20260622) | missing — acknowledged at v2.5 close |
+| quick_task | 260615-dtm-reusable-regex-discovery-tool-bank-agnos | unknown — acknowledged at v2.5 close |
+| quick_task | 260615-n3t-fix-recurring-onboarding-catalogazione-s | unknown — acknowledged at v2.5 close |
+| quick_task | 260703-na4-full-description-tooltip-widen-expense-t | missing — acknowledged at v2.5 close |
 
 ## Session Continuity
 
@@ -182,7 +187,7 @@ Last session: 2026-07-06T22:45:00.000Z
 
 ## Operator Next Steps
 
-- Run `yarn db:seed-patterns` to apply supermarket regex changes from quick task 260701-mqh (if still pending)
+- Start the next milestone with /gsd-new-milestone
 
 ## Performance Metrics
 
