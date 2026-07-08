@@ -42,7 +42,7 @@ export function TransactionTitleEdit({
     return (
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex min-w-0 items-center gap-1">
-          <Link href={transactionDetailHref(id)} className="block min-w-0">
+          <Link href={transactionDetailHref(id)} className="block min-w-0 flex-1">
             <span className="block truncate font-medium tracking-tight" title={description}>
               {displayTitle}
             </span>

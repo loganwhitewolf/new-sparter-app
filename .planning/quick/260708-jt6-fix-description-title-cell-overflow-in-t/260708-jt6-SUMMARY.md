@@ -48,19 +48,36 @@ than the CSS truncation chain had ever been exercised with.
    (`expense-table.tsx:292`, `<TableCell className="truncate">`) worked
    *because* `<td>` is `display: table-cell`, not inline — that's the tell.
 
+**Round 3 (visual polish — real screen confirmed the fix works, but left a gap):**
+
+4. After rounds 1-2, the title truncated correctly but left visible empty
+   space between the ellipsis and the start of the next column. The title
+   `Link` sits in a **row**-direction flex container
+   (`<div className="flex min-w-0 items-center gap-1">`, alongside the pencil
+   button) with no `flex-grow` — flex items default to `flex-grow: 0`, so the
+   Link only claimed as much horizontal space as its own shrink-to-fit
+   calculation produced, not the full remaining row width. (The default
+   `align-items: stretch` that made earlier `min-w-0` fixes work only
+   stretches items along the **cross** axis — vertical in a row-direction
+   flex container — so it never applied here.) Adding `flex-1` to the Link
+   makes it explicitly claim all available horizontal space in that row, and
+   since its child `span` is `block` (width defaults to 100% of its
+   containing block), the truncated text now fills the column edge-to-edge.
+
 ## Changes
 
 | File | Change |
 |------|--------|
 | `components/transactions/transaction-table.tsx` | `min-w-0` added to the div wrapping `TransactionTitleEdit` |
 | `components/expenses/expense-table.tsx` | wrapper div gains `overflow-hidden`; `<Table>` gains `table-fixed w-full` |
-| `components/transactions/transaction-title-edit.tsx` | `block` added to the title `Link` and both `span`s (main title + "Originale:" fallback line) |
-| `components/expenses/expense-title-edit.tsx` | `block` added to the title `Link` and `span` |
+| `components/transactions/transaction-title-edit.tsx` | `block` on the title `Link` + both `span`s (main + "Originale:" line); `flex-1` added to the title `Link` |
+| `components/expenses/expense-title-edit.tsx` | `block` on the title `Link` + `span`; `flex-1` added to the title `Link` |
 
 No new component, no new truncation mechanism — the existing `truncate` +
 native `title=""` tooltip pattern (already correct in both
 `TransactionTitleEdit` and `ExpenseTitleEdit`) now actually takes effect,
-since both structural CSS bugs preventing it are fixed.
+since both structural CSS bugs preventing it are fixed, and the title column
+now claims its full allocated width.
 
 ## Verification
 
@@ -70,12 +87,6 @@ since both structural CSS bugs preventing it are fixed.
   set-state-in-effect warnings, documented as unrelated in the na4 task)
 - `yarn vitest run` — 115 files / 1368 tests green, no regressions
 - `yarn check:language` — clean
-
-**Not verified:** live browser confirmation. No browser-automation tool was
-available in this session to screenshot the running dev server. The fix
-mirrors an already-correct, already-shipped pattern 1:1 (transactions table's
-own working title-cell structure was the template for the expense-table fix;
-the transactions table fix is a single missing utility class in an otherwise
-correct chain) — confidence is high, but a manual check on `/transactions`
-and `/expenses` with the reported long-description rows is the remaining
-verification step.
+- **Round 3 was user-confirmed on the live app**: rounds 1-2 fixed the
+  overflow (user: "ora va meglio"); round 3 addresses the follow-up report of
+  excess gap before the next column.
