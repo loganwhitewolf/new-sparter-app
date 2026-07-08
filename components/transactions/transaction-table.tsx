@@ -372,7 +372,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
               activeDir={activeDir}
               align="right"
               onSort={onSort}
-              className="w-32 text-xs font-normal uppercase tracking-wide text-muted-foreground"
+              className="w-28 text-xs font-normal uppercase tracking-wide text-muted-foreground"
             />
             <HeaderSortButton
               column={{ key: 'occurredAt', label: 'Data' }}
@@ -431,7 +431,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
                   />
                 </TableCell>
                 <TableCell className="max-w-0 w-full">
-                  <div className="flex flex-col gap-1">
+                  <div className="flex min-w-0 flex-col gap-1">
                     <TransactionTitleEdit
                       id={transaction.id}
                       description={transaction.description}

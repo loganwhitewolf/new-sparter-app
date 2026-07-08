@@ -190,8 +190,8 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
 
   return (
     <>
-      <div className="rounded-xl border bg-card shadow-sm">
-        <Table>
+      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <Table className="table-fixed w-full">
           <TableCaption className="sr-only">
             Elenco spese con categoria, stato, totale e data.
           </TableCaption>
@@ -222,7 +222,7 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                 activeDir={activeDir}
                 align="right"
                 onSort={onSort}
-                className="w-32 text-xs uppercase tracking-wide text-muted-foreground font-normal"
+                className="w-28 text-xs uppercase tracking-wide text-muted-foreground font-normal"
               />
               <HeaderSortButton
                 column={{ key: 'createdAt', label: 'Data' }}
