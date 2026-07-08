@@ -222,7 +222,7 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                 activeDir={activeDir}
                 align="right"
                 onSort={onSort}
-                className="w-32 text-xs uppercase tracking-wide text-muted-foreground font-normal"
+                className="w-28 text-xs uppercase tracking-wide text-muted-foreground font-normal"
               />
               <HeaderSortButton
                 column={{ key: 'createdAt', label: 'Data' }}

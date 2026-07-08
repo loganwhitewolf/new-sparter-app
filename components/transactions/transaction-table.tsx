@@ -372,7 +372,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
               activeDir={activeDir}
               align="right"
               onSort={onSort}
-              className="w-32 text-xs font-normal uppercase tracking-wide text-muted-foreground"
+              className="w-28 text-xs font-normal uppercase tracking-wide text-muted-foreground"
             />
             <HeaderSortButton
               column={{ key: 'occurredAt', label: 'Data' }}

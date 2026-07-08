@@ -64,12 +64,23 @@ than the CSS truncation chain had ever been exercised with.
    since its child `span` is `block` (width defaults to 100% of its
    containing block), the truncated text now fills the column edge-to-edge.
 
+**Round 4 (column-width tuning, user follow-up):**
+
+5. With the title column correctly claiming its full allocated space (round
+   3), the user pointed at the `Importo`/`Totale` amount column as still too
+   wide for what it displays. `formatAbsoluteAmount` (`lib/utils/format-amount.ts`)
+   always renders the **absolute value** — no leading minus sign, direction is
+   conveyed by color/dimming instead — so the realistic max width is something
+   like `12.345,67 €` (~11 chars), comfortably under the original `w-32`
+   (128px). Reduced both amount columns to `w-28` (112px), handing the freed
+   16px/row to the title column.
+
 ## Changes
 
 | File | Change |
 |------|--------|
-| `components/transactions/transaction-table.tsx` | `min-w-0` added to the div wrapping `TransactionTitleEdit` |
-| `components/expenses/expense-table.tsx` | wrapper div gains `overflow-hidden`; `<Table>` gains `table-fixed w-full` |
+| `components/transactions/transaction-table.tsx` | `min-w-0` added to the div wrapping `TransactionTitleEdit`; `Importo` column `w-32` → `w-28` |
+| `components/expenses/expense-table.tsx` | wrapper div gains `overflow-hidden`; `<Table>` gains `table-fixed w-full`; `Totale` column `w-32` → `w-28` |
 | `components/transactions/transaction-title-edit.tsx` | `block` on the title `Link` + both `span`s (main + "Originale:" line); `flex-1` added to the title `Link` |
 | `components/expenses/expense-title-edit.tsx` | `block` on the title `Link` + `span`; `flex-1` added to the title `Link` |
 
