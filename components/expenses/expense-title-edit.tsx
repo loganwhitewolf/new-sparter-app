@@ -34,8 +34,8 @@ export function ExpenseTitleEdit({ id, title, onSuccess }: Props) {
   if (!isEditing) {
     return (
       <div className="flex min-w-0 max-w-full items-center gap-1">
-        <Link href={expenseDetailHref(id)} className="min-w-0">
-          <span className="min-w-0 truncate font-mono text-sm tracking-tight" title={title}>
+        <Link href={expenseDetailHref(id)} className="block min-w-0">
+          <span className="block min-w-0 truncate font-mono text-sm tracking-tight" title={title}>
             {title}
           </span>
         </Link>

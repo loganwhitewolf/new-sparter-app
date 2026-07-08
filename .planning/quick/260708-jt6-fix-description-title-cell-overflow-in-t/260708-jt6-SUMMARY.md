@@ -13,7 +13,9 @@ became visible after the na4 milestone task stopped truncating `expense.title`
 at write time (commits c3b39af/19143a8), which produced much longer strings
 than the CSS truncation chain had ever been exercised with.
 
-## Root cause (traced, not hypothesized)
+## Root cause (traced, not hypothesized) — two rounds
+
+**Round 1 (container-level):**
 
 1. **Transactions table** — `table-fixed` + wrapper `overflow-hidden` +
    `TableCell className="max-w-0 w-full"` were already correct. But the `<div
@@ -32,17 +34,33 @@ than the CSS truncation chain had ever been exercised with.
    from content, so the trick had no effect and long titles bled into
    `Totale`/`Data`/`Piattaforma`.
 
+**Round 2 (element-level, found after round 1 alone didn't fix it):**
+
+3. The innermost `<span className="truncate" ...>{title}</span>` — and the
+   `<Link>` wrapping it — are `display: inline` by default (`span`/`a`).
+   `text-overflow`/`overflow`/`width` do not apply to non-replaced inline
+   boxes per the CSS spec: a `white-space: nowrap` inline box simply grows to
+   its content's natural width regardless of any ancestor's `min-w-0` chain,
+   because there is no width being constrained on the inline box itself to
+   begin with. `truncate` alone (`overflow: hidden; text-overflow: ellipsis;
+   white-space: nowrap`) silently does nothing on an inline element. The one
+   place `truncate` already worked in this codebase before this task
+   (`expense-table.tsx:292`, `<TableCell className="truncate">`) worked
+   *because* `<td>` is `display: table-cell`, not inline — that's the tell.
+
 ## Changes
 
 | File | Change |
 |------|--------|
 | `components/transactions/transaction-table.tsx` | `min-w-0` added to the div wrapping `TransactionTitleEdit` |
 | `components/expenses/expense-table.tsx` | wrapper div gains `overflow-hidden`; `<Table>` gains `table-fixed w-full` |
+| `components/transactions/transaction-title-edit.tsx` | `block` added to the title `Link` and both `span`s (main title + "Originale:" fallback line) |
+| `components/expenses/expense-title-edit.tsx` | `block` added to the title `Link` and `span` |
 
 No new component, no new truncation mechanism — the existing `truncate` +
 native `title=""` tooltip pattern (already correct in both
 `TransactionTitleEdit` and `ExpenseTitleEdit`) now actually takes effect,
-since the structural CSS bug preventing it is fixed.
+since both structural CSS bugs preventing it are fixed.
 
 ## Verification
 
