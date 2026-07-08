@@ -153,7 +153,7 @@ None. Scope is small, cohesive, and fully specified by ADR 0016.
 | 260703-na4 | Full description tooltip: widen expense.title to text, de-truncate writes, backfill, wrapped dialog column (reconciled 2026-07-07) | 2026-07-03 | 2ffbb4d |
 | 260707-fy4 | Persistent table filters via sessionStorage URL restore (bare-navigation restore layer, URL stays source of truth) | 2026-07-07 | def3f4b |
 | 260707-fast | Fix pre-existing test failures (expense-actions mock, import-table stale assertion, overview fixtures, expense title 500) + language-check quoted-string false positives | 2026-07-07 | c9dc08a |
-| 260708-jt6 | Fix description/title cell overflow in transactions+expenses tables (missing min-w-0 / table-fixed broke CSS truncate chain) | 2026-07-08 | 9d1ad08 |
+| 260708-jt6 | Fix description/title cell overflow in transactions+expenses tables (missing min-w-0/table-fixed + inline span/link ignoring truncate) | 2026-07-08 | 4903880 |
 
 ## Deferred Items
 
