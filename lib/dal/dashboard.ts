@@ -42,6 +42,10 @@ export type OverviewData = {
   totalOut: string
   totalAllocation: string
   balance: string
+  // Recurring-income-only balance (income nature minus totalOut) — the "structural"
+  // sustainability signal. Null when the aggregate row did not carry totalInRecurring
+  // (260709-kp1). No delta: it feeds the Bilancio reading, not a trend chip.
+  structuralBalance: string | null
   savingsRate: number
   uncategorizedCount: number
   deltas: {
@@ -175,6 +179,10 @@ type OverviewAggregateRow = {
   totalIn: string | null
   totalOut: string | null
   totalAllocation: string | null
+  // Recurring income only (nature.code = 'income', excludes income_extraordinary).
+  // Optional: absent/null means "unknown" and structuralBalance degrades to null
+  // (quick task 260709-kp1 — structural balance reading).
+  totalInRecurring?: string | null
 }
 
 type BreakdownAggregateRow = {
@@ -437,6 +445,8 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
         totalIn: sql<string>`coalesce(sum(case when ${direction.code} = 'in' then ${effectiveAmount()} else 0 end), 0)::text`,
         totalOut: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' then ${effectiveAmount()} else 0 end)), 0)::text`,
         totalAllocation: sql<string>`coalesce(sum(case when ${direction.code} = 'allocation' then ${effectiveAmount()} else 0 end), 0)::text`,
+        // Recurring income only — excludes income_extraordinary (260709-kp1).
+        totalInRecurring: sql<string>`coalesce(sum(case when ${direction.code} = 'in' and ${nature.code} = 'income' then ${effectiveAmount()} else 0 end), 0)::text`,
       })
       .from(transactionTable)
       .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -466,9 +476,21 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
         )
       )
 
-    return rows[0] ?? { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT, totalAllocation: ZERO_AMOUNT }
+    return (
+      rows[0] ?? {
+        totalIn: ZERO_AMOUNT,
+        totalOut: ZERO_AMOUNT,
+        totalAllocation: ZERO_AMOUNT,
+        totalInRecurring: ZERO_AMOUNT,
+      }
+    )
   } catch {
-    return { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT, totalAllocation: ZERO_AMOUNT }
+    return {
+      totalIn: ZERO_AMOUNT,
+      totalOut: ZERO_AMOUNT,
+      totalAllocation: ZERO_AMOUNT,
+      totalInRecurring: ZERO_AMOUNT,
+    }
   }
 }
 
@@ -483,6 +505,11 @@ export function buildOverviewData(input: {
   // totalAllocation: propagate from aggregate row (new field in Phase 49)
   const totalAllocation = normalizeAmount(input.current.totalAllocation)
   const balance = balanceFrom(totalIn, totalOut)
+  // Structural balance: recurring income only (260709-kp1). Null when unknown.
+  const structuralBalance =
+    input.current.totalInRecurring != null
+      ? balanceFrom(normalizeAmount(input.current.totalInRecurring), totalOut)
+      : null
   const previousTotalIn = normalizeAmount(input.previous.totalIn)
   const previousTotalOut = normalizeAmount(input.previous.totalOut)
   const previousTotalAllocation = normalizeAmount(input.previous.totalAllocation)
@@ -496,6 +523,7 @@ export function buildOverviewData(input: {
     totalOut,
     totalAllocation,
     balance,
+    structuralBalance,
     savingsRate,
     uncategorizedCount: input.currentUncategorizedCount,
     deltas: {

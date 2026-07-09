@@ -145,8 +145,18 @@ export const getOverview = cache(async (year: number): Promise<OverviewData> => 
     })
   } catch {
     return buildOverviewData({
-      current: { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT, totalAllocation: ZERO_AMOUNT },
-      previous: { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT, totalAllocation: ZERO_AMOUNT },
+      current: {
+        totalIn: ZERO_AMOUNT,
+        totalOut: ZERO_AMOUNT,
+        totalAllocation: ZERO_AMOUNT,
+        totalInRecurring: ZERO_AMOUNT,
+      },
+      previous: {
+        totalIn: ZERO_AMOUNT,
+        totalOut: ZERO_AMOUNT,
+        totalAllocation: ZERO_AMOUNT,
+        totalInRecurring: ZERO_AMOUNT,
+      },
       currentUncategorizedCount: 0,
       previousUncategorizedCount: 0,
     })
