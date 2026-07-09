@@ -2,7 +2,7 @@ import type { OverviewData } from '@/lib/dal/dashboard'
 import { toDecimal } from '@/lib/utils/decimal'
 import { NATURE_LABELS } from '@/lib/utils/nature-labels'
 import { formatEur } from './format'
-import { ReadingKpiCard, type Reading } from './kpi-card-reading'
+import { ReadingKpiCard, type KpiComponentRow, type Reading, type ValueTone } from './kpi-card-reading'
 
 /**
  * Label for the recurring-only ("structural") breakdown row on the Bilancio and
@@ -81,95 +81,119 @@ export function resolveTrendReading(
   return trendReading(delta, prevYear, kind)
 }
 
+/** Sign-based tone: green when ≥ 0, red when < 0 (Bilancio / Tasso risparmio). */
+function signTone(value: number): ValueTone {
+  return value < 0 ? 'out' : 'in'
+}
+
 export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
   const prevYear = year - 1
   const balanceNumeric = Number(data.balance)
   const structuralNumeric = data.structuralBalance !== null ? Number(data.structuralBalance) : null
-  // Entrate composition (260709-lan): recurring from the DAL, extraordinary derived
-  // as totalIn − recurring (Decimal.js — never native arithmetic on money).
-  const incomeBreakdown =
+
+  // ── Entrate: Ricorrenti emphasised + Straordinarie muted; grand total below.
+  // Straordinarie derived as totalIn − recurring (Decimal.js — never native math on money).
+  const entrateComponents: KpiComponentRow[] =
     data.totalInRecurring !== null
       ? [
-          { label: 'Ricorrenti', value: formatEur(data.totalInRecurring) },
+          { label: 'Ricorrenti', value: formatEur(data.totalInRecurring), tone: 'in', emphasis: true },
           {
             label: 'Straordinarie',
             value: formatEur(toDecimal(data.totalIn).minus(toDecimal(data.totalInRecurring)).toNumber()),
+            tone: 'muted',
           },
         ]
-      : undefined
+      : [{ value: formatEur(data.totalIn), tone: 'in', emphasis: true }]
+
+  // ── Uscite: Essenziale emphasised + Discrezionale/Debiti muted; labels from
+  // NATURE_LABELS so the card can never drift from the chart's Uscite chips.
+  const usciteComponents: KpiComponentRow[] =
+    data.outByNature !== null
+      ? [
+          { label: NATURE_LABELS.essential, value: formatEur(data.outByNature.essential), tone: 'out', emphasis: true },
+          { label: NATURE_LABELS.discretionary, value: formatEur(data.outByNature.discretionary), tone: 'muted' },
+          { label: NATURE_LABELS.debt, value: formatEur(data.outByNature.debt), tone: 'muted' },
+        ]
+      : [{ value: formatEur(data.totalOut), tone: 'out', emphasis: true }]
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
       <ReadingKpiCard
-        label="Totale entrate"
-        value={formatEur(data.totalIn)}
-        tone="in"
+        label="Entrate"
+        components={entrateComponents}
+        total={data.totalInRecurring !== null ? { value: formatEur(data.totalIn), tone: 'neutral' } : null}
         delta={data.deltas.totalIn}
         goodWhenPositive
         prevYear={prevYear}
-        reading={resolveTrendReading(data.deltas.totalIn, prevYear, 'in')}
-        breakdown={incomeBreakdown}
+        // Trend reading dropped here — redundant with the YoY delta badge (260709-mf6).
+        reading={data.totalInRecurring !== null ? null : resolveTrendReading(data.deltas.totalIn, prevYear, 'in')}
         className="min-h-0"
       />
       <ReadingKpiCard
-        label="Totale uscite"
-        value={formatEur(data.totalOut)}
-        tone="out"
+        label="Uscite"
+        components={usciteComponents}
+        total={data.outByNature !== null ? { value: formatEur(data.totalOut), tone: 'neutral' } : null}
         delta={data.deltas.totalOut}
         goodWhenPositive={false}
         prevYear={prevYear}
-        reading={resolveTrendReading(data.deltas.totalOut, prevYear, 'out')}
-        // 260709-lkw: spending split by nature — labels from NATURE_LABELS so the
-        // card can never drift from the chart's Uscite chips (label review 2026-07-09).
-        breakdown={
-          data.outByNature !== null
-            ? [
-                { label: NATURE_LABELS.essential, value: formatEur(data.outByNature.essential) },
-                { label: NATURE_LABELS.discretionary, value: formatEur(data.outByNature.discretionary) },
-                { label: NATURE_LABELS.debt, value: formatEur(data.outByNature.debt) },
-              ]
-            : undefined
-        }
+        reading={data.outByNature !== null ? null : resolveTrendReading(data.deltas.totalOut, prevYear, 'out')}
         className="min-h-0"
       />
       <ReadingKpiCard
         label="Bilancio"
-        value={formatEur(data.balance)}
-        tone="balance"
+        // Structural (recurring-only) balance is the hero; grand total drops to the summary.
+        components={
+          structuralNumeric !== null
+            ? [
+                {
+                  label: STRUCTURAL_ROW_LABEL,
+                  value: formatEur(structuralNumeric),
+                  tone: signTone(structuralNumeric),
+                  emphasis: true,
+                  layout: 'stacked' as const,
+                },
+              ]
+            : [{ value: formatEur(data.balance), tone: signTone(balanceNumeric), emphasis: true }]
+        }
+        total={structuralNumeric !== null ? { value: formatEur(data.balance), tone: signTone(balanceNumeric) } : null}
         delta={data.deltas.balance}
         goodWhenPositive
         prevYear={prevYear}
         reading={balanceReading(balanceNumeric, structuralNumeric)}
-        // 260709-leg: structural (recurring-only) balance as a breakdown row — the
-        // number the kp1 warn reading refers to. "Straordinarie" is not repeated here
-        // (it lives on the Entrate card).
-        breakdown={
-          data.structuralBalance !== null
-            ? [{ label: STRUCTURAL_ROW_LABEL, value: formatEur(data.structuralBalance) }]
-            : undefined
-        }
         className="min-h-0"
       />
       <ReadingKpiCard
         label="Tasso risparmio"
-        value={`${data.savingsRate}%`}
-        tone="savings"
+        components={
+          data.structuralSavingsRate !== null
+            ? [
+                {
+                  label: STRUCTURAL_ROW_LABEL,
+                  value: `${data.structuralSavingsRate}%`,
+                  tone: signTone(data.structuralSavingsRate),
+                  emphasis: true,
+                  layout: 'stacked' as const,
+                },
+              ]
+            : [{ value: `${data.savingsRate}%`, tone: signTone(data.savingsRate), emphasis: true }]
+        }
+        total={
+          data.structuralSavingsRate !== null
+            ? { value: `${data.savingsRate}%`, tone: signTone(data.savingsRate) }
+            : null
+        }
         delta={data.deltas.savingsRate}
         goodWhenPositive
         prevYear={prevYear}
         reading={savingsReading(data.savingsRate)}
-        // 260709-lj5: recurring-only savings rate row.
-        breakdown={
-          data.structuralSavingsRate !== null
-            ? [{ label: STRUCTURAL_ROW_LABEL, value: `${data.structuralSavingsRate}%` }]
-            : undefined
-        }
         className="min-h-0"
       />
       <ReadingKpiCard
         label="Accantonato"
-        value={formatEur(toDecimal(data.totalAllocation).abs().toNumber())}
-        tone="allocation"
+        components={[
+          { value: formatEur(toDecimal(data.totalAllocation).abs().toNumber()), tone: 'allocation', emphasis: true },
+        ]}
+        total={null}
         delta={data.deltas.totalAllocation}
         goodWhenPositive
         prevYear={prevYear}

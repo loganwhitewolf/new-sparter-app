@@ -188,37 +188,61 @@ describe('balanceReading — structural-aware (260709-kp1, decision B+)', () => 
 
 const { ReadingKpiCard } = await import('@/components/dashboard/overview/kpi-card-reading')
 
-describe('ReadingKpiCard breakdown slot (260709-lan)', () => {
-  const baseProps = {
-    label: 'Totale entrate',
-    value: '5.000 €',
-    delta: null,
-    tone: 'in' as const,
-    reading: { text: 'Nessun confronto con il 2025', sentiment: 'neutral' as const },
-    prevYear: 2025,
-  }
-
-  it('renders breakdown rows with label and amount', () => {
+describe('ReadingKpiCard recurring-first layout (260709-mf6)', () => {
+  it('renders stacked component rows with an emphasised value and a total summary', () => {
     const html = renderToStaticMarkup(
       <ReadingKpiCard
-        {...baseProps}
-        breakdown={[
-          { label: 'Ricorrenti', value: '1.500 €' },
-          { label: 'Straordinarie', value: '3.500 €' },
+        label="Entrate"
+        components={[
+          { label: 'Ricorrenti', value: '1.500 €', tone: 'in', emphasis: true },
+          { label: 'Straordinarie', value: '3.500 €', tone: 'muted' },
         ]}
+        total={{ value: '5.000 €', tone: 'neutral' }}
+        delta={null}
+        prevYear={2025}
       />
     )
     expect(html).toContain('Ricorrenti')
     expect(html).toContain('Straordinarie')
     expect(html).toContain('1.500')
     expect(html).toContain('3.500')
+    // Grand total summary line
+    expect(html).toContain('Totale')
+    expect(html).toContain('5.000')
+    // Emphasised row uses the large type scale; secondary uses the smaller one
+    expect(html).toContain('text-2xl')
+    expect(html).toContain('text-lg')
   })
 
-  it('renders no breakdown block when the prop is absent or empty', () => {
-    const withoutProp = renderToStaticMarkup(<ReadingKpiCard {...baseProps} />)
-    const withEmpty = renderToStaticMarkup(<ReadingKpiCard {...baseProps} breakdown={[]} />)
-    expect(withoutProp).not.toContain('Ricorrenti')
-    expect(withoutProp).toBe(withEmpty)
+  it('renders a labelless single value with no total line (Accantonato shape)', () => {
+    const html = renderToStaticMarkup(
+      <ReadingKpiCard
+        label="Accantonato"
+        components={[{ value: '1.200 €', tone: 'allocation', emphasis: true }]}
+        total={null}
+        delta={null}
+        prevYear={2025}
+        reading={{ text: 'Nessun confronto con il 2025', sentiment: 'neutral' }}
+      />
+    )
+    expect(html).toContain('1.200')
+    expect(html).toContain('Nessun confronto')
+    expect(html).not.toContain('Totale')
+  })
+
+  it('renders the YoY delta badge when a delta is present', () => {
+    const html = renderToStaticMarkup(
+      <ReadingKpiCard
+        label="Entrate"
+        components={[{ value: '5.000 €', tone: 'in', emphasis: true }]}
+        total={null}
+        delta={12}
+        goodWhenPositive
+        prevYear={2025}
+      />
+    )
+    expect(html).toContain('+12%')
+    expect(html).toContain('2025')
   })
 })
 
