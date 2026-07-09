@@ -222,6 +222,52 @@ describe('ReadingKpiCard breakdown slot (260709-lan)', () => {
   })
 })
 
+const { KpiRow } = await import('@/components/dashboard/overview/kpi-row')
+
+describe('KpiRow breakdown wiring (260709-lan, 260709-leg)', () => {
+  const overviewFixture = {
+    totalIn: '5000.00',
+    totalOut: '2600.00',
+    totalAllocation: '0.00',
+    balance: '2400.00',
+    structuralBalance: '-1100.00',
+    totalInRecurring: '1500.00',
+    savingsRate: 48,
+    uncategorizedCount: 0,
+    deltas: {
+      totalIn: null,
+      totalOut: null,
+      totalAllocation: null,
+      balance: null,
+      savingsRate: null,
+      uncategorizedCount: null,
+    },
+  }
+
+  it('Entrate card shows Ricorrenti/Straordinarie and Bilancio card shows Ricorrente', () => {
+    const html = renderToStaticMarkup(<KpiRow data={overviewFixture} year={2026} />)
+    expect(html).toContain('Ricorrenti')
+    expect(html).toContain('Straordinarie')
+    // Bilancio structural row (singular label)
+    expect(html).toContain('Ricorrente')
+    // Structural amount −1100 and derived extraordinary 3500 both rendered
+    expect(html).toMatch(/1\.100|1100/)
+    expect(html).toMatch(/3\.500|3500/)
+  })
+
+  it('null structural/recurring fields → no breakdown rows anywhere', () => {
+    const html = renderToStaticMarkup(
+      <KpiRow
+        data={{ ...overviewFixture, structuralBalance: null, totalInRecurring: null }}
+        year={2026}
+      />
+    )
+    expect(html).not.toContain('Ricorrenti')
+    expect(html).not.toContain('Ricorrente')
+    expect(html).not.toContain('Straordinarie')
+  })
+})
+
 describe('deriveNatureBreakdown (FRU-FIX-02)', () => {
   it('income has recurring=1000 with correct label and color', () => {
     const result = deriveNatureBreakdown(FIXTURE, new Set(INCOME_KEYS), new Set(OUT_KEYS))

@@ -122,6 +122,14 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         goodWhenPositive
         prevYear={prevYear}
         reading={balanceReading(balanceNumeric, structuralNumeric)}
+        // 260709-leg: structural (recurring-only) balance as a breakdown row — the
+        // number the kp1 warn reading refers to. "Straordinarie" is not repeated here
+        // (it lives on the Entrate card).
+        breakdown={
+          data.structuralBalance !== null
+            ? [{ label: 'Ricorrente', value: formatEur(data.structuralBalance) }]
+            : undefined
+        }
         className="min-h-0"
       />
       <ReadingKpiCard
