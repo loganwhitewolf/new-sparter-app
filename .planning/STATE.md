@@ -6,8 +6,8 @@ current_phase: 5
 status: Awaiting next milestone
 stopped_at: v2.5 milestone complete, ready to plan next milestone
 last_updated: "2026-07-07T06:54:03.129Z"
-last_activity: 2026-07-07
-last_activity_desc: Milestone v2.5 completed and archived
+last_activity: 2026-07-08
+last_activity_desc: Completed quick task 260708-jt6 — fixed description/title cell overflow in transactions+expenses tables
 progress:
   total_phases: 3
   completed_phases: 3
@@ -153,8 +153,9 @@ None. Scope is small, cohesive, and fully specified by ADR 0016.
 | 260703-na4 | Full description tooltip: widen expense.title to text, de-truncate writes, backfill, wrapped dialog column (reconciled 2026-07-07) | 2026-07-03 | 2ffbb4d |
 | 260707-fy4 | Persistent table filters via sessionStorage URL restore (bare-navigation restore layer, URL stays source of truth) | 2026-07-07 | def3f4b |
 | 260707-fast | Fix pre-existing test failures (expense-actions mock, import-table stale assertion, overview fixtures, expense title 500) + language-check quoted-string false positives | 2026-07-07 | c9dc08a |
+| 260708-jt6 | Fix description/title cell overflow + edge-to-edge truncation + narrower amount column in transactions+expenses tables (min-w-0/table-fixed, inline span/link, flex-1, w-32→w-28) | 2026-07-08 | 1cd879d |
 | 260709-bdk | Re-import unlock: /api/files/initiate returns 409 only for completed imports; stale (failed/stuck) rows deleted on re-upload so onboarding + standard import can retry | 2026-07-09 | da24841 |
-| 260709-dq2 | Trade Republic CSV import format (seed-data v2, coexists with PDF v1 via header detection; datetime/description/amount mapping, quantity-strip aggregation). No migration — applied via yarn db:seed | 2026-07-09 | 30f153f |
+| 260709-dq2 | Trade Republic CSV import format (seed-data v2, coexists with PDF v1 via header detection; datetime/description/amount mapping, quantity-strip aggregation). Prod version-collision fixed via seed-extras step ensure-trade-republic-csv-global-format (MAX+1) | 2026-07-09 | 8d14b95 |
 
 ## Deferred Items
 

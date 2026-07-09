@@ -42,8 +42,8 @@ export function TransactionTitleEdit({
     return (
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex min-w-0 items-center gap-1">
-          <Link href={transactionDetailHref(id)} className="min-w-0">
-            <span className="truncate font-medium tracking-tight" title={description}>
+          <Link href={transactionDetailHref(id)} className="block min-w-0 flex-1">
+            <span className="block truncate font-medium tracking-tight" title={description}>
               {displayTitle}
             </span>
           </Link>
@@ -61,7 +61,7 @@ export function TransactionTitleEdit({
         </div>
         {customTitle ? (
           <span
-            className="truncate text-xs text-muted-foreground"
+            className="block truncate text-xs text-muted-foreground"
             title={description}
           >
             Originale: {description}
