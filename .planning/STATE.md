@@ -160,6 +160,8 @@ None. Scope is small, cohesive, and fully specified by ADR 0016.
 | 260709-kp1 | Bilancio KPI structural-aware reading (B+): headline stays totalIn−totalOut; warn "Senza le entrate straordinarie saresti a −X €" when positive only thanks to income_extraordinary. New totalInRecurring aggregate + OverviewData.structuralBalance. Tasso risparmio unchanged; freelance profile flagged as future work | 2026-07-09 | 2a2094d |
 | 260709-lan | Entrate KPI card composition breakdown: Ricorrenti + Straordinarie rows under the total (ReadingKpiCard breakdown slot; extraordinary derived totalIn−recurring via Decimal.js) | 2026-07-09 | 91dbd3e |
 | 260709-leg | Bilancio KPI card structural breakdown row: "Ricorrente −X €" under the total headline (reuses structuralBalance + breakdown slot; parity with Entrate card) | 2026-07-09 | 20e7021 |
+| 260709-lj5 | Tasso risparmio card recurring-only rate row (structuralSavingsRate, same formula/guards). Label provisional pending cross-card review | 2026-07-09 | f820be8 |
+| 260709-lkw | Uscite card nature breakdown: Essenziali/Discrezionali/Debiti rows (per-nature OUT sums in shared aggregate, outByNature). Labels provisional pending cross-card review | 2026-07-09 | c671da1 |
 
 ## Deferred Items
 
