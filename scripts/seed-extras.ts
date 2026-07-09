@@ -8,7 +8,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, max, sql } from 'drizzle-orm'
 import {
   categorizationPattern,
   category,
@@ -23,7 +23,11 @@ import {
   DROPPED_SUBCATEGORY_SLUGS,
   V2_SUBCATEGORY_MANIFEST,
 } from '../tests/fixtures/v2-taxonomy-manifest'
-import { categories as v2Categories, subCategories as v2SubCategories } from './seed-data'
+import {
+  categories as v2Categories,
+  importFormatVersions as seedFormatVersions,
+  subCategories as v2SubCategories,
+} from './seed-data'
 import {
   getOperatorDatabaseConfig,
   isDirectSupabaseHost,
@@ -832,6 +836,110 @@ async function backfillTruncatedExpenseTitles(database: Db): Promise<void> {
   )
 }
 
+// Idempotent: ensures the GLOBAL Trade Republic CSV import format exists even when a
+// user already created a PRIVATE format on the trade-republic platform in production.
+//
+// Why seed.ts alone is not enough: format version numbers are a per-platform sequence
+// SHARED by global and private formats (the wizard assigns MAX(version)+1), and the
+// unique constraint is (platformId, version) with NO owner scoping. In production a
+// private CSV format grabbed version 2 (MAX of the PDF v1 + 1), so seed-data's blind
+// `onConflictDoNothing()` insert of the global (trade-republic, 2) became a silent
+// no-op and the global CSV format was never added. This step instead inserts the
+// global CSV format at the next FREE version. Identity is the CSV header signature
+// (not the version), so it is a no-op once a global CSV format is present — including
+// fresh installs where seed-data already inserted it at v2.
+async function ensureTradeRepublicCsvGlobalFormat(database: Db): Promise<void> {
+  const TRADE_REPUBLIC_SLUG = 'trade-republic'
+
+  // Reuse the CSV contract from seed-data (single source of truth). Match the CSV
+  // entry by its contract shape, not by version — the PDF entry shares the slug.
+  const seed = seedFormatVersions.find(
+    (fv) =>
+      fv.platformSlug === TRADE_REPUBLIC_SLUG &&
+      fv.timestampColumn === 'datetime' &&
+      fv.amountColumn === 'amount',
+  )
+  if (!seed) {
+    console.log('    ensure-trade-republic-csv-global-format: seed CSV contract not found — skipping')
+    return
+  }
+
+  // headerSignature derivation mirrors headerSignatureFor() in seed.ts.
+  const csvHeaderSignature = [
+    seed.timestampColumn,
+    seed.descriptionColumn,
+    seed.amountColumn,
+    seed.positiveAmountColumn,
+    seed.negativeAmountColumn,
+  ]
+    .filter((column): column is string => Boolean(column))
+    .join(seed.delimiter)
+
+  const platformRows = await database
+    .select({ id: platform.id })
+    .from(platform)
+    .where(eq(platform.slug, TRADE_REPUBLIC_SLUG))
+    .limit(1)
+  const platformId = platformRows[0]?.id
+  if (platformId === undefined) {
+    console.log('    ensure-trade-republic-csv-global-format: platform not found — skipping')
+    return
+  }
+
+  // Idempotency guard: a GLOBAL (ownerUserId IS NULL) format with this CSV header
+  // signature already exists → nothing to do (fresh installs, re-runs).
+  const existingGlobal = await database
+    .select({ id: importFormatVersion.id, version: importFormatVersion.version })
+    .from(importFormatVersion)
+    .where(
+      and(
+        eq(importFormatVersion.platformId, platformId),
+        isNull(importFormatVersion.ownerUserId),
+        eq(importFormatVersion.headerSignature, csvHeaderSignature),
+      ),
+    )
+    .limit(1)
+  if (existingGlobal.length > 0) {
+    console.log(
+      `    ensure-trade-republic-csv-global-format: global CSV format already present (v${existingGlobal[0].version}) — skipping`,
+    )
+    return
+  }
+
+  // Next free version for this platform (steps past any private rows that took a slot).
+  const maxRows = await database
+    .select({ v: max(importFormatVersion.version) })
+    .from(importFormatVersion)
+    .where(eq(importFormatVersion.platformId, platformId))
+  const nextVersion = (maxRows[0]?.v ?? 0) + 1
+
+  await database.insert(importFormatVersion).values({
+    platformId,
+    ownerUserId: null,
+    visibility: 'global',
+    reviewStatus: 'approved',
+    version: nextVersion,
+    headerSignature: csvHeaderSignature,
+    notes: seed.notes,
+    isActive: true,
+    delimiter: seed.delimiter,
+    descriptionColumn: seed.descriptionColumn,
+    amountType: seed.amountType,
+    amountColumn: seed.amountColumn,
+    positiveAmountColumn: seed.positiveAmountColumn,
+    negativeAmountColumn: seed.negativeAmountColumn,
+    timestampColumn: seed.timestampColumn,
+    dateFormat: seed.dateFormat,
+    dateReplace: seed.dateReplace,
+    decimalReplace: seed.decimalReplace,
+    multiplyBy: seed.multiplyBy,
+    descriptionStripPattern: seed.descriptionStripPattern,
+  })
+  console.log(
+    `    ensure-trade-republic-csv-global-format: inserted global CSV format at v${nextVersion}`,
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Registry — append new taxonomy migration steps here (not regex patterns — see seed-patterns.ts)
 // ---------------------------------------------------------------------------
@@ -853,6 +961,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'move-parsing-contract-to-format-version', run: moveParsingContractToFormatVersion },
   { name: 'set-satispay-secondary-description-column', run: setSatispaySecondaryDescriptionColumn },
   { name: 'backfill-truncated-expense-titles', run: backfillTruncatedExpenseTitles },
+  { name: 'ensure-trade-republic-csv-global-format', run: ensureTradeRepublicCsvGlobalFormat },
 ]
 
 export const STEP_NAMES = STEPS.map((step) => step.name)
