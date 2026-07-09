@@ -233,6 +233,7 @@ describe('KpiRow breakdown wiring (260709-lan, 260709-leg)', () => {
     structuralBalance: '-1100.00',
     totalInRecurring: '1500.00',
     structuralSavingsRate: -73.3,
+    outByNature: { essential: '1800.00', discretionary: '600.00', debt: '200.00' },
     savingsRate: 48,
     uncategorizedCount: 0,
     deltas: {
@@ -256,6 +257,11 @@ describe('KpiRow breakdown wiring (260709-lan, 260709-leg)', () => {
     expect(html).toMatch(/3\.500|3500/)
     // 260709-lj5: recurring-only savings rate row on the Tasso risparmio card
     expect(html).toContain('-73.3%')
+    // 260709-lkw: Uscite split by nature
+    expect(html).toContain('Essenziali')
+    expect(html).toContain('Discrezionali')
+    expect(html).toContain('Debiti')
+    expect(html).toMatch(/1\.800|1800/)
   })
 
   it('null structural/recurring fields → no breakdown rows anywhere', () => {
@@ -266,6 +272,7 @@ describe('KpiRow breakdown wiring (260709-lan, 260709-leg)', () => {
           structuralBalance: null,
           totalInRecurring: null,
           structuralSavingsRate: null,
+          outByNature: null,
         }}
         year={2026}
       />
@@ -274,6 +281,7 @@ describe('KpiRow breakdown wiring (260709-lan, 260709-leg)', () => {
     expect(html).not.toContain('Ricorrente')
     expect(html).not.toContain('Straordinarie')
     expect(html).not.toContain('-73.3%')
+    expect(html).not.toContain('Essenziali')
   })
 })
 

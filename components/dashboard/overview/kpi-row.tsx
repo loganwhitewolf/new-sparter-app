@@ -112,6 +112,17 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         goodWhenPositive={false}
         prevYear={prevYear}
         reading={resolveTrendReading(data.deltas.totalOut, prevYear, 'out')}
+        // 260709-lkw: spending split by nature (same trio as the chart's Uscite chips).
+        // Labels provisional pending the cross-card label review.
+        breakdown={
+          data.outByNature !== null
+            ? [
+                { label: 'Essenziali', value: formatEur(data.outByNature.essential) },
+                { label: 'Discrezionali', value: formatEur(data.outByNature.discretionary) },
+                { label: 'Debiti', value: formatEur(data.outByNature.debt) },
+              ]
+            : undefined
+        }
         className="min-h-0"
       />
       <ReadingKpiCard

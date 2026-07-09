@@ -162,7 +162,15 @@ describe('dashboard DAL amount mapping', () => {
   it('propagates structuralBalance from totalInRecurring (extraordinary-heavy year: balance > 0, structural < 0)', () => {
     const overview = buildOverviewData({
       // totalIn 5000 includes 3500 extraordinary; recurring is 1500 vs 2600 out
-      current: { totalIn: '5000.00', totalOut: '2600.00', totalAllocation: '0.00', totalInRecurring: '1500.00' },
+      current: {
+        totalIn: '5000.00',
+        totalOut: '2600.00',
+        totalAllocation: '0.00',
+        totalInRecurring: '1500.00',
+        totalOutEssential: '1800.00',
+        totalOutDiscretionary: '600.00',
+        totalOutDebt: '200.00',
+      },
       previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00', totalInRecurring: '0.00' },
       currentUncategorizedCount: 0,
       previousUncategorizedCount: 0,
@@ -174,6 +182,12 @@ describe('dashboard DAL amount mapping', () => {
     expect(overview.totalInRecurring).toBe('1500.00')
     // 260709-lj5: recurring-only savings rate ((1500 − 2600)/1500 × 100 = −73.3)
     expect(overview.structuralSavingsRate).toBe(-73.3)
+    // 260709-lkw: spending split by nature propagated for the Uscite card breakdown
+    expect(overview.outByNature).toEqual({
+      essential: '1800.00',
+      discretionary: '600.00',
+      debt: '200.00',
+    })
   })
 
   it('structuralBalance equals balance when all income is recurring', () => {
@@ -199,6 +213,7 @@ describe('dashboard DAL amount mapping', () => {
     expect(overview.structuralBalance).toBeNull()
     expect(overview.totalInRecurring).toBeNull()
     expect(overview.structuralSavingsRate).toBeNull()
+    expect(overview.outByNature).toBeNull()
   })
 
   it('computes category and subcategory percentages by amount, not row count', () => {

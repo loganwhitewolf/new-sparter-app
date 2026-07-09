@@ -52,6 +52,9 @@ export type OverviewData = {
   // Recurring-only savings rate ((recurring − out)/recurring × 100) — feeds the Tasso
   // risparmio card breakdown (260709-lj5). Null when totalInRecurring is unknown.
   structuralSavingsRate: number | null
+  // Spending split by nature — feeds the Uscite card breakdown (260709-lkw).
+  // Null when the aggregate row lacks the per-nature fields.
+  outByNature: { essential: string; discretionary: string; debt: string } | null
   savingsRate: number
   uncategorizedCount: number
   deltas: {
@@ -189,6 +192,11 @@ type OverviewAggregateRow = {
   // Optional: absent/null means "unknown" and structuralBalance degrades to null
   // (quick task 260709-kp1 — structural balance reading).
   totalInRecurring?: string | null
+  // Per-nature OUT sums (abs of algebraic sum per nature, mirroring totalOut semantics).
+  // Optional: absent → outByNature degrades to null (260709-lkw — Uscite card breakdown).
+  totalOutEssential?: string | null
+  totalOutDiscretionary?: string | null
+  totalOutDebt?: string | null
 }
 
 type BreakdownAggregateRow = {
@@ -453,6 +461,10 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
         totalAllocation: sql<string>`coalesce(sum(case when ${direction.code} = 'allocation' then ${effectiveAmount()} else 0 end), 0)::text`,
         // Recurring income only — excludes income_extraordinary (260709-kp1).
         totalInRecurring: sql<string>`coalesce(sum(case when ${direction.code} = 'in' and ${nature.code} = 'income' then ${effectiveAmount()} else 0 end), 0)::text`,
+        // Per-nature OUT sums — Uscite card breakdown (260709-lkw). abs mirrors totalOut.
+        totalOutEssential: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'essential' then ${effectiveAmount()} else 0 end)), 0)::text`,
+        totalOutDiscretionary: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'discretionary' then ${effectiveAmount()} else 0 end)), 0)::text`,
+        totalOutDebt: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'debt' then ${effectiveAmount()} else 0 end)), 0)::text`,
       })
       .from(transactionTable)
       .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -488,6 +500,9 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
         totalOut: ZERO_AMOUNT,
         totalAllocation: ZERO_AMOUNT,
         totalInRecurring: ZERO_AMOUNT,
+        totalOutEssential: ZERO_AMOUNT,
+        totalOutDiscretionary: ZERO_AMOUNT,
+        totalOutDebt: ZERO_AMOUNT,
       }
     )
   } catch {
@@ -496,6 +511,9 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
       totalOut: ZERO_AMOUNT,
       totalAllocation: ZERO_AMOUNT,
       totalInRecurring: ZERO_AMOUNT,
+      totalOutEssential: ZERO_AMOUNT,
+      totalOutDiscretionary: ZERO_AMOUNT,
+      totalOutDebt: ZERO_AMOUNT,
     }
   }
 }
@@ -526,6 +544,17 @@ export function buildOverviewData(input: {
   // Recurring-only savings rate (260709-lj5) — same formula and guards, recurring income only.
   const structuralSavingsRate =
     totalInRecurring !== null ? computeSavingsRate(totalInRecurring, totalOut) : null
+  // Spending split by nature (260709-lkw). All three fields or null.
+  const outByNature =
+    input.current.totalOutEssential != null &&
+    input.current.totalOutDiscretionary != null &&
+    input.current.totalOutDebt != null
+      ? {
+          essential: normalizeAmount(input.current.totalOutEssential),
+          discretionary: normalizeAmount(input.current.totalOutDiscretionary),
+          debt: normalizeAmount(input.current.totalOutDebt),
+        }
+      : null
 
   return {
     totalIn,
@@ -536,6 +565,7 @@ export function buildOverviewData(input: {
     totalInRecurring,
     savingsRate,
     structuralSavingsRate,
+    outByNature,
     uncategorizedCount: input.currentUncategorizedCount,
     deltas: {
       totalIn: computeDeltaPercent(totalIn, previousTotalIn),
