@@ -1,7 +1,14 @@
 import type { OverviewData } from '@/lib/dal/dashboard'
 import { toDecimal } from '@/lib/utils/decimal'
+import { NATURE_LABELS } from '@/lib/utils/nature-labels'
 import { formatEur } from './format'
 import { ReadingKpiCard, type Reading } from './kpi-card-reading'
+
+/**
+ * Label for the recurring-only ("structural") breakdown row on the Bilancio and
+ * Tasso risparmio cards — locked in the cross-card label review (2026-07-09).
+ */
+const STRUCTURAL_ROW_LABEL = 'Solo ricorrenti'
 
 function savingsReading(rate: number): Reading {
   if (rate >= 20) return { text: 'Ottimo, sopra il 20% consigliato', sentiment: 'good' }
@@ -10,7 +17,22 @@ function savingsReading(rate: number): Reading {
   return { text: 'Attenzione: spendi più di quanto guadagni', sentiment: 'bad' }
 }
 
-function balanceReading(balance: number): Reading {
+/**
+ * Balance reading — structural-aware (260709-kp1, decision B+).
+ *
+ * The headline value stays totalIn − totalOut (reconciles with the Entrate/Uscite
+ * cards); the reading exposes when a positive balance holds only thanks to
+ * extraordinary income, quantifying the recurring-only ("structural") balance so
+ * the diagnosis carries its evidence. `structural === null` (unknown) degrades to
+ * the legacy reading.
+ */
+export function balanceReading(balance: number, structural: number | null = null): Reading {
+  if (balance > 0 && structural !== null && structural < 0) {
+    return {
+      text: `Senza le entrate straordinarie saresti a ${formatEur(structural)}`,
+      sentiment: 'warn',
+    }
+  }
   if (balance > 0) return { text: 'Spendi meno di quanto guadagni', sentiment: 'good' }
   if (balance < 0) return { text: 'Spendi più di quanto guadagni', sentiment: 'bad' }
   return { text: 'Sei in pareggio', sentiment: 'neutral' }
@@ -62,6 +84,19 @@ export function resolveTrendReading(
 export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
   const prevYear = year - 1
   const balanceNumeric = Number(data.balance)
+  const structuralNumeric = data.structuralBalance !== null ? Number(data.structuralBalance) : null
+  // Entrate composition (260709-lan): recurring from the DAL, extraordinary derived
+  // as totalIn − recurring (Decimal.js — never native arithmetic on money).
+  const incomeBreakdown =
+    data.totalInRecurring !== null
+      ? [
+          { label: 'Ricorrenti', value: formatEur(data.totalInRecurring) },
+          {
+            label: 'Straordinarie',
+            value: formatEur(toDecimal(data.totalIn).minus(toDecimal(data.totalInRecurring)).toNumber()),
+          },
+        ]
+      : undefined
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
@@ -73,6 +108,7 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         goodWhenPositive
         prevYear={prevYear}
         reading={resolveTrendReading(data.deltas.totalIn, prevYear, 'in')}
+        breakdown={incomeBreakdown}
         className="min-h-0"
       />
       <ReadingKpiCard
@@ -83,6 +119,17 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         goodWhenPositive={false}
         prevYear={prevYear}
         reading={resolveTrendReading(data.deltas.totalOut, prevYear, 'out')}
+        // 260709-lkw: spending split by nature — labels from NATURE_LABELS so the
+        // card can never drift from the chart's Uscite chips (label review 2026-07-09).
+        breakdown={
+          data.outByNature !== null
+            ? [
+                { label: NATURE_LABELS.essential, value: formatEur(data.outByNature.essential) },
+                { label: NATURE_LABELS.discretionary, value: formatEur(data.outByNature.discretionary) },
+                { label: NATURE_LABELS.debt, value: formatEur(data.outByNature.debt) },
+              ]
+            : undefined
+        }
         className="min-h-0"
       />
       <ReadingKpiCard
@@ -92,7 +139,15 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         delta={data.deltas.balance}
         goodWhenPositive
         prevYear={prevYear}
-        reading={balanceReading(balanceNumeric)}
+        reading={balanceReading(balanceNumeric, structuralNumeric)}
+        // 260709-leg: structural (recurring-only) balance as a breakdown row — the
+        // number the kp1 warn reading refers to. "Straordinarie" is not repeated here
+        // (it lives on the Entrate card).
+        breakdown={
+          data.structuralBalance !== null
+            ? [{ label: STRUCTURAL_ROW_LABEL, value: formatEur(data.structuralBalance) }]
+            : undefined
+        }
         className="min-h-0"
       />
       <ReadingKpiCard
@@ -103,6 +158,12 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         goodWhenPositive
         prevYear={prevYear}
         reading={savingsReading(data.savingsRate)}
+        // 260709-lj5: recurring-only savings rate row.
+        breakdown={
+          data.structuralSavingsRate !== null
+            ? [{ label: STRUCTURAL_ROW_LABEL, value: `${data.structuralSavingsRate}%` }]
+            : undefined
+        }
         className="min-h-0"
       />
       <ReadingKpiCard

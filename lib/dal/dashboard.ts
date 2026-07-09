@@ -42,6 +42,19 @@ export type OverviewData = {
   totalOut: string
   totalAllocation: string
   balance: string
+  // Recurring-income-only balance (income nature minus totalOut) — the "structural"
+  // sustainability signal. Null when the aggregate row did not carry totalInRecurring
+  // (260709-kp1). No delta: it feeds the Bilancio reading, not a trend chip.
+  structuralBalance: string | null
+  // Recurring income total (nature.code = 'income') — feeds the Entrate card breakdown
+  // (260709-lan). Extraordinary is derived as totalIn − totalInRecurring at render time.
+  totalInRecurring: string | null
+  // Recurring-only savings rate ((recurring − out)/recurring × 100) — feeds the Tasso
+  // risparmio card breakdown (260709-lj5). Null when totalInRecurring is unknown.
+  structuralSavingsRate: number | null
+  // Spending split by nature — feeds the Uscite card breakdown (260709-lkw).
+  // Null when the aggregate row lacks the per-nature fields.
+  outByNature: { essential: string; discretionary: string; debt: string } | null
   savingsRate: number
   uncategorizedCount: number
   deltas: {
@@ -175,6 +188,15 @@ type OverviewAggregateRow = {
   totalIn: string | null
   totalOut: string | null
   totalAllocation: string | null
+  // Recurring income only (nature.code = 'income', excludes income_extraordinary).
+  // Optional: absent/null means "unknown" and structuralBalance degrades to null
+  // (quick task 260709-kp1 — structural balance reading).
+  totalInRecurring?: string | null
+  // Per-nature OUT sums (abs of algebraic sum per nature, mirroring totalOut semantics).
+  // Optional: absent → outByNature degrades to null (260709-lkw — Uscite card breakdown).
+  totalOutEssential?: string | null
+  totalOutDiscretionary?: string | null
+  totalOutDebt?: string | null
 }
 
 type BreakdownAggregateRow = {
@@ -437,6 +459,12 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
         totalIn: sql<string>`coalesce(sum(case when ${direction.code} = 'in' then ${effectiveAmount()} else 0 end), 0)::text`,
         totalOut: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' then ${effectiveAmount()} else 0 end)), 0)::text`,
         totalAllocation: sql<string>`coalesce(sum(case when ${direction.code} = 'allocation' then ${effectiveAmount()} else 0 end), 0)::text`,
+        // Recurring income only — excludes income_extraordinary (260709-kp1).
+        totalInRecurring: sql<string>`coalesce(sum(case when ${direction.code} = 'in' and ${nature.code} = 'income' then ${effectiveAmount()} else 0 end), 0)::text`,
+        // Per-nature OUT sums — Uscite card breakdown (260709-lkw). abs mirrors totalOut.
+        totalOutEssential: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'essential' then ${effectiveAmount()} else 0 end)), 0)::text`,
+        totalOutDiscretionary: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'discretionary' then ${effectiveAmount()} else 0 end)), 0)::text`,
+        totalOutDebt: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'debt' then ${effectiveAmount()} else 0 end)), 0)::text`,
       })
       .from(transactionTable)
       .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
@@ -466,9 +494,27 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
         )
       )
 
-    return rows[0] ?? { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT, totalAllocation: ZERO_AMOUNT }
+    return (
+      rows[0] ?? {
+        totalIn: ZERO_AMOUNT,
+        totalOut: ZERO_AMOUNT,
+        totalAllocation: ZERO_AMOUNT,
+        totalInRecurring: ZERO_AMOUNT,
+        totalOutEssential: ZERO_AMOUNT,
+        totalOutDiscretionary: ZERO_AMOUNT,
+        totalOutDebt: ZERO_AMOUNT,
+      }
+    )
   } catch {
-    return { totalIn: ZERO_AMOUNT, totalOut: ZERO_AMOUNT, totalAllocation: ZERO_AMOUNT }
+    return {
+      totalIn: ZERO_AMOUNT,
+      totalOut: ZERO_AMOUNT,
+      totalAllocation: ZERO_AMOUNT,
+      totalInRecurring: ZERO_AMOUNT,
+      totalOutEssential: ZERO_AMOUNT,
+      totalOutDiscretionary: ZERO_AMOUNT,
+      totalOutDebt: ZERO_AMOUNT,
+    }
   }
 }
 
@@ -483,6 +529,11 @@ export function buildOverviewData(input: {
   // totalAllocation: propagate from aggregate row (new field in Phase 49)
   const totalAllocation = normalizeAmount(input.current.totalAllocation)
   const balance = balanceFrom(totalIn, totalOut)
+  // Structural balance: recurring income only (260709-kp1). Null when unknown.
+  const totalInRecurring =
+    input.current.totalInRecurring != null ? normalizeAmount(input.current.totalInRecurring) : null
+  const structuralBalance =
+    totalInRecurring !== null ? balanceFrom(totalInRecurring, totalOut) : null
   const previousTotalIn = normalizeAmount(input.previous.totalIn)
   const previousTotalOut = normalizeAmount(input.previous.totalOut)
   const previousTotalAllocation = normalizeAmount(input.previous.totalAllocation)
@@ -490,13 +541,31 @@ export function buildOverviewData(input: {
   // Savings rate uses spending-only totalOut — allocation must NOT enter the inputs (D-06, Pitfall 3)
   const savingsRate = computeSavingsRate(totalIn, totalOut)
   const previousSavingsRate = computeSavingsRate(previousTotalIn, previousTotalOut)
+  // Recurring-only savings rate (260709-lj5) — same formula and guards, recurring income only.
+  const structuralSavingsRate =
+    totalInRecurring !== null ? computeSavingsRate(totalInRecurring, totalOut) : null
+  // Spending split by nature (260709-lkw). All three fields or null.
+  const outByNature =
+    input.current.totalOutEssential != null &&
+    input.current.totalOutDiscretionary != null &&
+    input.current.totalOutDebt != null
+      ? {
+          essential: normalizeAmount(input.current.totalOutEssential),
+          discretionary: normalizeAmount(input.current.totalOutDiscretionary),
+          debt: normalizeAmount(input.current.totalOutDebt),
+        }
+      : null
 
   return {
     totalIn,
     totalOut,
     totalAllocation,
     balance,
+    structuralBalance,
+    totalInRecurring,
     savingsRate,
+    structuralSavingsRate,
+    outByNature,
     uncategorizedCount: input.currentUncategorizedCount,
     deltas: {
       totalIn: computeDeltaPercent(totalIn, previousTotalIn),

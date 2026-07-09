@@ -146,6 +146,145 @@ describe('resolveTrendReading (FRU-FIX-04)', () => {
   })
 })
 
+const { balanceReading } = await import('@/components/dashboard/overview/kpi-row')
+
+describe('balanceReading — structural-aware (260709-kp1, decision B+)', () => {
+  it('total > 0 and structural > 0 → good, legacy text', () => {
+    const result = balanceReading(1000, 400)
+    expect(result.text).toBe('Spendi meno di quanto guadagni')
+    expect(result.sentiment).toBe('good')
+  })
+
+  it('total > 0 but structural < 0 → warn carrying the formatted structural amount', () => {
+    const result = balanceReading(2400, -1100)
+    expect(result.sentiment).toBe('warn')
+    expect(result.text).toContain('Senza le entrate straordinarie')
+    // formatEur output carries the amount digits (locale-dependent separators)
+    expect(result.text).toMatch(/1[.  ]?100/)
+  })
+
+  it('total > 0 and structural = 0 → good (structural break-even still covers spending)', () => {
+    const result = balanceReading(500, 0)
+    expect(result.sentiment).toBe('good')
+  })
+
+  it('total < 0 → bad regardless of structural', () => {
+    expect(balanceReading(-300, -900).sentiment).toBe('bad')
+    expect(balanceReading(-300, null).sentiment).toBe('bad')
+  })
+
+  it('total = 0 → neutral pareggio', () => {
+    const result = balanceReading(0, -50)
+    expect(result.text).toBe('Sei in pareggio')
+    expect(result.sentiment).toBe('neutral')
+  })
+
+  it('structural null (unknown) → legacy behavior, never warn', () => {
+    const result = balanceReading(2400, null)
+    expect(result.text).toBe('Spendi meno di quanto guadagni')
+    expect(result.sentiment).toBe('good')
+  })
+})
+
+const { ReadingKpiCard } = await import('@/components/dashboard/overview/kpi-card-reading')
+
+describe('ReadingKpiCard breakdown slot (260709-lan)', () => {
+  const baseProps = {
+    label: 'Totale entrate',
+    value: '5.000 €',
+    delta: null,
+    tone: 'in' as const,
+    reading: { text: 'Nessun confronto con il 2025', sentiment: 'neutral' as const },
+    prevYear: 2025,
+  }
+
+  it('renders breakdown rows with label and amount', () => {
+    const html = renderToStaticMarkup(
+      <ReadingKpiCard
+        {...baseProps}
+        breakdown={[
+          { label: 'Ricorrenti', value: '1.500 €' },
+          { label: 'Straordinarie', value: '3.500 €' },
+        ]}
+      />
+    )
+    expect(html).toContain('Ricorrenti')
+    expect(html).toContain('Straordinarie')
+    expect(html).toContain('1.500')
+    expect(html).toContain('3.500')
+  })
+
+  it('renders no breakdown block when the prop is absent or empty', () => {
+    const withoutProp = renderToStaticMarkup(<ReadingKpiCard {...baseProps} />)
+    const withEmpty = renderToStaticMarkup(<ReadingKpiCard {...baseProps} breakdown={[]} />)
+    expect(withoutProp).not.toContain('Ricorrenti')
+    expect(withoutProp).toBe(withEmpty)
+  })
+})
+
+const { KpiRow } = await import('@/components/dashboard/overview/kpi-row')
+
+describe('KpiRow breakdown wiring (260709-lan, 260709-leg)', () => {
+  const overviewFixture = {
+    totalIn: '5000.00',
+    totalOut: '2600.00',
+    totalAllocation: '0.00',
+    balance: '2400.00',
+    structuralBalance: '-1100.00',
+    totalInRecurring: '1500.00',
+    structuralSavingsRate: -73.3,
+    outByNature: { essential: '1800.00', discretionary: '600.00', debt: '200.00' },
+    savingsRate: 48,
+    uncategorizedCount: 0,
+    deltas: {
+      totalIn: null,
+      totalOut: null,
+      totalAllocation: null,
+      balance: null,
+      savingsRate: null,
+      uncategorizedCount: null,
+    },
+  }
+
+  it('Entrate shows Ricorrenti/Straordinarie; Bilancio and Tasso show Solo ricorrenti (label review 2026-07-09)', () => {
+    const html = renderToStaticMarkup(<KpiRow data={overviewFixture} year={2026} />)
+    expect(html).toContain('Ricorrenti')
+    expect(html).toContain('Straordinarie')
+    // Structural rows on Bilancio + Tasso risparmio (locked label)
+    expect(html).toContain('Solo ricorrenti')
+    // Structural amount −1100 and derived extraordinary 3500 both rendered
+    expect(html).toMatch(/1\.100|1100/)
+    expect(html).toMatch(/3\.500|3500/)
+    // 260709-lj5: recurring-only savings rate row on the Tasso risparmio card
+    expect(html).toContain('-73.3%')
+    // 260709-lkw: Uscite split by nature — labels from NATURE_LABELS (chip lexicon)
+    expect(html).toContain('Essenziale')
+    expect(html).toContain('Discrezionale')
+    expect(html).toContain('Debiti')
+    expect(html).toMatch(/1\.800|1800/)
+  })
+
+  it('null structural/recurring fields → no breakdown rows anywhere', () => {
+    const html = renderToStaticMarkup(
+      <KpiRow
+        data={{
+          ...overviewFixture,
+          structuralBalance: null,
+          totalInRecurring: null,
+          structuralSavingsRate: null,
+          outByNature: null,
+        }}
+        year={2026}
+      />
+    )
+    expect(html).not.toContain('Ricorrenti')
+    expect(html).not.toContain('Solo ricorrenti')
+    expect(html).not.toContain('Straordinarie')
+    expect(html).not.toContain('-73.3%')
+    expect(html).not.toContain('Essenziale')
+  })
+})
+
 describe('deriveNatureBreakdown (FRU-FIX-02)', () => {
   it('income has recurring=1000 with correct label and color', () => {
     const result = deriveNatureBreakdown(FIXTURE, new Set(INCOME_KEYS), new Set(OUT_KEYS))
