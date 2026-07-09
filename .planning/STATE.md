@@ -162,6 +162,7 @@ None. Scope is small, cohesive, and fully specified by ADR 0016.
 | 260709-leg | Bilancio KPI card structural breakdown row: "Ricorrente −X €" under the total headline (reuses structuralBalance + breakdown slot; parity with Entrate card) | 2026-07-09 | 20e7021 |
 | 260709-lj5 | Tasso risparmio card recurring-only rate row (structuralSavingsRate, same formula/guards). Label locked: Solo ricorrenti (review 2026-07-09) | 2026-07-09 | f820be8 |
 | 260709-lkw | Uscite card nature breakdown: Essenziali/Discrezionali/Debiti rows (per-nature OUT sums in shared aggregate, outByNature). Labels locked: NATURE_LABELS chip lexicon (review 2026-07-09) | 2026-07-09 | c671da1 |
+| 260709-mf6 | Recurring-first KPI card restyle: ReadingKpiCard reworked to components-first (recurring/structural hero, total as summary line); Entrate/Uscite stacked additive rows, Bilancio/Tasso stacked structural label, sign-coloured. Verified in running app (light+dark) via throwaway proto | 2026-07-09 | d347a8b |
 
 ## Deferred Items
 
