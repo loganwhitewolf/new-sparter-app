@@ -232,6 +232,7 @@ describe('KpiRow breakdown wiring (260709-lan, 260709-leg)', () => {
     balance: '2400.00',
     structuralBalance: '-1100.00',
     totalInRecurring: '1500.00',
+    structuralSavingsRate: -73.3,
     savingsRate: 48,
     uncategorizedCount: 0,
     deltas: {
@@ -253,18 +254,26 @@ describe('KpiRow breakdown wiring (260709-lan, 260709-leg)', () => {
     // Structural amount −1100 and derived extraordinary 3500 both rendered
     expect(html).toMatch(/1\.100|1100/)
     expect(html).toMatch(/3\.500|3500/)
+    // 260709-lj5: recurring-only savings rate row on the Tasso risparmio card
+    expect(html).toContain('-73.3%')
   })
 
   it('null structural/recurring fields → no breakdown rows anywhere', () => {
     const html = renderToStaticMarkup(
       <KpiRow
-        data={{ ...overviewFixture, structuralBalance: null, totalInRecurring: null }}
+        data={{
+          ...overviewFixture,
+          structuralBalance: null,
+          totalInRecurring: null,
+          structuralSavingsRate: null,
+        }}
         year={2026}
       />
     )
     expect(html).not.toContain('Ricorrenti')
     expect(html).not.toContain('Ricorrente')
     expect(html).not.toContain('Straordinarie')
+    expect(html).not.toContain('-73.3%')
   })
 })
 

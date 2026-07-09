@@ -172,6 +172,8 @@ describe('dashboard DAL amount mapping', () => {
     expect(overview.structuralBalance).toBe('-1100.00')
     // 260709-lan: recurring total propagated for the Entrate card breakdown
     expect(overview.totalInRecurring).toBe('1500.00')
+    // 260709-lj5: recurring-only savings rate ((1500 − 2600)/1500 × 100 = −73.3)
+    expect(overview.structuralSavingsRate).toBe(-73.3)
   })
 
   it('structuralBalance equals balance when all income is recurring', () => {
@@ -183,6 +185,7 @@ describe('dashboard DAL amount mapping', () => {
     })
 
     expect(overview.structuralBalance).toBe(overview.balance)
+    expect(overview.structuralSavingsRate).toBe(overview.savingsRate)
   })
 
   it('structuralBalance is null when the aggregate row does not carry totalInRecurring', () => {
@@ -195,6 +198,7 @@ describe('dashboard DAL amount mapping', () => {
 
     expect(overview.structuralBalance).toBeNull()
     expect(overview.totalInRecurring).toBeNull()
+    expect(overview.structuralSavingsRate).toBeNull()
   })
 
   it('computes category and subcategory percentages by amount, not row count', () => {

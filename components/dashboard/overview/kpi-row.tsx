@@ -140,6 +140,13 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         goodWhenPositive
         prevYear={prevYear}
         reading={savingsReading(data.savingsRate)}
+        // 260709-lj5: recurring-only savings rate. Label provisional — breakdown
+        // wording across the three cards is under review.
+        breakdown={
+          data.structuralSavingsRate !== null
+            ? [{ label: 'Ricorrente', value: `${data.structuralSavingsRate}%` }]
+            : undefined
+        }
         className="min-h-0"
       />
       <ReadingKpiCard

@@ -49,6 +49,9 @@ export type OverviewData = {
   // Recurring income total (nature.code = 'income') — feeds the Entrate card breakdown
   // (260709-lan). Extraordinary is derived as totalIn − totalInRecurring at render time.
   totalInRecurring: string | null
+  // Recurring-only savings rate ((recurring − out)/recurring × 100) — feeds the Tasso
+  // risparmio card breakdown (260709-lj5). Null when totalInRecurring is unknown.
+  structuralSavingsRate: number | null
   savingsRate: number
   uncategorizedCount: number
   deltas: {
@@ -520,6 +523,9 @@ export function buildOverviewData(input: {
   // Savings rate uses spending-only totalOut — allocation must NOT enter the inputs (D-06, Pitfall 3)
   const savingsRate = computeSavingsRate(totalIn, totalOut)
   const previousSavingsRate = computeSavingsRate(previousTotalIn, previousTotalOut)
+  // Recurring-only savings rate (260709-lj5) — same formula and guards, recurring income only.
+  const structuralSavingsRate =
+    totalInRecurring !== null ? computeSavingsRate(totalInRecurring, totalOut) : null
 
   return {
     totalIn,
@@ -529,6 +535,7 @@ export function buildOverviewData(input: {
     structuralBalance,
     totalInRecurring,
     savingsRate,
+    structuralSavingsRate,
     uncategorizedCount: input.currentUncategorizedCount,
     deltas: {
       totalIn: computeDeltaPercent(totalIn, previousTotalIn),
