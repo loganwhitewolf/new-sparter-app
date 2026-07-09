@@ -154,6 +154,7 @@ None. Scope is small, cohesive, and fully specified by ADR 0016.
 | 260707-fy4 | Persistent table filters via sessionStorage URL restore (bare-navigation restore layer, URL stays source of truth) | 2026-07-07 | def3f4b |
 | 260707-fast | Fix pre-existing test failures (expense-actions mock, import-table stale assertion, overview fixtures, expense title 500) + language-check quoted-string false positives | 2026-07-07 | c9dc08a |
 | 260709-bdk | Re-import unlock: /api/files/initiate returns 409 only for completed imports; stale (failed/stuck) rows deleted on re-upload so onboarding + standard import can retry | 2026-07-09 | da24841 |
+| 260709-dq2 | Trade Republic CSV import format (seed-data v2, coexists with PDF v1 via header detection; datetime/description/amount mapping, quantity-strip aggregation). No migration — applied via yarn db:seed | 2026-07-09 | 30f153f |
 
 ## Deferred Items
 
