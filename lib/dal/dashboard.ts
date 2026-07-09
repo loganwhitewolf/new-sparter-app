@@ -46,6 +46,9 @@ export type OverviewData = {
   // sustainability signal. Null when the aggregate row did not carry totalInRecurring
   // (260709-kp1). No delta: it feeds the Bilancio reading, not a trend chip.
   structuralBalance: string | null
+  // Recurring income total (nature.code = 'income') — feeds the Entrate card breakdown
+  // (260709-lan). Extraordinary is derived as totalIn − totalInRecurring at render time.
+  totalInRecurring: string | null
   savingsRate: number
   uncategorizedCount: number
   deltas: {
@@ -506,10 +509,10 @@ export function buildOverviewData(input: {
   const totalAllocation = normalizeAmount(input.current.totalAllocation)
   const balance = balanceFrom(totalIn, totalOut)
   // Structural balance: recurring income only (260709-kp1). Null when unknown.
+  const totalInRecurring =
+    input.current.totalInRecurring != null ? normalizeAmount(input.current.totalInRecurring) : null
   const structuralBalance =
-    input.current.totalInRecurring != null
-      ? balanceFrom(normalizeAmount(input.current.totalInRecurring), totalOut)
-      : null
+    totalInRecurring !== null ? balanceFrom(totalInRecurring, totalOut) : null
   const previousTotalIn = normalizeAmount(input.previous.totalIn)
   const previousTotalOut = normalizeAmount(input.previous.totalOut)
   const previousTotalAllocation = normalizeAmount(input.previous.totalAllocation)
@@ -524,6 +527,7 @@ export function buildOverviewData(input: {
     totalAllocation,
     balance,
     structuralBalance,
+    totalInRecurring,
     savingsRate,
     uncategorizedCount: input.currentUncategorizedCount,
     deltas: {

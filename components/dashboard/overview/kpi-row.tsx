@@ -78,6 +78,18 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
   const prevYear = year - 1
   const balanceNumeric = Number(data.balance)
   const structuralNumeric = data.structuralBalance !== null ? Number(data.structuralBalance) : null
+  // Entrate composition (260709-lan): recurring from the DAL, extraordinary derived
+  // as totalIn − recurring (Decimal.js — never native arithmetic on money).
+  const incomeBreakdown =
+    data.totalInRecurring !== null
+      ? [
+          { label: 'Ricorrenti', value: formatEur(data.totalInRecurring) },
+          {
+            label: 'Straordinarie',
+            value: formatEur(toDecimal(data.totalIn).minus(toDecimal(data.totalInRecurring)).toNumber()),
+          },
+        ]
+      : undefined
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
@@ -89,6 +101,7 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         goodWhenPositive
         prevYear={prevYear}
         reading={resolveTrendReading(data.deltas.totalIn, prevYear, 'in')}
+        breakdown={incomeBreakdown}
         className="min-h-0"
       />
       <ReadingKpiCard

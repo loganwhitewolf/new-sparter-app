@@ -186,6 +186,42 @@ describe('balanceReading — structural-aware (260709-kp1, decision B+)', () => 
   })
 })
 
+const { ReadingKpiCard } = await import('@/components/dashboard/overview/kpi-card-reading')
+
+describe('ReadingKpiCard breakdown slot (260709-lan)', () => {
+  const baseProps = {
+    label: 'Totale entrate',
+    value: '5.000 €',
+    delta: null,
+    tone: 'in' as const,
+    reading: { text: 'Nessun confronto con il 2025', sentiment: 'neutral' as const },
+    prevYear: 2025,
+  }
+
+  it('renders breakdown rows with label and amount', () => {
+    const html = renderToStaticMarkup(
+      <ReadingKpiCard
+        {...baseProps}
+        breakdown={[
+          { label: 'Ricorrenti', value: '1.500 €' },
+          { label: 'Straordinarie', value: '3.500 €' },
+        ]}
+      />
+    )
+    expect(html).toContain('Ricorrenti')
+    expect(html).toContain('Straordinarie')
+    expect(html).toContain('1.500')
+    expect(html).toContain('3.500')
+  })
+
+  it('renders no breakdown block when the prop is absent or empty', () => {
+    const withoutProp = renderToStaticMarkup(<ReadingKpiCard {...baseProps} />)
+    const withEmpty = renderToStaticMarkup(<ReadingKpiCard {...baseProps} breakdown={[]} />)
+    expect(withoutProp).not.toContain('Ricorrenti')
+    expect(withoutProp).toBe(withEmpty)
+  })
+})
+
 describe('deriveNatureBreakdown (FRU-FIX-02)', () => {
   it('income has recurring=1000 with correct label and color', () => {
     const result = deriveNatureBreakdown(FIXTURE, new Set(INCOME_KEYS), new Set(OUT_KEYS))

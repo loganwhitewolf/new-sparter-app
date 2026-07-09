@@ -170,6 +170,8 @@ describe('dashboard DAL amount mapping', () => {
 
     expect(overview.balance).toBe('2400.00')
     expect(overview.structuralBalance).toBe('-1100.00')
+    // 260709-lan: recurring total propagated for the Entrate card breakdown
+    expect(overview.totalInRecurring).toBe('1500.00')
   })
 
   it('structuralBalance equals balance when all income is recurring', () => {
@@ -192,6 +194,7 @@ describe('dashboard DAL amount mapping', () => {
     })
 
     expect(overview.structuralBalance).toBeNull()
+    expect(overview.totalInRecurring).toBeNull()
   })
 
   it('computes category and subcategory percentages by amount, not row count', () => {

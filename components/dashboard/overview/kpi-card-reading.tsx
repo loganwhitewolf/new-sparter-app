@@ -42,6 +42,7 @@ export function ReadingKpiCard({
   goodWhenPositive = true,
   reading,
   prevYear,
+  breakdown,
   className,
 }: {
   label: string
@@ -51,6 +52,8 @@ export function ReadingKpiCard({
   goodWhenPositive?: boolean
   reading: Reading
   prevYear: number
+  /** Optional compact composition rows under the headline value (260709-lan). */
+  breakdown?: Array<{ label: string; value: string }>
   className?: string
 }) {
   return (
@@ -59,6 +62,19 @@ export function ReadingKpiCard({
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">{label}</p>
           <p className={cn('font-mono text-2xl font-semibold tabular-nums', valueColor(tone, value))}>{value}</p>
+          {breakdown && breakdown.length > 0 ? (
+            <div className="space-y-0.5 pt-0.5">
+              {breakdown.map((row) => (
+                <p
+                  key={row.label}
+                  className="flex items-baseline justify-between gap-2 text-xs text-muted-foreground"
+                >
+                  <span>{row.label}</span>
+                  <span className="font-mono tabular-nums">{row.value}</span>
+                </p>
+              ))}
+            </div>
+          ) : null}
         </div>
         <div className="space-y-1.5">
           <p className={cn('text-xs font-medium leading-snug', sentimentColor[reading.sentiment])}>{reading.text}</p>
