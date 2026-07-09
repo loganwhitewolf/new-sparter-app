@@ -159,6 +159,7 @@ None. Scope is small, cohesive, and fully specified by ADR 0016.
 | 260709-gfz | Persist dashboard Overview filters per-tab (sessionStorage): chart chips (chart-local, excluded-keys) restored post-hydration + year restored on bare mount via router.replace. Verification gap: live browser round-trip not driven (node-only test env, no jsdom) | 2026-07-09 | 8c8ed8a |
 | 260709-kp1 | Bilancio KPI structural-aware reading (B+): headline stays totalIn−totalOut; warn "Senza le entrate straordinarie saresti a −X €" when positive only thanks to income_extraordinary. New totalInRecurring aggregate + OverviewData.structuralBalance. Tasso risparmio unchanged; freelance profile flagged as future work | 2026-07-09 | 2a2094d |
 | 260709-lan | Entrate KPI card composition breakdown: Ricorrenti + Straordinarie rows under the total (ReadingKpiCard breakdown slot; extraordinary derived totalIn−recurring via Decimal.js) | 2026-07-09 | 91dbd3e |
+| 260709-leg | Bilancio KPI card structural breakdown row: "Ricorrente −X €" under the total headline (reuses structuralBalance + breakdown slot; parity with Entrate card) | 2026-07-09 | 20e7021 |
 
 ## Deferred Items
 
