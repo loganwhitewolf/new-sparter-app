@@ -246,20 +246,20 @@ describe('KpiRow breakdown wiring (260709-lan, 260709-leg)', () => {
     },
   }
 
-  it('Entrate card shows Ricorrenti/Straordinarie and Bilancio card shows Ricorrente', () => {
+  it('Entrate shows Ricorrenti/Straordinarie; Bilancio and Tasso show Solo ricorrenti (label review 2026-07-09)', () => {
     const html = renderToStaticMarkup(<KpiRow data={overviewFixture} year={2026} />)
     expect(html).toContain('Ricorrenti')
     expect(html).toContain('Straordinarie')
-    // Bilancio structural row (singular label)
-    expect(html).toContain('Ricorrente')
+    // Structural rows on Bilancio + Tasso risparmio (locked label)
+    expect(html).toContain('Solo ricorrenti')
     // Structural amount −1100 and derived extraordinary 3500 both rendered
     expect(html).toMatch(/1\.100|1100/)
     expect(html).toMatch(/3\.500|3500/)
     // 260709-lj5: recurring-only savings rate row on the Tasso risparmio card
     expect(html).toContain('-73.3%')
-    // 260709-lkw: Uscite split by nature
-    expect(html).toContain('Essenziali')
-    expect(html).toContain('Discrezionali')
+    // 260709-lkw: Uscite split by nature — labels from NATURE_LABELS (chip lexicon)
+    expect(html).toContain('Essenziale')
+    expect(html).toContain('Discrezionale')
     expect(html).toContain('Debiti')
     expect(html).toMatch(/1\.800|1800/)
   })
@@ -278,10 +278,10 @@ describe('KpiRow breakdown wiring (260709-lan, 260709-leg)', () => {
       />
     )
     expect(html).not.toContain('Ricorrenti')
-    expect(html).not.toContain('Ricorrente')
+    expect(html).not.toContain('Solo ricorrenti')
     expect(html).not.toContain('Straordinarie')
     expect(html).not.toContain('-73.3%')
-    expect(html).not.toContain('Essenziali')
+    expect(html).not.toContain('Essenziale')
   })
 })
 

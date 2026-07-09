@@ -1,7 +1,14 @@
 import type { OverviewData } from '@/lib/dal/dashboard'
 import { toDecimal } from '@/lib/utils/decimal'
+import { NATURE_LABELS } from '@/lib/utils/nature-labels'
 import { formatEur } from './format'
 import { ReadingKpiCard, type Reading } from './kpi-card-reading'
+
+/**
+ * Label for the recurring-only ("structural") breakdown row on the Bilancio and
+ * Tasso risparmio cards — locked in the cross-card label review (2026-07-09).
+ */
+const STRUCTURAL_ROW_LABEL = 'Solo ricorrenti'
 
 function savingsReading(rate: number): Reading {
   if (rate >= 20) return { text: 'Ottimo, sopra il 20% consigliato', sentiment: 'good' }
@@ -112,14 +119,14 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         goodWhenPositive={false}
         prevYear={prevYear}
         reading={resolveTrendReading(data.deltas.totalOut, prevYear, 'out')}
-        // 260709-lkw: spending split by nature (same trio as the chart's Uscite chips).
-        // Labels provisional pending the cross-card label review.
+        // 260709-lkw: spending split by nature — labels from NATURE_LABELS so the
+        // card can never drift from the chart's Uscite chips (label review 2026-07-09).
         breakdown={
           data.outByNature !== null
             ? [
-                { label: 'Essenziali', value: formatEur(data.outByNature.essential) },
-                { label: 'Discrezionali', value: formatEur(data.outByNature.discretionary) },
-                { label: 'Debiti', value: formatEur(data.outByNature.debt) },
+                { label: NATURE_LABELS.essential, value: formatEur(data.outByNature.essential) },
+                { label: NATURE_LABELS.discretionary, value: formatEur(data.outByNature.discretionary) },
+                { label: NATURE_LABELS.debt, value: formatEur(data.outByNature.debt) },
               ]
             : undefined
         }
@@ -138,7 +145,7 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         // (it lives on the Entrate card).
         breakdown={
           data.structuralBalance !== null
-            ? [{ label: 'Ricorrente', value: formatEur(data.structuralBalance) }]
+            ? [{ label: STRUCTURAL_ROW_LABEL, value: formatEur(data.structuralBalance) }]
             : undefined
         }
         className="min-h-0"
@@ -151,11 +158,10 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         goodWhenPositive
         prevYear={prevYear}
         reading={savingsReading(data.savingsRate)}
-        // 260709-lj5: recurring-only savings rate. Label provisional — breakdown
-        // wording across the three cards is under review.
+        // 260709-lj5: recurring-only savings rate row.
         breakdown={
           data.structuralSavingsRate !== null
-            ? [{ label: 'Ricorrente', value: `${data.structuralSavingsRate}%` }]
+            ? [{ label: STRUCTURAL_ROW_LABEL, value: `${data.structuralSavingsRate}%` }]
             : undefined
         }
         className="min-h-0"
