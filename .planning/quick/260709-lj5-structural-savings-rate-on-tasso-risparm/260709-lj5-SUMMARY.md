@@ -13,7 +13,7 @@ formula `(in − out)/in × 100` and zero-income guard, recurring income only. N
 totalInRecurring unknown → card unchanged. Reading thresholds still evaluate the
 total rate (unchanged).
 
-**Label provisional** ("Ricorrente") — cross-card label review follows (user request).
+**Label locked** (cross-card review 2026-07-09): "Solo ricorrenti".
 
 Verification: full suite green, tsc clean, check:language clean.
 Commit: f820be8

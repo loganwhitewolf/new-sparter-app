@@ -15,7 +15,8 @@ DAL: per-nature OUT sums in the shared aggregate (abs of algebraic sum per natur
 mirroring totalOut netting semantics); `OverviewData.outByNature` nullable object.
 Null → card unchanged.
 
-**Labels provisional** — cross-card label review follows (user request).
+**Labels locked** (cross-card review 2026-07-09): rows read from NATURE_LABELS
+(Essenziale / Discrezionale / Debiti) — same lexicon as the chart chips.
 
 Verification: full suite 1419/1419 green, tsc clean, check:language clean.
 Commit: c671da1
