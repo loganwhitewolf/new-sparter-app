@@ -68,6 +68,19 @@ export function isStaleDeletableStatus(status: ImportListRow['status']): boolean
   return (STALE_DELETABLE_STATUSES as readonly string[]).includes(status)
 }
 
+/**
+ * The only file status that blocks a re-upload of the same content hash. A
+ * completed import (`imported`) is the intended guard against re-importing
+ * duplicate data; every other status means the previous import never
+ * finished (including a stuck `importing`), so re-initiating should replace
+ * the stale row instead of returning 409.
+ */
+export const BLOCKS_REUPLOAD_STATUSES = ['imported'] as const satisfies readonly ImportListRow['status'][]
+
+export function blocksReupload(status: ImportListRow['status']): boolean {
+  return (BLOCKS_REUPLOAD_STATUSES as readonly string[]).includes(status)
+}
+
 const DOWNLOADABLE_STATUSES = new Set<ImportListRow['status']>([
   'uploaded',
   'analyzing',
