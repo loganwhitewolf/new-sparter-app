@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   createFileRecord: vi.fn(),
   findFileByContentHash: vi.fn(),
+  deleteFileForUser: vi.fn(),
   getFileForUser: vi.fn(),
   markFileFailed: vi.fn(),
   markFileUploaded: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock('@/lib/dal/files', () => ({
   },
   createFileRecord: mocks.createFileRecord,
   findFileByContentHash: mocks.findFileByContentHash,
+  deleteFileForUser: mocks.deleteFileForUser,
   getFileForUser: mocks.getFileForUser,
   markFileFailed: mocks.markFileFailed,
   markFileUploaded: mocks.markFileUploaded,
@@ -115,6 +117,7 @@ describe('file import upload API contracts', () => {
       }),
     )
     mocks.createPresignedPutUrl.mockResolvedValue({ url: 'https://r2.example.test/signed-put', expiresIn: 600 })
+    mocks.deleteFileForUser.mockResolvedValue(undefined)
     mocks.getFileForUser.mockResolvedValue(fileRow())
     mocks.headObject.mockResolvedValue({
       contentLength: 128,
@@ -144,7 +147,7 @@ describe('file import upload API contracts', () => {
     }))
   })
 
-  it('rejects duplicate uploads with 409 and existing file id when contentHash matches', async () => {
+  it('rejects re-upload with 409 only when the existing file finished importing', async () => {
     const existingId = '22222222-2222-4222-8222-222222222222'
     mocks.findFileByContentHash.mockResolvedValueOnce(fileRow({ id: existingId, status: 'imported' }))
     const hash = 'a'.repeat(64)
@@ -154,7 +157,9 @@ describe('file import upload API contracts', () => {
 
     expect(response.status).toBe(409)
     expect(body.error.code).toBe('duplicate_file')
+    expect(body.error.message).toBe('Hai già importato questo file.')
     expect(body.error.details.existingFileId).toBe(existingId)
+    expect(mocks.deleteFileForUser).not.toHaveBeenCalled()
     expect(mocks.createFileRecord).not.toHaveBeenCalled()
     expect(mocks.createPresignedPutUrl).not.toHaveBeenCalled()
     expect(mocks.findFileByContentHash).toHaveBeenCalledWith({ userId: 'user-1', contentHash: hash })
@@ -165,6 +170,36 @@ describe('file import upload API contracts', () => {
       existingFileId: existingId,
     }))
   })
+
+  it.each(['failed', 'importing', 'pending_upload', 'uploaded', 'analyzing', 'analyzed'] as const)(
+    'replaces a stale file (status %s) and proceeds with a fresh presigned URL',
+    async (status) => {
+      const existingId = '33333333-3333-4333-8333-333333333333'
+      mocks.findFileByContentHash.mockResolvedValueOnce(fileRow({ id: existingId, status }))
+      const hash = 'b'.repeat(64)
+
+      const response = await initiateUpload(jsonRequest({ name: 'fineco.csv', size: 128, type: 'text/csv', contentHash: hash }))
+      const body = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(mocks.deleteFileForUser).toHaveBeenCalledWith({ userId: 'user-1', fileId: existingId })
+      expect(mocks.createFileRecord).toHaveBeenCalledTimes(1)
+      expect(mocks.createPresignedPutUrl).toHaveBeenCalledTimes(1)
+      expect(body.upload).toEqual({
+        method: 'PUT',
+        url: 'https://r2.example.test/signed-put',
+        expiresIn: 600,
+        headers: { 'Content-Type': 'text/csv' },
+      })
+      expect(mocks.loggerInfo).toHaveBeenCalledWith(expect.objectContaining({
+        event: 'upload_initiate_stale_replaced',
+        userId: 'user-1',
+        contentHash: hash,
+        staleFileId: existingId,
+        staleStatus: status,
+      }))
+    },
+  )
 
   it('skips duplicate check and proceeds normally when no contentHash is provided', async () => {
     const response = await initiateUpload(jsonRequest({ name: 'fineco.csv', size: 128, type: 'text/csv' }))
