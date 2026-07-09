@@ -46,14 +46,6 @@ const toneColor: Record<ValueTone, string> = {
   neutral: 'text-foreground',
 }
 
-const dotColor: Record<ValueTone, string> = {
-  in: 'bg-total-in',
-  out: 'bg-total-out',
-  allocation: 'bg-[var(--total-allocation)]',
-  muted: 'bg-muted-foreground',
-  neutral: 'bg-foreground',
-}
-
 function formatDelta(delta: number): string {
   if (delta === 0) return '0%'
   const formatted = Number.isInteger(delta) ? String(delta) : delta.toFixed(1)
@@ -66,10 +58,25 @@ function deltaColor(delta: number, goodWhenPositive: boolean): string {
   return isGood ? 'text-total-in' : 'text-total-out'
 }
 
+/**
+ * Emphasised-value size step-down: a large number must never wrap to a second line,
+ * so long values shrink the type instead of breaking (260709-mf6 follow-up).
+ * Length thresholds are chosen against the ~1/5-width card at the 5-col breakpoint.
+ */
+function emphasisSizeClass(value: string): string {
+  const len = value.length
+  if (len <= 10) return 'text-2xl'
+  if (len <= 13) return 'text-xl'
+  if (len <= 16) return 'text-lg'
+  return 'text-base'
+}
+
 function ComponentRow({ row }: { row: KpiComponentRow }) {
   const valueClass = cn(
-    'font-mono tabular-nums',
-    row.emphasis ? 'text-2xl font-semibold leading-none' : 'text-lg font-medium',
+    'font-mono tabular-nums whitespace-nowrap',
+    row.emphasis
+      ? cn(emphasisSizeClass(row.value), 'font-semibold leading-none')
+      : 'text-lg font-medium',
     toneColor[row.tone]
   )
 
@@ -78,17 +85,10 @@ function ComponentRow({ row }: { row: KpiComponentRow }) {
     return <p className={valueClass}>{row.value}</p>
   }
 
-  const labelEl = (
-    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-      {row.emphasis ? (
-        <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', dotColor[row.tone])} aria-hidden="true" />
-      ) : null}
-      {row.label}
-    </span>
-  )
+  const labelEl = <span className="text-xs text-muted-foreground">{row.label}</span>
 
-  // Stacked: label above the value — avoids the label wrapping beside a large number
-  // in a narrow card (Bilancio, Tasso risparmio).
+  // Stacked: label above the value — the standalone hero number in a narrow card
+  // (Bilancio, Tasso risparmio).
   if (row.layout === 'stacked') {
     return (
       <div className="flex flex-col gap-1">
@@ -98,11 +98,12 @@ function ComponentRow({ row }: { row: KpiComponentRow }) {
     )
   }
 
-  // Inline (default): label left, value right.
+  // Inline (default): label left, value right. Value stays intact on one line;
+  // the label truncates first if space runs out.
   return (
     <div className="flex items-baseline justify-between gap-2">
-      {labelEl}
-      <span className={valueClass}>{row.value}</span>
+      <span className="min-w-0 truncate text-xs text-muted-foreground">{row.label}</span>
+      <span className={cn(valueClass, 'shrink-0')}>{row.value}</span>
     </div>
   )
 }
@@ -154,7 +155,12 @@ export function ReadingKpiCard({
             {total ? (
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-xs text-muted-foreground">Totale</span>
-                <span className={cn('font-mono text-sm font-medium tabular-nums', toneColor[total.tone])}>
+                <span
+                  className={cn(
+                    'font-mono text-sm font-medium tabular-nums whitespace-nowrap',
+                    toneColor[total.tone]
+                  )}
+                >
                   {total.value}
                 </span>
               </div>
