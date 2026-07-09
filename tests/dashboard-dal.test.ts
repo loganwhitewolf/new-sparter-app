@@ -158,6 +158,42 @@ describe('dashboard DAL amount mapping', () => {
     expect(overview.deltas.totalOut).toBeNull()
   })
 
+  // 260709-kp1: structural balance = recurring income only − totalOut
+  it('propagates structuralBalance from totalInRecurring (extraordinary-heavy year: balance > 0, structural < 0)', () => {
+    const overview = buildOverviewData({
+      // totalIn 5000 includes 3500 extraordinary; recurring is 1500 vs 2600 out
+      current: { totalIn: '5000.00', totalOut: '2600.00', totalAllocation: '0.00', totalInRecurring: '1500.00' },
+      previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00', totalInRecurring: '0.00' },
+      currentUncategorizedCount: 0,
+      previousUncategorizedCount: 0,
+    })
+
+    expect(overview.balance).toBe('2400.00')
+    expect(overview.structuralBalance).toBe('-1100.00')
+  })
+
+  it('structuralBalance equals balance when all income is recurring', () => {
+    const overview = buildOverviewData({
+      current: { totalIn: '3000.00', totalOut: '1000.00', totalAllocation: '0.00', totalInRecurring: '3000.00' },
+      previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: '0.00', totalInRecurring: '0.00' },
+      currentUncategorizedCount: 0,
+      previousUncategorizedCount: 0,
+    })
+
+    expect(overview.structuralBalance).toBe(overview.balance)
+  })
+
+  it('structuralBalance is null when the aggregate row does not carry totalInRecurring', () => {
+    const overview = buildOverviewData({
+      current: { totalIn: '2500.00', totalOut: '1500.00', totalAllocation: null },
+      previous: { totalIn: '0.00', totalOut: '0.00', totalAllocation: null },
+      currentUncategorizedCount: 0,
+      previousUncategorizedCount: 0,
+    })
+
+    expect(overview.structuralBalance).toBeNull()
+  })
+
   it('computes category and subcategory percentages by amount, not row count', () => {
     const breakdown = buildBreakdownData([
       {

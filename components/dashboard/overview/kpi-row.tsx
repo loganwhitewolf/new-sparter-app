@@ -10,7 +10,22 @@ function savingsReading(rate: number): Reading {
   return { text: 'Attenzione: spendi più di quanto guadagni', sentiment: 'bad' }
 }
 
-function balanceReading(balance: number): Reading {
+/**
+ * Balance reading — structural-aware (260709-kp1, decision B+).
+ *
+ * The headline value stays totalIn − totalOut (reconciles with the Entrate/Uscite
+ * cards); the reading exposes when a positive balance holds only thanks to
+ * extraordinary income, quantifying the recurring-only ("structural") balance so
+ * the diagnosis carries its evidence. `structural === null` (unknown) degrades to
+ * the legacy reading.
+ */
+export function balanceReading(balance: number, structural: number | null = null): Reading {
+  if (balance > 0 && structural !== null && structural < 0) {
+    return {
+      text: `Senza le entrate straordinarie saresti a ${formatEur(structural)}`,
+      sentiment: 'warn',
+    }
+  }
   if (balance > 0) return { text: 'Spendi meno di quanto guadagni', sentiment: 'good' }
   if (balance < 0) return { text: 'Spendi più di quanto guadagni', sentiment: 'bad' }
   return { text: 'Sei in pareggio', sentiment: 'neutral' }
@@ -62,6 +77,7 @@ export function resolveTrendReading(
 export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
   const prevYear = year - 1
   const balanceNumeric = Number(data.balance)
+  const structuralNumeric = data.structuralBalance !== null ? Number(data.structuralBalance) : null
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
@@ -92,7 +108,7 @@ export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
         delta={data.deltas.balance}
         goodWhenPositive
         prevYear={prevYear}
-        reading={balanceReading(balanceNumeric)}
+        reading={balanceReading(balanceNumeric, structuralNumeric)}
         className="min-h-0"
       />
       <ReadingKpiCard

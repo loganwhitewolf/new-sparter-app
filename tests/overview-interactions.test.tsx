@@ -146,6 +146,46 @@ describe('resolveTrendReading (FRU-FIX-04)', () => {
   })
 })
 
+const { balanceReading } = await import('@/components/dashboard/overview/kpi-row')
+
+describe('balanceReading — structural-aware (260709-kp1, decision B+)', () => {
+  it('total > 0 and structural > 0 → good, legacy text', () => {
+    const result = balanceReading(1000, 400)
+    expect(result.text).toBe('Spendi meno di quanto guadagni')
+    expect(result.sentiment).toBe('good')
+  })
+
+  it('total > 0 but structural < 0 → warn carrying the formatted structural amount', () => {
+    const result = balanceReading(2400, -1100)
+    expect(result.sentiment).toBe('warn')
+    expect(result.text).toContain('Senza le entrate straordinarie')
+    // formatEur output carries the amount digits (locale-dependent separators)
+    expect(result.text).toMatch(/1[.  ]?100/)
+  })
+
+  it('total > 0 and structural = 0 → good (structural break-even still covers spending)', () => {
+    const result = balanceReading(500, 0)
+    expect(result.sentiment).toBe('good')
+  })
+
+  it('total < 0 → bad regardless of structural', () => {
+    expect(balanceReading(-300, -900).sentiment).toBe('bad')
+    expect(balanceReading(-300, null).sentiment).toBe('bad')
+  })
+
+  it('total = 0 → neutral pareggio', () => {
+    const result = balanceReading(0, -50)
+    expect(result.text).toBe('Sei in pareggio')
+    expect(result.sentiment).toBe('neutral')
+  })
+
+  it('structural null (unknown) → legacy behavior, never warn', () => {
+    const result = balanceReading(2400, null)
+    expect(result.text).toBe('Spendi meno di quanto guadagni')
+    expect(result.sentiment).toBe('good')
+  })
+})
+
 describe('deriveNatureBreakdown (FRU-FIX-02)', () => {
   it('income has recurring=1000 with correct label and color', () => {
     const result = deriveNatureBreakdown(FIXTURE, new Set(INCOME_KEYS), new Set(OUT_KEYS))
