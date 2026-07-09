@@ -52,6 +52,16 @@ emphasised, total as a summary line).
   Playwright, reviewed both, fixed a label-wrap issue on Bilancio/Tasso (→ stacked
   label). Proto route removed after review.
 
+## Follow-up refinement (same session)
+
+- Removed the coloured dot before component labels (visual noise).
+- Values never wrap: `whitespace-nowrap` everywhere, and the emphasised hero value
+  steps its font size down by length (`emphasisSizeClass`) so a large amount shrinks
+  instead of breaking to a second line. On inline rows the value is `shrink-0` and the
+  label truncates first — only bites at 7-figure amounts, a rare graceful fallback.
+- Re-verified in the running app with a 7-figure stress scenario (light + dark).
+
 ## Commits
 
 - `d347a8b` feat: recurring-first KPI card restyle
+- `<refinement>` refactor: drop value dots; values never wrap (shrink instead)
