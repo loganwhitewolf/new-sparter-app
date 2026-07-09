@@ -293,6 +293,18 @@ export async function updateFileImportState(
   return rows[0] ?? null
 }
 
+/**
+ * Deletes a user-owned file row (e.g. a stale duplicate replaced on
+ * re-initiate). Ownership-scoped: only deletes when both id and userId
+ * match. Cascades to dependent transaction rows via onDelete: cascade.
+ */
+export async function deleteFileForUser(
+  input: { userId: string; fileId: string },
+  database: DbOrTx = db,
+): Promise<void> {
+  await database.delete(file).where(and(eq(file.id, input.fileId), eq(file.userId, input.userId)))
+}
+
 export function buildUserImportObjectKey(input: { userId: string; fileId: string; originalName: string }) {
   const extension = input.originalName.toLowerCase().match(/\.[a-z0-9]+$/)?.[0] ?? ''
   const safeExtension = ['.csv', '.xlsx'].includes(extension) ? extension : ''
