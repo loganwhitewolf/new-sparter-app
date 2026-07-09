@@ -57,8 +57,22 @@ transactions. Card/buy/transfer rows — the primary use — map exactly.
 
 ## Deploy note
 
-Run `yarn db:seed` on deploy — idempotent insert of the new `(trade-republic, 2)` row. No
-`db:migrate` or `db:seed-extras` step required.
+- **Fresh installs:** `yarn db:seed` inserts the global CSV format at `(trade-republic, 2)`.
+- **Existing production:** a user had already created a *private* CSV format via the wizard,
+  which took `version 2` (`MAX(version)+1` off the PDF v1). Because the
+  `(platformId, version)` unique constraint has no owner scoping, `seed.ts`'s
+  `onConflictDoNothing()` insert of the global `(trade-republic, 2)` was a silent no-op —
+  the global CSV format was never added. Fixed with an idempotent **seed-extras step**
+  `ensure-trade-republic-csv-global-format` that inserts the global CSV format at the next
+  free version (`MAX+1`), guarded by the CSV header signature so it is a no-op once a
+  global CSV format exists (including fresh installs).
+- **Run on deploy:** `yarn db:seed` then `yarn db:seed-extras`. No `db:migrate` needed.
+- Follow-up (deferred): a proper operator/admin promotion surface (promote a pending
+  private format to global in place vs. author a new global version) — the real fix for
+  the recurring "users create private formats, operator promotes them" workflow. The
+  schema lifecycle fields (`reviewStatus`, `visibility`, `proposedByUserId`/`ownerUserId`,
+  `role: admin`) already exist; only the review/promote surface is missing. Planned as the
+  v2.3 platform/format moderation feature.
 
 ## Commits (cherry-picked onto gsd/quick-260709-bdk-file-re-import — same trees, new hashes)
 
