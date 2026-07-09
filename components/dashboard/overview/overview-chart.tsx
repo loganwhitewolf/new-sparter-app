@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from 'recharts'
 import {
   ChartContainer,
@@ -20,6 +20,11 @@ import {
   type AllocationKey,
 } from './overview-chart-utils'
 import { OverviewChartFilters } from './overview-chart-filters'
+import {
+  readExcludedChips,
+  writeExcludedChips,
+  safeSessionStorage,
+} from './overview-persistence'
 
 // Chart config: Entrate = green (--total-in), Uscite = orange (--total-out), Accantonato = purple (--total-allocation).
 const chartConfig = {
@@ -120,7 +125,8 @@ type OverviewChartProps = {
 
 export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewChartProps) {
   // D-06: default all-on — all income, out, and allocation keys included.
-  // D-09: chip state is chart-local only (no URL, no localStorage).
+  // Defaults stay all-on so the SSR render matches the client's first render
+  // (hydration parity); persisted selection is applied post-mount below.
   const [includedIncome, setIncludedIncome] = useState<Set<IncomeKey>>(
     () => new Set(INCOME_KEYS)
   )
@@ -131,48 +137,68 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
     () => new Set(ALLOCATION_KEYS)
   )
 
+  // Session persistence (quick task 260709-gfz): chips remain chart-local (never in
+  // the URL — they filter already-fetched data client-side), but the excluded
+  // selection is remembered per-tab via sessionStorage. Restore runs once on mount,
+  // after hydration, so it never causes an SSR/client mismatch.
+  useEffect(() => {
+    const excluded = readExcludedChips(safeSessionStorage())
+    if (!excluded) return
+    setIncludedIncome(new Set(INCOME_KEYS.filter((k) => !excluded.income.includes(k))))
+    setIncludedOut(new Set(OUT_KEYS.filter((k) => !excluded.out.includes(k))))
+    setIncludedAllocation(
+      new Set(ALLOCATION_KEYS.filter((k) => !excluded.allocation.includes(k)))
+    )
+  }, [])
+
+  // Persist the EXCLUDED keys (default all-on ⇒ usually empty). Called from user-action
+  // handlers only — the restore effect above never writes, so there is no read/write race.
+  function persist(
+    income: Set<IncomeKey>,
+    out: Set<OutKey>,
+    allocation: Set<AllocationKey>
+  ) {
+    writeExcludedChips(safeSessionStorage(), {
+      income: INCOME_KEYS.filter((k) => !income.has(k)),
+      out: OUT_KEYS.filter((k) => !out.has(k)),
+      allocation: ALLOCATION_KEYS.filter((k) => !allocation.has(k)),
+    })
+  }
+
   // D-07: inclusive toggle — adds or removes a single key from the included set.
   function handleToggleIncome(key: IncomeKey) {
-    setIncludedIncome((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) {
-        next.delete(key)
-      } else {
-        next.add(key)
-      }
-      return next
-    })
+    const next = new Set(includedIncome)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    setIncludedIncome(next)
+    persist(next, includedOut, includedAllocation)
   }
 
   function handleToggleOut(key: OutKey) {
-    setIncludedOut((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) {
-        next.delete(key)
-      } else {
-        next.add(key)
-      }
-      return next
-    })
+    const next = new Set(includedOut)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    setIncludedOut(next)
+    persist(includedIncome, next, includedAllocation)
   }
 
   function handleToggleAllocation(key: AllocationKey) {
-    setIncludedAllocation((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) {
-        next.delete(key)
-      } else {
-        next.add(key)
-      }
-      return next
-    })
+    const next = new Set(includedAllocation)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    setIncludedAllocation(next)
+    persist(includedIncome, includedOut, next)
   }
 
   // D-08: reset restores all keys in all groups.
   function handleReset() {
-    setIncludedIncome(new Set(INCOME_KEYS))
-    setIncludedOut(new Set(OUT_KEYS))
-    setIncludedAllocation(new Set(ALLOCATION_KEYS))
+    const income = new Set(INCOME_KEYS)
+    const out = new Set(OUT_KEYS)
+    const allocation = new Set(ALLOCATION_KEYS)
+    setIncludedIncome(income)
+    setIncludedOut(out)
+    setIncludedAllocation(allocation)
+    persist(income, out, allocation)
   }
 
   // Derive bar rows using filter-aware reduction (FILT-01, FILT-02).
