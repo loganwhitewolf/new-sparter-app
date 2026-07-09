@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server'
 import { verifySession } from '@/lib/dal/auth'
-import { buildUserImportObjectKey, createFileRecord, findFileByContentHash, markFileFailed } from '@/lib/dal/files'
+import {
+  buildUserImportObjectKey,
+  createFileRecord,
+  deleteFileForUser,
+  findFileByContentHash,
+  markFileFailed,
+} from '@/lib/dal/files'
 import { logger, withLogContext } from '@/lib/logger'
 import { createPresignedPutUrl } from '@/lib/services/r2'
+import { blocksReupload } from '@/lib/utils/import-status'
 import { InitiateUploadSchema } from '@/lib/validations/import'
 
 export const runtime = 'nodejs'
@@ -85,15 +92,26 @@ export async function POST(request: Request) {
         contentHash: parsed.data.contentHash,
       })
       if (existing) {
+        if (blocksReupload(existing.status)) {
+          logger.info({
+            event: 'upload_initiate_duplicate',
+            userId: session.userId,
+            contentHash: parsed.data.contentHash,
+            existingFileId: existing.id,
+          })
+          return errorResponse(409, 'duplicate_file', 'Hai già importato questo file.', {
+            existingFileId: existing.id,
+          })
+        }
+
         logger.info({
-          event: 'upload_initiate_duplicate',
+          event: 'upload_initiate_stale_replaced',
           userId: session.userId,
           contentHash: parsed.data.contentHash,
-          existingFileId: existing.id,
+          staleFileId: existing.id,
+          staleStatus: existing.status,
         })
-        return errorResponse(409, 'duplicate_file', 'Hai già caricato questo file.', {
-          existingFileId: existing.id,
-        })
+        await deleteFileForUser({ userId: session.userId, fileId: existing.id })
       }
     }
 

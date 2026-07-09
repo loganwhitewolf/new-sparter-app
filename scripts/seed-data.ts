@@ -1091,6 +1091,34 @@ export const importFormatVersions = [
     descriptionStripPattern: "quantity:\\s*[\\d.,]+\\s*",
     notes: "Initial Trade Republic PDF import contract",
   },
+  {
+    // Trade Republic CSV import contract — version 2, coexists with the PDF (version 1)
+    // above via header detection. Trade Republic now offers a CSV export directly, more
+    // reliable than PDF text extraction; the PDF contract stays unchanged for existing
+    // uploads.
+    // Only the single signed `amount` column is read: `fee`/`tax` columns are ignored, so
+    // INTEREST_PAYMENT/DIVIDEND rows import their gross amount (withholding tax not
+    // netted) and TAX_OPTIMIZATION rows (amount = 0.000000) import as €0 transactions.
+    // Acceptable for a first CSV contract — card/buy/transfer rows (the primary use) map
+    // exactly.
+    platformSlug: 'trade-republic',
+    version: 2,
+    delimiter: ",",
+    descriptionColumn: "description",
+    amountType: "single" as AmountType,
+    amountColumn: "amount",
+    positiveAmountColumn: null,
+    negativeAmountColumn: null,
+    timestampColumn: "datetime",
+    dateFormat: null,
+    dateReplace: false,
+    decimalReplace: false,
+    multiplyBy: 1,
+    // Strip "quantity: 0.000384" from savings-plan descriptions so recurring buys
+    // aggregate into a single Expense — same pattern as the PDF contract (D-06).
+    descriptionStripPattern: "quantity:\\s*[\\d.,]+\\s*",
+    notes: "Trade Republic CSV import contract",
+  },
 ];
 
 // ---------------------------------------------------------------------------

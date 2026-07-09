@@ -48,8 +48,16 @@ describe('seed-extras STEPS registry', () => {
     expect(incomeExtraordinarySlugs.length).toBeGreaterThan(0)
   })
 
-  it('registers backfill-truncated-expense-titles LAST (append-only invariant)', () => {
+  it('keeps backfill-truncated-expense-titles registered (append-only invariant)', () => {
     expect(STEP_NAMES).toContain('backfill-truncated-expense-titles')
-    expect(STEP_NAMES.indexOf('backfill-truncated-expense-titles')).toBe(STEP_NAMES.length - 1)
+  })
+
+  it('registers ensure-trade-republic-csv-global-format LAST (append-only invariant)', () => {
+    expect(STEP_NAMES).toContain('ensure-trade-republic-csv-global-format')
+    expect(STEP_NAMES.indexOf('ensure-trade-republic-csv-global-format')).toBe(STEP_NAMES.length - 1)
+    // Must run after the older last step, never before it (append-only).
+    expect(STEP_NAMES.indexOf('ensure-trade-republic-csv-global-format')).toBeGreaterThan(
+      STEP_NAMES.indexOf('backfill-truncated-expense-titles'),
+    )
   })
 })

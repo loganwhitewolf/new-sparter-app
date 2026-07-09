@@ -405,3 +405,121 @@ describe('Trade Republic PDF — normalizeTransactionRow sign attribution', () =
     expect(negativeRows.length).toBeGreaterThan(0)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Trade Republic CSV — detector + normalizeTransactionRow (Quick Task 260709-dq2)
+// Version 2 of the trade-republic format: coexists with the PDF (version 1) above.
+// Do NOT reuse `formats` (built via `.find()` by slug alone) — that resolves to v1.
+// ---------------------------------------------------------------------------
+
+const trCsvFormatVersion = seedFormatVersions.find(
+  (fv) => fv.platformSlug === 'trade-republic' && fv.version === 2,
+)!
+
+const trCsvHeaderSignature = [
+  trCsvFormatVersion.timestampColumn,
+  trCsvFormatVersion.descriptionColumn,
+  trCsvFormatVersion.amountColumn,
+  trCsvFormatVersion.positiveAmountColumn,
+  trCsvFormatVersion.negativeAmountColumn,
+].filter((c): c is string => Boolean(c)).join(trCsvFormatVersion.delimiter)
+
+const trCsvFormat = {
+  id: trSyntheticId * 10 + 1,
+  platformId: trSyntheticId,
+  version: 2,
+  headerSignature: trCsvHeaderSignature,
+  isActive: true,
+  platform: {
+    id: trSyntheticId,
+    name: trPlatform.name,
+    slug: trPlatform.slug,
+    country: trPlatform.country,
+    delimiter: trCsvFormatVersion.delimiter,
+    timestampColumn: trCsvFormatVersion.timestampColumn,
+    descriptionColumn: trCsvFormatVersion.descriptionColumn,
+    amountType: trCsvFormatVersion.amountType,
+    amountColumn: trCsvFormatVersion.amountColumn ?? null,
+    positiveAmountColumn: trCsvFormatVersion.positiveAmountColumn ?? null,
+    negativeAmountColumn: trCsvFormatVersion.negativeAmountColumn ?? null,
+    multiplyBy: trCsvFormatVersion.multiplyBy,
+    descriptionStripPattern: trCsvFormatVersion.descriptionStripPattern ?? null,
+  },
+}
+
+async function detectTrCsvFixture() {
+  const parsed = await parseImportFile(readFileSync(fixturePath('trade-republic-csv.csv')), {
+    fileName: 'trade-republic-csv.csv',
+  })
+  return detectImportFormat({ parsed, formats: [trCsvFormat], userId: 'user-tr-csv-1' })
+}
+
+describe('Trade Republic CSV — detector', () => {
+  it('detects the CSV fixture with confidence >= 0.8', async () => {
+    const result = await detectTrCsvFixture()
+
+    expect(result.bestCandidate).not.toBeNull()
+    expect(result.bestCandidate?.platform.slug).toBe('trade-republic')
+    expect(result.bestCandidate?.confidence).toBeGreaterThanOrEqual(0.8)
+    expect(result.errors).toEqual([])
+  })
+
+  it('still resolves correctly alongside the PDF (v1) and all seeded CSV/XLSX formats', async () => {
+    const parsed = await parseImportFile(readFileSync(fixturePath('trade-republic-csv.csv')), {
+      fileName: 'trade-republic-csv.csv',
+    })
+    const allFormats = [...formats, trFormat, trCsvFormat]
+    const result = detectImportFormat({ parsed, formats: allFormats, userId: 'user-tr-csv-2' })
+
+    expect(result.bestCandidate?.platform.slug).toBe('trade-republic')
+    expect(result.bestCandidate?.confidence).toBeGreaterThanOrEqual(0.8)
+  })
+
+  it('parses the fixture into valid rows with both positive and negative signed amounts', async () => {
+    const result = await detectTrCsvFixture()
+
+    const validRows = result.preview.sampleRows.filter((r) => r.valid)
+    expect(validRows.length).toBeGreaterThan(0)
+
+    const positiveRows = validRows.filter((r) => r.amount && new Decimal(r.amount).isPositive())
+    const negativeRows = validRows.filter((r) => r.amount && new Decimal(r.amount).isNegative())
+    expect(positiveRows.length).toBeGreaterThan(0)
+    expect(negativeRows.length).toBeGreaterThan(0)
+  })
+})
+
+describe('Trade Republic CSV — normalizeTransactionRow', () => {
+  const trCsvPlatformConfig = {
+    ...trCsvFormat.platform,
+    platformId: trCsvFormat.platformId,
+  }
+
+  it('savings-plan BUY row strips the "quantity:" suffix and produces a negative amount', () => {
+    const row = {
+      datetime: '2026-01-06T07:00:00.000Z',
+      description: 'Savings plan execution SYNW quantity: 0.000384',
+      amount: '-30.00',
+    }
+    const normalized = normalizeTransactionRow(row, trCsvPlatformConfig, { userId: 'user-tr-csv-1', rowIndex: 1 })
+
+    expect(normalized.errors).toHaveLength(0)
+    expect(normalized.description).toBe('Savings plan execution SYNW')
+    expect(normalized.amount).not.toBeNull()
+    expect(new Decimal(normalized.amount!).isNegative()).toBe(true)
+    expect(new Decimal(normalized.amount!).toFixed(2)).toBe('-30.00')
+  })
+
+  it('ISO datetime column (with millisecond precision) parses to a valid occurredAt', () => {
+    const row = {
+      datetime: '2026-01-08T00:05:00.000Z',
+      description: 'Interest payment on cash balance',
+      amount: '4.320000',
+    }
+    const normalized = normalizeTransactionRow(row, trCsvPlatformConfig, { userId: 'user-tr-csv-1', rowIndex: 2 })
+
+    expect(normalized.errors).toHaveLength(0)
+    expect(normalized.occurredAt).not.toBeNull()
+    expect(normalized.occurredAt).toBeInstanceOf(Date)
+    expect(normalized.occurredAt!.toISOString()).toBe('2026-01-08T00:05:00.000Z')
+  })
+})

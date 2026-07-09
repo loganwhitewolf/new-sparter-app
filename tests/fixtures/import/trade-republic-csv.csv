@@ -1,0 +1,8 @@
+datetime,date,account_type,category,type,asset_class,name,symbol,shares,price,amount,fee,tax,currency,original_amount,original_currency,fx_rate,description,transaction_id,counterparty_name,counterparty_iban,payment_reference,mcc_code
+2026-01-05T09:12:33.000Z,2026-01-05,PRIVATE,shopping,CARD_TRANSACTION,,,,,,-18.50,0.00,,EUR,-18.50,EUR,1,Card transaction: Synthetic Coffee Shop,syn-tx-0001,Synthetic Coffee Shop,,,5812
+2026-01-06T07:00:00.000Z,2026-01-06,PRIVATE,savings_plan,BUY,ETF,Synthetic All-World ETF,SYNW,0.000384,108.50,-30.00,0.00,,EUR,-30.00,EUR,1,Savings plan execution SYNW quantity: 0.000384,syn-tx-0002,,,,
+2026-01-07T14:45:10.000Z,2026-01-07,PRIVATE,transfer,TRANSFER_INSTANT_INBOUND,,,,,,250.00,0.00,,EUR,250.00,EUR,1,Incoming transfer from Synthetic Sender,syn-tx-0003,Synthetic Sender,IT00Y0000000000000000000001,Shared rent January,
+2026-01-08T00:05:00.000Z,2026-01-08,PRIVATE,interest,INTEREST_PAYMENT,,,,,,4.320000,0.00,-1.170000,EUR,4.320000,EUR,1,Interest payment on cash balance,syn-tx-0004,,,,
+2026-01-09T11:30:00.000Z,2026-01-09,PRIVATE,dividend,DIVIDEND,ETF,Synthetic Core Index,SYNX,2,3.375,6.75,0.00,-1.01,EUR,6.75,EUR,1,Dividend payment SYNX,syn-tx-0005,,,,
+2026-01-10T16:00:00.000Z,2026-01-10,PRIVATE,tax,TAX_OPTIMIZATION,,,,,,0.000000,0.00,-3.44,EUR,0.000000,EUR,1,Tax loss harvesting adjustment,syn-tx-0006,,,,
+2026-01-05T09:12:33.000Z,2026-01-05,PRIVATE,shopping,CARD_TRANSACTION,,,,,,-18.50,0.00,,EUR,-18.50,EUR,1,Card transaction: Synthetic Coffee Shop,syn-tx-0001,Synthetic Coffee Shop,,,5812
