@@ -156,6 +156,7 @@ None. Scope is small, cohesive, and fully specified by ADR 0016.
 | 260708-jt6 | Fix description/title cell overflow + edge-to-edge truncation + narrower amount column in transactions+expenses tables (min-w-0/table-fixed, inline span/link, flex-1, w-32→w-28) | 2026-07-08 | 1cd879d |
 | 260709-bdk | Re-import unlock: /api/files/initiate returns 409 only for completed imports; stale (failed/stuck) rows deleted on re-upload so onboarding + standard import can retry | 2026-07-09 | da24841 |
 | 260709-dq2 | Trade Republic CSV import format (seed-data v2, coexists with PDF v1 via header detection; datetime/description/amount mapping, quantity-strip aggregation). Prod version-collision fixed via seed-extras step ensure-trade-republic-csv-global-format (MAX+1) | 2026-07-09 | 8d14b95 |
+| 260709-gfz | Persist dashboard Overview filters per-tab (sessionStorage): chart chips (chart-local, excluded-keys) restored post-hydration + year restored on bare mount via router.replace. Verification gap: live browser round-trip not driven (node-only test env, no jsdom) | 2026-07-09 | 8c8ed8a |
 
 ## Deferred Items
 
