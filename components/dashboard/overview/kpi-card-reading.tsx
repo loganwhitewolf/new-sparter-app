@@ -184,6 +184,10 @@ function ProgressBar({ value, target, tone }: { value: number; target: number; t
  * Anatomy: label + compact YoY delta chip (header) · headline hero value · one glanceable
  * visual (composition bar with dominant legend, or a value-vs-target progress bar) · an
  * optional reading. Diagnostic cards (Bilancio/Accantonato) carry a hero + reading only.
+ *
+ * Content is TOP-aligned (not spread) so the hero value sits at the same height on every
+ * card in the row — a card without a bar (Bilancio/Accantonato) lets its reading fall into
+ * the bar's slot instead of dropping the hero to the bottom.
  */
 export function ReadingKpiCard({
   label,
@@ -206,7 +210,7 @@ export function ReadingKpiCard({
 }) {
   return (
     <Card className={cn('min-h-32 rounded-lg py-0', className)}>
-      <CardContent className="flex h-full flex-col justify-between gap-3 p-4">
+      <CardContent className="flex h-full flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-2">
           <p className="min-w-0 truncate text-xs text-muted-foreground">{label}</p>
           {delta !== null ? (
