@@ -73,6 +73,28 @@ balance and Tasso's hero IS the structural rate. One mechanism, one story.
   outByNature` are no longer read by the cards — candidates for a later sweep.
 - Possible UX iteration: a visible "basis" tag on cards when selection ≠ default.
 
+## Follow-up refinements (same task, 2026-07-11 — Entrate/Uscite cards)
+
+Analysed one concern at a time on the two composition cards:
+
+1. **Delta credibility guardrail.** A partial/near-zero prior year gave explosive YoY
+   percentages (+770%). `credibleDelta()` in `overview-kpi-derive.ts` suppresses any
+   `|Δ| > MAX_CREDIBLE_DELTA_PERCENT` (300) to null — same treatment as a zero base;
+   applied dashboard-side only (`computeDeltaPercent` untouched). Rate deltas (savings
+   rate, a bounded %) stay credible and still show. Chosen policy A (suppress) over
+   B (cap ">300%") / C (denominator-based).
+2. **Icon legend + chip icons.** The legend now shows EVERY included segment as a
+   coloured nature icon + its share (was dominant-only); full name in the hover title +
+   sr-only label. The SAME glyph tints the filter chips (replaced the colour dot) →
+   learnable symbol, chip↔legend association. `nature-icons.tsx` centralises icon +
+   colour per chart key. Icons: Ricorrenti Repeat · Straordinarie Sparkles · Essenziale
+   Home · Discrezionale ShoppingBag · Debiti CreditCard · Risparmio PiggyBank ·
+   Investimento TrendingUp. Chosen A (icons, replace dot) over B (icon + dot) / C (text).
+
+Verified in-browser (light+dark + partial-prior-year panel): chips and legend share the
+glyph; guardrail suppresses Entrate/Uscite/Bilancio deltas while keeping the rate delta.
+
 ## Commits
 
 - `2af669f` feat(260711-gfd): dashboard-wide filter chips + sustainability default
+- `1924074` feat(260711-gfd): delta guardrail + icon legend on Entrate/Uscite cards
