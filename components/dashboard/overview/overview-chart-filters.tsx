@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/tooltip'
 import { NATURE_COLORS, NATURE_LABELS } from '@/lib/utils/nature-labels'
 import { INCOME_KEYS, OUT_KEYS, ALLOCATION_KEYS, type IncomeKey, type OutKey, type AllocationKey } from './overview-chart-utils'
+import { DEFAULT_EXCLUDED_CHIPS } from './overview-kpi-derive'
 
 // ─── Chip label helpers ───────────────────────────────────────────────────────
 
@@ -99,7 +100,7 @@ type OverviewChartFiltersProps = {
   onToggleOut: (key: OutKey) => void
   /** Toggle an allocation key in/out of the included set. */
   onToggleAllocation: (key: AllocationKey) => void
-  /** Reset all filter groups to all-included default state. */
+  /** Reset all filter groups to the dashboard default selection (260711-gfd). */
   onReset?: () => void
 }
 
@@ -166,10 +167,17 @@ export function OverviewChartFilters({
   onToggleAllocation,
   onReset,
 }: OverviewChartFiltersProps) {
-  const allIncluded =
-    includedIncome.size === INCOME_KEYS.length &&
-    includedOut.size === OUT_KEYS.length &&
-    includedAllocation.size === ALLOCATION_KEYS.length
+  // Reset affordance shows only when the selection differs from the DEFAULT —
+  // since 260711-gfd the default is the sustainability selection (extraordinary
+  // excluded), so "all-on" is itself a non-default state that offers Reimposta.
+  const isDefaultSelection =
+    INCOME_KEYS.every(
+      (k) => includedIncome.has(k) === !DEFAULT_EXCLUDED_CHIPS.income.includes(k)
+    ) &&
+    OUT_KEYS.every((k) => includedOut.has(k) === !DEFAULT_EXCLUDED_CHIPS.out.includes(k)) &&
+    ALLOCATION_KEYS.every(
+      (k) => includedAllocation.has(k) === !DEFAULT_EXCLUDED_CHIPS.allocation.includes(k)
+    )
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -280,8 +288,9 @@ export function OverviewChartFilters({
           ))}
         </div>
 
-        {/* Reset affordance (D-08: lightweight reset when any chip is excluded) */}
-        {onReset && !allIncluded && (
+        {/* Reset affordance (D-08 revisited): shown when the selection differs from
+            the sustainability default; reset returns to that default, not all-on. */}
+        {onReset && !isDefaultSelection && (
           <button
             type="button"
             onClick={onReset}

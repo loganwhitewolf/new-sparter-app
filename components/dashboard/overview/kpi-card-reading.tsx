@@ -113,7 +113,12 @@ function DeltaChip({
 /** Stacked composition bar + a single dominant-segment legend line (rest on hover). */
 function CompositionBar({ segments }: { segments: BarSegment[] }) {
   const total = segments.reduce((sum, s) => sum + s.value, 0) || 1
-  const dominant = segments[0]
+  // Dominant = largest segment (not first): under dashboard-wide filtering the first
+  // key can be excluded, so position no longer implies dominance (260711-gfd).
+  const dominant = segments.reduce<BarSegment | null>(
+    (best, s) => (best === null || s.value > best.value ? s : best),
+    null
+  )
   return (
     <div className="space-y-1.5">
       <div className="flex h-2 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
@@ -128,7 +133,10 @@ function CompositionBar({ segments }: { segments: BarSegment[] }) {
       </div>
       {dominant ? (
         <p className="flex items-center gap-1.5 text-xs">
-          <span className={cn('inline-block size-2 shrink-0 rounded-full', barShade(dominant.tone, 0))} aria-hidden="true" />
+          <span
+            className={cn('inline-block size-2 shrink-0 rounded-full', barShade(dominant.tone, dominant.step))}
+            aria-hidden="true"
+          />
           <span className="min-w-0 truncate font-medium text-foreground">{dominant.label}</span>
           <span className="shrink-0 text-muted-foreground">{Math.round((dominant.value / total) * 100)}%</span>
         </p>

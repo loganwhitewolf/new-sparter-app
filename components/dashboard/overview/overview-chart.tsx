@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from 'recharts'
 import {
   ChartContainer,
@@ -12,19 +11,10 @@ import { formatEur, formatEurCompact } from './format'
 import {
   deriveFilteredBarRow,
   deriveNatureBreakdown,
-  INCOME_KEYS,
-  OUT_KEYS,
-  ALLOCATION_KEYS,
   type IncomeKey,
   type OutKey,
   type AllocationKey,
 } from './overview-chart-utils'
-import { OverviewChartFilters } from './overview-chart-filters'
-import {
-  readExcludedChips,
-  writeExcludedChips,
-  safeSessionStorage,
-} from './overview-persistence'
 
 // Chart config: Entrate = green (--total-in), Uscite = orange (--total-out), Accantonato = purple (--total-allocation).
 const chartConfig = {
@@ -121,86 +111,21 @@ type OverviewChartProps = {
   selectedMonth: number
   // Month selection: clicking any bar selects the month and shows all 3 directions at once.
   onMonthSelect: (monthIndex: number) => void
+  // 260711-gfd: chip selection is dashboard-wide — owned by OverviewDashboardSection
+  // (which also renders the chips above the KPI cards); the chart is fully controlled.
+  includedIncome: Set<IncomeKey>
+  includedOut: Set<OutKey>
+  includedAllocation: Set<AllocationKey>
 }
 
-export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewChartProps) {
-  // D-06: default all-on — all income, out, and allocation keys included.
-  // Defaults stay all-on so the SSR render matches the client's first render
-  // (hydration parity); persisted selection is applied post-mount below.
-  const [includedIncome, setIncludedIncome] = useState<Set<IncomeKey>>(
-    () => new Set(INCOME_KEYS)
-  )
-  const [includedOut, setIncludedOut] = useState<Set<OutKey>>(
-    () => new Set(OUT_KEYS)
-  )
-  const [includedAllocation, setIncludedAllocation] = useState<Set<AllocationKey>>(
-    () => new Set(ALLOCATION_KEYS)
-  )
-
-  // Session persistence (quick task 260709-gfz): chips remain chart-local (never in
-  // the URL — they filter already-fetched data client-side), but the excluded
-  // selection is remembered per-tab via sessionStorage. Restore runs once on mount,
-  // after hydration, so it never causes an SSR/client mismatch.
-  useEffect(() => {
-    const excluded = readExcludedChips(safeSessionStorage())
-    if (!excluded) return
-    setIncludedIncome(new Set(INCOME_KEYS.filter((k) => !excluded.income.includes(k))))
-    setIncludedOut(new Set(OUT_KEYS.filter((k) => !excluded.out.includes(k))))
-    setIncludedAllocation(
-      new Set(ALLOCATION_KEYS.filter((k) => !excluded.allocation.includes(k)))
-    )
-  }, [])
-
-  // Persist the EXCLUDED keys (default all-on ⇒ usually empty). Called from user-action
-  // handlers only — the restore effect above never writes, so there is no read/write race.
-  function persist(
-    income: Set<IncomeKey>,
-    out: Set<OutKey>,
-    allocation: Set<AllocationKey>
-  ) {
-    writeExcludedChips(safeSessionStorage(), {
-      income: INCOME_KEYS.filter((k) => !income.has(k)),
-      out: OUT_KEYS.filter((k) => !out.has(k)),
-      allocation: ALLOCATION_KEYS.filter((k) => !allocation.has(k)),
-    })
-  }
-
-  // D-07: inclusive toggle — adds or removes a single key from the included set.
-  function handleToggleIncome(key: IncomeKey) {
-    const next = new Set(includedIncome)
-    if (next.has(key)) next.delete(key)
-    else next.add(key)
-    setIncludedIncome(next)
-    persist(next, includedOut, includedAllocation)
-  }
-
-  function handleToggleOut(key: OutKey) {
-    const next = new Set(includedOut)
-    if (next.has(key)) next.delete(key)
-    else next.add(key)
-    setIncludedOut(next)
-    persist(includedIncome, next, includedAllocation)
-  }
-
-  function handleToggleAllocation(key: AllocationKey) {
-    const next = new Set(includedAllocation)
-    if (next.has(key)) next.delete(key)
-    else next.add(key)
-    setIncludedAllocation(next)
-    persist(includedIncome, includedOut, next)
-  }
-
-  // D-08: reset restores all keys in all groups.
-  function handleReset() {
-    const income = new Set(INCOME_KEYS)
-    const out = new Set(OUT_KEYS)
-    const allocation = new Set(ALLOCATION_KEYS)
-    setIncludedIncome(income)
-    setIncludedOut(out)
-    setIncludedAllocation(allocation)
-    persist(income, out, allocation)
-  }
-
+export function OverviewChart({
+  data,
+  selectedMonth,
+  onMonthSelect,
+  includedIncome,
+  includedOut,
+  includedAllocation,
+}: OverviewChartProps) {
   // Derive bar rows using filter-aware reduction (FILT-01, FILT-02).
   // Number() conversion happens only inside deriveFilteredBarRow (Recharts boundary).
   const rows = data.map((p) =>
@@ -209,17 +134,6 @@ export function OverviewChart({ data, selectedMonth, onMonthSelect }: OverviewCh
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Filter chips — Entrate and Uscite groups with group popovers and per-chip tooltips */}
-      <OverviewChartFilters
-        includedIncome={includedIncome}
-        includedOut={includedOut}
-        includedAllocation={includedAllocation}
-        onToggleIncome={handleToggleIncome}
-        onToggleOut={handleToggleOut}
-        onToggleAllocation={handleToggleAllocation}
-        onReset={handleReset}
-      />
-
       {/* FRU-FIX-05: clicking a bar focuses Recharts' internal z-index group
           (<g class="recharts-zIndex-layer_*">), and the global
           `* { outline-ring/50 }` base rule (ring hue is green) paints a green

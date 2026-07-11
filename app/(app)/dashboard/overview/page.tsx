@@ -9,8 +9,7 @@ import {
 import { resolveYear } from '@/components/dashboard/overview/resolve-year'
 import { OverviewEmptyState } from '@/components/dashboard/overview/overview-empty-state'
 import { OverviewHeader } from '@/components/dashboard/overview/overview-header'
-import { KpiRow } from '@/components/dashboard/overview/kpi-row'
-import { OverviewMoversSection } from '@/components/dashboard/overview/overview-movers-section'
+import { OverviewDashboardSection } from '@/components/dashboard/overview/overview-dashboard-section'
 import { OverviewPageSkeleton } from '@/components/dashboard/overview/overview-page-skeleton'
 import { OverviewNudge } from '@/components/dashboard/overview/overview-nudge'
 import { toDecimal } from '@/lib/utils/decimal'
@@ -53,7 +52,14 @@ function deriveDefaultMonthIndex(chart: OverviewChartPoint[]): number {
 // FRU-FIX-03: OverviewHeader is rendered here (not eagerly) so it has access to
 // uncategorizedCount for the inline nudge slot on the title row.
 async function OverviewDataSection({ year, years }: { year: number; years: string[] }) {
-  const [overview, chart] = await Promise.all([getOverview(year), getOverviewChart(year)])
+  // Prior-year chart points feed the filtered YoY deltas on the KPI cards (260711-gfd):
+  // deltas compare the SAME chip selection year-over-year. A prior year with no data
+  // yields zero sums → null deltas (existing null handling).
+  const [overview, chart, prevChart] = await Promise.all([
+    getOverview(year),
+    getOverviewChart(year),
+    getOverviewChart(year - 1),
+  ])
 
   if (isYearWithNoData(overview.totalIn, overview.totalOut)) {
     return (
@@ -82,11 +88,11 @@ async function OverviewDataSection({ year, years }: { year: number; years: strin
         years={years}
         nudge={<OverviewNudge uncategorizedCount={overview.uncategorizedCount} year={year} />}
       />
-      <KpiRow data={overview} year={year} />
-      {/* OverviewMoversSection owns the shared selectedMonth — chart + movers panel never drift.
-          All 3 directions are pre-fetched server-side and shown simultaneously in 3 columns. */}
-      <OverviewMoversSection
+      {/* 260711-gfd: chips + KPI cards + chart/movers share one dashboard-wide chip
+          selection — OverviewDashboardSection owns it (sustainability default). */}
+      <OverviewDashboardSection
         data={chart}
+        prevData={prevChart}
         year={year}
         defaultMonthIndex={defaultMonthIndex}
         initialMoversIn={initialMoversIn}

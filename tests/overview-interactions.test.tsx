@@ -101,48 +101,91 @@ describe('overview chart filters (FILT-01, FILT-02, FILT-03)', () => {
   })
 })
 
-const { resolveTrendReading } = await import('@/components/dashboard/overview/kpi-row')
+const { deriveFilteredKpis, DEFAULT_EXCLUDED_CHIPS } = await import(
+  '@/components/dashboard/overview/overview-kpi-derive'
+)
 
-describe('resolveTrendReading (FRU-FIX-04)', () => {
-  it('delta=null → neutral reading NOT "In linea con il {prevYear}"', () => {
-    const result = resolveTrendReading(null, 2023, 'in')
-    expect(result.text).not.toContain('In linea con il')
-    expect(result.sentiment).toBe('neutral')
+describe('deriveFilteredKpis (260711-gfd)', () => {
+  // Two months of data + one prior-year month; distinct amounts per bucket.
+  const points: OverviewChartPoint[] = [
+    FIXTURE,
+    {
+      month: '2024-02',
+      label: 'Feb',
+      income: { recurring: '1000.00', extraordinary: '300.00' },
+      out: { essential: '700.00', discretionary: '250.00', debt: '60.00' },
+      allocation: { savings: '30.00', investment: '40.00' },
+    },
+  ]
+  const prevPoints: OverviewChartPoint[] = [
+    {
+      month: '2023-01',
+      label: 'Gen',
+      income: { recurring: '1600.00', extraordinary: '100.00' },
+      out: { essential: '800.00', discretionary: '200.00', debt: '0.00' },
+      allocation: { savings: '50.00', investment: '0.00' },
+    },
+  ]
+  const allIncome = new Set(INCOME_KEYS)
+  const allOut = new Set(OUT_KEYS)
+  const allAllocation = new Set(ALLOCATION_KEYS)
+
+  it('all-on selection sums every bucket across months (parity with the chart rows)', () => {
+    const kpis = deriveFilteredKpis(points, prevPoints, allIncome, allOut, allAllocation)
+    // income: (1000+200) + (1000+300) = 2500; out: 490 + 1010 = 1500; alloc: 80 + 70 = 150
+    expect(kpis.totalIn).toBe('2500.00')
+    expect(kpis.totalOut).toBe('1500.00')
+    expect(kpis.totalAllocation).toBe('150.00')
+    expect(kpis.balance).toBe('1000.00')
+    // savingsRate = 1000/2500 = 40%
+    expect(kpis.savingsRate).toBe(40)
   })
 
-  it('delta=null → truthful neutral text includes the prevYear', () => {
-    const result = resolveTrendReading(null, 2023, 'in')
-    expect(result.text).toContain('2023')
+  it('sustainability default: extraordinary excluded → totals are recurring-only', () => {
+    const income = new Set(
+      INCOME_KEYS.filter((k) => !DEFAULT_EXCLUDED_CHIPS.income.includes(k))
+    )
+    const kpis = deriveFilteredKpis(points, prevPoints, income, allOut, allAllocation)
+    // recurring only: 1000 + 1000 = 2000; balance = 2000 − 1500 = 500 (the structural balance)
+    expect(kpis.totalIn).toBe('2000.00')
+    expect(kpis.balance).toBe('500.00')
+    // With recurring-only income, balance IS the structural balance
+    expect(kpis.structuralBalance).toBe(kpis.balance)
+    // Only the included key is present in incomeByKey
+    expect(kpis.incomeByKey.recurring).toBe('2000.00')
+    expect(kpis.incomeByKey.extraordinary).toBeUndefined()
   })
 
-  it('delta=0 → "In linea con il 2023" (within ±1)', () => {
-    const result = resolveTrendReading(0, 2023, 'in')
-    expect(result.text).toBe('In linea con il 2023')
-    expect(result.sentiment).toBe('neutral')
+  it('deltas compare the SAME selection year-over-year', () => {
+    const kpis = deriveFilteredKpis(points, prevPoints, allIncome, allOut, allAllocation)
+    // totalIn: 2500 vs prev 1700 → +47.1%
+    expect(kpis.deltas.totalIn).toBeCloseTo(47.1, 1)
+    // totalOut: 1500 vs prev 1000 → +50%
+    expect(kpis.deltas.totalOut).toBe(50)
   })
 
-  it('delta=+10, kind=in → Più entrate, sentiment good', () => {
-    const result = resolveTrendReading(10, 2023, 'in')
-    expect(result.text).toContain('entrate')
-    expect(result.sentiment).toBe('good')
+  it('empty prior year → all deltas null', () => {
+    const kpis = deriveFilteredKpis(points, [], allIncome, allOut, allAllocation)
+    expect(kpis.deltas.totalIn).toBeNull()
+    expect(kpis.deltas.totalOut).toBeNull()
+    expect(kpis.deltas.totalAllocation).toBeNull()
+    expect(kpis.deltas.balance).toBeNull()
+    expect(kpis.deltas.savingsRate).toBeNull()
   })
 
-  it('delta=+10, kind=out → Spendi più, sentiment warn', () => {
-    const result = resolveTrendReading(10, 2023, 'out')
-    expect(result.text).toContain('più')
-    expect(result.sentiment).toBe('warn')
+  it('excluding an out key drops it from totals AND outByKey', () => {
+    const out = new Set(OUT_KEYS.filter((k) => k !== 'debt'))
+    const kpis = deriveFilteredKpis(points, prevPoints, allIncome, out, allAllocation)
+    // out without debt: (300+150) + (700+250) = 1400
+    expect(kpis.totalOut).toBe('1400.00')
+    expect(kpis.outByKey.debt).toBeUndefined()
+    expect(kpis.outByKey.essential).toBe('1000.00')
   })
 
-  it('delta=-10, kind=in → Meno entrate, sentiment warn', () => {
-    const result = resolveTrendReading(-10, 2023, 'in')
-    expect(result.text).toContain('Meno entrate')
-    expect(result.sentiment).toBe('warn')
-  })
-
-  it('delta=-10, kind=out → Spendi meno, sentiment good', () => {
-    const result = resolveTrendReading(-10, 2023, 'out')
-    expect(result.text).toContain('meno')
-    expect(result.sentiment).toBe('good')
+  it('empty income selection → zero totals, savingsRate 0 (guarded division)', () => {
+    const kpis = deriveFilteredKpis(points, prevPoints, new Set(), allOut, allAllocation)
+    expect(kpis.totalIn).toBe('0.00')
+    expect(kpis.savingsRate).toBe(0)
   })
 })
 
@@ -272,64 +315,85 @@ describe('ReadingKpiCard composition-first layout (option B)', () => {
 
 const { KpiRow } = await import('@/components/dashboard/overview/kpi-row')
 
-describe('KpiRow breakdown wiring (260709-lan, 260709-leg)', () => {
-  const overviewFixture = {
-    totalIn: '5000.00',
-    totalOut: '2600.00',
-    totalAllocation: '0.00',
-    balance: '2400.00',
-    structuralBalance: '-1100.00',
-    totalInRecurring: '1500.00',
-    structuralSavingsRate: -73.3,
-    outByNature: { essential: '1800.00', discretionary: '600.00', debt: '200.00' },
-    savingsRate: 48,
-    uncategorizedCount: 0,
-    deltas: {
-      totalIn: null,
-      totalOut: null,
-      totalAllocation: null,
-      balance: null,
-      savingsRate: null,
-      uncategorizedCount: null,
+describe('KpiRow dashboard-wide filter wiring (260711-gfd)', () => {
+  // Single-month year: recurring 1500, extraordinary 3500, out 1800/600/200 → balance 2400,
+  // structural (recurring − out) = 1500 − 2600 = −1100.
+  const kpiPoints: OverviewChartPoint[] = [
+    {
+      month: '2026-01',
+      label: 'Gen',
+      income: { recurring: '1500.00', extraordinary: '3500.00' },
+      out: { essential: '1800.00', discretionary: '600.00', debt: '200.00' },
+      allocation: { savings: '0.00', investment: '0.00' },
     },
-  }
+  ]
+  const allIncome = new Set(INCOME_KEYS)
+  const allOut = new Set(OUT_KEYS)
+  const allAllocation = new Set(ALLOCATION_KEYS)
 
-  it('Entrate/Uscite render composition segments; Bilancio surfaces the structural signal in its reading (option B)', () => {
-    const html = renderToStaticMarkup(<KpiRow data={overviewFixture} year={2026} />)
-    // Entrate composition: Ricorrenti (dominant legend) + Straordinarie (bar hover title)
+  it('all-on: composition segments render and Bilancio surfaces the structural warn', () => {
+    const html = renderToStaticMarkup(
+      <KpiRow
+        data={kpiPoints}
+        prevData={[]}
+        includedIncome={allIncome}
+        includedOut={allOut}
+        includedAllocation={allAllocation}
+        year={2026}
+      />
+    )
+    // Entrate composition: both income segments present (legend or bar hover title)
     expect(html).toContain('Ricorrenti')
     expect(html).toContain('Straordinarie')
-    // Bilancio reading quantifies the recurring-only balance (structural −1100)
-    expect(html).toMatch(/1\.100|1100/)
-    // Derived extraordinary income 3500 surfaces via the Entrate bar segment title
     expect(html).toMatch(/3\.500|3500/)
-    // Tasso risparmio hero is the grand savings rate (48%), not the structural rate
+    // Balance 2400 positive but structural −1100 → warn quantifies the structural balance
+    expect(html).toContain('Senza le entrate straordinarie')
+    expect(html).toMatch(/1\.100|1100/)
+    // Savings rate on all-in basis: (5000−2600)/5000 = 48%
     expect(html).toContain('48%')
-    // 260709-lkw: Uscite split by nature — labels from NATURE_LABELS (chip lexicon)
+    // Uscite split by nature — labels from NATURE_LABELS (chip lexicon)
     expect(html).toContain('Essenziale')
     expect(html).toContain('Discrezionale')
     expect(html).toContain('Debiti')
     expect(html).toMatch(/1\.800|1800/)
   })
 
-  it('null structural/recurring fields → no breakdown rows anywhere', () => {
+  it('sustainability selection (extraordinary excluded): heroes ARE the structural numbers, no tautological warn', () => {
+    const recurringOnly = new Set(INCOME_KEYS.filter((k) => k !== 'extraordinary'))
     const html = renderToStaticMarkup(
       <KpiRow
-        data={{
-          ...overviewFixture,
-          structuralBalance: null,
-          totalInRecurring: null,
-          structuralSavingsRate: null,
-          outByNature: null,
-        }}
+        data={kpiPoints}
+        prevData={[]}
+        includedIncome={recurringOnly}
+        includedOut={allOut}
+        includedAllocation={allAllocation}
         year={2026}
       />
     )
-    expect(html).not.toContain('Ricorrenti')
-    expect(html).not.toContain('Solo ricorrenti')
+    // Entrate hero = recurring only (1500); extraordinary segment gone
+    expect(html).toMatch(/1\.500|1500/)
     expect(html).not.toContain('Straordinarie')
-    expect(html).not.toContain('-73.3%')
-    expect(html).not.toContain('Essenziale')
+    // Bilancio hero = structural balance −1100; the warn would be tautological → plain bad reading
+    expect(html).toMatch(/1\.100|1100/)
+    expect(html).not.toContain('Senza le entrate straordinarie')
+    expect(html).toContain('Spendi più di quanto guadagni')
+  })
+
+  it('excluding an out nature removes its segment and shrinks the Uscite hero', () => {
+    const noDebt = new Set(OUT_KEYS.filter((k) => k !== 'debt'))
+    const html = renderToStaticMarkup(
+      <KpiRow
+        data={kpiPoints}
+        prevData={[]}
+        includedIncome={allIncome}
+        includedOut={noDebt}
+        includedAllocation={allAllocation}
+        year={2026}
+      />
+    )
+    expect(html).not.toContain('Debiti')
+    // Uscite total without debt: 2400
+    expect(html).toMatch(/2\.400|2400/)
   })
 })
 

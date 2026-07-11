@@ -1,11 +1,25 @@
-import type { OverviewData } from '@/lib/dal/dashboard'
+import type { OverviewChartPoint } from '@/lib/dal/overview'
 import { toDecimal } from '@/lib/utils/decimal'
 import { NATURE_LABELS } from '@/lib/utils/nature-labels'
 import { formatEur } from './format'
 import { ReadingKpiCard, type BarSegment, type CardBar, type Reading, type ValueTone } from './kpi-card-reading'
+import {
+  INCOME_KEYS,
+  OUT_KEYS,
+  type AllocationKey,
+  type IncomeKey,
+  type OutKey,
+} from './overview-chart-utils'
+import { deriveFilteredKpis } from './overview-kpi-derive'
 
 /** Recurring-only savings-rate target — the "sopra il 20% consigliato" benchmark. */
 const SAVINGS_TARGET_RATE = 20
+
+/** Income segment labels — mirror the filter chips (INCOME_CHIP_LABELS, D-05). */
+const INCOME_SEGMENT_LABELS: Record<IncomeKey, string> = {
+  recurring: 'Ricorrenti',
+  extraordinary: 'Straordinarie',
+}
 
 function savingsReading(rate: number): Reading {
   if (rate >= 20) return { text: 'Ottimo, sopra il 20% consigliato', sentiment: 'good' }
@@ -17,11 +31,11 @@ function savingsReading(rate: number): Reading {
 /**
  * Balance reading — structural-aware (260709-kp1, decision B+).
  *
- * The headline value stays totalIn − totalOut (reconciles with the Entrate/Uscite
- * cards); the reading exposes when a positive balance holds only thanks to
- * extraordinary income, quantifying the recurring-only ("structural") balance so
- * the diagnosis carries its evidence. `structural === null` (unknown) degrades to
- * the legacy reading.
+ * The headline value stays the filtered balance; the reading exposes when a positive
+ * balance holds only thanks to extraordinary income, quantifying the recurring-only
+ * ("structural") balance so the diagnosis carries its evidence. Callers pass
+ * `structural = null` when extraordinary income is excluded from the selection —
+ * the hero already IS the structural balance, so the warn would be tautological.
  */
 export function balanceReading(balance: number, structural: number | null = null): Reading {
   if (balance > 0 && structural !== null && structural < 0) {
@@ -47,139 +61,113 @@ function allocationReading(delta: number | null, prevYear: number): Reading {
   return { text: `In linea con il ${prevYear}`, sentiment: 'neutral' }
 }
 
-export function trendReading(delta: number, prevYear: number, kind: 'in' | 'out'): Reading {
-  if (Math.abs(delta) <= 1) return { text: `In linea con il ${prevYear}`, sentiment: 'neutral' }
-  if (kind === 'in') {
-    return delta > 0
-      ? { text: `Più entrate del ${prevYear}`, sentiment: 'good' }
-      : { text: `Meno entrate del ${prevYear}`, sentiment: 'warn' }
-  }
-  return delta < 0
-    ? { text: `Spendi meno del ${prevYear}`, sentiment: 'good' }
-    : { text: `Spendi più del ${prevYear}`, sentiment: 'warn' }
-}
-
-/**
- * Resolves the Entrate/Uscite KPI reading based on whether a real prior-year
- * comparison exists.
- *
- * When delta is null (no prior-year data), returns a truthful neutral reading
- * rather than a misleading "In linea con il {prevYear}".
- * When delta is non-null, delegates to trendReading.
- */
-export function resolveTrendReading(
-  delta: number | null,
-  prevYear: number,
-  kind: 'in' | 'out'
-): Reading {
-  if (delta === null) {
-    return { text: `Nessun confronto con il ${prevYear}`, sentiment: 'neutral' }
-  }
-  return trendReading(delta, prevYear, kind)
-}
-
 /** Sign-based tone: green when ≥ 0, red when < 0 (Bilancio / Tasso risparmio). */
 function signTone(value: number): ValueTone {
   return value < 0 ? 'out' : 'in'
 }
 
-export function KpiRow({ data, year }: { data: OverviewData; year: number }) {
+type KpiRowProps = {
+  /** Monthly chart points for the selected year — the single KPI data source (260711-gfd). */
+  data: OverviewChartPoint[]
+  /** Prior-year points — YoY deltas are recomputed under the SAME chip selection. */
+  prevData: OverviewChartPoint[]
+  includedIncome: ReadonlySet<IncomeKey>
+  includedOut: ReadonlySet<OutKey>
+  includedAllocation: ReadonlySet<AllocationKey>
+  year: number
+}
+
+/**
+ * KpiRow — dashboard-wide filtered KPI cards (260711-gfd, option B).
+ *
+ * All five cards derive from the monthly chart points under the current chip
+ * selection, so the cards and the chart always tell the same story. With the
+ * sustainability default (extraordinary income excluded) Bilancio's hero IS the
+ * structural balance and Tasso's hero IS the structural savings rate.
+ */
+export function KpiRow({ data, prevData, includedIncome, includedOut, includedAllocation, year }: KpiRowProps) {
   const prevYear = year - 1
-  const balanceNumeric = Number(data.balance)
-  const structuralNumeric = data.structuralBalance !== null ? Number(data.structuralBalance) : null
+  const kpis = deriveFilteredKpis(data, prevData, includedIncome, includedOut, includedAllocation)
+  const balanceNumeric = Number(kpis.balance)
 
-  // ── Entrate: composition bar of Ricorrenti (solid) + Straordinarie (lighter), total hero.
-  // Straordinarie derived as totalIn − recurring (Decimal.js — never native math on money).
+  // ── Entrate: composition of the INCLUDED income keys (single key → honest 100% bar).
+  // Shade is key-fixed (recurring solid, extraordinary lighter) — see Uscite note below.
+  const entrateSegments: BarSegment[] = INCOME_KEYS.filter((key) => includedIncome.has(key)).map(
+    (key) => ({
+      label: INCOME_SEGMENT_LABELS[key],
+      value: Number(kpis.incomeByKey[key] ?? '0.00'),
+      display: formatEur(kpis.incomeByKey[key] ?? '0.00'),
+      tone: 'in',
+      step: INCOME_KEYS.indexOf(key),
+    })
+  )
   const entrateBar: CardBar | null =
-    data.totalInRecurring !== null
-      ? {
-          kind: 'composition',
-          segments: [
-            {
-              label: 'Ricorrenti',
-              value: Number(data.totalInRecurring),
-              display: formatEur(data.totalInRecurring),
-              tone: 'in',
-              step: 0,
-            },
-            {
-              label: 'Straordinarie',
-              value: toDecimal(data.totalIn).minus(toDecimal(data.totalInRecurring)).toNumber(),
-              display: formatEur(toDecimal(data.totalIn).minus(toDecimal(data.totalInRecurring)).toNumber()),
-              tone: 'in',
-              step: 1,
-            },
-          ],
-        }
-      : null
+    entrateSegments.length > 0 ? { kind: 'composition', segments: entrateSegments } : null
 
-  // ── Uscite: composition bar Essenziale (solid) / Discrezionale / Debiti (lighter), total hero.
-  // Labels from NATURE_LABELS so the card can never drift from the chart's Uscite chips.
+  // ── Uscite: composition of the INCLUDED spending natures. Shade is key-fixed
+  // (essential always solid, debt always lightest) so colours stay recognisable
+  // across filter changes. Labels from NATURE_LABELS — never drift from the chips.
+  const usciteSegments: BarSegment[] = OUT_KEYS.filter((key) => includedOut.has(key)).map((key) => ({
+    label: NATURE_LABELS[key],
+    value: Number(kpis.outByKey[key] ?? '0.00'),
+    display: formatEur(kpis.outByKey[key] ?? '0.00'),
+    tone: 'out',
+    step: OUT_KEYS.indexOf(key),
+  }))
   const usciteBar: CardBar | null =
-    data.outByNature !== null
-      ? {
-          kind: 'composition',
-          segments: [
-            { label: NATURE_LABELS.essential, value: Number(data.outByNature.essential), display: formatEur(data.outByNature.essential), tone: 'out', step: 0 },
-            { label: NATURE_LABELS.discretionary, value: Number(data.outByNature.discretionary), display: formatEur(data.outByNature.discretionary), tone: 'out', step: 1 },
-            { label: NATURE_LABELS.debt, value: Number(data.outByNature.debt), display: formatEur(data.outByNature.debt), tone: 'out', step: 2 },
-          ] satisfies BarSegment[],
-        }
-      : null
+    usciteSegments.length > 0 ? { kind: 'composition', segments: usciteSegments } : null
+
+  // Structural warn only makes sense while extraordinary income is part of the hero.
+  const structuralForReading = includedIncome.has('extraordinary')
+    ? Number(kpis.structuralBalance)
+    : null
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
       <ReadingKpiCard
         label="Entrate"
-        // Total is the hero (neutral) when the mix bar carries the colour; else tone the number.
-        hero={{ value: formatEur(data.totalIn), tone: entrateBar ? 'neutral' : 'in' }}
+        hero={{ value: formatEur(kpis.totalIn), tone: entrateBar ? 'neutral' : 'in' }}
         bar={entrateBar}
-        delta={data.deltas.totalIn}
+        delta={kpis.deltas.totalIn}
         goodWhenPositive
         prevYear={prevYear}
-        // Trend reading only in the no-breakdown fallback — the delta chip covers it otherwise.
-        reading={entrateBar ? null : resolveTrendReading(data.deltas.totalIn, prevYear, 'in')}
         className="min-h-0"
       />
       <ReadingKpiCard
         label="Uscite"
-        hero={{ value: formatEur(data.totalOut), tone: usciteBar ? 'neutral' : 'out' }}
+        hero={{ value: formatEur(kpis.totalOut), tone: usciteBar ? 'neutral' : 'out' }}
         bar={usciteBar}
-        delta={data.deltas.totalOut}
+        delta={kpis.deltas.totalOut}
         goodWhenPositive={false}
         prevYear={prevYear}
-        reading={usciteBar ? null : resolveTrendReading(data.deltas.totalOut, prevYear, 'out')}
         className="min-h-0"
       />
       <ReadingKpiCard
         label="Bilancio"
-        // Grand-total balance is the hero; the recurring-only ("structural") signal lives in
-        // the reading, which quantifies it when a positive balance holds only on extras.
-        hero={{ value: formatEur(data.balance), tone: signTone(balanceNumeric) }}
-        delta={data.deltas.balance}
+        hero={{ value: formatEur(kpis.balance), tone: signTone(balanceNumeric) }}
+        delta={kpis.deltas.balance}
         goodWhenPositive
         prevYear={prevYear}
-        reading={balanceReading(balanceNumeric, structuralNumeric)}
+        reading={balanceReading(balanceNumeric, structuralForReading)}
         className="min-h-0"
       />
       <ReadingKpiCard
         label="Tasso risparmio"
-        hero={{ value: `${data.savingsRate}%`, tone: signTone(data.savingsRate) }}
-        // Progress toward the 20% benchmark — a glanceable distance-to-target.
-        bar={{ kind: 'progress', value: data.savingsRate, target: SAVINGS_TARGET_RATE, tone: signTone(data.savingsRate) }}
-        delta={data.deltas.savingsRate}
+        hero={{ value: `${kpis.savingsRate}%`, tone: signTone(kpis.savingsRate) }}
+        bar={{ kind: 'progress', value: kpis.savingsRate, target: SAVINGS_TARGET_RATE, tone: signTone(kpis.savingsRate) }}
+        delta={kpis.deltas.savingsRate}
         goodWhenPositive
         prevYear={prevYear}
-        reading={savingsReading(data.savingsRate)}
+        reading={savingsReading(kpis.savingsRate)}
         className="min-h-0"
       />
       <ReadingKpiCard
         label="Accantonato"
-        hero={{ value: formatEur(toDecimal(data.totalAllocation).abs().toNumber()), tone: 'allocation' }}
-        delta={data.deltas.totalAllocation}
+        hero={{ value: formatEur(toDecimal(kpis.totalAllocation).abs().toNumber()), tone: 'allocation' }}
+        delta={kpis.deltas.totalAllocation}
         goodWhenPositive
         prevYear={prevYear}
-        reading={allocationReading(data.deltas.totalAllocation, prevYear)}
+        reading={allocationReading(kpis.deltas.totalAllocation, prevYear)}
         className="min-h-0"
       />
     </div>
