@@ -173,6 +173,24 @@ describe('deriveFilteredKpis (260711-gfd)', () => {
     expect(kpis.deltas.savingsRate).toBeNull()
   })
 
+  it('guardrail: a non-credible delta (tiny prior-year base → >300%) is suppressed to null, credible ones pass', () => {
+    // Prior year: income near-zero (partial year), spending close to current.
+    const tinyPrev: OverviewChartPoint[] = [
+      {
+        month: '2023-01',
+        label: 'Gen',
+        income: { recurring: '100.00', extraordinary: '50.00' },
+        out: { essential: '1200.00', discretionary: '0.00', debt: '0.00' },
+        allocation: { savings: '0.00', investment: '0.00' },
+      },
+    ]
+    const kpis = deriveFilteredKpis(points, tinyPrev, allIncome, allOut, allAllocation)
+    // totalIn: 2500 vs 150 → ~1566% → suppressed
+    expect(kpis.deltas.totalIn).toBeNull()
+    // totalOut: 1500 vs 1200 → +25% → credible, still shown
+    expect(kpis.deltas.totalOut).toBe(25)
+  })
+
   it('excluding an out key drops it from totals AND outByKey', () => {
     const out = new Set(OUT_KEYS.filter((k) => k !== 'debt'))
     const kpis = deriveFilteredKpis(points, prevPoints, allIncome, out, allAllocation)
@@ -251,12 +269,14 @@ describe('ReadingKpiCard composition-first layout (option B)', () => {
       />
     )
     expect(html).toContain('3.240')
-    // Dominant legend = first segment + its share (1980/3240 ≈ 61%)
+    // Legend shows EVERY segment's share (icons + %); names via sr-only + hover title.
     expect(html).toContain('Essenziale')
-    expect(html).toContain('61%')
-    // Secondary segments still surface via the bar's hover titles
+    expect(html).toContain('61%') // 1980/3240
     expect(html).toContain('Discrezionale')
+    expect(html).toContain('25%') // 820/3240
     expect(html).toContain('Debiti')
+    expect(html).toContain('14%') // 440/3240
+    // Amounts still surface via the bar's hover titles
     expect(html).toContain('1.980')
     // Delta chip
     expect(html).toContain('8%')

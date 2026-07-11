@@ -10,6 +10,7 @@ import {
   type IncomeKey,
   type OutKey,
 } from './overview-chart-utils'
+import { NATURE_ICONS, NATURE_KEY_COLORS } from './nature-icons'
 import { deriveFilteredKpis } from './overview-kpi-derive'
 
 /** Recurring-only savings-rate target — the "sopra il 20% consigliato" benchmark. */
@@ -99,6 +100,8 @@ export function KpiRow({ data, prevData, includedIncome, includedOut, includedAl
       display: formatEur(kpis.incomeByKey[key] ?? '0.00'),
       tone: 'in',
       step: INCOME_KEYS.indexOf(key),
+      icon: NATURE_ICONS[key],
+      iconColor: NATURE_KEY_COLORS[key],
     })
   )
   const entrateBar: CardBar | null =
@@ -113,6 +116,8 @@ export function KpiRow({ data, prevData, includedIncome, includedOut, includedAl
     display: formatEur(kpis.outByKey[key] ?? '0.00'),
     tone: 'out',
     step: OUT_KEYS.indexOf(key),
+    icon: NATURE_ICONS[key],
+    iconColor: NATURE_KEY_COLORS[key],
   }))
   const usciteBar: CardBar | null =
     usciteSegments.length > 0 ? { kind: 'composition', segments: usciteSegments } : null

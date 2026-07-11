@@ -23,6 +23,21 @@ export const DEFAULT_EXCLUDED_CHIPS: ExcludedChips = {
 }
 
 /**
+ * YoY delta credibility ceiling (260711-gfd follow-up). A prior year that is partial or
+ * near-zero yields a tiny denominator and an explosive percentage (e.g. +770%) that is
+ * mathematically correct but useless. Beyond this magnitude the comparison is not
+ * credible, so `credibleDelta` suppresses the chip (null) — the same treatment as a
+ * zero prior-year base. Tunable in one place.
+ */
+export const MAX_CREDIBLE_DELTA_PERCENT = 300
+
+/** Passes a delta through only when it is within the credibility ceiling. */
+function credibleDelta(delta: number | null): number | null {
+  if (delta === null) return null
+  return Math.abs(delta) > MAX_CREDIBLE_DELTA_PERCENT ? null : delta
+}
+
+/**
  * KPI view derived from the monthly chart points under the current chip selection
  * (260711-gfd). Money values are DECIMAL strings (formatEur accepts them); deltas
  * mirror the DAL semantics (computeDeltaPercent current vs prior year, same selection).
@@ -138,14 +153,13 @@ export function deriveFilteredKpis(
     incomeByKey,
     outByKey,
     deltas: {
-      totalIn: computeDeltaPercent(current.totalIn.toFixed(2), previous.totalIn.toFixed(2)),
-      totalOut: computeDeltaPercent(current.totalOut.toFixed(2), previous.totalOut.toFixed(2)),
-      totalAllocation: computeDeltaPercent(
-        current.totalAllocation.toFixed(2),
-        previous.totalAllocation.toFixed(2)
+      totalIn: credibleDelta(computeDeltaPercent(current.totalIn.toFixed(2), previous.totalIn.toFixed(2))),
+      totalOut: credibleDelta(computeDeltaPercent(current.totalOut.toFixed(2), previous.totalOut.toFixed(2))),
+      totalAllocation: credibleDelta(
+        computeDeltaPercent(current.totalAllocation.toFixed(2), previous.totalAllocation.toFixed(2))
       ),
-      balance: computeDeltaPercent(current.balance.toFixed(2), previous.balance.toFixed(2)),
-      savingsRate: computeDeltaPercent(current.savingsRate, previous.savingsRate),
+      balance: credibleDelta(computeDeltaPercent(current.balance.toFixed(2), previous.balance.toFixed(2))),
+      savingsRate: credibleDelta(computeDeltaPercent(current.savingsRate, previous.savingsRate)),
     },
   }
 }

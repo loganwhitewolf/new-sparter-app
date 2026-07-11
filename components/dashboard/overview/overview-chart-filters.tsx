@@ -1,6 +1,6 @@
 'use client'
 
-import { Info } from 'lucide-react'
+import { Info, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   Popover,
@@ -16,6 +16,7 @@ import {
 import { NATURE_COLORS, NATURE_LABELS } from '@/lib/utils/nature-labels'
 import { INCOME_KEYS, OUT_KEYS, ALLOCATION_KEYS, type IncomeKey, type OutKey, type AllocationKey } from './overview-chart-utils'
 import { DEFAULT_EXCLUDED_CHIPS } from './overview-kpi-derive'
+import { NATURE_ICONS } from './nature-icons'
 
 // ─── Chip label helpers ───────────────────────────────────────────────────────
 
@@ -109,13 +110,15 @@ type OverviewChartFiltersProps = {
 type ChipProps = {
   label: string
   tooltip: string
-  /** Chart series color shown as a leading dot — doubles as the legend key. */
+  /** Nature identity colour — tints the icon; doubles as the chart legend key. */
   color: string
+  /** Shared nature icon — the same glyph appears under the KPI composition bars. */
+  icon: LucideIcon
   included: boolean
   onToggle: () => void
 }
 
-function FilterChip({ label, tooltip, color, included, onToggle }: ChipProps) {
+function FilterChip({ label, tooltip, color, icon: Icon, included, onToggle }: ChipProps) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -130,9 +133,9 @@ function FilterChip({ label, tooltip, color, included, onToggle }: ChipProps) {
               : 'border-border bg-background text-muted-foreground line-through hover:bg-muted'
           )}
         >
-          <span
-            className="h-2 w-2 shrink-0 rounded-full"
-            style={{ backgroundColor: color, opacity: included ? 1 : 0.4 }}
+          <Icon
+            className="size-3.5 shrink-0"
+            style={{ color, opacity: included ? 1 : 0.4 }}
             aria-hidden="true"
           />
           {label}
@@ -212,6 +215,7 @@ export function OverviewChartFilters({
               label={INCOME_CHIP_LABELS[key]}
               tooltip={INCOME_CHIP_TOOLTIPS[key]}
               color={INCOME_CHIP_COLORS[key]}
+              icon={NATURE_ICONS[key]}
               included={includedIncome.has(key)}
               onToggle={() => onToggleIncome(key)}
             />
@@ -247,6 +251,7 @@ export function OverviewChartFilters({
               label={NATURE_LABELS[OUT_NATURE_KEY_MAP[key]]}
               tooltip={OUT_CHIP_TOOLTIPS[key]}
               color={NATURE_COLORS[OUT_NATURE_KEY_MAP[key]]}
+              icon={NATURE_ICONS[key]}
               included={includedOut.has(key)}
               onToggle={() => onToggleOut(key)}
             />
@@ -282,6 +287,7 @@ export function OverviewChartFilters({
               label={chip.label}
               tooltip={chip.tooltip}
               color={chip.color}
+              icon={NATURE_ICONS[chip.key]}
               included={includedAllocation.has(chip.key)}
               onToggle={() => onToggleAllocation(chip.key)}
             />

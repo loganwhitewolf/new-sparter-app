@@ -1,3 +1,4 @@
+import type { LucideIcon } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
@@ -16,11 +17,16 @@ export type ValueTone = 'in' | 'out' | 'allocation' | 'muted' | 'neutral'
  * the shade in the tone ramp: 0 (default) is the solid, dominant segment; 1+ are lighter.
  */
 export type BarSegment = {
+  /** Full nature name — the accessible label and the legend/hover tooltip title. */
   label: string
   value: number
   display: string
   tone: ValueTone
   step?: number
+  /** Legend glyph — the shared nature icon (also on the filter chips). */
+  icon?: LucideIcon
+  /** Legend icon colour — the nature's identity colour (matches the chip). */
+  iconColor?: string
 }
 
 /**
@@ -110,15 +116,14 @@ function DeltaChip({
   )
 }
 
-/** Stacked composition bar + a single dominant-segment legend line (rest on hover). */
+/**
+ * Stacked composition bar + a compact legend showing EVERY included segment as a
+ * coloured nature icon + its share (260711-gfd follow-up). The icon glyph is the shared
+ * nature symbol (also on the filter chips); the full name + amount live in the hover
+ * title and an sr-only label so icon-only stays accessible.
+ */
 function CompositionBar({ segments }: { segments: BarSegment[] }) {
   const total = segments.reduce((sum, s) => sum + s.value, 0) || 1
-  // Dominant = largest segment (not first): under dashboard-wide filtering the first
-  // key can be excluded, so position no longer implies dominance (260711-gfd).
-  const dominant = segments.reduce<BarSegment | null>(
-    (best, s) => (best === null || s.value > best.value ? s : best),
-    null
-  )
   return (
     <div className="space-y-1.5">
       <div className="flex h-2 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
@@ -131,16 +136,25 @@ function CompositionBar({ segments }: { segments: BarSegment[] }) {
           />
         ))}
       </div>
-      {dominant ? (
-        <p className="flex items-center gap-1.5 text-xs">
-          <span
-            className={cn('inline-block size-2 shrink-0 rounded-full', barShade(dominant.tone, dominant.step))}
-            aria-hidden="true"
-          />
-          <span className="min-w-0 truncate font-medium text-foreground">{dominant.label}</span>
-          <span className="shrink-0 text-muted-foreground">{Math.round((dominant.value / total) * 100)}%</span>
-        </p>
-      ) : null}
+      <ul className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {segments.map((s) => {
+          const pct = Math.round((s.value / total) * 100)
+          const Icon = s.icon
+          return (
+            <li
+              key={s.label}
+              className="flex items-center gap-1 text-xs tabular-nums"
+              title={`${s.label} · ${pct}% · ${s.display}`}
+            >
+              {Icon ? (
+                <Icon className="size-3.5 shrink-0" style={{ color: s.iconColor }} aria-hidden="true" />
+              ) : null}
+              <span className="text-muted-foreground">{pct}%</span>
+              <span className="sr-only">{s.label}</span>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
