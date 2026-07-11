@@ -188,38 +188,59 @@ describe('balanceReading — structural-aware (260709-kp1, decision B+)', () => 
 
 const { ReadingKpiCard } = await import('@/components/dashboard/overview/kpi-card-reading')
 
-describe('ReadingKpiCard recurring-first layout (260709-mf6)', () => {
-  it('renders stacked component rows with an emphasised value and a total summary', () => {
+describe('ReadingKpiCard composition-first layout (option B)', () => {
+  it('renders the hero total, a composition bar with per-segment hover titles, and the dominant legend', () => {
     const html = renderToStaticMarkup(
       <ReadingKpiCard
-        label="Entrate"
-        components={[
-          { label: 'Ricorrenti', value: '1.500 €', tone: 'in', emphasis: true },
-          { label: 'Straordinarie', value: '3.500 €', tone: 'muted' },
-        ]}
-        total={{ value: '5.000 €', tone: 'neutral' }}
-        delta={null}
+        label="Uscite"
+        hero={{ value: '3.240 €', tone: 'neutral' }}
+        bar={{
+          kind: 'composition',
+          segments: [
+            { label: 'Essenziale', value: 1980, display: '1.980 €', tone: 'out', step: 0 },
+            { label: 'Discrezionale', value: 820, display: '820 €', tone: 'out', step: 1 },
+            { label: 'Debiti', value: 440, display: '440 €', tone: 'out', step: 2 },
+          ],
+        }}
+        delta={8}
+        goodWhenPositive={false}
         prevYear={2025}
       />
     )
-    expect(html).toContain('Ricorrenti')
-    expect(html).toContain('Straordinarie')
-    expect(html).toContain('1.500')
-    expect(html).toContain('3.500')
-    // Grand total summary line
-    expect(html).toContain('Totale')
-    expect(html).toContain('5.000')
-    // Emphasised row uses the large type scale; secondary uses the smaller one
-    expect(html).toContain('text-2xl')
-    expect(html).toContain('text-lg')
+    expect(html).toContain('3.240')
+    // Dominant legend = first segment + its share (1980/3240 ≈ 61%)
+    expect(html).toContain('Essenziale')
+    expect(html).toContain('61%')
+    // Secondary segments still surface via the bar's hover titles
+    expect(html).toContain('Discrezionale')
+    expect(html).toContain('Debiti')
+    expect(html).toContain('1.980')
+    // Delta chip
+    expect(html).toContain('8%')
   })
 
-  it('renders a labelless single value with no total line (Accantonato shape)', () => {
+  it('renders a progress bar for a rate card (value + target tick)', () => {
+    const html = renderToStaticMarkup(
+      <ReadingKpiCard
+        label="Tasso risparmio"
+        hero={{ value: '6%', tone: 'in' }}
+        bar={{ kind: 'progress', value: 6, target: 20, tone: 'in' }}
+        delta={-3}
+        prevYear={2025}
+        reading={{ text: 'Migliorabile', sentiment: 'warn' }}
+      />
+    )
+    expect(html).toContain('6%')
+    expect(html).toContain('Migliorabile')
+    // Target tick carries its objective in the title
+    expect(html).toContain('Obiettivo 20%')
+  })
+
+  it('renders a hero + reading with no bar and no delta chip (Accantonato, delta null)', () => {
     const html = renderToStaticMarkup(
       <ReadingKpiCard
         label="Accantonato"
-        components={[{ value: '1.200 €', tone: 'allocation', emphasis: true }]}
-        total={null}
+        hero={{ value: '1.200 €', tone: 'allocation' }}
         delta={null}
         prevYear={2025}
         reading={{ text: 'Nessun confronto con il 2025', sentiment: 'neutral' }}
@@ -227,21 +248,24 @@ describe('ReadingKpiCard recurring-first layout (260709-mf6)', () => {
     )
     expect(html).toContain('1.200')
     expect(html).toContain('Nessun confronto')
-    expect(html).not.toContain('Totale')
+    // No delta chip (and thus no arrow) when delta is null
+    expect(html).not.toContain('▲')
+    expect(html).not.toContain('▼')
   })
 
-  it('renders the YoY delta badge when a delta is present', () => {
+  it('renders the YoY delta chip with an arrow when a delta is present', () => {
     const html = renderToStaticMarkup(
       <ReadingKpiCard
         label="Entrate"
-        components={[{ value: '5.000 €', tone: 'in', emphasis: true }]}
-        total={null}
+        hero={{ value: '5.000 €', tone: 'in' }}
         delta={12}
         goodWhenPositive
         prevYear={2025}
       />
     )
     expect(html).toContain('+12%')
+    expect(html).toContain('▲')
+    // prevYear surfaces via the chip title
     expect(html).toContain('2025')
   })
 })
@@ -270,17 +294,17 @@ describe('KpiRow breakdown wiring (260709-lan, 260709-leg)', () => {
     },
   }
 
-  it('Entrate shows Ricorrenti/Straordinarie; Bilancio and Tasso show Solo ricorrenti (label review 2026-07-09)', () => {
+  it('Entrate/Uscite render composition segments; Bilancio surfaces the structural signal in its reading (option B)', () => {
     const html = renderToStaticMarkup(<KpiRow data={overviewFixture} year={2026} />)
+    // Entrate composition: Ricorrenti (dominant legend) + Straordinarie (bar hover title)
     expect(html).toContain('Ricorrenti')
     expect(html).toContain('Straordinarie')
-    // Structural rows on Bilancio + Tasso risparmio (locked label)
-    expect(html).toContain('Solo ricorrenti')
-    // Structural amount −1100 and derived extraordinary 3500 both rendered
+    // Bilancio reading quantifies the recurring-only balance (structural −1100)
     expect(html).toMatch(/1\.100|1100/)
+    // Derived extraordinary income 3500 surfaces via the Entrate bar segment title
     expect(html).toMatch(/3\.500|3500/)
-    // 260709-lj5: recurring-only savings rate row on the Tasso risparmio card
-    expect(html).toContain('-73.3%')
+    // Tasso risparmio hero is the grand savings rate (48%), not the structural rate
+    expect(html).toContain('48%')
     // 260709-lkw: Uscite split by nature — labels from NATURE_LABELS (chip lexicon)
     expect(html).toContain('Essenziale')
     expect(html).toContain('Discrezionale')

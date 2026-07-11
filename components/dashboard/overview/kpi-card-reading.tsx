@@ -1,35 +1,35 @@
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
 export type Reading = { text: string; sentiment: 'good' | 'warn' | 'bad' | 'neutral' }
 
 /**
- * Colour role for a KPI value. Drives both the text colour and the leading dot.
+ * Colour role for a KPI value. Drives the hero text colour and the bar fill.
  * `allocation` uses an arbitrary var (no registered --color-* token); the rest map
  * to Tailwind utilities backed by --color-total-in/out and --foreground/--muted.
  */
 export type ValueTone = 'in' | 'out' | 'allocation' | 'muted' | 'neutral'
 
 /**
- * One stacked row in the card's primary area (260709-mf6). The emphasised row is the
- * recurring/structural value that "explains the trend" — rendered large with a coloured
- * dot; secondary rows are smaller and muted. A row without a label renders the value
- * alone, left-aligned (single-value cards like Accantonato).
+ * One segment of a composition bar (260709-…, option B). `value` is the proportion
+ * weight (raw amount); `display` is the pre-formatted amount shown on hover. `step` picks
+ * the shade in the tone ramp: 0 (default) is the solid, dominant segment; 1+ are lighter.
  */
-export type KpiComponentRow = {
-  label?: string
-  value: string
+export type BarSegment = {
+  label: string
+  value: number
+  display: string
   tone: ValueTone
-  emphasis?: boolean
-  /**
-   * `inline` (default): label left, value right — for additive breakdown rows that
-   * read as a column of aligned amounts (Entrate, Uscite).
-   * `stacked`: label above the value — for a standalone hero value whose label would
-   * otherwise wrap beside a large number in a narrow card (Bilancio, Tasso risparmio).
-   */
-  layout?: 'inline' | 'stacked'
+  step?: number
 }
+
+/**
+ * The card's single glanceable visual. `composition` is a stacked proportion bar
+ * (Entrate/Uscite mix); `progress` is a value-vs-target bar with a tick (Tasso risparmio).
+ */
+export type CardBar =
+  | { kind: 'composition'; segments: BarSegment[] }
+  | { kind: 'progress'; value: number; target: number; tone: ValueTone }
 
 const sentimentColor: Record<Reading['sentiment'], string> = {
   good: 'text-total-in',
@@ -38,12 +38,30 @@ const sentimentColor: Record<Reading['sentiment'], string> = {
   neutral: 'text-muted-foreground',
 }
 
-const toneColor: Record<ValueTone, string> = {
+const toneText: Record<ValueTone, string> = {
   in: 'text-total-in',
   out: 'text-total-out',
   allocation: 'text-[var(--total-allocation)]',
   muted: 'text-muted-foreground',
   neutral: 'text-foreground',
+}
+
+/**
+ * Bar fill ramp per tone: index 0 = solid (dominant segment), 1+ = progressively lighter
+ * shades of the SAME hue. A single-hue ramp keeps the emphasised block dominant instead of
+ * a noisy multi-colour bar — the mix reads as "how much is essential/recurring".
+ */
+const barRamp: Record<ValueTone, string[]> = {
+  in: ['bg-total-in', 'bg-total-in/35', 'bg-total-in/20'],
+  out: ['bg-total-out', 'bg-total-out/55', 'bg-total-out/30'],
+  allocation: ['bg-[var(--total-allocation)]', 'bg-[var(--total-allocation)]/40', 'bg-[var(--total-allocation)]/20'],
+  muted: ['bg-muted-foreground', 'bg-muted-foreground/40', 'bg-muted-foreground/20'],
+  neutral: ['bg-foreground', 'bg-foreground/40', 'bg-foreground/20'],
+}
+
+function barShade(tone: ValueTone, step = 0): string {
+  const ramp = barRamp[tone]
+  return ramp[Math.min(step, ramp.length - 1)]
 }
 
 function formatDelta(delta: number): string {
@@ -59,11 +77,10 @@ function deltaColor(delta: number, goodWhenPositive: boolean): string {
 }
 
 /**
- * Emphasised-value size step-down: a large number must never wrap to a second line,
- * so long values shrink the type instead of breaking (260709-mf6 follow-up).
- * Length thresholds are chosen against the ~1/5-width card at the 5-col breakpoint.
+ * Hero-value size step-down: a large number must never wrap to a second line, so long
+ * values shrink the type instead of breaking. Thresholds tuned for the ~1/5-width card.
  */
-function emphasisSizeClass(value: string): string {
+function heroSizeClass(value: string): string {
   const len = value.length
   if (len <= 10) return 'text-2xl'
   if (len <= 13) return 'text-xl'
@@ -71,116 +88,130 @@ function emphasisSizeClass(value: string): string {
   return 'text-base'
 }
 
-function ComponentRow({ row }: { row: KpiComponentRow }) {
-  const valueClass = cn(
-    'font-mono tabular-nums whitespace-nowrap',
-    row.emphasis
-      ? cn(emphasisSizeClass(row.value), 'font-semibold leading-none')
-      : 'text-lg font-medium',
-    toneColor[row.tone]
-  )
-
-  // Labelless row: single big value, left-aligned (Accantonato).
-  if (!row.label) {
-    return <p className={valueClass}>{row.value}</p>
-  }
-
-  const labelEl = <span className="text-xs text-muted-foreground">{row.label}</span>
-
-  // Stacked: label above the value — the standalone hero number in a narrow card
-  // (Bilancio, Tasso risparmio).
-  if (row.layout === 'stacked') {
-    return (
-      <div className="flex flex-col gap-1">
-        {labelEl}
-        <span className={valueClass}>{row.value}</span>
-      </div>
-    )
-  }
-
-  // Inline (default): label left, value right. Value stays intact on one line;
-  // the label truncates first if space runs out.
+/** Compact YoY delta chip (top-right). Arrow + signed %, coloured by good/bad direction. */
+function DeltaChip({
+  delta,
+  goodWhenPositive,
+  prevYear,
+}: {
+  delta: number
+  goodWhenPositive: boolean
+  prevYear: number
+}) {
+  const arrow = delta > 0 ? '▲' : delta < 0 ? '▼' : ''
   return (
-    <div className="flex items-baseline justify-between gap-2">
-      <span className="min-w-0 truncate text-xs text-muted-foreground">{row.label}</span>
-      <span className={cn(valueClass, 'shrink-0')}>{row.value}</span>
+    <span
+      className={cn('shrink-0 font-mono text-xs font-medium tabular-nums', deltaColor(delta, goodWhenPositive))}
+      title={`vs ${prevYear}`}
+    >
+      {arrow ? `${arrow} ` : ''}
+      {formatDelta(delta)}
+    </span>
+  )
+}
+
+/** Stacked composition bar + a single dominant-segment legend line (rest on hover). */
+function CompositionBar({ segments }: { segments: BarSegment[] }) {
+  const total = segments.reduce((sum, s) => sum + s.value, 0) || 1
+  const dominant = segments[0]
+  return (
+    <div className="space-y-1.5">
+      <div className="flex h-2 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
+        {segments.map((s) => (
+          <div
+            key={s.label}
+            className={barShade(s.tone, s.step)}
+            style={{ width: `${(s.value / total) * 100}%` }}
+            title={`${s.label}: ${s.display}`}
+          />
+        ))}
+      </div>
+      {dominant ? (
+        <p className="flex items-center gap-1.5 text-xs">
+          <span className={cn('inline-block size-2 shrink-0 rounded-full', barShade(dominant.tone, 0))} aria-hidden="true" />
+          <span className="min-w-0 truncate font-medium text-foreground">{dominant.label}</span>
+          <span className="shrink-0 text-muted-foreground">{Math.round((dominant.value / total) * 100)}%</span>
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+/** Value-vs-target progress bar with a tick at the target (Tasso risparmio). */
+function ProgressBar({ value, target, tone }: { value: number; target: number; tone: ValueTone }) {
+  // Scale so both the value and the target tick stay on-bar with headroom.
+  const max = Math.max(target * 1.4, value + 4, 1)
+  const fillPct = Math.max(0, Math.min(100, (value / max) * 100))
+  const tickPct = Math.max(0, Math.min(100, (target / max) * 100))
+  return (
+    <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div className={cn('h-full rounded-full', barShade(tone, 0))} style={{ width: `${fillPct}%` }} />
+      <div
+        className="absolute top-0 h-full w-0.5 bg-foreground/50"
+        style={{ left: `${tickPct}%` }}
+        title={`Obiettivo ${target}%`}
+        aria-hidden="true"
+      />
     </div>
   )
 }
 
 /**
- * ReadingKpiCard — recurring-first KPI card (260709-mf6).
+ * ReadingKpiCard — composition-first KPI card (option B, 260710-…).
  *
- * Primary area: stacked component rows (recurring/structural emphasised in full colour).
- * Footer (below a divider): optional grand-total summary line, an optional reading, and
- * the optional YoY delta badge.
+ * Anatomy: label + compact YoY delta chip (header) · headline hero value · one glanceable
+ * visual (composition bar with dominant legend, or a value-vs-target progress bar) · an
+ * optional reading. Diagnostic cards (Bilancio/Accantonato) carry a hero + reading only.
  */
 export function ReadingKpiCard({
   label,
-  components,
-  total,
+  hero,
+  bar,
+  reading,
   delta,
   goodWhenPositive = true,
-  reading,
   prevYear,
   className,
 }: {
   label: string
-  components: KpiComponentRow[]
-  /** Grand-total summary line under the divider. Null for single-value cards. */
-  total?: { value: string; tone: ValueTone } | null
+  hero: { value: string; tone: ValueTone }
+  bar?: CardBar | null
+  reading?: Reading | null
   delta: number | null
   goodWhenPositive?: boolean
-  reading?: Reading | null
   prevYear: number
   className?: string
 }) {
-  const hasFooter = Boolean(total) || Boolean(reading) || delta !== null
-
   return (
     <Card className={cn('min-h-32 rounded-lg py-0', className)}>
       <CardContent className="flex h-full flex-col justify-between gap-3 p-4">
-        <div className="space-y-2.5">
-          <p className="text-xs text-muted-foreground">{label}</p>
-          <div className="space-y-2">
-            {components.map((row, index) => (
-              <ComponentRow key={row.label ?? `v-${index}`} row={row} />
-            ))}
-          </div>
+        <div className="flex items-start justify-between gap-2">
+          <p className="min-w-0 truncate text-xs text-muted-foreground">{label}</p>
+          {delta !== null ? (
+            <DeltaChip delta={delta} goodWhenPositive={goodWhenPositive} prevYear={prevYear} />
+          ) : null}
         </div>
 
-        {hasFooter ? (
-          <div className="space-y-1.5">
-            <div className="h-px bg-border" aria-hidden="true" />
-            {total ? (
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-xs text-muted-foreground">Totale</span>
-                <span
-                  className={cn(
-                    'font-mono text-sm font-medium tabular-nums whitespace-nowrap',
-                    toneColor[total.tone]
-                  )}
-                >
-                  {total.value}
-                </span>
-              </div>
-            ) : null}
-            {reading ? (
-              <p className={cn('text-xs font-medium leading-snug', sentimentColor[reading.sentiment])}>
-                {reading.text}
-              </p>
-            ) : null}
-            {delta !== null ? (
-              <Badge
-                variant="outline"
-                className={cn('border-border bg-background font-mono', deltaColor(delta, goodWhenPositive))}
-              >
-                <span>{formatDelta(delta)}</span>
-                <span className="hidden lg:inline"> vs {prevYear}</span>
-              </Badge>
-            ) : null}
-          </div>
-        ) : null}
+        <div className="space-y-2.5">
+          <p
+            className={cn(
+              'font-mono font-semibold leading-none tabular-nums whitespace-nowrap',
+              heroSizeClass(hero.value),
+              toneText[hero.tone]
+            )}
+          >
+            {hero.value}
+          </p>
+
+          {bar?.kind === 'composition' ? <CompositionBar segments={bar.segments} /> : null}
+          {bar?.kind === 'progress' ? <ProgressBar value={bar.value} target={bar.target} tone={bar.tone} /> : null}
+
+          {reading ? (
+            <p className={cn('text-xs font-medium leading-snug', sentimentColor[reading.sentiment])}>
+              {reading.text}
+            </p>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   )
