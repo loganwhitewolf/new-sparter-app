@@ -163,6 +163,7 @@ None. Scope is small, cohesive, and fully specified by ADR 0016.
 | 260709-lj5 | Tasso risparmio card recurring-only rate row (structuralSavingsRate, same formula/guards). Label locked: Solo ricorrenti (review 2026-07-09) | 2026-07-09 | f820be8 |
 | 260709-lkw | Uscite card nature breakdown: Essenziali/Discrezionali/Debiti rows (per-nature OUT sums in shared aggregate, outByNature). Labels locked: NATURE_LABELS chip lexicon (review 2026-07-09) | 2026-07-09 | c671da1 |
 | 260709-mf6 | Recurring-first KPI card restyle: ReadingKpiCard reworked to components-first (recurring/structural hero, total as summary line); Entrate/Uscite stacked additive rows, Bilancio/Tasso stacked structural label, sign-coloured. Verified in running app (light+dark) via throwaway proto | 2026-07-09 | d347a8b |
+| 260711-cbr | Composition-bar KPI card restyle (supersedes mf6): total = hero again; Entrate/Uscite mix as a single-hue composition bar + dominant legend (rest on hover); Tasso risparmio = rate + progress bar toward 20%; Bilancio/Accantonato = hero + reading. Compact top-right YoY delta chip. Chosen from 3 proposals informed by Copilot/KPI-card research. Verified light+dark+7-figure via throwaway proto | 2026-07-11 | dd7c017 |
 
 ## Deferred Items
 
