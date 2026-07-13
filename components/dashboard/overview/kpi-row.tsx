@@ -81,10 +81,12 @@ type KpiRowProps = {
 /**
  * KpiRow — dashboard-wide filtered KPI cards (260711-gfd, option B).
  *
- * All five cards derive from the monthly chart points under the current chip
- * selection, so the cards and the chart always tell the same story. With the
- * sustainability default (extraordinary income excluded) Bilancio's hero IS the
- * structural balance and Tasso's hero IS the structural savings rate.
+ * Four cards (Entrate · Uscite · Bilancio · Accantonato) derive from the monthly chart
+ * points under the current chip selection, so the cards and the chart always tell the
+ * same story. Bilancio merges the former Bilancio + Tasso risparmio cards (same numerator:
+ * the € net is the hero, the savings rate is that net as a share of income in the progress
+ * bar). Under the sustainability default (extraordinary excluded) Bilancio's hero IS the
+ * structural balance and its rate IS the structural savings rate.
  */
 export function KpiRow({ data, prevData, includedIncome, includedOut, includedAllocation, year }: KpiRowProps) {
   const prevYear = year - 1
@@ -122,13 +124,21 @@ export function KpiRow({ data, prevData, includedIncome, includedOut, includedAl
   const usciteBar: CardBar | null =
     usciteSegments.length > 0 ? { kind: 'composition', segments: usciteSegments } : null
 
-  // Structural warn only makes sense while extraordinary income is part of the hero.
+  // ── Bilancio: merged card (was Bilancio + Tasso risparmio). They share the numerator
+  // (net = totalIn − totalOut): the € net is the hero, the savings rate is the same net as
+  // a share of income and lives in the progress bar toward the 20% benchmark. One reading:
+  // the structural warn when a positive balance holds only on extraordinary income
+  // (extraordinary still included), otherwise the savings-rate tier judgement.
   const structuralForReading = includedIncome.has('extraordinary')
     ? Number(kpis.structuralBalance)
     : null
+  const balanceReadingResolved =
+    balanceNumeric > 0 && structuralForReading !== null && structuralForReading < 0
+      ? balanceReading(balanceNumeric, structuralForReading)
+      : savingsReading(kpis.savingsRate)
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
       <ReadingKpiCard
         label="Entrate"
         hero={{ value: formatEur(kpis.totalIn), tone: entrateBar ? 'neutral' : 'in' }}
@@ -150,20 +160,11 @@ export function KpiRow({ data, prevData, includedIncome, includedOut, includedAl
       <ReadingKpiCard
         label="Bilancio"
         hero={{ value: formatEur(kpis.balance), tone: signTone(balanceNumeric) }}
+        bar={{ kind: 'progress', value: kpis.savingsRate, target: SAVINGS_TARGET_RATE, tone: signTone(kpis.savingsRate) }}
         delta={kpis.deltas.balance}
         goodWhenPositive
         prevYear={prevYear}
-        reading={balanceReading(balanceNumeric, structuralForReading)}
-        className="min-h-0"
-      />
-      <ReadingKpiCard
-        label="Tasso risparmio"
-        hero={{ value: `${kpis.savingsRate}%`, tone: signTone(kpis.savingsRate) }}
-        bar={{ kind: 'progress', value: kpis.savingsRate, target: SAVINGS_TARGET_RATE, tone: signTone(kpis.savingsRate) }}
-        delta={kpis.deltas.savingsRate}
-        goodWhenPositive
-        prevYear={prevYear}
-        reading={savingsReading(kpis.savingsRate)}
+        reading={balanceReadingResolved}
         className="min-h-0"
       />
       <ReadingKpiCard

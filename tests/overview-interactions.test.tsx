@@ -393,10 +393,11 @@ describe('KpiRow dashboard-wide filter wiring (260711-gfd)', () => {
     // Entrate hero = recurring only (1500); extraordinary segment gone
     expect(html).toMatch(/1\.500|1500/)
     expect(html).not.toContain('Straordinarie')
-    // Bilancio hero = structural balance −1100; the warn would be tautological → plain bad reading
+    // Bilancio hero = structural balance −1100; the warn would be tautological → the merged
+    // card falls back to the savings-rate reading (negative rate → "Attenzione: …").
     expect(html).toMatch(/1\.100|1100/)
     expect(html).not.toContain('Senza le entrate straordinarie')
-    expect(html).toContain('Spendi più di quanto guadagni')
+    expect(html).toContain('Attenzione: spendi più di quanto guadagni')
   })
 
   it('excluding an out nature removes its segment and shrinks the Uscite hero', () => {

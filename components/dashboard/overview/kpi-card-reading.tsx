@@ -159,21 +159,31 @@ function CompositionBar({ segments }: { segments: BarSegment[] }) {
   )
 }
 
-/** Value-vs-target progress bar with a tick at the target (Tasso risparmio). */
+/**
+ * Value-vs-target progress bar with a labelled rate and a tick at the target. On the
+ * merged Bilancio card the € net is the hero, so the savings rate lives here: the label
+ * row names it ("Tasso {value}%", sign-coloured) and marks the benchmark ("obiettivo N%").
+ */
 function ProgressBar({ value, target, tone }: { value: number; target: number; tone: ValueTone }) {
   // Scale so both the value and the target tick stay on-bar with headroom.
   const max = Math.max(target * 1.4, value + 4, 1)
   const fillPct = Math.max(0, Math.min(100, (value / max) * 100))
   const tickPct = Math.max(0, Math.min(100, (target / max) * 100))
   return (
-    <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
-      <div className={cn('h-full rounded-full', barShade(tone, 0))} style={{ width: `${fillPct}%` }} />
-      <div
-        className="absolute top-0 h-full w-0.5 bg-foreground/50"
-        style={{ left: `${tickPct}%` }}
-        title={`Obiettivo ${target}%`}
-        aria-hidden="true"
-      />
+    <div className="space-y-1.5">
+      <div className="flex items-baseline justify-between gap-2 text-xs tabular-nums">
+        <span className={cn('font-medium', toneText[tone])}>Tasso {value}%</span>
+        <span className="text-muted-foreground">obiettivo {target}%</span>
+      </div>
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div className={cn('h-full rounded-full', barShade(tone, 0))} style={{ width: `${fillPct}%` }} />
+        <div
+          className="absolute top-0 h-full w-0.5 bg-foreground/50"
+          style={{ left: `${tickPct}%` }}
+          title={`Obiettivo ${target}%`}
+          aria-hidden="true"
+        />
+      </div>
     </div>
   )
 }
