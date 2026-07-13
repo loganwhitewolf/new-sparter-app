@@ -94,7 +94,17 @@ Analysed one concern at a time on the two composition cards:
 Verified in-browser (light+dark + partial-prior-year panel): chips and legend share the
 glyph; guardrail suppresses Entrate/Uscite/Bilancio deltas while keeping the rate delta.
 
+3. **Hero alignment.** Dropped `justify-between` on the card content so all hero values sit
+   at the same height; a card without a bar lets its reading fall into the bar's slot
+   instead of bottom-aligning and dropping the hero.
+4. **Merged Bilancio + Tasso risparmio → one card (5→4).** They shared a numerator
+   (savings rate = balance / income). The € net is the hero; the savings rate lives in a
+   labelled progress bar toward 20% ("Tasso N% · obiettivo 20%"); one reading (balance
+   structural warn ▸ savings-rate tier). `ProgressBar` gained a label row. Grid → grid-cols-4.
+
 ## Commits
 
 - `2af669f` feat(260711-gfd): dashboard-wide filter chips + sustainability default
 - `1924074` feat(260711-gfd): delta guardrail + icon legend on Entrate/Uscite cards
+- `8a59c4d` fix(260711-gfd): align KPI hero values; Bilancio reading at bar level
+- `7b4ff94` feat(260711-gfd): merge Bilancio + Tasso risparmio into one card
