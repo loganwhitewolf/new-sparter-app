@@ -98,9 +98,13 @@ glyph; guardrail suppresses Entrate/Uscite/Bilancio deltas while keeping the rat
    at the same height; a card without a bar lets its reading fall into the bar's slot
    instead of bottom-aligning and dropping the hero.
 4. **Merged Bilancio + Tasso risparmio → one card (5→4).** They shared a numerator
-   (savings rate = balance / income). The € net is the hero; the savings rate lives in a
-   labelled progress bar toward 20% ("Tasso N% · obiettivo 20%"); one reading (balance
-   structural warn ▸ savings-rate tier). `ProgressBar` gained a label row. Grid → grid-cols-4.
+   (savings rate = balance / income). The € net is the hero; one reading (balance
+   structural warn ▸ savings-rate tier). Grid → grid-cols-4.
+5. **Bilancio visual: progress bar → sparkline.** The progress-toward-20% bar was
+   redundant (rate + benchmark already in the reading) with an arbitrary scale. Replaced
+   by a per-month net sparkline (trajectory — the dimension all cards lacked), computed
+   from `balanceSeries` (monthly points already client-side, zero new queries). The
+   `progress` CardBar variant + ProgressBar + SAVINGS_TARGET_RATE were removed.
 
 ## Commits
 
@@ -108,3 +112,4 @@ glyph; guardrail suppresses Entrate/Uscite/Bilancio deltas while keeping the rat
 - `1924074` feat(260711-gfd): delta guardrail + icon legend on Entrate/Uscite cards
 - `8a59c4d` fix(260711-gfd): align KPI hero values; Bilancio reading at bar level
 - `7b4ff94` feat(260711-gfd): merge Bilancio + Tasso risparmio into one card
+- `9769196` feat(260711-gfd): replace Bilancio progress bar with a monthly sparkline
