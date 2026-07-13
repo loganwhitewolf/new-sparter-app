@@ -104,7 +104,13 @@ glyph; guardrail suppresses Entrate/Uscite/Bilancio deltas while keeping the rat
    redundant (rate + benchmark already in the reading) with an arbitrary scale. Replaced
    by a per-month net sparkline (trajectory — the dimension all cards lacked), computed
    from `balanceSeries` (monthly points already client-side, zero new queries). The
-   `progress` CardBar variant + ProgressBar + SAVINGS_TARGET_RATE were removed.
+   `progress` CardBar variant + ProgressBar were removed.
+6. **Sparkline polish (3 sub-steps).** (a) zero baseline (dashed) so positive months read
+   above / negative below; (b) restored the savings rate as a caption ("Tasso N% ·
+   obiettivo 20%") via a generic `caption` slot on ReadingKpiCard; (c) two-colour line —
+   split at zero, green above / red below; (d) ±500 € neutral dead-zone — near-break-even
+   months render neutral grey (only > +500 green / < −500 red), split generalised to the
+   band boundaries. `NEUTRAL_BALANCE_THRESHOLD` + `SAVINGS_TARGET_RATE` in kpi-row.
 
 ## Commits
 
@@ -113,3 +119,6 @@ glyph; guardrail suppresses Entrate/Uscite/Bilancio deltas while keeping the rat
 - `8a59c4d` fix(260711-gfd): align KPI hero values; Bilancio reading at bar level
 - `7b4ff94` feat(260711-gfd): merge Bilancio + Tasso risparmio into one card
 - `9769196` feat(260711-gfd): replace Bilancio progress bar with a monthly sparkline
+- `c248c8d` feat(260711-gfd): Bilancio sparkline — zero baseline + restored rate caption
+- `dba92c0` feat(260711-gfd): two-colour Bilancio sparkline (green above / red below zero)
+- `6288fca` feat(260711-gfd): neutral dead-zone on the Bilancio sparkline (±500 €)
