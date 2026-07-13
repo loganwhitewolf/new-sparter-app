@@ -319,6 +319,38 @@ describe('ReadingKpiCard composition-first layout (option B)', () => {
     expect(html).not.toContain('stroke-total-out')
   })
 
+  it('neutral threshold: months within the ±band render neither green nor red', () => {
+    const html = renderToStaticMarkup(
+      <ReadingKpiCard
+        label="Bilancio"
+        hero={{ value: '120 €', tone: 'in' }}
+        // All within ±500 → every segment neutral (no green/red).
+        bar={{ kind: 'sparkline', points: [100, -200, 300, -50], neutralThreshold: 500 }}
+        delta={2}
+        prevYear={2025}
+        reading={{ text: 'In pareggio', sentiment: 'neutral' }}
+      />
+    )
+    expect(html).toContain('<svg')
+    expect(html).not.toContain('stroke-total-in')
+    expect(html).not.toContain('stroke-total-out')
+  })
+
+  it('neutral threshold: a big surplus is green, a big deficit red, small months neutral', () => {
+    const html = renderToStaticMarkup(
+      <ReadingKpiCard
+        label="Bilancio"
+        hero={{ value: '900 €', tone: 'in' }}
+        bar={{ kind: 'sparkline', points: [900, -800, 100], neutralThreshold: 500 }}
+        delta={2}
+        prevYear={2025}
+        reading={{ text: 'Ballerino', sentiment: 'warn' }}
+      />
+    )
+    expect(html).toContain('stroke-total-in') // 900 surplus
+    expect(html).toContain('stroke-total-out') // −800 deficit
+  })
+
   it('renders no sparkline for a single data point (needs ≥2)', () => {
     const html = renderToStaticMarkup(
       <ReadingKpiCard

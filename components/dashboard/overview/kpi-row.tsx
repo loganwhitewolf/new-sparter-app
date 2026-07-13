@@ -17,6 +17,13 @@ import { deriveFilteredKpis } from './overview-kpi-derive'
 /** Savings-rate benchmark shown on the Bilancio caption — "sopra il 20% consigliato". */
 const SAVINGS_TARGET_RATE = 20
 
+/**
+ * Monthly-net dead-zone for the Bilancio sparkline: a month within ±500 € is essentially
+ * break-even, so its segment renders neutral grey rather than overstating a tiny surplus
+ * or deficit as green/red. Tunable.
+ */
+const NEUTRAL_BALANCE_THRESHOLD = 500
+
 /** Income segment labels — mirror the filter chips (INCOME_CHIP_LABELS, D-05). */
 const INCOME_SEGMENT_LABELS: Record<IncomeKey, string> = {
   recurring: 'Ricorrenti',
@@ -161,9 +168,9 @@ export function KpiRow({ data, prevData, includedIncome, includedOut, includedAl
       <ReadingKpiCard
         label="Bilancio"
         hero={{ value: formatEur(kpis.balance), tone: signTone(balanceNumeric) }}
-        // Sparkline of the monthly net — split at zero, green above / red below the baseline;
-        // the savings rate vs the 20% benchmark is restored as the caption below it.
-        bar={{ kind: 'sparkline', points: kpis.balanceSeries }}
+        // Sparkline of the monthly net — green above / red below, neutral grey within the
+        // ±500 dead-zone; the savings rate vs the 20% benchmark is the caption below it.
+        bar={{ kind: 'sparkline', points: kpis.balanceSeries, neutralThreshold: NEUTRAL_BALANCE_THRESHOLD }}
         caption={
           <p className="text-xs tabular-nums">
             <span className={cn('font-medium', signTone(kpis.savingsRate) === 'out' ? 'text-total-out' : 'text-total-in')}>

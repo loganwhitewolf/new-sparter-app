@@ -33,11 +33,12 @@ export type BarSegment = {
 /**
  * The card's single glanceable visual. `composition` is a stacked proportion bar
  * (Entrate/Uscite mix); `sparkline` is a per-month trend line (Bilancio trajectory) —
- * self-coloured per segment (green above zero, red below), so it needs no tone.
+ * self-coloured per segment (green above the neutral band, red below, grey within).
+ * `neutralThreshold` is the ±band around zero rendered neutral (default 0 = pure sign).
  */
 export type CardBar =
   | { kind: 'composition'; segments: BarSegment[] }
-  | { kind: 'sparkline'; points: number[] }
+  | { kind: 'sparkline'; points: number[]; neutralThreshold?: number }
 
 const sentimentColor: Record<Reading['sentiment'], string> = {
   good: 'text-total-in',
@@ -161,13 +162,21 @@ function CompositionBar({ segments }: { segments: BarSegment[] }) {
   )
 }
 
+/** Sign band for a value given the neutral threshold: green / red / neutral-grey. */
+function bandStroke(v: number, threshold: number): string {
+  if (v >= threshold && v > 0) return 'stroke-total-in'
+  if (v <= -threshold && v < 0) return 'stroke-total-out'
+  return 'stroke-muted-foreground'
+}
+
 /**
  * Compact per-month trend line (Bilancio trajectory). The domain always includes zero and a
- * dashed baseline marks break-even; the line is split at every zero crossing and each piece
- * is coloured by sign — green above the baseline (positive month), red below. Needs ≥2
- * points; renders nothing otherwise. Decorative — the hero + reading carry the meaning.
+ * dashed baseline marks break-even; the line is split wherever it crosses a band boundary
+ * (±threshold) so each piece sits in one band, coloured green above / red below / neutral
+ * grey within ±threshold. Needs ≥2 points; renders nothing otherwise. Decorative — the hero
+ * + reading carry the meaning.
  */
-function Sparkline({ points }: { points: number[] }) {
+function Sparkline({ points, neutralThreshold = 0 }: { points: number[]; neutralThreshold?: number }) {
   if (points.length < 2) return null
   const w = 100
   const h = 24
@@ -180,20 +189,27 @@ function Sparkline({ points }: { points: number[] }) {
   const y = (v: number) => h - ((v - domainMin) / range) * h
   const yZero = y(0)
 
-  // Split each adjacent pair at the zero crossing so a segment is never half-positive.
-  const segments: Array<{ d: string; positive: boolean }> = []
+  // The band boundaries the line may cross (dedup for threshold 0 → just zero).
+  const boundaries = [...new Set([neutralThreshold, -neutralThreshold])]
+
+  // Split each adjacent pair at every boundary it crosses, so a piece is never two-tone.
+  const segments: Array<{ d: string; stroke: string }> = []
   for (let i = 0; i < points.length - 1; i++) {
     const v0 = points[i]
     const v1 = points[i + 1]
-    const p0 = `${x(i).toFixed(1)},${y(v0).toFixed(1)}`
-    const p1 = `${x(i + 1).toFixed(1)},${y(v1).toFixed(1)}`
-    if (v0 >= 0 === v1 >= 0) {
-      segments.push({ d: `M${p0} L${p1}`, positive: v0 >= 0 })
-    } else {
-      const t = v0 / (v0 - v1) // fraction from i→i+1 where the value hits 0
-      const cross = `${(x(i) + (x(i + 1) - x(i)) * t).toFixed(1)},${yZero.toFixed(1)}`
-      segments.push({ d: `M${p0} L${cross}`, positive: v0 >= 0 })
-      segments.push({ d: `M${cross} L${p1}`, positive: v1 >= 0 })
+    const cuts = boundaries
+      .filter((b) => (v0 - b) * (v1 - b) < 0) // strictly between v0 and v1
+      .map((b) => (b - v0) / (v1 - v0)) // fraction along the segment
+      .sort((a, b) => a - b)
+    let prevT = 0
+    let prevPoint = `${x(i).toFixed(1)},${y(v0).toFixed(1)}`
+    for (const t of [...cuts, 1]) {
+      const vAtT = v0 + (v1 - v0) * t
+      const point = `${(x(i) + step * t).toFixed(1)},${y(vAtT).toFixed(1)}`
+      const midV = v0 + (v1 - v0) * ((prevT + t) / 2)
+      segments.push({ d: `M${prevPoint} L${point}`, stroke: bandStroke(midV, neutralThreshold) })
+      prevT = t
+      prevPoint = point
     }
   }
 
@@ -215,7 +231,7 @@ function Sparkline({ points }: { points: number[] }) {
             key={i}
             d={s.d}
             fill="none"
-            className={s.positive ? 'stroke-total-in' : 'stroke-total-out'}
+            className={s.stroke}
             strokeWidth={1.5}
             strokeLinejoin="round"
             strokeLinecap="round"
@@ -282,7 +298,9 @@ export function ReadingKpiCard({
           </p>
 
           {bar?.kind === 'composition' ? <CompositionBar segments={bar.segments} /> : null}
-          {bar?.kind === 'sparkline' ? <Sparkline points={bar.points} /> : null}
+          {bar?.kind === 'sparkline' ? (
+            <Sparkline points={bar.points} neutralThreshold={bar.neutralThreshold} />
+          ) : null}
 
           {caption ? <div>{caption}</div> : null}
 
