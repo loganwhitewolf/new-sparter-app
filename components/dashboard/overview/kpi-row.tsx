@@ -161,9 +161,9 @@ export function KpiRow({ data, prevData, includedIncome, includedOut, includedAl
       <ReadingKpiCard
         label="Bilancio"
         hero={{ value: formatEur(kpis.balance), tone: signTone(balanceNumeric) }}
-        // Sparkline of the monthly net (with a zero baseline: above = positive month); the
-        // savings rate vs the 20% benchmark is restored as the caption below it.
-        bar={{ kind: 'sparkline', points: kpis.balanceSeries, tone: signTone(balanceNumeric) }}
+        // Sparkline of the monthly net — split at zero, green above / red below the baseline;
+        // the savings rate vs the 20% benchmark is restored as the caption below it.
+        bar={{ kind: 'sparkline', points: kpis.balanceSeries }}
         caption={
           <p className="text-xs tabular-nums">
             <span className={cn('font-medium', signTone(kpis.savingsRate) === 'out' ? 'text-total-out' : 'text-total-in')}>

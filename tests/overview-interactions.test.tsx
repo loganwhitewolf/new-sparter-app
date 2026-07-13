@@ -284,12 +284,12 @@ describe('ReadingKpiCard composition-first layout (option B)', () => {
     expect(html).toContain('8%')
   })
 
-  it('renders a sparkline trend for a card (≥2 points → an svg polyline)', () => {
+  it('renders a two-colour sparkline: green above zero, red below (split at the crossing)', () => {
     const html = renderToStaticMarkup(
       <ReadingKpiCard
         label="Bilancio"
         hero={{ value: '4.690 €', tone: 'in' }}
-        bar={{ kind: 'sparkline', points: [200, 450, 100, 600, 900, 700], tone: 'in' }}
+        bar={{ kind: 'sparkline', points: [200, -150, 600, -80, 900] }}
         delta={-3}
         prevYear={2025}
         reading={{ text: 'Ottimo, sopra il 20% consigliato', sentiment: 'good' }}
@@ -297,10 +297,26 @@ describe('ReadingKpiCard composition-first layout (option B)', () => {
     )
     expect(html).toContain('4.690')
     expect(html).toContain('Ottimo, sopra il 20% consigliato')
-    // Sparkline renders an svg path with a move command
     expect(html).toContain('<svg')
-    expect(html).toContain('<path')
     expect(html).toContain('Andamento del bilancio')
+    // Both signs present → both stroke colours rendered
+    expect(html).toContain('stroke-total-in')
+    expect(html).toContain('stroke-total-out')
+  })
+
+  it('renders an all-positive sparkline with no red segment', () => {
+    const html = renderToStaticMarkup(
+      <ReadingKpiCard
+        label="Bilancio"
+        hero={{ value: '4.690 €', tone: 'in' }}
+        bar={{ kind: 'sparkline', points: [200, 450, 100, 600] }}
+        delta={2}
+        prevYear={2025}
+        reading={{ text: 'Ottimo', sentiment: 'good' }}
+      />
+    )
+    expect(html).toContain('stroke-total-in')
+    expect(html).not.toContain('stroke-total-out')
   })
 
   it('renders no sparkline for a single data point (needs ≥2)', () => {
@@ -308,7 +324,7 @@ describe('ReadingKpiCard composition-first layout (option B)', () => {
       <ReadingKpiCard
         label="Bilancio"
         hero={{ value: '4.690 €', tone: 'in' }}
-        bar={{ kind: 'sparkline', points: [200], tone: 'in' }}
+        bar={{ kind: 'sparkline', points: [200] }}
         delta={null}
         prevYear={2025}
         reading={{ text: 'Ottimo', sentiment: 'good' }}

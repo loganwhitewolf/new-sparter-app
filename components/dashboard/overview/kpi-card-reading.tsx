@@ -32,11 +32,12 @@ export type BarSegment = {
 
 /**
  * The card's single glanceable visual. `composition` is a stacked proportion bar
- * (Entrate/Uscite mix); `sparkline` is a per-month trend line (Bilancio trajectory).
+ * (Entrate/Uscite mix); `sparkline` is a per-month trend line (Bilancio trajectory) —
+ * self-coloured per segment (green above zero, red below), so it needs no tone.
  */
 export type CardBar =
   | { kind: 'composition'; segments: BarSegment[] }
-  | { kind: 'sparkline'; points: number[]; tone: ValueTone }
+  | { kind: 'sparkline'; points: number[] }
 
 const sentimentColor: Record<Reading['sentiment'], string> = {
   good: 'text-total-in',
@@ -161,12 +162,12 @@ function CompositionBar({ segments }: { segments: BarSegment[] }) {
 }
 
 /**
- * Compact per-month trend line (Bilancio trajectory). The domain always includes zero so a
- * dashed zero baseline shows which months were positive (above) vs negative (below); the
- * polyline is tone-coloured via currentColor. Needs ≥2 points; renders nothing otherwise
- * (e.g. a single-month year). Decorative — the hero + reading carry the meaning.
+ * Compact per-month trend line (Bilancio trajectory). The domain always includes zero and a
+ * dashed baseline marks break-even; the line is split at every zero crossing and each piece
+ * is coloured by sign — green above the baseline (positive month), red below. Needs ≥2
+ * points; renders nothing otherwise. Decorative — the hero + reading carry the meaning.
  */
-function Sparkline({ points, tone }: { points: number[]; tone: ValueTone }) {
+function Sparkline({ points }: { points: number[] }) {
   if (points.length < 2) return null
   const w = 100
   const h = 24
@@ -175,33 +176,52 @@ function Sparkline({ points, tone }: { points: number[]; tone: ValueTone }) {
   const domainMax = Math.max(0, ...points)
   const range = domainMax - domainMin || 1
   const step = w / (points.length - 1)
+  const x = (i: number) => i * step
   const y = (v: number) => h - ((v - domainMin) / range) * h
-  const line = points
-    .map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * step).toFixed(1)},${y(v).toFixed(1)}`)
-    .join(' ')
-  const yZero = y(0).toFixed(1)
+  const yZero = y(0)
+
+  // Split each adjacent pair at the zero crossing so a segment is never half-positive.
+  const segments: Array<{ d: string; positive: boolean }> = []
+  for (let i = 0; i < points.length - 1; i++) {
+    const v0 = points[i]
+    const v1 = points[i + 1]
+    const p0 = `${x(i).toFixed(1)},${y(v0).toFixed(1)}`
+    const p1 = `${x(i + 1).toFixed(1)},${y(v1).toFixed(1)}`
+    if (v0 >= 0 === v1 >= 0) {
+      segments.push({ d: `M${p0} L${p1}`, positive: v0 >= 0 })
+    } else {
+      const t = v0 / (v0 - v1) // fraction from i→i+1 where the value hits 0
+      const cross = `${(x(i) + (x(i + 1) - x(i)) * t).toFixed(1)},${yZero.toFixed(1)}`
+      segments.push({ d: `M${p0} L${cross}`, positive: v0 >= 0 })
+      segments.push({ d: `M${cross} L${p1}`, positive: v1 >= 0 })
+    }
+  }
+
   return (
-    <span className={cn('block', toneText[tone])} title="Andamento del bilancio mese per mese">
+    <span className="block" title="Andamento del bilancio mese per mese">
       <svg viewBox={`0 0 ${w} ${h}`} className="h-6 w-full" preserveAspectRatio="none" aria-hidden="true">
         <line
           x1="0"
-          y1={yZero}
+          y1={yZero.toFixed(1)}
           x2={w}
-          y2={yZero}
+          y2={yZero.toFixed(1)}
           className="stroke-muted-foreground/40"
           strokeWidth={1}
           strokeDasharray="2 2"
           vectorEffect="non-scaling-stroke"
         />
-        <path
-          d={line}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-        />
+        {segments.map((s, i) => (
+          <path
+            key={i}
+            d={s.d}
+            fill="none"
+            className={s.positive ? 'stroke-total-in' : 'stroke-total-out'}
+            strokeWidth={1.5}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
       </svg>
     </span>
   )
@@ -262,7 +282,7 @@ export function ReadingKpiCard({
           </p>
 
           {bar?.kind === 'composition' ? <CompositionBar segments={bar.segments} /> : null}
-          {bar?.kind === 'sparkline' ? <Sparkline points={bar.points} tone={bar.tone} /> : null}
+          {bar?.kind === 'sparkline' ? <Sparkline points={bar.points} /> : null}
 
           {caption ? <div>{caption}</div> : null}
 
