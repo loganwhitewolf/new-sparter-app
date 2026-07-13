@@ -18,11 +18,11 @@ import { deriveFilteredKpis } from './overview-kpi-derive'
 const SAVINGS_TARGET_RATE = 20
 
 /**
- * Monthly-net dead-zone for the Bilancio sparkline: a month within ±500 € is essentially
- * break-even, so its segment renders neutral grey rather than overstating a tiny surplus
- * or deficit as green/red. Tunable.
+ * Monthly-net dead-zone for the Bilancio sparkline: a month within ±100 € is essentially
+ * break-even (rounding/timing noise), so its segment renders neutral grey rather than
+ * overstating a tiny surplus or deficit as green/red. Tunable.
  */
-const NEUTRAL_BALANCE_THRESHOLD = 500
+const NEUTRAL_BALANCE_THRESHOLD = 100
 
 /** Income segment labels — mirror the filter chips (INCOME_CHIP_LABELS, D-05). */
 const INCOME_SEGMENT_LABELS: Record<IncomeKey, string> = {
