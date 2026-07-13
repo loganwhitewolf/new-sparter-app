@@ -1,4 +1,5 @@
 import type { OverviewChartPoint } from '@/lib/dal/overview'
+import { cn } from '@/lib/utils'
 import { toDecimal } from '@/lib/utils/decimal'
 import { NATURE_LABELS } from '@/lib/utils/nature-labels'
 import { formatEur } from './format'
@@ -12,6 +13,9 @@ import {
 } from './overview-chart-utils'
 import { NATURE_ICONS, NATURE_KEY_COLORS } from './nature-icons'
 import { deriveFilteredKpis } from './overview-kpi-derive'
+
+/** Savings-rate benchmark shown on the Bilancio caption — "sopra il 20% consigliato". */
+const SAVINGS_TARGET_RATE = 20
 
 /** Income segment labels — mirror the filter chips (INCOME_CHIP_LABELS, D-05). */
 const INCOME_SEGMENT_LABELS: Record<IncomeKey, string> = {
@@ -157,9 +161,17 @@ export function KpiRow({ data, prevData, includedIncome, includedOut, includedAl
       <ReadingKpiCard
         label="Bilancio"
         hero={{ value: formatEur(kpis.balance), tone: signTone(balanceNumeric) }}
-        // Sparkline of the monthly net — the trajectory the other cards lack; the savings
-        // rate vs the 20% benchmark now lives entirely in the reading.
+        // Sparkline of the monthly net (with a zero baseline: above = positive month); the
+        // savings rate vs the 20% benchmark is restored as the caption below it.
         bar={{ kind: 'sparkline', points: kpis.balanceSeries, tone: signTone(balanceNumeric) }}
+        caption={
+          <p className="text-xs tabular-nums">
+            <span className={cn('font-medium', signTone(kpis.savingsRate) === 'out' ? 'text-total-out' : 'text-total-in')}>
+              Tasso {kpis.savingsRate}%
+            </span>
+            <span className="text-muted-foreground"> · obiettivo {SAVINGS_TARGET_RATE}%</span>
+          </p>
+        }
         delta={kpis.deltas.balance}
         goodWhenPositive
         prevYear={prevYear}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -160,29 +161,38 @@ function CompositionBar({ segments }: { segments: BarSegment[] }) {
 }
 
 /**
- * Compact per-month trend line (Bilancio trajectory). Normalised min→max polyline with a
- * faint area fill, coloured by tone via currentColor. Needs ≥2 points; renders nothing
- * otherwise (e.g. a single-month year). Decorative — the hero + reading carry the meaning.
+ * Compact per-month trend line (Bilancio trajectory). The domain always includes zero so a
+ * dashed zero baseline shows which months were positive (above) vs negative (below); the
+ * polyline is tone-coloured via currentColor. Needs ≥2 points; renders nothing otherwise
+ * (e.g. a single-month year). Decorative — the hero + reading carry the meaning.
  */
 function Sparkline({ points, tone }: { points: number[]; tone: ValueTone }) {
   if (points.length < 2) return null
   const w = 100
   const h = 24
-  const min = Math.min(...points)
-  const max = Math.max(...points)
-  const range = max - min || 1
+  // Anchor the scale on zero so the baseline is always meaningful (positive vs negative).
+  const domainMin = Math.min(0, ...points)
+  const domainMax = Math.max(0, ...points)
+  const range = domainMax - domainMin || 1
   const step = w / (points.length - 1)
-  const coords = points.map((v, i) => {
-    const x = i * step
-    const y = h - ((v - min) / range) * h
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  })
-  const line = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c}`).join(' ')
-  const area = `${line} L${w},${h} L0,${h} Z`
+  const y = (v: number) => h - ((v - domainMin) / range) * h
+  const line = points
+    .map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * step).toFixed(1)},${y(v).toFixed(1)}`)
+    .join(' ')
+  const yZero = y(0).toFixed(1)
   return (
     <span className={cn('block', toneText[tone])} title="Andamento del bilancio mese per mese">
       <svg viewBox={`0 0 ${w} ${h}`} className="h-6 w-full" preserveAspectRatio="none" aria-hidden="true">
-        <path d={area} fill="currentColor" fillOpacity={0.12} />
+        <line
+          x1="0"
+          y1={yZero}
+          x2={w}
+          y2={yZero}
+          className="stroke-muted-foreground/40"
+          strokeWidth={1}
+          strokeDasharray="2 2"
+          vectorEffect="non-scaling-stroke"
+        />
         <path
           d={line}
           fill="none"
@@ -212,6 +222,7 @@ export function ReadingKpiCard({
   label,
   hero,
   bar,
+  caption,
   reading,
   delta,
   goodWhenPositive = true,
@@ -221,6 +232,8 @@ export function ReadingKpiCard({
   label: string
   hero: { value: string; tone: ValueTone }
   bar?: CardBar | null
+  /** Optional line under the visual (e.g. Bilancio's "Tasso N% · obiettivo 20%"). */
+  caption?: ReactNode
   reading?: Reading | null
   delta: number | null
   goodWhenPositive?: boolean
@@ -250,6 +263,8 @@ export function ReadingKpiCard({
 
           {bar?.kind === 'composition' ? <CompositionBar segments={bar.segments} /> : null}
           {bar?.kind === 'sparkline' ? <Sparkline points={bar.points} tone={bar.tone} /> : null}
+
+          {caption ? <div>{caption}</div> : null}
 
           {reading ? (
             <p className={cn('text-xs font-medium leading-snug', sentimentColor[reading.sentiment])}>

@@ -388,6 +388,9 @@ describe('KpiRow dashboard-wide filter wiring (260711-gfd)', () => {
     // Balance 2400 positive but structural −1100 → warn quantifies the structural balance
     expect(html).toContain('Senza le entrate straordinarie')
     expect(html).toMatch(/1\.100|1100/)
+    // Savings-rate caption restored: (5000−2600)/5000 = 48% vs the 20% benchmark
+    expect(html).toContain('Tasso 48%')
+    expect(html).toContain('obiettivo 20%')
     // Uscite split by nature — labels from NATURE_LABELS (chip lexicon)
     expect(html).toContain('Essenziale')
     expect(html).toContain('Discrezionale')
