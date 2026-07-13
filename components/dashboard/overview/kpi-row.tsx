@@ -13,9 +13,6 @@ import {
 import { NATURE_ICONS, NATURE_KEY_COLORS } from './nature-icons'
 import { deriveFilteredKpis } from './overview-kpi-derive'
 
-/** Recurring-only savings-rate target — the "sopra il 20% consigliato" benchmark. */
-const SAVINGS_TARGET_RATE = 20
-
 /** Income segment labels — mirror the filter chips (INCOME_CHIP_LABELS, D-05). */
 const INCOME_SEGMENT_LABELS: Record<IncomeKey, string> = {
   recurring: 'Ricorrenti',
@@ -83,10 +80,10 @@ type KpiRowProps = {
  *
  * Four cards (Entrate · Uscite · Bilancio · Accantonato) derive from the monthly chart
  * points under the current chip selection, so the cards and the chart always tell the
- * same story. Bilancio merges the former Bilancio + Tasso risparmio cards (same numerator:
- * the € net is the hero, the savings rate is that net as a share of income in the progress
- * bar). Under the sustainability default (extraordinary excluded) Bilancio's hero IS the
- * structural balance and its rate IS the structural savings rate.
+ * same story. Bilancio merges the former Bilancio + Tasso risparmio cards: the € net is the
+ * hero, a per-month sparkline shows its trajectory, and the savings-rate-vs-20% judgement
+ * lives in the reading. Under the sustainability default (extraordinary excluded) Bilancio's
+ * hero IS the structural balance.
  */
 export function KpiRow({ data, prevData, includedIncome, includedOut, includedAllocation, year }: KpiRowProps) {
   const prevYear = year - 1
@@ -160,7 +157,9 @@ export function KpiRow({ data, prevData, includedIncome, includedOut, includedAl
       <ReadingKpiCard
         label="Bilancio"
         hero={{ value: formatEur(kpis.balance), tone: signTone(balanceNumeric) }}
-        bar={{ kind: 'progress', value: kpis.savingsRate, target: SAVINGS_TARGET_RATE, tone: signTone(kpis.savingsRate) }}
+        // Sparkline of the monthly net — the trajectory the other cards lack; the savings
+        // rate vs the 20% benchmark now lives entirely in the reading.
+        bar={{ kind: 'sparkline', points: kpis.balanceSeries, tone: signTone(balanceNumeric) }}
         delta={kpis.deltas.balance}
         goodWhenPositive
         prevYear={prevYear}

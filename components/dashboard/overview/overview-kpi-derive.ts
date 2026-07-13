@@ -56,6 +56,8 @@ export type FilteredKpis = {
   /** Per-key sums for the composition bars — only the INCLUDED keys are present. */
   incomeByKey: Partial<Record<IncomeKey, string>>
   outByKey: Partial<Record<OutKey, string>>
+  /** Per-month net (income − out) under the selection — feeds the Bilancio sparkline. */
+  balanceSeries: number[]
   deltas: {
     totalIn: number | null
     totalOut: number | null
@@ -143,6 +145,13 @@ export function deriveFilteredKpis(
     outByKey[key] = sumAcrossMonths(points, (p) => p.out as unknown as Record<string, string>, [key]).toFixed(2)
   }
 
+  // Per-month net under the selection — the Bilancio sparkline trajectory.
+  const balanceSeries = points.map((p) =>
+    sumSelected(incomeValues(p), income)
+      .minus(sumSelected(p.out as unknown as Record<string, string>, out))
+      .toNumber()
+  )
+
   return {
     totalIn: current.totalIn.toFixed(2),
     totalOut: current.totalOut.toFixed(2),
@@ -152,6 +161,7 @@ export function deriveFilteredKpis(
     structuralBalance: structural.toFixed(2),
     incomeByKey,
     outByKey,
+    balanceSeries,
     deltas: {
       totalIn: credibleDelta(computeDeltaPercent(current.totalIn.toFixed(2), previous.totalIn.toFixed(2))),
       totalOut: credibleDelta(computeDeltaPercent(current.totalOut.toFixed(2), previous.totalOut.toFixed(2))),

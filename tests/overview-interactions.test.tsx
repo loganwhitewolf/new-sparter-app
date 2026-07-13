@@ -139,6 +139,8 @@ describe('deriveFilteredKpis (260711-gfd)', () => {
     expect(kpis.balance).toBe('1000.00')
     // savingsRate = 1000/2500 = 40%
     expect(kpis.savingsRate).toBe(40)
+    // Per-month net for the sparkline: Gen 1200−490=710, Feb 1300−1010=290
+    expect(kpis.balanceSeries).toEqual([710, 290])
   })
 
   it('sustainability default: extraordinary excluded → totals are recurring-only', () => {
@@ -282,21 +284,38 @@ describe('ReadingKpiCard composition-first layout (option B)', () => {
     expect(html).toContain('8%')
   })
 
-  it('renders a progress bar for a rate card (value + target tick)', () => {
+  it('renders a sparkline trend for a card (≥2 points → an svg polyline)', () => {
     const html = renderToStaticMarkup(
       <ReadingKpiCard
-        label="Tasso risparmio"
-        hero={{ value: '6%', tone: 'in' }}
-        bar={{ kind: 'progress', value: 6, target: 20, tone: 'in' }}
+        label="Bilancio"
+        hero={{ value: '4.690 €', tone: 'in' }}
+        bar={{ kind: 'sparkline', points: [200, 450, 100, 600, 900, 700], tone: 'in' }}
         delta={-3}
         prevYear={2025}
-        reading={{ text: 'Migliorabile', sentiment: 'warn' }}
+        reading={{ text: 'Ottimo, sopra il 20% consigliato', sentiment: 'good' }}
       />
     )
-    expect(html).toContain('6%')
-    expect(html).toContain('Migliorabile')
-    // Target tick carries its objective in the title
-    expect(html).toContain('Obiettivo 20%')
+    expect(html).toContain('4.690')
+    expect(html).toContain('Ottimo, sopra il 20% consigliato')
+    // Sparkline renders an svg path with a move command
+    expect(html).toContain('<svg')
+    expect(html).toContain('<path')
+    expect(html).toContain('Andamento del bilancio')
+  })
+
+  it('renders no sparkline for a single data point (needs ≥2)', () => {
+    const html = renderToStaticMarkup(
+      <ReadingKpiCard
+        label="Bilancio"
+        hero={{ value: '4.690 €', tone: 'in' }}
+        bar={{ kind: 'sparkline', points: [200], tone: 'in' }}
+        delta={null}
+        prevYear={2025}
+        reading={{ text: 'Ottimo', sentiment: 'good' }}
+      />
+    )
+    expect(html).not.toContain('<svg')
+    expect(html).toContain('4.690')
   })
 
   it('renders a hero + reading with no bar and no delta chip (Accantonato, delta null)', () => {
@@ -369,8 +388,6 @@ describe('KpiRow dashboard-wide filter wiring (260711-gfd)', () => {
     // Balance 2400 positive but structural −1100 → warn quantifies the structural balance
     expect(html).toContain('Senza le entrate straordinarie')
     expect(html).toMatch(/1\.100|1100/)
-    // Savings rate on all-in basis: (5000−2600)/5000 = 48%
-    expect(html).toContain('48%')
     // Uscite split by nature — labels from NATURE_LABELS (chip lexicon)
     expect(html).toContain('Essenziale')
     expect(html).toContain('Discrezionale')

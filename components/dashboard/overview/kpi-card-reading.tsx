@@ -31,11 +31,11 @@ export type BarSegment = {
 
 /**
  * The card's single glanceable visual. `composition` is a stacked proportion bar
- * (Entrate/Uscite mix); `progress` is a value-vs-target bar with a tick (Tasso risparmio).
+ * (Entrate/Uscite mix); `sparkline` is a per-month trend line (Bilancio trajectory).
  */
 export type CardBar =
   | { kind: 'composition'; segments: BarSegment[] }
-  | { kind: 'progress'; value: number; target: number; tone: ValueTone }
+  | { kind: 'sparkline'; points: number[]; tone: ValueTone }
 
 const sentimentColor: Record<Reading['sentiment'], string> = {
   good: 'text-total-in',
@@ -160,31 +160,40 @@ function CompositionBar({ segments }: { segments: BarSegment[] }) {
 }
 
 /**
- * Value-vs-target progress bar with a labelled rate and a tick at the target. On the
- * merged Bilancio card the € net is the hero, so the savings rate lives here: the label
- * row names it ("Tasso {value}%", sign-coloured) and marks the benchmark ("obiettivo N%").
+ * Compact per-month trend line (Bilancio trajectory). Normalised min→max polyline with a
+ * faint area fill, coloured by tone via currentColor. Needs ≥2 points; renders nothing
+ * otherwise (e.g. a single-month year). Decorative — the hero + reading carry the meaning.
  */
-function ProgressBar({ value, target, tone }: { value: number; target: number; tone: ValueTone }) {
-  // Scale so both the value and the target tick stay on-bar with headroom.
-  const max = Math.max(target * 1.4, value + 4, 1)
-  const fillPct = Math.max(0, Math.min(100, (value / max) * 100))
-  const tickPct = Math.max(0, Math.min(100, (target / max) * 100))
+function Sparkline({ points, tone }: { points: number[]; tone: ValueTone }) {
+  if (points.length < 2) return null
+  const w = 100
+  const h = 24
+  const min = Math.min(...points)
+  const max = Math.max(...points)
+  const range = max - min || 1
+  const step = w / (points.length - 1)
+  const coords = points.map((v, i) => {
+    const x = i * step
+    const y = h - ((v - min) / range) * h
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  })
+  const line = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c}`).join(' ')
+  const area = `${line} L${w},${h} L0,${h} Z`
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-baseline justify-between gap-2 text-xs tabular-nums">
-        <span className={cn('font-medium', toneText[tone])}>Tasso {value}%</span>
-        <span className="text-muted-foreground">obiettivo {target}%</span>
-      </div>
-      <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
-        <div className={cn('h-full rounded-full', barShade(tone, 0))} style={{ width: `${fillPct}%` }} />
-        <div
-          className="absolute top-0 h-full w-0.5 bg-foreground/50"
-          style={{ left: `${tickPct}%` }}
-          title={`Obiettivo ${target}%`}
-          aria-hidden="true"
+    <span className={cn('block', toneText[tone])} title="Andamento del bilancio mese per mese">
+      <svg viewBox={`0 0 ${w} ${h}`} className="h-6 w-full" preserveAspectRatio="none" aria-hidden="true">
+        <path d={area} fill="currentColor" fillOpacity={0.12} />
+        <path
+          d={line}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
         />
-      </div>
-    </div>
+      </svg>
+    </span>
   )
 }
 
@@ -192,8 +201,8 @@ function ProgressBar({ value, target, tone }: { value: number; target: number; t
  * ReadingKpiCard — composition-first KPI card (option B, 260710-…).
  *
  * Anatomy: label + compact YoY delta chip (header) · headline hero value · one glanceable
- * visual (composition bar with dominant legend, or a value-vs-target progress bar) · an
- * optional reading. Diagnostic cards (Bilancio/Accantonato) carry a hero + reading only.
+ * visual (composition bar with icon legend, or a per-month sparkline) · an optional
+ * reading. Accantonato carries a hero + reading only.
  *
  * Content is TOP-aligned (not spread) so the hero value sits at the same height on every
  * card in the row — a card without a bar (Bilancio/Accantonato) lets its reading fall into
@@ -240,7 +249,7 @@ export function ReadingKpiCard({
           </p>
 
           {bar?.kind === 'composition' ? <CompositionBar segments={bar.segments} /> : null}
-          {bar?.kind === 'progress' ? <ProgressBar value={bar.value} target={bar.target} tone={bar.tone} /> : null}
+          {bar?.kind === 'sparkline' ? <Sparkline points={bar.points} tone={bar.tone} /> : null}
 
           {reading ? (
             <p className={cn('text-xs font-medium leading-snug', sentimentColor[reading.sentiment])}>
