@@ -105,12 +105,22 @@ glyph; guardrail suppresses Entrate/Uscite/Bilancio deltas while keeping the rat
    by a per-month net sparkline (trajectory — the dimension all cards lacked), computed
    from `balanceSeries` (monthly points already client-side, zero new queries). The
    `progress` CardBar variant + ProgressBar were removed.
-6. **Sparkline polish (3 sub-steps).** (a) zero baseline (dashed) so positive months read
+6. **Sparkline polish (4 sub-steps).** (a) zero baseline (dashed) so positive months read
    above / negative below; (b) restored the savings rate as a caption ("Tasso N% ·
    obiettivo 20%") via a generic `caption` slot on ReadingKpiCard; (c) two-colour line —
-   split at zero, green above / red below; (d) ±500 € neutral dead-zone — near-break-even
-   months render neutral grey (only > +500 green / < −500 red), split generalised to the
-   band boundaries. `NEUTRAL_BALANCE_THRESHOLD` + `SAVINGS_TARGET_RATE` in kpi-row.
+   split at zero, green above / red below; (d) neutral dead-zone — near-break-even months
+   render neutral grey, split generalised to the band boundaries. Threshold tuned to
+   **±100 €** (500 greyed out meaningful months). `NEUTRAL_BALANCE_THRESHOLD` in kpi-row.
+7. **Accantonato composition bar (last card).** Gained the Entrate/Uscite visual language:
+   a composition bar of the included allocation natures + icon legend (🐷 Risparmio / 📈
+   Investimento). This gives the allocation chips a visible purpose — they now slice the
+   card in front of the user. Kept under the filters (exempting → chart-only chips, more
+   inconsistent). YoY reading dropped (redundant with the delta chip). `allocationByKey`
+   added to deriveFilteredKpis; `allocationReading` removed.
+
+Net result: **4 consistent cards** — Entrate/Uscite/Accantonato are composition bars +
+icon legends; Bilancio is the € hero + two-colour sparkline (±100 dead-zone) + rate
+caption. All driven by the dashboard-wide chips.
 
 ## Commits
 
@@ -122,3 +132,5 @@ glyph; guardrail suppresses Entrate/Uscite/Bilancio deltas while keeping the rat
 - `c248c8d` feat(260711-gfd): Bilancio sparkline — zero baseline + restored rate caption
 - `dba92c0` feat(260711-gfd): two-colour Bilancio sparkline (green above / red below zero)
 - `6288fca` feat(260711-gfd): neutral dead-zone on the Bilancio sparkline (±500 €)
+- `ce44585` tweak(260711-gfd): lower Bilancio sparkline dead-zone to ±100 €
+- `09caaa7` feat(260711-gfd): Accantonato composition bar (Risparmio / Investimento)
