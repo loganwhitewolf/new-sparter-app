@@ -6,16 +6,14 @@ import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { user as userTable } from '@/lib/db/schema'
 import { getAuthSessionOrNull } from '@/lib/auth-session'
+import { isStagingBypass, stagingUserId } from '@/lib/auth-staging'
 
 export const verifySession = cache(async () => {
   const requestHeaders = await headers()
 
-  if (
-    process.env.STAGING_KEY &&
-    requestHeaders.get('x-staging-key') === process.env.STAGING_KEY
-  ) {
+  if (isStagingBypass(requestHeaders.get('x-staging-key'))) {
     return {
-      userId: process.env.STAGING_USER_ID ?? 'staging-user',
+      userId: stagingUserId(),
       email: 'staging@example.local',
       subscriptionPlan: 'basic' as const,
       role: 'user' as const,

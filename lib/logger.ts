@@ -4,6 +4,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { headers } from 'next/headers'
 import pino from 'pino'
 import { auth } from '@/auth'
+import { isStagingBypass, stagingUserId } from '@/lib/auth-staging'
 
 export const DEFAULT_BETTERSTACK_ENDPOINT = 'https://in.logs.betterstack.com'
 const REDACTED = '[Redacted]'
@@ -51,13 +52,10 @@ export async function withUserId<T>(
   try {
     const requestHeaders = await headers()
 
-    if (
-      process.env.STAGING_KEY &&
-      requestHeaders.get('x-staging-key') === process.env.STAGING_KEY
-    ) {
+    if (isStagingBypass(requestHeaders.get('x-staging-key'))) {
       context = {
         ...extraContext,
-        userId: process.env.STAGING_USER_ID ?? 'staging-user',
+        userId: stagingUserId(),
       }
     } else {
       const session = await auth.api.getSession({

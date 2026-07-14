@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { getAuthSessionOrNull } from '@/lib/auth-session'
+import { isStagingBypass } from '@/lib/auth-staging'
 
 const PUBLIC_ROUTES = ['/login', '/register']
 const AUTH_ROUTES = ['/login', '/register']
@@ -8,12 +9,9 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
 
   // D-07 / D-08: Staging bypass FIRST — before any auth check.
-  // Active whenever STAGING_KEY env var is defined (not NODE_ENV-gated).
-  // NEVER set STAGING_KEY in Railway production service.
-  if (
-    process.env.STAGING_KEY &&
-    request.headers.get('x-staging-key') === process.env.STAGING_KEY
-  ) {
+  // Inert in production (Vercel VERCEL_ENV === 'production'); active in
+  // preview/dev whenever STAGING_KEY is set. See lib/auth-staging.ts.
+  if (isStagingBypass(request.headers.get('x-staging-key'))) {
     return NextResponse.next()
   }
 
