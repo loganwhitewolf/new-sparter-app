@@ -4,6 +4,7 @@ import type { OverviewChartPoint, MonthOverMonthChange } from '@/lib/dal/overvie
 import { fetchMovers } from '@/lib/actions/overview'
 import { OverviewChart } from './overview-chart'
 import { OverviewMoversPanel } from './overview-movers-panel'
+import type { AllocationKey, IncomeKey, OutKey } from './overview-chart-utils'
 
 type Props = {
   data: OverviewChartPoint[]
@@ -12,6 +13,10 @@ type Props = {
   initialMoversIn: MonthOverMonthChange[]
   initialMoversOut: MonthOverMonthChange[]
   initialMoversAllocation: MonthOverMonthChange[]
+  // 260711-gfd: chip selection owned by OverviewDashboardSection — passed through to the chart.
+  includedIncome: Set<IncomeKey>
+  includedOut: Set<OutKey>
+  includedAllocation: Set<AllocationKey>
 }
 
 /**
@@ -30,6 +35,9 @@ export function OverviewMoversSection({
   initialMoversIn,
   initialMoversOut,
   initialMoversAllocation,
+  includedIncome,
+  includedOut,
+  includedAllocation,
 }: Props) {
   const [selectedMonth, setSelectedMonth] = useState(defaultMonthIndex)
   const [moversIn, setMoversIn] = useState<MonthOverMonthChange[]>(initialMoversIn)
@@ -64,6 +72,9 @@ export function OverviewMoversSection({
         data={data}
         selectedMonth={selectedMonth}
         onMonthSelect={handleMonthSelect}
+        includedIncome={includedIncome}
+        includedOut={includedOut}
+        includedAllocation={includedAllocation}
       />
       <OverviewMoversPanel
         year={year}
