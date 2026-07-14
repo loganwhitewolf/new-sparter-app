@@ -6,8 +6,8 @@ current_phase: 5
 status: Awaiting next milestone
 stopped_at: v2.5 milestone complete, ready to plan next milestone
 last_updated: "2026-07-07T06:54:03.129Z"
-last_activity: 2026-07-08
-last_activity_desc: Completed quick task 260708-jt6 — fixed description/title cell overflow in transactions+expenses tables
+last_activity: 2026-07-14
+last_activity_desc: "Shipped KPI-card rework (260709-mf6 + 260711-cbr + 260711-gfd) — PR #46"
 progress:
   total_phases: 3
   completed_phases: 3
