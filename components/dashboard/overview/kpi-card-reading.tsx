@@ -247,8 +247,8 @@ function Sparkline({ points, neutralThreshold = 0 }: { points: number[]; neutral
  * ReadingKpiCard — composition-first KPI card (option B, 260710-…).
  *
  * Anatomy: label + compact YoY delta chip (header) · headline hero value · one glanceable
- * visual (composition bar with icon legend, or a per-month sparkline) · an optional
- * reading. Accantonato carries a hero + reading only.
+ * visual (composition bar with icon legend, or a per-month sparkline) · an optional caption
+ * (Bilancio's rate line) · an optional reading (Bilancio's judgement).
  *
  * Content is TOP-aligned (not spread) so the hero value sits at the same height on every
  * card in the row — a card without a bar (Bilancio/Accantonato) lets its reading fall into

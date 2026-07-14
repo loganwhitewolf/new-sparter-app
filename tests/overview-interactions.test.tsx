@@ -141,6 +141,9 @@ describe('deriveFilteredKpis (260711-gfd)', () => {
     expect(kpis.savingsRate).toBe(40)
     // Per-month net for the sparkline: Gen 1200−490=710, Feb 1300−1010=290
     expect(kpis.balanceSeries).toEqual([710, 290])
+    // Per-allocation-key sums: savings 20+30=50, investment 60+40=100
+    expect(kpis.allocationByKey.savings).toBe('50.00')
+    expect(kpis.allocationByKey.investment).toBe('100.00')
   })
 
   it('sustainability default: extraordinary excluded → totals are recurring-only', () => {
@@ -411,7 +414,7 @@ describe('KpiRow dashboard-wide filter wiring (260711-gfd)', () => {
       label: 'Gen',
       income: { recurring: '1500.00', extraordinary: '3500.00' },
       out: { essential: '1800.00', discretionary: '600.00', debt: '200.00' },
-      allocation: { savings: '0.00', investment: '0.00' },
+      allocation: { savings: '500.00', investment: '300.00' },
     },
   ]
   const allIncome = new Set(INCOME_KEYS)
@@ -444,6 +447,10 @@ describe('KpiRow dashboard-wide filter wiring (260711-gfd)', () => {
     expect(html).toContain('Discrezionale')
     expect(html).toContain('Debiti')
     expect(html).toMatch(/1\.800|1800/)
+    // Accantonato composition — Risparmio / Investimento split (500 / 300 → 63% / 38%)
+    expect(html).toContain('Risparmio')
+    expect(html).toContain('Investimento')
+    expect(html).toContain('63%')
   })
 
   it('sustainability selection (extraordinary excluded): heroes ARE the structural numbers, no tautological warn', () => {
