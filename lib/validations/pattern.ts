@@ -1,7 +1,19 @@
+import safeRegex from 'safe-regex'
 import { z } from 'zod'
 
 const INVALID_PATTERN_MESSAGE = 'Pattern regex non valido.'
 const UNSUPPORTED_FLAGS_MESSAGE = 'Flag regex non supportati. Usa solo /pattern/i oppure pattern.'
+// A categorization pattern matches short merchant strings; a real one never needs
+// to be long. The cap bounds worst-case matching work and blocks oversized inputs
+// before they reach the regex engine.
+const MAX_PATTERN_LENGTH = 200
+const MAX_PATTERN_MESSAGE = `Pattern troppo lungo (max ${MAX_PATTERN_LENGTH} caratteri).`
+// ReDoS guard (docs/security/audit-2026-07-14.md, finding H-3):
+// user regexes are executed synchronously against every transaction description
+// during import. safe-regex rejects catastrophic-backtracking shapes (nested
+// quantifiers like (a+)+) at creation time — the single choke point through which
+// every persisted user pattern passes.
+const UNSAFE_PATTERN_MESSAGE = 'Pattern regex non ammesso: struttura potenzialmente troppo costosa. Semplificalo.'
 
 export function normalizePatternInput(input: string): string {
   const trimmed = input.trim()
@@ -31,10 +43,20 @@ export function normalizePatternInput(input: string): string {
     throw new Error(INVALID_PATTERN_MESSAGE)
   }
 
+  if (source.length > MAX_PATTERN_LENGTH) {
+    throw new Error(MAX_PATTERN_MESSAGE)
+  }
+
   try {
     new RegExp(source, 'i')
   } catch {
     throw new Error(INVALID_PATTERN_MESSAGE)
+  }
+
+  // ReDoS guard: reject catastrophic-backtracking shapes before the pattern is
+  // ever persisted and later run against transaction descriptions.
+  if (!safeRegex(source)) {
+    throw new Error(UNSAFE_PATTERN_MESSAGE)
   }
 
   return source
