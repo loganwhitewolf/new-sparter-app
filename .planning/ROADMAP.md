@@ -59,7 +59,7 @@ totals never persisted), and via the "tag = filter, never breakdown" rule for ta
 Plans:
 **Wave 1**
 
-- [ ] 65-01-PLAN.md — expenseGroup/expenseGroupMembership schema + migration + merge/rename Zod schemas
+- [x] 65-01-PLAN.md — expenseGroup/expenseGroupMembership schema + migration + merge/rename Zod schemas
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -342,7 +342,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 62. transaction-edit-core | v2.5 | 2/2 | Complete    | 2026-07-05 |
 | 63. detail-pages-tx-expense | v2.5 | 4/4 | Complete    | 2026-07-05 |
 | 64. file-detail-and-navigation | v2.5 | 7/7 | Complete    | 2026-07-06 |
-| 65. expense-group-merge-and-view | v2.6 | 0/6 | Not started | - |
+| 65. expense-group-merge-and-view | v2.6 | 0/6 | In Progress|  |
 | 66. expense-group-lifecycle | v2.6 | 0/TBD | Not started | - |
 | 67. tags-foundation-and-assignment | v2.6 | 0/TBD | Not started | - |
 | 68. tags-dashboard-and-navigation | v2.6 | 0/TBD | Not started | - |

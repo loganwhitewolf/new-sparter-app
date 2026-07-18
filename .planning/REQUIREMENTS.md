@@ -12,10 +12,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 Model locked in ADR 0017 (grill 2026-07-18): grouping entity above intact Expenses; no
 physical merge, no hash aliasing; read-time totals; dashboard values structurally unchanged.
 
-- [ ] **GRP-01**: User can select multiple expenses sharing the same subcategory from the expenses table bulk bar and merge them into an Expense Group with a custom title ("Unisci")
+- [x] **GRP-01**: User can select multiple expenses sharing the same subcategory from the expenses table bulk bar and merge them into an Expense Group with a custom title ("Unisci")
 - [ ] **GRP-02**: When the selection includes uncategorized expenses, the merge dialog offers to categorize them explicitly (Tier-2-visible act) before grouping — merge itself never assigns categories
 - [ ] **GRP-03**: Expenses list and dashboard drill-downs show the group as a single row (title, read-time computed totals: amount sum, transaction count, min/max dates, "unita" badge); member rows are hidden
-- [ ] **GRP-04**: User can open a group detail page showing subcategory, member expenses with original titles/totals, and the combined transaction list; rename lives here
+- [x] **GRP-04**: User can open a group detail page showing subcategory, member expenses with original titles/totals, and the combined transaction list; rename lives here
 - [ ] **GRP-05**: User can recategorize the group and the new subcategory propagates to all members (group is the categorization unit; member-level recategorization not offered while grouped)
 - [ ] **GRP-06**: User can add a later expense to an existing group (select group + expense → "Unisci"), same subcategory gate
 - [ ] **GRP-07**: User can remove a single member or dissolve the group ("Scomponi"); a group left with one member auto-dissolves; dissolution restores the exact pre-merge state
@@ -66,10 +66,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GRP-01 | Phase 65 | Pending |
+| GRP-01 | Phase 65 | Complete |
 | GRP-02 | Phase 65 | Pending |
 | GRP-03 | Phase 65 | Pending |
-| GRP-04 | Phase 65 | Pending |
+| GRP-04 | Phase 65 | Complete |
 | GRP-08 | Phase 65 | Pending |
 | GRP-05 | Phase 66 | Pending |
 | GRP-06 | Phase 66 | Pending |
@@ -84,6 +84,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NAV-01 | Phase 68 | Pending |
 
 **Coverage:**
+
 - v2.6 requirements: 16 total
 - Mapped to phases: 16
 - Unmapped: 0 ✓

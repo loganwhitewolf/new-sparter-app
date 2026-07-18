@@ -2,14 +2,18 @@
 gsd_state_version: 1.0
 milestone: v2.6
 milestone_name: Expenses & Transactions Refinement
-status: planning
-last_updated: "2026-07-18T15:00:00.000Z"
+current_phase: 65
+current_phase_name: expense-group-merge-and-view
+status: executing
+stopped_at: Completed 65-01-PLAN.md
+last_updated: "2026-07-18T17:24:58.452Z"
 last_activity: 2026-07-18
+last_activity_desc: Phase 65 execution started
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 6
+  completed_plans: 1
   percent: 0
 ---
 
@@ -20,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** v2.6 roadmap created (Phases 65-68) — ready to plan Phase 65
+**Current focus:** Phase 65 — expense-group-merge-and-view
 
 ## Current Position
 
-Phase: 65 of 68 (expense-group-merge-and-view) — not started
-Plan: —
-Status: Roadmap created, ready for `/gsd-plan-phase 65`
-Last activity: 2026-07-18 — ROADMAP.md created: 4 phases, 16/16 v2.6 requirements mapped, no orphans
+Phase: 65 (expense-group-merge-and-view) — EXECUTING
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-07-18 — Phase 65 execution started
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 17%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -72,15 +76,18 @@ change dashboard totals or category breakdowns.
   never assigns categories). Group is the categorization unit — recategorizing the group
   propagates to all members. No import-time auto-merge/similarity heuristics (deferred: GRP-F01).
   Standalone Expenses are not special-cased and may join a group.
+
 - **Transaction Tags design** — curated entity (name + optional date range), never deleted
   (archive only); N tags per transaction; bulk-assign only (no per-transaction single-tag UI
   requirement); tag = filter axis, never a breakdown dimension (multi-tag would double-count).
   Date-range suggestion fires on tag creation and on every subsequent import. TAG-06 (Viaggi
   audit) restricts Vacanze/Viaggi subcategories to intrinsically-travel spend so trip-tagging
   has a clean categorization substrate underneath it.
+
 - **Cross-cutting invariant** — neither Expense Group nor Tag work may change dashboard values:
   structural for GRP (pure regrouping, read-time totals — GRP-09 is a testable requirement); via
   the "tag = filter, never breakdown" rule for TAG.
+
 - Deferred out of this milestone: GRP-F01 (similarity hints at import), TAG-F01 (AI tagging
   pass), TAG-F02 (person/"for whom" tag family) — see REQUIREMENTS.md Future Requirements.
 
@@ -141,6 +148,8 @@ change dashboard totals or category breakdowns.
 - [Phase 64]: [Phase 64-06] attachPopstateRefresh is a standalone hook-free export so it is unit-testable with a plain mock object, no jsdom needed
 - [Phase 64]: [Phase 64-07] CR-01 fixed via ancestor-only `.group` addition on the three detail-page title wrappers, not a rewrite of the shared pencil components — keeps the fix isolated from the already-correct table-row hover behavior
 - [Phase 64]: [Phase 64-07] WR-02: hasInAppHistory(historyLength) replaces document.referrer entirely as handleBackClick's sole branch signal — referrer is fixed at hard navigation and never updated by client-side App Router transitions, so it silently and permanently disabled smart-back for any tab that ever loaded from an external link
+- [Phase ?]: expenseGroupMembership enforces at most one group per expense via a standalone unique(expenseId), not just the (groupId, expenseId) pair unique
+- [Phase ?]: MergeExpensesSchema has no category field at all — merge is pure regrouping; categorization happens via bulkCategorize separately (D-02)
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -154,10 +163,12 @@ change dashboard totals or category breakdowns.
   (group + membership) via `drizzle-kit generate` + `scripts/migrate.ts`. No migration touches
   existing expense/transaction rows (ADR 0017 consequence). Group totals must be computed at
   read time in the DAL, never persisted/cached on the group row.
+
 - **Transaction Tags (Phases 67-68)** — no existing schema entity; new curated tag table +
   transaction-tag join table (N:M). TAG-06's regex/categorizer updates for Vacanze/Viaggi follow
   the existing `scripts/seed-patterns-data.ts` full-replace model (`yarn db:seed-patterns`) — new
   or corrected patterns go there, not in `seed-data.ts`/`seed-extras.ts`.
+
 - `lib/services/transaction-detach.ts` — `detachTransactionToDedicatedExpense({ userId, transactionId, title, subCategoryId })` (shipped v2.4/ADR 0016) is the precedent for in-place re-hash mechanics; ADR 0017 §5 notes a Standalone Expense may join a group without special-casing.
 - `SubcategoryPicker` (vaul bottom sheet, single `subCategoryId` output, adopted across all 7 selection surfaces) is the intended control for any new subcategory-capture UI in the merge dialog (GRP-02) — reuse, do not build a new picker (v1.13 / ADR 0008).
 - Dashboard aggregation sites (8, per v2.0 `isNotSecondary()`/`effectiveAmount()` netting) are the surfaces GRP-09's invariant test and TAG-04's global filter must both leave structurally unchanged / correctly narrow.
@@ -241,9 +252,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** v2.6 ROADMAP.md created (Phases 65-68), 16/16 requirements mapped
+**Stopped at:** Completed 65-01-PLAN.md
 
-Last session: 2026-07-18T15:00:00.000Z
+Last session: 2026-07-18T17:24:58.446Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -277,3 +288,8 @@ Last session: 2026-07-18T15:00:00.000Z
 | Phase 64 P05 | 8min | 1 tasks | 2 files |
 | Phase 64 P06 | 5min | 1 tasks | 2 files |
 | Phase 64 P07 | 12min | 2 tasks | 4 files |
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 65 P01 | 12min | 3 tasks | 5 files |
