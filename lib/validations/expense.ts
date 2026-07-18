@@ -56,6 +56,31 @@ export const IgnoreExpenseSchema = z.object({
   id: z.string().min(1, { error: 'ID spesa mancante.' }),
 })
 
+// Merge (Unisci) — Phase 65, ADR 0017. Pure regrouping: deliberately carries no
+// category field (D-02) — the merge dialog categorizes uncategorized selections
+// via the pre-existing BulkCategorizeSchema/bulkCategorize action first, as a
+// separate call, before this schema's input is ever submitted.
+export const MergeExpensesSchema = z.object({
+  selectedExpenseIds: z
+    .array(z.string().uuid())
+    .min(2, { error: 'Seleziona almeno due spese per unire.' })
+    .max(500, { error: 'Puoi unire al massimo 500 spese alla volta.' }),
+  groupTitle: z
+    .string()
+    .trim()
+    .min(2, { error: 'Il titolo del gruppo deve contenere almeno 2 caratteri.' })
+    .max(500, { error: 'Il titolo del gruppo non può superare i 500 caratteri.' }),
+})
+
+export const RenameExpenseGroupSchema = z.object({
+  groupId: z.coerce.number().int().positive({ error: 'Gruppo non valido.' }),
+  title: z
+    .string()
+    .trim()
+    .min(2, { error: 'Il titolo deve contenere almeno 2 caratteri.' })
+    .max(500, { error: 'Il titolo non può superare i 500 caratteri.' }),
+})
+
 export type CreateExpenseInput = z.infer<typeof CreateExpenseSchema>
 export type UpdateExpenseInput = z.infer<typeof UpdateExpenseSchema>
 export type UpdateExpenseTitleInput = z.infer<typeof UpdateExpenseTitleSchema>
@@ -63,6 +88,8 @@ export type BulkCategorizeInput = z.infer<typeof BulkCategorizeSchema>
 export type BulkDeleteExpensesInput = z.infer<typeof BulkDeleteExpensesSchema>
 export type SingleCategorizeInput = z.infer<typeof SingleCategorizeSchema>
 export type IgnoreExpenseInput = z.infer<typeof IgnoreExpenseSchema>
+export type MergeExpensesInput = z.infer<typeof MergeExpensesSchema>
+export type RenameExpenseGroupInput = z.infer<typeof RenameExpenseGroupSchema>
 export type ActionState = { error: string | null }
 
 // ─── Shared filter parser for the Expenses page toolbar ───────────────────────
