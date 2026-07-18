@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   writeClassificationHistory: vi.fn(),
   revalidateCategorizationSurfaces: vi.fn(),
   dbUpdate: vi.fn(),
+  createExpenseGroup: vi.fn(),
+  renameExpenseGroup: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
@@ -22,6 +24,10 @@ vi.mock('@/lib/dal/transactions', () => ({
 }))
 vi.mock('@/lib/actions/revalidation', () => ({
   revalidateCategorizationSurfaces: mocks.revalidateCategorizationSurfaces,
+}))
+vi.mock('@/lib/services/expense-group', () => ({
+  createExpenseGroup: mocks.createExpenseGroup,
+  renameExpenseGroup: mocks.renameExpenseGroup,
 }))
 vi.mock('@/lib/db', () => ({
   db: {
@@ -60,7 +66,8 @@ vi.mock('drizzle-orm', () => ({
   ),
 }))
 
-const { categorizeExpense, bulkCategorize, updateExpenseTitle } = await import('@/lib/actions/expenses')
+const { categorizeExpense, bulkCategorize, updateExpenseTitle, mergeExpenses, renameExpenseGroupAction } =
+  await import('@/lib/actions/expenses')
 
 function makeFormData(fields: Record<string, string>) {
   const fd = new FormData()
@@ -257,6 +264,176 @@ describe('bulkCategorize — subcategory visibility guard', () => {
     )
 
     expect(mocks.writeClassificationHistory).not.toHaveBeenCalled()
+    expect(mocks.revalidateCategorizationSurfaces).not.toHaveBeenCalled()
+  })
+})
+
+describe('mergeExpenses', () => {
+  function mockTxSelectRows(rows: Array<{ id: string; subCategoryId: number | null }>) {
+    mocks.dbTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue(rows),
+          }),
+        }),
+      }
+      return fn(tx)
+    })
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+    mocks.revalidateCategorizationSurfaces.mockReturnValue(undefined)
+  })
+
+  it('merges when every selected expense shares the same non-null subcategory', async () => {
+    mockTxSelectRows([
+      { id: '11111111-1111-4111-8111-111111111111', subCategoryId: 42 },
+      { id: '22222222-2222-4222-8222-222222222222', subCategoryId: 42 },
+    ])
+    mocks.createExpenseGroup.mockResolvedValue({ groupId: 7 })
+
+    const result = await mergeExpenses(
+      { error: null },
+      makeFormData({
+        selectedExpenseIds: JSON.stringify(['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222']),
+        groupTitle: 'Cherasco 57',
+      }),
+    )
+
+    expect(result).toEqual({ error: null })
+    expect(mocks.createExpenseGroup).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        userId: 'user-1',
+        selectedExpenseIds: ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222'],
+        groupTitle: 'Cherasco 57',
+        subCategoryId: 42,
+      }),
+    )
+    expect(mocks.revalidateCategorizationSurfaces).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects when a selected id is missing or not owned', async () => {
+    mockTxSelectRows([{ id: '11111111-1111-4111-8111-111111111111', subCategoryId: 42 }]) // expense-2 missing/unowned
+
+    const result = await mergeExpenses(
+      { error: null },
+      makeFormData({
+        selectedExpenseIds: JSON.stringify(['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222']),
+        groupTitle: 'Cherasco 57',
+      }),
+    )
+
+    expect(result).toEqual({ error: 'Una o più spese non sono state trovate.' })
+    expect(mocks.createExpenseGroup).not.toHaveBeenCalled()
+  })
+
+  it('rejects when any selected expense is uncategorized', async () => {
+    mockTxSelectRows([
+      { id: '11111111-1111-4111-8111-111111111111', subCategoryId: 42 },
+      { id: '22222222-2222-4222-8222-222222222222', subCategoryId: null },
+    ])
+
+    const result = await mergeExpenses(
+      { error: null },
+      makeFormData({
+        selectedExpenseIds: JSON.stringify(['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222']),
+        groupTitle: 'Cherasco 57',
+      }),
+    )
+
+    expect(result).toEqual({ error: 'Categorizza prima di unire.' })
+    expect(mocks.createExpenseGroup).not.toHaveBeenCalled()
+  })
+
+  it('rejects when selected expenses disagree on subcategory', async () => {
+    mockTxSelectRows([
+      { id: '11111111-1111-4111-8111-111111111111', subCategoryId: 42 },
+      { id: '22222222-2222-4222-8222-222222222222', subCategoryId: 43 },
+    ])
+
+    const result = await mergeExpenses(
+      { error: null },
+      makeFormData({
+        selectedExpenseIds: JSON.stringify(['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222']),
+        groupTitle: 'Cherasco 57',
+      }),
+    )
+
+    expect(result).toEqual({ error: 'Le spese devono avere la stessa categoria.' })
+    expect(mocks.createExpenseGroup).not.toHaveBeenCalled()
+  })
+
+  it('surfaces the already-grouped service error verbatim', async () => {
+    mockTxSelectRows([
+      { id: '11111111-1111-4111-8111-111111111111', subCategoryId: 42 },
+      { id: '22222222-2222-4222-8222-222222222222', subCategoryId: 42 },
+    ])
+    mocks.createExpenseGroup.mockRejectedValue(
+      new Error('Una spesa selezionata fa già parte di un gruppo.'),
+    )
+
+    const result = await mergeExpenses(
+      { error: null },
+      makeFormData({
+        selectedExpenseIds: JSON.stringify(['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222']),
+        groupTitle: 'Cherasco 57',
+      }),
+    )
+
+    expect(result).toEqual({ error: 'Una spesa selezionata fa già parte di un gruppo.' })
+  })
+
+  it('rejects a parse failure (fewer than 2 ids) without touching the DB', async () => {
+    const result = await mergeExpenses(
+      { error: null },
+      makeFormData({
+        selectedExpenseIds: JSON.stringify(['11111111-1111-4111-8111-111111111111']),
+        groupTitle: 'Cherasco 57',
+      }),
+    )
+
+    expect(result.error).toBe('Seleziona almeno due spese per unire.')
+    expect(mocks.verifySession).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+})
+
+describe('renameExpenseGroupAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+    mocks.revalidateCategorizationSurfaces.mockReturnValue(undefined)
+  })
+
+  it('renames the group and revalidates on success', async () => {
+    mocks.renameExpenseGroup.mockResolvedValue(true)
+
+    const result = await renameExpenseGroupAction(
+      { error: null },
+      makeFormData({ groupId: '7', title: 'Nuovo titolo' }),
+    )
+
+    expect(result).toEqual({ error: null })
+    expect(mocks.renameExpenseGroup).toHaveBeenCalledWith(
+      expect.anything(),
+      { userId: 'user-1', groupId: 7, title: 'Nuovo titolo' },
+    )
+    expect(mocks.revalidateCategorizationSurfaces).toHaveBeenCalledTimes(1)
+  })
+
+  it('surfaces the not-found service error verbatim', async () => {
+    mocks.renameExpenseGroup.mockRejectedValue(new Error('Gruppo non trovato.'))
+
+    const result = await renameExpenseGroupAction(
+      { error: null },
+      makeFormData({ groupId: '999', title: 'Nuovo titolo' }),
+    )
+
+    expect(result).toEqual({ error: 'Gruppo non trovato.' })
     expect(mocks.revalidateCategorizationSurfaces).not.toHaveBeenCalled()
   })
 })

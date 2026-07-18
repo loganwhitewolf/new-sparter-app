@@ -9,6 +9,8 @@ import {
   DeleteExpenseSchema,
   SingleCategorizeSchema,
   IgnoreExpenseSchema,
+  MergeExpensesSchema,
+  RenameExpenseGroupSchema,
   ActionState,
 } from '@/lib/validations/expense'
 import {
@@ -22,6 +24,7 @@ import {
   type ExpenseSourceFile,
 } from '@/lib/dal/expenses'
 import { deleteExpensesWithOptions } from '@/lib/services/expense-deletion'
+import { createExpenseGroup, renameExpenseGroup } from '@/lib/services/expense-group'
 import {
   getTransactionsByExpenseId,
   type ExpenseTransactionRow,
@@ -388,6 +391,101 @@ export async function ignoreExpense(
   } catch {
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
+  revalidateCategorizationSurfaces()
+  return { error: null }
+}
+
+/**
+ * Merge (Unisci) — Phase 65, ADR 0017. Pure regrouping (D-02): this action never
+ * assigns a category. Every selected expense must already share the same
+ * non-null subCategoryId; uncategorized selections are categorized separately
+ * (via bulkCategorize) in the merge dialog before this action is ever called.
+ */
+export async function mergeExpenses(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  let selectedExpenseIds: unknown
+  try {
+    selectedExpenseIds = JSON.parse((formData.get('selectedExpenseIds') as string) ?? '[]')
+  } catch {
+    return { error: 'Selezione non valida.' }
+  }
+
+  const parsed = MergeExpensesSchema.safeParse({
+    selectedExpenseIds,
+    groupTitle: formData.get('groupTitle'),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+
+  const { userId } = await verifySession()
+  const dedupedIds = [...new Set(parsed.data.selectedExpenseIds)]
+
+  try {
+    await db.transaction(async (tx) => {
+      const rows = await tx
+        .select({ id: expense.id, subCategoryId: expense.subCategoryId })
+        .from(expense)
+        .where(and(eq(expense.userId, userId), inArray(expense.id, dedupedIds)))
+
+      if (rows.length !== dedupedIds.length) {
+        throw new Error('Una o più spese non sono state trovate.')
+      }
+
+      if (rows.some((row) => row.subCategoryId === null)) {
+        throw new Error('Categorizza prima di unire.')
+      }
+
+      const subCategoryIds = new Set(rows.map((row) => row.subCategoryId))
+      if (subCategoryIds.size > 1) {
+        throw new Error('Le spese devono avere la stessa categoria.')
+      }
+
+      const commonSubCategoryId = rows[0].subCategoryId as number
+
+      await createExpenseGroup(tx, {
+        userId,
+        selectedExpenseIds: dedupedIds,
+        groupTitle: parsed.data.groupTitle,
+        subCategoryId: commonSubCategoryId,
+      })
+    })
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message }
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+
+  revalidateCategorizationSurfaces()
+  return { error: null }
+}
+
+export async function renameExpenseGroupAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const parsed = RenameExpenseGroupSchema.safeParse({
+    groupId: formData.get('groupId'),
+    title: formData.get('title'),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+
+  const { userId } = await verifySession()
+
+  try {
+    await renameExpenseGroup(db, {
+      userId,
+      groupId: parsed.data.groupId,
+      title: parsed.data.title,
+    })
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message }
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+
   revalidateCategorizationSurfaces()
   return { error: null }
 }
