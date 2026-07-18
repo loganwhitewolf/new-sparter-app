@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.6
 milestone_name: Expenses & Transactions Refinement
 status: planning
-last_updated: "2026-07-18T13:30:35.724Z"
+last_updated: "2026-07-18T15:00:00.000Z"
 last_activity: 2026-07-18
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,19 +17,39 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-01)
+See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** v2.5 milestone complete — ready to start next milestone
+**Current focus:** v2.6 roadmap created (Phases 65-68) — ready to plan Phase 65
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 65 of 68 (expense-group-merge-and-view) — not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-18 — Milestone v2.6 started
+Status: Roadmap created, ready for `/gsd-plan-phase 65`
+Last activity: 2026-07-18 — ROADMAP.md created: 4 phases, 16/16 v2.6 requirements mapped, no orphans
 
-## Roadmap (v2.5 — Phases 62–64)
+Progress: [░░░░░░░░░░] 0%
+
+## Roadmap (v2.6 — Phases 65-68)
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 65 | expense-group-merge-and-view | GRP-01, GRP-02, GRP-03, GRP-04, GRP-08 | Not started |
+| 66 | expense-group-lifecycle | GRP-05, GRP-06, GRP-07, GRP-09 | Not started |
+| 67 | tags-foundation-and-assignment | TAG-01, TAG-02, TAG-03, TAG-06 | Not started |
+| 68 | tags-dashboard-and-navigation | TAG-04, TAG-05, NAV-01 | Not started |
+
+**Coverage:** 16/16 v2.6 requirements mapped across Phases 65-68, none orphaned. Expense Group
+model LOCKED in `docs/adr/0017-expense-group-over-physical-merge.md` (grill 2026-07-18) — no
+discovery to redo: grouping entity above intact Expenses, same-subcategory gate, group is the
+categorization unit, no import-time auto-merge, read-time totals never persisted. Transaction
+Tags design LOCKED in `.planning/REQUIREMENTS.md` notes (source: Obsidian "sparter-tag-transazioni",
+2026-07-06) — tag = filter, never breakdown; curated entity, never deleted. Cross-cutting
+invariant across both features (GRP-09 testable requirement): neither grouping nor tagging may
+change dashboard totals or category breakdowns.
+
+## Roadmap (v2.5 — Phases 62-64, shipped)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
@@ -37,11 +57,34 @@ Last activity: 2026-07-18 — Milestone v2.6 started
 | 63 | detail-pages-tx-expense | DET-05, DET-06, DET-07 | Complete |
 | 64 | file-detail-and-navigation | DET-08, DET-09 | Complete |
 
-**Coverage:** 9/9 DET requirements mapped across Phases 62–64, all shipped. Edit-domain contract locked (grill 2026-07-05): hashes/description immutable, auto-reconcile, pair-guard blocks, route pages.
+**Coverage:** 9/9 DET requirements mapped across Phases 62-64, all shipped. Edit-domain contract locked (grill 2026-07-05): hashes/description immutable, auto-reconcile, pair-guard blocks, route pages.
 
 ## Accumulated Context
 
 ### Decisions
+
+**v2.6 milestone contract (locked at roadmap creation, 2026-07-18):**
+
+- **Expense Group model** — ADR 0017: grouping entity above intact Expenses (option A);
+  members keep `descriptionHash`, aggregates, Tier 2 history unchanged; group totals computed
+  at read time, never persisted. Merge requires all members share one non-null subcategory
+  (uncategorized selections are categorized explicitly in the merge dialog first — merge itself
+  never assigns categories). Group is the categorization unit — recategorizing the group
+  propagates to all members. No import-time auto-merge/similarity heuristics (deferred: GRP-F01).
+  Standalone Expenses are not special-cased and may join a group.
+- **Transaction Tags design** — curated entity (name + optional date range), never deleted
+  (archive only); N tags per transaction; bulk-assign only (no per-transaction single-tag UI
+  requirement); tag = filter axis, never a breakdown dimension (multi-tag would double-count).
+  Date-range suggestion fires on tag creation and on every subsequent import. TAG-06 (Viaggi
+  audit) restricts Vacanze/Viaggi subcategories to intrinsically-travel spend so trip-tagging
+  has a clean categorization substrate underneath it.
+- **Cross-cutting invariant** — neither Expense Group nor Tag work may change dashboard values:
+  structural for GRP (pure regrouping, read-time totals — GRP-09 is a testable requirement); via
+  the "tag = filter, never breakdown" rule for TAG.
+- Deferred out of this milestone: GRP-F01 (similarity hints at import), TAG-F01 (AI tagging
+  pass), TAG-F02 (person/"for whom" tag family) — see REQUIREMENTS.md Future Requirements.
+
+---
 
 **v2.5 milestone decisions (locked in grill 2026-07-05):**
 
@@ -107,14 +150,21 @@ Last activity: 2026-07-18 — Milestone v2.6 started
 
 ### Codebase facts relevant to the milestone
 
-- `lib/services/transaction-detach.ts` — `detachTransactionToDedicatedExpense({ userId, transactionId, title })` already: validates ownership via `innerJoin(expense)`, computes `syntheticDescriptionHash = sha256("detached:{transactionId}")`, inserts a new expense (`subCategoryId: null`, `transactionCount: 1`, `status: '1'`), repoints the transaction, and reconciles the source. **STEXP-01 must add subcategory capture** (the service currently sets `subCategoryId: null`). **STEXP-02 must lift the `SINGLE_TRANSACTION_EXPENSE` guard** (currently throws when `expenseTransactionCount <= 1`) via an in-place re-hash branch.
-- Landed via quick task `260629-m9i` (commit 90bfa69): "Detach transaction to dedicated expense + re-import manual lock" — the multi-transaction detach and the synthetic-hash mechanism already exist. This milestone surfaces it inline in the categorization flow and adds the single-transaction path + subcategory.
-- Tier 2 history learning writes to `expenseClassificationHistory` (source `manual`), keyed by `(userId, descriptionHash)`. Because a standalone expense carries a synthetic per-transaction hash, it does not teach Tier 2 for the original description — STEXP-03 must confirm/preserve this.
-- `SubcategoryPicker` (vaul bottom sheet, single `subCategoryId` output, adopted across all 7 selection surfaces) is the intended control for the inline standalone action's subcategory capture — reuse, do not build a new picker (v1.13 / ADR 0008).
+- **Expense Group (Phases 65-66)** — no existing schema entity; requires a new grouping table
+  (group + membership) via `drizzle-kit generate` + `scripts/migrate.ts`. No migration touches
+  existing expense/transaction rows (ADR 0017 consequence). Group totals must be computed at
+  read time in the DAL, never persisted/cached on the group row.
+- **Transaction Tags (Phases 67-68)** — no existing schema entity; new curated tag table +
+  transaction-tag join table (N:M). TAG-06's regex/categorizer updates for Vacanze/Viaggi follow
+  the existing `scripts/seed-patterns-data.ts` full-replace model (`yarn db:seed-patterns`) — new
+  or corrected patterns go there, not in `seed-data.ts`/`seed-extras.ts`.
+- `lib/services/transaction-detach.ts` — `detachTransactionToDedicatedExpense({ userId, transactionId, title, subCategoryId })` (shipped v2.4/ADR 0016) is the precedent for in-place re-hash mechanics; ADR 0017 §5 notes a Standalone Expense may join a group without special-casing.
+- `SubcategoryPicker` (vaul bottom sheet, single `subCategoryId` output, adopted across all 7 selection surfaces) is the intended control for any new subcategory-capture UI in the merge dialog (GRP-02) — reuse, do not build a new picker (v1.13 / ADR 0008).
+- Dashboard aggregation sites (8, per v2.0 `isNotSecondary()`/`effectiveAmount()` netting) are the surfaces GRP-09's invariant test and TAG-04's global filter must both leave structurally unchanged / correctly narrow.
 
 ### Blockers/Concerns
 
-None. Scope is small, cohesive, and fully specified by ADR 0016.
+None. Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidian design note) are locked — no discovery to redo before planning Phase 65.
 
 ## Quick Tasks Completed
 
@@ -165,6 +215,9 @@ Items acknowledged and postponed:
 
 | Category | Item | Status |
 |----------|------|--------|
+| v2.6 | GRP-F01 (similarity hints at import time) | deferred — ADR 0017 |
+| v2.6 | TAG-F01 (AI tagging pass) | deferred — post-stabilization |
+| v2.6 | TAG-F02 (person/"for whom" tag family) | deferred — not a promoted product concept |
 | v2.4 | SUBS-VIEW (normalized Subscriptions net-per-month view) | deferred — ADR 0016 |
 | v2.4 | SPLIT-01 (split one inflow across subcategories) | deferred — ADR 0016 |
 | v2.3 | Operator approval UI (`pending` → `approved`) | deferred — needed only with a second user |
@@ -188,16 +241,16 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** v2.5 milestone complete, ready to plan next milestone
+**Stopped at:** v2.6 ROADMAP.md created (Phases 65-68), 16/16 requirements mapped
 
-Last session: 2026-07-06T22:45:00.000Z
+Last session: 2026-07-18T15:00:00.000Z
 
-**Next:** `/gsd-complete-milestone v2.5` to archive, then `/gsd-new-milestone` to start the next cycle
+**Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
 - On the live DB (if not yet applied): `yarn db:migrate && yarn db:seed-extras` — migration 0025 (expense.title → text) + backfill-truncated-expense-titles step from quick task 260703-na4
+- Phases 65-66 (Expense Group) will require a new `drizzle-kit generate` migration once planned — no existing schema entity for group/membership
 
 ## Performance Metrics
 

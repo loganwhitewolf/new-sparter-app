@@ -27,33 +27,11 @@ Structural facts (verified against schema during the grill):
 
 <decisions>
 
-**D-01 (locked). Unification is a grouping entity above Expense — members stay intact.**
-An Expense Group holds N member Expenses, a user-given title, and implies a single
-subcategory. Members keep their `descriptionHash`, aggregates, Tier 2 history, and
-re-import behavior unchanged. Group totals (amount sum, transaction count, min/max
-dates) are computed at read time, **never persisted**.
-
-**D-02 (locked). Merge requires equal subcategory; categorization is a separate act.**
-The merge gate is: all members share the same non-null subcategory. Uncategorized
-selections are softened in UI only — the merge dialog offers to categorize them
-first (an explicit, Tier-2-visible categorization act), then groups. The merge
-itself is pure regrouping and therefore structurally unable to move dashboard values.
-
-**D-03 (locked). The group is the categorization unit.**
-(Phase 65 consequence: the group detail page shows ONE subcategory; member-level
-recategorization controls are not offered on grouped members. The propagation
-mechanics of recategorizing a group are Phase 66 scope.)
-
-**D-04 (locked). Membership is manual; no import-time auto-merge.**
-No similarity heuristics at import. New variants appear as ungrouped rows until
-manually joined. (Add-to-existing-group / remove-member / dissolve flows are
-Phase 66 scope; Phase 65 delivers creation via bulk "Unisci" only.)
-
-**D-05 (locked). Standalone Expenses are not special-cased.**
-A Standalone Expense may join a group (grouping is orthogonal to hash aggregation).
-Detaching a transaction from a grouped member follows normal rules: the new
-standalone expense is born outside the group; the in-place single-transaction
-re-hash (ADR 0016 §4) keeps the member — now synthetic-hashed — inside its group.
+- **D-01:** Unification is a grouping entity above Expense — members stay intact (locked). An Expense Group holds N member Expenses, a user-given title, and implies a single subcategory. Members keep their `descriptionHash`, aggregates, Tier 2 history, and re-import behavior unchanged. Group totals (amount sum, transaction count, min/max dates) are computed at read time, **never persisted**.
+- **D-02:** Merge requires equal subcategory; categorization is a separate act (locked). The merge gate is: all members share the same non-null subcategory. Uncategorized selections are softened in UI only — the merge dialog offers to categorize them first (an explicit, Tier-2-visible categorization act), then groups. The merge itself is pure regrouping and therefore structurally unable to move dashboard values.
+- **D-03:** The group is the categorization unit (locked). Phase 65 consequence: the group detail page shows ONE subcategory; member-level recategorization controls are not offered on grouped members. The propagation mechanics of recategorizing a group are Phase 66 scope.
+- **D-04:** Membership is manual; no import-time auto-merge (locked). No similarity heuristics at import. New variants appear as ungrouped rows until manually joined. Add-to-existing-group / remove-member / dissolve flows are Phase 66 scope; Phase 65 delivers creation via bulk "Unisci" only.
+- **D-05:** Standalone Expenses are not special-cased (locked). A Standalone Expense may join a group (grouping is orthogonal to hash aggregation). Detaching a transaction from a grouped member follows normal rules: the new standalone expense is born outside the group; the in-place single-transaction re-hash (ADR 0016 §4) keeps the member — now synthetic-hashed — inside its group.
 
 </decisions>
 

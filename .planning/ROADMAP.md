@@ -57,9 +57,17 @@ totals never persisted), and via the "tag = filter, never breakdown" rule for ta
 **Plans:** 6 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 65-01-PLAN.md — expenseGroup/expenseGroupMembership schema + migration + merge/rename Zod schemas
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 65-02-PLAN.md — createExpenseGroup/renameExpenseGroup service + mergeExpenses/renameExpenseGroupAction actions + categorizeExpense group guard
 - [ ] 65-03-PLAN.md — read-time group composition in getExpenses, getExpenseGroupForDetail, transaction group-title precedence (DAL)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 65-04-PLAN.md — Unisci bulk button + merge dialog + expense-table grouped-row rendering
 - [ ] 65-05-PLAN.md — /expenses/groups/[groupId] detail page + rename control
 - [ ] 65-06-PLAN.md — transaction row/detail + expense detail "Parte di" cross-refs
