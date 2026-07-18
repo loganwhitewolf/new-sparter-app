@@ -471,6 +471,56 @@ export const transactionPair = pgTable(
   ],
 );
 
+// Expense Group — grouping entity above intact Expenses (Phase 65, ADR 0017).
+// Members keep their descriptionHash, aggregates, and Tier 2 history unchanged;
+// group totals are computed at read time and are deliberately NOT persisted here
+// (no totalAmount/transactionCount/firstTransactionAt/lastTransactionAt column).
+export const expenseGroup = pgTable(
+  "expense_group",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    subCategoryId: integer("sub_category_id").references(() => subCategory.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("expense_group_userId_idx").on(table.userId),
+    index("expense_group_subCategoryId_idx").on(table.subCategoryId),
+  ],
+);
+
+// Junction table: an expense belongs to at most one group at a time (D-04).
+// The standalone unique on expenseId — not just the (groupId, expenseId) pair —
+// is what actually enforces that invariant at the DB level.
+export const expenseGroupMembership = pgTable(
+  "expense_group_membership",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => expenseGroup.id, { onDelete: "cascade" }),
+    expenseId: text("expense_id")
+      .notNull()
+      .references(() => expense.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("expense_group_membership_group_expense_unique").on(table.groupId, table.expenseId),
+    unique("expense_group_membership_expense_unique").on(table.expenseId),
+    index("expense_group_membership_groupId_idx").on(table.groupId),
+    index("expense_group_membership_expenseId_idx").on(table.expenseId),
+  ],
+);
+
 export const categorizationPattern = pgTable(
   "categorization_pattern",
   {
@@ -695,6 +745,29 @@ export const transactionPairRelations = relations(transactionPair, ({ one }) => 
     fields: [transactionPair.transactionBId],
     references: [transaction.id],
     relationName: "secondaryTransaction",
+  }),
+}));
+
+export const expenseGroupRelations = relations(expenseGroup, ({ one, many }) => ({
+  user: one(user, {
+    fields: [expenseGroup.userId],
+    references: [user.id],
+  }),
+  subCategory: one(subCategory, {
+    fields: [expenseGroup.subCategoryId],
+    references: [subCategory.id],
+  }),
+  memberships: many(expenseGroupMembership),
+}));
+
+export const expenseGroupMembershipRelations = relations(expenseGroupMembership, ({ one }) => ({
+  group: one(expenseGroup, {
+    fields: [expenseGroupMembership.groupId],
+    references: [expenseGroup.id],
+  }),
+  expense: one(expense, {
+    fields: [expenseGroupMembership.expenseId],
+    references: [expense.id],
   }),
 }));
 
