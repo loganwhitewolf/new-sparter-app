@@ -607,6 +607,137 @@ export const getExpenseForDetail = cache(
   },
 )
 
+export type ExpenseGroupMemberRow = {
+  id: string
+  title: string
+  totalAmount: string
+  transactionCount: number
+}
+
+export type ExpenseGroupDetailRow = {
+  id: number
+  title: string
+  subCategoryId: number | null
+  subCategoryName: string | null
+  categoryName: string | null
+  categorySlug: string | null
+  categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
+  totalAmount: string
+  transactionCount: number
+  createdAt: Date
+  members: ExpenseGroupMemberRow[]
+  transactions: ExpenseTransactionRow[]
+}
+
+/**
+ * Ownership-scoped detail query for the group detail page (Task 2, GRP-04). Mirrors
+ * getExpenseForDetail's two-query shape: one query for the group + its subCategory/category
+ * join chain scoped to `expenseGroup.userId = userId AND expenseGroup.id = groupId` (T-65-07 —
+ * a groupId belonging to another user resolves to `undefined`, identical to a missing id, never
+ * throwing); a second query joining `expenseGroupMembership -> expense` for `members`, then a
+ * third loading every transaction belonging to any member expense, sorted `occurredAt` DESC
+ * across all members regardless of insertion order. A member with zero transactions renders
+ * normally in `members` (its own totalAmount/transactionCount, defaulting to '0.00'/0 at the
+ * expense-row level already) — no special-casing, no crash (GRP-04 empty edge).
+ */
+export const getExpenseGroupForDetail = cache(
+  async ({
+    userId,
+    groupId,
+  }: {
+    userId: string
+    groupId: number
+  }): Promise<ExpenseGroupDetailRow | undefined> => {
+    const groupRows = await db
+      .select({
+        id: expenseGroup.id,
+        title: expenseGroup.title,
+        subCategoryId: expenseGroup.subCategoryId,
+        subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
+        categoryName: category.name,
+        categorySlug: category.slug,
+        categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
+        createdAt: expenseGroup.createdAt,
+      })
+      .from(expenseGroup)
+      .leftJoin(subCategory, eq(expenseGroup.subCategoryId, subCategory.id))
+      .leftJoin(category, eq(subCategory.categoryId, category.id))
+      .leftJoin(nature, eq(subCategory.natureId, nature.id))
+      .leftJoin(direction, eq(nature.directionId, direction.id))
+      .leftJoin(
+        userSubcategoryOverride,
+        and(
+          eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+          eq(userSubcategoryOverride.userId, userId),
+        ),
+      )
+      .where(and(eq(expenseGroup.id, groupId), eq(expenseGroup.userId, userId)))
+      .limit(1)
+
+    const group = groupRows[0]
+    if (!group) return undefined
+
+    const members = await db
+      .select({
+        id: expense.id,
+        title: expense.title,
+        totalAmount: expense.totalAmount,
+        transactionCount: expense.transactionCount,
+      })
+      .from(expenseGroupMembership)
+      .innerJoin(expense, eq(expenseGroupMembership.expenseId, expense.id))
+      .where(eq(expenseGroupMembership.groupId, groupId))
+
+    const totalAmount = members.reduce(
+      (sum, m) => sum.plus(toDecimal(m.totalAmount)),
+      toDecimal('0'),
+    )
+    const transactionCount = members.reduce((sum, m) => sum + m.transactionCount, 0)
+
+    const memberIds = members.map((m) => m.id)
+    const transactions =
+      memberIds.length === 0
+        ? []
+        : await db
+            .select({
+              id: transaction.id,
+              description: transaction.description,
+              customTitle: transaction.customTitle,
+              amount: transaction.amount,
+              currency: transaction.currency,
+              occurredAt: transaction.occurredAt,
+            })
+            .from(transaction)
+            .where(and(inArray(transaction.expenseId, memberIds), eq(transaction.userId, userId)))
+            .orderBy(desc(transaction.occurredAt))
+
+    return {
+      id: group.id,
+      title: group.title,
+      subCategoryId: group.subCategoryId,
+      subCategoryName: group.subCategoryName,
+      categoryName: group.categoryName,
+      categorySlug: group.categorySlug,
+      categoryType: group.categoryType,
+      totalAmount: toDbDecimal(totalAmount),
+      transactionCount,
+      createdAt: group.createdAt,
+      members,
+      transactions,
+    }
+  },
+)
+
+/** Thin helper returning just the member expense ids for a group (Task 2). */
+export const getExpenseGroupMembers = cache(async (groupId: number): Promise<string[]> => {
+  const rows = await db
+    .select({ expenseId: expenseGroupMembership.expenseId })
+    .from(expenseGroupMembership)
+    .where(eq(expenseGroupMembership.groupId, groupId))
+
+  return rows.map((row) => row.expenseId)
+})
+
 export async function insertExpense(data: {
   userId: string
   title: string

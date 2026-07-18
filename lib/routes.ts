@@ -59,6 +59,10 @@ export function expenseDetailHref(id: string) {
   return `${APP_ROUTES.expenses}/${encodeURIComponent(id)}`
 }
 
+export function expenseGroupDetailHref(groupId: number | string): string {
+  return `${APP_ROUTES.expenses}/groups/${encodeURIComponent(String(groupId))}`
+}
+
 export function importFileDetailHref(fileId: string): string {
   return `${APP_ROUTES.import}/${encodeURIComponent(fileId)}`
 }
