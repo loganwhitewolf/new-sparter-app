@@ -30,7 +30,7 @@ import {
   type ExpenseTransactionRow,
 } from '@/lib/dal/transactions'
 import { db } from '@/lib/db'
-import { expense } from '@/lib/db/schema'
+import { expense, expenseGroupMembership } from '@/lib/db/schema'
 import { and, eq, inArray } from 'drizzle-orm'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
 import { revalidateCategorizationSurfaces } from '@/lib/actions/revalidation'
@@ -303,6 +303,17 @@ export async function categorizeExpense(
   const subCategoryVisible = await isSubCategoryVisibleToUser(parsed.data.subCategoryId, userId)
   if (!subCategoryVisible) {
     return { error: 'Sottocategoria non valida.' }
+  }
+  // D-03 defense-in-depth: a grouped expense's category is set at the group level
+  // (Phase 66) — recategorizing a member directly here would silently diverge it
+  // from its group. Reject before starting the transaction; nothing is written.
+  const groupMembership = await db
+    .select({ id: expenseGroupMembership.id })
+    .from(expenseGroupMembership)
+    .where(eq(expenseGroupMembership.expenseId, parsed.data.id))
+    .limit(1)
+  if (groupMembership.length > 0) {
+    return { error: 'Questa spesa fa parte di un gruppo: categorizza dal gruppo.' }
   }
   try {
     await db.transaction(async (tx) => {

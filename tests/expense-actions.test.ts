@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   writeClassificationHistory: vi.fn(),
   revalidateCategorizationSurfaces: vi.fn(),
   dbUpdate: vi.fn(),
+  dbSelect: vi.fn(),
   createExpenseGroup: vi.fn(),
   renameExpenseGroup: vi.fn(),
 }))
@@ -33,6 +34,7 @@ vi.mock('@/lib/db', () => ({
   db: {
     transaction: mocks.dbTransaction,
     update: mocks.dbUpdate,
+    select: mocks.dbSelect,
   },
 }))
 vi.mock('@/lib/db/schema', () => ({
@@ -44,6 +46,10 @@ vi.mock('@/lib/db/schema', () => ({
     title: 'expense.title',
     totalAmount: 'expense.totalAmount',
     updatedAt: 'expense.updatedAt',
+  },
+  expenseGroupMembership: {
+    id: 'expenseGroupMembership.id',
+    expenseId: 'expenseGroupMembership.expenseId',
   },
   // Referenced by module-scope sort keys in lib/dal/expenses.ts
   category: { name: 'category.name' },
@@ -120,6 +126,14 @@ describe('categorizeExpense — subcategory visibility guard', () => {
     mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
     mocks.writeClassificationHistory.mockResolvedValue(undefined)
     mocks.revalidateCategorizationSurfaces.mockReturnValue(undefined)
+    // Default: expense is not a grouped member (D-03 guard passes through).
+    mocks.dbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    })
     mocks.dbTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       const tx = {
         select: vi.fn().mockReturnValue({
@@ -188,6 +202,34 @@ describe('categorizeExpense — subcategory visibility guard', () => {
     await categorizeExpense({ error: null }, makeFormData({ id: 'expense-1', subCategoryId: '42' }))
 
     expect(mocks.revalidateCategorizationSurfaces).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('categorizeExpense — grouped member guard (D-03)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+    mocks.isSubCategoryVisibleToUser.mockResolvedValue(true)
+    mocks.revalidateCategorizationSurfaces.mockReturnValue(undefined)
+  })
+
+  it('rejects recategorizing an expense that is already a group member, without touching the transaction', async () => {
+    mocks.dbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([{ id: 1 }]),
+        }),
+      }),
+    })
+
+    const result = await categorizeExpense(
+      { error: null },
+      makeFormData({ id: 'expense-1', subCategoryId: '42' }),
+    )
+
+    expect(result).toEqual({ error: 'Questa spesa fa parte di un gruppo: categorizza dal gruppo.' })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+    expect(mocks.revalidateCategorizationSurfaces).not.toHaveBeenCalled()
   })
 })
 

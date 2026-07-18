@@ -32,6 +32,29 @@ const mocks = vi.hoisted(() => ({
   and: vi.fn(() => ({ kind: 'and' })),
   eq: vi.fn(() => ({ kind: 'eq' })),
   inArray: vi.fn(() => ({ kind: 'inArray' })),
+  schemaTables: {
+    expense: {
+      id: 'expense.id',
+      userId: 'expense.userId',
+      subCategoryId: 'expense.subCategoryId',
+      status: 'expense.status',
+    },
+    subCategory: {
+      id: 'subCategory.id',
+      userId: 'subCategory.userId',
+      categoryId: 'subCategory.categoryId',
+      isActive: 'subCategory.isActive',
+    },
+    category: {
+      id: 'category.id',
+      userId: 'category.userId',
+      isActive: 'category.isActive',
+    },
+    expenseGroupMembership: {
+      id: 'expenseGroupMembership.id',
+      expenseId: 'expenseGroupMembership.expenseId',
+    },
+  },
 }))
 
 vi.mock('server-only', () => ({}))
@@ -89,27 +112,22 @@ vi.mock('@/lib/dal/patterns', () => ({
 }))
 
 vi.mock('@/lib/db/schema', () => ({
-  expense: {
-    id: 'expense.id',
-    userId: 'expense.userId',
-    subCategoryId: 'expense.subCategoryId',
-    status: 'expense.status',
-  },
-  subCategory: {
-    id: 'subCategory.id',
-    userId: 'subCategory.userId',
-    categoryId: 'subCategory.categoryId',
-    isActive: 'subCategory.isActive',
-  },
-  category: {
-    id: 'category.id',
-    userId: 'category.userId',
-    isActive: 'category.isActive',
-  },
+  expense: mocks.schemaTables.expense,
+  subCategory: mocks.schemaTables.subCategory,
+  category: mocks.schemaTables.category,
+  expenseGroupMembership: mocks.schemaTables.expenseGroupMembership,
 }))
 
+// Default chain: used by isSubCategoryVisibleToUser (subCategory/category join) — resolves
+// a visible row so pre-existing categorizeExpense/bulkCategorize flows are unaffected.
 const dbSelectChain = {
-  from: () => dbSelectChain,
+  from: (table: unknown) => {
+    // D-03 guard (categorizeExpense): expenseGroupMembership lookup — not grouped by default.
+    if (table === mocks.schemaTables.expenseGroupMembership) {
+      return { where: () => ({ limit: () => Promise.resolve([]) }) }
+    }
+    return dbSelectChain
+  },
   leftJoin: () => dbSelectChain,
   where: () => dbSelectChain,
   limit: () => Promise.resolve([{ id: 42 }]),
