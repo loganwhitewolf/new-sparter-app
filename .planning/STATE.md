@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.5
-milestone_name: Detail Pages
-current_phase: 5
-status: Awaiting next milestone
-stopped_at: v2.5 milestone complete, ready to plan next milestone
-last_updated: "2026-07-07T06:54:03.129Z"
-last_activity: 2026-07-08
-last_activity_desc: Completed quick task 260708-jt6 — fixed description/title cell overflow in transactions+expenses tables
+milestone: v2.6
+milestone_name: Expenses & Transactions Refinement
+status: planning
+last_updated: "2026-07-18T13:30:35.724Z"
+last_activity: 2026-07-18
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
-current_phase_name: file-detail-and-navigation
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -28,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 
 ## Current Position
 
-Phase: Milestone v2.5 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-07 — Completed quick task 260707-fy4: persistent table filters via sessionStorage URL restore
+Status: Defining requirements
+Last activity: 2026-07-18 — Milestone v2.6 started
 
 ## Roadmap (v2.5 — Phases 62–64)
 

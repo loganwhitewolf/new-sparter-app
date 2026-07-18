@@ -33,6 +33,17 @@ All milestones M001–v2.5 (Phases 1–64) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
+## Current Milestone: v2.6 — Expenses & Transactions Refinement
+
+**Goal:** Refine the expenses/transactions section with same-merchant unification (Expense Group), a second orthogonal analysis axis (Transaction Tags), and dashboard-to-transactions filtered navigation.
+
+**Target features:**
+- Expense Group: manual bulk "Unisci" of same-merchant expenses seen from different platforms — grouping entity above intact expenses, same-subcategory gate, group as categorization unit, Scomponi/remove-member, no import-time auto-merge (model locked in ADR 0017, grill 2026-07-18)
+- Transaction Tags: curated tag entity (optional date range, N per transaction, archived flag), bulk-tagging from transactions page, tag as global dashboard filter, Tag section with per-tag totals, date-range suggestion on tag creation and import, Viaggi category audit + categorizer rule updates (design source: Obsidian note 2026-07-06; excluded: per-tag breakdowns, status/behavioral tags, AI tagging pass)
+- Dashboard month → transactions link: per-row link in the savings/deviations view navigating to the transactions section with filters pre-applied from the dashboard's current settings
+
+**Cross-cutting constraint:** neither merging nor tagging moves dashboard values — structural for Expense Group (pure regrouping, read-time totals); for tags via the "tag = filter, never breakdown" rule.
+
 ## Last Shipped Milestone: v2.5 — Detail Pages (shipped 2026-07-07, tag v2.5)
 
 **Goal:** Uniform detail pages for the three core entities — `/transactions/[id]`,
@@ -229,6 +240,7 @@ quick-task entries acknowledged as deferred at milestone close — see STATE.md 
 - [x] v2.3: Platform Identity & Format Ownership — Platform as globally shared moderated identity (pending→approved), private ownership on Import Format only, seed slug-linkage fix (ADR 0015). Shipped 2026-06-30 (PR #31, tag v2.3).
 - [x] v2.4: Standalone Expense — general "treat as standalone / don't aggregate" action in categorization + in-place single-transaction isolation, lifting the SINGLE_TRANSACTION_EXPENSE guard (ADR 0016). Shipped 2026-07-01, tag v2.4.
 - [x] v2.5: Detail Pages — uniform `/transactions/[id]`, `/expenses/[id]`, `/import/[fileId]` detail pages with pencil-inline editing, atomic derived-field reconciliation, pair-coherence guard, and consistent navigation wiring across all three tables. Shipped 2026-07-07, tag v2.5.
+- [ ] v2.6: Expenses & Transactions Refinement — Expense Group same-merchant unification (ADR 0017), Transaction Tags (curated entity, bulk-tagging, dashboard filter, date-range suggestion, Viaggi audit), dashboard month → filtered transactions link. In progress.
 
 ## Key Decisions
 
@@ -306,4 +318,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-07 after v2.5 milestone — Detail Pages shipped (3/3 phases, 13/13 plans, 9/9 DET requirements validated)*
+*Last updated: 2026-07-18 — milestone v2.6 Expenses & Transactions Refinement started (Expense Group model locked in ADR 0017)*
