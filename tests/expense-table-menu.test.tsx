@@ -88,6 +88,10 @@ function makeExpense(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
     categoryName: 'Spese',
     categorySlug: 'spese',
     platformName: 'Intesa SP',
+    firstTransactionAt: new Date('2026-06-01'),
+    lastTransactionAt: new Date('2026-06-01'),
+    groupId: null,
+    groupTitle: null,
     ...overrides,
   }
 }
