@@ -5,15 +5,15 @@ milestone_name: Expenses & Transactions Refinement
 current_phase: 65
 current_phase_name: expense-group-merge-and-view
 status: executing
-stopped_at: Completed 65-01-PLAN.md
-last_updated: "2026-07-18T17:24:58.452Z"
+stopped_at: Completed 65-02-PLAN.md
+last_updated: "2026-07-18T18:00:11.254Z"
 last_activity: 2026-07-18
 last_activity_desc: Phase 65 execution started
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 65 (expense-group-merge-and-view) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-07-18 — Phase 65 execution started
 
-Progress: [██░░░░░░░░] 17%
+Progress: [███░░░░░░░] 33%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -150,6 +150,8 @@ change dashboard totals or category breakdowns.
 - [Phase 64]: [Phase 64-07] WR-02: hasInAppHistory(historyLength) replaces document.referrer entirely as handleBackClick's sole branch signal — referrer is fixed at hard navigation and never updated by client-side App Router transitions, so it silently and permanently disabled smart-back for any tab that ever loaded from an external link
 - [Phase ?]: expenseGroupMembership enforces at most one group per expense via a standalone unique(expenseId), not just the (groupId, expenseId) pair unique
 - [Phase ?]: MergeExpensesSchema has no category field at all — merge is pure regrouping; categorization happens via bulkCategorize separately (D-02)
+- [Phase ?]: mergeExpenses never writes expense.subCategoryId/status — pure regrouping delegated to createExpenseGroup (D-02, verified via grep)
+- [Phase ?]: categorizeExpense guards against grouped members via a pre-transaction expenseGroupMembership check (D-03 defense-in-depth)
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -252,9 +254,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 65-01-PLAN.md
+**Stopped at:** Completed 65-02-PLAN.md
 
-Last session: 2026-07-18T17:24:58.446Z
+Last session: 2026-07-18T18:00:11.248Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -293,3 +295,4 @@ Last session: 2026-07-18T17:24:58.446Z
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 65 P01 | 12min | 3 tasks | 5 files |
+| Phase 65 P02 | 12min | 3 tasks | 5 files |

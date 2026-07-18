@@ -63,7 +63,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 65-02-PLAN.md — createExpenseGroup/renameExpenseGroup service + mergeExpenses/renameExpenseGroupAction actions + categorizeExpense group guard
+- [x] 65-02-PLAN.md — createExpenseGroup/renameExpenseGroup service + mergeExpenses/renameExpenseGroupAction actions + categorizeExpense group guard
 - [ ] 65-03-PLAN.md — read-time group composition in getExpenses, getExpenseGroupForDetail, transaction group-title precedence (DAL)
 
 **Wave 3** *(blocked on Wave 2 completion)*
