@@ -54,7 +54,15 @@ totals never persisted), and via the "tag = filter, never breakdown" rule for ta
 4. Opening a group navigates to a group detail page showing the shared subcategory, each member expense with its own original title/total, and the full combined transaction list; rename lives on this page.
 5. Transaction rows belonging to a grouped member display the group's title, and a grouped member's own expense detail page declares that it belongs to a group.
 
-**Plans:** TBD
+**Plans:** 6 plans
+
+Plans:
+- [ ] 65-01-PLAN.md — expenseGroup/expenseGroupMembership schema + migration + merge/rename Zod schemas
+- [ ] 65-02-PLAN.md — createExpenseGroup/renameExpenseGroup service + mergeExpenses/renameExpenseGroupAction actions + categorizeExpense group guard
+- [ ] 65-03-PLAN.md — read-time group composition in getExpenses, getExpenseGroupForDetail, transaction group-title precedence (DAL)
+- [ ] 65-04-PLAN.md — Unisci bulk button + merge dialog + expense-table grouped-row rendering
+- [ ] 65-05-PLAN.md — /expenses/groups/[groupId] detail page + rename control
+- [ ] 65-06-PLAN.md — transaction row/detail + expense detail "Parte di" cross-refs
 
 **UI hint:** yes
 
@@ -326,7 +334,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 62. transaction-edit-core | v2.5 | 2/2 | Complete    | 2026-07-05 |
 | 63. detail-pages-tx-expense | v2.5 | 4/4 | Complete    | 2026-07-05 |
 | 64. file-detail-and-navigation | v2.5 | 7/7 | Complete    | 2026-07-06 |
-| 65. expense-group-merge-and-view | v2.6 | 0/TBD | Not started | - |
+| 65. expense-group-merge-and-view | v2.6 | 0/6 | Not started | - |
 | 66. expense-group-lifecycle | v2.6 | 0/TBD | Not started | - |
 | 67. tags-foundation-and-assignment | v2.6 | 0/TBD | Not started | - |
 | 68. tags-dashboard-and-navigation | v2.6 | 0/TBD | Not started | - |
