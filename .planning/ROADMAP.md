@@ -18,8 +18,101 @@
 - ✅ **v2.3: Platform Identity & Format Ownership** — Phases 58–60 (shipped 2026-06-30, tag v2.3)
 - ✅ **v2.4: Standalone Expense** — Phase 61 (shipped 2026-07-01) · [archive](milestones/v2.4-ROADMAP.md)
 - ✅ **v2.5: Detail Pages** — Phases 62–64 (shipped 2026-07-07, tag v2.5) · [archive](milestones/v2.5-ROADMAP.md)
+- 🚧 **v2.6: Expenses & Transactions Refinement** — Phases 65–68 (in progress)
 
 ## Phases
+
+### 🚧 v2.6: Expenses & Transactions Refinement (Phases 65–68) — IN PROGRESS
+
+Expense Group same-merchant unification (grouping entity above intact Expenses, no
+physical merge, model LOCKED in `docs/adr/0017-expense-group-over-physical-merge.md`),
+Transaction Tags (curated second axis, orthogonal to categories, design LOCKED in
+`.planning/REQUIREMENTS.md` from Obsidian note "sparter-tag-transazioni"), and a
+dashboard month → filtered-transactions navigation link. Cross-cutting invariant
+across both features: neither grouping nor tagging may change dashboard totals or
+category breakdowns — structural for Expense Group (pure regrouping, read-time
+totals never persisted), and via the "tag = filter, never breakdown" rule for tags.
+
+- [ ] **Phase 65: expense-group-merge-and-view** - User can bulk-merge same-subcategory expenses into a titled Expense Group and see it rendered as one row everywhere (expenses list, dashboard drill-downs, transaction rows, member detail pages), with a group detail page as the single place to view composition and rename. (GRP-01, GRP-02, GRP-03, GRP-04, GRP-08)
+- [ ] **Phase 66: expense-group-lifecycle** - User can recategorize a group as one unit, add a later expense to an existing group, remove a member or dissolve the group entirely — with dashboard totals and category breakdowns provably unchanged by any of it. (GRP-05, GRP-06, GRP-07, GRP-09)
+- [ ] **Phase 67: tags-foundation-and-assignment** - User can maintain a curated tag list (create/edit/archive, never delete), bulk-assign tags to transactions from the transactions page, get a pre-checked date-range suggestion on tag creation and each subsequent import, and trust that Viaggi/Vacanze categorization only captures intrinsically-travel spend. (TAG-01, TAG-02, TAG-03, TAG-06)
+- [ ] **Phase 68: tags-dashboard-and-navigation** - User can filter the entire dashboard by tag, review a dedicated Tag section with independent per-tag totals, and jump from a dashboard savings/deviations row straight into the matching filtered transaction list. (TAG-04, TAG-05, NAV-01)
+
+### Phase 65: expense-group-merge-and-view
+
+**Goal:** A user with the same real-world merchant scattered across several Expenses (different bank descriptions per card/platform) can unify them into one titled Expense Group, and that group is what they see everywhere Expenses and their transactions are rendered — without any of the underlying transactions, hashes, or categorization history being touched.
+
+**Depends on:** Nothing (first phase of v2.6)
+
+**Requirements:** GRP-01, GRP-02, GRP-03, GRP-04, GRP-08
+
+**Success Criteria**:
+
+1. From the expenses table bulk-selection bar, user can select multiple expenses that share the same subcategory and merge them into an Expense Group with a custom title via "Unisci".
+2. If the selection includes uncategorized expenses, the merge dialog first offers to assign them a subcategory (an explicit, Tier-2-visible categorization act) before the merge proceeds; the merge action itself never assigns a category.
+3. In the expenses list and in dashboard drill-downs, a merged group appears as a single row with read-time computed totals (amount sum, transaction count, min/max dates) and an "unita" badge; the original member rows no longer appear individually.
+4. Opening a group navigates to a group detail page showing the shared subcategory, each member expense with its own original title/total, and the full combined transaction list; rename lives on this page.
+5. Transaction rows belonging to a grouped member display the group's title, and a grouped member's own expense detail page declares that it belongs to a group.
+
+**Plans:** TBD
+
+**UI hint:** yes
+
+### Phase 66: expense-group-lifecycle
+
+**Goal:** A user can keep an Expense Group current over time — recategorizing it as a single unit, folding in a later same-merchant expense, removing a member or dissolving the group — with an airtight guarantee that none of these operations ever move a transaction or a subcategory assignment, and therefore never move a dashboard total.
+
+**Depends on:** Phase 65
+
+**Requirements:** GRP-05, GRP-06, GRP-07, GRP-09
+
+**Success Criteria**:
+
+1. Recategorizing a group's subcategory propagates to every member expense in one action; while grouped, individual members are not offered their own recategorization control (detach from the group first).
+2. User can add a later-arriving expense to an existing group by selecting the group and the expense and choosing "Unisci", gated on the same shared-subcategory rule as initial merge.
+3. User can remove a single member from a group or dissolve the whole group via "Scomponi"; a group left with exactly one member auto-dissolves, and dissolution restores the exact pre-merge state (same standalone expense rows, same totals, same hashes).
+4. A before/after comparison of dashboard totals and category breakdowns across a merge-then-recategorize-then-dissolve cycle is provably identical — no transaction row or subcategory assignment was altered by any grouping operation.
+
+**Plans:** TBD
+
+**UI hint:** yes
+
+### Phase 67: tags-foundation-and-assignment
+
+**Goal:** A user can define a small curated vocabulary of tags (trips, events, projects), apply them in bulk to transactions from the transactions page, get proactive help finding which transactions belong to a newly-dated tag, and trust that the Viaggi/Vacanze category is clean enough to be a meaningful tagging target rather than a catch-all.
+
+**Depends on:** Nothing (independent — no dependency on Expense Group phases)
+
+**Requirements:** TAG-01, TAG-02, TAG-03, TAG-06
+
+**Success Criteria**:
+
+1. User can create, edit, and archive tags (name + optional date range) in a curated tag list; tags are never deleted, and an archived tag remains selectable and queryable in filters.
+2. From the (filtered) transactions page, user can select multiple transactions and bulk-assign one or more tags to them in a single action; a transaction can hold more than one tag at once.
+3. When a tag is created with a date range, and again on each subsequent import, the app proposes the transactions falling inside that range as a pre-checked, user-confirmable list to add to the tag.
+4. Vacanze/Viaggi subcategories match only intrinsically-travel spend (flight, hotel, rental, insurance); regex and AI categorizer rules are updated so non-travel spend previously miscategorized there no longer lands in Vacanze.
+
+**Plans:** TBD
+
+**UI hint:** yes
+
+### Phase 68: tags-dashboard-and-navigation
+
+**Goal:** A user can see the whole dashboard narrowed to a single tag's context, review a dedicated section listing every tag's own independent total, and jump directly from a dashboard savings/deviations row into the correspondingly filtered transaction list — closing the loop between "look at the numbers" and "see the transactions behind them."
+
+**Depends on:** Phase 67
+
+**Requirements:** TAG-04, TAG-05, NAV-01
+
+**Success Criteria**:
+
+1. User can apply a tag filter globally on the dashboard alongside month/year; every existing widget narrows to tagged transactions only, and totals still reconcile.
+2. User can open a Tag section listing every tag with its own independent per-tag total (no expectation that totals sum to a whole) and an archive action; archived tags remain visible and interrogable there.
+3. With a month selected on the dashboard's savings/deviations view, clicking a row navigates to the transactions section pre-filtered to that month and the row's category context.
+
+**Plans:** TBD
+
+**UI hint:** yes
 
 <details>
 <summary>✅ v2.5: Detail Pages (Phases 62–64) — SHIPPED 2026-07-07 (tag v2.5)</summary>
@@ -230,10 +323,13 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 59. import-wizard-attach-format | v2.3 | 4/4 | Complete   | 2026-06-30 |
 | 60. seed-slug-linkage-and-docs | v2.3 | 2/2 | Complete   | 2026-06-30 |
 | 61. standalone-expense | v2.4 | 2/2 | Complete    | 2026-07-01 |
-
 | 62. transaction-edit-core | v2.5 | 2/2 | Complete    | 2026-07-05 |
 | 63. detail-pages-tx-expense | v2.5 | 4/4 | Complete    | 2026-07-05 |
 | 64. file-detail-and-navigation | v2.5 | 7/7 | Complete    | 2026-07-06 |
+| 65. expense-group-merge-and-view | v2.6 | 0/TBD | Not started | - |
+| 66. expense-group-lifecycle | v2.6 | 0/TBD | Not started | - |
+| 67. tags-foundation-and-assignment | v2.6 | 0/TBD | Not started | - |
+| 68. tags-dashboard-and-navigation | v2.6 | 0/TBD | Not started | - |
 
 **Total shipped: 64 phases · 235 plans complete**
-**Current milestone: none — planning next milestone**
+**Current milestone: v2.6 Expenses & Transactions Refinement — Phases 65–68 planned**

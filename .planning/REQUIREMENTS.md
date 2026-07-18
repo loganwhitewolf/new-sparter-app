@@ -9,7 +9,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Expense Group (GRP)
 
-Model locked in ADR 0017 (grill 2026-07-18): grouping entity above intact Expenses; no physical merge, no hash aliasing; read-time totals; dashboard values structurally unchanged.
+Model locked in ADR 0017 (grill 2026-07-18): grouping entity above intact Expenses; no
+physical merge, no hash aliasing; read-time totals; dashboard values structurally unchanged.
 
 - [ ] **GRP-01**: User can select multiple expenses sharing the same subcategory from the expenses table bulk bar and merge them into an Expense Group with a custom title ("Unisci")
 - [ ] **GRP-02**: When the selection includes uncategorized expenses, the merge dialog offers to categorize them explicitly (Tier-2-visible act) before grouping — merge itself never assigns categories
@@ -65,13 +66,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| — | — | — |
+| GRP-01 | Phase 65 | Pending |
+| GRP-02 | Phase 65 | Pending |
+| GRP-03 | Phase 65 | Pending |
+| GRP-04 | Phase 65 | Pending |
+| GRP-08 | Phase 65 | Pending |
+| GRP-05 | Phase 66 | Pending |
+| GRP-06 | Phase 66 | Pending |
+| GRP-07 | Phase 66 | Pending |
+| GRP-09 | Phase 66 | Pending |
+| TAG-01 | Phase 67 | Pending |
+| TAG-02 | Phase 67 | Pending |
+| TAG-03 | Phase 67 | Pending |
+| TAG-06 | Phase 67 | Pending |
+| TAG-04 | Phase 68 | Pending |
+| TAG-05 | Phase 68 | Pending |
+| NAV-01 | Phase 68 | Pending |
 
 **Coverage:**
 - v2.6 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️ (roadmap pending)
+- Mapped to phases: 16
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-18*
-*Last updated: 2026-07-18 after initial definition*
+*Last updated: 2026-07-18 after roadmap creation (Phases 65–68)*
