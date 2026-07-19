@@ -213,8 +213,19 @@ export async function bulkCategorize(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
+  // WR-04: guard against malformed/tampered `ids` payload (a raw JSON.parse throw
+  // would otherwise escape as an uncaught exception instead of an ActionState),
+  // matching the sibling try/catch pattern in bulkDeleteExpenses/mergeExpenses —
+  // this action is also invoked from the new merge dialog's categorize step.
+  let ids: unknown
+  try {
+    ids = JSON.parse((formData.get('ids') as string) ?? '[]')
+  } catch {
+    return { error: 'Selezione non valida.' }
+  }
+
   const parsed = BulkCategorizeSchema.safeParse({
-    ids: JSON.parse((formData.get('ids') as string) ?? '[]'),
+    ids,
     subCategoryId: Number(formData.get('subCategoryId')),
   })
   if (!parsed.success) {
