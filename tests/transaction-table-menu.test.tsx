@@ -94,6 +94,8 @@ function makeTransaction(overrides: Partial<TransactionListRow> = {}): Transacti
     platformName: null,
     platformSlug: null,
     categoryType: null,
+    groupId: null,
+    groupTitle: null,
     pairedWithId: null,
     pairedNetAmount: null,
     pairedAmount: null,

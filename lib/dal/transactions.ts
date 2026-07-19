@@ -9,6 +9,8 @@ import {
   category,
   direction,
   expense,
+  expenseGroup,
+  expenseGroupMembership,
   file as importFile,
   importFormatVersion,
   nature,
@@ -95,6 +97,10 @@ export const transactionListSelect = {
   platformSlug: platform.slug,
   // Direction code from the nature→direction join (replaces the category.id placeholder)
   categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
+  // Group-title display precedence (Task 3, GRP-08): non-null only when the linked expense is
+  // an Expense Group member; display-only, never participates in sorting/filtering.
+  groupId: expenseGroupMembership.groupId,
+  groupTitle: expenseGroup.title,
   // Phase 50: pairing fields — correlated subqueries (no LEFT JOIN to preserve buildTransactionOrderBy)
   pairedWithId: sql<string | null>`(
     SELECT CASE
@@ -181,6 +187,9 @@ export type TransactionListRow = {
   platformSlug: string | null
   // Direction code from the nature→direction join
   categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
+  // Group-title display precedence (Task 3, GRP-08)
+  groupId: number | null
+  groupTitle: string | null
   // Phase 50: pairing fields (nullable — null when transaction is unpaired)
   pairedWithId: string | null
   pairedNetAmount: string | null
@@ -368,6 +377,8 @@ export const getTransactions = cache(
       )
       .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
       .leftJoin(expense, eq(transaction.expenseId, expense.id))
+      .leftJoin(expenseGroupMembership, eq(expense.id, expenseGroupMembership.expenseId))
+      .leftJoin(expenseGroup, eq(expenseGroupMembership.groupId, expenseGroup.id))
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
       .leftJoin(nature, eq(subCategory.natureId, nature.id))
@@ -581,6 +592,9 @@ export type TransactionDetailRow = {
   fileId: string | null
   fileName: string | null
   platformName: string | null
+  // Group-title display precedence (Task 3, GRP-08)
+  groupId: number | null
+  groupTitle: string | null
   pairedWithId: string | null
   pairedAmount: string | null
   pairedDescription: string | null
@@ -627,6 +641,8 @@ export const getTransactionForDetail = cache(
         fileId: importFile.id,
         fileName: sql<string | null>`coalesce(nullif(trim(coalesce(${importFile.displayName}, '')), ''), ${importFile.originalName})`,
         platformName: platform.name,
+        groupId: expenseGroupMembership.groupId,
+        groupTitle: expenseGroup.title,
         pairedWithId: transactionListSelect.pairedWithId,
         pairedAmount: transactionListSelect.pairedAmount,
         pairedDescription: transactionListSelect.pairedDescription,
@@ -641,6 +657,8 @@ export const getTransactionForDetail = cache(
       )
       .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
       .leftJoin(expense, eq(transaction.expenseId, expense.id))
+      .leftJoin(expenseGroupMembership, eq(expense.id, expenseGroupMembership.expenseId))
+      .leftJoin(expenseGroup, eq(expenseGroupMembership.groupId, expenseGroup.id))
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
       .leftJoin(nature, eq(subCategory.natureId, nature.id))

@@ -108,6 +108,14 @@ vi.mock("@/lib/db/schema", () => ({
     title: "expense.title",
     userId: "expense.userId",
   },
+  expenseGroup: {
+    id: "expenseGroup.id",
+    title: "expenseGroup.title",
+  },
+  expenseGroupMembership: {
+    groupId: "expenseGroupMembership.groupId",
+    expenseId: "expenseGroupMembership.expenseId",
+  },
   file: {
     id: "file.id",
     displayName: "file.displayName",
@@ -339,11 +347,25 @@ describe("transaction DAL query helpers", () => {
       op: "sql",
     });
     expect(transactionListSelect.fileName).toMatchObject({ op: "sql" });
+    // Task 3 (65-03, GRP-08): group-title display precedence fields.
+    expect(transactionListSelect.groupId).toBe("expenseGroupMembership.groupId");
+    expect(transactionListSelect.groupTitle).toBe("expenseGroup.title");
     expect(transactionPlatformSelect).toEqual({
       id: "platform.id",
       name: "platform.name",
       slug: "platform.slug",
     });
+  });
+
+  it("resolves groupId/groupTitle to null for the non-grouped majority — zero regression (Task 3, GRP-08)", async () => {
+    // groupId/groupTitle participate in display only, via a LEFT JOIN that is null
+    // for any transaction whose expense is not an Expense Group member — identical
+    // query cost and shape to every other existing field on an ungrouped row.
+    await getTransactions();
+
+    expect(mocks.selectedShapes[0]).toBe(transactionListSelect);
+    // Adding the join chain does not change buildTransactionOrderBy's default sort.
+    expect(mocks.orderByArgs[0]).toEqual({ op: "desc", column: "transaction.occurredAt" });
   });
 
   it("verifies the session, scopes transaction rows to the user and file owner, and applies filters safely", async () => {
