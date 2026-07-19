@@ -42,7 +42,6 @@ export async function deleteExpensesWithOptions(input: {
       .select({ expenseId: expenseGroupMembership.expenseId })
       .from(expenseGroupMembership)
       .where(inArray(expenseGroupMembership.expenseId, expenseIdsToDelete))
-      .limit(1)
 
     if (groupedMemberships.length > 0) {
       throw new Error(
