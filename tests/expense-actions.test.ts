@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   createExpenseGroup: vi.fn(),
   renameExpenseGroup: vi.fn(),
   addExpensesToGroup: vi.fn(),
+  removeExpenseFromGroup: vi.fn(),
+  dissolveExpenseGroup: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
@@ -31,6 +33,8 @@ vi.mock('@/lib/services/expense-group', () => ({
   createExpenseGroup: mocks.createExpenseGroup,
   renameExpenseGroup: mocks.renameExpenseGroup,
   addExpensesToGroup: mocks.addExpensesToGroup,
+  removeExpenseFromGroup: mocks.removeExpenseFromGroup,
+  dissolveExpenseGroup: mocks.dissolveExpenseGroup,
 }))
 vi.mock('@/lib/db', () => ({
   db: {
@@ -89,6 +93,8 @@ const {
   renameExpenseGroupAction,
   categorizeExpenseGroup,
   addExpensesToGroupAction,
+  removeExpenseFromGroupAction,
+  dissolveExpenseGroupAction,
 } = await import('@/lib/actions/expenses')
 
 function makeFormData(fields: Record<string, string>) {
@@ -763,5 +769,74 @@ describe('addExpensesToGroupAction', () => {
     expect(result.error).toBe('Seleziona almeno una spesa da aggiungere.')
     expect(mocks.verifySession).not.toHaveBeenCalled()
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+})
+
+describe('removeExpenseFromGroupAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+    mocks.revalidateCategorizationSurfaces.mockReturnValue(undefined)
+    mocks.dbTransaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn({}))
+  })
+
+  it('removes the member and revalidates on success', async () => {
+    mocks.removeExpenseFromGroup.mockResolvedValue({ autoDissolved: false })
+
+    const result = await removeExpenseFromGroupAction(
+      { error: null },
+      makeFormData({ groupId: '7', expenseId: '11111111-1111-4111-8111-111111111111' }),
+    )
+
+    expect(result).toEqual({ error: null })
+    expect(mocks.removeExpenseFromGroup).toHaveBeenCalledWith(expect.anything(), {
+      userId: 'user-1',
+      groupId: 7,
+      expenseId: '11111111-1111-4111-8111-111111111111',
+    })
+    expect(mocks.revalidateCategorizationSurfaces).toHaveBeenCalledTimes(1)
+  })
+
+  it('surfaces the not-found service error verbatim without revalidating', async () => {
+    mocks.removeExpenseFromGroup.mockRejectedValue(new Error('Gruppo non trovato.'))
+
+    const result = await removeExpenseFromGroupAction(
+      { error: null },
+      makeFormData({ groupId: '999', expenseId: '11111111-1111-4111-8111-111111111111' }),
+    )
+
+    expect(result).toEqual({ error: 'Gruppo non trovato.' })
+    expect(mocks.revalidateCategorizationSurfaces).not.toHaveBeenCalled()
+  })
+})
+
+describe('dissolveExpenseGroupAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+    mocks.revalidateCategorizationSurfaces.mockReturnValue(undefined)
+    mocks.dbTransaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn({}))
+  })
+
+  it('dissolves the group and revalidates on success', async () => {
+    mocks.dissolveExpenseGroup.mockResolvedValue(true)
+
+    const result = await dissolveExpenseGroupAction({ error: null }, makeFormData({ groupId: '7' }))
+
+    expect(result).toEqual({ error: null })
+    expect(mocks.dissolveExpenseGroup).toHaveBeenCalledWith(expect.anything(), {
+      userId: 'user-1',
+      groupId: 7,
+    })
+    expect(mocks.revalidateCategorizationSurfaces).toHaveBeenCalledTimes(1)
+  })
+
+  it('surfaces the not-found service error verbatim without revalidating', async () => {
+    mocks.dissolveExpenseGroup.mockRejectedValue(new Error('Gruppo non trovato.'))
+
+    const result = await dissolveExpenseGroupAction({ error: null }, makeFormData({ groupId: '999' }))
+
+    expect(result).toEqual({ error: 'Gruppo non trovato.' })
+    expect(mocks.revalidateCategorizationSurfaces).not.toHaveBeenCalled()
   })
 })
