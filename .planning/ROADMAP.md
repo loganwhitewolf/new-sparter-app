@@ -98,7 +98,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 66-02-PLAN.md — categorizeExpenseGroup / addExpensesToGroupAction / removeExpenseFromGroupAction / dissolveExpenseGroupAction server actions
+- [x] 66-02-PLAN.md — categorizeExpenseGroup / addExpensesToGroupAction / removeExpenseFromGroupAction / dissolveExpenseGroupAction server actions
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
