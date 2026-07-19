@@ -89,7 +89,22 @@ Plans:
 3. User can remove a single member from a group or dissolve the whole group via "Scomponi"; a group left with exactly one member auto-dissolves, and dissolution restores the exact pre-merge state (same standalone expense rows, same totals, same hashes).
 4. A before/after comparison of dashboard totals and category breakdowns across a merge-then-recategorize-then-dissolve cycle is provably identical — no transaction row or subcategory assignment was altered by any grouping operation.
 
-**Plans:** TBD
+**Plans:** 5 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 66-01-PLAN.md — validation schemas + expense-group service additions (add/remove/dissolve)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 66-02-PLAN.md — categorizeExpenseGroup / addExpensesToGroupAction / removeExpenseFromGroupAction / dissolveExpenseGroupAction server actions
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 66-03-PLAN.md — GRP-09 invariance test (merge/recategorize/dissolve dashboard-aggregate proof)
+- [ ] 66-04-PLAN.md — merge dialog add-to-group mode + expenses-table selection/eligibility + group-row recategorize
+- [ ] 66-05-PLAN.md — group detail page: editable subcategory, remove member, dissolve group
 
 **UI hint:** yes
 
@@ -343,7 +358,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 63. detail-pages-tx-expense | v2.5 | 4/4 | Complete    | 2026-07-05 |
 | 64. file-detail-and-navigation | v2.5 | 7/7 | Complete    | 2026-07-06 |
 | 65. expense-group-merge-and-view | v2.6 | 0/6 | In Progress|  |
-| 66. expense-group-lifecycle | v2.6 | 0/TBD | Not started | - |
+| 66. expense-group-lifecycle | v2.6 | 0/5 | Planned | - |
 | 67. tags-foundation-and-assignment | v2.6 | 0/TBD | Not started | - |
 | 68. tags-dashboard-and-navigation | v2.6 | 0/TBD | Not started | - |
 
