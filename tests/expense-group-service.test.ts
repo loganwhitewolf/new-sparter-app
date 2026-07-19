@@ -25,12 +25,15 @@ vi.mock('drizzle-orm', () => ({
   and: (...args: unknown[]) => ({ op: 'and', args }),
   eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
   inArray: (col: unknown, vals: unknown) => ({ op: 'inArray', col, vals }),
+  count: (col: unknown) => ({ op: 'count', col }),
 }))
 
 import { expense, expenseGroup, expenseGroupMembership } from '@/lib/db/schema'
 import {
   addExpensesToGroup,
   createExpenseGroup,
+  dissolveExpenseGroup,
+  removeExpenseFromGroup,
   renameExpenseGroup,
 } from '@/lib/services/expense-group'
 
@@ -42,16 +45,29 @@ type DbOrTxMockOptions = {
   updateRows?: unknown[]
   /** Rows returned by a select on expenseGroup (group ownership check). */
   groupOwnedRows?: unknown[]
+  /** Rows returned by the membership-exists check (removeExpenseFromGroup). Falls back to groupedRows. */
+  membershipRows?: unknown[]
+  /** Rows returned by the membership count query (removeExpenseFromGroup). */
+  membershipCountRows?: unknown[]
+  membershipDeleteImpl?: () => Promise<unknown>
+  groupDeleteImpl?: () => Promise<unknown>
 }
 
 function makeDbOrTx(opts: DbOrTxMockOptions) {
-  const select = vi.fn(() => ({
+  const select = vi.fn((fields?: unknown) => ({
     from: vi.fn((table: unknown) => {
       if (table === expense) {
         return { where: vi.fn().mockResolvedValue(opts.ownedRows ?? []) }
       }
       if (table === expenseGroupMembership) {
-        return { where: vi.fn().mockResolvedValue(opts.groupedRows ?? []) }
+        const isCountQuery = !!fields && typeof fields === 'object' && 'count' in (fields as object)
+        return {
+          where: vi.fn().mockResolvedValue(
+            isCountQuery
+              ? (opts.membershipCountRows ?? [{ count: 0 }])
+              : (opts.membershipRows ?? opts.groupedRows ?? []),
+          ),
+        }
       }
       if (table === expenseGroup) {
         return { where: vi.fn().mockResolvedValue(opts.groupOwnedRows ?? []) }
@@ -76,6 +92,16 @@ function makeDbOrTx(opts: DbOrTxMockOptions) {
     throw new Error(`unexpected insert table: ${String(table)}`)
   })
 
+  const del = vi.fn((table: unknown) => {
+    if (table === expenseGroupMembership) {
+      return { where: vi.fn(opts.membershipDeleteImpl ?? (() => Promise.resolve(undefined))) }
+    }
+    if (table === expenseGroup) {
+      return { where: vi.fn(opts.groupDeleteImpl ?? (() => Promise.resolve(undefined))) }
+    }
+    throw new Error(`unexpected delete table: ${String(table)}`)
+  })
+
   const update = vi.fn((table: unknown) => {
     if (table === expenseGroup) {
       return {
@@ -89,7 +115,7 @@ function makeDbOrTx(opts: DbOrTxMockOptions) {
     throw new Error(`unexpected update table: ${String(table)}`)
   })
 
-  return { select, insert, update } as never
+  return { select, insert, update, delete: del } as never
 }
 
 describe('createExpenseGroup', () => {
@@ -291,5 +317,97 @@ describe('addExpensesToGroup', () => {
         expenseIds: ['expense-1', 'expense-2'],
       }),
     ).rejects.toThrow('Una spesa selezionata fa già parte di un gruppo.')
+  })
+})
+
+describe('removeExpenseFromGroup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('deletes only the membership row when 3+ members remain', async () => {
+    const dbOrTx = makeDbOrTx({
+      groupOwnedRows: [{ id: 7 }],
+      membershipRows: [{ id: 1 }],
+      membershipCountRows: [{ count: 3 }],
+    })
+
+    const result = await removeExpenseFromGroup(dbOrTx, {
+      userId: 'user-1',
+      groupId: 7,
+      expenseId: 'expense-1',
+    })
+
+    expect(result).toEqual({ autoDissolved: false })
+  })
+
+  it('also deletes the group row (auto-dissolve) when exactly 1 member will remain', async () => {
+    const dbOrTx = makeDbOrTx({
+      groupOwnedRows: [{ id: 7 }],
+      membershipRows: [{ id: 1 }],
+      membershipCountRows: [{ count: 2 }],
+    })
+
+    const result = await removeExpenseFromGroup(dbOrTx, {
+      userId: 'user-1',
+      groupId: 7,
+      expenseId: 'expense-1',
+    })
+
+    expect(result).toEqual({ autoDissolved: true })
+  })
+
+  it('throws "Gruppo non trovato." when the group is missing or not owned', async () => {
+    const dbOrTx = makeDbOrTx({
+      groupOwnedRows: [],
+      membershipRows: [{ id: 1 }],
+      membershipCountRows: [{ count: 3 }],
+    })
+
+    await expect(
+      removeExpenseFromGroup(dbOrTx, {
+        userId: 'user-1',
+        groupId: 999,
+        expenseId: 'expense-1',
+      }),
+    ).rejects.toThrow('Gruppo non trovato.')
+  })
+
+  it('throws "Spesa non trovata nel gruppo." when expenseId is not a member', async () => {
+    const dbOrTx = makeDbOrTx({
+      groupOwnedRows: [{ id: 7 }],
+      membershipRows: [],
+      membershipCountRows: [{ count: 3 }],
+    })
+
+    await expect(
+      removeExpenseFromGroup(dbOrTx, {
+        userId: 'user-1',
+        groupId: 7,
+        expenseId: 'expense-stale',
+      }),
+    ).rejects.toThrow('Spesa non trovata nel gruppo.')
+  })
+})
+
+describe('dissolveExpenseGroup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('deletes all memberships and the group row', async () => {
+    const dbOrTx = makeDbOrTx({ groupOwnedRows: [{ id: 7 }] })
+
+    const result = await dissolveExpenseGroup(dbOrTx, { userId: 'user-1', groupId: 7 })
+
+    expect(result).toBe(true)
+  })
+
+  it('throws "Gruppo non trovato." when the group is missing or not owned', async () => {
+    const dbOrTx = makeDbOrTx({ groupOwnedRows: [] })
+
+    await expect(
+      dissolveExpenseGroup(dbOrTx, { userId: 'user-1', groupId: 999 }),
+    ).rejects.toThrow('Gruppo non trovato.')
   })
 })
