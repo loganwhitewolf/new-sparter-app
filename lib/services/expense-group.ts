@@ -127,3 +127,73 @@ export async function renameExpenseGroup(
 
   return true
 }
+
+export type AddExpensesToGroupInput = {
+  userId: string
+  groupId: number
+  expenseIds: string[]
+}
+
+/**
+ * Add owned, ungrouped expenses to an existing owned Expense Group (GRP-06,
+ * ADR 0017 D-04/D-05/D-06).
+ *
+ * Structural guarantee: only ever inserts `expenseGroupMembership` rows — never
+ * writes `expense.subCategoryId`/`expense.status` and never inserts a new
+ * `expenseGroup` row (the group already exists). Shared-subcategory validation
+ * (D-05) is deliberately NOT this function's job — it belongs to the caller
+ * action, which already has the group's subCategoryId in scope.
+ *
+ * Caller owns the transaction boundary — never calls `dbOrTx.transaction(...)`
+ * itself (matches createExpenseGroup/renameExpenseGroup convention).
+ */
+export async function addExpensesToGroup(
+  dbOrTx: DbOrTx,
+  input: AddExpensesToGroupInput,
+): Promise<void> {
+  const { userId, groupId, expenseIds } = input
+
+  // 1. Group ownership check.
+  const [ownedGroup] = await dbOrTx
+    .select({ id: expenseGroup.id })
+    .from(expenseGroup)
+    .where(and(eq(expenseGroup.id, groupId), eq(expenseGroup.userId, userId)))
+
+  if (!ownedGroup) {
+    throw new Error('Gruppo non trovato.')
+  }
+
+  // 2. Ownership check (IDOR guard) — every id must belong to userId.
+  const ownedRows = await dbOrTx
+    .select({ id: expense.id })
+    .from(expense)
+    .where(and(eq(expense.userId, userId), inArray(expense.id, expenseIds)))
+
+  if (ownedRows.length < expenseIds.length) {
+    throw new Error('Spesa non trovata o non tua.')
+  }
+
+  // 3. Already-grouped pre-check — covers the common case; the insert below
+  //    covers the race.
+  const alreadyGrouped = await dbOrTx
+    .select({ expenseId: expenseGroupMembership.expenseId })
+    .from(expenseGroupMembership)
+    .where(inArray(expenseGroupMembership.expenseId, expenseIds))
+
+  if (alreadyGrouped.length > 0) {
+    throw new Error('Una spesa selezionata fa già parte di un gruppo.')
+  }
+
+  // 4. Insert membership rows. A 23505 here means another request grouped one
+  //    of these expenses between step 3's pre-check and this insert.
+  try {
+    await dbOrTx
+      .insert(expenseGroupMembership)
+      .values(expenseIds.map((expenseId) => ({ groupId, expenseId })))
+  } catch (e) {
+    if (errorCauseCode(e) === '23505') {
+      throw new Error('Una spesa selezionata fa già parte di un gruppo.')
+    }
+    throw e
+  }
+}
