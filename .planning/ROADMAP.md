@@ -70,7 +70,7 @@ Plans:
 
 - [x] 65-04-PLAN.md — Unisci bulk button + merge dialog + expense-table grouped-row rendering
 - [x] 65-05-PLAN.md — /expenses/groups/[groupId] detail page + rename control
-- [ ] 65-06-PLAN.md — transaction row/detail + expense detail "Parte di" cross-refs
+- [x] 65-06-PLAN.md — transaction row/detail + expense detail "Parte di" cross-refs
 
 **UI hint:** yes
 

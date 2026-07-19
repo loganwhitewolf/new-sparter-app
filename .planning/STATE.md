@@ -4,17 +4,17 @@ milestone: v2.6
 milestone_name: Expenses & Transactions Refinement
 current_phase: 65
 current_phase_name: expense-group-merge-and-view
-status: executing
-stopped_at: Completed 65-05-PLAN.md
-last_updated: "2026-07-19T13:33:46.602Z"
+status: verifying
+stopped_at: Completed 65-06-PLAN.md
+last_updated: "2026-07-19T13:39:40.035Z"
 last_activity: 2026-07-18
 last_activity_desc: Phase 65 execution started
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 5
-  percent: 0
+  completed_plans: 6
+  percent: 25
 ---
 
 # Project State
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 Phase: 65 (expense-group-merge-and-view) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-18 — Phase 65 execution started
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -155,6 +155,8 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: 65-03: getExpenses composes group rows read-time, collapse-then-paginate in JS (never SQL LIMIT/OFFSET pre-collapse) to guarantee a group is never split across pagination pages
 - [Phase ?]: MergeExpensesDialog's step logic exported as pure/async functions (isGroupTitleValid, nextStepAfterTitle, getUncategorizedIds, runCategorizeStep, runMergeStep) for direct unit testing, since the repo's Vitest setup has no jsdom/@testing-library for DOM-interaction simulation
 - [Phase ?]: MergeExpensesDialog always calls mergeExpenses with the FULL original selectedExpenses id set, never just the ids categorized during the categorize step (GRP-02)
+- [Phase ?]: [Phase 65-06] transaction-table.tsx categorize-dialog-prefill call sites (setCategorizeTarget title: expenseTitle ?? rowLabel) left untouched — they only fire for uncategorized expenses, which can never be grouped (a group requires a shared non-null subcategory)
+- [Phase ?]: [Phase 65-06] Expense detail 'Parte di' links to expenseGroupDetailHref; transaction detail 'Spesa collegata' link target stays expenseDetailHref unchanged — cross-reference chain is transaction -> member's own expense page -> that page's 'Parte di' link to the group, never a direct transaction-to-group link
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -257,9 +259,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 65-05-PLAN.md
+**Stopped at:** Completed 65-06-PLAN.md
 
-Last session: 2026-07-19T13:33:46.596Z
+Last session: 2026-07-19T13:39:40.029Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -302,3 +304,4 @@ Last session: 2026-07-19T13:33:46.596Z
 | Phase 65 P03 | 20min | 3 tasks | 9 files |
 | Phase 65 P04 | 9min | 3 tasks | 6 files |
 | Phase 65 P05 | 2min | 3 tasks | 4 files |
+| Phase 65 P06 | 15min | 3 tasks | 6 files |
