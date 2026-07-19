@@ -69,7 +69,7 @@ vi.mock('@/components/ui/dropdown-menu', async () => {
 })
 
 const { ExpenseTable } = await import('../components/expenses/expense-table')
-const { expenseDetailHref } = await import('../lib/routes')
+const { expenseDetailHref, expenseGroupDetailHref } = await import('../lib/routes')
 import type { ExpenseRow } from '../lib/dal/expenses'
 
 const EXPENSE_ID = 'aabbccdd-0000-4000-8000-aabbccddeeff'
@@ -134,5 +134,32 @@ describe('ExpenseTable — row menu Dettagli entry (DET-07)', () => {
     const html = render([makeExpense({ status: '1', subCategoryId: null, subCategoryName: null })])
 
     expect(html).toContain('Da categorizzare')
+  })
+})
+
+describe('ExpenseTable — grouped row rendering (GRP-03)', () => {
+  it('renders an "Unita" badge and a Dettagli link to the group route for a grouped row', () => {
+    const html = render([makeExpense({ groupId: 42, groupTitle: 'Netflix condiviso' })])
+
+    expect(html).toContain('Unita')
+    expect(html).toContain(`href="${expenseGroupDetailHref(42)}"`)
+  })
+
+  it('renders the grouped row checkbox as disabled', () => {
+    const html = render([makeExpense({ groupId: 42, groupTitle: 'Netflix condiviso' })])
+
+    const checkboxMatch = html.match(/<input type="checkbox"[^>]*aria-label="Seleziona Spesa Esselunga"[^>]*>/)
+    expect(checkboxMatch).not.toBeNull()
+    expect(checkboxMatch?.[0]).toContain('disabled=""')
+  })
+
+  it('renders no Ignora, Elimina, or title-rename control for a grouped row', () => {
+    const html = render([makeExpense({ groupId: 42, groupTitle: 'Netflix condiviso' })])
+
+    // "Elimina" alone also appears in the (always-rendered, count=0) BulkActionBar and
+    // BulkDeleteExpensesDialog markup, so assert against the per-row controls specifically.
+    expect(html).not.toContain('Ignora')
+    expect(html).not.toContain('Elimina spesa')
+    expect(html).not.toContain('aria-label="Rinomina spesa"')
   })
 })

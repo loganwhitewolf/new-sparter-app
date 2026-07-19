@@ -42,10 +42,11 @@ import { BulkCategorizeDialog } from './bulk-categorize-dialog'
 import { BulkDeleteExpensesDialog } from './bulk-delete-expenses-dialog'
 import { ExpenseCategorizeDialog } from './expense-categorize-dialog'
 import { ExpenseTitleEdit } from './expense-title-edit'
+import { MergeExpensesDialog } from './merge-expenses-dialog'
 import type { ExpenseFilters, ExpenseRow } from '@/lib/dal/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
-import { expenseDetailHref } from '@/lib/routes'
+import { expenseDetailHref, expenseGroupDetailHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -79,6 +80,7 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const [categorizeDialogExpense, setCategorizeDialogExpense] = useState<{
     id: string
@@ -89,6 +91,14 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
 
   const allSelected = loadedExpenses.length > 0 && selectedIds.length === loadedExpenses.length
   const someSelected = selectedIds.length > 0 && selectedIds.length < loadedExpenses.length
+
+  // GRP-01: merge eligibility mirrors mergeExpenses' server-side gate exactly —
+  // 2+ selected, and the categorized subset (if any) shares a single subCategoryId.
+  const selectedRows = loadedExpenses.filter((e) => selectedIds.includes(e.id))
+  const categorizedSubCatIds = new Set(
+    selectedRows.filter((e) => e.subCategoryId !== null).map((e) => e.subCategoryId),
+  )
+  const mergeEligible = selectedIds.length >= 2 && categorizedSubCatIds.size <= 1
 
   const loadNextPage = useCallback(async () => {
     if (isLoadingMoreRef.current || !hasMore) {
@@ -253,6 +263,10 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
               const isSelected = selectedIds.includes(exp.id)
               const isCategorized = exp.status === '2' || exp.status === '3'
               const isIgnored = exp.status === '4'
+              const isGrouped = exp.groupId !== null
+              const detailsHref = isGrouped
+                ? expenseGroupDetailHref(exp.groupId as number)
+                : expenseDetailHref(exp.id)
 
               return (
                 <TableRow
@@ -265,24 +279,39 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                   <TableCell className="w-10 text-center">
                     <input
                       type="checkbox"
-                      checked={isSelected}
+                      checked={isGrouped ? false : isSelected}
+                      disabled={isGrouped}
                       onChange={() => toggleRow(exp.id)}
                       className="h-4 w-4 cursor-pointer"
                       aria-label={`Seleziona ${exp.title}`}
                     />
                   </TableCell>
                   <TableCell className="max-w-0 w-full">
-                    <ExpenseTitleEdit
-                      id={exp.id}
-                      title={exp.title}
-                      onSuccess={(updatedTitle) => {
-                        setLoadedExpenses((prev) =>
-                          prev.map((e) =>
-                            e.id === exp.id ? { ...e, title: updatedTitle } : e
+                    {isGrouped ? (
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Link
+                          href={detailsHref}
+                          className="truncate text-sm font-medium hover:underline"
+                        >
+                          {exp.title}
+                        </Link>
+                        <Badge variant="outline" className="shrink-0 border-0 bg-muted text-muted-foreground">
+                          Unita
+                        </Badge>
+                      </div>
+                    ) : (
+                      <ExpenseTitleEdit
+                        id={exp.id}
+                        title={exp.title}
+                        onSuccess={(updatedTitle) => {
+                          setLoadedExpenses((prev) =>
+                            prev.map((e) =>
+                              e.id === exp.id ? { ...e, title: updatedTitle } : e
+                            )
                           )
-                        )
-                      }}
-                    />
+                        }}
+                      />
+                    )}
                   </TableCell>
                   <TableCell
                     className={cn(
@@ -293,7 +322,9 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                     {formatAmount(exp.totalAmount)}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums text-sm">
-                    {formatDate(exp.createdAt)}
+                    {exp.firstTransactionAt && exp.lastTransactionAt
+                      ? `${formatDate(exp.firstTransactionAt)} – ${formatDate(exp.lastTransactionAt)}`
+                      : formatDate(exp.createdAt)}
                   </TableCell>
                   <TableCell className="truncate text-sm">{exp.platformName ?? '—'}</TableCell>
                   <TableCell>
@@ -352,19 +383,23 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
-                          <Link href={expenseDetailHref(exp.id)}>Dettagli</Link>
+                          <Link href={detailsHref}>Dettagli</Link>
                         </DropdownMenuItem>
-                        <IgnoreExpenseMenuItem
-                          expense={exp}
-                          onIgnored={() => setOpenDropdownId(null)}
-                        />
-                        <DeleteExpenseMenuItem
-                          expense={exp}
-                          onDeleted={() => {
-                            setSelectedIds((prev) => prev.filter((id) => id !== exp.id))
-                            setOpenDropdownId(null)
-                          }}
-                        />
+                        {!isGrouped ? (
+                          <>
+                            <IgnoreExpenseMenuItem
+                              expense={exp}
+                              onIgnored={() => setOpenDropdownId(null)}
+                            />
+                            <DeleteExpenseMenuItem
+                              expense={exp}
+                              onDeleted={() => {
+                                setSelectedIds((prev) => prev.filter((id) => id !== exp.id))
+                                setOpenDropdownId(null)
+                              }}
+                            />
+                          </>
+                        ) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -399,6 +434,7 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
         selectedIds={selectedIds}
         onBulkCategorize={() => setBulkDialogOpen(true)}
         onBulkDelete={() => setBulkDeleteOpen(true)}
+        onBulkMerge={mergeEligible ? () => setMergeDialogOpen(true) : undefined}
       />
 
       <BulkDeleteExpensesDialog
@@ -437,6 +473,18 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
         categories={categories}
         mostUsed={mostUsed}
         onSuccess={() => setCategorizeDialogExpense(null)}
+      />
+
+      <MergeExpensesDialog
+        open={mergeDialogOpen}
+        onOpenChange={setMergeDialogOpen}
+        selectedExpenses={selectedRows.map((e) => ({ id: e.id, subCategoryId: e.subCategoryId }))}
+        categories={categories}
+        mostUsed={mostUsed}
+        onSuccess={() => {
+          setSelectedIds([])
+          setMergeDialogOpen(false)
+        }}
       />
     </>
   )
