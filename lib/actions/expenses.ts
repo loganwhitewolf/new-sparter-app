@@ -11,6 +11,7 @@ import {
   IgnoreExpenseSchema,
   MergeExpensesSchema,
   RenameExpenseGroupSchema,
+  CategorizeExpenseGroupSchema,
   ActionState,
 } from '@/lib/validations/expense'
 import {
@@ -30,7 +31,7 @@ import {
   type ExpenseTransactionRow,
 } from '@/lib/dal/transactions'
 import { db } from '@/lib/db'
-import { expense, expenseGroupMembership } from '@/lib/db/schema'
+import { expense, expenseGroup, expenseGroupMembership } from '@/lib/db/schema'
 import { and, eq, inArray } from 'drizzle-orm'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
 import { revalidateCategorizationSurfaces } from '@/lib/actions/revalidation'
@@ -495,6 +496,109 @@ export async function mergeExpenses(
         groupTitle: parsed.data.groupTitle,
         subCategoryId: commonSubCategoryId,
       })
+    })
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message }
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+
+  revalidateCategorizationSurfaces()
+  return { error: null }
+}
+
+/**
+ * Recategorize an entire Expense Group (GRP-05, ADR 0017 D-01/D-02). Every
+ * member's expense.subCategoryId/status is updated AND expenseGroup.subCategoryId
+ * is dual-written in the same transaction (D-09) — the group and its members
+ * must never diverge on category. This is the ONLY path that may move a grouped
+ * member's category; categorizeExpense's D-03 guard blocks direct member edits.
+ */
+export async function categorizeExpenseGroup(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const parsed = CategorizeExpenseGroupSchema.safeParse({
+    groupId: formData.get('groupId'),
+    subCategoryId: Number(formData.get('subCategoryId')),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+
+  // SECURITY: verifySession() first, then scope everything to userId (T-3-02 / T-66-05).
+  const { userId } = await verifySession()
+  const subCategoryVisible = await isSubCategoryVisibleToUser(parsed.data.subCategoryId, userId)
+  if (!subCategoryVisible) {
+    return { error: 'Sottocategoria non valida.' }
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      // Group ownership check — a groupId belonging to another user resolves to
+      // the same 'Gruppo non trovato.' as a missing groupId, before any row is touched.
+      const [ownedGroup] = await tx
+        .select({ id: expenseGroup.id })
+        .from(expenseGroup)
+        .where(and(eq(expenseGroup.id, parsed.data.groupId), eq(expenseGroup.userId, userId)))
+
+      if (!ownedGroup) {
+        throw new Error('Gruppo non trovato.')
+      }
+
+      const memberRows = await tx
+        .select({
+          id: expense.id,
+          subCategoryId: expense.subCategoryId,
+          status: expense.status,
+        })
+        .from(expenseGroupMembership)
+        .innerJoin(expense, eq(expense.id, expenseGroupMembership.expenseId))
+        .where(
+          and(
+            eq(expenseGroupMembership.groupId, parsed.data.groupId),
+            eq(expense.userId, userId),
+          ),
+        )
+
+      const beforeById = new Map(memberRows.map((row) => [row.id, row]))
+      const memberIds = memberRows.map((row) => row.id)
+
+      const updated = await tx
+        .update(expense)
+        .set({
+          subCategoryId: parsed.data.subCategoryId,
+          status: '3',
+          updatedAt: new Date(),
+        })
+        .where(and(inArray(expense.id, memberIds), eq(expense.userId, userId)))
+        .returning({ id: expense.id })
+
+      // D-09: dual-write the group's own subCategoryId in the SAME transaction —
+      // the group and its members must never diverge on category.
+      await tx
+        .update(expenseGroup)
+        .set({ subCategoryId: parsed.data.subCategoryId, updatedAt: new Date() })
+        .where(and(eq(expenseGroup.id, parsed.data.groupId), eq(expenseGroup.userId, userId)))
+
+      // Non-fatal per-member history write (ADV-02 precedent).
+      await Promise.all(
+        updated.map(async (row) => {
+          const before = beforeById.get(row.id)
+          try {
+            await writeClassificationHistory(tx, {
+              userId,
+              expenseId: row.id,
+              fromSubCategoryId: before?.subCategoryId ?? null,
+              toSubCategoryId: parsed.data.subCategoryId,
+              fromStatus: before?.status ?? null,
+              toStatus: '3',
+              source: 'manual',
+            })
+          } catch {
+            // history write failure is non-fatal
+          }
+        }),
+      )
     })
   } catch (err) {
     if (err instanceof Error) return { error: err.message }
