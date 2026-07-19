@@ -64,7 +64,13 @@ export const MergeExpensesSchema = z.object({
   selectedExpenseIds: z
     .array(z.string().uuid())
     .min(2, { error: 'Seleziona almeno due spese per unire.' })
-    .max(500, { error: 'Puoi unire al massimo 500 spese alla volta.' }),
+    .max(500, { error: 'Puoi unire al massimo 500 spese alla volta.' })
+    // WR-03: enforce "at least two DISTINCT expenses" — without this, a duplicated id
+    // (e.g. ["a", "a"]) passes .min(2) on the raw array but dedupes to a single real
+    // expense downstream in mergeExpenses, silently creating a one-member "group".
+    .refine((ids) => new Set(ids).size === ids.length, {
+      error: 'Spese duplicate nella selezione.',
+    }),
   groupTitle: z
     .string()
     .trim()
