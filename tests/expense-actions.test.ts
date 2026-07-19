@@ -315,7 +315,9 @@ describe('bulkCategorize — subcategory visibility guard', () => {
 })
 
 describe('mergeExpenses', () => {
-  function mockTxSelectRows(rows: Array<{ id: string; subCategoryId: number | null }>) {
+  function mockTxSelectRows(
+    rows: Array<{ id: string; subCategoryId: number | null; status?: string }>,
+  ) {
     mocks.dbTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       const tx = {
         select: vi.fn().mockReturnValue({
@@ -410,6 +412,27 @@ describe('mergeExpenses', () => {
     )
 
     expect(result).toEqual({ error: 'Le spese devono avere la stessa categoria.' })
+    expect(mocks.createExpenseGroup).not.toHaveBeenCalled()
+  })
+
+  // WR-05: an ignored (status '4') member must be rejected — ignoreExpense doesn't
+  // clear subCategoryId, so it would otherwise pass the "same category" gate above
+  // and let a group's composed totals silently under-represent it under status filters.
+  it('rejects when any selected expense is ignored (status 4)', async () => {
+    mockTxSelectRows([
+      { id: '11111111-1111-4111-8111-111111111111', subCategoryId: 42, status: '3' },
+      { id: '22222222-2222-4222-8222-222222222222', subCategoryId: 42, status: '4' },
+    ])
+
+    const result = await mergeExpenses(
+      { error: null },
+      makeFormData({
+        selectedExpenseIds: JSON.stringify(['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222']),
+        groupTitle: 'Cherasco 57',
+      }),
+    )
+
+    expect(result).toEqual({ error: 'Una o più spese selezionate sono ignorate: riattivale prima di unire.' })
     expect(mocks.createExpenseGroup).not.toHaveBeenCalled()
   })
 

@@ -460,7 +460,7 @@ export async function mergeExpenses(
   try {
     await db.transaction(async (tx) => {
       const rows = await tx
-        .select({ id: expense.id, subCategoryId: expense.subCategoryId })
+        .select({ id: expense.id, subCategoryId: expense.subCategoryId, status: expense.status })
         .from(expense)
         .where(and(eq(expense.userId, userId), inArray(expense.id, dedupedIds)))
 
@@ -470,6 +470,16 @@ export async function mergeExpenses(
 
       if (rows.some((row) => row.subCategoryId === null)) {
         throw new Error('Categorizza prima di unire.')
+      }
+
+      // WR-05: reject ignored (status '4') members. getExpenses applies status as a
+      // SQL WHERE filter BEFORE composeExpenseRows groups members by groupId, so a
+      // group containing a mix of ignored/non-ignored members would have its composed
+      // totals silently built from whichever status subset survives a given filter —
+      // ignoreExpense sets status='4' without clearing subCategoryId, so this
+      // divergence is otherwise invisible to the "same category" gate above.
+      if (rows.some((row) => row.status === '4')) {
+        throw new Error('Una o più spese selezionate sono ignorate: riattivale prima di unire.')
       }
 
       const subCategoryIds = new Set(rows.map((row) => row.subCategoryId))
