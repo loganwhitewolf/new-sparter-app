@@ -12,6 +12,7 @@ import {
   MergeExpensesSchema,
   RenameExpenseGroupSchema,
   CategorizeExpenseGroupSchema,
+  AddExpensesToGroupSchema,
   ActionState,
 } from '@/lib/validations/expense'
 import {
@@ -25,7 +26,11 @@ import {
   type ExpenseSourceFile,
 } from '@/lib/dal/expenses'
 import { deleteExpensesWithOptions } from '@/lib/services/expense-deletion'
-import { createExpenseGroup, renameExpenseGroup } from '@/lib/services/expense-group'
+import {
+  createExpenseGroup,
+  renameExpenseGroup,
+  addExpensesToGroup,
+} from '@/lib/services/expense-group'
 import {
   getTransactionsByExpenseId,
   type ExpenseTransactionRow,
@@ -599,6 +604,85 @@ export async function categorizeExpenseGroup(
           }
         }),
       )
+    })
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message }
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+
+  revalidateCategorizationSurfaces()
+  return { error: null }
+}
+
+/**
+ * Add owned, ungrouped expenses to an existing owned Expense Group (GRP-06,
+ * ADR 0017 D-04/D-05/D-06). Shared-subcategory + ignored-status validation
+ * happens here (mirrors mergeExpenses' WR-05 guard) before delegating the
+ * membership insert to the Plan 66-01 addExpensesToGroup service.
+ */
+export async function addExpensesToGroupAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  // WR-04: guard against malformed/tampered `expenseIds` payload — mirrors
+  // bulkCategorize/mergeExpenses' JSON.parse try/catch.
+  let expenseIds: unknown
+  try {
+    expenseIds = JSON.parse((formData.get('expenseIds') as string) ?? '[]')
+  } catch {
+    return { error: 'Selezione non valida.' }
+  }
+
+  const parsed = AddExpensesToGroupSchema.safeParse({
+    groupId: formData.get('groupId'),
+    expenseIds,
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+
+  const { userId } = await verifySession()
+
+  try {
+    await db.transaction(async (tx) => {
+      const [ownedGroup] = await tx
+        .select({ subCategoryId: expenseGroup.subCategoryId })
+        .from(expenseGroup)
+        .where(and(eq(expenseGroup.id, parsed.data.groupId), eq(expenseGroup.userId, userId)))
+
+      if (!ownedGroup) {
+        throw new Error('Gruppo non trovato.')
+      }
+
+      const rows = await tx
+        .select({ id: expense.id, subCategoryId: expense.subCategoryId, status: expense.status })
+        .from(expense)
+        .where(and(eq(expense.userId, userId), inArray(expense.id, parsed.data.expenseIds)))
+
+      if (rows.length !== parsed.data.expenseIds.length) {
+        throw new Error('Una o più spese non sono state trovate.')
+      }
+
+      // Mirrors mergeExpenses' WR-05 guard for the add path.
+      if (rows.some((row) => row.status === '4')) {
+        throw new Error(
+          'Una o più spese selezionate sono ignorate: riattivale prima di aggiungerle.',
+        )
+      }
+
+      if (
+        rows.some(
+          (row) => row.subCategoryId !== null && row.subCategoryId !== ownedGroup.subCategoryId,
+        )
+      ) {
+        throw new Error('Le spese devono avere la stessa categoria del gruppo.')
+      }
+
+      await addExpensesToGroup(tx, {
+        userId,
+        groupId: parsed.data.groupId,
+        expenseIds: parsed.data.expenseIds,
+      })
     })
   } catch (err) {
     if (err instanceof Error) return { error: err.message }
