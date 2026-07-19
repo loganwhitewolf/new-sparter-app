@@ -13,6 +13,8 @@ import {
   RenameExpenseGroupSchema,
   CategorizeExpenseGroupSchema,
   AddExpensesToGroupSchema,
+  RemoveExpenseFromGroupSchema,
+  DissolveExpenseGroupSchema,
   ActionState,
 } from '@/lib/validations/expense'
 import {
@@ -30,6 +32,8 @@ import {
   createExpenseGroup,
   renameExpenseGroup,
   addExpensesToGroup,
+  removeExpenseFromGroup,
+  dissolveExpenseGroup,
 } from '@/lib/services/expense-group'
 import {
   getTransactionsByExpenseId,
@@ -683,6 +687,76 @@ export async function addExpensesToGroupAction(
         groupId: parsed.data.groupId,
         expenseIds: parsed.data.expenseIds,
       })
+    })
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message }
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+
+  revalidateCategorizationSurfaces()
+  return { error: null }
+}
+
+/**
+ * Remove a single member from an owned Expense Group (GRP-07, ADR 0017
+ * D-07/D-08). Delegates ownership checks + the auto-dissolve boundary decision
+ * to the Plan 66-01 removeExpenseFromGroup service, invoked inside
+ * db.transaction here since the service's TOCTOU guarantee (T-66-03) depends
+ * on the count-then-delete running in the same transaction as the caller.
+ */
+export async function removeExpenseFromGroupAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const parsed = RemoveExpenseFromGroupSchema.safeParse({
+    groupId: formData.get('groupId'),
+    expenseId: formData.get('expenseId'),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+
+  const { userId } = await verifySession()
+
+  try {
+    await db.transaction(async (tx) => {
+      await removeExpenseFromGroup(tx, {
+        userId,
+        groupId: parsed.data.groupId,
+        expenseId: parsed.data.expenseId,
+      })
+    })
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message }
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+
+  revalidateCategorizationSurfaces()
+  return { error: null }
+}
+
+/**
+ * Dissolve an owned Expense Group entirely (GRP-07, ADR 0017 D-07/D-08).
+ * Delegates deletion of all memberships + the group row to the Plan 66-01
+ * dissolveExpenseGroup service, invoked inside db.transaction here so both
+ * deletes are atomic.
+ */
+export async function dissolveExpenseGroupAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const parsed = DissolveExpenseGroupSchema.safeParse({
+    groupId: formData.get('groupId'),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+
+  const { userId } = await verifySession()
+
+  try {
+    await db.transaction(async (tx) => {
+      await dissolveExpenseGroup(tx, { userId, groupId: parsed.data.groupId })
     })
   } catch (err) {
     if (err instanceof Error) return { error: err.message }
