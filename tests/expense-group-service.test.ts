@@ -28,7 +28,11 @@ vi.mock('drizzle-orm', () => ({
 }))
 
 import { expense, expenseGroup, expenseGroupMembership } from '@/lib/db/schema'
-import { createExpenseGroup, renameExpenseGroup } from '@/lib/services/expense-group'
+import {
+  addExpensesToGroup,
+  createExpenseGroup,
+  renameExpenseGroup,
+} from '@/lib/services/expense-group'
 
 type DbOrTxMockOptions = {
   ownedRows?: unknown[]
@@ -36,6 +40,8 @@ type DbOrTxMockOptions = {
   groupInsertRows?: unknown[]
   membershipInsertImpl?: () => Promise<unknown>
   updateRows?: unknown[]
+  /** Rows returned by a select on expenseGroup (group ownership check). */
+  groupOwnedRows?: unknown[]
 }
 
 function makeDbOrTx(opts: DbOrTxMockOptions) {
@@ -46,6 +52,9 @@ function makeDbOrTx(opts: DbOrTxMockOptions) {
       }
       if (table === expenseGroupMembership) {
         return { where: vi.fn().mockResolvedValue(opts.groupedRows ?? []) }
+      }
+      if (table === expenseGroup) {
+        return { where: vi.fn().mockResolvedValue(opts.groupOwnedRows ?? []) }
       }
       throw new Error(`unexpected select table: ${String(table)}`)
     }),
@@ -189,5 +198,98 @@ describe('renameExpenseGroup', () => {
         title: 'Nuovo titolo',
       }),
     ).rejects.toThrow('Gruppo non trovato.')
+  })
+})
+
+describe('addExpensesToGroup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('inserts memberships when the group is owned and every expense is owned and ungrouped', async () => {
+    const dbOrTx = makeDbOrTx({
+      groupOwnedRows: [{ id: 7 }],
+      ownedRows: [{ id: 'expense-1' }, { id: 'expense-2' }],
+      groupedRows: [],
+    })
+
+    await expect(
+      addExpensesToGroup(dbOrTx, {
+        userId: 'user-1',
+        groupId: 7,
+        expenseIds: ['expense-1', 'expense-2'],
+      }),
+    ).resolves.toBeUndefined()
+  })
+
+  it('throws "Gruppo non trovato." when the group is missing or not owned', async () => {
+    const dbOrTx = makeDbOrTx({
+      groupOwnedRows: [],
+      ownedRows: [{ id: 'expense-1' }],
+      groupedRows: [],
+    })
+
+    await expect(
+      addExpensesToGroup(dbOrTx, {
+        userId: 'user-1',
+        groupId: 999,
+        expenseIds: ['expense-1'],
+      }),
+    ).rejects.toThrow('Gruppo non trovato.')
+  })
+
+  it('rejects on partial ownership of the expenseIds (IDOR)', async () => {
+    const dbOrTx = makeDbOrTx({
+      groupOwnedRows: [{ id: 7 }],
+      ownedRows: [{ id: 'expense-1' }], // expense-2 missing or not owned
+      groupedRows: [],
+    })
+
+    await expect(
+      addExpensesToGroup(dbOrTx, {
+        userId: 'user-1',
+        groupId: 7,
+        expenseIds: ['expense-1', 'expense-2'],
+      }),
+    ).rejects.toThrow('Spesa non trovata o non tua.')
+  })
+
+  it('rejects when a pre-check finds a selected expense already grouped', async () => {
+    const dbOrTx = makeDbOrTx({
+      groupOwnedRows: [{ id: 7 }],
+      ownedRows: [{ id: 'expense-1' }, { id: 'expense-2' }],
+      groupedRows: [{ expenseId: 'expense-2' }],
+    })
+
+    await expect(
+      addExpensesToGroup(dbOrTx, {
+        userId: 'user-1',
+        groupId: 7,
+        expenseIds: ['expense-1', 'expense-2'],
+      }),
+    ).rejects.toThrow('Una spesa selezionata fa già parte di un gruppo.')
+  })
+
+  it('translates a 23505 unique-violation race on the membership insert into the same Italian message', async () => {
+    const dbOrTx = makeDbOrTx({
+      groupOwnedRows: [{ id: 7 }],
+      ownedRows: [{ id: 'expense-1' }, { id: 'expense-2' }],
+      groupedRows: [],
+      membershipInsertImpl: () => {
+        const err = new Error('duplicate key value violates unique constraint') as Error & {
+          cause?: { code: string }
+        }
+        err.cause = { code: '23505' }
+        return Promise.reject(err)
+      },
+    })
+
+    await expect(
+      addExpensesToGroup(dbOrTx, {
+        userId: 'user-1',
+        groupId: 7,
+        expenseIds: ['expense-1', 'expense-2'],
+      }),
+    ).rejects.toThrow('Una spesa selezionata fa già parte di un gruppo.')
   })
 })
