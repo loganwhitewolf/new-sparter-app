@@ -79,7 +79,10 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
   const [unpairPending, setUnpairPending] = useState(false)
 
   const displayTitle =
-    transaction.customTitle ?? transaction.expenseTitle ?? transaction.description
+    transaction.customTitle ??
+    transaction.groupTitle ??
+    transaction.expenseTitle ??
+    transaction.description
   const isOneToOne =
     Boolean(transaction.expenseTitle) && transaction.expenseTransactionCount === 1
 
@@ -162,7 +165,7 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
           id={transaction.id}
           description={transaction.description}
           customTitle={transaction.customTitle}
-          fallbackTitle={transaction.expenseTitle}
+          fallbackTitle={transaction.groupTitle ?? transaction.expenseTitle}
           onSuccess={() => router.refresh()}
         />
       </div>
@@ -277,7 +280,7 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
             href={expenseDetailHref(transaction.expenseId)}
             className="text-sm text-primary underline-offset-4 hover:underline"
           >
-            {transaction.expenseTitle ?? 'Vedi spesa'}
+            {transaction.groupTitle ?? transaction.expenseTitle ?? 'Vedi spesa'}
           </Link>
         </div>
       ) : null}

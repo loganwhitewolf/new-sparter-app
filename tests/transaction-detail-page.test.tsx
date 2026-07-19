@@ -282,6 +282,8 @@ function makeTransactionDetailRow(overrides: Record<string, unknown> = {}) {
     fileId: 'file-1',
     fileName: 'estratto_conto.csv',
     platformName: 'Intesa SP',
+    groupId: null,
+    groupTitle: null,
     pairedWithId: null,
     pairedAmount: null,
     pairedDescription: null,
@@ -402,5 +404,21 @@ describe('/transactions/[id] page', () => {
     expect(html).toContain('Spesa a sé (non aggregare)')
     expect(html).toContain('Elimina')
     expect(html).not.toContain('Altre azioni')
+  })
+
+  it('shows the group title ahead of the expense title in both the header and "Spesa collegata", while linking to the member expense\'s own detail page (GRP-08)', async () => {
+    pageMocks.getTransactionForDetail.mockResolvedValue(
+      makeTransactionDetailRow({
+        expenseId: 'expense-1',
+        expenseTitle: 'Cherasco 57 SRL',
+        groupId: 1,
+        groupTitle: 'Cherasco',
+      }),
+    )
+    const html = await renderTransactionPage()
+
+    expect(html).toContain('Cherasco')
+    expect(html).not.toContain('Cherasco 57 SRL')
+    expect(html).toContain('href="/expenses/expense-1"')
   })
 })
