@@ -126,11 +126,13 @@ describe('categorizeExpense — subcategory visibility guard', () => {
     mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
     mocks.writeClassificationHistory.mockResolvedValue(undefined)
     mocks.revalidateCategorizationSurfaces.mockReturnValue(undefined)
-    // Default: expense is not a grouped member (D-03 guard passes through).
+    // Default: expense is not a grouped member (D-03/WR-02 guard passes through).
     mocks.dbSelect.mockReturnValue({
       from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([]),
+        innerJoin: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
         }),
       }),
     })
@@ -216,8 +218,10 @@ describe('categorizeExpense — grouped member guard (D-03)', () => {
   it('rejects recategorizing an expense that is already a group member, without touching the transaction', async () => {
     mocks.dbSelect.mockReturnValue({
       from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([{ id: 1 }]),
+        innerJoin: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: 1 }]),
+          }),
         }),
       }),
     })

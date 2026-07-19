@@ -306,13 +306,23 @@ export async function categorizeExpense(
   if (!subCategoryVisible) {
     return { error: 'Sottocategoria non valida.' }
   }
-  // D-03 defense-in-depth: a grouped expense's category is set at the group level
-  // (Phase 66) — recategorizing a member directly here would silently diverge it
-  // from its group. Reject before starting the transaction; nothing is written.
+  // D-03 defense-in-depth (WR-02): a grouped expense's category is set at the group
+  // level (Phase 66) — recategorizing a member directly here would silently diverge
+  // it from its group. Reject before starting the transaction; nothing is written.
+  // Joined through `expense` and scoped to `userId` (not just expenseId) — the
+  // original guard checked expenseId alone, so any caller could learn via the
+  // distinct error response whether an arbitrary (unowned) expense id was grouped,
+  // before ownership was ever checked (IDOR info-leak).
   const groupMembership = await db
     .select({ id: expenseGroupMembership.id })
     .from(expenseGroupMembership)
-    .where(eq(expenseGroupMembership.expenseId, parsed.data.id))
+    .innerJoin(expense, eq(expense.id, expenseGroupMembership.expenseId))
+    .where(
+      and(
+        eq(expenseGroupMembership.expenseId, parsed.data.id),
+        eq(expense.userId, userId),
+      ),
+    )
     .limit(1)
   if (groupMembership.length > 0) {
     return { error: 'Questa spesa fa parte di un gruppo: categorizza dal gruppo.' }

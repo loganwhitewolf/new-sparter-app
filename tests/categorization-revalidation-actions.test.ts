@@ -122,9 +122,10 @@ vi.mock('@/lib/db/schema', () => ({
 // a visible row so pre-existing categorizeExpense/bulkCategorize flows are unaffected.
 const dbSelectChain = {
   from: (table: unknown) => {
-    // D-03 guard (categorizeExpense): expenseGroupMembership lookup — not grouped by default.
+    // D-03/WR-02 guard (categorizeExpense): expenseGroupMembership lookup, joined
+    // through expense and scoped to userId — not grouped by default.
     if (table === mocks.schemaTables.expenseGroupMembership) {
-      return { where: () => ({ limit: () => Promise.resolve([]) }) }
+      return { innerJoin: () => ({ where: () => ({ limit: () => Promise.resolve([]) }) }) }
     }
     return dbSelectChain
   },
