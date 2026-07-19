@@ -198,3 +198,87 @@ describe('GroupDetailClient', () => {
     expect(idxTx3).toBeGreaterThan(idxTx2)
   })
 })
+
+// ---------------------------------------------------------------------------
+// GroupTitleEdit — inline rename control
+// ---------------------------------------------------------------------------
+
+describe('GroupTitleEdit', () => {
+  beforeEach(() => {
+    vi.resetModules()
+  })
+
+  it('renders the title as plain text with no self-link when not editing', async () => {
+    vi.doMock('react', async () => {
+      const actual = await vi.importActual<typeof import('react')>('react')
+      return {
+        ...actual,
+        useActionState: vi.fn(() => [{ error: null }, vi.fn(), false]),
+      }
+    })
+    const { GroupTitleEdit } = await import('../components/expenses/group-title-edit')
+
+    const html = renderToStaticMarkup(
+      createElement(GroupTitleEdit, { groupId: GROUP_ID, title: 'Vacanza Roma' }),
+    )
+
+    expect(html).toContain('Vacanza Roma')
+    expect(html).not.toContain('<a ')
+    vi.doUnmock('react')
+  })
+
+  it('renders a hidden groupId input and a title input in edit mode, with no name="id" field', async () => {
+    vi.doMock('react', async () => {
+      const actual = await vi.importActual<typeof import('react')>('react')
+      return {
+        ...actual,
+        useState: vi.fn((initial: unknown) => {
+          const resolved = typeof initial === 'function' ? (initial as () => unknown)() : initial
+          if (typeof resolved === 'boolean') {
+            return [true, vi.fn()]
+          }
+          return [resolved, vi.fn()]
+        }),
+        useActionState: vi.fn(() => [{ error: null }, vi.fn(), false]),
+      }
+    })
+    const { GroupTitleEdit } = await import('../components/expenses/group-title-edit')
+
+    const html = renderToStaticMarkup(
+      createElement(GroupTitleEdit, { groupId: GROUP_ID, title: 'Vacanza Roma' }),
+    )
+
+    expect(html).toContain('name="groupId"')
+    expect(html).toContain('name="title"')
+    expect(html).not.toContain('name="id"')
+    vi.doUnmock('react')
+  })
+
+  it('disables the Salva button when the value is shorter than 2 trimmed characters', async () => {
+    vi.doMock('react', async () => {
+      const actual = await vi.importActual<typeof import('react')>('react')
+      return {
+        ...actual,
+        useState: vi.fn((initial: unknown) => {
+          const resolved = typeof initial === 'function' ? (initial as () => unknown)() : initial
+          if (typeof resolved === 'boolean') {
+            return [true, vi.fn()]
+          }
+          if (resolved === 'Vacanza Roma') {
+            return ['a', vi.fn()]
+          }
+          return [resolved, vi.fn()]
+        }),
+        useActionState: vi.fn(() => [{ error: null }, vi.fn(), false]),
+      }
+    })
+    const { GroupTitleEdit } = await import('../components/expenses/group-title-edit')
+
+    const html = renderToStaticMarkup(
+      createElement(GroupTitleEdit, { groupId: GROUP_ID, title: 'Vacanza Roma' }),
+    )
+
+    expect(html).toMatch(/<button type="submit" disabled=""/)
+    vi.doUnmock('react')
+  })
+})
