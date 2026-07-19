@@ -69,7 +69,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [x] 65-04-PLAN.md — Unisci bulk button + merge dialog + expense-table grouped-row rendering
-- [ ] 65-05-PLAN.md — /expenses/groups/[groupId] detail page + rename control
+- [x] 65-05-PLAN.md — /expenses/groups/[groupId] detail page + rename control
 - [ ] 65-06-PLAN.md — transaction row/detail + expense detail "Parte di" cross-refs
 
 **UI hint:** yes
