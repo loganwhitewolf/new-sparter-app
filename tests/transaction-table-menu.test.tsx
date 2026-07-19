@@ -154,6 +154,37 @@ describe('TransactionTable — row menu Dettagli entry (DET-07)', () => {
   })
 })
 
+describe('TransactionTable — group title precedence (GRP-08)', () => {
+  it('renders the group title ahead of the expense title when the linked expense is grouped', () => {
+    const html = render([
+      makeTransaction({
+        expenseId: 'expense-1',
+        expenseTitle: 'Cherasco 57 SRL',
+        groupId: 1,
+        groupTitle: 'Cherasco',
+      }),
+    ])
+
+    expect(html).toContain('Cherasco')
+    expect(html).not.toContain('Cherasco 57 SRL')
+  })
+
+  it('still shows customTitle over both groupTitle and expenseTitle when set', () => {
+    const html = render([
+      makeTransaction({
+        customTitle: 'Rinominata da me',
+        expenseId: 'expense-1',
+        expenseTitle: 'Cherasco 57 SRL',
+        groupId: 1,
+        groupTitle: 'Cherasco',
+      }),
+    ])
+
+    expect(html).toContain('Rinominata da me')
+    expect(html).not.toContain('Cherasco')
+  })
+})
+
 describe('TransactionTable — file column link (D-05/D-16 repoint)', () => {
   it('links the file name to importFileDetailHref(transaction.fileId) instead of the legacy ?fileId= filter', () => {
     const html = render([
