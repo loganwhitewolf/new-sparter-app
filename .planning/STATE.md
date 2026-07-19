@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v2.6
 milestone_name: Expenses & Transactions Refinement
-current_phase: 65
-current_phase_name: expense-group-merge-and-view
+current_phase: 66
+current_phase_name: expense-group-lifecycle
 status: executing
-stopped_at: Phase 66 context gathered
-last_updated: "2026-07-19T19:49:28.635Z"
-last_activity: 2026-07-18
-last_activity_desc: Phase 65 execution started
+stopped_at: Completed 66-01-PLAN.md
+last_updated: "2026-07-19T20:14:32.015Z"
+last_activity: 2026-07-19
+last_activity_desc: Phase 66 execution started
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 11
+  completed_plans: 7
   percent: 25
 ---
 
@@ -24,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 65 — expense-group-merge-and-view
+**Current focus:** Phase 66 — expense-group-lifecycle
 
 ## Current Position
 
-Phase: 65 (expense-group-merge-and-view) — EXECUTING
-Plan: 6 of 6
+Phase: 66 (expense-group-lifecycle) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-07-18 — Phase 65 execution started
+Last activity: 2026-07-19 — Phase 66 execution started
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 64%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -157,6 +157,8 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: MergeExpensesDialog always calls mergeExpenses with the FULL original selectedExpenses id set, never just the ids categorized during the categorize step (GRP-02)
 - [Phase ?]: [Phase 65-06] transaction-table.tsx categorize-dialog-prefill call sites (setCategorizeTarget title: expenseTitle ?? rowLabel) left untouched — they only fire for uncategorized expenses, which can never be grouped (a group requires a shared non-null subcategory)
 - [Phase ?]: [Phase 65-06] Expense detail 'Parte di' links to expenseGroupDetailHref; transaction detail 'Spesa collegata' link target stays expenseDetailHref unchanged — cross-reference chain is transaction -> member's own expense page -> that page's 'Parte di' link to the group, never a direct transaction-to-group link
+- [Phase ?]: Phase 66-01: removeExpenseFromGroup auto-dissolve threshold checked as memberCount===2 BEFORE delete (not post-delete count) to keep the read-then-write in one DbOrTx call and close the TOCTOU gap (T-66-03)
+- [Phase ?]: Phase 66-01: shared-subcategory validation (D-05) deliberately NOT implemented in addExpensesToGroup — stays in Plan 66-02's action layer, which already has the group's subCategoryId in scope
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -257,11 +259,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/66-expense-group-lifecycle/66-CONTEXT.md
+**Resume file:** None
 
-**Stopped at:** Phase 66 context gathered
+**Stopped at:** Completed 66-01-PLAN.md
 
-Last session: 2026-07-19T18:51:30.802Z
+Last session: 2026-07-19T20:14:32.009Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -305,3 +307,4 @@ Last session: 2026-07-19T18:51:30.802Z
 | Phase 65 P04 | 9min | 3 tasks | 6 files |
 | Phase 65 P05 | 2min | 3 tasks | 4 files |
 | Phase 65 P06 | 15min | 3 tasks | 6 files |
+| Phase 66 P01 | 5min | 3 tasks | 3 files |

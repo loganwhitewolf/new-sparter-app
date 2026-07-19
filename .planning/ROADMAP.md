@@ -94,7 +94,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 66-01-PLAN.md — validation schemas + expense-group service additions (add/remove/dissolve)
+- [x] 66-01-PLAN.md — validation schemas + expense-group service additions (add/remove/dissolve)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -358,7 +358,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 63. detail-pages-tx-expense | v2.5 | 4/4 | Complete    | 2026-07-05 |
 | 64. file-detail-and-navigation | v2.5 | 7/7 | Complete    | 2026-07-06 |
 | 65. expense-group-merge-and-view | v2.6 | 0/6 | In Progress|  |
-| 66. expense-group-lifecycle | v2.6 | 0/5 | Planned | - |
+| 66. expense-group-lifecycle | v2.6 | 0/5 | In Progress|  |
 | 67. tags-foundation-and-assignment | v2.6 | 0/TBD | Not started | - |
 | 68. tags-dashboard-and-navigation | v2.6 | 0/TBD | Not started | - |
 
