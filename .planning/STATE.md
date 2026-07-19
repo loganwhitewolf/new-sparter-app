@@ -5,8 +5,8 @@ milestone_name: Expenses & Transactions Refinement
 current_phase: 65
 current_phase_name: expense-group-merge-and-view
 status: verifying
-stopped_at: Completed 65-06-PLAN.md
-last_updated: "2026-07-19T13:39:40.035Z"
+stopped_at: Phase 66 context gathered
+last_updated: "2026-07-19T18:51:30.808Z"
 last_activity: 2026-07-18
 last_activity_desc: Phase 65 execution started
 progress:
@@ -257,11 +257,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** None
+**Resume file:** .planning/phases/66-expense-group-lifecycle/66-CONTEXT.md
 
-**Stopped at:** Completed 65-06-PLAN.md
+**Stopped at:** Phase 66 context gathered
 
-Last session: 2026-07-19T13:39:40.029Z
+Last session: 2026-07-19T18:51:30.802Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
