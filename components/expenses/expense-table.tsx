@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { MoreHorizontal } from 'lucide-react'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 import { toast } from 'sonner'
@@ -71,6 +72,7 @@ function dedupeExpenseRows(rows: ExpenseRow[]): ExpenseRow[] {
 }
 
 export function ExpenseTable({ expenses, route, categories, mostUsed, filters }: Props) {
+  const router = useRouter()
   const [loadedExpenses, setLoadedExpenses] = useState(() => dedupeExpenseRows(expenses))
   const [hasMore, setHasMore] = useState(expenses.length === PAGE_SIZE)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -482,8 +484,11 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
         categories={categories}
         mostUsed={mostUsed}
         onSuccess={() => {
+          const mergedIds = new Set(selectedRows.map((e) => e.id))
+          setLoadedExpenses((prev) => prev.filter((e) => !mergedIds.has(e.id)))
           setSelectedIds([])
           setMergeDialogOpen(false)
+          router.refresh()
         }}
       />
     </>
