@@ -53,6 +53,21 @@ export function nextStepAfterTitle(selectedExpenses: MergeSelectedExpense[]): St
 }
 
 /**
+ * WR-01: the subCategoryId already shared by the selection's categorized members,
+ * or null when the selection is fully uncategorized (nothing to conflict with yet).
+ * Used to reject a categorize-step pick that would guarantee mergeExpenses' own
+ * "same category" server check fails.
+ */
+export function getSharedSubCategoryId(selectedExpenses: MergeSelectedExpense[]): number | null {
+  const ids = new Set(
+    selectedExpenses
+      .map((expense) => expense.subCategoryId)
+      .filter((id): id is number => id !== null),
+  )
+  return ids.size === 1 ? [...ids][0] : null
+}
+
+/**
  * Thin async wrapper around bulkCategorize, scoped to only the uncategorized
  * ids in the selection (D-02: merge itself never assigns a category).
  */
@@ -117,6 +132,18 @@ export function MergeExpensesDialog({
   }
 
   function handleCategorizeChange(subCategoryId: string) {
+    // WR-01: block picks that mergeExpenses is guaranteed to reject server-side —
+    // a subcategory that differs from the one already shared by the selection's
+    // categorized members. Surfacing this now (instead of after a wasted
+    // bulkCategorize + confirm round trip) avoids the confusing dead end.
+    const sharedSubCategoryId = getSharedSubCategoryId(selectedExpenses)
+    if (sharedSubCategoryId !== null && sharedSubCategoryId !== Number(subCategoryId)) {
+      toast.error(
+        'La categoria scelta non corrisponde a quella già assegnata alle altre spese selezionate.',
+      )
+      return
+    }
+
     startTransition(async () => {
       const result = await runCategorizeStep({ selectedExpenses, subCategoryId })
       if (result.error) {
