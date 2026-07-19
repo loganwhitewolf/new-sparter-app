@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   dbSelect: vi.fn(),
   createExpenseGroup: vi.fn(),
   renameExpenseGroup: vi.fn(),
+  addExpensesToGroup: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
@@ -29,6 +30,7 @@ vi.mock('@/lib/actions/revalidation', () => ({
 vi.mock('@/lib/services/expense-group', () => ({
   createExpenseGroup: mocks.createExpenseGroup,
   renameExpenseGroup: mocks.renameExpenseGroup,
+  addExpensesToGroup: mocks.addExpensesToGroup,
 }))
 vi.mock('@/lib/db', () => ({
   db: {
@@ -86,6 +88,7 @@ const {
   mergeExpenses,
   renameExpenseGroupAction,
   categorizeExpenseGroup,
+  addExpensesToGroupAction,
 } = await import('@/lib/actions/expenses')
 
 function makeFormData(fields: Record<string, string>) {
@@ -619,5 +622,146 @@ describe('categorizeExpenseGroup', () => {
     expect(result).toEqual({ error: 'Gruppo non trovato.' })
     expect(tx.update).not.toHaveBeenCalled()
     expect(mocks.revalidateCategorizationSurfaces).not.toHaveBeenCalled()
+  })
+})
+
+describe('addExpensesToGroupAction', () => {
+  // The action issues two sequential tx.select() calls: (1) the group-ownership
+  // check (returns the group's own subCategoryId), then (2) the candidate
+  // expenses' ownership/status/subcategory load. Dispatch by call order.
+  function makeTx({
+    groupRows = [{ subCategoryId: 42 }],
+    expenseRows = [],
+  }: {
+    groupRows?: Array<{ subCategoryId: number | null }>
+    expenseRows?: Array<{ id: string; subCategoryId: number | null; status: string }>
+  } = {}) {
+    let selectCall = 0
+    return {
+      select: vi.fn().mockImplementation(() => {
+        selectCall += 1
+        if (selectCall === 1) {
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue(groupRows),
+            }),
+          }
+        }
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue(expenseRows),
+          }),
+        }
+      }),
+    }
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+    mocks.revalidateCategorizationSurfaces.mockReturnValue(undefined)
+  })
+
+  it('calls addExpensesToGroup when all additions are uncategorized-or-matching', async () => {
+    const tx = makeTx({
+      groupRows: [{ subCategoryId: 42 }],
+      expenseRows: [
+        { id: '11111111-1111-4111-8111-111111111111', subCategoryId: null, status: '1' },
+        { id: '22222222-2222-4222-8222-222222222222', subCategoryId: 42, status: '3' },
+      ],
+    })
+    mocks.dbTransaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(tx))
+    mocks.addExpensesToGroup.mockResolvedValue(undefined)
+
+    const result = await addExpensesToGroupAction(
+      { error: null },
+      makeFormData({
+        groupId: '7',
+        expenseIds: JSON.stringify([
+          '11111111-1111-4111-8111-111111111111',
+          '22222222-2222-4222-8222-222222222222',
+        ]),
+      }),
+    )
+
+    expect(result).toEqual({ error: null })
+    expect(mocks.addExpensesToGroup).toHaveBeenCalledWith(tx, {
+      userId: 'user-1',
+      groupId: 7,
+      expenseIds: ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222'],
+    })
+    expect(mocks.revalidateCategorizationSurfaces).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects a differently-categorized addition without calling addExpensesToGroup', async () => {
+    const tx = makeTx({
+      groupRows: [{ subCategoryId: 42 }],
+      expenseRows: [{ id: '11111111-1111-4111-8111-111111111111', subCategoryId: 99, status: '3' }],
+    })
+    mocks.dbTransaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(tx))
+
+    const result = await addExpensesToGroupAction(
+      { error: null },
+      makeFormData({
+        groupId: '7',
+        expenseIds: JSON.stringify(['11111111-1111-4111-8111-111111111111']),
+      }),
+    )
+
+    expect(result).toEqual({ error: 'Le spese devono avere la stessa categoria del gruppo.' })
+    expect(mocks.addExpensesToGroup).not.toHaveBeenCalled()
+  })
+
+  it('rejects an ignored (status 4) addition', async () => {
+    const tx = makeTx({
+      groupRows: [{ subCategoryId: 42 }],
+      expenseRows: [{ id: '11111111-1111-4111-8111-111111111111', subCategoryId: null, status: '4' }],
+    })
+    mocks.dbTransaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(tx))
+
+    const result = await addExpensesToGroupAction(
+      { error: null },
+      makeFormData({
+        groupId: '7',
+        expenseIds: JSON.stringify(['11111111-1111-4111-8111-111111111111']),
+      }),
+    )
+
+    expect(result).toEqual({
+      error: 'Una o più spese selezionate sono ignorate: riattivale prima di aggiungerle.',
+    })
+    expect(mocks.addExpensesToGroup).not.toHaveBeenCalled()
+  })
+
+  it('surfaces addExpensesToGroup errors verbatim', async () => {
+    const tx = makeTx({
+      groupRows: [{ subCategoryId: 42 }],
+      expenseRows: [{ id: '11111111-1111-4111-8111-111111111111', subCategoryId: null, status: '1' }],
+    })
+    mocks.dbTransaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(tx))
+    mocks.addExpensesToGroup.mockRejectedValue(
+      new Error('Una spesa selezionata fa già parte di un gruppo.'),
+    )
+
+    const result = await addExpensesToGroupAction(
+      { error: null },
+      makeFormData({
+        groupId: '7',
+        expenseIds: JSON.stringify(['11111111-1111-4111-8111-111111111111']),
+      }),
+    )
+
+    expect(result).toEqual({ error: 'Una spesa selezionata fa già parte di un gruppo.' })
+  })
+
+  it('rejects a parse failure (empty expenseIds array) without calling verifySession', async () => {
+    const result = await addExpensesToGroupAction(
+      { error: null },
+      makeFormData({ groupId: '7', expenseIds: JSON.stringify([]) }),
+    )
+
+    expect(result.error).toBe('Seleziona almeno una spesa da aggiungere.')
+    expect(mocks.verifySession).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
 })
