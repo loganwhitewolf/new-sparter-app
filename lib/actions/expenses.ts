@@ -169,7 +169,8 @@ export async function deleteExpense(
     if (result.deletedExpenseIds.length === 0) {
       return { error: 'Spesa non trovata o già eliminata.' }
     }
-  } catch {
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message }
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
   revalidateCategorizationSurfaces()
@@ -200,7 +201,8 @@ export async function bulkDeleteExpenses(
       expenseIds: parsed.data.ids,
       deleteLinkedTransactions: parsed.data.deleteLinkedTransactions,
     })
-  } catch {
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message }
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
   revalidateCategorizationSurfaces()
