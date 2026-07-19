@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ExternalLink, MoreHorizontal, Split, Tag, Unlink } from 'lucide-react'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
+import { toDecimal } from '@/lib/utils/decimal'
 import { toast } from 'sonner'
 import { BulkDeleteTransactionsDialog } from '@/components/transactions/bulk-delete-transactions-dialog'
 import { TransactionBulkActionBar } from '@/components/transactions/transaction-bulk-action-bar'
@@ -128,8 +129,16 @@ export function TransactionTable({ transactions, route, searchParams, categories
   const [bulkCategorizeOpen, setBulkCategorizeOpen] = useState(false)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const [categorizeTarget, setCategorizeTarget] = useState<{ id: string; title: string } | null>(null)
-  // Pair target: set when "Collega rimborso" is selected (D-09, PAIR-01)
-  const [pairTarget, setPairTarget] = useState<{ id: string; amount: string; occurredAt: Date } | null>(null)
+  // Pair target: set when "Collega rimborso" is selected (D-09, PAIR-01).
+  // `description` is carried alongside id/amount/occurredAt (CR-03) so a
+  // successful pairing can optimistically set the *counterpart's* pairing fields
+  // (pairedDescription) on this row without waiting for a reload.
+  const [pairTarget, setPairTarget] = useState<{
+    id: string
+    amount: string
+    description: string
+    occurredAt: Date
+  } | null>(null)
   const [detachTarget, setDetachTarget] = useState<{
     transactionId: string
     defaultTitle: string
@@ -614,6 +623,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
                             setPairTarget({
                               id: transaction.id,
                               amount: transaction.amount,
+                              description: transaction.description,
                               occurredAt: transaction.occurredAt,
                             })
                             setOpenDropdownId(null)
@@ -756,12 +766,50 @@ export function TransactionTable({ transactions, route, searchParams, categories
       transactionId={pairTarget?.id ?? ''}
       transactionAmount={pairTarget?.amount ?? ''}
       transactionOccurredAt={pairTarget?.occurredAt ?? new Date()}
-      onPaired={({ secondaryTransactionId, subCategoryId }) => {
+      onPaired={({ secondaryTransactionId, subCategoryId, counterpart }) => {
         // Repaint the refund (secondary) row as categorized when the server
         // inherited the spend's subcategory (decision 2). When subCategoryId is
         // undefined the refund was left untouched — nothing to repaint.
         if (subCategoryId !== undefined) {
           markExpenseCategorized(secondaryTransactionId, String(subCategoryId))
+        }
+
+        // CR-03: mirror handleUnpair's optimistic-update pattern for pair *creation* —
+        // set the pairing fields on BOTH legs of the new pair in local state so the
+        // TransactionPairPopover badge appears immediately, without a manual reload.
+        // `counterpart` is the selected counterpart's own data (its id may or may not
+        // be `secondaryTransactionId` — the server independently resolves which leg
+        // is "primary"/"secondary" by amount — but the pairing fields are symmetric
+        // regardless of that designation).
+        if (pairTarget && counterpart) {
+          const netAmount = toDecimal(pairTarget.amount).plus(counterpart.amount).toString()
+          const primaryId = pairTarget.id
+
+          setLoadedTransactions((prev) =>
+            prev.map((t) => {
+              if (t.id === primaryId) {
+                return {
+                  ...t,
+                  pairedWithId: counterpart.id,
+                  pairedNetAmount: netAmount,
+                  pairedAmount: counterpart.amount,
+                  pairedDescription: counterpart.description,
+                  pairedOccurredAt: counterpart.occurredAt,
+                }
+              }
+              if (t.id === counterpart.id) {
+                return {
+                  ...t,
+                  pairedWithId: primaryId,
+                  pairedNetAmount: netAmount,
+                  pairedAmount: pairTarget.amount,
+                  pairedDescription: pairTarget.description,
+                  pairedOccurredAt: pairTarget.occurredAt,
+                }
+              }
+              return t
+            }),
+          )
         }
       }}
     />

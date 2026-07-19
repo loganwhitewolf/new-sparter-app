@@ -30,8 +30,17 @@ type Props = {
    * transaction id and, when the refund expense inherited the spend's subcategory
    * (decision 2), that subCategoryId. Lets the table repaint the refund row as
    * categorized without a full reload.
+   *
+   * `counterpart` carries the selected counterpart's own amount/description/occurredAt
+   * (CR-03) — the table needs this to optimistically set the pairing fields on BOTH
+   * legs of the new pair, since the counterpart may not be present in the table's own
+   * locally-loaded row list (it can come from outside the currently-loaded page).
    */
-  onPaired?: (payload: { secondaryTransactionId: string; subCategoryId?: number }) => void
+  onPaired?: (payload: {
+    secondaryTransactionId: string
+    subCategoryId?: number
+    counterpart?: { id: string; amount: string; description: string; occurredAt: Date }
+  }) => void
 }
 
 /** Format absolute amount for display (display-only, never written back to DB). */
@@ -141,13 +150,22 @@ export function CounterpartPickerDialog({
       // Repaint the refund row: the server resolves which leg is the refund
       // (secondary) and whether its expense inherited a subcategory (decision 2).
       if (state.pairedSecondaryId) {
+        const selectedCounterpart = counterparts.find((c) => c.id === selectedId)
         onPaired?.({
           secondaryTransactionId: state.pairedSecondaryId,
           subCategoryId: state.pairedSubCategoryId,
+          counterpart: selectedCounterpart
+            ? {
+                id: selectedCounterpart.id,
+                amount: selectedCounterpart.amount,
+                description: selectedCounterpart.description,
+                occurredAt: selectedCounterpart.occurredAt,
+              }
+            : undefined,
         })
       }
     }
-  }, [state, onOpenChange, onPaired])
+  }, [state, onOpenChange, onPaired, counterparts, selectedId])
 
   // Re-fetch when date range changes (only while open).
   function handleDateFromChange(value: string) {
