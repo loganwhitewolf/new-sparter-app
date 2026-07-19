@@ -32,7 +32,7 @@ import { categorizeExpense, deleteExpense } from '@/lib/actions/expenses'
 import type { ExpenseDetailRow } from '@/lib/dal/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
-import { APP_ROUTES, importFileDetailHref, transactionDetailHref } from '@/lib/routes'
+import { APP_ROUTES, expenseGroupDetailHref, importFileDetailHref, transactionDetailHref } from '@/lib/routes'
 import { amountToneClass } from '@/lib/utils/amount-tone'
 import { toDecimal } from '@/lib/utils/decimal'
 import { cn } from '@/lib/utils'
@@ -129,10 +129,12 @@ export function ExpenseDetailClient({ expense, categories, mostUsed }: Props) {
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Categoria
         </span>
-        <Button type="button" variant="outline" size="sm" onClick={() => setCategoryPickerOpen(true)}>
-          <Tag className="h-4 w-4" />
-          {expense.subCategoryName ? 'Cambia categoria' : 'Assegna categoria'}
-        </Button>
+        {expense.groupId === null ? (
+          <Button type="button" variant="outline" size="sm" onClick={() => setCategoryPickerOpen(true)}>
+            <Tag className="h-4 w-4" />
+            {expense.subCategoryName ? 'Cambia categoria' : 'Assegna categoria'}
+          </Button>
+        ) : null}
       </div>
       {expense.subCategoryName ? (
         <div className="flex flex-col gap-1">
@@ -205,6 +207,17 @@ export function ExpenseDetailClient({ expense, categories, mostUsed }: Props) {
       <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Collegamenti
       </span>
+      {expense.groupId !== null ? (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm text-muted-foreground">Parte di</span>
+          <Link
+            href={expenseGroupDetailHref(expense.groupId)}
+            className="text-sm text-primary underline-offset-4 hover:underline"
+          >
+            {expense.groupTitle}
+          </Link>
+        </div>
+      ) : null}
       {expense.sourceFile ? (
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm text-muted-foreground">File di origine</span>
