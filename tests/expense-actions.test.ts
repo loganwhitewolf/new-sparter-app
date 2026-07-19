@@ -47,8 +47,15 @@ vi.mock('@/lib/db/schema', () => ({
     totalAmount: 'expense.totalAmount',
     updatedAt: 'expense.updatedAt',
   },
+  expenseGroup: {
+    id: 'expenseGroup.id',
+    userId: 'expenseGroup.userId',
+    subCategoryId: 'expenseGroup.subCategoryId',
+    updatedAt: 'expenseGroup.updatedAt',
+  },
   expenseGroupMembership: {
     id: 'expenseGroupMembership.id',
+    groupId: 'expenseGroupMembership.groupId',
     expenseId: 'expenseGroupMembership.expenseId',
   },
   // Referenced by module-scope sort keys in lib/dal/expenses.ts
@@ -72,8 +79,14 @@ vi.mock('drizzle-orm', () => ({
   ),
 }))
 
-const { categorizeExpense, bulkCategorize, updateExpenseTitle, mergeExpenses, renameExpenseGroupAction } =
-  await import('@/lib/actions/expenses')
+const {
+  categorizeExpense,
+  bulkCategorize,
+  updateExpenseTitle,
+  mergeExpenses,
+  renameExpenseGroupAction,
+  categorizeExpenseGroup,
+} = await import('@/lib/actions/expenses')
 
 function makeFormData(fields: Record<string, string>) {
   const fd = new FormData()
@@ -503,6 +516,108 @@ describe('renameExpenseGroupAction', () => {
     )
 
     expect(result).toEqual({ error: 'Gruppo non trovato.' })
+    expect(mocks.revalidateCategorizationSurfaces).not.toHaveBeenCalled()
+  })
+})
+
+describe('categorizeExpenseGroup', () => {
+  // The action issues two sequential tx.select() calls: (1) the group-ownership
+  // check (`select().from(expenseGroup).where(...)`), then (2) the member load
+  // (`select().from(expenseGroupMembership).innerJoin(expense,...).where(...)`).
+  // Dispatch by call order, mirroring the categorizeExpense grouped-member mock.
+  function makeGroupTx({
+    groupRows = [{ id: 1 }],
+    memberRows = [],
+    updatedRows = [],
+  }: {
+    groupRows?: Array<{ id: number }>
+    memberRows?: Array<{ id: string; subCategoryId: number | null; status: string }>
+    updatedRows?: Array<{ id: string }>
+  } = {}) {
+    let selectCall = 0
+    return {
+      select: vi.fn().mockImplementation(() => {
+        selectCall += 1
+        if (selectCall === 1) {
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue(groupRows),
+            }),
+          }
+        }
+        return {
+          from: vi.fn().mockReturnValue({
+            innerJoin: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue(memberRows),
+            }),
+          }),
+        }
+      }),
+      update: vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue(updatedRows),
+          }),
+        }),
+      }),
+    }
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+    mocks.writeClassificationHistory.mockResolvedValue(undefined)
+    mocks.revalidateCategorizationSurfaces.mockReturnValue(undefined)
+  })
+
+  it('updates every member expense and the group row, writing one history row per member', async () => {
+    mocks.isSubCategoryVisibleToUser.mockResolvedValue(true)
+    const tx = makeGroupTx({
+      groupRows: [{ id: 7 }],
+      memberRows: [
+        { id: 'expense-1', subCategoryId: null, status: '1' },
+        { id: 'expense-2', subCategoryId: 10, status: '3' },
+      ],
+      updatedRows: [{ id: 'expense-1' }, { id: 'expense-2' }],
+    })
+    mocks.dbTransaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(tx))
+
+    const result = await categorizeExpenseGroup(
+      { error: null },
+      makeFormData({ groupId: '7', subCategoryId: '42' }),
+    )
+
+    expect(result).toEqual({ error: null })
+    expect(tx.update).toHaveBeenCalledTimes(2)
+    expect(mocks.writeClassificationHistory).toHaveBeenCalledTimes(2)
+    expect(mocks.revalidateCategorizationSurfaces).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns a safe Italian error and never opens a transaction when the subcategory is not visible', async () => {
+    mocks.isSubCategoryVisibleToUser.mockResolvedValue(false)
+
+    const result = await categorizeExpenseGroup(
+      { error: null },
+      makeFormData({ groupId: '7', subCategoryId: '99' }),
+    )
+
+    expect(result).toEqual({ error: 'Sottocategoria non valida.' })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+    expect(mocks.revalidateCategorizationSurfaces).not.toHaveBeenCalled()
+  })
+
+  it('returns "Gruppo non trovato." and touches no expense row when the group is not owned', async () => {
+    mocks.isSubCategoryVisibleToUser.mockResolvedValue(true)
+    const tx = makeGroupTx({ groupRows: [] })
+    mocks.dbTransaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(tx))
+
+    const result = await categorizeExpenseGroup(
+      { error: null },
+      makeFormData({ groupId: '999', subCategoryId: '42' }),
+    )
+
+    expect(result).toEqual({ error: 'Gruppo non trovato.' })
+    expect(tx.update).not.toHaveBeenCalled()
     expect(mocks.revalidateCategorizationSurfaces).not.toHaveBeenCalled()
   })
 })
