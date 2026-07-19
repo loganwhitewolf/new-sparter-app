@@ -132,3 +132,69 @@ describe('/expenses/groups/[groupId] page', () => {
     expect(pageMocks.getExpenseGroupForDetail).not.toHaveBeenCalled()
   })
 })
+
+// ---------------------------------------------------------------------------
+// GroupDetailClient — shared category (read-only), members, combined transactions
+// ---------------------------------------------------------------------------
+
+describe('GroupDetailClient', () => {
+  beforeEach(() => {
+    vi.resetModules()
+  })
+
+  async function renderGroupDetailClient(overrides: Record<string, unknown> = {}) {
+    const { GroupDetailClient } = await import('../components/expenses/group-detail-client')
+    return renderToStaticMarkup(
+      createElement(GroupDetailClient, { group: makeGroupDetailRow(overrides) }),
+    )
+  }
+
+  it('renders the shared subcategory read-only with no "Cambia categoria" control anywhere', async () => {
+    const html = await renderGroupDetailClient()
+
+    expect(html).toContain('Viaggi')
+    expect(html).toContain('Svago')
+    expect(html).not.toContain('Cambia categoria')
+    expect(html).not.toContain('Assegna categoria')
+  })
+
+  it('renders each member with its OWN title and OWN total, linking to its own expense detail page', async () => {
+    const html = await renderGroupDetailClient()
+
+    expect(html).toContain('Hotel')
+    expect(html).toContain('href="/expenses/exp-1"')
+    expect(html).toContain('Treno')
+    expect(html).toContain('href="/expenses/exp-2"')
+    // members' own totals, not the group's composed total (-150.00)
+    expect(html).toContain('100,00')
+    expect(html).toContain('50,00')
+  })
+
+  it('renders a member with zero linked transactions normally with a 0,00 € total', async () => {
+    const html = await renderGroupDetailClient({
+      members: [
+        {
+          id: 'exp-3',
+          title: 'Extra vuoto',
+          totalAmount: '0.00',
+          transactionCount: 0,
+        },
+      ],
+    })
+
+    expect(html).toContain('Extra vuoto')
+    expect(html).toContain('0,00')
+  })
+
+  it('renders the combined transaction list spanning every member, in the DAL-provided occurredAt DESC order', async () => {
+    const html = await renderGroupDetailClient()
+
+    const idxTx1 = html.indexOf('HOTEL ROMA CENTRO<')
+    const idxTx2 = html.indexOf('TRENITALIA')
+    const idxTx3 = html.indexOf('HOTEL ROMA CENTRO EXTRA')
+
+    expect(idxTx1).toBeGreaterThan(-1)
+    expect(idxTx2).toBeGreaterThan(idxTx1)
+    expect(idxTx3).toBeGreaterThan(idxTx2)
+  })
+})
