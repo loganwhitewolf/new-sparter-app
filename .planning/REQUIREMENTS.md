@@ -14,12 +14,12 @@ physical merge, no hash aliasing; read-time totals; dashboard values structurall
 
 - [x] **GRP-01**: User can select multiple expenses sharing the same subcategory from the expenses table bulk bar and merge them into an Expense Group with a custom title ("Unisci")
 - [x] **GRP-02**: When the selection includes uncategorized expenses, the merge dialog offers to categorize them explicitly (Tier-2-visible act) before grouping — merge itself never assigns categories
-- [ ] **GRP-03**: Expenses list and dashboard drill-downs show the group as a single row (title, read-time computed totals: amount sum, transaction count, min/max dates, "unita" badge); member rows are hidden
+- [x] **GRP-03**: Expenses list and dashboard drill-downs show the group as a single row (title, read-time computed totals: amount sum, transaction count, min/max dates, "unita" badge); member rows are hidden
 - [x] **GRP-04**: User can open a group detail page showing subcategory, member expenses with original titles/totals, and the combined transaction list; rename lives here
 - [ ] **GRP-05**: User can recategorize the group and the new subcategory propagates to all members (group is the categorization unit; member-level recategorization not offered while grouped)
 - [ ] **GRP-06**: User can add a later expense to an existing group (select group + expense → "Unisci"), same subcategory gate
 - [ ] **GRP-07**: User can remove a single member or dissolve the group ("Scomponi"); a group left with one member auto-dissolves; dissolution restores the exact pre-merge state
-- [ ] **GRP-08**: Transaction rows display the group title for transactions of grouped members; member detail pages declare group membership
+- [x] **GRP-08**: Transaction rows display the group title for transactions of grouped members; member detail pages declare group membership
 - [ ] **GRP-09**: Dashboard totals and category breakdowns are provably unchanged by merge/dissolve (structural invariant: no transaction or subcategory is touched)
 
 ### Transaction Tags (TAG)
@@ -68,9 +68,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | GRP-01 | Phase 65 | Complete |
 | GRP-02 | Phase 65 | Complete |
-| GRP-03 | Phase 65 | Pending |
+| GRP-03 | Phase 65 | Complete |
 | GRP-04 | Phase 65 | Complete |
-| GRP-08 | Phase 65 | Pending |
+| GRP-08 | Phase 65 | Complete |
 | GRP-05 | Phase 66 | Pending |
 | GRP-06 | Phase 66 | Pending |
 | GRP-07 | Phase 66 | Pending |

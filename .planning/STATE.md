@@ -5,15 +5,15 @@ milestone_name: Expenses & Transactions Refinement
 current_phase: 65
 current_phase_name: expense-group-merge-and-view
 status: executing
-stopped_at: Completed 65-02-PLAN.md
-last_updated: "2026-07-18T18:00:11.254Z"
+stopped_at: Completed 65-03-PLAN.md
+last_updated: "2026-07-19T13:16:34.214Z"
 last_activity: 2026-07-18
 last_activity_desc: Phase 65 execution started
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 65 (expense-group-merge-and-view) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-07-18 — Phase 65 execution started
 
-Progress: [███░░░░░░░] 33%
+Progress: [█████░░░░░] 50%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -152,6 +152,7 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: MergeExpensesSchema has no category field at all — merge is pure regrouping; categorization happens via bulkCategorize separately (D-02)
 - [Phase ?]: mergeExpenses never writes expense.subCategoryId/status — pure regrouping delegated to createExpenseGroup (D-02, verified via grep)
 - [Phase ?]: categorizeExpense guards against grouped members via a pre-transaction expenseGroupMembership check (D-03 defense-in-depth)
+- [Phase ?]: 65-03: getExpenses composes group rows read-time, collapse-then-paginate in JS (never SQL LIMIT/OFFSET pre-collapse) to guarantee a group is never split across pagination pages
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -254,9 +255,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 65-02-PLAN.md
+**Stopped at:** Completed 65-03-PLAN.md
 
-Last session: 2026-07-18T18:00:11.248Z
+Last session: 2026-07-19T13:16:34.208Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -296,3 +297,4 @@ Last session: 2026-07-18T18:00:11.248Z
 |------|----------|-------|-------|
 | Phase 65 P01 | 12min | 3 tasks | 5 files |
 | Phase 65 P02 | 12min | 3 tasks | 5 files |
+| Phase 65 P03 | 20min | 3 tasks | 9 files |
