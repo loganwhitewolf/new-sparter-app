@@ -102,7 +102,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 66-03-PLAN.md — GRP-09 invariance test (merge/recategorize/dissolve dashboard-aggregate proof)
+- [x] 66-03-PLAN.md — GRP-09 invariance test (merge/recategorize/dissolve dashboard-aggregate proof)
 - [ ] 66-04-PLAN.md — merge dialog add-to-group mode + expenses-table selection/eligibility + group-row recategorize
 - [ ] 66-05-PLAN.md — group detail page: editable subcategory, remove member, dissolve group
 

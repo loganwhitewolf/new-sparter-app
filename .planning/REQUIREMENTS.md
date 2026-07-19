@@ -20,7 +20,7 @@ physical merge, no hash aliasing; read-time totals; dashboard values structurall
 - [x] **GRP-06**: User can add a later expense to an existing group (select group + expense → "Unisci"), same subcategory gate
 - [x] **GRP-07**: User can remove a single member or dissolve the group ("Scomponi"); a group left with one member auto-dissolves; dissolution restores the exact pre-merge state
 - [x] **GRP-08**: Transaction rows display the group title for transactions of grouped members; member detail pages declare group membership
-- [ ] **GRP-09**: Dashboard totals and category breakdowns are provably unchanged by merge/dissolve (structural invariant: no transaction or subcategory is touched)
+- [x] **GRP-09**: Dashboard totals and category breakdowns are provably unchanged by merge/dissolve (structural invariant: no transaction or subcategory is touched)
 
 ### Transaction Tags (TAG)
 
@@ -74,7 +74,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GRP-05 | Phase 66 | Complete |
 | GRP-06 | Phase 66 | Complete |
 | GRP-07 | Phase 66 | Complete |
-| GRP-09 | Phase 66 | Pending |
+| GRP-09 | Phase 66 | Complete |
 | TAG-01 | Phase 67 | Pending |
 | TAG-02 | Phase 67 | Pending |
 | TAG-03 | Phase 67 | Pending |
