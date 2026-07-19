@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, count, eq, inArray } from 'drizzle-orm'
 import type { DbOrTx } from '@/lib/db'
 import { expense, expenseGroup, expenseGroupMembership } from '@/lib/db/schema'
 
@@ -196,4 +196,116 @@ export async function addExpensesToGroup(
     }
     throw e
   }
+}
+
+export type RemoveExpenseFromGroupInput = {
+  userId: string
+  groupId: number
+  expenseId: string
+}
+
+/**
+ * Remove a single member from an owned Expense Group (GRP-07, ADR 0017
+ * D-07/D-08). Auto-dissolves the group (deletes the `expenseGroup` row too)
+ * when this removal leaves exactly one member behind — a lone survivor is not
+ * a group.
+ *
+ * The membership count is read and the auto-dissolve decision made using the
+ * SAME dbOrTx call/transaction as the delete (no separate `db.transaction`
+ * opened here) — the caller MUST invoke this from within `db.transaction` to
+ * close the TOCTOU gap between the count and the delete (T-66-03).
+ *
+ * Structural guarantee (D-09): never writes `expense.subCategoryId`/`status`
+ * and never stores/restores a per-member pre-merge subcategory.
+ */
+export async function removeExpenseFromGroup(
+  dbOrTx: DbOrTx,
+  input: RemoveExpenseFromGroupInput,
+): Promise<{ autoDissolved: boolean }> {
+  const { userId, groupId, expenseId } = input
+
+  // 1. Group ownership check.
+  const [ownedGroup] = await dbOrTx
+    .select({ id: expenseGroup.id })
+    .from(expenseGroup)
+    .where(and(eq(expenseGroup.id, groupId), eq(expenseGroup.userId, userId)))
+
+  if (!ownedGroup) {
+    throw new Error('Gruppo non trovato.')
+  }
+
+  // 2. The expenseId must currently be a member of this group.
+  const [membershipRow] = await dbOrTx
+    .select({ id: expenseGroupMembership.id })
+    .from(expenseGroupMembership)
+    .where(
+      and(eq(expenseGroupMembership.groupId, groupId), eq(expenseGroupMembership.expenseId, expenseId)),
+    )
+
+  if (!membershipRow) {
+    throw new Error('Spesa non trovata nel gruppo.')
+  }
+
+  // 3. Count total members BEFORE the delete — exactly 2 means exactly 1
+  //    remains after this delete, which triggers auto-dissolve.
+  const [{ count: memberCount }] = await dbOrTx
+    .select({ count: count(expenseGroupMembership.id) })
+    .from(expenseGroupMembership)
+    .where(eq(expenseGroupMembership.groupId, groupId))
+
+  // 4. Delete the single membership row.
+  await dbOrTx
+    .delete(expenseGroupMembership)
+    .where(
+      and(eq(expenseGroupMembership.groupId, groupId), eq(expenseGroupMembership.expenseId, expenseId)),
+    )
+
+  // 5. Auto-dissolve when this was the second-to-last member.
+  if (Number(memberCount) === 2) {
+    await dbOrTx
+      .delete(expenseGroup)
+      .where(and(eq(expenseGroup.id, groupId), eq(expenseGroup.userId, userId)))
+
+    return { autoDissolved: true }
+  }
+
+  return { autoDissolved: false }
+}
+
+export type DissolveExpenseGroupInput = {
+  userId: string
+  groupId: number
+}
+
+/**
+ * Dissolve an owned Expense Group entirely (GRP-07, ADR 0017 D-07/D-08):
+ * deletes every membership row for the group, then the group row itself.
+ * Members revert to plain, ungrouped Expenses — this never touches
+ * `expense.subCategoryId`/`status` (D-09).
+ */
+export async function dissolveExpenseGroup(
+  dbOrTx: DbOrTx,
+  input: DissolveExpenseGroupInput,
+): Promise<true> {
+  const { userId, groupId } = input
+
+  // 1. Group ownership check.
+  const [ownedGroup] = await dbOrTx
+    .select({ id: expenseGroup.id })
+    .from(expenseGroup)
+    .where(and(eq(expenseGroup.id, groupId), eq(expenseGroup.userId, userId)))
+
+  if (!ownedGroup) {
+    throw new Error('Gruppo non trovato.')
+  }
+
+  // 2. Delete all membership rows for this group.
+  await dbOrTx.delete(expenseGroupMembership).where(eq(expenseGroupMembership.groupId, groupId))
+
+  // 3. Delete the group row itself.
+  await dbOrTx
+    .delete(expenseGroup)
+    .where(and(eq(expenseGroup.id, groupId), eq(expenseGroup.userId, userId)))
+
+  return true
 }
