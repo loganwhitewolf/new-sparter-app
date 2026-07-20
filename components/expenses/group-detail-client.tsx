@@ -73,12 +73,14 @@ function formatSignedAmount(amount: string, currency = 'EUR'): string {
 }
 
 function formatTransactionAmount(amount: string, currency: string): string {
-  const num = parseFloat(amount)
-  if (!Number.isFinite(num)) return amount
-  return new Intl.NumberFormat('it-IT', {
-    style: 'currency',
-    currency,
-  }).format(num)
+  try {
+    return new Intl.NumberFormat('it-IT', {
+      style: 'currency',
+      currency,
+    }).format(Number(toDecimal(amount)))
+  } catch {
+    return amount
+  }
 }
 
 export function GroupDetailClient({ group, categories, mostUsed }: Props) {
