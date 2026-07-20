@@ -71,6 +71,58 @@ function dedupeExpenseRows(rows: ExpenseRow[]): ExpenseRow[] {
   return unique
 }
 
+/**
+ * GRP-06/D-06 merge/add-to-group eligibility, extracted as a pure function so
+ * it is directly unit-testable without rendering (selection is internal
+ * component state, not a prop — this repo has no jsdom/interaction
+ * simulation). Mirrors mergeExpenses' create-group gate (2+ same-subcategory
+ * ungrouped rows) plus the new add-to-group gate (exactly 1 group row + 1+
+ * ungrouped rows that don't conflict with the group's subcategory); 2+ group
+ * rows is never eligible (D-06 — group-to-group merge is unsupported).
+ */
+export function computeMergeEligibility(
+  selectedRows: Pick<ExpenseRow, 'groupId' | 'subCategoryId' | 'title'>[],
+): {
+  mergeEligible: boolean
+  targetGroup: { id: number; title: string; subCategoryId: number } | null
+} {
+  const selectedGroupRows = selectedRows.filter((e) => e.groupId !== null)
+  const selectedUngroupedRows = selectedRows.filter((e) => e.groupId === null)
+  const targetGroupRow = selectedGroupRows.length === 1 ? selectedGroupRows[0] : null
+  const conflictingSubCategory = targetGroupRow
+    ? selectedUngroupedRows.some(
+        (e) => e.subCategoryId !== null && e.subCategoryId !== targetGroupRow.subCategoryId,
+      )
+    : false
+  const createGroupEligible =
+    selectedGroupRows.length === 0 &&
+    selectedUngroupedRows.length >= 2 &&
+    new Set(
+      selectedUngroupedRows.filter((e) => e.subCategoryId !== null).map((e) => e.subCategoryId),
+    ).size <= 1
+  const addToGroupEligible =
+    targetGroupRow !== null && selectedUngroupedRows.length >= 1 && !conflictingSubCategory
+  const mergeEligible = createGroupEligible || addToGroupEligible
+  const targetGroup =
+    targetGroupRow && addToGroupEligible
+      ? {
+          id: targetGroupRow.groupId as number,
+          title: targetGroupRow.title,
+          subCategoryId: targetGroupRow.subCategoryId as number,
+        }
+      : null
+  return { mergeEligible, targetGroup }
+}
+
+/**
+ * Whether the current selection includes 1+ group rows — gates the
+ * Categorizza/Elimina bulk actions off entirely (bulk categorize/delete are
+ * not meaningful operations on a group's synthetic id).
+ */
+export function selectedIncludesGroupRow(selectedRows: Pick<ExpenseRow, 'groupId'>[]): boolean {
+  return selectedRows.some((e) => e.groupId !== null)
+}
+
 export function ExpenseTable({ expenses, route, categories, mostUsed, filters }: Props) {
   const router = useRouter()
   const [loadedExpenses, setLoadedExpenses] = useState(() => dedupeExpenseRows(expenses))
@@ -94,13 +146,13 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
   const allSelected = loadedExpenses.length > 0 && selectedIds.length === loadedExpenses.length
   const someSelected = selectedIds.length > 0 && selectedIds.length < loadedExpenses.length
 
-  // GRP-01: merge eligibility mirrors mergeExpenses' server-side gate exactly —
-  // 2+ selected, and the categorized subset (if any) shares a single subCategoryId.
+  // GRP-01/GRP-06: merge eligibility covers both create-group (2+ ungrouped,
+  // same subcategory) and add-to-group (1 group row + 1+ ungrouped rows that
+  // don't conflict with the group's subcategory) — see computeMergeEligibility.
   const selectedRows = loadedExpenses.filter((e) => selectedIds.includes(e.id))
-  const categorizedSubCatIds = new Set(
-    selectedRows.filter((e) => e.subCategoryId !== null).map((e) => e.subCategoryId),
-  )
-  const mergeEligible = selectedIds.length >= 2 && categorizedSubCatIds.size <= 1
+  const selectedUngroupedRows = selectedRows.filter((e) => e.groupId === null)
+  const { mergeEligible, targetGroup } = computeMergeEligibility(selectedRows)
+  const bulkActionsGated = selectedIncludesGroupRow(selectedRows)
 
   const loadNextPage = useCallback(async () => {
     if (isLoadingMoreRef.current || !hasMore) {
@@ -281,8 +333,7 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                   <TableCell className="w-10 text-center">
                     <input
                       type="checkbox"
-                      checked={isGrouped ? false : isSelected}
-                      disabled={isGrouped}
+                      checked={isSelected}
                       onChange={() => toggleRow(exp.id)}
                       className="h-4 w-4 cursor-pointer"
                       aria-label={`Seleziona ${exp.title}`}
@@ -434,8 +485,20 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
 
       <BulkActionBar
         selectedIds={selectedIds}
-        onBulkCategorize={() => setBulkDialogOpen(true)}
-        onBulkDelete={() => setBulkDeleteOpen(true)}
+        onBulkCategorize={() => {
+          if (bulkActionsGated) {
+            toast.error('Apri il gruppo per categorizzare o eliminare le spese che ne fanno parte.')
+            return
+          }
+          setBulkDialogOpen(true)
+        }}
+        onBulkDelete={() => {
+          if (bulkActionsGated) {
+            toast.error('Apri il gruppo per categorizzare o eliminare le spese che ne fanno parte.')
+            return
+          }
+          setBulkDeleteOpen(true)
+        }}
         onBulkMerge={mergeEligible ? () => setMergeDialogOpen(true) : undefined}
       />
 
@@ -480,12 +543,21 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
       <MergeExpensesDialog
         open={mergeDialogOpen}
         onOpenChange={setMergeDialogOpen}
-        selectedExpenses={selectedRows.map((e) => ({ id: e.id, subCategoryId: e.subCategoryId }))}
+        selectedExpenses={(targetGroup ? selectedUngroupedRows : selectedRows).map((e) => ({
+          id: e.id,
+          subCategoryId: e.subCategoryId,
+        }))}
         categories={categories}
         mostUsed={mostUsed}
+        targetGroup={targetGroup}
         onSuccess={() => {
-          const mergedIds = new Set(selectedRows.map((e) => e.id))
-          setLoadedExpenses((prev) => prev.filter((e) => !mergedIds.has(e.id)))
+          // Add-to-group mode: only the ungrouped ids that were added disappear as
+          // standalone rows (they fold into the existing group's composed row on
+          // router.refresh()) — the group row's own id is never cleared.
+          const clearedIds = new Set(
+            (targetGroup ? selectedUngroupedRows : selectedRows).map((e) => e.id),
+          )
+          setLoadedExpenses((prev) => prev.filter((e) => !clearedIds.has(e.id)))
           setSelectedIds([])
           setMergeDialogOpen(false)
           router.refresh()
