@@ -145,7 +145,7 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 67-08-PLAN.md — /settings/tags CRUD UI + create-time suggestion modal
-- [ ] 67-09-PLAN.md — post-import "Suggerimenti tag" summary block
+- [x] 67-09-PLAN.md — post-import "Suggerimenti tag" summary block
 
 **UI hint:** yes
 
