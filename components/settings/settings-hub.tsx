@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ChevronRight, FolderTree, UserCog } from 'lucide-react'
+import { ChevronRight, FolderTree, Tags, UserCog } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { APP_ROUTES } from '@/lib/routes'
@@ -23,6 +23,12 @@ const HUB_ITEMS: HubItem[] = [
     title: 'Categorie',
     description: 'Tassonomia delle categorie e pattern di categorizzazione.',
     icon: FolderTree,
+  },
+  {
+    href: APP_ROUTES.tagSettings,
+    title: 'Tag',
+    description: 'Crea e gestisci i tag per organizzare le tue transazioni.',
+    icon: Tags,
   },
 ]
 
