@@ -692,11 +692,18 @@ export async function addExpensesToGroupAction(
         )
       }
 
-      if (
-        rows.some(
-          (row) => row.subCategoryId !== null && row.subCategoryId !== ownedGroup.subCategoryId,
-        )
-      ) {
+      // CR-02: reject uncategorized candidates the same way mergeExpenses rejects
+      // them ('Categorizza prima di unire.') — addExpensesToGroup never writes
+      // expense.subCategoryId (D-09), so a null candidate admitted here would leave
+      // a member with no category inside an already-categorized group, breaking
+      // composeExpenseRows' "a group's members all share one non-null subcategory"
+      // assumption (lib/dal/expenses.ts) and any per-category filter applied
+      // before grouping.
+      if (rows.some((row) => row.subCategoryId === null)) {
+        throw new Error('Categorizza prima di aggiungere al gruppo.')
+      }
+
+      if (rows.some((row) => row.subCategoryId !== ownedGroup.subCategoryId)) {
         throw new Error('Le spese devono avere la stessa categoria del gruppo.')
       }
 

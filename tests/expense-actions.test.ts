@@ -668,11 +668,11 @@ describe('addExpensesToGroupAction', () => {
     mocks.revalidateCategorizationSurfaces.mockReturnValue(undefined)
   })
 
-  it('calls addExpensesToGroup when all additions are uncategorized-or-matching', async () => {
+  it('calls addExpensesToGroup when all additions already match the group category', async () => {
     const tx = makeTx({
       groupRows: [{ subCategoryId: 42 }],
       expenseRows: [
-        { id: '11111111-1111-4111-8111-111111111111', subCategoryId: null, status: '1' },
+        { id: '11111111-1111-4111-8111-111111111111', subCategoryId: 42, status: '1' },
         { id: '22222222-2222-4222-8222-222222222222', subCategoryId: 42, status: '3' },
       ],
     })
@@ -697,6 +697,35 @@ describe('addExpensesToGroupAction', () => {
       expenseIds: ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222'],
     })
     expect(mocks.revalidateCategorizationSurfaces).toHaveBeenCalledTimes(1)
+  })
+
+  // CR-02: an uncategorized candidate must be rejected the same way mergeExpenses
+  // rejects it ('Categorizza prima di unire.') — addExpensesToGroup never writes
+  // expense.subCategoryId (D-09), so admitting a null candidate here would leave
+  // a member with no category inside an already-categorized group.
+  it('rejects an uncategorized addition without calling addExpensesToGroup', async () => {
+    const tx = makeTx({
+      groupRows: [{ subCategoryId: 42 }],
+      expenseRows: [
+        { id: '11111111-1111-4111-8111-111111111111', subCategoryId: null, status: '1' },
+        { id: '22222222-2222-4222-8222-222222222222', subCategoryId: 42, status: '3' },
+      ],
+    })
+    mocks.dbTransaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(tx))
+
+    const result = await addExpensesToGroupAction(
+      { error: null },
+      makeFormData({
+        groupId: '7',
+        expenseIds: JSON.stringify([
+          '11111111-1111-4111-8111-111111111111',
+          '22222222-2222-4222-8222-222222222222',
+        ]),
+      }),
+    )
+
+    expect(result).toEqual({ error: 'Categorizza prima di aggiungere al gruppo.' })
+    expect(mocks.addExpensesToGroup).not.toHaveBeenCalled()
   })
 
   it('rejects a differently-categorized addition without calling addExpensesToGroup', async () => {
@@ -742,7 +771,7 @@ describe('addExpensesToGroupAction', () => {
   it('surfaces addExpensesToGroup errors verbatim', async () => {
     const tx = makeTx({
       groupRows: [{ subCategoryId: 42 }],
-      expenseRows: [{ id: '11111111-1111-4111-8111-111111111111', subCategoryId: null, status: '1' }],
+      expenseRows: [{ id: '11111111-1111-4111-8111-111111111111', subCategoryId: 42, status: '1' }],
     })
     mocks.dbTransaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(tx))
     mocks.addExpensesToGroup.mockRejectedValue(
