@@ -362,6 +362,17 @@ export const systemCategorizationPatterns: SystemCategorizationPatternSeed[] = [
     priority: 100,
     description: "Sports association (polisportiva)",
   },
+
+  // --- Phase 67 vacanze audit (D-14): travel-only trasporto ---
+  {
+    pattern:
+      "(?:\\bryanair\\b|\\beasyjet\\b|\\bvolo\\b|\\bvoli\\b|\\baerolinee\\b|\\blufthansa\\b|\\bair france\\b|\\bklm\\b|\\bwizz ?air\\b|\\btraghett[oi]\\b|\\bferry\\b|\\bautonoleggio\\b|\\bcar rental\\b|\\brent[ao]car\\b|\\bhertz\\b|\\bavis\\b|\\beuropcar\\b|\\bsixt\\b|\\bnoleggio auto\\b)",
+    subCategorySlug: "trasporto",
+    confidence: 0.85,
+    priority: 100,
+    description:
+      "Travel-specific transport: flights, ferries, car rental — excludes daily commute (metro, bus, tram, local trains, taxi/ride-sharing) which stay routed to mezzi-pubblici/taxi-e-ride-sharing.",
+  },
 ];
 
 export function validateSystemCategorizationPatterns(
