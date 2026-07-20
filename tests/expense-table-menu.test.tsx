@@ -164,6 +164,12 @@ describe('ExpenseTable — grouped row rendering (GRP-03)', () => {
     expect(html).not.toContain('Elimina spesa')
     expect(html).not.toContain('aria-label="Rinomina spesa"')
   })
+
+  it('renders a "Cambia categoria" dropdown item for a grouped row (GRP-05)', () => {
+    const html = render([makeExpense({ groupId: 42, groupTitle: 'Netflix condiviso' })])
+
+    expect(html).toContain('Cambia categoria')
+  })
 })
 
 describe('ExpenseTable — add-to-group selection eligibility (GRP-06/D-06)', () => {
