@@ -212,6 +212,15 @@ describe('GroupDetailClient', () => {
     expect(linkMatch?.[0]).not.toContain('<button')
   })
 
+  it('renders a "Scomponi gruppo" header action with no wording implying restoration/undo', async () => {
+    const html = await renderGroupDetailClient()
+
+    expect(html).toContain('Scomponi gruppo')
+    expect(html.toLowerCase()).not.toContain('ripristina')
+    expect(html.toLowerCase()).not.toContain('restore')
+    expect(html.toLowerCase()).not.toContain('annulla lo scioglimento')
+  })
+
   it('renders a member with zero linked transactions normally with a 0,00 € total', async () => {
     const html = await renderGroupDetailClient({
       members: [
