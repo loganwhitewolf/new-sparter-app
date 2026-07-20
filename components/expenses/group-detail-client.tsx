@@ -2,7 +2,10 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -11,9 +14,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { SubcategoryPicker } from '@/components/categorization/subcategory-picker'
 import { DetailPageShell } from '@/components/detail-pages/detail-page-shell'
 import { GroupTitleEdit } from '@/components/expenses/group-title-edit'
+import { categorizeExpenseGroup } from '@/lib/actions/expenses'
+import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { ExpenseGroupDetailRow } from '@/lib/dal/expenses'
+import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import { APP_ROUTES, expenseDetailHref, transactionDetailHref } from '@/lib/routes'
 import { amountToneClass } from '@/lib/utils/amount-tone'
 import { toDecimal } from '@/lib/utils/decimal'
@@ -21,6 +28,8 @@ import { cn } from '@/lib/utils'
 
 type Props = {
   group: ExpenseGroupDetailRow
+  categories: CategoryWithSubCategories[]
+  mostUsed: MostUsedSubcategory[]
 }
 
 const LINKED_TRANSACTIONS_PREVIEW_LIMIT = 8
@@ -55,8 +64,10 @@ function formatTransactionAmount(amount: string, currency: string): string {
   }).format(num)
 }
 
-export function GroupDetailClient({ group }: Props) {
+export function GroupDetailClient({ group, categories, mostUsed }: Props) {
   const router = useRouter()
+  const [categorizeOpen, setCategorizeOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   const amountClass = amountToneClass(group.totalAmount, group.categoryType)
   const previewTransactions = group.transactions.slice(0, LINKED_TRANSACTIONS_PREVIEW_LIMIT)
@@ -64,6 +75,22 @@ export function GroupDetailClient({ group }: Props) {
     0,
     group.transactions.length - LINKED_TRANSACTIONS_PREVIEW_LIMIT,
   )
+
+  function handleCategorizeChange(subCategoryId: string) {
+    startTransition(async () => {
+      const fd = new FormData()
+      fd.set('groupId', String(group.id))
+      fd.set('subCategoryId', subCategoryId)
+      const result = await categorizeExpenseGroup({ error: null }, fd)
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      toast.success('Gruppo categorizzato.')
+      setCategorizeOpen(false)
+      router.refresh()
+    })
+  }
 
   const categoriaSection = (
     <div className="mt-2 flex flex-col gap-1 rounded-md border bg-muted/30 p-4">
@@ -85,6 +112,26 @@ export function GroupDetailClient({ group }: Props) {
           Non assegnata
         </Badge>
       )}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="mt-2 w-fit"
+        aria-label="Cambia categoria"
+        onClick={() => setCategorizeOpen(true)}
+      >
+        Cambia categoria
+      </Button>
+      <SubcategoryPicker
+        open={categorizeOpen}
+        onOpenChange={setCategorizeOpen}
+        categories={categories}
+        mostUsed={mostUsed}
+        allowedCategoryTypes={['in', 'out', 'transfer', 'allocation']}
+        defaultType={null}
+        onChange={handleCategorizeChange}
+        pending={isPending}
+      />
     </div>
   )
 

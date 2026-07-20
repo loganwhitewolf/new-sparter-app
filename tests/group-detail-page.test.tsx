@@ -14,6 +14,8 @@ const GROUP_ID = 42
 const pageMocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   getExpenseGroupForDetail: vi.fn(),
+  getCategories: vi.fn(),
+  getMostUsedSubcategories: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error('notFound')
   }),
@@ -30,6 +32,14 @@ vi.mock('@/lib/dal/auth', () => ({
 
 vi.mock('@/lib/dal/expenses', () => ({
   getExpenseGroupForDetail: pageMocks.getExpenseGroupForDetail,
+}))
+
+vi.mock('@/lib/dal/categories', () => ({
+  getCategories: pageMocks.getCategories,
+}))
+
+vi.mock('@/lib/dal/subcategory-usage', () => ({
+  getMostUsedSubcategories: pageMocks.getMostUsedSubcategories,
 }))
 
 function makeGroupDetailRow(overrides: Record<string, unknown> = {}) {
@@ -101,6 +111,8 @@ describe('/expenses/groups/[groupId] page', () => {
     vi.resetModules()
     pageMocks.verifySession.mockReset()
     pageMocks.getExpenseGroupForDetail.mockReset()
+    pageMocks.getCategories.mockReset()
+    pageMocks.getMostUsedSubcategories.mockReset()
     pageMocks.notFound.mockReset()
     pageMocks.notFound.mockImplementation(() => {
       throw new Error('notFound')
@@ -108,6 +120,8 @@ describe('/expenses/groups/[groupId] page', () => {
 
     pageMocks.verifySession.mockResolvedValue({ userId: USER_ID })
     pageMocks.getExpenseGroupForDetail.mockResolvedValue(makeGroupDetailRow())
+    pageMocks.getCategories.mockResolvedValue([])
+    pageMocks.getMostUsedSubcategories.mockResolvedValue([])
   })
 
   it('renders the group title, category, members, and transactions on the happy path', async () => {
@@ -125,6 +139,8 @@ describe('/expenses/groups/[groupId] page', () => {
 
     await expect(renderGroupPage()).rejects.toThrow('notFound')
     expect(pageMocks.notFound).toHaveBeenCalledTimes(1)
+    expect(pageMocks.getCategories).not.toHaveBeenCalled()
+    expect(pageMocks.getMostUsedSubcategories).not.toHaveBeenCalled()
   })
 
   it('calls notFound() for a malformed (non-numeric) groupId without calling getExpenseGroupForDetail', async () => {
