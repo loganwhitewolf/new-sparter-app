@@ -142,20 +142,34 @@ describe('GroupDetailClient', () => {
     vi.resetModules()
   })
 
-  async function renderGroupDetailClient(overrides: Record<string, unknown> = {}) {
+  async function renderGroupDetailClient(
+    overrides: Record<string, unknown> = {},
+    props: Record<string, unknown> = {},
+  ) {
     const { GroupDetailClient } = await import('../components/expenses/group-detail-client')
     return renderToStaticMarkup(
-      createElement(GroupDetailClient, { group: makeGroupDetailRow(overrides) }),
+      createElement(GroupDetailClient, {
+        group: makeGroupDetailRow(overrides),
+        categories: [],
+        mostUsed: [],
+        ...props,
+      }),
     )
   }
 
-  it('renders the shared subcategory read-only with no "Cambia categoria" control anywhere', async () => {
+  it('renders the shared subcategory with a "Cambia categoria" trigger', async () => {
     const html = await renderGroupDetailClient()
 
     expect(html).toContain('Viaggi')
     expect(html).toContain('Svago')
-    expect(html).not.toContain('Cambia categoria')
-    expect(html).not.toContain('Assegna categoria')
+    expect(html).toContain('Cambia categoria')
+  })
+
+  it('renders with empty categories/mostUsed arrays without crashing (cold-start safety)', async () => {
+    const html = await renderGroupDetailClient({}, { categories: [], mostUsed: [] })
+
+    expect(html).toContain('Vacanza Roma')
+    expect(html).toContain('Cambia categoria')
   })
 
   it('renders each member with its OWN title and OWN total, linking to its own expense detail page', async () => {
