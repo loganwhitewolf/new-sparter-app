@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ExternalLink, Link2, Lock, Split, Tag, Trash2, Unlink } from 'lucide-react'
+import { ExternalLink, Link2, Lock, Split, Tag, Trash2, Unlink, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { DetailPageShell } from '@/components/detail-pages/detail-page-shell'
 import { TransactionAmountEdit } from '@/components/transactions/transaction-amount-edit'
@@ -26,19 +27,25 @@ import { DetachExpenseDialog } from '@/components/transactions/detach-expense-di
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { deleteTransaction } from '@/lib/actions/transactions'
 import { deleteTransactionPairAction } from '@/lib/actions/transaction-pairs'
+import { addTransactionTagAction, removeTransactionTagAction } from '@/lib/actions/transaction-tags'
 import type { TransactionDetailRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
+import type { TagRow } from '@/lib/dal/tags'
 import { APP_ROUTES, expenseDetailHref, importFileDetailHref, transactionDetailHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
 import { amountToneClass } from '@/lib/utils/amount-tone'
 import { toDecimal } from '@/lib/utils/decimal'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 
+type CurrentTag = { tagId: number; tagName: string; archived: boolean }
+
 type Props = {
   transaction: TransactionDetailRow
   categories: CategoryWithSubCategories[]
   mostUsed: MostUsedSubcategory[]
+  currentTags: CurrentTag[]
+  allTags: TagRow[]
 }
 
 const dateFormatter = new Intl.DateTimeFormat('it-IT', {
@@ -68,7 +75,13 @@ function formatDate(date: Date): string {
   return dateFormatter.format(new Date(date))
 }
 
-export function TransactionDetailClient({ transaction, categories, mostUsed }: Props) {
+export function TransactionDetailClient({
+  transaction,
+  categories,
+  mostUsed,
+  currentTags,
+  allTags,
+}: Props) {
   const router = useRouter()
   const [pairPickerOpen, setPairPickerOpen] = useState(false)
   const [detachOpen, setDetachOpen] = useState(false)
@@ -77,6 +90,9 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
   const [deleteLinkedExpenses, setDeleteLinkedExpenses] = useState(false)
   const [deletePending, setDeletePending] = useState(false)
   const [unpairPending, setUnpairPending] = useState(false)
+  const [tags, setTags] = useState<CurrentTag[]>(currentTags)
+  const [addTagId, setAddTagId] = useState<string>('')
+  const [tagPending, setTagPending] = useState(false)
 
   const displayTitle =
     transaction.customTitle ??
@@ -114,6 +130,100 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
       router.push(APP_ROUTES.transactions)
     }
   }
+
+  async function handleAddTag() {
+    if (!addTagId) return
+    const found = allTags.find((t) => t.id === Number(addTagId))
+    if (!found) return
+
+    setTagPending(true)
+    const fd = new FormData()
+    fd.set('transactionId', transaction.id)
+    fd.set('tagId', addTagId)
+    const result = await addTransactionTagAction({ error: null }, fd)
+    setTagPending(false)
+    if (result.error) {
+      toast.error(result.error)
+    } else {
+      setTags((prev) => [...prev, { tagId: found.id, tagName: found.name, archived: found.archived }])
+      setAddTagId('')
+      toast.success('Tag aggiunto.')
+    }
+  }
+
+  async function handleRemoveTag(tagId: number) {
+    setTagPending(true)
+    const fd = new FormData()
+    fd.set('transactionId', transaction.id)
+    fd.set('tagId', String(tagId))
+    const result = await removeTransactionTagAction({ error: null }, fd)
+    setTagPending(false)
+    if (result.error) {
+      toast.error(result.error)
+    } else {
+      setTags((prev) => prev.filter((t) => t.tagId !== tagId))
+      toast.success('Tag rimosso.')
+    }
+  }
+
+  const availableTags = allTags.filter((t) => !tags.some((current) => current.tagId === t.id))
+
+  const tagSection = (
+    <div className="mt-2 flex flex-col gap-3 rounded-md border bg-muted/30 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tag</span>
+        <div className="flex items-center gap-2">
+          <Select value={addTagId} onValueChange={setAddTagId} disabled={tagPending}>
+            <SelectTrigger size="sm" className="w-40">
+              <SelectValue placeholder="Aggiungi tag" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableTags.length === 0 ? (
+                <div className="px-2 py-1.5 text-xs text-muted-foreground">Nessun tag disponibile</div>
+              ) : (
+                availableTags.map((t) => (
+                  <SelectItem key={t.id} value={String(t.id)}>
+                    {t.name}
+                    {t.archived ? ' (Archiviato)' : ''}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!addTagId || tagPending}
+            onClick={() => void handleAddTag()}
+          >
+            Aggiungi
+          </Button>
+        </div>
+      </div>
+      {tags.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Nessun tag assegnato.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {tags.map((t) => (
+            <Badge key={t.tagId} variant="outline" className="flex items-center gap-1">
+              {t.tagName}
+              {t.archived ? <span className="text-muted-foreground">(Archiviato)</span> : null}
+              <button
+                type="button"
+                aria-label={`Rimuovi tag ${t.tagName}`}
+                disabled={tagPending}
+                onClick={() => void handleRemoveTag(t.tagId)}
+                className="ml-1 rounded-full hover:text-destructive"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 
   const searchQuery = transaction.customTitle?.trim() || transaction.description
   const searchHref = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`
@@ -207,6 +317,7 @@ export function TransactionDetailClient({ transaction, categories, mostUsed }: P
         </TooltipProvider>
       </div>
       {categoriaSection}
+      {tagSection}
     </div>
   )
 

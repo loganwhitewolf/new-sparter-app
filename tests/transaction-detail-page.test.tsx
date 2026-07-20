@@ -1,4 +1,4 @@
-import { createElement } from 'react'
+import { createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -229,6 +229,8 @@ const pageMocks = vi.hoisted(() => ({
   getTransactionForDetail: vi.fn(),
   getCategories: vi.fn(),
   getMostUsedSubcategories: vi.fn(),
+  getTransactionTagsForTransaction: vi.fn(),
+  getTags: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error('notFound')
   }),
@@ -253,6 +255,30 @@ vi.mock('@/lib/dal/categories', () => ({
 
 vi.mock('@/lib/dal/subcategory-usage', () => ({
   getMostUsedSubcategories: pageMocks.getMostUsedSubcategories,
+}))
+
+vi.mock('@/lib/dal/transaction-tags', () => ({
+  getTransactionTagsForTransaction: pageMocks.getTransactionTagsForTransaction,
+}))
+
+vi.mock('@/lib/dal/tags', () => ({
+  getTags: pageMocks.getTags,
+}))
+
+// Radix's Select portals SelectContent into document.body, which never renders under
+// renderToStaticMarkup (no DOM). Mock as passthrough divs — established pattern, mirrors
+// the Sheet mock in tests/subcategory-picker.test.tsx — so SelectItem text is inspectable.
+vi.mock('@/components/ui/select', () => ({
+  Select: ({ children }: { children?: ReactNode }) =>
+    createElement('div', { 'data-slot': 'select' }, children),
+  SelectTrigger: ({ children }: { children?: ReactNode }) =>
+    createElement('div', { 'data-slot': 'select-trigger' }, children),
+  SelectValue: ({ placeholder }: { placeholder?: string }) =>
+    createElement('span', { 'data-slot': 'select-value' }, placeholder),
+  SelectContent: ({ children }: { children?: ReactNode }) =>
+    createElement('div', { 'data-slot': 'select-content' }, children),
+  SelectItem: ({ children, value }: { children?: ReactNode; value?: string }) =>
+    createElement('div', { 'data-slot': 'select-item', 'data-value': value }, children),
 }))
 
 const USER_ID = 'user-1'
@@ -308,6 +334,8 @@ describe('/transactions/[id] page', () => {
     pageMocks.getTransactionForDetail.mockReset()
     pageMocks.getCategories.mockReset()
     pageMocks.getMostUsedSubcategories.mockReset()
+    pageMocks.getTransactionTagsForTransaction.mockReset()
+    pageMocks.getTags.mockReset()
     pageMocks.notFound.mockReset()
     pageMocks.notFound.mockImplementation(() => {
       throw new Error('notFound')
@@ -317,6 +345,8 @@ describe('/transactions/[id] page', () => {
     pageMocks.getTransactionForDetail.mockResolvedValue(makeTransactionDetailRow())
     pageMocks.getCategories.mockResolvedValue([])
     pageMocks.getMostUsedSubcategories.mockResolvedValue([])
+    pageMocks.getTransactionTagsForTransaction.mockResolvedValue([])
+    pageMocks.getTags.mockResolvedValue([])
   })
 
   it('renders 200 with amount, date, title, category, and cross-refs for an owned transaction', async () => {
@@ -334,6 +364,14 @@ describe('/transactions/[id] page', () => {
 
     await expect(renderTransactionPage(NON_OWNED_ID)).rejects.toThrow('notFound')
     expect(pageMocks.notFound).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not fetch tag data on the 404 path (no wasted queries)', async () => {
+    pageMocks.getTransactionForDetail.mockResolvedValue(undefined)
+
+    await expect(renderTransactionPage(NON_OWNED_ID)).rejects.toThrow('notFound')
+    expect(pageMocks.getTransactionTagsForTransaction).not.toHaveBeenCalled()
+    expect(pageMocks.getTags).not.toHaveBeenCalled()
   })
 
   it('calls notFound() for a transaction owned by a different user (DAL returns undefined)', async () => {
@@ -420,5 +458,96 @@ describe('/transactions/[id] page', () => {
     expect(html).toContain('Cherasco')
     expect(html).not.toContain('Cherasco 57 SRL')
     expect(html).toContain('href="/expenses/expense-1"')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Tag section (TAG-02, D-07b) — single-transaction add/remove
+// ---------------------------------------------------------------------------
+
+function makeTagRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 1,
+    userId: USER_ID,
+    name: 'Vacanza',
+    normalizedName: 'vacanza',
+    dateRangeStart: null,
+    dateRangeEnd: null,
+    archived: false,
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    ...overrides,
+  }
+}
+
+describe('Tag section (TAG-02, D-07b)', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    pageMocks.verifySession.mockReset()
+    pageMocks.getTransactionForDetail.mockReset()
+    pageMocks.getCategories.mockReset()
+    pageMocks.getMostUsedSubcategories.mockReset()
+    pageMocks.getTransactionTagsForTransaction.mockReset()
+    pageMocks.getTags.mockReset()
+    pageMocks.notFound.mockReset()
+    pageMocks.notFound.mockImplementation(() => {
+      throw new Error('notFound')
+    })
+
+    pageMocks.verifySession.mockResolvedValue({ userId: USER_ID })
+    pageMocks.getTransactionForDetail.mockResolvedValue(makeTransactionDetailRow())
+    pageMocks.getCategories.mockResolvedValue([])
+    pageMocks.getMostUsedSubcategories.mockResolvedValue([])
+  })
+
+  it('renders each current tag as a chip with a "Rimuovi tag {name}" control', async () => {
+    pageMocks.getTransactionTagsForTransaction.mockResolvedValue([
+      { transactionId: TX_ID, tagId: 1, tagName: 'Vacanza', archived: false },
+      { transactionId: TX_ID, tagId: 2, tagName: 'Lavoro', archived: false },
+    ])
+    pageMocks.getTags.mockResolvedValue([
+      makeTagRow({ id: 1, name: 'Vacanza', normalizedName: 'vacanza' }),
+      makeTagRow({ id: 2, name: 'Lavoro', normalizedName: 'lavoro' }),
+    ])
+
+    const html = await renderTransactionPage()
+
+    expect(html).toContain('Vacanza')
+    expect(html).toContain('Lavoro')
+    expect(html).toContain('aria-label="Rimuovi tag Vacanza"')
+    expect(html).toContain('aria-label="Rimuovi tag Lavoro"')
+  })
+
+  it('the "Aggiungi tag" picker options exclude tags already assigned to this transaction', async () => {
+    pageMocks.getTransactionTagsForTransaction.mockResolvedValue([
+      { transactionId: TX_ID, tagId: 1, tagName: 'Vacanza', archived: false },
+    ])
+    pageMocks.getTags.mockResolvedValue([
+      makeTagRow({ id: 1, name: 'Vacanza', normalizedName: 'vacanza' }),
+      makeTagRow({ id: 2, name: 'Lavoro', normalizedName: 'lavoro' }),
+    ])
+
+    const html = await renderTransactionPage()
+
+    const pickerItemTexts = [...html.matchAll(/data-slot="select-item"[^>]*>([^<]*)</g)].map(
+      (m) => m[1],
+    )
+    expect(pickerItemTexts).toContain('Lavoro')
+    expect(pickerItemTexts).not.toContain('Vacanza')
+  })
+
+  it('an archived tag still appears as a pickable "Aggiungi tag" option (D-04)', async () => {
+    pageMocks.getTransactionTagsForTransaction.mockResolvedValue([])
+    pageMocks.getTags.mockResolvedValue([
+      makeTagRow({ id: 3, name: 'Sharm 2026', normalizedName: 'sharm 2026', archived: true }),
+    ])
+
+    const html = await renderTransactionPage()
+
+    const pickerItemTexts = [...html.matchAll(/data-slot="select-item"[^>]*>([^<]*)</g)].map(
+      (m) => m[1],
+    )
+    expect(pickerItemTexts.some((text) => text.includes('Sharm 2026'))).toBe(true)
+    expect(pickerItemTexts.some((text) => text.includes('(Archiviato)'))).toBe(true)
   })
 })
