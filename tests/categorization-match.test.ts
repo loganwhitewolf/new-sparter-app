@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 // server-only context (no `import 'server-only'` guard), which is what lets a
 // plain tsx script reuse the production matcher verbatim.
 import { applyTier1Regex, type ActivePattern } from '@/lib/services/categorization-match'
+import { systemCategorizationPatterns } from '../scripts/seed-patterns-data'
 
 // System patterns (userId null) ordered by priority, plus one user-owned pattern.
 const patterns: ActivePattern[] = [
@@ -62,5 +63,51 @@ describe('applyTier1Regex (pure module)', () => {
     const result = applyTier1Regex('COOP centro', '-5.00', ambiguous)
     expect(result?.subCategoryId).toBe(10)
     expect(result?.patternId).toBe(1)
+  })
+})
+
+describe('trasporto pattern (D-14, travel-only)', () => {
+  const found = systemCategorizationPatterns.find((p) => p.subCategorySlug === 'trasporto')
+
+  it('is registered in systemCategorizationPatterns', () => {
+    expect(found).toBeDefined()
+  })
+
+  const trasportoPattern: ActivePattern[] = found
+    ? [
+        {
+          id: 1,
+          userId: null,
+          subCategoryId: 1,
+          confidence: found.confidence.toString(),
+          priority: found.priority,
+          pattern: found.pattern,
+        },
+      ]
+    : []
+
+  it('matches a flight booking', () => {
+    const result = applyTier1Regex('Volo Ryanair Bergamo-Palermo', '-89.00', trasportoPattern)
+    expect(result?.subCategoryId).toBe(1)
+  })
+
+  it('matches a ferry crossing', () => {
+    const result = applyTier1Regex('Traghetto Livorno Olbia', '-120.00', trasportoPattern)
+    expect(result?.subCategoryId).toBe(1)
+  })
+
+  it('matches a car rental', () => {
+    const result = applyTier1Regex('Autonoleggio Hertz aeroporto', '-210.00', trasportoPattern)
+    expect(result?.subCategoryId).toBe(1)
+  })
+
+  it('does NOT match daily-commute metro subscription', () => {
+    const result = applyTier1Regex('ATM abbonamento mensile metro Milano', '-39.00', trasportoPattern)
+    expect(result).toBeNull()
+  })
+
+  it('does NOT match a Trenitalia description (mezzi-pubblici territory, unchanged)', () => {
+    const result = applyTier1Regex('Trenitalia Roma-Milano', '-45.00', trasportoPattern)
+    expect(result).toBeNull()
   })
 })
