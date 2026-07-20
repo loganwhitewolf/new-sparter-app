@@ -427,6 +427,24 @@ export async function ignoreExpense(
   }
   // SECURITY: verifySession() first, then scope update to userId (IDOR prevention)
   const { userId } = await verifySession()
+  // D-03 defense-in-depth (CR-01): mirrors categorizeExpense's guard — ignoring a
+  // currently-grouped member would flip its status to '4' while it keeps its
+  // subCategoryId and stays a member, silently diverging the group's composed
+  // total from any status-filtered aggregate. Reject before mutating anything.
+  const groupMembership = await db
+    .select({ id: expenseGroupMembership.id })
+    .from(expenseGroupMembership)
+    .innerJoin(expense, eq(expense.id, expenseGroupMembership.expenseId))
+    .where(
+      and(
+        eq(expenseGroupMembership.expenseId, parsed.data.id),
+        eq(expense.userId, userId),
+      ),
+    )
+    .limit(1)
+  if (groupMembership.length > 0) {
+    return { error: 'Questa spesa fa parte di un gruppo: rimuovila dal gruppo prima di ignorarla.' }
+  }
   try {
     await db
       .update(expense)
