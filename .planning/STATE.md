@@ -5,8 +5,8 @@ milestone_name: Expenses & Transactions Refinement
 current_phase: 67
 current_phase_name: tags-foundation-and-assignment
 status: planning
-stopped_at: Completed 66-05-PLAN.md
-last_updated: "2026-07-20T07:43:03.910Z"
+stopped_at: Phase 67 context gathered
+last_updated: "2026-07-20T12:27:15.077Z"
 last_activity: 2026-07-20
 last_activity_desc: Phase 66 complete, transitioned to Phase 67
 progress:
@@ -266,11 +266,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** None
+**Resume file:** .planning/phases/67-tags-foundation-and-assignment/67-CONTEXT.md
 
-**Stopped at:** Completed 66-05-PLAN.md
+**Stopped at:** Phase 67 context gathered
 
-Last session: 2026-07-20T07:37:31.127Z
+Last session: 2026-07-20T12:27:15.070Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
