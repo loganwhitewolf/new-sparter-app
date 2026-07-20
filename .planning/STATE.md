@@ -5,15 +5,15 @@ milestone_name: Expenses & Transactions Refinement
 current_phase: 67
 current_phase_name: tags-foundation-and-assignment
 status: executing
-stopped_at: Phase 67 context gathered
-last_updated: "2026-07-20T13:32:02.070Z"
+stopped_at: Completed 67-01-PLAN.md
+last_updated: "2026-07-20T13:41:34.296Z"
 last_activity: 2026-07-20
-last_activity_desc: Phase 66 complete, transitioned to Phase 67
+last_activity_desc: Phase 67 execution started
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 20
+  completed_plans: 12
   percent: 50
 ---
 
@@ -24,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 66 — expense-group-lifecycle
+**Current focus:** Phase 67 — tags-foundation-and-assignment
 
 ## Current Position
 
-Phase: 67 — tags-foundation-and-assignment
-Plan: Not started
+Phase: 67 (tags-foundation-and-assignment) — EXECUTING
+Plan: 2 of 9
 Status: Ready to execute
-Last activity: 2026-07-20 — Phase 66 complete, transitioned to Phase 67
+Last activity: 2026-07-20 — Phase 67 execution started
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 60%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -166,6 +166,9 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: [Phase 66-04] selectedIncludesGroupRow added as a second exported pure helper (beyond computeMergeEligibility) so the Categorizza/Elimina bulk-action gate decision is directly unit-testable, since this repo has no jsdom for click-time toast assertions
 - [Phase ?]: Phase 66-05: GroupDetailClient's Cambia categoria control is an independent inline trigger, not a reuse of Plan 66-04's GroupCategorizeDialog (no dependency edge between sibling Wave-3 plans; both call categorizeExpenseGroup)
 - [Phase ?]: Phase 66-05: tests/group-detail-page.test.tsx mocks @/components/ui/dropdown-menu with a flat SSR stub (DropdownMenuContent always renders children) since Radix portals closed-menu content out of static markup — same pattern as tests/expense-table-menu.test.tsx
+- [Phase ?]: Phase 67-01: normalizedName computed by service layer (Plan 67-03) via name.trim().toLowerCase(), never derived in DB; DB stores it as a plain column with a (userId, normalizedName) unique constraint closing the TAG-01 concurrency race
+- [Phase ?]: Phase 67-01: transactionTag has no standalone unique on transactionId — a transaction may carry N tags, unlike expenseGroupMembership's one-group-per-expense rule; only composite (tagId, transactionId) unique applies
+- [Phase ?]: Phase 67-01: local db:migrate target resolves DATABASE_URL to a Supabase-hosted Postgres instance in this dev environment, not the docker-compose sparter-postgres container (which is empty/unused) — migration 0027 verified against the actual db:migrate target
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -266,11 +269,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/67-tags-foundation-and-assignment/67-CONTEXT.md
+**Resume file:** None
 
-**Stopped at:** Phase 67 context gathered
+**Stopped at:** Completed 67-01-PLAN.md
 
-Last session: 2026-07-20T12:27:15.070Z
+Last session: 2026-07-20T13:41:34.289Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -319,3 +322,4 @@ Last session: 2026-07-20T12:27:15.070Z
 | Phase 66 P03 | 15min | 1 tasks | 1 files |
 | Phase 66 P04 | 7min | 3 tasks | 5 files |
 | Phase 66 P05 | 6min | 3 tasks | 4 files |
+| Phase 67 P01 | 3min | 3 tasks | 6 files |

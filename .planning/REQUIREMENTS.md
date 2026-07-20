@@ -26,9 +26,9 @@ physical merge, no hash aliasing; read-time totals; dashboard values structurall
 
 Design source: Obsidian note "sparter-tag-transazioni" (2026-07-06). Tag = second axis orthogonal to categories (context: event/trip/project). Rendering rule: tag = filter, never breakdown.
 
-- [ ] **TAG-01**: User can create, edit, and archive tags in a curated list (name, optional date range); tags are never deleted and archived tags remain queryable
-- [ ] **TAG-02**: User can bulk-assign one or more tags to transactions from the (filtered) transactions page; a transaction holds N tags
-- [ ] **TAG-03**: On tag creation with a date range and on each subsequent import, the app proposes the transactions falling in the range as a pre-checked confirmable list
+- [x] **TAG-01**: User can create, edit, and archive tags in a curated list (name, optional date range); tags are never deleted and archived tags remain queryable
+- [x] **TAG-02**: User can bulk-assign one or more tags to transactions from the (filtered) transactions page; a transaction holds N tags
+- [x] **TAG-03**: On tag creation with a date range and on each subsequent import, the app proposes the transactions falling in the range as a pre-checked confirmable list
 - [ ] **TAG-04**: User can filter the dashboard globally by tag (like month/year): all existing widgets narrow to tagged transactions, sums always reconcile
 - [ ] **TAG-05**: User can view the Tag section: every tag with its per-tag total (independent cards, no sum expectation), with archive action; archived tags stay interrogable
 - [ ] **TAG-06**: Viaggi category is audited: subcategories restricted to intrinsically-travel spend (flight, hotel, rental, insurance); regex/AI categorizer rules updated accordingly
@@ -75,9 +75,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GRP-06 | Phase 66 | Complete |
 | GRP-07 | Phase 66 | Complete |
 | GRP-09 | Phase 66 | Complete |
-| TAG-01 | Phase 67 | Pending |
-| TAG-02 | Phase 67 | Pending |
-| TAG-03 | Phase 67 | Pending |
+| TAG-01 | Phase 67 | Complete |
+| TAG-02 | Phase 67 | Complete |
+| TAG-03 | Phase 67 | Complete |
 | TAG-06 | Phase 67 | Pending |
 | TAG-04 | Phase 68 | Pending |
 | TAG-05 | Phase 68 | Pending |

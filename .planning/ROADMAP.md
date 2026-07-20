@@ -128,7 +128,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 67-01-PLAN.md — tag/transactionTag schema + migration + Zod validation schemas
+- [x] 67-01-PLAN.md — tag/transactionTag schema + migration + Zod validation schemas
 - [ ] 67-02-PLAN.md — Vacanze subcategory audit (seed-extras deactivate step + travel-only trasporto regex)
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -381,7 +381,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 64. file-detail-and-navigation | v2.5 | 7/7 | Complete    | 2026-07-06 |
 | 65. expense-group-merge-and-view | v2.6 | 0/6 | In Progress|  |
 | 66. expense-group-lifecycle | v2.6 | 0/5 | Complete    | 2026-07-20 |
-| 67. tags-foundation-and-assignment | v2.6 | 0/9 | Planned | - |
+| 67. tags-foundation-and-assignment | v2.6 | 0/9 | In Progress|  |
 | 68. tags-dashboard-and-navigation | v2.6 | 0/TBD | Not started | - |
 
 **Total shipped: 64 phases · 235 plans complete**
