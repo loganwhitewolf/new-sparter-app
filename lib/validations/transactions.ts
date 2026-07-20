@@ -142,7 +142,7 @@ function firstTrimmed(value: string | string[] | undefined): string | undefined 
   return trimmed ? trimmed : undefined
 }
 
-function parseDateOnly(value: string | undefined): Date | undefined {
+export function parseDateOnly(value: string | undefined): Date | undefined {
   if (!value) {
     return undefined
   }
