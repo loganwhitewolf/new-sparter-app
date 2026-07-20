@@ -138,7 +138,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 67-05-PLAN.md — tag suggestion DAL/service/actions (shared date-range matcher, D-09/D-10)
+- [x] 67-05-PLAN.md — tag suggestion DAL/service/actions (shared date-range matcher, D-09/D-10)
 - [ ] 67-06-PLAN.md — transactions-page bulk-assign dialog + row tag chips
 - [ ] 67-07-PLAN.md — transaction detail page tag section (single add/remove)
 
