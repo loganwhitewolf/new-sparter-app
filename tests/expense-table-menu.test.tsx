@@ -68,7 +68,9 @@ vi.mock('@/components/ui/dropdown-menu', async () => {
   }
 })
 
-const { ExpenseTable } = await import('../components/expenses/expense-table')
+const { ExpenseTable, computeMergeEligibility, selectedIncludesGroupRow } = await import(
+  '../components/expenses/expense-table'
+)
 const { expenseDetailHref, expenseGroupDetailHref } = await import('../lib/routes')
 import type { ExpenseRow } from '../lib/dal/expenses'
 
@@ -145,12 +147,12 @@ describe('ExpenseTable — grouped row rendering (GRP-03)', () => {
     expect(html).toContain(`href="${expenseGroupDetailHref(42)}"`)
   })
 
-  it('renders the grouped row checkbox as disabled', () => {
+  it('renders the grouped row checkbox as selectable (GRP-06 add-to-group entry point)', () => {
     const html = render([makeExpense({ groupId: 42, groupTitle: 'Netflix condiviso' })])
 
     const checkboxMatch = html.match(/<input type="checkbox"[^>]*aria-label="Seleziona Spesa Esselunga"[^>]*>/)
     expect(checkboxMatch).not.toBeNull()
-    expect(checkboxMatch?.[0]).toContain('disabled=""')
+    expect(checkboxMatch?.[0]).not.toContain('disabled=""')
   })
 
   it('renders no Ignora, Elimina, or title-rename control for a grouped row', () => {
@@ -161,5 +163,79 @@ describe('ExpenseTable — grouped row rendering (GRP-03)', () => {
     expect(html).not.toContain('Ignora')
     expect(html).not.toContain('Elimina spesa')
     expect(html).not.toContain('aria-label="Rinomina spesa"')
+  })
+})
+
+describe('ExpenseTable — add-to-group selection eligibility (GRP-06/D-06)', () => {
+  it('2 ungrouped rows sharing one subcategory are createGroupEligible', () => {
+    const { mergeEligible, targetGroup } = computeMergeEligibility([
+      { groupId: null, subCategoryId: 10, title: 'A' },
+      { groupId: null, subCategoryId: 10, title: 'B' },
+    ])
+    expect(mergeEligible).toBe(true)
+    expect(targetGroup).toBeNull()
+  })
+
+  it('2 ungrouped rows with different subcategories are not eligible', () => {
+    const { mergeEligible } = computeMergeEligibility([
+      { groupId: null, subCategoryId: 10, title: 'A' },
+      { groupId: null, subCategoryId: 20, title: 'B' },
+    ])
+    expect(mergeEligible).toBe(false)
+  })
+
+  it('1 group row + 1 ungrouped row matching subcategory is addToGroupEligible with the correct targetGroup', () => {
+    const { mergeEligible, targetGroup } = computeMergeEligibility([
+      { groupId: 42, subCategoryId: 10, title: 'Netflix condiviso' },
+      { groupId: null, subCategoryId: 10, title: 'A' },
+    ])
+    expect(mergeEligible).toBe(true)
+    expect(targetGroup).toEqual({ id: 42, title: 'Netflix condiviso', subCategoryId: 10 })
+  })
+
+  it('1 group row + 1 ungrouped row with a CONFLICTING subcategory is not eligible', () => {
+    const { mergeEligible, targetGroup } = computeMergeEligibility([
+      { groupId: 42, subCategoryId: 10, title: 'Netflix condiviso' },
+      { groupId: null, subCategoryId: 20, title: 'A' },
+    ])
+    expect(mergeEligible).toBe(false)
+    expect(targetGroup).toBeNull()
+  })
+
+  it('2 group rows are never eligible (D-06 — group-to-group merge unsupported)', () => {
+    const { mergeEligible, targetGroup } = computeMergeEligibility([
+      { groupId: 42, subCategoryId: 10, title: 'Netflix condiviso' },
+      { groupId: 43, subCategoryId: 10, title: 'Amazon condiviso' },
+    ])
+    expect(mergeEligible).toBe(false)
+    expect(targetGroup).toBeNull()
+  })
+
+  it('1 group row + 1 UNCATEGORIZED ungrouped row is addToGroupEligible (uncategorized never conflicts)', () => {
+    const { mergeEligible, targetGroup } = computeMergeEligibility([
+      { groupId: 42, subCategoryId: 10, title: 'Netflix condiviso' },
+      { groupId: null, subCategoryId: null, title: 'A' },
+    ])
+    expect(mergeEligible).toBe(true)
+    expect(targetGroup).toEqual({ id: 42, title: 'Netflix condiviso', subCategoryId: 10 })
+  })
+})
+
+describe('selectedIncludesGroupRow (Categorizza/Elimina bulk-action gate)', () => {
+  it('is false when the selection is all ungrouped rows', () => {
+    expect(
+      selectedIncludesGroupRow([
+        { groupId: null },
+        { groupId: null },
+      ]),
+    ).toBe(false)
+  })
+
+  it('is true when the selection includes exactly 1 group row', () => {
+    expect(selectedIncludesGroupRow([{ groupId: 42 }, { groupId: null }])).toBe(true)
+  })
+
+  it('is true when the selection includes 2 group rows', () => {
+    expect(selectedIncludesGroupRow([{ groupId: 42 }, { groupId: 43 }])).toBe(true)
   })
 })
