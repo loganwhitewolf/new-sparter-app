@@ -134,7 +134,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 67-03-PLAN.md — tag DAL/service/actions (create/edit/archive, D-02 uniqueness guard)
-- [ ] 67-04-PLAN.md — transaction_tag DAL/service/actions (bulk assign/remove, D-06/D-07)
+- [x] 67-04-PLAN.md — transaction_tag DAL/service/actions (bulk assign/remove, D-06/D-07)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 

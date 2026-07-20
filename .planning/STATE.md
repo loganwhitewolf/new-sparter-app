@@ -5,15 +5,15 @@ milestone_name: Expenses & Transactions Refinement
 current_phase: 67
 current_phase_name: tags-foundation-and-assignment
 status: executing
-stopped_at: Completed 67-02-PLAN.md
-last_updated: "2026-07-20T13:48:30.586Z"
+stopped_at: Completed 67-04-PLAN.md
+last_updated: "2026-07-20T14:41:25.537Z"
 last_activity: 2026-07-20
 last_activity_desc: Phase 67 execution started
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 20
-  completed_plans: 13
+  completed_plans: 15
   percent: 50
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 67 (tags-foundation-and-assignment) — EXECUTING
-Plan: 3 of 9
+Plan: 4 of 9
 Status: Ready to execute
 Last activity: 2026-07-20 — Phase 67 execution started
 
-Progress: [███████░░░] 65%
+Progress: [████████░░] 75%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -172,6 +172,8 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: Phase 67-02: vacanzeAudit seed-extras STEP resets linked expenses to da-categorizzare BEFORE deactivating attivita-e-intrattenimento/cibo-e-bevande (D-11/D-12/D-13), lookup by slug never filtered on isActive for idempotent re-run
 - [Phase ?]: Phase 67-02: D-14 regex half only — travel-only 'trasporto' pattern excludes daily-commute keywords; AI-categorizer-rules half deferred (Tier-3 not built)
 - [Phase ?]: Phase 67-02: yarn db:seed-patterns intentionally not run in this plan (full replace, broader blast radius) — flagged as Operator Next Step
+- [Phase ?]: 67-04: bulkAssignTags/bulkRemoveTags implement D-06 additive-union / D-07 symmetric removal as fully separate code paths, gated by dual IDOR checks (transaction + tag ownership) before any write
+- [Phase ?]: 67-04: ActionState imported from lib/validations/category (per plan) rather than lib/validations/expense — structurally identical, no behavior change
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -276,9 +278,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 67-02-PLAN.md
+**Stopped at:** Completed 67-04-PLAN.md
 
-Last session: 2026-07-20T13:48:20.952Z
+Last session: 2026-07-20T14:41:19.421Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -329,3 +331,4 @@ Last session: 2026-07-20T13:48:20.952Z
 | Phase 66 P05 | 6min | 3 tasks | 4 files |
 | Phase 67 P01 | 3min | 3 tasks | 6 files |
 | Phase 67 P02 | 12min | 2 tasks | 4 files |
+| Phase 67 P04 | 3min | 3 tasks | 6 files |
