@@ -123,7 +123,29 @@ Plans:
 3. When a tag is created with a date range, and again on each subsequent import, the app proposes the transactions falling inside that range as a pre-checked, user-confirmable list to add to the tag.
 4. Vacanze/Viaggi subcategories match only intrinsically-travel spend (flight, hotel, rental, insurance); regex and AI categorizer rules are updated so non-travel spend previously miscategorized there no longer lands in Vacanze.
 
-**Plans:** TBD
+**Plans:** 9 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 67-01-PLAN.md — tag/transactionTag schema + migration + Zod validation schemas
+- [ ] 67-02-PLAN.md — Vacanze subcategory audit (seed-extras deactivate step + travel-only trasporto regex)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 67-03-PLAN.md — tag DAL/service/actions (create/edit/archive, D-02 uniqueness guard)
+- [ ] 67-04-PLAN.md — transaction_tag DAL/service/actions (bulk assign/remove, D-06/D-07)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 67-05-PLAN.md — tag suggestion DAL/service/actions (shared date-range matcher, D-09/D-10)
+- [ ] 67-06-PLAN.md — transactions-page bulk-assign dialog + row tag chips
+- [ ] 67-07-PLAN.md — transaction detail page tag section (single add/remove)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 67-08-PLAN.md — /settings/tags CRUD UI + create-time suggestion modal
+- [ ] 67-09-PLAN.md — post-import "Suggerimenti tag" summary block
 
 **UI hint:** yes
 
@@ -359,7 +381,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 64. file-detail-and-navigation | v2.5 | 7/7 | Complete    | 2026-07-06 |
 | 65. expense-group-merge-and-view | v2.6 | 0/6 | In Progress|  |
 | 66. expense-group-lifecycle | v2.6 | 0/5 | Complete    | 2026-07-20 |
-| 67. tags-foundation-and-assignment | v2.6 | 0/TBD | Not started | - |
+| 67. tags-foundation-and-assignment | v2.6 | 0/9 | Planned | - |
 | 68. tags-dashboard-and-navigation | v2.6 | 0/TBD | Not started | - |
 
 **Total shipped: 64 phases · 235 plans complete**
