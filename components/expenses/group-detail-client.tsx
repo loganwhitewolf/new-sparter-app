@@ -17,6 +17,7 @@ import {
 import { SubcategoryPicker } from '@/components/categorization/subcategory-picker'
 import { DetailPageShell } from '@/components/detail-pages/detail-page-shell'
 import { GroupTitleEdit } from '@/components/expenses/group-title-edit'
+import { RemoveGroupMemberButton } from '@/components/expenses/remove-group-member-button'
 import { categorizeExpenseGroup } from '@/lib/actions/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { ExpenseGroupDetailRow } from '@/lib/dal/expenses'
@@ -157,16 +158,23 @@ export function GroupDetailClient({ group, categories, mostUsed }: Props) {
       ) : (
         <div className="flex flex-col gap-2">
           {group.members.map((member) => (
-            <Link
+            <div
               key={member.id}
-              href={expenseDetailHref(member.id)}
               className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm hover:bg-muted/50"
             >
-              <span className="min-w-0 flex-1 truncate">{member.title}</span>
+              <Link href={expenseDetailHref(member.id)} className="min-w-0 flex-1 truncate">
+                {member.title}
+              </Link>
               <span className="shrink-0 font-mono tabular-nums">
                 {formatSignedAmount(member.totalAmount)}
               </span>
-            </Link>
+              <RemoveGroupMemberButton
+                groupId={group.id}
+                expenseId={member.id}
+                expenseTitle={member.title}
+                onSuccess={() => router.refresh()}
+              />
+            </div>
           ))}
         </div>
       )}
