@@ -722,42 +722,52 @@ export async function addExpensesToGroupAction(
   return { error: null }
 }
 
+export type RemoveExpenseFromGroupActionState = ActionState & { autoDissolved: boolean }
+
 /**
  * Remove a single member from an owned Expense Group (GRP-07, ADR 0017
  * D-07/D-08). Delegates ownership checks + the auto-dissolve boundary decision
  * to the Plan 66-01 removeExpenseFromGroup service, invoked inside
  * db.transaction here since the service's TOCTOU guarantee (T-66-03) depends
  * on the count-then-delete running in the same transaction as the caller.
+ *
+ * WR-01: threads the service's `autoDissolved` signal back through so the
+ * caller (RemoveGroupMemberButton / GroupDetailClient) can redirect to the
+ * expenses list instead of calling router.refresh() into a now-404'd group
+ * detail page, mirroring handleDissolve's redirect for the equivalent
+ * terminal state.
  */
 export async function removeExpenseFromGroupAction(
   _prev: ActionState,
   formData: FormData
-): Promise<ActionState> {
+): Promise<RemoveExpenseFromGroupActionState> {
   const parsed = RemoveExpenseFromGroupSchema.safeParse({
     groupId: formData.get('groupId'),
     expenseId: formData.get('expenseId'),
   })
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message }
+    return { error: parsed.error.issues[0].message, autoDissolved: false }
   }
 
   const { userId } = await verifySession()
 
+  let autoDissolved = false
   try {
     await db.transaction(async (tx) => {
-      await removeExpenseFromGroup(tx, {
+      const result = await removeExpenseFromGroup(tx, {
         userId,
         groupId: parsed.data.groupId,
         expenseId: parsed.data.expenseId,
       })
+      autoDissolved = result.autoDissolved
     })
   } catch (err) {
-    if (err instanceof Error) return { error: err.message }
-    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+    if (err instanceof Error) return { error: err.message, autoDissolved: false }
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.', autoDissolved: false }
   }
 
   revalidateCategorizationSurfaces()
-  return { error: null }
+  return { error: null, autoDissolved }
 }
 
 /**

@@ -817,12 +817,26 @@ describe('removeExpenseFromGroupAction', () => {
       makeFormData({ groupId: '7', expenseId: '11111111-1111-4111-8111-111111111111' }),
     )
 
-    expect(result).toEqual({ error: null })
+    expect(result).toEqual({ error: null, autoDissolved: false })
     expect(mocks.removeExpenseFromGroup).toHaveBeenCalledWith(expect.anything(), {
       userId: 'user-1',
       groupId: 7,
       expenseId: '11111111-1111-4111-8111-111111111111',
     })
+    expect(mocks.revalidateCategorizationSurfaces).toHaveBeenCalledTimes(1)
+  })
+
+  // WR-01: the caller (RemoveGroupMemberButton / GroupDetailClient) needs this
+  // signal to redirect instead of refreshing into a now-404'd group detail page.
+  it('threads autoDissolved: true through when the removal was the last-pair boundary', async () => {
+    mocks.removeExpenseFromGroup.mockResolvedValue({ autoDissolved: true })
+
+    const result = await removeExpenseFromGroupAction(
+      { error: null },
+      makeFormData({ groupId: '7', expenseId: '11111111-1111-4111-8111-111111111111' }),
+    )
+
+    expect(result).toEqual({ error: null, autoDissolved: true })
     expect(mocks.revalidateCategorizationSurfaces).toHaveBeenCalledTimes(1)
   })
 
@@ -834,7 +848,7 @@ describe('removeExpenseFromGroupAction', () => {
       makeFormData({ groupId: '999', expenseId: '11111111-1111-4111-8111-111111111111' }),
     )
 
-    expect(result).toEqual({ error: 'Gruppo non trovato.' })
+    expect(result).toEqual({ error: 'Gruppo non trovato.', autoDissolved: false })
     expect(mocks.revalidateCategorizationSurfaces).not.toHaveBeenCalled()
   })
 })

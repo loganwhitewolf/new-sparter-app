@@ -19,16 +19,16 @@ type Props = {
   groupId: number
   expenseId: string
   expenseTitle: string
-  onSuccess: () => void
+  onSuccess: (autoDissolved: boolean) => void
 }
 
 /**
  * GRP-07/D-07: per-member "remove from group" control on the group detail
  * page's member rows. Confirms via a Dialog, then calls
  * removeExpenseFromGroupAction; on success the freed member becomes a
- * standalone expense (no more group-row collapsing) and the parent refreshes
- * so the member list/count updates — including the auto-dissolve case where
- * the group itself may no longer exist.
+ * standalone expense (no more group-row collapsing) and the parent is told
+ * whether the removal auto-dissolved the group (WR-01) so it can redirect
+ * instead of refreshing into a now-404'd group detail page.
  */
 export function RemoveGroupMemberButton({ groupId, expenseId, expenseTitle, onSuccess }: Props) {
   const [open, setOpen] = useState(false)
@@ -47,7 +47,7 @@ export function RemoveGroupMemberButton({ groupId, expenseId, expenseTitle, onSu
     }
     toast.success('Spesa rimossa dal gruppo.')
     setOpen(false)
-    onSuccess()
+    onSuccess(result.autoDissolved)
   }
 
   return (

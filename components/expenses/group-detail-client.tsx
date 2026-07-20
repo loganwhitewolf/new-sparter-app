@@ -244,7 +244,18 @@ export function GroupDetailClient({ group, categories, mostUsed }: Props) {
                 groupId={group.id}
                 expenseId={member.id}
                 expenseTitle={member.title}
-                onSuccess={() => router.refresh()}
+                onSuccess={(autoDissolved) => {
+                  // WR-01: an auto-dissolved group no longer exists — redirect
+                  // instead of router.refresh(), which would re-run this RSC
+                  // page, get undefined from getExpenseGroupForDetail, and hit
+                  // notFound() right after the success toast. Mirrors
+                  // handleDissolve's redirect for the equivalent terminal state.
+                  if (autoDissolved) {
+                    router.push(APP_ROUTES.expenses)
+                    return
+                  }
+                  router.refresh()
+                }}
               />
             </div>
           ))}
