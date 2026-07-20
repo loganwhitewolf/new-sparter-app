@@ -23,6 +23,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 vi.mock('@/lib/actions/expenses', () => ({
   bulkCategorize: vi.fn(),
   mergeExpenses: vi.fn(),
+  addExpensesToGroupAction: vi.fn(),
 }))
 
 vi.mock('sonner', () => ({
@@ -56,15 +57,20 @@ const {
   getUncategorizedIds,
   runCategorizeStep,
   runMergeStep,
+  runAddToGroupStep,
 } = await import('../components/expenses/merge-expenses-dialog')
-const { bulkCategorize, mergeExpenses } = await import('../lib/actions/expenses')
+const { bulkCategorize, mergeExpenses, addExpensesToGroupAction } = await import(
+  '../lib/actions/expenses'
+)
 
 const bulkCategorizeMock = vi.mocked(bulkCategorize)
 const mergeExpensesMock = vi.mocked(mergeExpenses)
+const addExpensesToGroupActionMock = vi.mocked(addExpensesToGroupAction)
 
 beforeEach(() => {
   bulkCategorizeMock.mockReset()
   mergeExpensesMock.mockReset()
+  addExpensesToGroupActionMock.mockReset()
 })
 
 describe('isGroupTitleValid (GRP-02 title gate)', () => {
@@ -179,6 +185,75 @@ describe('runMergeStep (calls mergeExpenses with the FULL original id set)', () 
   })
 })
 
+describe('runAddToGroupStep (add-to-group, targetGroup mode)', () => {
+  it('calls bulkCategorize scoped to only uncategorized ids THEN addExpensesToGroupAction with the full id set, when the selection has an uncategorized member', async () => {
+    bulkCategorizeMock.mockResolvedValue({ error: null })
+    addExpensesToGroupActionMock.mockResolvedValue({ error: null })
+
+    const result = await runAddToGroupStep({
+      selectedExpenses: [
+        { id: 'e1', subCategoryId: 10 },
+        { id: 'e2', subCategoryId: null },
+      ],
+      targetGroupId: 7,
+      targetSubCategoryId: 10,
+    })
+
+    expect(result.error).toBeNull()
+    expect(bulkCategorizeMock).toHaveBeenCalledTimes(1)
+    const [, categorizeFd] = bulkCategorizeMock.mock.calls[0]
+    expect(JSON.parse(categorizeFd.get('ids') as string)).toEqual(['e2'])
+    expect(categorizeFd.get('subCategoryId')).toBe('10')
+
+    expect(addExpensesToGroupActionMock).toHaveBeenCalledTimes(1)
+    const [, addFd] = addExpensesToGroupActionMock.mock.calls[0]
+    expect(addFd.get('groupId')).toBe('7')
+    expect(JSON.parse(addFd.get('expenseIds') as string)).toEqual(['e1', 'e2'])
+  })
+
+  it('calls addExpensesToGroupAction directly (bulkCategorize NOT called) when every selected expense is already categorized', async () => {
+    addExpensesToGroupActionMock.mockResolvedValue({ error: null })
+
+    const result = await runAddToGroupStep({
+      selectedExpenses: [
+        { id: 'e1', subCategoryId: 10 },
+        { id: 'e2', subCategoryId: 10 },
+      ],
+      targetGroupId: 7,
+      targetSubCategoryId: 10,
+    })
+
+    expect(result.error).toBeNull()
+    expect(bulkCategorizeMock).not.toHaveBeenCalled()
+    expect(addExpensesToGroupActionMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('propagates a bulkCategorize error without calling addExpensesToGroupAction', async () => {
+    bulkCategorizeMock.mockResolvedValue({ error: 'Errore di categorizzazione.' })
+
+    const result = await runAddToGroupStep({
+      selectedExpenses: [{ id: 'e1', subCategoryId: null }],
+      targetGroupId: 7,
+      targetSubCategoryId: 10,
+    })
+
+    expect(result.error).toBe('Errore di categorizzazione.')
+    expect(addExpensesToGroupActionMock).not.toHaveBeenCalled()
+  })
+
+  it('propagates an addExpensesToGroupAction error', async () => {
+    addExpensesToGroupActionMock.mockResolvedValue({ error: 'Selezione non valida.' })
+
+    const result = await runAddToGroupStep({
+      selectedExpenses: [{ id: 'e1', subCategoryId: 10 }],
+      targetGroupId: 7,
+      targetSubCategoryId: 10,
+    })
+
+    expect(result.error).toBe('Selezione non valida.')
+  })
+})
+
 describe('MergeExpensesDialog (render smoke test — title step)', () => {
   it('renders the title step with the primary button disabled by default (empty title)', () => {
     const html = renderToStaticMarkup(
@@ -197,5 +272,26 @@ describe('MergeExpensesDialog (render smoke test — title step)', () => {
 
     expect(html).toContain('data-slot="dialog-content"')
     expect(html).toContain('disabled=""')
+  })
+
+  it('renders the confirm step immediately when targetGroup is set (add-to-group mode, no title step)', () => {
+    const html = renderToStaticMarkup(
+      createElement(MergeExpensesDialog, {
+        open: true,
+        onOpenChange: vi.fn(),
+        selectedExpenses: [
+          { id: 'e1', subCategoryId: 10 },
+          { id: 'e2', subCategoryId: 10 },
+        ],
+        categories: [],
+        mostUsed: [],
+        targetGroup: { id: 7, title: 'Amazon condiviso', subCategoryId: 42 },
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    expect(html).toContain('Amazon condiviso')
+    expect(html).toContain('Aggiungi')
+    expect(html).not.toContain('placeholder="Titolo del gruppo"')
   })
 })
