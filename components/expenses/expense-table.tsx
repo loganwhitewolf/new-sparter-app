@@ -43,6 +43,7 @@ import { BulkCategorizeDialog } from './bulk-categorize-dialog'
 import { BulkDeleteExpensesDialog } from './bulk-delete-expenses-dialog'
 import { ExpenseCategorizeDialog } from './expense-categorize-dialog'
 import { ExpenseTitleEdit } from './expense-title-edit'
+import { GroupCategorizeDialog } from './group-categorize-dialog'
 import { MergeExpensesDialog } from './merge-expenses-dialog'
 import type { ExpenseFilters, ExpenseRow } from '@/lib/dal/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
@@ -138,6 +139,10 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const [categorizeDialogExpense, setCategorizeDialogExpense] = useState<{
     id: string
+    title: string
+  } | null>(null)
+  const [categorizeGroupTarget, setCategorizeGroupTarget] = useState<{
+    id: number
     title: string
   } | null>(null)
 
@@ -452,7 +457,20 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                               }}
                             />
                           </>
-                        ) : null}
+                        ) : (
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault()
+                              setCategorizeGroupTarget({
+                                id: exp.groupId as number,
+                                title: exp.title,
+                              })
+                              setOpenDropdownId(null)
+                            }}
+                          >
+                            Cambia categoria
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -538,6 +556,20 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
         categories={categories}
         mostUsed={mostUsed}
         onSuccess={() => setCategorizeDialogExpense(null)}
+      />
+
+      <GroupCategorizeDialog
+        open={categorizeGroupTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setCategorizeGroupTarget(null)
+        }}
+        group={categorizeGroupTarget ?? { id: 0, title: '' }}
+        categories={categories}
+        mostUsed={mostUsed}
+        onSuccess={() => {
+          setCategorizeGroupTarget(null)
+          router.refresh()
+        }}
       />
 
       <MergeExpensesDialog
