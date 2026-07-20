@@ -34,7 +34,7 @@ category breakdowns — structural for Expense Group (pure regrouping, read-time
 totals never persisted), and via the "tag = filter, never breakdown" rule for tags.
 
 - [ ] **Phase 65: expense-group-merge-and-view** - User can bulk-merge same-subcategory expenses into a titled Expense Group and see it rendered as one row everywhere (expenses list, dashboard drill-downs, transaction rows, member detail pages), with a group detail page as the single place to view composition and rename. (GRP-01, GRP-02, GRP-03, GRP-04, GRP-08)
-- [ ] **Phase 66: expense-group-lifecycle** - User can recategorize a group as one unit, add a later expense to an existing group, remove a member or dissolve the group entirely — with dashboard totals and category breakdowns provably unchanged by any of it. (GRP-05, GRP-06, GRP-07, GRP-09)
+- [x] **Phase 66: expense-group-lifecycle** - User can recategorize a group as one unit, add a later expense to an existing group, remove a member or dissolve the group entirely — with dashboard totals and category breakdowns provably unchanged by any of it. (GRP-05, GRP-06, GRP-07, GRP-09) (completed 2026-07-20)
 - [ ] **Phase 67: tags-foundation-and-assignment** - User can maintain a curated tag list (create/edit/archive, never delete), bulk-assign tags to transactions from the transactions page, get a pre-checked date-range suggestion on tag creation and each subsequent import, and trust that Viaggi/Vacanze categorization only captures intrinsically-travel spend. (TAG-01, TAG-02, TAG-03, TAG-06)
 - [ ] **Phase 68: tags-dashboard-and-navigation** - User can filter the entire dashboard by tag, review a dedicated Tag section with independent per-tag totals, and jump from a dashboard savings/deviations row straight into the matching filtered transaction list. (TAG-04, TAG-05, NAV-01)
 
@@ -89,7 +89,7 @@ Plans:
 3. User can remove a single member from a group or dissolve the whole group via "Scomponi"; a group left with exactly one member auto-dissolves, and dissolution restores the exact pre-merge state (same standalone expense rows, same totals, same hashes).
 4. A before/after comparison of dashboard totals and category breakdowns across a merge-then-recategorize-then-dissolve cycle is provably identical — no transaction row or subcategory assignment was altered by any grouping operation.
 
-**Plans:** 5 plans
+**Plans:** 5/5 plans complete
 
 Plans:
 **Wave 1**
@@ -358,7 +358,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 63. detail-pages-tx-expense | v2.5 | 4/4 | Complete    | 2026-07-05 |
 | 64. file-detail-and-navigation | v2.5 | 7/7 | Complete    | 2026-07-06 |
 | 65. expense-group-merge-and-view | v2.6 | 0/6 | In Progress|  |
-| 66. expense-group-lifecycle | v2.6 | 0/5 | In Progress|  |
+| 66. expense-group-lifecycle | v2.6 | 0/5 | Complete    | 2026-07-20 |
 | 67. tags-foundation-and-assignment | v2.6 | 0/TBD | Not started | - |
 | 68. tags-dashboard-and-navigation | v2.6 | 0/TBD | Not started | - |
 
