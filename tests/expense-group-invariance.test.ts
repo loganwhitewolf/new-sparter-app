@@ -110,6 +110,8 @@ import {
   categorizeExpense,
   categorizeExpenseGroup,
   dissolveExpenseGroupAction,
+  addExpensesToGroupAction,
+  removeExpenseFromGroupAction,
 } from '@/lib/actions/expenses'
 import { buildBreakdownData, DASHBOARD_TOTAL_EXPENSE_STATUSES } from '@/lib/dal/dashboard'
 import type { BreakdownCategory } from '@/lib/dal/dashboard'
@@ -121,6 +123,8 @@ const EXP_1 = '11111111-1111-4111-8111-111111111111'
 const EXP_2 = '22222222-2222-4222-8222-222222222222'
 const EXP_3 = '33333333-3333-4333-8333-333333333333'
 const EXP_CONTROL = '44444444-4444-4444-8444-444444444444'
+// WR-02 fixtures — add-to-group / remove-member invariance scenarios.
+const EXP_4 = '55555555-5555-4555-8555-555555555555'
 
 // Casa/Bollette (pre-merge shared category), Svago/Cinema (untouched control),
 // Casa/Affitto (the recategorize target — same parent category as Bollette so
@@ -202,7 +206,7 @@ type FixtureMembership = {
 
 type FixtureDb = {
   transaction: (fn: (tx: FixtureDb) => Promise<unknown>) => Promise<unknown>
-  select: (fields?: Record<string, string>) => {
+  select: (fields?: FieldMapping) => {
     from: (table: unknown) => SelectChain
   }
   update: (table: unknown) => {
@@ -219,6 +223,11 @@ type FixtureDb = {
 }
 
 type Cond = { op: string; args?: Cond[]; col?: string; left?: unknown; right?: unknown }
+
+// A select field's value is either a plain column-ref string (e.g. 'expense.id')
+// or a count() aggregate descriptor (e.g. count(expenseGroupMembership.id) —
+// used by removeExpenseFromGroup's TOCTOU membership count, WR-02).
+type FieldMapping = Record<string, string | Cond>
 
 type SelectChain = {
   innerJoin: (otherTable: unknown, cond: Cond) => SelectChain
@@ -293,17 +302,39 @@ function createFixtureDb(): { db: FixtureDb; expenses: FixtureExpense[]; groups:
 
   function project(
     nestedRow: Record<string, unknown>,
-    fields?: Record<string, string>,
+    fields?: FieldMapping,
   ): Record<string, unknown> {
     if (!fields) return nestedRow
     const out: Record<string, unknown> = {}
     for (const [key, colRef] of Object.entries(fields)) {
-      out[key] = getField(nestedRow, colRef)
+      // count(...) descriptors are never resolved per-row — callers only ever
+      // select a SINGLE count field (never mixed with plain columns), so this
+      // path is unreachable in practice; projectRows below intercepts count
+      // queries before rows ever reach project().
+      out[key] = typeof colRef === 'string' ? getField(nestedRow, colRef) : undefined
     }
     return out
   }
 
-  function makeSelectChain(fields: Record<string, string> | undefined, baseTable: unknown): SelectChain {
+  /** Detects a `{ count: count(...) }` field selection (WR-02: removeExpenseFromGroup's
+   *  TOCTOU membership count) and returns a single aggregate row instead of projecting
+   *  per-row — otherwise falls back to the normal per-row projection. */
+  function projectRows(
+    rows: Array<Record<string, unknown>>,
+    fields?: FieldMapping,
+  ): Array<Record<string, unknown>> {
+    if (fields) {
+      const countKey = Object.entries(fields).find(([, ref]) => {
+        return typeof ref === 'object' && ref !== null && ref.op === 'count'
+      })?.[0]
+      if (countKey) {
+        return [{ [countKey]: rows.length }]
+      }
+    }
+    return rows.map((r) => project(r, fields))
+  }
+
+  function makeSelectChain(fields: FieldMapping | undefined, baseTable: unknown): SelectChain {
     const { name: baseName, rows: baseRows } = tableInfo(baseTable)
     let nestedRows: Array<Record<string, unknown>> = baseRows.map((r) => ({ [baseName]: r }))
     let whereCond: Cond | undefined
@@ -329,18 +360,18 @@ function createFixtureDb(): { db: FixtureDb; expenses: FixtureExpense[]; groups:
       },
       limit(n: number) {
         const filtered = nestedRows.filter((r) => evalCond(r, whereCond))
-        return Promise.resolve(filtered.slice(0, n).map((r) => project(r, fields)))
+        return Promise.resolve(projectRows(filtered, fields).slice(0, n))
       },
       then(resolve, reject) {
         const filtered = nestedRows.filter((r) => evalCond(r, whereCond))
-        return Promise.resolve(filtered.map((r) => project(r, fields))).then(resolve, reject)
+        return Promise.resolve(projectRows(filtered, fields)).then(resolve, reject)
       },
     }
     return chain
   }
 
   const db: FixtureDb = {
-    select(fields?: Record<string, string>) {
+    select(fields?: FieldMapping) {
       return {
         from(table: unknown) {
           return makeSelectChain(fields, table)
@@ -409,8 +440,25 @@ function createFixtureDb(): { db: FixtureDb; expenses: FixtureExpense[]; groups:
       const { rows } = tableInfo(table)
       return {
         where(cond: Cond | undefined) {
+          const deletedGroupIds: number[] = []
           for (let i = rows.length - 1; i >= 0; i -= 1) {
-            if (evalCond(rows[i], cond)) rows.splice(i, 1)
+            if (evalCond(rows[i], cond)) {
+              if (table === expenseGroup) {
+                deletedGroupIds.push((rows[i] as unknown as FixtureGroup).id)
+              }
+              rows.splice(i, 1)
+            }
+          }
+          // Mirrors the real schema's expenseGroupMembership.groupId
+          // ON DELETE CASCADE (lib/db/schema.ts) — deleting an expenseGroup row
+          // (e.g. removeExpenseFromGroup's auto-dissolve branch, which only
+          // explicitly deletes the SINGLE removed member's membership row, not
+          // the last-surviving one) cascades to any remaining membership rows
+          // for that group in the real database.
+          if (deletedGroupIds.length > 0) {
+            for (let i = memberships.length - 1; i >= 0; i -= 1) {
+              if (deletedGroupIds.includes(memberships[i].groupId)) memberships.splice(i, 1)
+            }
           }
           return Promise.resolve(undefined)
         },
@@ -660,5 +708,177 @@ describe('GRP-09: merge -> recategorize -> dissolve invariance', () => {
     // IDENTICAL to recategorizing the same three expenses one at a time.
     expect(snapshotT1FromGroupedPath).toBeDefined()
     expect(JSON.stringify(snapshotIndividual)).toBe(JSON.stringify(snapshotT1FromGroupedPath))
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WR-02 — addExpensesToGroupAction / removeExpenseFromGroupAction invariance.
+//
+// The GRP-09 suite above only drives mergeExpenses / categorizeExpenseGroup /
+// dissolveExpenseGroupAction. These two sibling lifecycle mutations (Phase 66
+// Plan 04/05) are exercised here with the same aggregate-snapshot method — an
+// aggregate-snapshot assertion here would have caught CR-02 (a null-subcategory
+// candidate silently admitted into a categorized group).
+// ---------------------------------------------------------------------------
+
+describe('WR-02: add-to-group / remove-member invariance', () => {
+  beforeEach(() => {
+    mocks.verifySession.mockReset().mockResolvedValue({ userId: FIXTURE_USER_ID })
+    mocks.isSubCategoryVisibleToUser.mockReset().mockResolvedValue(true)
+    mocks.writeClassificationHistory.mockReset().mockResolvedValue(undefined)
+    mocks.revalidateCategorizationSurfaces.mockReset()
+  })
+
+  it('adding an already-categorized member to a group never moves the aggregate; adding an uncategorized one is rejected without moving anything', async () => {
+    const fixture = createFixtureDb()
+    mocks.currentDb = fixture.db
+
+    fixture.expenses.push(
+      { id: EXP_1, userId: FIXTURE_USER_ID, subCategoryId: CAT_A_SUB, status: '3' },
+      { id: EXP_2, userId: FIXTURE_USER_ID, subCategoryId: CAT_A_SUB, status: '3' },
+      // Candidate for the add — already shares the group's category, but is
+      // NOT yet grouped. Its amount is already counted in the CAT_A_SUB
+      // bucket before the add, exactly like every other ungrouped expense.
+      { id: EXP_3, userId: FIXTURE_USER_ID, subCategoryId: CAT_A_SUB, status: '3' },
+      { id: EXP_CONTROL, userId: FIXTURE_USER_ID, subCategoryId: CAT_B_SUB, status: '3' },
+      // CR-02 candidate: uncategorized, must be rejected by the add guard.
+      { id: EXP_4, userId: FIXTURE_USER_ID, subCategoryId: null, status: '1' },
+    )
+
+    const transactions: FixtureTransaction[] = [
+      { id: 'tx-1', expenseId: EXP_1, amount: '-30.00' },
+      { id: 'tx-2', expenseId: EXP_2, amount: '-20.00' },
+      { id: 'tx-3', expenseId: EXP_3, amount: '-10.00' },
+      { id: 'tx-control', expenseId: EXP_CONTROL, amount: '-15.00' },
+    ]
+
+    const mergeResult = await mergeExpenses(
+      { error: null },
+      makeFormData({
+        selectedExpenseIds: JSON.stringify([EXP_1, EXP_2]),
+        groupTitle: 'Amazon condiviso',
+      }),
+    )
+    expect(mergeResult.error).toBeNull()
+    const insertedGroupId = fixture.groups[0].id
+
+    const snapshotBeforeAdd = snapshotBreakdown(fixture.expenses, transactions)
+
+    // --- add an already-categorized, ungrouped member ---
+    const addResult = await addExpensesToGroupAction(
+      { error: null },
+      makeFormData({ groupId: String(insertedGroupId), expenseIds: JSON.stringify([EXP_3]) }),
+    )
+    expect(addResult.error).toBeNull()
+    expect(fixture.memberships.some((m) => m.groupId === insertedGroupId && m.expenseId === EXP_3)).toBe(true)
+
+    const snapshotAfterAdd = snapshotBreakdown(fixture.expenses, transactions)
+    // Assertion: adding an already-categorized member is byte-identical to
+    // before the add — grouping never touches subCategoryId/status (D-09), and
+    // the added member's amount was already counted in the same bucket.
+    expect(JSON.stringify(snapshotAfterAdd)).toBe(JSON.stringify(snapshotBeforeAdd))
+
+    // --- CR-02: reject an uncategorized candidate ---
+    const rejectResult = await addExpensesToGroupAction(
+      { error: null },
+      makeFormData({ groupId: String(insertedGroupId), expenseIds: JSON.stringify([EXP_4]) }),
+    )
+    expect(rejectResult.error).toBe('Categorizza prima di aggiungere al gruppo.')
+    expect(fixture.memberships.some((m) => m.expenseId === EXP_4)).toBe(false)
+
+    const snapshotAfterReject = snapshotBreakdown(fixture.expenses, transactions)
+    // The rejected add must not have moved anything either (EXP_4 has no
+    // transactions and no subCategoryId, so it never entered the breakdown at all).
+    expect(JSON.stringify(snapshotAfterReject)).toBe(JSON.stringify(snapshotAfterAdd))
+  })
+
+  it('removing a member down to the auto-dissolve boundary never moves the aggregate, and leaves the freed member categorized', async () => {
+    const fixture = createFixtureDb()
+    mocks.currentDb = fixture.db
+
+    fixture.expenses.push(
+      { id: EXP_1, userId: FIXTURE_USER_ID, subCategoryId: CAT_A_SUB, status: '3' },
+      { id: EXP_2, userId: FIXTURE_USER_ID, subCategoryId: CAT_A_SUB, status: '3' },
+      { id: EXP_CONTROL, userId: FIXTURE_USER_ID, subCategoryId: CAT_B_SUB, status: '3' },
+    )
+
+    const transactions: FixtureTransaction[] = [
+      { id: 'tx-1', expenseId: EXP_1, amount: '-30.00' },
+      { id: 'tx-2', expenseId: EXP_2, amount: '-20.00' },
+      { id: 'tx-control', expenseId: EXP_CONTROL, amount: '-15.00' },
+    ]
+
+    const mergeResult = await mergeExpenses(
+      { error: null },
+      makeFormData({
+        selectedExpenseIds: JSON.stringify([EXP_1, EXP_2]),
+        groupTitle: 'Amazon condiviso',
+      }),
+    )
+    expect(mergeResult.error).toBeNull()
+    const insertedGroupId = fixture.groups[0].id
+
+    const snapshotBeforeRemove = snapshotBreakdown(fixture.expenses, transactions)
+
+    // --- remove the second-to-last member: this is the auto-dissolve boundary ---
+    const removeResult = await removeExpenseFromGroupAction(
+      { error: null },
+      makeFormData({ groupId: String(insertedGroupId), expenseId: EXP_1 }),
+    )
+    expect(removeResult.error).toBeNull()
+    expect(removeResult.autoDissolved).toBe(true)
+    expect(fixture.groups.some((g) => g.id === insertedGroupId)).toBe(false)
+    expect(fixture.memberships.some((m) => m.groupId === insertedGroupId)).toBe(false)
+    // D-09: the freed member keeps its category — removal never touches it.
+    expect(fixture.expenses.find((e) => e.id === EXP_1)?.subCategoryId).toBe(CAT_A_SUB)
+
+    const snapshotAfterRemove = snapshotBreakdown(fixture.expenses, transactions)
+    // Assertion: auto-dissolving removal is byte-identical to before the
+    // removal — removeExpenseFromGroup only deletes membership/group rows,
+    // never expense.subCategoryId/status (D-09).
+    expect(JSON.stringify(snapshotAfterRemove)).toBe(JSON.stringify(snapshotBeforeRemove))
+  })
+
+  it('removing a member from a 3-member group does NOT auto-dissolve and does not move the aggregate', async () => {
+    const fixture = createFixtureDb()
+    mocks.currentDb = fixture.db
+
+    fixture.expenses.push(
+      { id: EXP_1, userId: FIXTURE_USER_ID, subCategoryId: CAT_A_SUB, status: '3' },
+      { id: EXP_2, userId: FIXTURE_USER_ID, subCategoryId: CAT_A_SUB, status: '3' },
+      { id: EXP_3, userId: FIXTURE_USER_ID, subCategoryId: CAT_A_SUB, status: '3' },
+      { id: EXP_CONTROL, userId: FIXTURE_USER_ID, subCategoryId: CAT_B_SUB, status: '3' },
+    )
+
+    const transactions: FixtureTransaction[] = [
+      { id: 'tx-1', expenseId: EXP_1, amount: '-30.00' },
+      { id: 'tx-2', expenseId: EXP_2, amount: '-20.00' },
+      { id: 'tx-3', expenseId: EXP_3, amount: '-10.00' },
+      { id: 'tx-control', expenseId: EXP_CONTROL, amount: '-15.00' },
+    ]
+
+    const mergeResult = await mergeExpenses(
+      { error: null },
+      makeFormData({
+        selectedExpenseIds: JSON.stringify([EXP_1, EXP_2, EXP_3]),
+        groupTitle: 'Amazon condiviso',
+      }),
+    )
+    expect(mergeResult.error).toBeNull()
+    const insertedGroupId = fixture.groups[0].id
+
+    const snapshotBeforeRemove = snapshotBreakdown(fixture.expenses, transactions)
+
+    const removeResult = await removeExpenseFromGroupAction(
+      { error: null },
+      makeFormData({ groupId: String(insertedGroupId), expenseId: EXP_3 }),
+    )
+    expect(removeResult.error).toBeNull()
+    expect(removeResult.autoDissolved).toBe(false)
+    expect(fixture.groups.some((g) => g.id === insertedGroupId)).toBe(true)
+    expect(fixture.memberships.filter((m) => m.groupId === insertedGroupId)).toHaveLength(2)
+
+    const snapshotAfterRemove = snapshotBreakdown(fixture.expenses, transactions)
+    expect(JSON.stringify(snapshotAfterRemove)).toBe(JSON.stringify(snapshotBeforeRemove))
   })
 })
