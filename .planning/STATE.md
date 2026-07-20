@@ -5,15 +5,15 @@ milestone_name: Expenses & Transactions Refinement
 current_phase: 66
 current_phase_name: expense-group-lifecycle
 status: executing
-stopped_at: Completed 66-03-PLAN.md
-last_updated: "2026-07-19T20:33:51.311Z"
+stopped_at: Completed 66-04-PLAN.md
+last_updated: "2026-07-20T07:28:07.290Z"
 last_activity: 2026-07-19
 last_activity_desc: Phase 66 execution started
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
   percent: 25
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 66 (expense-group-lifecycle) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-07-19 — Phase 66 execution started
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 91%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -163,6 +163,7 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: Phase 66-02: removeExpenseFromGroupAction/dissolveExpenseGroupAction each open their own db.transaction around the single Plan 66-01 service call to guarantee the auto-dissolve TOCTOU count-then-delete (T-66-03) always runs inside a transaction
 - [Phase ?]: Phase 66-03: snapshotBreakdown hand-computes the GROUP BY (categoryId, subCategoryId) step mirroring getCategoriesBreakdown, then delegates to the REAL buildBreakdownData export — only the SQL aggregation itself is faked
 - [Phase ?]: Phase 66-03: CAT_A_SUB/CAT_C_SUB deliberately share one parent category (Casa) so Assertion B proves a subcategory-level movement, not a trivially-satisfied category-level one
+- [Phase ?]: [Phase 66-04] selectedIncludesGroupRow added as a second exported pure helper (beyond computeMergeEligibility) so the Categorizza/Elimina bulk-action gate decision is directly unit-testable, since this repo has no jsdom for click-time toast assertions
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -265,9 +266,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 66-03-PLAN.md
+**Stopped at:** Completed 66-04-PLAN.md
 
-Last session: 2026-07-19T20:33:51.305Z
+Last session: 2026-07-20T07:28:07.284Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -314,3 +315,4 @@ Last session: 2026-07-19T20:33:51.305Z
 | Phase 66 P01 | 5min | 3 tasks | 3 files |
 | Phase 66 P02 | 3min | 3 tasks | 2 files |
 | Phase 66 P03 | 15min | 1 tasks | 1 files |
+| Phase 66 P04 | 7min | 3 tasks | 5 files |
