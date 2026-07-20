@@ -129,7 +129,7 @@ Plans:
 **Wave 1**
 
 - [x] 67-01-PLAN.md — tag/transactionTag schema + migration + Zod validation schemas
-- [ ] 67-02-PLAN.md — Vacanze subcategory audit (seed-extras deactivate step + travel-only trasporto regex)
+- [x] 67-02-PLAN.md — Vacanze subcategory audit (seed-extras deactivate step + travel-only trasporto regex)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

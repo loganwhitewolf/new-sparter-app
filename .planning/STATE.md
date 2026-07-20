@@ -5,15 +5,15 @@ milestone_name: Expenses & Transactions Refinement
 current_phase: 67
 current_phase_name: tags-foundation-and-assignment
 status: executing
-stopped_at: Completed 67-01-PLAN.md
-last_updated: "2026-07-20T13:41:34.296Z"
+stopped_at: Completed 67-02-PLAN.md
+last_updated: "2026-07-20T13:48:30.586Z"
 last_activity: 2026-07-20
 last_activity_desc: Phase 67 execution started
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 20
-  completed_plans: 12
+  completed_plans: 13
   percent: 50
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 67 (tags-foundation-and-assignment) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 Status: Ready to execute
 Last activity: 2026-07-20 — Phase 67 execution started
 
-Progress: [██████░░░░] 60%
+Progress: [███████░░░] 65%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -169,6 +169,9 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: Phase 67-01: normalizedName computed by service layer (Plan 67-03) via name.trim().toLowerCase(), never derived in DB; DB stores it as a plain column with a (userId, normalizedName) unique constraint closing the TAG-01 concurrency race
 - [Phase ?]: Phase 67-01: transactionTag has no standalone unique on transactionId — a transaction may carry N tags, unlike expenseGroupMembership's one-group-per-expense rule; only composite (tagId, transactionId) unique applies
 - [Phase ?]: Phase 67-01: local db:migrate target resolves DATABASE_URL to a Supabase-hosted Postgres instance in this dev environment, not the docker-compose sparter-postgres container (which is empty/unused) — migration 0027 verified against the actual db:migrate target
+- [Phase ?]: Phase 67-02: vacanzeAudit seed-extras STEP resets linked expenses to da-categorizzare BEFORE deactivating attivita-e-intrattenimento/cibo-e-bevande (D-11/D-12/D-13), lookup by slug never filtered on isActive for idempotent re-run
+- [Phase ?]: Phase 67-02: D-14 regex half only — travel-only 'trasporto' pattern excludes daily-commute keywords; AI-categorizer-rules half deferred (Tier-3 not built)
+- [Phase ?]: Phase 67-02: yarn db:seed-patterns intentionally not run in this plan (full replace, broader blast radius) — flagged as Operator Next Step
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -194,7 +197,9 @@ change dashboard totals or category breakdowns.
 
 ### Blockers/Concerns
 
-None. Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidian design note) are locked — no discovery to redo before planning Phase 65.
+Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidian design note) are locked — no discovery to redo before planning Phase 65.
+
+- Operator: run yarn db:seed-patterns against the real target to make Phase 67-02's new travel-only 'trasporto' regex pattern live (full replace of system patterns)
 
 ## Quick Tasks Completed
 
@@ -271,9 +276,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 67-01-PLAN.md
+**Stopped at:** Completed 67-02-PLAN.md
 
-Last session: 2026-07-20T13:41:34.289Z
+Last session: 2026-07-20T13:48:20.952Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -323,3 +328,4 @@ Last session: 2026-07-20T13:41:34.289Z
 | Phase 66 P04 | 7min | 3 tasks | 5 files |
 | Phase 66 P05 | 6min | 3 tasks | 4 files |
 | Phase 67 P01 | 3min | 3 tasks | 6 files |
+| Phase 67 P02 | 12min | 2 tasks | 4 files |
