@@ -200,6 +200,18 @@ describe('GroupDetailClient', () => {
     expect(html).toContain('50,00')
   })
 
+  it('renders a "Rimuovi dal gruppo" control per member, as a sibling of the title Link (not nested)', async () => {
+    const html = await renderGroupDetailClient()
+
+    expect(html).toContain('dal gruppo')
+    // The member Link still wraps only the title text, not the remove control:
+    // href appears immediately before the truncate title span, and the anchor
+    // closes before the remove button markup (no nested <button> inside <a>).
+    const linkMatch = html.match(/<a class="[^"]*" href="\/expenses\/exp-1">.*?<\/a>/)
+    expect(linkMatch).not.toBeNull()
+    expect(linkMatch?.[0]).not.toContain('<button')
+  })
+
   it('renders a member with zero linked transactions normally with a 0,00 € total', async () => {
     const html = await renderGroupDetailClient({
       members: [
