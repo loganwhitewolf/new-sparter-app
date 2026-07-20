@@ -4,17 +4,17 @@ milestone: v2.6
 milestone_name: Expenses & Transactions Refinement
 current_phase: 66
 current_phase_name: expense-group-lifecycle
-status: executing
-stopped_at: Completed 66-04-PLAN.md
-last_updated: "2026-07-20T07:28:07.290Z"
+status: verifying
+stopped_at: Completed 66-05-PLAN.md
+last_updated: "2026-07-20T07:37:31.133Z"
 last_activity: 2026-07-19
 last_activity_desc: Phase 66 execution started
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 11
-  completed_plans: 10
-  percent: 25
+  completed_plans: 11
+  percent: 50
 ---
 
 # Project State
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 Phase: 66 (expense-group-lifecycle) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-19 — Phase 66 execution started
 
-Progress: [█████████░] 91%
+Progress: [██████████] 100%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -164,6 +164,8 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: Phase 66-03: snapshotBreakdown hand-computes the GROUP BY (categoryId, subCategoryId) step mirroring getCategoriesBreakdown, then delegates to the REAL buildBreakdownData export — only the SQL aggregation itself is faked
 - [Phase ?]: Phase 66-03: CAT_A_SUB/CAT_C_SUB deliberately share one parent category (Casa) so Assertion B proves a subcategory-level movement, not a trivially-satisfied category-level one
 - [Phase ?]: [Phase 66-04] selectedIncludesGroupRow added as a second exported pure helper (beyond computeMergeEligibility) so the Categorizza/Elimina bulk-action gate decision is directly unit-testable, since this repo has no jsdom for click-time toast assertions
+- [Phase ?]: Phase 66-05: GroupDetailClient's Cambia categoria control is an independent inline trigger, not a reuse of Plan 66-04's GroupCategorizeDialog (no dependency edge between sibling Wave-3 plans; both call categorizeExpenseGroup)
+- [Phase ?]: Phase 66-05: tests/group-detail-page.test.tsx mocks @/components/ui/dropdown-menu with a flat SSR stub (DropdownMenuContent always renders children) since Radix portals closed-menu content out of static markup — same pattern as tests/expense-table-menu.test.tsx
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -266,9 +268,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 66-04-PLAN.md
+**Stopped at:** Completed 66-05-PLAN.md
 
-Last session: 2026-07-20T07:28:07.284Z
+Last session: 2026-07-20T07:37:31.127Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -316,3 +318,4 @@ Last session: 2026-07-20T07:28:07.284Z
 | Phase 66 P02 | 3min | 3 tasks | 2 files |
 | Phase 66 P03 | 15min | 1 tasks | 1 files |
 | Phase 66 P04 | 7min | 3 tasks | 5 files |
+| Phase 66 P05 | 6min | 3 tasks | 4 files |
