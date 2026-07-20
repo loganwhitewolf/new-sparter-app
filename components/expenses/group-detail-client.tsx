@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { MoreHorizontal } from 'lucide-react'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -14,11 +15,26 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { SubcategoryPicker } from '@/components/categorization/subcategory-picker'
 import { DetailPageShell } from '@/components/detail-pages/detail-page-shell'
 import { GroupTitleEdit } from '@/components/expenses/group-title-edit'
 import { RemoveGroupMemberButton } from '@/components/expenses/remove-group-member-button'
-import { categorizeExpenseGroup } from '@/lib/actions/expenses'
+import { categorizeExpenseGroup, dissolveExpenseGroupAction } from '@/lib/actions/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { ExpenseGroupDetailRow } from '@/lib/dal/expenses'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
@@ -69,6 +85,8 @@ export function GroupDetailClient({ group, categories, mostUsed }: Props) {
   const router = useRouter()
   const [categorizeOpen, setCategorizeOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [dissolveDialogOpen, setDissolveDialogOpen] = useState(false)
+  const [dissolvePending, setDissolvePending] = useState(false)
 
   const amountClass = amountToneClass(group.totalAmount, group.categoryType)
   const previewTransactions = group.transactions.slice(0, LINKED_TRANSACTIONS_PREVIEW_LIMIT)
@@ -92,6 +110,60 @@ export function GroupDetailClient({ group, categories, mostUsed }: Props) {
       router.refresh()
     })
   }
+
+  async function handleDissolve() {
+    setDissolvePending(true)
+    const fd = new FormData()
+    fd.set('groupId', String(group.id))
+    const result = await dissolveExpenseGroupAction({ error: null }, fd)
+    setDissolvePending(false)
+    if (result.error) {
+      toast.error(result.error)
+      return
+    }
+    toast.success('Gruppo sciolto.')
+    router.push(APP_ROUTES.expenses)
+  }
+
+  const dissolveControl = (
+    <Dialog open={dissolveDialogOpen} onOpenChange={setDissolveDialogOpen}>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="ghost" size="icon" aria-label="Azioni gruppo">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onSelect={(e) => {
+              e.preventDefault()
+              setDissolveDialogOpen(true)
+            }}
+          >
+            Scomponi gruppo
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Sciogliere il gruppo?</DialogTitle>
+          <DialogDescription>
+            Il gruppo verrà sciolto e le spese torneranno indipendenti, mantenendo la categoria
+            attuale.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="ghost">Annulla</Button>
+          </DialogClose>
+          <Button variant="destructive" onClick={handleDissolve} disabled={dissolvePending}>
+            Scomponi
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 
   const categoriaSection = (
     <div className="mt-2 flex flex-col gap-1 rounded-md border bg-muted/30 p-4">
@@ -276,6 +348,7 @@ export function GroupDetailClient({ group, categories, mostUsed }: Props) {
       amount={formatSignedAmount(group.totalAmount)}
       amountInline
       amountToneClassName={amountClass}
+      overflowMenu={dissolveControl}
       layout="two-column"
       datiCard={datiCard}
       collegamentiCard={collegamentiCard}

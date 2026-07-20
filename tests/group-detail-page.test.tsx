@@ -1,8 +1,61 @@
-import { createElement } from 'react'
+import { createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
+
+// Radix portals omit menu content from SSR; render a flat stub for static markup assertions.
+// Pattern matches tests/expense-table-menu.test.tsx.
+vi.mock('@/components/ui/dropdown-menu', async () => {
+  const React = await import('react')
+
+  const DropdownMenu = ({ children }: { children?: ReactNode }) =>
+    React.createElement('div', { 'data-slot': 'dropdown-menu' }, children)
+
+  const DropdownMenuTrigger = ({
+    children,
+    asChild,
+  }: {
+    children?: ReactNode
+    asChild?: boolean
+  }) => (asChild ? children : React.createElement('button', { type: 'button' }, children))
+
+  const DropdownMenuContent = ({
+    children,
+    className,
+  }: {
+    children?: ReactNode
+    className?: string
+  }) => React.createElement('div', { 'data-slot': 'dropdown-menu-content', className }, children)
+
+  const DropdownMenuItem = ({
+    children,
+    asChild,
+    onSelect,
+    className,
+    disabled,
+  }: {
+    children?: ReactNode
+    asChild?: boolean
+    onSelect?: () => void
+    className?: string
+    disabled?: boolean
+  }) =>
+    asChild
+      ? children
+      : React.createElement(
+          'button',
+          { type: 'button', onClick: onSelect, className, disabled },
+          children,
+        )
+
+  return {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+  }
+})
 
 const USER_ID = 'user-1'
 const GROUP_ID = 42
