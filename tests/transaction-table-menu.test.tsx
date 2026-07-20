@@ -113,6 +113,8 @@ function render(transactions: TransactionListRow[]) {
       searchParams: {},
       categories: [],
       mostUsed: [],
+      tags: [],
+      tagsByTransactionId: {},
     }),
   )
 }

@@ -7,6 +7,9 @@ import {
 import { getCategories } from '@/lib/dal/categories'
 import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
 import { getMonthsWithData } from '@/lib/dal/months-with-data'
+import { verifySession } from '@/lib/dal/auth'
+import { getTags } from '@/lib/dal/tags'
+import { getTagsForTransactionIds } from '@/lib/dal/transaction-tags'
 import {
   parseTransactionFilters,
   type TransactionSearchParams,
@@ -72,6 +75,7 @@ export default async function TransactionsPage({
 }: {
   searchParams: Promise<TransactionSearchParams>
 }) {
+  const { userId } = await verifySession()
   const params = await searchParams
   const filters = mapParsedTransactionFiltersToDal(parseTransactionFilters(params))
   const [transactions, platforms, categories, mostUsed, monthsWithData] = await Promise.all([
@@ -81,6 +85,25 @@ export default async function TransactionsPage({
     getMostUsedSubcategories(['in', 'out', 'transfer', 'allocation']),
     getMonthsWithData('transactions'),
   ])
+
+  // Tag data (TAG-02): getTagsForTransactionIds performs no ownership check of its own —
+  // it is only ever called here with ids sourced from the already-userId-scoped
+  // getTransactions(filters) call above, per the threat model's trust-boundary note.
+  const [tags, transactionTagRows] = await Promise.all([
+    getTags(userId),
+    getTagsForTransactionIds(transactions.map((t) => t.id)),
+  ])
+  const tagsByTransactionId = transactionTagRows.reduce(
+    (acc, row) => {
+      ;(acc[row.transactionId] ??= []).push({
+        tagId: row.tagId,
+        tagName: row.tagName,
+        archived: row.archived,
+      })
+      return acc
+    },
+    {} as Record<string, { tagId: number; tagName: string; archived: boolean }[]>,
+  )
 
   const platformOptions = platforms.map((p) => ({ value: p.slug, label: p.name }))
   const categoryOptions = categories
@@ -161,6 +184,8 @@ export default async function TransactionsPage({
           searchParams={params}
           categories={categories}
           mostUsed={mostUsed}
+          tags={tags}
+          tagsByTransactionId={tagsByTransactionId}
         />
       )}
     </div>
