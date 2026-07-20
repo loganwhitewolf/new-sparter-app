@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { bulkCategorize, mergeExpenses } from '@/lib/actions/expenses'
+import { addExpensesToGroupAction, bulkCategorize, mergeExpenses } from '@/lib/actions/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 
@@ -26,6 +26,7 @@ type Props = {
   selectedExpenses: MergeSelectedExpense[]
   categories: CategoryWithSubCategories[]
   mostUsed: MostUsedSubcategory[]
+  targetGroup?: { id: number; title: string; subCategoryId: number } | null
   onSuccess: () => void
 }
 
@@ -101,27 +102,59 @@ export async function runMergeStep({
   return mergeExpenses({ error: null }, fd)
 }
 
+/**
+ * GRP-06 add-to-group: scopes any uncategorized selection to the group's fixed
+ * subcategory first (D-05: the target subcategory is not user-chosen), then
+ * always adds the FULL original selectedExpenses id set (mirrors runMergeStep's
+ * "always full original set" rule).
+ */
+export async function runAddToGroupStep({
+  selectedExpenses,
+  targetGroupId,
+  targetSubCategoryId,
+}: {
+  selectedExpenses: MergeSelectedExpense[]
+  targetGroupId: number
+  targetSubCategoryId: number
+}): Promise<{ error: string | null }> {
+  if (getUncategorizedIds(selectedExpenses).length > 0) {
+    const categorizeFd = new FormData()
+    categorizeFd.set('ids', JSON.stringify(getUncategorizedIds(selectedExpenses)))
+    categorizeFd.set('subCategoryId', String(targetSubCategoryId))
+    const categorizeResult = await bulkCategorize({ error: null }, categorizeFd)
+    if (categorizeResult.error) {
+      return categorizeResult
+    }
+  }
+
+  const addFd = new FormData()
+  addFd.set('groupId', String(targetGroupId))
+  addFd.set('expenseIds', JSON.stringify(selectedExpenses.map((expense) => expense.id)))
+  return addExpensesToGroupAction({ error: null }, addFd)
+}
+
 export function MergeExpensesDialog({
   open,
   onOpenChange,
   selectedExpenses,
   categories,
   mostUsed,
+  targetGroup,
   onSuccess,
 }: Props) {
-  const [step, setStep] = useState<Step>('title')
+  const [step, setStep] = useState<Step>(() => (targetGroup ? 'confirm' : 'title'))
   const [groupTitle, setGroupTitle] = useState('')
   const [isPending, startTransition] = useTransition()
 
   function resetAndClose() {
-    setStep('title')
+    setStep(targetGroup ? 'confirm' : 'title')
     setGroupTitle('')
     onOpenChange(false)
   }
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
-      setStep('title')
+      setStep(targetGroup ? 'confirm' : 'title')
       setGroupTitle('')
     }
     onOpenChange(nextOpen)
@@ -167,6 +200,24 @@ export function MergeExpensesDialog({
     })
   }
 
+  function handleConfirmAddToGroup() {
+    if (!targetGroup) return
+    startTransition(async () => {
+      const result = await runAddToGroupStep({
+        selectedExpenses,
+        targetGroupId: targetGroup.id,
+        targetSubCategoryId: targetGroup.subCategoryId,
+      })
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      toast.success('Spese aggiunte al gruppo.')
+      onSuccess()
+      resetAndClose()
+    })
+  }
+
   return (
     <>
       <Dialog open={open && step !== 'categorize'} onOpenChange={handleOpenChange}>
@@ -174,13 +225,15 @@ export function MergeExpensesDialog({
           <DialogHeader>
             <DialogTitle>Unisci spese</DialogTitle>
             <DialogDescription>
-              {step === 'title'
-                ? 'Assegna un titolo al gruppo di spese unite.'
-                : 'Conferma per unire le spese selezionate in un unico gruppo.'}
+              {targetGroup
+                ? `Aggiungi spese al gruppo "${targetGroup.title}".`
+                : step === 'title'
+                  ? 'Assegna un titolo al gruppo di spese unite.'
+                  : 'Conferma per unire le spese selezionate in un unico gruppo.'}
             </DialogDescription>
           </DialogHeader>
 
-          {step === 'title' ? (
+          {!targetGroup && step === 'title' ? (
             <Input
               value={groupTitle}
               onChange={(event) => setGroupTitle(event.target.value)}
@@ -189,7 +242,19 @@ export function MergeExpensesDialog({
             />
           ) : null}
 
-          {step === 'confirm' ? (
+          {targetGroup ? (
+            <p className="text-sm text-muted-foreground">
+              Stai per aggiungere <strong>{selectedExpenses.length} spese</strong> al gruppo
+              &ldquo;{targetGroup.title}&rdquo;.
+              {getUncategorizedIds(selectedExpenses).length > 0 ? (
+                <>
+                  {' '}
+                  Le spese non categorizzate verranno assegnate automaticamente alla categoria del
+                  gruppo.
+                </>
+              ) : null}
+            </p>
+          ) : step === 'confirm' ? (
             <p className="text-sm text-muted-foreground">
               Stai per unire <strong>{selectedExpenses.length} spese</strong> nel gruppo
               &ldquo;{groupTitle}&rdquo;.
@@ -197,7 +262,7 @@ export function MergeExpensesDialog({
           ) : null}
 
           <DialogFooter>
-            {step === 'title' ? (
+            {!targetGroup && step === 'title' ? (
               <Button
                 type="button"
                 disabled={!isGroupTitleValid(groupTitle)}
@@ -206,7 +271,11 @@ export function MergeExpensesDialog({
                 Continua
               </Button>
             ) : null}
-            {step === 'confirm' ? (
+            {targetGroup ? (
+              <Button type="button" disabled={isPending} onClick={handleConfirmAddToGroup}>
+                Aggiungi
+              </Button>
+            ) : step === 'confirm' ? (
               <Button type="button" disabled={isPending} onClick={handleConfirmMerge}>
                 Unisci
               </Button>
