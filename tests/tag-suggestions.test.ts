@@ -101,9 +101,47 @@ vi.mock('@/lib/dal/transaction-tags', () => ({
   getAlreadyTaggedTransactionIds: serviceMocks.getAlreadyTaggedTransactionIds,
 }))
 
+// ---------------------------------------------------------------------------
+// Task 3: lib/actions/tag-suggestions.ts — fetch + confirm actions
+// ---------------------------------------------------------------------------
+//
+// `@/lib/services/tag-suggestions` is deliberately NOT mocked here either, for the same reason
+// as Task 2 above — `getNewTagSuggestionsAction` delegates to the real `computeSuggestionsForNewTag`,
+// itself backed by the `@/lib/dal/tags`/`@/lib/dal/transaction-tags` mocks. Only the session and
+// assignment-service boundaries are mocked.
+const actionMocks = vi.hoisted(() => ({
+  verifySession: vi.fn(),
+  bulkAssignTags: vi.fn(),
+  revalidatePath: vi.fn(),
+}))
+
+vi.mock('@/lib/dal/auth', () => ({ verifySession: actionMocks.verifySession }))
+// Export the REAL TagAssignmentError class from the mock so `instanceof` checks in the action
+// still work — only bulkAssignTags is mocked (bulkRemoveTags/addSingleTransactionTag/
+// removeSingleTransactionTag are untouched, real exports).
+vi.mock('@/lib/services/tag-assignment', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/services/tag-assignment')>(
+    '@/lib/services/tag-assignment',
+  )
+  return { ...actual, bulkAssignTags: actionMocks.bulkAssignTags }
+})
+vi.mock('next/cache', () => ({ revalidatePath: actionMocks.revalidatePath }))
+
 const { getTransactionsInDateRange } = await import('@/lib/dal/tag-suggestions')
 const { isOccurredAtInRange, computeSuggestionsForTag, computeSuggestionsForNewTag, computeAllTagSuggestions } =
   await import('@/lib/services/tag-suggestions')
+const { TagAssignmentError } = await import('@/lib/services/tag-assignment')
+const { getNewTagSuggestionsAction, confirmTagSuggestionAction } = await import('@/lib/actions/tag-suggestions')
+
+const validTransactionId = '11111111-1111-4111-8111-111111111111'
+
+function formDataFrom(entries: Record<string, string>): FormData {
+  const fd = new FormData()
+  for (const [key, value] of Object.entries(entries)) {
+    fd.set(key, value)
+  }
+  return fd
+}
 
 describe('lib/dal/tag-suggestions', () => {
   beforeEach(() => {
@@ -354,5 +392,133 @@ describe('lib/services/tag-suggestions', () => {
       ])
     })
   })
+})
 
+describe('lib/actions/tag-suggestions', () => {
+  const start = new Date('2026-07-01T00:00:00.000Z')
+  const end = new Date('2026-07-31T23:59:59.999Z')
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    dalMocks.fromArgs.length = 0
+    dalMocks.whereArgs.length = 0
+    dalMocks.orderByArgs.length = 0
+    dalMocks.queryResult = []
+    serviceMocks.getAlreadyTaggedTransactionIds.mockResolvedValue(new Set())
+    actionMocks.verifySession.mockResolvedValue({ userId: 'user-1' })
+  })
+
+  describe('getNewTagSuggestionsAction', () => {
+    it('returns the computed group unchanged on success', async () => {
+      serviceMocks.getTag.mockResolvedValue({
+        id: 1,
+        name: 'Sharm 2026',
+        dateRangeStart: start,
+        dateRangeEnd: end,
+      })
+      dalMocks.queryResult = [
+        {
+          id: 'tx-1',
+          occurredAt: start,
+          description: 'Hotel Roma',
+          customTitle: null,
+          amount: '-120.00',
+          currency: 'EUR',
+        },
+      ]
+
+      const result = await getNewTagSuggestionsAction({ tagId: 1 })
+
+      expect(result).toEqual({
+        group: {
+          tagId: 1,
+          tagName: 'Sharm 2026',
+          matches: [
+            {
+              transactionId: 'tx-1',
+              occurredAt: start,
+              description: 'Hotel Roma',
+              customTitle: null,
+              amount: '-120.00',
+              currency: 'EUR',
+            },
+          ],
+        },
+        error: null,
+      })
+    })
+
+    it('returns { group: null } when the tag is not found (IDOR-safe, T-67-12)', async () => {
+      serviceMocks.getTag.mockResolvedValue(null)
+
+      const result = await getNewTagSuggestionsAction({ tagId: 999 })
+
+      expect(result).toEqual({ group: null, error: null })
+    })
+
+    it('returns a generic error and group: null on unexpected failure', async () => {
+      serviceMocks.getTag.mockRejectedValue(new Error('db down'))
+
+      const result = await getNewTagSuggestionsAction({ tagId: 1 })
+
+      expect(result).toEqual({
+        group: null,
+        error: 'Si è verificato un errore. Riprova tra qualche secondo.',
+      })
+    })
+  })
+
+  describe('confirmTagSuggestionAction', () => {
+    it('returns { error: "Selezione non valida." } for malformed transactionIds JSON, without calling verifySession', async () => {
+      const result = await confirmTagSuggestionAction(
+        { error: null },
+        formDataFrom({ transactionIds: 'not-json', tagId: '1' }),
+      )
+
+      expect(result).toEqual({ error: 'Selezione non valida.' })
+      expect(actionMocks.verifySession).not.toHaveBeenCalled()
+      expect(actionMocks.bulkAssignTags).not.toHaveBeenCalled()
+    })
+
+    it('delegates to bulkAssignTags with tagIds: [tagId] and the parsed transactionIds on success (T-67-13)', async () => {
+      actionMocks.bulkAssignTags.mockResolvedValue(undefined)
+
+      const result = await confirmTagSuggestionAction(
+        { error: null },
+        formDataFrom({ transactionIds: `["${validTransactionId}"]`, tagId: '1' }),
+      )
+
+      expect(result).toEqual({ error: null })
+      expect(actionMocks.bulkAssignTags).toHaveBeenCalledWith({
+        userId: 'user-1',
+        transactionIds: [validTransactionId],
+        tagIds: [1],
+      })
+      expect(actionMocks.revalidatePath).toHaveBeenCalledWith('/transactions')
+    })
+
+    it('surfaces the exact TagAssignmentError message, not the generic fallback', async () => {
+      actionMocks.bulkAssignTags.mockRejectedValue(
+        new TagAssignmentError('forbidden', 'Una o più transazioni selezionate non sono valide.'),
+      )
+
+      const result = await confirmTagSuggestionAction(
+        { error: null },
+        formDataFrom({ transactionIds: `["${validTransactionId}"]`, tagId: '1' }),
+      )
+
+      expect(result).toEqual({ error: 'Una o più transazioni selezionate non sono valide.' })
+    })
+
+    it('falls back to the generic error message for unrelated failures', async () => {
+      actionMocks.bulkAssignTags.mockRejectedValue(new Error('db down'))
+
+      const result = await confirmTagSuggestionAction(
+        { error: null },
+        formDataFrom({ transactionIds: `["${validTransactionId}"]`, tagId: '1' }),
+      )
+
+      expect(result).toEqual({ error: 'Si è verificato un errore. Riprova tra qualche secondo.' })
+    })
+  })
 })
