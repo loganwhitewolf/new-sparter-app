@@ -197,6 +197,7 @@ export async function createPrivateImportFormatAction(
     delimiter: formString(formData, "delimiter"),
     timestampColumn: formData.get("timestampColumn") ?? "",
     descriptionColumn: formData.get("descriptionColumn") ?? "",
+    secondaryDescriptionColumn: formString(formData, "secondaryDescriptionColumn"),
     amountMode: formString(formData, "amountMode"),
     amountColumn: formString(formData, "amountColumn"),
     positiveAmountColumn: formString(formData, "positiveAmountColumn"),
