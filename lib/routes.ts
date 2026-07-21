@@ -11,6 +11,7 @@ export const APP_ROUTES = {
   settings: '/settings',
   categorySettings: '/settings/categories',
   tagSettings: '/settings/tags',
+  dashboardTags: '/dashboard/tags',
   profile: '/profile',                  // compatibility alias (D-04)
   profileSettings: '/settings/profile', // canonical (D-03)
 } as const
