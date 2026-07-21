@@ -64,6 +64,8 @@ describe('lib/actions/tags', () => {
         dateRangeEnd: null,
       })
       expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/tags')
+      // WR-02 — a newly created tag must also refresh the dashboard Tag section
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/dashboard/tags')
     })
 
     it('surfaces the exact TagMutationError message for a duplicate, not the generic fallback', async () => {
@@ -103,6 +105,8 @@ describe('lib/actions/tags', () => {
         expect.objectContaining({ userId: 'user-1', tagId: 1, name: 'Sharm 2027' }),
       )
       expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/tags')
+      // WR-02 — a renamed tag must also refresh the dashboard Tag section
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/dashboard/tags')
     })
 
     it('surfaces a not_found TagMutationError message', async () => {

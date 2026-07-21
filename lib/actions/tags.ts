@@ -51,6 +51,7 @@ export async function createTagAction(
       dateRangeEnd: parsed.data.dateRangeEnd ?? null,
     })
     revalidatePath(APP_ROUTES.tagSettings)
+    revalidatePath(APP_ROUTES.dashboardTags) // WR-02 — a new tag must appear in the dashboard Tag section
     return { error: null, tagId: created.id }
   } catch (error) {
     return mapKnownTagError(error) ?? { error: GENERIC_ERROR }
@@ -83,6 +84,7 @@ export async function updateTagAction(
       dateRangeEnd: parsed.data.dateRangeEnd ?? undefined,
     })
     revalidatePath(APP_ROUTES.tagSettings)
+    revalidatePath(APP_ROUTES.dashboardTags) // WR-02 — a renamed tag must refresh in the dashboard Tag section
     return { error: null }
   } catch (error) {
     return mapKnownTagError(error) ?? { error: GENERIC_ERROR }
