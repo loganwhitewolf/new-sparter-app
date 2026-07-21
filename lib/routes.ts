@@ -26,6 +26,7 @@ type DashboardCategoryFilters = {
   sort?: DashboardSort
   defaultPreset?: DashboardPreset
   defaultSort?: DashboardSort
+  tag?: number
 }
 
 export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters = {}) {
@@ -43,6 +44,10 @@ export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters =
 
   if (filters.sort && filters.sort !== defaultSort) {
     params.set('sort', filters.sort)
+  }
+
+  if (filters.tag) {
+    params.set('tag', String(filters.tag))
   }
 
   const search = params.toString()
@@ -87,6 +92,10 @@ export function buildDashboardCategoryDetailHref(
 
   if (filters.sort && filters.sort !== defaultSort) {
     params.set('sort', filters.sort)
+  }
+
+  if (filters.tag) {
+    params.set('tag', String(filters.tag))
   }
 
   const search = params.toString()

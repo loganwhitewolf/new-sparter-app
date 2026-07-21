@@ -17,6 +17,7 @@ type Props = {
   defaultPreset?: DashboardPreset
   sort?: DashboardSort
   deviations?: Map<number, DeviationData>
+  tagId?: number
 }
 
 function deviationSortKey(item: CategoryRankingItem, deviations?: Map<number, DeviationData>): number {
@@ -73,6 +74,7 @@ export function CategoryRankingList({
   defaultPreset = 'this-year',
   sort = 'amount',
   deviations,
+  tagId,
 }: Props) {
   const sortedData = sort === 'deviation' && deviations
     ? [...data].sort((a, b) => compareItems(a, b, sort, deviations))
@@ -98,6 +100,7 @@ export function CategoryRankingList({
           preset,
           type,
           defaultPreset,
+          tag: tagId,
         })
         const percentage = Math.max(0, Math.min(category.percentage, 100))
         const barColor = type === 'in' ? 'bg-[var(--total-in)]' : 'bg-[var(--total-out)]'
