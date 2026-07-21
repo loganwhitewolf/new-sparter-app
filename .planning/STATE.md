@@ -5,8 +5,8 @@ milestone_name: Expenses & Transactions Refinement
 current_phase: 68
 current_phase_name: tags-dashboard-and-navigation
 status: verifying
-stopped_at: Completed 68-07-PLAN.md
-last_updated: "2026-07-21T12:43:36.224Z"
+stopped_at: Phase 68 executed + WR-02/WR-04 fixed; verification human_needed (1 visual UAT item); v2.6 ready to complete after UAT
+last_updated: "2026-07-21T13:38:16.168Z"
 last_activity: 2026-07-21
 last_activity_desc: Phase 68 execution started
 progress:
@@ -269,6 +269,7 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260709-leg | Bilancio KPI card structural breakdown row: "Ricorrente −X €" under the total headline (reuses structuralBalance + breakdown slot; parity with Entrate card) | 2026-07-09 | 20e7021 |
 | 260709-lj5 | Tasso risparmio card recurring-only rate row (structuralSavingsRate, same formula/guards). Label locked: Solo ricorrenti (review 2026-07-09) | 2026-07-09 | f820be8 |
 | 260709-lkw | Uscite card nature breakdown: Essenziali/Discrezionali/Debiti rows (per-nature OUT sums in shared aggregate, outByNature). Labels locked: NATURE_LABELS chip lexicon (review 2026-07-09) | 2026-07-09 | c671da1 |
+| 260721-mim | Fix transactions free-text search to also match the Expense Group title (getTransactions name filter or() + precedence comment) | 2026-07-21 | e52608f |
 
 ## Deferred Items
 
@@ -300,11 +301,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** None
+**Resume file:** .planning/phases/68-tags-dashboard-and-navigation/68-UAT.md
 
-**Stopped at:** Completed 68-07-PLAN.md
+**Stopped at:** Phase 68 executed + WR-02/WR-04 fixed; verification human_needed (1 visual UAT item); v2.6 ready to complete after UAT
 
-Last session: 2026-07-21T12:43:36.218Z
+Last session: 2026-07-21T13:38:16.160Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 

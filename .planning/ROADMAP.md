@@ -38,6 +38,8 @@ totals never persisted), and via the "tag = filter, never breakdown" rule for ta
 - [ ] **Phase 67: tags-foundation-and-assignment** - User can maintain a curated tag list (create/edit/archive, never delete), bulk-assign tags to transactions from the transactions page, get a pre-checked date-range suggestion on tag creation and each subsequent import, and trust that Viaggi/Vacanze categorization only captures intrinsically-travel spend. (TAG-01, TAG-02, TAG-03, TAG-06)
 - [ ] **Phase 68: tags-dashboard-and-navigation** - User can filter the entire dashboard by tag, review a dedicated Tag section with independent per-tag totals, and jump from a dashboard savings/deviations row straight into the matching filtered transaction list. (TAG-04, TAG-05, NAV-01)
 
+**Post-Phase-68 bugfix:** 260721-mim — transactions free-text search now also matches the Expense Group title (`lib/dal/transactions.ts` name filter, 2026-07-21).
+
 ### Phase 65: expense-group-merge-and-view
 
 **Goal:** A user with the same real-world merchant scattered across several Expenses (different bank descriptions per card/platform) can unify them into one titled Expense Group, and that group is what they see everywhere Expenses and their transactions are rendered — without any of the underlying transactions, hashes, or categorization history being touched.
