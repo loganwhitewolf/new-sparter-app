@@ -4,11 +4,25 @@ const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   executeResult: { rows: [] as unknown[] },
   selectResult: [] as unknown[],
+  // 68-03: rowsQueue lets a test seed per-select-call result rows (categorySlug
+  // assertions need real row data); whereArgs records each query's WHERE arg in
+  // call order (tagId threading assertions inspect this).
+  rowsQueue: [] as unknown[][],
+  whereArgs: [] as unknown[],
+  // tagScopedTransactions spied directly (not the real EXISTS-SQL builder) so
+  // tagId-threading assertions can inspect plain call args instead of
+  // JSON.stringify-ing real drizzle-orm/schema objects (which are circular —
+  // dashboard-dal.test.ts avoids this by mocking @/lib/db/schema, this file
+  // avoids it by mocking this predicate directly).
+  tagScopedTransactions: vi.fn((tagId?: number) => (tagId ? { op: 'tagScoped', tagId } : undefined)),
 }))
 
 vi.mock('server-only', () => ({}))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
 vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
+vi.mock('@/lib/dal/transaction-tags-sql', () => ({
+  tagScopedTransactions: mocks.tagScopedTransactions,
+}))
 vi.mock('drizzle-orm', () => ({
   sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({
     op: 'sql',
@@ -24,22 +38,44 @@ vi.mock('drizzle-orm', () => ({
   isNull: (...args: unknown[]) => ({ op: 'isNull', args }),
   or: (...args: unknown[]) => ({ op: 'or', args }),
   desc: (...args: unknown[]) => ({ op: 'desc', args }),
+  // Needed by lib/dal/dashboard.ts's getUncategorizedCount (called by
+  // getOverview, 68-03 tagId-threading tests) — was missing, silently
+  // throwing inside getUncategorizedCount's try/catch and returning 0 without
+  // ever reaching its WHERE clause.
+  countDistinct: (...args: unknown[]) => ({ op: 'countDistinct', args }),
   // relations is needed by lib/db/schema.ts when it is transitively imported
   relations: () => ({}),
 }))
-vi.mock('@/lib/db', () => ({
-  db: {
-    execute: vi.fn(() => Promise.resolve(mocks.executeResult)),
-    select: vi.fn(() => ({
-      from: vi.fn().mockReturnThis(),
-      leftJoin: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      groupBy: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      limit: vi.fn(() => Promise.resolve(mocks.selectResult)),
-    })),
-  },
-}))
+vi.mock('@/lib/db', () => {
+  // Thenable chain: several queries under test (getOverviewAmountTotals,
+  // getUncategorizedCount, getMonthOverMonthCategoryChanges, getOverviewChart)
+  // await the chain directly after .where()/.groupBy() with no terminal
+  // .limit() call — a chain without a `then` never resolves to the row array.
+  function makeChain(rows: unknown[]) {
+    const chain: Record<string, unknown> = {
+      from: vi.fn(() => chain),
+      leftJoin: vi.fn(() => chain),
+      innerJoin: vi.fn(() => chain),
+      where: vi.fn((arg: unknown) => {
+        mocks.whereArgs.push(arg)
+        return chain
+      }),
+      groupBy: vi.fn(() => chain),
+      orderBy: vi.fn(() => chain),
+      limit: vi.fn((n: number) => Promise.resolve(rows.slice(0, n))),
+      then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
+        Promise.resolve(rows).then(resolve, reject),
+    }
+    return chain
+  }
+
+  return {
+    db: {
+      execute: vi.fn(() => Promise.resolve(mocks.executeResult)),
+      select: vi.fn(() => makeChain(mocks.rowsQueue.shift() ?? mocks.selectResult)),
+    },
+  }
+})
 
 // These tests target lib/dal/overview.ts which does not exist yet.
 // They are intentionally RED (module not found) and will turn GREEN in plan 42-03.
@@ -121,6 +157,38 @@ describe('getOverview', () => {
   })
 })
 
+describe('getOverview tagId threading (68-03, TAG-04)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.verifySession.mockResolvedValue({ userId: 'user-123' })
+    mocks.executeResult.rows = [{ last_ym: '2026-04' }]
+    mocks.selectResult = []
+    mocks.rowsQueue = []
+  })
+
+  it('no tagId: forwards undefined to all four getOverviewAmountTotals/getUncategorizedCount calls', async () => {
+    const { getOverview } = await import('@/lib/dal/overview')
+    await getOverview(2026)
+
+    // getOverviewAmountTotals ×2 (current/previous) + getUncategorizedCount ×2
+    // (current/previous), each forwarding tagId to tagScopedTransactions internally.
+    expect(mocks.tagScopedTransactions).toHaveBeenCalledTimes(4)
+    for (const call of mocks.tagScopedTransactions.mock.calls) {
+      expect(call[0]).toBeUndefined()
+    }
+  })
+
+  it('tagId=5: forwards 5 to all four getOverviewAmountTotals/getUncategorizedCount calls', async () => {
+    const { getOverview } = await import('@/lib/dal/overview')
+    await getOverview(2026, 5)
+
+    expect(mocks.tagScopedTransactions).toHaveBeenCalledTimes(4)
+    for (const call of mocks.tagScopedTransactions.mock.calls) {
+      expect(call[0]).toBe(5)
+    }
+  })
+})
+
 describe('getMonthOverMonthCategoryChanges', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -175,6 +243,7 @@ describe('getOverviewChart', () => {
     mocks.verifySession.mockResolvedValue({ userId: 'user-123' })
     mocks.executeResult.rows = []
     mocks.selectResult = []
+    mocks.rowsQueue = []
   })
 
   it('splits income into recurring and extraordinary buckets', async () => {
@@ -258,5 +327,31 @@ describe('getOverviewChart', () => {
         expect(jan.out).not.toHaveProperty('investment')
       }
     }
+  })
+})
+
+describe('getOverviewChart tagId threading (68-03, TAG-04)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.verifySession.mockResolvedValue({ userId: 'user-123' })
+    mocks.executeResult.rows = []
+    mocks.selectResult = []
+    mocks.rowsQueue = []
+  })
+
+  it('no tagId: forwards undefined to the single WHERE clause', async () => {
+    const { getOverviewChart } = await import('@/lib/dal/overview')
+    await getOverviewChart(2026)
+
+    expect(mocks.tagScopedTransactions).toHaveBeenCalledTimes(1)
+    expect(mocks.tagScopedTransactions.mock.calls[0]![0]).toBeUndefined()
+  })
+
+  it('tagId=5: forwards 5 to the single WHERE clause', async () => {
+    const { getOverviewChart } = await import('@/lib/dal/overview')
+    await getOverviewChart(2026, 5)
+
+    expect(mocks.tagScopedTransactions).toHaveBeenCalledTimes(1)
+    expect(mocks.tagScopedTransactions.mock.calls[0]![0]).toBe(5)
   })
 })
