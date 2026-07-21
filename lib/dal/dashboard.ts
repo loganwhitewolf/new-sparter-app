@@ -179,6 +179,7 @@ export type DeviationDateRanges = {
 export type CategoryDeviationsInput = {
   type: 'in' | 'out' | 'all'
   categoryId?: number
+  tagId?: number
 }
 
 type BreakdownCategoryDraft = Omit<BreakdownCategory, 'percentage' | 'subCategories'> & {
@@ -1032,7 +1033,7 @@ export const getCategoriesBreakdown = cache(
 )
 
 export const getCategoryRanking = cache(
-  async (filters: DashboardFilters): Promise<CategoryRankingItem[]> => {
+  async (filters: DashboardFilters, tagId?: number): Promise<CategoryRankingItem[]> => {
     const { userId } = await verifySession()
     const { from, to } = dashboardPresetToDateRange(filters.preset)
     const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
@@ -1078,7 +1079,8 @@ export const getCategoryRanking = cache(
             expenseStatusIncludedInDashboardTotals(),
             eq(direction.includedInTotals, true),
             isNotSecondary(),
-            typeFilter
+            typeFilter,
+            tagScopedTransactions(tagId)
           )
         )
         .groupBy(category.id, monthSql, direction.code)
@@ -1139,7 +1141,8 @@ export const getCategoryDeviations = cache(
               eq(direction.includedInTotals, true),
               isNotSecondary(),
               typeFilter,
-              categoryScope
+              categoryScope,
+              tagScopedTransactions(input.tagId)
             )
           )
           .groupBy(groupColumn),
@@ -1175,7 +1178,8 @@ export const getCategoryDeviations = cache(
               eq(direction.includedInTotals, true),
               isNotSecondary(),
               typeFilter,
-              categoryScope
+              categoryScope,
+              tagScopedTransactions(input.tagId)
             )
           )
           .groupBy(groupColumn, monthSql),

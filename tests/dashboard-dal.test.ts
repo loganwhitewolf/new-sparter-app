@@ -120,7 +120,11 @@ const {
   getOverviewComparisonRanges,
   getUncategorizedCount,
   getOverviewAmountTotals,
+  getCategoryRanking,
+  getCategoryDeviations,
 } = await import('../lib/dal/dashboard')
+
+const { verifySession } = await import('../lib/dal/auth')
 
 /** Locate the tagScopedTransactions EXISTS fragment (if any) inside a real
  * drizzle-orm `and(...)` condition tree — mirrors the substring-search idiom
@@ -138,6 +142,7 @@ function hasTagCondition(whereArg: unknown): boolean {
 beforeEach(() => {
   dalMocks.whereArgs = []
   dalMocks.rowsQueue = []
+  vi.mocked(verifySession).mockResolvedValue({ userId: 'user-1' } as never)
 })
 
 describe('dashboard DAL amount mapping', () => {
@@ -1111,5 +1116,39 @@ describe('getUncategorizedCount / getOverviewAmountTotals tagId threading (68-02
 
     expect(dalMocks.whereArgs).toHaveLength(1)
     expect(findTagCondition(dalMocks.whereArgs[0], 5)).toBe(true)
+  })
+})
+
+describe('getCategoryRanking / getCategoryDeviations tagId threading (68-02, TAG-04)', () => {
+  const filters = { preset: 'last-month', type: 'all', sort: 'amount' } as const
+
+  it('getCategoryRanking: no tagId adds no EXISTS(transaction_tag) condition', async () => {
+    await getCategoryRanking(filters)
+
+    expect(dalMocks.whereArgs).toHaveLength(1)
+    expect(hasTagCondition(dalMocks.whereArgs[0])).toBe(false)
+  })
+
+  it('getCategoryRanking: tagId=5 adds the EXISTS(transaction_tag) fragment scoped to that tag', async () => {
+    await getCategoryRanking(filters, 5)
+
+    expect(dalMocks.whereArgs).toHaveLength(1)
+    expect(findTagCondition(dalMocks.whereArgs[0], 5)).toBe(true)
+  })
+
+  it('getCategoryDeviations: no tagId adds no EXISTS(transaction_tag) condition to either query', async () => {
+    await getCategoryDeviations({ type: 'out' })
+
+    expect(dalMocks.whereArgs).toHaveLength(2)
+    expect(hasTagCondition(dalMocks.whereArgs[0])).toBe(false)
+    expect(hasTagCondition(dalMocks.whereArgs[1])).toBe(false)
+  })
+
+  it('getCategoryDeviations: tagId=5 narrows BOTH the reference and baseline queries', async () => {
+    await getCategoryDeviations({ type: 'out', tagId: 5 })
+
+    expect(dalMocks.whereArgs).toHaveLength(2)
+    expect(findTagCondition(dalMocks.whereArgs[0], 5)).toBe(true)
+    expect(findTagCondition(dalMocks.whereArgs[1], 5)).toBe(true)
   })
 })
