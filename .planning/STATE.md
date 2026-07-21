@@ -5,15 +5,15 @@ milestone_name: Expenses & Transactions Refinement
 current_phase: 68
 current_phase_name: tags-dashboard-and-navigation
 status: executing
-stopped_at: Completed 68-03-PLAN.md
-last_updated: "2026-07-21T12:22:36.131Z"
+stopped_at: Completed 68-08-PLAN.md
+last_updated: "2026-07-21T12:29:58.802Z"
 last_activity: 2026-07-21
 last_activity_desc: Phase 68 execution started
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 28
-  completed_plans: 25
+  completed_plans: 26
   percent: 75
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 68 (tags-dashboard-and-navigation) — EXECUTING
-Plan: 6 of 8
+Plan: 7 of 8
 Status: Ready to execute
 Last activity: 2026-07-21 — Phase 68 execution started
 
-Progress: [█████████░] 89%
+Progress: [█████████░] 93%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -193,6 +193,8 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: 68-05: 'Tutti i tag' sentinel value is the literal string 'all', not empty string — Radix Select reserves value="" for no-selection; no real tagId can ever be 'all'
 - [Phase ?]: MonthOverMonthChange.categorySlug is required (string | null), not optional — matches the NAV-01 fix literally; updated 11 fixture sites in tests/overview-movers.test.tsx
 - [Phase ?]: fetchMovers had no dedicated test file (tests/overview-movers.test.tsx only covers pure format helpers) — created tests/overview-movers-action.test.ts for Pitfall 4 coverage
+- [Phase ?]: [Phase 68] 68-08: TagRankingList constructs a minimal TagRow-shaped object for ArchiveTagDialog (only id/name/archived populated) instead of fetching a second, separate TagRow[]
+- [Phase ?]: [Phase 68] 68-08: /dashboard/tags reads no searchParams at all (no preset/year/tag) — TAG-05's per-tag total is all-time and independent of the dashboard's global filters (LOCKED DECISION 1)
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -297,9 +299,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 68-03-PLAN.md
+**Stopped at:** Completed 68-08-PLAN.md
 
-Last session: 2026-07-21T12:22:36.124Z
+Last session: 2026-07-21T12:29:58.795Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -361,3 +363,4 @@ Last session: 2026-07-21T12:22:36.124Z
 | Phase 68 P04 | 25min | 2 tasks | 4 files |
 | Phase 68 P05 | 12min | 2 tasks | 5 files |
 | Phase 68 P03 | 15min | 3 tasks | 6 files |
+| Phase 68 P08 | 20min | 2 tasks | 4 files |

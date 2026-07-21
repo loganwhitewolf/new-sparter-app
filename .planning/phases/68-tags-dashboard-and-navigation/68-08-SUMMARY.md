@@ -166,3 +166,10 @@ TAG-05 is fully delivered: `/dashboard/tags` renders every tag with an independe
 ---
 *Phase: 68-tags-dashboard-and-navigation*
 *Completed: 2026-07-21*
+
+## Self-Check: PASSED
+
+All created files found on disk (`components/dashboard/tag-ranking-list.tsx`,
+`components/dashboard/tag-ranking-skeleton.tsx`, `app/(app)/dashboard/tags/page.tsx`,
+`tests/tag-ranking-list.test.tsx`); all three commits (`210327c`, `2477957`, `1efbafc`)
+verified present in git log.
