@@ -184,7 +184,7 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 68-06-PLAN.md — wire `?tag=` into Overview/Categorie/category-detail pages + href carry-through
-- [ ] 68-07-PLAN.md — NAV-01 movers-panel row click-through (Link wrap via categorySlug)
+- [x] 68-07-PLAN.md — NAV-01 movers-panel row click-through (Link wrap via categorySlug)
 
 **UI hint:** yes
 

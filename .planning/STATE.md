@@ -4,17 +4,17 @@ milestone: v2.6
 milestone_name: Expenses & Transactions Refinement
 current_phase: 68
 current_phase_name: tags-dashboard-and-navigation
-status: executing
-stopped_at: Completed 68-06-PLAN.md
-last_updated: "2026-07-21T12:38:44.983Z"
+status: verifying
+stopped_at: Completed 68-07-PLAN.md
+last_updated: "2026-07-21T12:43:36.224Z"
 last_activity: 2026-07-21
 last_activity_desc: Phase 68 execution started
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 28
-  completed_plans: 27
-  percent: 75
+  completed_plans: 28
+  percent: 100
 ---
 
 # Project State
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 Phase: 68 (tags-dashboard-and-navigation) — EXECUTING
 Plan: 8 of 8
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-21 — Phase 68 execution started
 
-Progress: [██████████] 96%
+Progress: [██████████] 100%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -197,6 +197,7 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: [Phase 68] 68-08: /dashboard/tags reads no searchParams at all (no preset/year/tag) — TAG-05's per-tag total is all-time and independent of the dashboard's global filters (LOCKED DECISION 1)
 - [Phase ?]: 68-06: Added no-data-for-tag OverviewEmptyState variant + tagId-aware CategoryRankingList empty copy to satisfy the plan's locked must_haves copy contract (not spelled out in task action blocks)
 - [Phase ?]: 68-06: Category detail page renders no TagFilterSelect of its own — filter is set on the ranking-list page and carried through via ?tag= only, matching the existing preset/type no-second-control pattern
+- [Phase ?]: 68-07: MoverList rows built from categorySlug (never categoryId) per Pitfall 2; UI-SPEC's stale category={m.categoryId} snippet is superseded by the plan/PATTERNS.md
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -301,9 +302,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 68-06-PLAN.md
+**Stopped at:** Completed 68-07-PLAN.md
 
-Last session: 2026-07-21T12:38:44.977Z
+Last session: 2026-07-21T12:43:36.218Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -367,3 +368,4 @@ Last session: 2026-07-21T12:38:44.977Z
 | Phase 68 P03 | 15min | 3 tasks | 6 files |
 | Phase 68 P08 | 20min | 2 tasks | 4 files |
 | Phase 68 P06 | 12min | 3 tasks | 7 files |
+| Phase 68 P07 | 15min | 1 tasks | 2 files |
