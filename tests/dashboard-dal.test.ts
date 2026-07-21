@@ -56,6 +56,14 @@ vi.mock('@/lib/db/schema', () => ({
     status: 'expense.status',
     subCategoryId: 'expense.subCategoryId',
   },
+  expenseGroup: {
+    id: 'expenseGroup.id',
+    title: 'expenseGroup.title',
+  },
+  expenseGroupMembership: {
+    groupId: 'expenseGroupMembership.groupId',
+    expenseId: 'expenseGroupMembership.expenseId',
+  },
   subCategory: {
     id: 'subCategory.id',
     userId: 'subCategory.userId',
@@ -561,6 +569,7 @@ describe('dashboard DAL amount mapping', () => {
           categoryType: 'out',
           description: 'Rent fallback',
           customTitle: 'Rent custom',
+          groupTitle: null,
           amount: '-90',
           occurredAt: new Date(2026, 0, 5),
         },
@@ -571,6 +580,7 @@ describe('dashboard DAL amount mapping', () => {
           categoryType: 'out',
           description: 'Power bill',
           customTitle: null,
+          groupTitle: 'Abbonamenti condivisi',
           amount: '-60.005',
           occurredAt: new Date(2026, 1, 10),
         },
@@ -590,7 +600,7 @@ describe('dashboard DAL amount mapping', () => {
     ])
     expect(detail.topTransactions).toEqual([
       { id: 'tx-2', title: 'Rent custom', description: 'Rent fallback', date: '2026-01-05', amount: '90.00' },
-      { id: 'tx-1', title: 'Power bill', description: 'Power bill', date: '2026-02-10', amount: '60.01' },
+      { id: 'tx-1', title: 'Abbonamenti condivisi', description: 'Power bill', date: '2026-02-10', amount: '60.01' },
     ])
   })
 
@@ -661,9 +671,9 @@ describe('dashboard DAL amount mapping', () => {
         },
       ],
       topTransactionRows: [
-        { id: null, categoryId: 1, categorySlug: 'casa', categoryType: 'out', description: 'Missing', customTitle: null, amount: '999', occurredAt: new Date(2026, 0, 1) },
-        { id: 'tx-b', categoryId: 1, categorySlug: 'casa', categoryType: 'out', description: 'B', customTitle: null, amount: '-25', occurredAt: new Date(2026, 0, 2) },
-        { id: 'tx-a', categoryId: 1, categorySlug: 'casa', categoryType: 'out', description: 'A', customTitle: null, amount: '-25', occurredAt: new Date(2026, 0, 2) },
+        { id: null, categoryId: 1, categorySlug: 'casa', categoryType: 'out', description: 'Missing', customTitle: null, groupTitle: null, amount: '999', occurredAt: new Date(2026, 0, 1) },
+        { id: 'tx-b', categoryId: 1, categorySlug: 'casa', categoryType: 'out', description: 'B', customTitle: null, groupTitle: null, amount: '-25', occurredAt: new Date(2026, 0, 2) },
+        { id: 'tx-a', categoryId: 1, categorySlug: 'casa', categoryType: 'out', description: 'A', customTitle: null, groupTitle: null, amount: '-25', occurredAt: new Date(2026, 0, 2) },
       ],
     })
 
