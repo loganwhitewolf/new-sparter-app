@@ -1,9 +1,10 @@
 ---
-status: testing
+status: resolved
 phase: 68-tags-dashboard-and-navigation
 source: [68-VERIFICATION.md]
 started: 2026-07-21T00:00:00Z
 updated: 2026-07-21T00:00:00Z
+resolution: Verified by user (2026-07-21) — the "Periodo"/date-range caption renders on one line at common widths, including a multi-year range. No line-clamp needed.
 ---
 
 ## Current Test

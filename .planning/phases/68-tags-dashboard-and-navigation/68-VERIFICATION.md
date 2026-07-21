@@ -1,10 +1,11 @@
 ---
 phase: 68-tags-dashboard-and-navigation
 verified: 2026-07-21T15:00:00Z
-status: human_needed
-score: 36/37 must-haves verified
+status: passed
+score: 37/37 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
+human_verification: resolved — user confirmed the wide-date-range caption renders on one line (2026-07-21); see 68-UAT.md
 ---
 
 # Phase 68: Tags Dashboard and Navigation Verification Report
