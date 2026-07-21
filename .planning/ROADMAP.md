@@ -163,7 +163,28 @@ Plans:
 2. User can open a Tag section listing every tag with its own independent per-tag total (no expectation that totals sum to a whole) and an archive action; archived tags remain visible and interrogable there.
 3. With a month selected on the dashboard's savings/deviations view, clicking a row navigates to the transactions section pre-filtered to that month and the row's category context.
 
-**Plans:** TBD
+**Plans:** 8 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 68-01-PLAN.md — tagScopedTransactions predicate, transactions `tag` filter contract, IDOR defense-in-depth foundation (resolveOwnedTagId)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 68-02-PLAN.md — thread tagId through dashboard.ts (getUncategorizedCount, getOverviewAmountTotals, getCategoryRanking, getCategoryDeviations, getCategoryDetail)
+- [ ] 68-04-PLAN.md — getTagTotals (all-time, dashboard-exclusion-aware) + archiveTagAction second revalidatePath
+- [ ] 68-05-PLAN.md — TagFilterSelect control + 3rd "Tag" tab in DashboardTabNav
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 68-03-PLAN.md — thread tagId through overview.ts + category.slug fix (NAV-01) + fetchMovers tagId
+- [ ] 68-08-PLAN.md — /dashboard/tags page + TagRankingList (TAG-05 Tag section)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 68-06-PLAN.md — wire `?tag=` into Overview/Categorie/category-detail pages + href carry-through
+- [ ] 68-07-PLAN.md — NAV-01 movers-panel row click-through (Link wrap via categorySlug)
 
 **UI hint:** yes
 
@@ -382,7 +403,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 65. expense-group-merge-and-view | v2.6 | 0/6 | In Progress|  |
 | 66. expense-group-lifecycle | v2.6 | 0/5 | Complete    | 2026-07-20 |
 | 67. tags-foundation-and-assignment | v2.6 | 0/9 | In Progress|  |
-| 68. tags-dashboard-and-navigation | v2.6 | 0/TBD | Not started | - |
+| 68. tags-dashboard-and-navigation | v2.6 | 0/8 | Planned | - |
 
 **Total shipped: 64 phases · 235 plans complete**
 **Current milestone: v2.6 Expenses & Transactions Refinement — Phases 65–68 planned**
