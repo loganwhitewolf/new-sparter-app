@@ -55,6 +55,12 @@ function formatDate(date: Date): string {
   return dateFormatter.format(new Date(date))
 }
 
+function formatPeriodo(first: Date | null, last: Date | null): string {
+  if (!first) return '—'
+  if (!last || last.getTime() === first.getTime()) return formatDate(first)
+  return `${formatDate(first)} – ${formatDate(last)}`
+}
+
 function formatSignedAmount(amount: string, currency = 'EUR'): string {
   try {
     return new Intl.NumberFormat('it-IT', {
@@ -261,6 +267,12 @@ export function ExpenseDetailClient({ expense, categories, mostUsed }: Props) {
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm text-muted-foreground">Creata il</span>
         <span className="text-sm">{formatDate(expense.createdAt)}</span>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm text-muted-foreground">Periodo</span>
+        <span className="text-sm">
+          {formatPeriodo(expense.firstTransactionAt, expense.lastTransactionAt)}
+        </span>
       </div>
     </div>
   )

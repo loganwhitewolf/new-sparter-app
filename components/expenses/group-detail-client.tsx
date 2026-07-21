@@ -61,6 +61,12 @@ function formatDate(date: Date): string {
   return dateFormatter.format(new Date(date))
 }
 
+function formatPeriodo(first: Date | null, last: Date | null): string {
+  if (!first) return '—'
+  if (!last || last.getTime() === first.getTime()) return formatDate(first)
+  return `${formatDate(first)} – ${formatDate(last)}`
+}
+
 function formatSignedAmount(amount: string, currency = 'EUR'): string {
   try {
     return new Intl.NumberFormat('it-IT', {
@@ -95,6 +101,18 @@ export function GroupDetailClient({ group, categories, mostUsed }: Props) {
   const hiddenTransactionsCount = Math.max(
     0,
     group.transactions.length - LINKED_TRANSACTIONS_PREVIEW_LIMIT,
+  )
+  // ExpenseGroupDetailRow has no firstTransactionAt/lastTransactionAt of its
+  // own — derive the period from the member transactions' occurredAt dates
+  // (do not rely on the array's DESC sort order; compute min/max explicitly).
+  const [firstTransactionAt, lastTransactionAt] = group.transactions.reduce<
+    [Date | null, Date | null]
+  >(
+    ([min, max], tx) => [
+      !min || tx.occurredAt < min ? tx.occurredAt : min,
+      !max || tx.occurredAt > max ? tx.occurredAt : max,
+    ],
+    [null, null],
   )
 
   function handleCategorizeChange(subCategoryId: string) {
@@ -289,6 +307,10 @@ export function GroupDetailClient({ group, categories, mostUsed }: Props) {
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm text-muted-foreground">Creato il</span>
         <span className="text-sm">{formatDate(group.createdAt)}</span>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm text-muted-foreground">Periodo</span>
+        <span className="text-sm">{formatPeriodo(firstTransactionAt, lastTransactionAt)}</span>
       </div>
     </div>
   )
