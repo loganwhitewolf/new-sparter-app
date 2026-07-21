@@ -174,7 +174,7 @@ Plans:
 
 - [x] 68-02-PLAN.md — thread tagId through dashboard.ts (getUncategorizedCount, getOverviewAmountTotals, getCategoryRanking, getCategoryDeviations, getCategoryDetail)
 - [x] 68-04-PLAN.md — getTagTotals (all-time, dashboard-exclusion-aware) + archiveTagAction second revalidatePath
-- [ ] 68-05-PLAN.md — TagFilterSelect control + 3rd "Tag" tab in DashboardTabNav
+- [x] 68-05-PLAN.md — TagFilterSelect control + 3rd "Tag" tab in DashboardTabNav
 
 **Wave 3** *(blocked on Wave 2 completion)*
 

@@ -5,15 +5,15 @@ milestone_name: Expenses & Transactions Refinement
 current_phase: 68
 current_phase_name: tags-dashboard-and-navigation
 status: executing
-stopped_at: Completed 68-04-PLAN.md
-last_updated: "2026-07-21T12:02:44.635Z"
+stopped_at: Completed 68-05-PLAN.md
+last_updated: "2026-07-21T12:07:38.694Z"
 last_activity: 2026-07-21
 last_activity_desc: Phase 68 execution started
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 28
-  completed_plans: 23
+  completed_plans: 24
   percent: 75
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 68 (tags-dashboard-and-navigation) — EXECUTING
-Plan: 4 of 8
+Plan: 5 of 8
 Status: Ready to execute
 Last activity: 2026-07-21 — Phase 68 execution started
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 86%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -189,6 +189,8 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: Phase 68 (68-04): getTagTotals rooted at FROM tag with every join LEFT so a zero-transaction tag still surfaces a row via COALESCE/FILTER defaults instead of being dropped
 - [Phase ?]: Phase 68 (68-04): dashboard exclusion set (status/transfer/pair-netting) composed once and applied via SQL FILTER (WHERE ...) inside count/MIN/MAX/SUM, never the outer WHERE — outer WHERE is only eq(tag.userId, userId)
 - [Phase ?]: Phase 68 (68-04): tests/tags-dal.test.ts drizzle-orm mock switched to importOriginal() + selective overrides (and/asc/eq/isNotNull stay mocked, sql/inArray/ne pass through real) to support getTagTotals's real-SQL FILTER usage without rewriting pre-existing tests
+- [Phase ?]: 68-05: buildTagFilterSearch extracted as a standalone exported pure function (not inlined in the component) for unit-testability without jsdom — mirrors MergeExpensesDialog's exported step-logic precedent
+- [Phase ?]: 68-05: 'Tutti i tag' sentinel value is the literal string 'all', not empty string — Radix Select reserves value="" for no-selection; no real tagId can ever be 'all'
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -293,9 +295,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 68-04-PLAN.md
+**Stopped at:** Completed 68-05-PLAN.md
 
-Last session: 2026-07-21T12:02:44.629Z
+Last session: 2026-07-21T12:07:38.687Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -355,3 +357,4 @@ Last session: 2026-07-21T12:02:44.629Z
 | Phase 68 P01 | 25min | 3 tasks | 9 files |
 | Phase 68 P02 | 12min | 3 tasks | 2 files |
 | Phase 68 P04 | 25min | 2 tasks | 4 files |
+| Phase 68 P05 | 12min | 2 tasks | 5 files |
