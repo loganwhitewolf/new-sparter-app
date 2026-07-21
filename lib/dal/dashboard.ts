@@ -36,6 +36,7 @@ import {
 } from '@/lib/utils/dashboard'
 import { toDecimal } from '@/lib/utils/decimal'
 import { effectiveAmount, isNotSecondary } from '@/lib/dal/transaction-pairs-sql'
+import { tagScopedTransactions } from '@/lib/dal/transaction-tags-sql'
 
 export type OverviewData = {
   totalIn: string
@@ -430,7 +431,7 @@ function expenseStatusIncludedInDashboardTotals() {
   return inArray(expense.status, [...DASHBOARD_TOTAL_EXPENSE_STATUSES])
 }
 
-export async function getUncategorizedCount(userId: string, from: Date, to: Date): Promise<number> {
+export async function getUncategorizedCount(userId: string, from: Date, to: Date, tagId?: number): Promise<number> {
   try {
     const rows = await db
       .select({ total: countDistinct(expense.id) })
@@ -442,7 +443,8 @@ export async function getUncategorizedCount(userId: string, from: Date, to: Date
         and(
           dateScopedTransactions(userId, from, to),
           expenseStatusUncategorized(),
-          isNull(expense.subCategoryId)
+          isNull(expense.subCategoryId),
+          tagScopedTransactions(tagId)
         )
       )
 
@@ -452,7 +454,7 @@ export async function getUncategorizedCount(userId: string, from: Date, to: Date
   }
 }
 
-export async function getOverviewAmountTotals(userId: string, from: Date, to: Date): Promise<OverviewAggregateRow> {
+export async function getOverviewAmountTotals(userId: string, from: Date, to: Date, tagId?: number): Promise<OverviewAggregateRow> {
   try {
     const rows = await db
       .select({
@@ -490,7 +492,8 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
           dateScopedTransactions(userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
           ne(direction.code, 'transfer'),
-          isNotSecondary()
+          isNotSecondary(),
+          tagScopedTransactions(tagId)
         )
       )
 

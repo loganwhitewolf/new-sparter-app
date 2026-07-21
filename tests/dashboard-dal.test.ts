@@ -1,10 +1,47 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { dashboardPresetToDateRange } from '@/lib/utils/date'
+
+// Hoisted so the `@/lib/db` mock factory below (which is itself hoisted above
+// all imports by vi.mock) can close over shared mutable state: whereArgs
+// records each query's WHERE condition in call order (68-02 tagId assertions
+// inspect this), rowsQueue lets a test seed per-call result rows (used by
+// getCategoryDetail's category-metadata lookup, which must return a row for
+// the function to proceed past its early-return guard).
+const dalMocks = vi.hoisted(() => ({
+  whereArgs: [] as unknown[],
+  rowsQueue: [] as unknown[][],
+}))
 
 vi.mock('server-only', () => ({}))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
 vi.mock('@/lib/dal/auth', () => ({ verifySession: vi.fn() }))
-vi.mock('@/lib/db', () => ({ db: {} }))
+vi.mock('@/lib/db', () => {
+  function makeChain(rows: unknown[]) {
+    const chain: Record<string, unknown> = {
+      from: vi.fn(() => chain),
+      leftJoin: vi.fn(() => chain),
+      innerJoin: vi.fn(() => chain),
+      where: vi.fn((arg: unknown) => {
+        dalMocks.whereArgs.push(arg)
+        return chain
+      }),
+      groupBy: vi.fn(() => chain),
+      orderBy: vi.fn(() => chain),
+      limit: vi.fn((n: number) => Promise.resolve(rows.slice(0, n))),
+      // Thenable: several queries under test await the chain directly after
+      // .where()/.groupBy()/.orderBy() with no terminal .limit() call.
+      then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
+        Promise.resolve(rows).then(resolve, reject),
+    }
+    return chain
+  }
+
+  return {
+    db: {
+      select: vi.fn(() => makeChain(dalMocks.rowsQueue.shift() ?? [])),
+    },
+  }
+})
 vi.mock('@/lib/db/schema', () => ({
   category: {
     id: 'category.id',
@@ -81,7 +118,27 @@ const {
   buildOverviewData,
   getDeviationDateRanges,
   getOverviewComparisonRanges,
+  getUncategorizedCount,
+  getOverviewAmountTotals,
 } = await import('../lib/dal/dashboard')
+
+/** Locate the tagScopedTransactions EXISTS fragment (if any) inside a real
+ * drizzle-orm `and(...)` condition tree — mirrors the substring-search idiom
+ * used in tests/transactions-dal.test.ts, adapted for the REAL drizzle-orm
+ * `sql`/`and` builders this file uses (no drizzle-orm mock in this file). */
+function findTagCondition(whereArg: unknown, tagId: number): boolean {
+  const serialized = JSON.stringify(whereArg)
+  return serialized.includes('transaction_tag') && serialized.includes(String(tagId))
+}
+
+function hasTagCondition(whereArg: unknown): boolean {
+  return JSON.stringify(whereArg).includes('transaction_tag')
+}
+
+beforeEach(() => {
+  dalMocks.whereArgs = []
+  dalMocks.rowsQueue = []
+})
 
 describe('dashboard DAL amount mapping', () => {
   it('uses the selected dashboard preset for KPI ranges and compares against the preceding range', () => {
@@ -1021,5 +1078,38 @@ describe('transaction pairing netting (Phase 50 — PAIR-03)', () => {
       expect(overview.balance).toBe('1000.01')
       expect(overview.savingsRate).toBe(40)
     })
+  })
+})
+
+describe('getUncategorizedCount / getOverviewAmountTotals tagId threading (68-02, TAG-04)', () => {
+  const from = new Date(2026, 0, 1)
+  const to = new Date(2026, 0, 31)
+
+  it('getUncategorizedCount: no tagId adds no EXISTS(transaction_tag) condition', async () => {
+    await getUncategorizedCount('user-1', from, to)
+
+    expect(dalMocks.whereArgs).toHaveLength(1)
+    expect(hasTagCondition(dalMocks.whereArgs[0])).toBe(false)
+  })
+
+  it('getUncategorizedCount: tagId=5 adds the EXISTS(transaction_tag) fragment scoped to that tag', async () => {
+    await getUncategorizedCount('user-1', from, to, 5)
+
+    expect(dalMocks.whereArgs).toHaveLength(1)
+    expect(findTagCondition(dalMocks.whereArgs[0], 5)).toBe(true)
+  })
+
+  it('getOverviewAmountTotals: no tagId adds no EXISTS(transaction_tag) condition', async () => {
+    await getOverviewAmountTotals('user-1', from, to)
+
+    expect(dalMocks.whereArgs).toHaveLength(1)
+    expect(hasTagCondition(dalMocks.whereArgs[0])).toBe(false)
+  })
+
+  it('getOverviewAmountTotals: tagId=5 adds the EXISTS(transaction_tag) fragment scoped to that tag', async () => {
+    await getOverviewAmountTotals('user-1', from, to, 5)
+
+    expect(dalMocks.whereArgs).toHaveLength(1)
+    expect(findTagCondition(dalMocks.whereArgs[0], 5)).toBe(true)
   })
 })
