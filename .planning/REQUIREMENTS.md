@@ -29,8 +29,8 @@ Design source: Obsidian note "sparter-tag-transazioni" (2026-07-06). Tag = secon
 - [x] **TAG-01**: User can create, edit, and archive tags in a curated list (name, optional date range); tags are never deleted and archived tags remain queryable
 - [x] **TAG-02**: User can bulk-assign one or more tags to transactions from the (filtered) transactions page; a transaction holds N tags
 - [x] **TAG-03**: On tag creation with a date range and on each subsequent import, the app proposes the transactions falling in the range as a pre-checked confirmable list
-- [ ] **TAG-04**: User can filter the dashboard globally by tag (like month/year): all existing widgets narrow to tagged transactions, sums always reconcile
-- [ ] **TAG-05**: User can view the Tag section: every tag with its per-tag total (independent cards, no sum expectation), with archive action; archived tags stay interrogable
+- [x] **TAG-04**: User can filter the dashboard globally by tag (like month/year): all existing widgets narrow to tagged transactions, sums always reconcile
+- [x] **TAG-05**: User can view the Tag section: every tag with its per-tag total (independent cards, no sum expectation), with archive action; archived tags stay interrogable
 - [x] **TAG-06**: Viaggi category is audited: subcategories restricted to intrinsically-travel spend (flight, hotel, rental, insurance); regex/AI categorizer rules updated accordingly
 
 ### Dashboard → Transactions Navigation (NAV)
@@ -79,8 +79,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TAG-02 | Phase 67 | Complete |
 | TAG-03 | Phase 67 | Complete |
 | TAG-06 | Phase 67 | Complete |
-| TAG-04 | Phase 68 | Pending |
-| TAG-05 | Phase 68 | Pending |
+| TAG-04 | Phase 68 | Complete |
+| TAG-05 | Phase 68 | Complete |
 | NAV-01 | Phase 68 | Pending |
 
 **Coverage:**

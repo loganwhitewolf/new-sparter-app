@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v2.6
 milestone_name: Expenses & Transactions Refinement
-current_phase: 67
-current_phase_name: tags-foundation-and-assignment
-status: verifying
-stopped_at: Completed 67-09-PLAN.md
-last_updated: "2026-07-20T15:24:53.055Z"
-last_activity: 2026-07-20
-last_activity_desc: Phase 67 execution started
+current_phase: 68
+current_phase_name: tags-dashboard-and-navigation
+status: executing
+stopped_at: Completed 68-01-PLAN.md
+last_updated: "2026-07-21T11:43:43.166Z"
+last_activity: 2026-07-21
+last_activity_desc: Phase 68 execution started
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 20
-  completed_plans: 20
+  total_plans: 28
+  completed_plans: 21
   percent: 75
 ---
 
@@ -24,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 67 — tags-foundation-and-assignment
+**Current focus:** Phase 68 — tags-dashboard-and-navigation
 
 ## Current Position
 
-Phase: 67 (tags-foundation-and-assignment) — EXECUTING
-Plan: 9 of 9
-Status: Phase complete — ready for verification
-Last activity: 2026-07-20 — Phase 67 execution started
+Phase: 68 (tags-dashboard-and-navigation) — EXECUTING
+Plan: 2 of 8
+Status: Ready to execute
+Last activity: 2026-07-21 — Phase 68 execution started
 
-Progress: [██████████] 100%
+Progress: [████████░░] 75%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -182,6 +182,8 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: Phase 67-08: CreateTagDialog manages its own useActionState (not useDialogAction) to inspect the create result (tagId, hadRange) after success and decide whether to fetch/open the D-08a suggestion modal
 - [Phase ?]: Phase 67-08: tests/settings-hub.test.tsx mocks updated (Tags icon, tagSettings route) to support the new SettingsHub 'Tag' card (Rule 3 auto-fix, file not in plan's files_modified list)
 - [Phase ?]: 67-09: TagSuggestionCard keeps a local confirmed state instead of removing itself on success — sibling tag cards on the same screen may still be pending confirmation.
+- [Phase ?]: 68-01: tagScopedTransactions lives in a new sibling lib/dal/transaction-tags-sql.ts (not transaction-pairs-sql.ts), keeping pairing vs. tagging predicates in separate files
+- [Phase ?]: 68-01: mapParsedTransactionFiltersToDal needed no code change for tagId — its existing ...rest spread already passes tagId through identically to subCategoryId
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -286,9 +288,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 67-09-PLAN.md
+**Stopped at:** Completed 68-01-PLAN.md
 
-Last session: 2026-07-20T15:24:53.049Z
+Last session: 2026-07-21T11:43:43.159Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -345,3 +347,4 @@ Last session: 2026-07-20T15:24:53.049Z
 | Phase 67 P07 | 8min | 2 tasks | 3 files |
 | Phase 67 P08 | 4min | 3 tasks | 8 files |
 | Phase 67 P09 | 8min | 2 tasks | 3 files |
+| Phase 68 P01 | 25min | 3 tasks | 9 files |

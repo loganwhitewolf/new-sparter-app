@@ -168,7 +168,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 68-01-PLAN.md — tagScopedTransactions predicate, transactions `tag` filter contract, IDOR defense-in-depth foundation (resolveOwnedTagId)
+- [x] 68-01-PLAN.md — tagScopedTransactions predicate, transactions `tag` filter contract, IDOR defense-in-depth foundation (resolveOwnedTagId)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -403,7 +403,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 65. expense-group-merge-and-view | v2.6 | 0/6 | In Progress|  |
 | 66. expense-group-lifecycle | v2.6 | 0/5 | Complete    | 2026-07-20 |
 | 67. tags-foundation-and-assignment | v2.6 | 0/9 | In Progress|  |
-| 68. tags-dashboard-and-navigation | v2.6 | 0/8 | Planned | - |
+| 68. tags-dashboard-and-navigation | v2.6 | 0/8 | In Progress|  |
 
 **Total shipped: 64 phases · 235 plans complete**
 **Current milestone: v2.6 Expenses & Transactions Refinement — Phases 65–68 planned**
