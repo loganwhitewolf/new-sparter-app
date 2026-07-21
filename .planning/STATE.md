@@ -5,15 +5,15 @@ milestone_name: Expenses & Transactions Refinement
 current_phase: 68
 current_phase_name: tags-dashboard-and-navigation
 status: executing
-stopped_at: Completed 68-01-PLAN.md
-last_updated: "2026-07-21T11:43:43.166Z"
+stopped_at: Completed 68-02-PLAN.md
+last_updated: "2026-07-21T11:53:28.647Z"
 last_activity: 2026-07-21
 last_activity_desc: Phase 68 execution started
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 28
-  completed_plans: 21
+  completed_plans: 22
   percent: 75
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 68 (tags-dashboard-and-navigation) — EXECUTING
-Plan: 2 of 8
+Plan: 3 of 8
 Status: Ready to execute
 Last activity: 2026-07-21 — Phase 68 execution started
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 79%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -184,6 +184,8 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: 67-09: TagSuggestionCard keeps a local confirmed state instead of removing itself on success — sibling tag cards on the same screen may still be pending confirmation.
 - [Phase ?]: 68-01: tagScopedTransactions lives in a new sibling lib/dal/transaction-tags-sql.ts (not transaction-pairs-sql.ts), keeping pairing vs. tagging predicates in separate files
 - [Phase ?]: 68-01: mapParsedTransactionFiltersToDal needed no code change for tagId — its existing ...rest spread already passes tagId through identically to subCategoryId
+- [Phase ?]: 68-02: tests/dashboard-dal.test.ts extended with a real db chain mock (from/leftJoin/innerJoin/where/groupBy/orderBy/limit, thenable) instead of mocking drizzle-orm itself — real and()/eq()/sql() work fine against the file's existing plain-string schema mocks
+- [Phase ?]: 68-02: getCategoryDetail's category-metadata lookup query intentionally left untouched by tagId (no transaction join to scope); all 3 of its data-bearing queries (trend, subcategory breakdown, top transactions) narrow
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -288,9 +290,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 68-01-PLAN.md
+**Stopped at:** Completed 68-02-PLAN.md
 
-Last session: 2026-07-21T11:43:43.159Z
+Last session: 2026-07-21T11:53:28.641Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -348,3 +350,4 @@ Last session: 2026-07-21T11:43:43.159Z
 | Phase 67 P08 | 4min | 3 tasks | 8 files |
 | Phase 67 P09 | 8min | 2 tasks | 3 files |
 | Phase 68 P01 | 25min | 3 tasks | 9 files |
+| Phase 68 P02 | 12min | 3 tasks | 2 files |
