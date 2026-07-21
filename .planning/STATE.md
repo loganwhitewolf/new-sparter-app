@@ -7,7 +7,7 @@ status: Awaiting next milestone
 stopped_at: v2.5 milestone complete, ready to plan next milestone
 last_updated: "2026-07-07T06:54:03.129Z"
 last_activity: 2026-07-21
-last_activity_desc: "Completed quick task 260721-mm0: persist secondaryDescriptionColumn on private format create"
+last_activity_desc: "Completed quick task 260721-mrl: Categorie in primary left sidebar"
 progress:
   total_phases: 3
   completed_phases: 3
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 Phase: Milestone v2.5 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-07-21 — Completed quick task 260721-mm0: persist secondaryDescriptionColumn on private format create
+Last activity: 2026-07-21 — Completed quick task 260721-mrl: Categorie in primary left sidebar
 
 ## Roadmap (v2.5 — Phases 62–64)
 
@@ -166,6 +166,7 @@ None. Scope is small, cohesive, and fully specified by ADR 0016.
 | 260711-cbr | Composition-bar KPI card restyle (supersedes mf6): total = hero again; Entrate/Uscite mix as a single-hue composition bar + dominant legend (rest on hover); Tasso risparmio = rate + progress bar toward 20%; Bilancio/Accantonato = hero + reading. Compact top-right YoY delta chip. Chosen from 3 proposals informed by Copilot/KPI-card research. Verified light+dark+7-figure via throwaway proto | 2026-07-11 | dd7c017 |
 | 260711-gfd | Dashboard-wide filter chips + sustainability default (option B): nature chips lifted from the chart to OverviewDashboardSection and now drive KPI cards AND chart; KPIs derived client-side from monthly points (overview-kpi-derive.ts, Decimal); YoY deltas vs prior-year points under the same selection (page fetches year−1); default = recurring income vs all spending (Straordinarie excluse) so Bilancio/Tasso heroes ARE the structural numbers; reset → default; Reimposta shown when ≠ default. Verified in-browser (toggle updates cards+chart together) | 2026-07-11 | 2af669f |
 | 260721-mm0 | Fix: private format create drops secondaryDescriptionColumn (formData not forwarded in createPrivateImportFormatAction) | 2026-07-21 | 7904df5 |
+| 260721-mrl | Move Categorie into primary left sidebar; remove hub card; keep /settings/categories route | 2026-07-21 | eddc893 |
 
 ## Deferred Items
 
