@@ -5,15 +5,15 @@ milestone_name: Expenses & Transactions Refinement
 current_phase: 68
 current_phase_name: tags-dashboard-and-navigation
 status: executing
-stopped_at: Completed 68-05-PLAN.md
-last_updated: "2026-07-21T12:07:38.694Z"
+stopped_at: Completed 68-03-PLAN.md
+last_updated: "2026-07-21T12:22:36.131Z"
 last_activity: 2026-07-21
 last_activity_desc: Phase 68 execution started
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 28
-  completed_plans: 24
+  completed_plans: 25
   percent: 75
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 68 (tags-dashboard-and-navigation) — EXECUTING
-Plan: 5 of 8
+Plan: 6 of 8
 Status: Ready to execute
 Last activity: 2026-07-21 — Phase 68 execution started
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 89%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -191,6 +191,8 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: Phase 68 (68-04): tests/tags-dal.test.ts drizzle-orm mock switched to importOriginal() + selective overrides (and/asc/eq/isNotNull stay mocked, sql/inArray/ne pass through real) to support getTagTotals's real-SQL FILTER usage without rewriting pre-existing tests
 - [Phase ?]: 68-05: buildTagFilterSearch extracted as a standalone exported pure function (not inlined in the component) for unit-testability without jsdom — mirrors MergeExpensesDialog's exported step-logic precedent
 - [Phase ?]: 68-05: 'Tutti i tag' sentinel value is the literal string 'all', not empty string — Radix Select reserves value="" for no-selection; no real tagId can ever be 'all'
+- [Phase ?]: MonthOverMonthChange.categorySlug is required (string | null), not optional — matches the NAV-01 fix literally; updated 11 fixture sites in tests/overview-movers.test.tsx
+- [Phase ?]: fetchMovers had no dedicated test file (tests/overview-movers.test.tsx only covers pure format helpers) — created tests/overview-movers-action.test.ts for Pitfall 4 coverage
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -295,9 +297,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 68-05-PLAN.md
+**Stopped at:** Completed 68-03-PLAN.md
 
-Last session: 2026-07-21T12:07:38.687Z
+Last session: 2026-07-21T12:22:36.124Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -358,3 +360,4 @@ Last session: 2026-07-21T12:07:38.687Z
 | Phase 68 P02 | 12min | 3 tasks | 2 files |
 | Phase 68 P04 | 25min | 2 tasks | 4 files |
 | Phase 68 P05 | 12min | 2 tasks | 5 files |
+| Phase 68 P03 | 15min | 3 tasks | 6 files |

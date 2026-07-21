@@ -178,7 +178,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 68-03-PLAN.md — thread tagId through overview.ts + category.slug fix (NAV-01) + fetchMovers tagId
+- [x] 68-03-PLAN.md — thread tagId through overview.ts + category.slug fix (NAV-01) + fetchMovers tagId
 - [ ] 68-08-PLAN.md — /dashboard/tags page + TagRankingList (TAG-05 Tag section)
 
 **Wave 4** *(blocked on Wave 3 completion)*

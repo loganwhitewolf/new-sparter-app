@@ -35,7 +35,7 @@ Design source: Obsidian note "sparter-tag-transazioni" (2026-07-06). Tag = secon
 
 ### Dashboard → Transactions Navigation (NAV)
 
-- [ ] **NAV-01**: From the dashboard with a month selected, each row of the savings/deviations view links to the transactions section with filters pre-applied matching the dashboard's current settings (month + row category context)
+- [x] **NAV-01**: From the dashboard with a month selected, each row of the savings/deviations view links to the transactions section with filters pre-applied matching the dashboard's current settings (month + row category context)
 
 ## Future Requirements
 
@@ -81,7 +81,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TAG-06 | Phase 67 | Complete |
 | TAG-04 | Phase 68 | Complete |
 | TAG-05 | Phase 68 | Complete |
-| NAV-01 | Phase 68 | Pending |
+| NAV-01 | Phase 68 | Complete |
 
 **Coverage:**
 
