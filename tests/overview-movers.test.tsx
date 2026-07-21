@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { describe, expect, it, vi } from 'vitest'
+import type * as React from 'react'
 import {
   formatMoverLine,
   splitMovers,
@@ -7,6 +9,16 @@ import {
   moverQualifier,
 } from '@/components/dashboard/overview/overview-movers-format'
 import type { MonthOverMonthChange } from '@/lib/dal/overview'
+
+vi.mock('next/link', () => ({
+  default: ({ href, children, ...props }: React.ComponentProps<'a'>) => (
+    <a href={String(href)} {...props}>
+      {children}
+    </a>
+  ),
+}))
+
+const { OverviewMoversPanel } = await import('@/components/dashboard/overview/overview-movers-panel')
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -224,5 +236,85 @@ describe('splitMovers', () => {
     const result = splitMovers([negativeItem])
     expect(result.increases).toHaveLength(0)
     expect(result.savings).toHaveLength(1)
+  })
+})
+
+// ─── OverviewMoversPanel — NAV-01 movers-row click-through ──────────────────
+
+describe('OverviewMoversPanel (NAV-01 movers-row click-through)', () => {
+  const allocationItem: MonthOverMonthChange = {
+    categoryId: null,
+    categorySlug: null,
+    natureCode: 'risparmio',
+    name: 'Risparmio',
+    delta: '15.00',
+    isNew: false,
+  }
+
+  it('wraps a category-keyed row in a Link built from categorySlug (never categoryId), with a zero-padded month', () => {
+    const html = renderToStaticMarkup(
+      <OverviewMoversPanel
+        year={2026}
+        selectedMonth={2} // March (0-indexed) -> "2026-03"
+        moversIn={[positiveItem]}
+        moversOut={[]}
+        moversAllocation={[]}
+        isPending={false}
+      />
+    )
+    expect(html).toContain('href="/transactions?months=2026-03&amp;category=spesa"')
+    expect(html).not.toContain('category=1')
+  })
+
+  it('does not leak the numeric categoryId into any generated href', () => {
+    const html = renderToStaticMarkup(
+      <OverviewMoversPanel
+        year={2026}
+        selectedMonth={0} // January -> "2026-01"
+        moversIn={[]}
+        moversOut={[negativeItem]}
+        moversAllocation={[]}
+        isPending={false}
+      />
+    )
+    expect(html).toContain('href="/transactions?months=2026-01&amp;category=bollette"')
+    expect(html).not.toContain('category=2')
+  })
+
+  it('renders the Accantonamenti (allocation) column as plain non-clickable text, unchanged', () => {
+    const html = renderToStaticMarkup(
+      <OverviewMoversPanel
+        year={2026}
+        selectedMonth={5}
+        moversIn={[]}
+        moversOut={[]}
+        moversAllocation={[allocationItem]}
+        isPending={false}
+      />
+    )
+    expect(html).toContain('Risparmio')
+    expect(html).not.toContain('<a')
+  })
+
+  it('renders a defensive non-linked row when categorySlug is null/undefined in a category-keyed column', () => {
+    const nullSlugItem: MonthOverMonthChange = {
+      categoryId: 9,
+      categorySlug: null,
+      name: 'Senza slug',
+      delta: '5.00',
+      isNew: false,
+    }
+    const html = renderToStaticMarkup(
+      <OverviewMoversPanel
+        year={2026}
+        selectedMonth={3}
+        moversIn={[nullSlugItem]}
+        moversOut={[]}
+        moversAllocation={[]}
+        isPending={false}
+      />
+    )
+    expect(html).toContain('Senza slug')
+    expect(html).not.toContain('<a')
   })
 })
