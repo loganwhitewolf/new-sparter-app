@@ -21,6 +21,7 @@ export async function fetchMovers(
   year: number,
   monthIndex: number,
   direction: 'in' | 'out' | 'allocation' = 'out',
+  tagId?: number,
 ): Promise<{ movers: MonthOverMonthChange[]; error: string | null }> {
   try {
     // Trust boundary: verify session first — DAL handles userId internally, void to satisfy unused binding
@@ -44,7 +45,18 @@ export async function fetchMovers(
       return { movers: [], error: 'Parametri non validi.' }
     }
 
-    const movers = await getMonthOverMonthCategoryChanges(year, monthIndex, direction as ValidDirection)
+    // 68-03 (Pitfall 4): defensive bound on tagId, matching this file's existing
+    // year/monthIndex idiom — a non-integer or non-positive value is dropped
+    // (undefined), never trusted through as-is.
+    const safeTagId = Number.isInteger(tagId) && (tagId as number) > 0 ? tagId : undefined
+
+    const movers = await getMonthOverMonthCategoryChanges(
+      year,
+      monthIndex,
+      direction as ValidDirection,
+      10,
+      safeTagId
+    )
     return { movers, error: null }
   } catch {
     return {
