@@ -493,6 +493,27 @@ describe('import format wizard Server Actions', () => {
     expect(mocks.txExecute).not.toHaveBeenCalled()
   })
 
+  it('create branch: persists a submitted secondary description column to importFormatVersion', async () => {
+    const result = await createPrivateImportFormatAction(
+      { error: null },
+      validCreateForm({ secondaryDescriptionColumn: 'Importo' }),
+    )
+
+    expect(result.error).toBeNull()
+    expect(mocks.insertedVersions[0]).toMatchObject({
+      secondaryDescriptionColumn: 'Importo',
+    })
+  })
+
+  it('create branch: stores null secondaryDescriptionColumn when the field is omitted (no regression)', async () => {
+    const result = await createPrivateImportFormatAction({ error: null }, validCreateForm())
+
+    expect(result.error).toBeNull()
+    expect(mocks.insertedVersions[0]).toMatchObject({
+      secondaryDescriptionColumn: null,
+    })
+  })
+
   // Plan 59-02: listAttachablePlatformsAction tests
   it('listAttachablePlatformsAction returns the attachable platform list for authenticated session', async () => {
     const result = await listAttachablePlatformsAction()
