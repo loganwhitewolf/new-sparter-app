@@ -726,6 +726,41 @@ describe("transaction DAL query helpers", () => {
     );
   });
 
+  it("narrows via the tagScopedTransactions EXISTS fragment when tagId is set (68-01, never a leftJoin)", async () => {
+    await getTransactions({ tagId: 7 });
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] };
+    const tagCondition = where.args.find(
+      (arg) =>
+        typeof arg === "object" &&
+        arg !== null &&
+        (arg as { op?: string }).op === "sql" &&
+        ((arg as { strings?: string[] }).strings ?? [])
+          .join("")
+          .includes("EXISTS"),
+    ) as { op: string; strings: string[]; values: unknown[] } | undefined;
+
+    expect(tagCondition).toBeDefined();
+    expect(tagCondition!.strings.join("")).toContain("transaction_tag");
+    expect(tagCondition!.values).toContain(7);
+  });
+
+  it("adds no tag condition when tagId is absent (falsy guard)", async () => {
+    await getTransactions({});
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] };
+    const hasTagCondition = where.args.some(
+      (arg) =>
+        typeof arg === "object" &&
+        arg !== null &&
+        (arg as { op?: string }).op === "sql" &&
+        ((arg as { strings?: string[] }).strings ?? [])
+          .join("")
+          .includes("transaction_tag"),
+    );
+    expect(hasTagCondition).toBe(false);
+  });
+
   it("no months condition added when months array is empty", async () => {
     await getTransactions({ months: [] });
 

@@ -25,7 +25,7 @@ describe('tagScopedTransactions', () => {
   })
 
   it('returns a truthy EXISTS sql fragment referencing transaction.id and the given tagId', () => {
-    const fragment = tagScopedTransactions(5) as {
+    const fragment = tagScopedTransactions(5) as unknown as {
       op: string
       strings: string[]
       values: unknown[]

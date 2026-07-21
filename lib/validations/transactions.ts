@@ -99,6 +99,8 @@ export type ParsedTransactionFilters = {
   name?: string
   categorySlug?: string
   subCategoryId?: number
+  /** Tag click-through filter — LOCKED DECISION 3 (68-01) — `/transactions?tag={tagId}` */
+  tagId?: number
   months?: string[]
   amountMin?: string
   amountMax?: string
@@ -204,6 +206,7 @@ export function parseTransactionFilters(
   const rawQ = firstTrimmed(input.q) ?? firstTrimmed(input.name)
   const rawCategory = firstTrimmed(input.category)
   const rawSubCategory = firstTrimmed(input.subCategory)
+  const rawTag = firstTrimmed(input.tag)
   const sort = transactionSortSchema.safeParse(firstTrimmed(input.sort))
   const dir = transactionSortDirectionSchema.safeParse(firstTrimmed(input.dir))
   const importId =
@@ -214,6 +217,8 @@ export function parseTransactionFilters(
   const subCategoryId = Number.isInteger(parsedSubCategoryId) && parsedSubCategoryId > 0
     ? parsedSubCategoryId
     : undefined
+  const parsedTagId = rawTag ? Number(rawTag) : NaN
+  const tagId = Number.isInteger(parsedTagId) && parsedTagId > 0 ? parsedTagId : undefined
   const months = parseMonths(input.months)
   const amountMin = parseAmount(input.amountMin)
   const amountMax = parseAmount(input.amountMax)
@@ -230,6 +235,7 @@ export function parseTransactionFilters(
     ...(q ? { q, name: q } : {}),
     ...(categorySlug ? { categorySlug } : {}),
     ...(subCategoryId ? { subCategoryId } : {}),
+    ...(tagId ? { tagId } : {}),
     ...(months.length > 0 ? { months } : {}),
     ...(amountMin ? { amountMin } : {}),
     ...(amountMax ? { amountMax } : {}),

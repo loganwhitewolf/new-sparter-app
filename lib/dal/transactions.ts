@@ -5,6 +5,7 @@ import { DETAIL_LINKED_TRANSACTIONS_PREVIEW_LIMIT } from '@/lib/constants/detail
 import { db, type DbOrTx } from '@/lib/db'
 import { toDecimal } from '@/lib/utils/decimal'
 import { verifySession } from '@/lib/dal/auth'
+import { tagScopedTransactions } from '@/lib/dal/transaction-tags-sql'
 import {
   category,
   direction,
@@ -62,6 +63,8 @@ export type TransactionFilters = {
   name?: string
   categorySlug?: string
   subCategoryId?: number
+  /** Tag click-through filter — LOCKED DECISION 3 (68-01) — `/transactions?tag={tagId}` */
+  tagId?: number
   sort?: TransactionSort
   dir?: TransactionSortDirection
   // Wave 4 filter conditions (D-19..D-25):
@@ -328,6 +331,12 @@ export const getTransactions = cache(
 
     if (filters.subCategoryId) {
       conditions.push(eq(subCategory.id, filters.subCategoryId))
+    }
+
+    // Tag click-through filter (68-01) — EXISTS predicate, never a leftJoin against
+    // transaction_tag (a genuine N:M table; a join would fan out multi-tag rows).
+    if (filters.tagId) {
+      conditions.push(tagScopedTransactions(filters.tagId))
     }
 
     // Wave 4: months filter — OR across TO_CHAR(occurredAt, 'YYYY-MM') = ym (D-07/D-08)
