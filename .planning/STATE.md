@@ -5,15 +5,15 @@ milestone_name: Expenses & Transactions Refinement
 current_phase: 68
 current_phase_name: tags-dashboard-and-navigation
 status: executing
-stopped_at: Completed 68-02-PLAN.md
-last_updated: "2026-07-21T11:53:28.647Z"
+stopped_at: Completed 68-04-PLAN.md
+last_updated: "2026-07-21T12:02:44.635Z"
 last_activity: 2026-07-21
 last_activity_desc: Phase 68 execution started
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 28
-  completed_plans: 22
+  completed_plans: 23
   percent: 75
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 68 (tags-dashboard-and-navigation) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
 Last activity: 2026-07-21 — Phase 68 execution started
 
-Progress: [████████░░] 79%
+Progress: [████████░░] 82%
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -186,6 +186,9 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: 68-01: mapParsedTransactionFiltersToDal needed no code change for tagId — its existing ...rest spread already passes tagId through identically to subCategoryId
 - [Phase ?]: 68-02: tests/dashboard-dal.test.ts extended with a real db chain mock (from/leftJoin/innerJoin/where/groupBy/orderBy/limit, thenable) instead of mocking drizzle-orm itself — real and()/eq()/sql() work fine against the file's existing plain-string schema mocks
 - [Phase ?]: 68-02: getCategoryDetail's category-metadata lookup query intentionally left untouched by tagId (no transaction join to scope); all 3 of its data-bearing queries (trend, subcategory breakdown, top transactions) narrow
+- [Phase ?]: Phase 68 (68-04): getTagTotals rooted at FROM tag with every join LEFT so a zero-transaction tag still surfaces a row via COALESCE/FILTER defaults instead of being dropped
+- [Phase ?]: Phase 68 (68-04): dashboard exclusion set (status/transfer/pair-netting) composed once and applied via SQL FILTER (WHERE ...) inside count/MIN/MAX/SUM, never the outer WHERE — outer WHERE is only eq(tag.userId, userId)
+- [Phase ?]: Phase 68 (68-04): tests/tags-dal.test.ts drizzle-orm mock switched to importOriginal() + selective overrides (and/asc/eq/isNotNull stay mocked, sql/inArray/ne pass through real) to support getTagTotals's real-SQL FILTER usage without rewriting pre-existing tests
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -290,9 +293,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 68-02-PLAN.md
+**Stopped at:** Completed 68-04-PLAN.md
 
-Last session: 2026-07-21T11:53:28.641Z
+Last session: 2026-07-21T12:02:44.629Z
 
 **Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
 
@@ -351,3 +354,4 @@ Last session: 2026-07-21T11:53:28.641Z
 | Phase 67 P09 | 8min | 2 tasks | 3 files |
 | Phase 68 P01 | 25min | 3 tasks | 9 files |
 | Phase 68 P02 | 12min | 3 tasks | 2 files |
+| Phase 68 P04 | 25min | 2 tasks | 4 files |
