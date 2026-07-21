@@ -270,6 +270,7 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260709-lj5 | Tasso risparmio card recurring-only rate row (structuralSavingsRate, same formula/guards). Label locked: Solo ricorrenti (review 2026-07-09) | 2026-07-09 | f820be8 |
 | 260709-lkw | Uscite card nature breakdown: Essenziali/Discrezionali/Debiti rows (per-nature OUT sums in shared aggregate, outByNature). Labels locked: NATURE_LABELS chip lexicon (review 2026-07-09) | 2026-07-09 | c671da1 |
 | 260721-mim | Fix transactions free-text search to also match the Expense Group title (getTransactions name filter or() + precedence comment) | 2026-07-21 | e52608f |
+| 260721-n3c | Remove overflowing "Data" column from expenses table; add "Periodo" row to expense/group detail riepilogoCard | 2026-07-21 | 72c82f8 |
 
 ## Deferred Items
 
