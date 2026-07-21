@@ -8,7 +8,7 @@ import { getCategories } from '@/lib/dal/categories'
 import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
 import { getMonthsWithData } from '@/lib/dal/months-with-data'
 import { verifySession } from '@/lib/dal/auth'
-import { getTags } from '@/lib/dal/tags'
+import { getTags, resolveOwnedTagId } from '@/lib/dal/tags'
 import { getTagsForTransactionIds } from '@/lib/dal/transaction-tags'
 import {
   parseTransactionFilters,
@@ -77,7 +77,13 @@ export default async function TransactionsPage({
 }) {
   const { userId } = await verifySession()
   const params = await searchParams
-  const filters = mapParsedTransactionFiltersToDal(parseTransactionFilters(params))
+  const parsedFilters = parseTransactionFilters(params)
+  // WR-04 — defense-in-depth: drop a non-owned ?tag= before it reaches the DAL (fail-closed),
+  // mirroring the four dashboard pages. getTransactions already scopes by userId, so a forged
+  // tagId matches zero rows anyway; this closes the gap should tagScopedTransactions's
+  // structural userId guarantee ever regress, and keeps the ?tag= entry points consistent.
+  const ownedTagId = await resolveOwnedTagId(userId, parsedFilters.tagId)
+  const filters = mapParsedTransactionFiltersToDal({ ...parsedFilters, tagId: ownedTagId })
   const [transactions, platforms, categories, mostUsed, monthsWithData] = await Promise.all([
     getTransactions(filters),
     getTransactionPlatforms(),
