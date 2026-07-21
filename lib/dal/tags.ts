@@ -1,8 +1,21 @@
 import 'server-only'
 import { cache } from 'react'
 import { db, type DbOrTx } from '@/lib/db'
-import { tag } from '@/lib/db/schema'
-import { and, asc, eq, isNotNull } from 'drizzle-orm'
+import {
+  category,
+  direction,
+  expense,
+  nature,
+  subCategory,
+  tag,
+  transaction as transactionTable,
+  transactionTag,
+  userSubcategoryOverride,
+} from '@/lib/db/schema'
+import { and, asc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
+import { effectiveAmount, isNotSecondary } from '@/lib/dal/transaction-pairs-sql'
+import { DASHBOARD_TOTAL_EXPENSE_STATUSES } from '@/lib/dal/dashboard'
+import { toDecimal } from '@/lib/utils/decimal'
 
 // Name it `TagRow`, NOT `Tag` — `Tag` as a bare name would collide with the
 // `Tag` icon already imported from `lucide-react` in transaction-table.tsx /
@@ -142,4 +155,98 @@ export async function archiveTagRow(
     .returning()
 
   return rows[0] ?? null
+}
+
+/**
+ * TAG-05 per-tag aggregate (dashboard Tag section, Plan 68-08).
+ *
+ * All-time, sign-colored total — NOT period-scoped by the dashboard's month/year
+ * selector (LOCKED DECISION 1). Applies the SAME exclusions as every other
+ * dashboard total (LOCKED DECISION 2): expenseStatusIncludedInDashboardTotals(),
+ * exclude `transfer` direction, effectiveAmount()/isNotSecondary() pair-netting.
+ * The number MUST match what the user sees filtering transactions by that tag.
+ */
+export type TagTotalItem = {
+  tagId: number
+  name: string
+  archived: boolean
+  count: number
+  minDate: string | null
+  maxDate: string | null
+  total: string // signed — sign-colored per the UI-SPEC, a tag can net positive or negative
+}
+
+type TagTotalAggregateRow = {
+  tagId: number
+  name: string
+  archived: boolean
+  count: number | string | null
+  minDate: string | null
+  maxDate: string | null
+  total: string | null
+}
+
+// Pure, unit-testable without a DB — mirrors buildCategoryRankingData's query-vs-shaping
+// split. Sorts by absolute total descending (UI-SPEC default sort).
+export function buildTagTotalsData(rows: TagTotalAggregateRow[]): TagTotalItem[] {
+  return rows
+    .map((row) => ({
+      tagId: row.tagId,
+      name: row.name,
+      archived: row.archived,
+      count: Number(row.count ?? 0),
+      minDate: row.minDate ?? null,
+      maxDate: row.maxDate ?? null,
+      total: toDecimal(row.total ?? '0').toFixed(2),
+    }))
+    .sort((a, b) => toDecimal(b.total).abs().comparedTo(toDecimal(a.total).abs()))
+}
+
+export async function getTagTotals(userId: string): Promise<TagTotalItem[]> {
+  // Shared FILTER predicate — applies the exact same exclusion set as
+  // getOverviewAmountTotals (the dashboard total reference point). Composed once
+  // and reused inside every aggregate expression (count/minDate/maxDate/total)
+  // via a SQL FILTER clause, NEVER in the outer WHERE — a tag whose only
+  // transactions are excluded (or a tag with zero transactions at all) must
+  // still surface a row via the LEFT JOIN, not be silently dropped.
+  const tagTotalExclusion = sql`(
+    ${inArray(expense.status, [...DASHBOARD_TOTAL_EXPENSE_STATUSES])}
+    AND ${ne(direction.code, 'transfer')}
+    AND ${isNotSecondary()}
+  )`
+
+  const rows = await db
+    .select({
+      tagId: tag.id,
+      name: tag.name,
+      archived: tag.archived,
+      count: sql<string>`count(distinct ${transactionTable.id}) FILTER (WHERE ${tagTotalExclusion})`,
+      minDate: sql<string | null>`(MIN(${transactionTable.occurredAt}) FILTER (WHERE ${tagTotalExclusion}))::text`,
+      maxDate: sql<string | null>`(MAX(${transactionTable.occurredAt}) FILTER (WHERE ${tagTotalExclusion}))::text`,
+      total: sql<string>`coalesce(sum(${effectiveAmount()}) FILTER (WHERE ${tagTotalExclusion}), 0)::text`,
+    })
+    // FROM tag, never FROM transaction — the join direction is inverted vs every
+    // other dashboard aggregate in this codebase (see 68-RESEARCH.md Anti-Pattern).
+    .from(tag)
+    .leftJoin(transactionTag, eq(transactionTag.tagId, tag.id))
+    .leftJoin(transactionTable, eq(transactionTag.transactionId, transactionTable.id))
+    .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
+    .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+    .leftJoin(category, eq(subCategory.categoryId, category.id))
+    .leftJoin(
+      userSubcategoryOverride,
+      and(
+        eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+        eq(userSubcategoryOverride.userId, userId),
+      ),
+    )
+    .leftJoin(
+      nature,
+      eq(nature.id, sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`),
+    )
+    .leftJoin(direction, eq(nature.directionId, direction.id))
+    .where(eq(tag.userId, userId))
+    .groupBy(tag.id, tag.name, tag.archived)
+
+  return buildTagTotalsData(rows)
 }

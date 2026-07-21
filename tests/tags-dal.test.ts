@@ -12,6 +12,10 @@ const mocks = vi.hoisted(() => ({
   updateArgs: [] as unknown[],
   updateSets: [] as unknown[],
   returningResult: [] as unknown[],
+  selectArgs: [] as unknown[],
+  leftJoinArgs: [] as unknown[],
+  innerJoinCount: 0,
+  groupByArgs: [] as unknown[][],
 }))
 
 function nextSelectResult() {
@@ -24,8 +28,20 @@ function makeQueryChain() {
       mocks.fromArgs.push(arg)
       return chain
     }),
+    leftJoin: vi.fn((arg: unknown) => {
+      mocks.leftJoinArgs.push(arg)
+      return chain
+    }),
+    innerJoin: vi.fn(() => {
+      mocks.innerJoinCount += 1
+      return chain
+    }),
     where: vi.fn((arg: unknown) => {
       mocks.whereArgs.push(arg)
+      return chain
+    }),
+    groupBy: vi.fn((...args: unknown[]) => {
+      mocks.groupByArgs.push(args)
       return chain
     }),
     orderBy: vi.fn((...args: unknown[]) => {
@@ -96,7 +112,10 @@ vi.mock('server-only', () => ({}))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
 vi.mock('@/lib/db', () => ({
   db: {
-    select: () => makeQueryChain(),
+    select: (spec?: unknown) => {
+      mocks.selectArgs.push(spec)
+      return makeQueryChain()
+    },
     insert: (table: unknown) => {
       mocks.insertArgs.push(table)
       return makeInsertChain()
@@ -107,11 +126,26 @@ vi.mock('@/lib/db', () => ({
     },
   },
 }))
-vi.mock('drizzle-orm', () => ({
-  and: (...args: unknown[]) => ({ op: 'and', args }),
-  asc: (column: unknown) => ({ op: 'asc', column }),
-  eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
-  isNotNull: (column: unknown) => ({ op: 'isNotNull', column }),
+// `and`/`asc`/`eq`/`isNotNull` stay simplified (existing tests assert exact
+// `{ op, ... }` shapes) — everything else (sql, inArray, ne, etc.) passes
+// through to the REAL drizzle-orm, needed by getTagTotals's FILTER predicate
+// and by transaction-pairs-sql.ts's effectiveAmount()/isNotSecondary() (both
+// real, unmocked modules imported transitively by getTagTotals).
+vi.mock('drizzle-orm', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('drizzle-orm')>()
+  return {
+    ...actual,
+    and: (...args: unknown[]) => ({ op: 'and', args }),
+    asc: (column: unknown) => ({ op: 'asc', column }),
+    eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
+    isNotNull: (column: unknown) => ({ op: 'isNotNull', column }),
+  }
+})
+vi.mock('@/lib/dal/dashboard', () => ({
+  // getTagTotals only needs the constant — avoid pulling in the real,
+  // heavy lib/dal/dashboard.ts module (which transitively imports
+  // lib/dal/auth.ts -> next/headers, unnecessary and unmocked in this file).
+  DASHBOARD_TOTAL_EXPENSE_STATUSES: ['1', '2', '3'],
 }))
 vi.mock('@/lib/db/schema', () => ({
   tag: {
@@ -124,6 +158,43 @@ vi.mock('@/lib/db/schema', () => ({
     archived: 'tag.archived',
     createdAt: 'tag.createdAt',
   },
+  transactionTag: {
+    tagId: 'transactionTag.tagId',
+    transactionId: 'transactionTag.transactionId',
+  },
+  transaction: {
+    id: 'transaction.id',
+    userId: 'transaction.userId',
+    expenseId: 'transaction.expenseId',
+    amount: 'transaction.amount',
+    occurredAt: 'transaction.occurredAt',
+  },
+  expense: {
+    id: 'expense.id',
+    status: 'expense.status',
+    subCategoryId: 'expense.subCategoryId',
+  },
+  subCategory: {
+    id: 'subCategory.id',
+    categoryId: 'subCategory.categoryId',
+    natureId: 'subCategory.natureId',
+  },
+  category: {
+    id: 'category.id',
+  },
+  userSubcategoryOverride: {
+    subCategoryId: 'userSubcategoryOverride.subCategoryId',
+    userId: 'userSubcategoryOverride.userId',
+    natureId: 'userSubcategoryOverride.natureId',
+  },
+  nature: {
+    id: 'nature.id',
+    directionId: 'nature.directionId',
+  },
+  direction: {
+    id: 'direction.id',
+    code: 'direction.code',
+  },
 }))
 
 const {
@@ -135,6 +206,8 @@ const {
   updateTagRow,
   archiveTagRow,
   resolveOwnedTagId,
+  getTagTotals,
+  buildTagTotalsData,
 } = await import('@/lib/dal/tags')
 
 describe('lib/dal/tags', () => {
@@ -151,6 +224,10 @@ describe('lib/dal/tags', () => {
     mocks.updateSets.length = 0
     mocks.returningResult = []
     mocks.queryResult = []
+    mocks.selectArgs.length = 0
+    mocks.leftJoinArgs.length = 0
+    mocks.innerJoinCount = 0
+    mocks.groupByArgs.length = 0
   })
 
   it('scopes getTags to userId, ordered by createdAt then id asc, and includes archived rows (D-04)', async () => {
@@ -274,6 +351,107 @@ describe('lib/dal/tags', () => {
       const result = await resolveOwnedTagId('user-1', 5)
 
       expect(result).toBe(5)
+    })
+  })
+
+  describe('buildTagTotalsData (pure, unit-testable without a DB)', () => {
+    it('shapes a zero-transaction tag row (LEFT JOIN nulls) to count:0, dates null, total 0.00', () => {
+      const result = buildTagTotalsData([
+        { tagId: 1, name: 'Sharm', archived: false, count: '0', minDate: null, maxDate: null, total: null },
+      ])
+
+      expect(result).toEqual([
+        { tagId: 1, name: 'Sharm', archived: false, count: 0, minDate: null, maxDate: null, total: '0.00' },
+      ])
+    })
+
+    it('coerces string count/total from the driver into number/formatted-decimal', () => {
+      const result = buildTagTotalsData([
+        { tagId: 2, name: 'Viaggi', archived: false, count: '7', minDate: '2026-01-05', maxDate: '2026-03-01', total: '-123.4' },
+      ])
+
+      expect(result[0]).toEqual({
+        tagId: 2,
+        name: 'Viaggi',
+        archived: false,
+        count: 7,
+        minDate: '2026-01-05',
+        maxDate: '2026-03-01',
+        total: '-123.40',
+      })
+    })
+
+    it('sorts by absolute total descending, regardless of sign', () => {
+      const result = buildTagTotalsData([
+        { tagId: 1, name: 'Small positive', archived: false, count: 1, minDate: null, maxDate: null, total: '10.00' },
+        { tagId: 2, name: 'Large negative', archived: false, count: 1, minDate: null, maxDate: null, total: '-500.00' },
+        { tagId: 3, name: 'Mid positive', archived: false, count: 1, minDate: null, maxDate: null, total: '100.00' },
+      ])
+
+      expect(result.map((r) => r.tagId)).toEqual([2, 3, 1])
+    })
+
+    it('returns an empty array for zero tags, never null/throw', () => {
+      expect(buildTagTotalsData([])).toEqual([])
+    })
+  })
+
+  describe('getTagTotals (TAG-05 per-tag aggregate)', () => {
+    it('scopes the outer WHERE to ONLY eq(tag.userId, userId) — exclusions live in FILTER, never here', async () => {
+      mocks.queryResult = []
+
+      await getTagTotals('user-1')
+
+      expect(mocks.whereArgs).toHaveLength(1)
+      expect(mocks.whereArgs[0]).toEqual({ op: 'eq', left: 'tag.userId', right: 'user-1' })
+    })
+
+    it('never uses innerJoin (structurally zero-safe — every join is a leftJoin so a zero-transaction tag still surfaces a row)', async () => {
+      mocks.queryResult = []
+
+      await getTagTotals('user-1')
+
+      expect(mocks.innerJoinCount).toBe(0)
+      expect(mocks.leftJoinArgs.length).toBeGreaterThanOrEqual(7)
+    })
+
+    it('embeds the dashboard exclusion set inside a FILTER clause on the select spec, not the outer WHERE', async () => {
+      mocks.queryResult = []
+
+      await getTagTotals('user-1')
+
+      const serializedSelect = JSON.stringify(mocks.selectArgs[0])
+      expect(serializedSelect).toContain('FILTER')
+      // Anti-Pattern guard: the exclusion tokens (status/transfer/pair-netting) must
+      // never leak into the outer WHERE — only eq(tag.userId, ...) is asserted there.
+      expect(JSON.stringify(mocks.whereArgs[0])).not.toContain('FILTER')
+    })
+
+    it('groups by tag.id, tag.name, tag.archived', async () => {
+      mocks.queryResult = []
+
+      await getTagTotals('user-1')
+
+      expect(mocks.groupByArgs[0]).toEqual(['tag.id', 'tag.name', 'tag.archived'])
+    })
+
+    it('delegates the returned rows through buildTagTotalsData (zero-safe shaping + sort)', async () => {
+      mocks.queryResult = [
+        { tagId: 1, name: 'Sharm', archived: false, count: '0', minDate: null, maxDate: null, total: '0' },
+        { tagId: 2, name: 'Viaggi', archived: true, count: '3', minDate: '2026-01-01', maxDate: '2026-02-01', total: '-250.5' },
+      ]
+
+      const result = await getTagTotals('user-1')
+
+      expect(result).toEqual(
+        buildTagTotalsData([
+          { tagId: 1, name: 'Sharm', archived: false, count: '0', minDate: null, maxDate: null, total: '0' },
+          { tagId: 2, name: 'Viaggi', archived: true, count: '3', minDate: '2026-01-01', maxDate: '2026-02-01', total: '-250.5' },
+        ]),
+      )
+      // Viaggi's larger absolute total sorts first.
+      expect(result[0].tagId).toBe(2)
+      expect(result[0].archived).toBe(true)
     })
   })
 })
