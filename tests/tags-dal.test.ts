@@ -134,6 +134,7 @@ const {
   insertTagRow,
   updateTagRow,
   archiveTagRow,
+  resolveOwnedTagId,
 } = await import('@/lib/dal/tags')
 
 describe('lib/dal/tags', () => {
@@ -246,5 +247,33 @@ describe('lib/dal/tags', () => {
     expect(mocks.updateSets[0]).toMatchObject({ archived: true })
     expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'tag.id', right: 5 })
     expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'tag.userId', right: 'user-1' })
+  })
+
+  describe('resolveOwnedTagId (68-01 IDOR defense-in-depth)', () => {
+    it('resolves to undefined without calling getTag (no DB call) when candidateTagId is undefined', async () => {
+      const result = await resolveOwnedTagId('user-1', undefined)
+
+      expect(result).toBeUndefined()
+      expect(mocks.whereArgs).toHaveLength(0)
+      expect(mocks.limitArgs).toHaveLength(0)
+    })
+
+    it('resolves to undefined (fail-closed) when getTag finds no owned row (foreign or nonexistent tagId)', async () => {
+      mocks.selectResults.push([])
+
+      const result = await resolveOwnedTagId('user-1', 999)
+
+      expect(result).toBeUndefined()
+      expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'tag.id', right: 999 })
+      expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'tag.userId', right: 'user-1' })
+    })
+
+    it('resolves to the candidateTagId when getTag finds an owned row', async () => {
+      mocks.selectResults.push([{ id: 5, userId: 'user-1' }])
+
+      const result = await resolveOwnedTagId('user-1', 5)
+
+      expect(result).toBe(5)
+    })
   })
 })

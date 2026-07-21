@@ -5,7 +5,7 @@ import {
   buildDashboardCategoryDetailHref,
   dashboardCategoryDetail,
 } from '@/lib/routes'
-import { parseDashboardFilters } from '@/lib/validations/dashboard'
+import { parseDashboardFilters, parseTagIdParam } from '@/lib/validations/dashboard'
 
 describe('parseDashboardFilters', () => {
   test('uses preset as the canonical period parameter', () => {
@@ -96,6 +96,26 @@ describe('parseDashboardFilters', () => {
     expect(
       parseDashboardFilters({ sort: 'oops' }, { defaultSort: 'deviation' })
     ).toMatchObject({ sort: 'deviation' })
+  })
+})
+
+describe('parseTagIdParam (68-01)', () => {
+  test('parses a valid positive integer string', () => {
+    expect(parseTagIdParam({ tag: '3' })).toBe(3)
+  })
+
+  test('returns undefined when tag is absent', () => {
+    expect(parseTagIdParam({ tag: undefined })).toBeUndefined()
+  })
+
+  test('returns undefined for non-positive-integer values', () => {
+    expect(parseTagIdParam({ tag: '0' })).toBeUndefined()
+    expect(parseTagIdParam({ tag: '-1' })).toBeUndefined()
+    expect(parseTagIdParam({ tag: 'abc' })).toBeUndefined()
+  })
+
+  test('uses the first array value', () => {
+    expect(parseTagIdParam({ tag: ['7', '9'] })).toBe(7)
   })
 })
 

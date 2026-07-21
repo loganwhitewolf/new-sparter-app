@@ -105,6 +105,30 @@ export async function updateTagRow(
   return rows[0] ?? null
 }
 
+/**
+ * IDOR defense-in-depth for the dashboard `?tag=` filter (68-01, T-68-01).
+ *
+ * Ownership is already enforced structurally: tagScopedTransactions() only
+ * narrows rows already scoped by eq(transaction.userId, userId) in the same
+ * query's WHERE clause, so a foreign tagId matches zero rows — no leak is
+ * possible even without this check. This helper is the belt-and-suspenders
+ * addition every RSC page reading `?tag=` in Wave 3/4 of this phase MUST call
+ * before forwarding a user-supplied tagId to any DAL function.
+ *
+ * Fail-closed by design: a tagId that does not belong to the authenticated
+ * user (or does not exist) is silently ignored (resolves to undefined),
+ * never thrown as an error.
+ */
+export async function resolveOwnedTagId(
+  userId: string,
+  candidateTagId?: number,
+): Promise<number | undefined> {
+  if (candidateTagId === undefined) return undefined
+
+  const owned = await getTag(userId, candidateTagId)
+  return owned ? candidateTagId : undefined
+}
+
 // The ONLY write to `archived` in this file; there is no `db.delete(tag)` call anywhere (D-04).
 export async function archiveTagRow(
   userId: string,
