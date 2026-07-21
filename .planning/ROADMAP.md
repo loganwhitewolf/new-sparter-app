@@ -42,6 +42,8 @@ totals never persisted), and via the "tag = filter, never breakdown" rule for ta
 
 **Post-Phase-68 bugfix:** 260721-n3c — removed the overflowing "Data" column from the expenses table; transaction period now shown as a "Periodo" row on the expense/group detail pages (`expense-table.tsx`, `expense-detail-client.tsx`, `group-detail-client.tsx`, 2026-07-21).
 
+**Post-Phase-68 bugfix:** dashboard Categorie tag filter alignment — dropped the internal `pb-4` from `DashboardFilters` (and the two `CategoryFiltersFallback` skeletons) so the `TagFilterSelect` sibling aligns on the `items-center` row; vertical spacing is handled by the pages' `flex flex-col gap-6` (2026-07-21).
+
 ### Phase 65: expense-group-merge-and-view
 
 **Goal:** A user with the same real-world merchant scattered across several Expenses (different bank descriptions per card/platform) can unify them into one titled Expense Group, and that group is what they see everywhere Expenses and their transactions are rendered — without any of the underlying transactions, hashes, or categorization history being touched.

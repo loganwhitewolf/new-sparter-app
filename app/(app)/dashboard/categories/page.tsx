@@ -25,7 +25,7 @@ const categoryTypeOptions = [
 
 function CategoryFiltersFallback() {
   return (
-    <div className="flex flex-wrap items-center gap-2 pb-4" aria-hidden="true">
+    <div className="flex flex-wrap items-center gap-2" aria-hidden="true">
       <div className="h-9 w-40 animate-pulse rounded-md bg-muted" />
       <div className="h-9 w-[170px] animate-pulse rounded-md bg-muted" />
       <div className="h-9 w-40 animate-pulse rounded-md bg-muted" />

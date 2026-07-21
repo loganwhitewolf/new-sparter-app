@@ -68,7 +68,7 @@ export function DashboardFilters({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 pb-4">
+    <div className="flex flex-wrap items-center gap-2">
       {typeOptions.length > 0 && (
         <Tabs
           value={type}
