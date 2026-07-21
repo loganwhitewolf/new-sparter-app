@@ -81,12 +81,22 @@ export function CategoryRankingList({
     : data
 
   if (sortedData.length === 0) {
+    // 68-06: a tag filter active with zero matching transactions in the browsed period
+    // surfaces distinct copy (68-UI-SPEC.md Copywriting Contract) rather than the
+    // generic "no categories in this period" message, which would misleadingly point
+    // the user at the period/type filters instead of the active tag filter.
     return (
       <div className="flex min-h-[260px] items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 text-center">
         <div className="max-w-sm space-y-2">
-          <p className="text-sm font-medium">Nessuna categoria nel periodo selezionato</p>
+          <p className="text-sm font-medium">
+            {tagId
+              ? 'Nessuna transazione con questo tag nel periodo selezionato'
+              : 'Nessuna categoria nel periodo selezionato'}
+          </p>
           <p className="text-sm text-muted-foreground">
-            Cambia periodo o tipo movimento per visualizzare la classifica.
+            {tagId
+              ? 'Cambia periodo o rimuovi il filtro tag per vedere altri dati.'
+              : 'Cambia periodo o tipo movimento per visualizzare la classifica.'}
           </p>
         </div>
       </div>
