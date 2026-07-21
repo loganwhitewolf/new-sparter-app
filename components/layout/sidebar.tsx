@@ -128,7 +128,7 @@ export function Sidebar({ user }: { user: UserDisplay }) {
           })}
         </ul>
 
-        {/* SETTINGS LINK: direct access to /settings hub (categories + theme) */}
+        {/* SETTINGS LINK: Impostazioni hub (Profilo + theme) */}
         <Separator className="my-2" />
         {(() => {
           const isActive =
