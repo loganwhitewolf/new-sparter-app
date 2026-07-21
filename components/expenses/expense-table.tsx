@@ -225,14 +225,6 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
     )
   }
 
-  function formatDate(date: Date): string {
-    return new Intl.DateTimeFormat('it-IT', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    }).format(new Date(date))
-  }
-
   // Display-only; never use for values written back to the DB.
   function formatAmount(amount: string): string {
     return formatAbsoluteAmount(amount)
@@ -262,7 +254,7 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
       <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
         <Table className="table-fixed w-full">
           <TableCaption className="sr-only">
-            Elenco spese con categoria, stato, totale e data.
+            Elenco spese con categoria, stato e totale.
           </TableCaption>
           <TableHeader>
             <TableRow className="bg-secondary/70">
@@ -292,14 +284,6 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                 align="right"
                 onSort={onSort}
                 className="w-28 text-xs uppercase tracking-wide text-muted-foreground font-normal"
-              />
-              <HeaderSortButton
-                column={{ key: 'createdAt', label: 'Data' }}
-                activeSort={activeSort}
-                activeDir={activeDir}
-                align="right"
-                onSort={onSort}
-                className="w-24 text-xs uppercase tracking-wide text-muted-foreground font-normal"
               />
               <TableHead className="w-36 text-xs uppercase tracking-wide text-muted-foreground font-normal">
                 Piattaforma
@@ -378,11 +362,6 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                     )}
                   >
                     {formatAmount(exp.totalAmount)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums text-sm">
-                    {exp.firstTransactionAt && exp.lastTransactionAt
-                      ? `${formatDate(exp.firstTransactionAt)} – ${formatDate(exp.lastTransactionAt)}`
-                      : formatDate(exp.createdAt)}
                   </TableCell>
                   <TableCell className="truncate text-sm">{exp.platformName ?? '—'}</TableCell>
                   <TableCell>
