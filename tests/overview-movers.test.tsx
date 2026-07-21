@@ -12,6 +12,7 @@ import type { MonthOverMonthChange } from '@/lib/dal/overview'
 
 const positiveItem: MonthOverMonthChange = {
   categoryId: 1,
+  categorySlug: 'spesa',
   name: 'Spesa',
   delta: '42.50',
   isNew: false,
@@ -19,6 +20,7 @@ const positiveItem: MonthOverMonthChange = {
 
 const negativeItem: MonthOverMonthChange = {
   categoryId: 2,
+  categorySlug: 'bollette',
   name: 'Bollette',
   delta: '-30.00',
   isNew: false,
@@ -26,6 +28,7 @@ const negativeItem: MonthOverMonthChange = {
 
 const isNewItem: MonthOverMonthChange = {
   categoryId: 3,
+  categorySlug: 'palestra',
   name: 'Palestra',
   delta: '80.00',
   isNew: true,
@@ -33,6 +36,7 @@ const isNewItem: MonthOverMonthChange = {
 
 const isNewItemWithNegativeDelta: MonthOverMonthChange = {
   categoryId: 4,
+  categorySlug: 'abbonamento',
   name: 'Abbonamento',
   delta: '-20.00',
   isNew: true, // isNew wins regardless of delta sign
@@ -98,6 +102,7 @@ describe('formatMoverLine', () => {
 describe('takeTopMovers', () => {
   const makeItem = (id: number): MonthOverMonthChange => ({
     categoryId: id,
+    categorySlug: `cat-${id}`,
     name: `Cat ${id}`,
     delta: '10.00',
     isNew: false,
@@ -133,19 +138,19 @@ describe('takeTopMovers', () => {
 
 describe('moverAmountTone', () => {
   it('positive delta → "increase"', () => {
-    expect(moverAmountTone({ categoryId: 1, name: 'X', delta: '10.00', isNew: false })).toBe('increase')
+    expect(moverAmountTone({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '10.00', isNew: false })).toBe('increase')
   })
 
   it('isNew with negative delta → "increase" (isNew wins)', () => {
-    expect(moverAmountTone({ categoryId: 1, name: 'X', delta: '-20.00', isNew: true })).toBe('increase')
+    expect(moverAmountTone({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '-20.00', isNew: true })).toBe('increase')
   })
 
   it('negative delta, not new → "decrease"', () => {
-    expect(moverAmountTone({ categoryId: 1, name: 'X', delta: '-15.00', isNew: false })).toBe('decrease')
+    expect(moverAmountTone({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '-15.00', isNew: false })).toBe('decrease')
   })
 
   it('zero delta, not new → "decrease"', () => {
-    expect(moverAmountTone({ categoryId: 1, name: 'X', delta: '0.00', isNew: false })).toBe('decrease')
+    expect(moverAmountTone({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '0.00', isNew: false })).toBe('decrease')
   })
 })
 
@@ -153,19 +158,19 @@ describe('moverAmountTone', () => {
 
 describe('moverQualifier', () => {
   it('isNew → "spesa nuova"', () => {
-    expect(moverQualifier({ categoryId: 1, name: 'X', delta: '50.00', isNew: true })).toBe('spesa nuova')
+    expect(moverQualifier({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '50.00', isNew: true })).toBe('spesa nuova')
   })
 
   it('positive delta → "in più"', () => {
-    expect(moverQualifier({ categoryId: 1, name: 'X', delta: '30.00', isNew: false })).toBe('in più')
+    expect(moverQualifier({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '30.00', isNew: false })).toBe('in più')
   })
 
   it('negative delta → "in meno"', () => {
-    expect(moverQualifier({ categoryId: 1, name: 'X', delta: '-25.00', isNew: false })).toBe('in meno')
+    expect(moverQualifier({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '-25.00', isNew: false })).toBe('in meno')
   })
 
   it('isNew wins over positive delta', () => {
-    expect(moverQualifier({ categoryId: 1, name: 'X', delta: '100.00', isNew: true })).toBe('spesa nuova')
+    expect(moverQualifier({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '100.00', isNew: true })).toBe('spesa nuova')
   })
 })
 

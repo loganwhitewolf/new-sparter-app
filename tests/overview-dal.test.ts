@@ -237,6 +237,90 @@ describe('getMonthOverMonthCategoryChanges', () => {
   })
 })
 
+describe('getMonthOverMonthCategoryChanges tagId threading (68-03, TAG-04)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.verifySession.mockResolvedValue({ userId: 'user-123' })
+    mocks.rowsQueue = []
+    mocks.selectResult = []
+  })
+
+  it('in/out grain, no tagId: forwards undefined to both current+previous internal queries', async () => {
+    const { getMonthOverMonthCategoryChanges } = await import('@/lib/dal/overview')
+    await getMonthOverMonthCategoryChanges(2026, 3, 'out')
+
+    expect(mocks.tagScopedTransactions).toHaveBeenCalledTimes(2)
+    for (const call of mocks.tagScopedTransactions.mock.calls) {
+      expect(call[0]).toBeUndefined()
+    }
+  })
+
+  it('in/out grain, tagId=5: forwards 5 to both current+previous internal queries', async () => {
+    const { getMonthOverMonthCategoryChanges } = await import('@/lib/dal/overview')
+    await getMonthOverMonthCategoryChanges(2026, 3, 'out', 10, 5)
+
+    expect(mocks.tagScopedTransactions).toHaveBeenCalledTimes(2)
+    for (const call of mocks.tagScopedTransactions.mock.calls) {
+      expect(call[0]).toBe(5)
+    }
+  })
+
+  it('allocation grain, no tagId: forwards undefined to both current+previous internal queries', async () => {
+    const { getMonthOverMonthCategoryChanges } = await import('@/lib/dal/overview')
+    await getMonthOverMonthCategoryChanges(2026, 3, 'allocation')
+
+    expect(mocks.tagScopedTransactions).toHaveBeenCalledTimes(2)
+    for (const call of mocks.tagScopedTransactions.mock.calls) {
+      expect(call[0]).toBeUndefined()
+    }
+  })
+
+  it('allocation grain, tagId=5: forwards 5 to both current+previous internal queries (covers all 4 .where() blocks across both grains)', async () => {
+    const { getMonthOverMonthCategoryChanges } = await import('@/lib/dal/overview')
+    await getMonthOverMonthCategoryChanges(2026, 3, 'allocation', 10, 5)
+
+    expect(mocks.tagScopedTransactions).toHaveBeenCalledTimes(2)
+    for (const call of mocks.tagScopedTransactions.mock.calls) {
+      expect(call[0]).toBe(5)
+    }
+  })
+})
+
+describe('getMonthOverMonthCategoryChanges categorySlug (68-03, NAV-01 slug-vs-id fix)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.verifySession.mockResolvedValue({ userId: 'user-123' })
+    mocks.rowsQueue = []
+    mocks.selectResult = []
+  })
+
+  it('in/out grain: carries categorySlug matching the category row data', async () => {
+    mocks.rowsQueue = [
+      [{ id: 1, name: 'Spesa', categorySlug: 'spesa', amount: '100.00' }],
+      [{ id: 1, name: 'Spesa', categorySlug: 'spesa', amount: '50.00' }],
+    ]
+
+    const { getMonthOverMonthCategoryChanges } = await import('@/lib/dal/overview')
+    const result = await getMonthOverMonthCategoryChanges(2026, 3, 'out')
+
+    expect(result).toHaveLength(1)
+    expect(result[0]!.categorySlug).toBe('spesa')
+  })
+
+  it('allocation grain: categorySlug stays null (no category join in this branch)', async () => {
+    mocks.rowsQueue = [
+      [{ id: 1, name: 'Risparmio', natureCode: 'savings', amount: '100.00' }],
+      [{ id: 1, name: 'Risparmio', natureCode: 'savings', amount: '50.00' }],
+    ]
+
+    const { getMonthOverMonthCategoryChanges } = await import('@/lib/dal/overview')
+    const result = await getMonthOverMonthCategoryChanges(2026, 3, 'allocation')
+
+    expect(result).toHaveLength(1)
+    expect(result[0]!.categorySlug).toBeNull()
+  })
+})
+
 describe('getOverviewChart', () => {
   beforeEach(() => {
     vi.clearAllMocks()

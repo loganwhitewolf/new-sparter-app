@@ -29,6 +29,7 @@ import type { OverviewData } from '@/lib/dal/dashboard'
 
 export type MonthOverMonthChange = {
   categoryId: number | null
+  categorySlug: string | null // NAV-01: movers-row click-through matches by slug, never numeric id
   name: string
   delta: string // signed Decimal string; negative = spent less (saved money)
   isNew: boolean
@@ -190,7 +191,8 @@ export const getMonthOverMonthCategoryChanges = cache(
     year: number,
     monthIndex = 0,
     directionParam: 'in' | 'out' | 'allocation' = 'out',
-    limit = 10
+    limit = 10,
+    tagId?: number
   ): Promise<MonthOverMonthChange[]> => {
     const { userId } = await verifySession()
 
@@ -205,7 +207,13 @@ export const getMonthOverMonthCategoryChanges = cache(
 
     const isAllocation = directionParam === 'allocation'
 
-    type AmountRow = { id: number; name: string; amount: string; natureCode?: string | null }
+    type AmountRow = {
+      id: number
+      name: string
+      amount: string
+      natureCode?: string | null
+      categorySlug?: string | null
+    }
 
     let currRows: AmountRow[] = []
     let prevRows: AmountRow[] = []
@@ -244,7 +252,8 @@ export const getMonthOverMonthCategoryChanges = cache(
                 dateScopedTransactions(userId, currFrom, currTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, 'allocation'),
-                isNotSecondary()
+                isNotSecondary(),
+                tagScopedTransactions(tagId)
               )
             )
             .groupBy(natureTable.id, natureTable.labelIt, natureTable.code),
@@ -278,7 +287,8 @@ export const getMonthOverMonthCategoryChanges = cache(
                 dateScopedTransactions(userId, prevFrom, prevTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, 'allocation'),
-                isNotSecondary()
+                isNotSecondary(),
+                tagScopedTransactions(tagId)
               )
             )
             .groupBy(natureTable.id, natureTable.labelIt, natureTable.code),
@@ -297,6 +307,7 @@ export const getMonthOverMonthCategoryChanges = cache(
             .select({
               id: category.id,
               name: category.name,
+              categorySlug: category.slug,
               amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
             })
             .from(transactionTable)
@@ -323,14 +334,16 @@ export const getMonthOverMonthCategoryChanges = cache(
                 dateScopedTransactions(userId, currFrom, currTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, directionParam),
-                isNotSecondary()
+                isNotSecondary(),
+                tagScopedTransactions(tagId)
               )
             )
-            .groupBy(category.id, category.name),
+            .groupBy(category.id, category.name, category.slug),
           db
             .select({
               id: category.id,
               name: category.name,
+              categorySlug: category.slug,
               amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
             })
             .from(transactionTable)
@@ -357,17 +370,28 @@ export const getMonthOverMonthCategoryChanges = cache(
                 dateScopedTransactions(userId, prevFrom, prevTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, directionParam),
-                isNotSecondary()
+                isNotSecondary(),
+                tagScopedTransactions(tagId)
               )
             )
-            .groupBy(category.id, category.name),
+            .groupBy(category.id, category.name, category.slug),
         ])
 
         currRows = Array.isArray(rawCurr)
-          ? rawCurr.map((r) => ({ id: Number(r.id), name: String(r.name), amount: String(r.amount) }))
+          ? rawCurr.map((r) => ({
+              id: Number(r.id),
+              name: String(r.name),
+              amount: String(r.amount),
+              categorySlug: r.categorySlug ?? null,
+            }))
           : []
         prevRows = Array.isArray(rawPrev)
-          ? rawPrev.map((r) => ({ id: Number(r.id), name: String(r.name), amount: String(r.amount) }))
+          ? rawPrev.map((r) => ({
+              id: Number(r.id),
+              name: String(r.name),
+              amount: String(r.amount),
+              categorySlug: r.categorySlug ?? null,
+            }))
           : []
       }
     } catch {
@@ -397,6 +421,7 @@ export const getMonthOverMonthCategoryChanges = cache(
       processedIds.add(curr.id)
       changes.push({
         categoryId: isAllocation ? null : curr.id,
+        categorySlug: isAllocation ? null : (curr.categorySlug ?? null),
         name: curr.name,
         delta: delta.toFixed(2),
         isNew,
@@ -419,6 +444,7 @@ export const getMonthOverMonthCategoryChanges = cache(
 
       changes.push({
         categoryId: isAllocation ? null : prev.id,
+        categorySlug: isAllocation ? null : (prev.categorySlug ?? null),
         name: prev.name,
         delta: delta.toFixed(2),
         isNew: false,
