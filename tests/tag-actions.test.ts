@@ -132,6 +132,24 @@ describe('lib/actions/tags', () => {
       expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/tags')
     })
 
+    it('revalidates BOTH /settings/tags and /dashboard/tags on success (Pitfall 3 fix — 68-04)', async () => {
+      mocks.archiveTag.mockResolvedValue({ id: 1, archived: true })
+
+      await archiveTagAction({ error: null }, formDataFrom({ id: '1' }))
+
+      expect(mocks.revalidatePath).toHaveBeenCalledTimes(2)
+      expect(mocks.revalidatePath).toHaveBeenNthCalledWith(1, '/settings/tags')
+      expect(mocks.revalidatePath).toHaveBeenNthCalledWith(2, '/dashboard/tags')
+    })
+
+    it('does not call revalidatePath at all when the service call fails', async () => {
+      mocks.archiveTag.mockRejectedValue(new Error('db down'))
+
+      await archiveTagAction({ error: null }, formDataFrom({ id: '1' }))
+
+      expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+
     it('surfaces a not_found TagMutationError message', async () => {
       mocks.archiveTag.mockRejectedValue(new TagMutationError('not_found', 'Tag non trovato.'))
 

@@ -104,6 +104,7 @@ export async function archiveTagAction(
   try {
     await archiveTagService({ userId, tagId: parsed.data.id })
     revalidatePath(APP_ROUTES.tagSettings)
+    revalidatePath(APP_ROUTES.dashboardTags) // Pitfall 3 fix — dashboard Tag section (Plan 68-08)
     return { error: null }
   } catch (error) {
     return mapKnownTagError(error) ?? { error: GENERIC_ERROR }
