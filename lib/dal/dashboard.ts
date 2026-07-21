@@ -1204,7 +1204,7 @@ export const getCategoryDeviations = cache(
 )
 
 export const getCategoryDetail = cache(
-  async (categoryId: number, filters: DashboardFilters): Promise<CategoryDetailData> => {
+  async (categoryId: number, filters: DashboardFilters, tagId?: number): Promise<CategoryDetailData> => {
     const { userId } = await verifySession()
     const { from, to } = dashboardPresetToDateRange(filters.preset)
     const emptyData = () => emptyCategoryDetailData(null, from, to)
@@ -1314,7 +1314,8 @@ export const getCategoryDetail = cache(
               activeScopedCategory,
               activeScopedSubCategory,
               eq(direction.includedInTotals, true),
-              isNotSecondary()
+              isNotSecondary(),
+              tagScopedTransactions(tagId)
             )
           )
           .groupBy(category.id, monthSql, direction.code)
@@ -1357,7 +1358,8 @@ export const getCategoryDetail = cache(
               activeScopedCategory,
               activeScopedSubCategory,
               eq(direction.includedInTotals, true),
-              isNotSecondary()
+              isNotSecondary(),
+              tagScopedTransactions(tagId)
             )
           )
           .groupBy(category.id, subCategory.id, userSubcategoryOverride.customName, direction.code)
@@ -1400,7 +1402,8 @@ export const getCategoryDetail = cache(
               activeScopedCategory,
               activeScopedSubCategory,
               eq(direction.includedInTotals, true),
-              isNotSecondary()
+              isNotSecondary(),
+              tagScopedTransactions(tagId)
             )
           )
           .orderBy(desc(sql`abs(${effectiveAmount()})`), desc(transactionTable.occurredAt), transactionTable.id)

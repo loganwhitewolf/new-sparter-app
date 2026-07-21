@@ -122,6 +122,7 @@ const {
   getOverviewAmountTotals,
   getCategoryRanking,
   getCategoryDeviations,
+  getCategoryDetail,
 } = await import('../lib/dal/dashboard')
 
 const { verifySession } = await import('../lib/dal/auth')
@@ -1150,5 +1151,37 @@ describe('getCategoryRanking / getCategoryDeviations tagId threading (68-02, TAG
     expect(dalMocks.whereArgs).toHaveLength(2)
     expect(findTagCondition(dalMocks.whereArgs[0], 5)).toBe(true)
     expect(findTagCondition(dalMocks.whereArgs[1], 5)).toBe(true)
+  })
+})
+
+describe('getCategoryDetail tagId threading (68-02, TAG-04, resolved Open Question #2)', () => {
+  const filters = { preset: 'last-month', type: 'all', sort: 'amount' } as const
+  const categoryMetadataRow = [
+    { id: 1, name: 'Casa', slug: 'casa', type: 'out' },
+  ]
+
+  it('no tagId adds no EXISTS(transaction_tag) condition to any of the 3 data queries', async () => {
+    dalMocks.rowsQueue = [categoryMetadataRow]
+
+    await getCategoryDetail(1, filters)
+
+    // whereArgs[0] is the category-metadata lookup (untouched by design — no
+    // transaction join to scope); whereArgs[1..3] are trend/subcategory/top.
+    expect(dalMocks.whereArgs).toHaveLength(4)
+    expect(hasTagCondition(dalMocks.whereArgs[1])).toBe(false)
+    expect(hasTagCondition(dalMocks.whereArgs[2])).toBe(false)
+    expect(hasTagCondition(dalMocks.whereArgs[3])).toBe(false)
+  })
+
+  it('tagId=5 narrows all 3 data queries (trend, subcategory breakdown, top transactions) but not the metadata lookup', async () => {
+    dalMocks.rowsQueue = [categoryMetadataRow]
+
+    await getCategoryDetail(1, filters, 5)
+
+    expect(dalMocks.whereArgs).toHaveLength(4)
+    expect(hasTagCondition(dalMocks.whereArgs[0])).toBe(false)
+    expect(findTagCondition(dalMocks.whereArgs[1], 5)).toBe(true)
+    expect(findTagCondition(dalMocks.whereArgs[2], 5)).toBe(true)
+    expect(findTagCondition(dalMocks.whereArgs[3], 5)).toBe(true)
   })
 })
