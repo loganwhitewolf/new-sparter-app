@@ -19,6 +19,8 @@ import {
   category,
   direction,
   expense,
+  expenseGroup,
+  expenseGroupMembership,
   nature,
   subCategory,
   transaction as transactionTable,
@@ -266,6 +268,7 @@ type CategoryDetailTopTransactionRow = {
   categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
   description: string | null
   customTitle: string | null
+  groupTitle: string | null
   amount: string | null
   occurredAt: Date | string | null
 }
@@ -908,7 +911,7 @@ export function buildCategoryDetailData(input: {
       return [
         {
           id: row.id,
-          title: row.customTitle ?? row.description,
+          title: row.customTitle ?? row.groupTitle ?? row.description,
           description: row.description,
           date,
           amount: normalizeAmount(toDecimal(row.amount ?? 0).abs().toString()),
@@ -1373,11 +1376,14 @@ export const getCategoryDetail = cache(
             categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
             description: transactionTable.description,
             customTitle: transactionTable.customTitle,
+            groupTitle: expenseGroup.title,
             amount: transactionTable.amount,
             occurredAt: transactionTable.occurredAt,
           })
           .from(transactionTable)
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+          .leftJoin(expenseGroupMembership, eq(expense.id, expenseGroupMembership.expenseId))
+          .leftJoin(expenseGroup, eq(expenseGroupMembership.groupId, expenseGroup.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
           .leftJoin(
