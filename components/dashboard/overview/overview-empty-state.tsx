@@ -1,5 +1,5 @@
 type OverviewEmptyStateProps = {
-  variant: 'no-years' | 'no-data-for-year'
+  variant: 'no-years' | 'no-data-for-year' | 'no-data-for-tag'
   year?: number
 }
 
@@ -9,6 +9,8 @@ type OverviewEmptyStateProps = {
  *
  * variant 'no-years'        — account has no transactions at all
  * variant 'no-data-for-year' — the selected year has no transactions
+ * variant 'no-data-for-tag'  — a tag filter is active with zero matching transactions
+ *                              in the browsed period (68-06, 68-UI-SPEC.md Copywriting Contract)
  */
 export function OverviewEmptyState({ variant, year }: OverviewEmptyStateProps) {
   return (
@@ -18,6 +20,15 @@ export function OverviewEmptyState({ variant, year }: OverviewEmptyStateProps) {
           <p className="text-base font-medium text-foreground">Nessuna transazione registrata</p>
           <p className="max-w-xs text-sm">
             Inizia importando un estratto conto per vedere le tue finanze qui.
+          </p>
+        </>
+      ) : variant === 'no-data-for-tag' ? (
+        <>
+          <p className="text-base font-medium text-foreground">
+            Nessuna transazione con questo tag nel periodo selezionato
+          </p>
+          <p className="max-w-xs text-sm">
+            Cambia periodo o rimuovi il filtro tag per vedere altri dati.
           </p>
         </>
       ) : (
