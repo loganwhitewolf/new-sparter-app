@@ -676,7 +676,7 @@ describe("transaction DAL query helpers", () => {
     expect(amountMaxCondition!.values).toContain("200");
   });
 
-  it("name filter uses substring ILIKE on description, customTitle, and expense title", async () => {
+  it("name filter uses substring ILIKE on description, customTitle, expense title, and expense group title", async () => {
     await getTransactions({ name: "esselunga" });
 
     const where = mocks.whereArgs[0] as { op: string; args: unknown[] };
@@ -700,6 +700,7 @@ describe("transaction DAL query helpers", () => {
         { op: "ilike", left: "transaction.description", right: "%esselunga%" },
         { op: "ilike", left: "transaction.customTitle", right: "%esselunga%" },
         { op: "ilike", left: "expense.title", right: "%esselunga%" },
+        { op: "ilike", left: "expenseGroup.title", right: "%esselunga%" },
       ]),
     );
   });
