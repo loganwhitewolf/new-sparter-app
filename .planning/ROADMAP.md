@@ -44,6 +44,8 @@ totals never persisted), and via the "tag = filter, never breakdown" rule for ta
 
 **Post-Phase-68 bugfix:** dashboard Categorie tag filter alignment — dropped the internal `pb-4` from `DashboardFilters` (and the two `CategoryFiltersFallback` skeletons) so the `TagFilterSelect` sibling aligns on the `items-center` row; vertical spacing is handled by the pages' `flex flex-col gap-6` (2026-07-21).
 
+**Post-Phase-68 bugfix:** 260721-o5t — dashboard category-detail "Top 5 movimenti" panel now shows a grouped expense's Expense Group title instead of its raw bank description, closing the GRP-08 scope exclusion left open in Phase 65 (`lib/dal/dashboard.ts` `topTransactionRows` query mirrors the `lib/dal/transactions.ts` leftJoin(expenseGroup) pattern, 2026-07-21).
+
 ### Phase 65: expense-group-merge-and-view
 
 **Goal:** A user with the same real-world merchant scattered across several Expenses (different bank descriptions per card/platform) can unify them into one titled Expense Group, and that group is what they see everywhere Expenses and their transactions are rendered — without any of the underlying transactions, hashes, or categorization history being touched.

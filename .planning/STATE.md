@@ -271,6 +271,7 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260709-lkw | Uscite card nature breakdown: Essenziali/Discrezionali/Debiti rows (per-nature OUT sums in shared aggregate, outByNature). Labels locked: NATURE_LABELS chip lexicon (review 2026-07-09) | 2026-07-09 | c671da1 |
 | 260721-mim | Fix transactions free-text search to also match the Expense Group title (getTransactions name filter or() + precedence comment) | 2026-07-21 | e52608f |
 | 260721-n3c | Remove overflowing "Data" column from expenses table; add "Periodo" row to expense/group detail riepilogoCard | 2026-07-21 | 72c82f8 |
+| 260721-o5t | Dashboard category-detail Top 5 movimenti shows Expense Group title (GRP-08 gap closed): topTransactionRows leftJoins expenseGroup, title precedence customTitle ?? groupTitle ?? description | 2026-07-21 | 0b473c3 |
 
 ## Deferred Items
 
