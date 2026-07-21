@@ -6,6 +6,7 @@ function DashboardTabNavFallback() {
     <nav className="flex border-b" aria-label="Navigazione dashboard">
       <div className="px-4 py-2 text-sm font-medium text-muted-foreground">Overview</div>
       <div className="px-4 py-2 text-sm font-medium text-muted-foreground">Categorie</div>
+      <div className="px-4 py-2 text-sm font-medium text-muted-foreground">Tag</div>
     </nav>
   )
 }

@@ -8,6 +8,7 @@ import { APP_ROUTES } from '@/lib/routes'
 const tabs = [
   { href: APP_ROUTES.dashboardOverview, label: 'Overview' },
   { href: APP_ROUTES.dashboardCategories, label: 'Categorie' },
+  { href: APP_ROUTES.dashboardTags, label: 'Tag' },
 ]
 
 export function buildDashboardTabHref(
@@ -18,6 +19,7 @@ export function buildDashboardTabHref(
   const preset = searchParams.get('preset')
   const type = searchParams.get('type')
   const sort = searchParams.get('sort')
+  const tag = searchParams.get('tag')
 
   if (preset) {
     params.set('preset', preset)
@@ -29,6 +31,10 @@ export function buildDashboardTabHref(
 
   if (sort) {
     params.set('sort', sort)
+  }
+
+  if (tag) {
+    params.set('tag', tag)
   }
 
   const search = params.toString()

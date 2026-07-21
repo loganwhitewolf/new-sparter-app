@@ -147,6 +147,26 @@ describe('buildDashboardTabHref', () => {
       '/dashboard/categories?preset=last-3-months&sort=amount'
     )
   })
+
+  test('forwards ?tag= across Overview <-> Categorie <-> Tag tab switches (68-05)', () => {
+    const current = new URLSearchParams({ tag: '5' })
+
+    expect(buildDashboardTabHref('/dashboard/overview', current)).toBe(
+      '/dashboard/overview?tag=5'
+    )
+    expect(buildDashboardTabHref('/dashboard/categories', current)).toBe(
+      '/dashboard/categories?tag=5'
+    )
+    expect(buildDashboardTabHref('/dashboard/tags', current)).toBe('/dashboard/tags?tag=5')
+  })
+
+  test('omits ?tag= (not empty-string) when absent from the current params', () => {
+    const current = new URLSearchParams({ preset: 'last-3-months' })
+
+    expect(buildDashboardTabHref('/dashboard/tags', current)).toBe(
+      '/dashboard/tags?preset=last-3-months'
+    )
+  })
 })
 
 describe('dashboard category list routes', () => {
