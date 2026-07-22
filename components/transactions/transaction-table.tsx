@@ -15,6 +15,7 @@ import { TransactionPairPopover } from '@/components/transactions/transaction-pa
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { BulkCategorizeDialog } from '@/components/expenses/bulk-categorize-dialog'
 import { BulkAssignTagsDialog } from '@/components/tags/bulk-assign-tags-dialog'
+import { TransactionTagsChip } from '@/components/transactions/transaction-tags-chip'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -458,13 +459,21 @@ export function TransactionTable({
                 </TableCell>
                 <TableCell className="max-w-0 w-full">
                   <div className="flex min-w-0 flex-col gap-1">
-                    <TransactionTitleEdit
-                      id={transaction.id}
-                      description={transaction.description}
-                      customTitle={transaction.customTitle}
-                      fallbackTitle={transaction.groupTitle ?? transaction.expenseTitle}
-                      onSuccess={(newTitle) => updateTransactionTitle(transaction.id, newTitle)}
-                    />
+                    {/* Title + inline tag indicator on ONE line: the title owns the flexible
+                        space and truncates ("…"), the chip is shrink-0 so it stays visible
+                        right after the ellipsis. Tag names are revealed in the chip's popover. */}
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <div className="min-w-0 flex-1">
+                        <TransactionTitleEdit
+                          id={transaction.id}
+                          description={transaction.description}
+                          customTitle={transaction.customTitle}
+                          fallbackTitle={transaction.groupTitle ?? transaction.expenseTitle}
+                          onSuccess={(newTitle) => updateTransactionTitle(transaction.id, newTitle)}
+                        />
+                      </div>
+                      <TransactionTagsChip tags={tagsByTx[transaction.id] ?? []} />
+                    </div>
                     {/* Inline pair badge — shown when the row is paired (D-15, PAIR-02).
                         Rows stay in natural chronological order (no re-sort/grouping).
                         WR-05: gate on ALL required fields being non-null. Substituting
@@ -482,17 +491,9 @@ export function TransactionTable({
                           pairedOccurredAt={transaction.pairedOccurredAt}
                         />
                       )}
-                    {/* Tag chips (D-07b) — read-only display; bulk add/remove lives in
-                        BulkAssignTagsDialog, single add/remove lives on the detail page. */}
-                    {(tagsByTx[transaction.id]?.length ?? 0) > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {tagsByTx[transaction.id]!.map((t) => (
-                          <Badge key={t.tagId} variant="outline" className="text-[10px]">
-                            {t.tagName}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
+                    {/* Tag chips moved inline next to the title (TransactionTagsChip above) —
+                        read-only display; bulk add/remove lives in BulkAssignTagsDialog,
+                        single add/remove lives on the detail page. */}
                   </div>
                 </TableCell>
                 <TableCell

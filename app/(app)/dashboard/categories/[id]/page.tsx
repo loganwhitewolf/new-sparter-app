@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { parsePositiveIntParam } from '@/lib/utils/search-params'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { CategoryDetailEmptyState } from '@/components/dashboard/category-detail-empty-state'
@@ -10,11 +11,9 @@ import { CategoryTopTransactions } from '@/components/dashboard/category-top-tra
 import { DashboardFilters } from '@/components/dashboard/dashboard-filters'
 import { getCategoryDeviations, getCategoryDetail } from '@/lib/dal/dashboard'
 import { verifySession } from '@/lib/dal/auth'
-import { resolveOwnedTagId } from '@/lib/dal/tags'
 import { buildDashboardCategoriesHref } from '@/lib/routes'
 import {
   parseDashboardFilters,
-  parseTagIdParam,
   type DashboardFilters as ParsedDashboardFilters,
 } from '@/lib/validations/dashboard'
 
@@ -35,7 +34,6 @@ type Props = {
     preset?: string | string[]
     period?: string | string[]
     type?: string | string[]
-    tag?: string | string[]
   }>
 }
 
@@ -47,15 +45,6 @@ function CategoryFiltersFallback() {
       <div className="h-9 w-40 animate-pulse rounded-md bg-muted" />
     </div>
   )
-}
-
-function parseCategoryId(value: string): number | null {
-  if (!/^\d+$/.test(value)) {
-    return null
-  }
-
-  const id = Number(value)
-  return Number.isSafeInteger(id) && id > 0 ? id : null
 }
 
 function parseCategoryDetailFilters(
@@ -75,20 +64,18 @@ async function CategoryDetailContent({
   categoryId,
   filters,
   categoriesHref,
-  tagId,
 }: {
   categoryId: number | null
   filters: CategoryDetailFilters
   categoriesHref: string
-  tagId?: number
 }) {
   if (categoryId === null) {
     return <CategoryDetailEmptyState />
   }
 
   const [data, deviations] = await Promise.all([
-    getCategoryDetail(categoryId, filters, tagId),
-    getCategoryDeviations({ type: filters.type, categoryId, tagId }),
+    getCategoryDetail(categoryId, filters),
+    getCategoryDeviations({ type: filters.type, categoryId }),
   ])
 
   if (data.category === null) {
@@ -149,21 +136,15 @@ async function CategoryDetailContent({
 }
 
 export default async function DashboardCategoryDetailPage({ params, searchParams }: Props) {
-  const { userId } = await verifySession()
+  await verifySession()
   const [{ id }, query] = await Promise.all([params, searchParams])
-  const categoryId = parseCategoryId(id)
+  const categoryId = parsePositiveIntParam(id)
   const filters = parseCategoryDetailFilters(query)
-
-  // 68-06 (T-68-01): resolveOwnedTagId is fail-closed — a foreign or malformed tagId
-  // silently resolves to undefined instead of being forwarded to any DAL call.
-  const candidateTagId = parseTagIdParam(query)
-  const tagId = await resolveOwnedTagId(userId, candidateTagId)
 
   const backHref = buildDashboardCategoriesHref({
     preset: filters.preset,
     type: filters.type,
     defaultPreset: CATEGORY_DETAIL_DEFAULT_PRESET,
-    tag: tagId,
   })
 
   return (
@@ -194,7 +175,6 @@ export default async function DashboardCategoryDetailPage({ params, searchParams
           categoryId={categoryId}
           filters={filters}
           categoriesHref={backHref}
-          tagId={tagId}
         />
       </Suspense>
     </div>

@@ -3,15 +3,12 @@ import { Suspense } from 'react'
 import { CategoryRankingList } from '@/components/dashboard/category-ranking-list'
 import { CategoryRankingSkeleton } from '@/components/dashboard/category-ranking-skeleton'
 import { DashboardFilters } from '@/components/dashboard/dashboard-filters'
-import { TagFilterSelect } from '@/components/dashboard/tag-filter-select'
 import { getCategoryDeviations, getCategoryRanking } from '@/lib/dal/dashboard'
 import { verifySession } from '@/lib/dal/auth'
-import { getTags, resolveOwnedTagId, type TagRow } from '@/lib/dal/tags'
 import { buildDashboardCategoriesHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
 import {
   parseDashboardFilters,
-  parseTagIdParam,
   type DashboardFilters as ParsedDashboardFilters,
   type DashboardSort,
 } from '@/lib/validations/dashboard'
@@ -45,7 +42,6 @@ type Props = {
     period?: string | string[]
     type?: string | string[]
     sort?: string | string[]
-    tag?: string | string[]
   }>
 }
 
@@ -63,7 +59,7 @@ function parseCategoryDashboardFilters(
   }
 }
 
-function SortToggle({ filters, tagId }: { filters: CategoryDashboardFilters; tagId?: number }) {
+function SortToggle({ filters }: { filters: CategoryDashboardFilters }) {
   const options: Array<{ value: DashboardSort; label: string }> = [
     { value: 'deviation', label: 'Deviazione' },
     { value: 'amount', label: 'Importo' },
@@ -79,7 +75,6 @@ function SortToggle({ filters, tagId }: { filters: CategoryDashboardFilters; tag
           sort: option.value,
           defaultPreset: CATEGORIES_DEFAULT_PRESET,
           defaultSort: CATEGORIES_DEFAULT_SORT,
-          tag: tagId,
         })
         return (
           <Link
@@ -103,14 +98,12 @@ function SortToggle({ filters, tagId }: { filters: CategoryDashboardFilters; tag
 
 async function CategoryRankingContent({
   filters,
-  tagId,
 }: {
   filters: CategoryDashboardFilters
-  tagId?: number
 }) {
   const [data, deviations] = await Promise.all([
-    getCategoryRanking(filters, tagId),
-    getCategoryDeviations({ type: filters.type, tagId }),
+    getCategoryRanking(filters),
+    getCategoryDeviations({ type: filters.type }),
   ])
 
   return (
@@ -121,21 +114,14 @@ async function CategoryRankingContent({
       defaultPreset={CATEGORIES_DEFAULT_PRESET}
       sort={filters.sort}
       deviations={deviations}
-      tagId={tagId}
     />
   )
 }
 
 export default async function DashboardCategoriesPage({ searchParams }: Props) {
-  const { userId } = await verifySession()
+  await verifySession()
   const params = await searchParams
   const filters = parseCategoryDashboardFilters(params)
-
-  // 68-06 (T-68-01): resolveOwnedTagId is fail-closed — a foreign or malformed tagId
-  // silently resolves to undefined instead of being forwarded to any DAL call.
-  const candidateTagId = parseTagIdParam(params)
-  const tagId = await resolveOwnedTagId(userId, candidateTagId)
-  const tags: TagRow[] = await getTags(userId)
 
   return (
     <div className="flex flex-col gap-6">
@@ -147,21 +133,18 @@ export default async function DashboardCategoriesPage({ searchParams }: Props) {
       </div>
 
       <Suspense fallback={<CategoryFiltersFallback />}>
-        <div className="flex flex-wrap items-center gap-2">
-          <DashboardFilters
-            preset={filters.preset}
-            type={filters.type}
-            defaultPreset={CATEGORIES_DEFAULT_PRESET}
-            typeOptions={categoryTypeOptions}
-          />
-          <TagFilterSelect tags={tags} value={tagId} />
-        </div>
+        <DashboardFilters
+          preset={filters.preset}
+          type={filters.type}
+          defaultPreset={CATEGORIES_DEFAULT_PRESET}
+          typeOptions={categoryTypeOptions}
+        />
       </Suspense>
 
-      <SortToggle filters={filters} tagId={tagId} />
+      <SortToggle filters={filters} />
 
       <Suspense fallback={<CategoryRankingSkeleton />}>
-        <CategoryRankingContent filters={filters} tagId={tagId} />
+        <CategoryRankingContent filters={filters} />
       </Suspense>
     </div>
   )

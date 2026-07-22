@@ -10,7 +10,7 @@ import {
 import { ArchiveTagSchema, CreateTagSchema, UpdateTagSchema } from '@/lib/validations/tags'
 import type { ActionState } from '@/lib/validations/category'
 import { revalidatePath } from 'next/cache'
-import { APP_ROUTES } from '@/lib/routes'
+import { APP_ROUTES, tagDetail } from '@/lib/routes'
 
 const GENERIC_ERROR = 'Si è verificato un errore. Riprova tra qualche secondo.'
 
@@ -85,6 +85,7 @@ export async function updateTagAction(
     })
     revalidatePath(APP_ROUTES.tags)
     revalidatePath(APP_ROUTES.dashboardTags) // WR-02 — a renamed tag must refresh in the dashboard Tag section
+    revalidatePath(tagDetail(parsed.data.id)) // D5 — in-place rename on the dedicated page
     return { error: null }
   } catch (error) {
     return mapKnownTagError(error) ?? { error: GENERIC_ERROR }
@@ -107,6 +108,7 @@ export async function archiveTagAction(
     await archiveTagService({ userId, tagId: parsed.data.id })
     revalidatePath(APP_ROUTES.tags)
     revalidatePath(APP_ROUTES.dashboardTags) // Pitfall 3 fix — dashboard Tag section (Plan 68-08)
+    revalidatePath(tagDetail(parsed.data.id)) // D5 — stay on the dedicated page; Archiviato badge updates in place
     return { error: null }
   } catch (error) {
     return mapKnownTagError(error) ?? { error: GENERIC_ERROR }

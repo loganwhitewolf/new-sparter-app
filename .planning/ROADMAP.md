@@ -19,7 +19,8 @@
 - ✅ **v2.4: Standalone Expense** — Phase 61 (shipped 2026-07-01) · [archive](milestones/v2.4-ROADMAP.md)
 - ✅ **v2.5: Detail Pages** — Phases 62–64 (shipped 2026-07-07, tag v2.5) · [archive](milestones/v2.5-ROADMAP.md)
 - ✅ **v2.6: Expenses & Transactions Refinement** — Phases 65–68 (shipped 2026-07-22, tag v2.6) · [archive](milestones/v2.6-ROADMAP.md)
-- 🔄 **v2.8: Public Branding Site** — Phases 73–77 (in progress; v2.7 Tag Dedicated View shipped on main as phases 69–72; branding renumbered to 73–77)
+- ✅ **v2.7: Tag Dedicated View** — Phases 69–72 (shipped 2026-07-22) — dedicated all-time per-tag page + `?tag=` dashboard-filter removal
+- 🔄 **v2.8: Public Branding Site** — Phases 73–77 (in progress; branding renumbered after v2.7 claimed 69–72)
 
 ## Phases
 
@@ -56,6 +57,74 @@ Plans:
 - [ ] **Phase 75: marketing-pages** (BRAND-06, BRAND-07, BRAND-08) — Italian homepage (hero, import-first value prop, CTA Registrati/Entra, mobile-responsive) promoted from the winning proto; `/how-it-works` 3–5 step explainer; public nav/footer links (Come funziona, Privacy, Termini, Entra, Registrati — no Pricing).
 - [ ] **Phase 76: legal-pages** (BRAND-09, BRAND-10) — `/privacy` GDPR-minimum policy naming real sub-processors (Vercel, Supabase, R2, Better Auth/OAuth); `/terms` usage terms (no financial advice, as-is, no pricing clauses); both footer-linked.
 - [ ] **Phase 77: seo-and-auth-polish** (BRAND-11, BRAND-12, BRAND-13) — Per-page Italian SEO metadata; `app/sitemap.ts` + `app/robots.ts` listing indexable public routes (`app/proto/*` stays `noindex`); session-aware public header (hides Registrati when authenticated); sign-out lands on `/`.
+
+### ✅ v2.7: Tag Dedicated View (Phases 69–72) — COMPLETE
+
+Make a dedicated per-tag page the canonical, all-time view of a tag (event-shaped),
+replacing the period-scoped `?tag=` dashboard filter so a tag shows one reconciled set of
+numbers everywhere. Tags are event-shaped: the canonical per-tag view is all-time (every
+transaction carrying the tag, regardless of calendar) — `dateRange` is a descriptive label,
+not a filter. Single numeric source `getTagDetail` / `getTagTotals` already exists in the
+branch base (quick task 260722-ked absorbed); only the per-category breakdown query is new.
+Layout: Variant A "report verticale" (prototype `proto/tag-view`).
+
+- [x] **Phase 69: tag-dedicated-page** - Dedicated per-tag mini-dashboard (Variant A) with edit/archive in place and entry points from /tags and /dashboard/tags (TAG-06, TAG-07, TAG-08, TAG-09, TAG-10, TAG-11, TAG-12)
+- [x] **Phase 70: dashboard-tag-filter-removal** - Remove the period-scoped `?tag=` filter and its wiring from /dashboard/overview and /dashboard/categories (TAG-13)
+- [x] **Phase 71: transactions-tag-filter-control** - Add a tag filter control to the transactions toolbar, integrated into the unified filter/sort system (TAG-14)
+- [x] **Phase 72: transactions-tag-indicator** - Inline tag chip on the transaction title line with a hover/tap popover listing the linked tags (TAG-15)
+
+### Phase 69: tag-dedicated-page
+
+**Goal**: A dedicated per-tag page is the canonical, all-time view of a tag — a "report verticale" mini-dashboard reachable from both /tags and /dashboard/tags, showing reconciled totals, a per-category breakdown, a compact transaction list, and in-place edit/archive.
+**Depends on**: Nothing (numeric foundation `getTagDetail`/`getTagTotals` already in the branch base)
+**Requirements**: TAG-06, TAG-07, TAG-08, TAG-09, TAG-10, TAG-11, TAG-12
+**Success Criteria** (what must be TRUE):
+
+  1. User can open a dedicated page for a single tag from both /tags and /dashboard/tags, showing an all-time overview of every transaction carrying that tag regardless of calendar period.
+  2. The page shows three totals — Entrate, Uscite, Valore finale (signed net) — that reconcile with /dashboard/tags (same netting/exclusions via `getTagDetail`/`getTagTotals`).
+  3. The page shows the included-transaction count and a per-category breakdown of the tag's transactions with signed amounts (CSS bars, no charting dependency).
+  4. The page shows a compact list of the included transactions (date · subcategory · signed amount) sorted by date descending.
+  5. User can edit and archive the tag directly from the page.
+
+**Plans**: 3 plans
+
+- [x] 69-01-PLAN.md — Tracer: /tags/[id] RSC page rendering real getTagDetail (header + KPI + count + tx list) [wave 1]
+- [x] 69-02-PLAN.md — Per-category breakdown: extend getTagDetail/buildTagDetailData + CSS-bar card [wave 2]
+- [x] 69-03-PLAN.md — Entry points + cleanup: /tags index links, /dashboard/tags re-point, remove orphaned action, human-verify [wave 2]
+
+**UI hint**: yes
+
+### Phase 70: dashboard-tag-filter-removal
+
+**Goal**: Per-tag analysis lives only in the dedicated all-time page; the period-scoped `?tag=` dashboard filter and its entire wiring are gone, and the dashboard behaves exactly as it did before the filter existed.
+**Depends on**: Phase 69 (the dedicated page must exist before the dashboard filter is removed)
+**Requirements**: TAG-13
+**Success Criteria** (what must be TRUE):
+
+  1. Neither /dashboard/overview nor /dashboard/categories shows a tag-filter control anymore (`TagFilterSelect` removed).
+  2. A dashboard URL carrying a legacy `?tag=<id>` renders the normal all-transactions dashboard — the param is ignored, with no `no-data-for-tag` empty state and no error.
+  3. Dashboard totals and category breakdowns match the pre-existing unfiltered numbers, with the filter wiring (`tagId` threading through the overview/category DAL, `parseTagIdParam`, and the `no-data-for-tag` empty state) fully removed.
+
+**Plans**: 2 plans
+
+- [x] 70-01-PLAN.md — Surface removal: tag control + `?tag=` read gone from all three dashboard pages, both href builders, ranking-list copy, and the movers prop/action chain [wave 1]
+- [ ] 70-02-PLAN.md — DAL de-threading + orphan deletion (component, `parseTagIdParam`, their tests) + regression gates proving `tagScopedTransactions` / `/transactions?tag=` survive [wave 2]
+
+### Phase 71: transactions-tag-filter-control
+
+**Goal**: Users can filter the transactions table by tag from the toolbar. A tag control is integrated into the transactions' existing unified filter/sort system (persisted, chip, clear-all) and writes `?tag=`. The `?tag=` URL param, IDOR guard, and `getTransactions` `tagId` support already exist — this phase adds the missing UI control only.
+**Depends on**: Nothing (independent of Phase 70 — 70 removes the dashboard tag filter, 71 adds the transactions tag filter; different surfaces, different components)
+**Requirements**: TAG-14
+**Success Criteria** (what must be TRUE):
+
+  1. The transactions toolbar shows a tag filter control listing the user's tags (with a "Tutti i tag" / clear option), sitting alongside the existing filters.
+  2. Selecting a tag filters the table to that tag's transactions (writes `?tag=<id>`, reusing the existing param + `getTransactions` tagId path); clearing it removes the filter.
+  3. The tag filter participates in the unified filter system like the others — active-state visible (chip/label), persisted across bare navigation (sessionStorage restore layer), and reset by clear-all.
+  4. Does NOT reuse the dashboard `TagFilterSelect` (removed in Phase 70) — the control lives in the transactions filter component.
+
+**Plans**: 1 plan
+
+- [x] 71-01-PLAN.md — Tag filter control: add `tag` entry to `transactionsTableConfig`, inject user tags as options in page.tsx, resolve chip label to the tag name (toChip 2nd arg) + human-verify [wave 1]
 
 <details>
 <summary>✅ v2.6: Expenses & Transactions Refinement (Phases 65–68) — SHIPPED 2026-07-22 (tag v2.6)</summary>
@@ -294,11 +363,16 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 66. expense-group-lifecycle | v2.6 | 5/5 | Complete    | 2026-07-20 |
 | 67. tags-foundation-and-assignment | v2.6 | 9/9 | Complete    | 2026-07-20 |
 | 68. tags-dashboard-and-navigation | v2.6 | 8/8 | Complete    | 2026-07-22 |
-| 73. proto-design-variants | v2.8 | 0/3 | Complete    | 2026-07-22 |
+| 69. tag-dedicated-page | v2.7 | 3/3 | Complete | 2026-07-22 |
+| 70. dashboard-tag-filter-removal | v2.7 | 2/2 | Complete | 2026-07-22 |
+| 71. transactions-tag-filter-control | v2.7 | 1/1 | Complete | 2026-07-22 |
+| 72. transactions-tag-indicator | v2.7 | direct | Complete | 2026-07-22 |
+
+| 73. proto-design-variants | v2.8 | 3/3 | Complete    | 2026-07-22 |
 | 74. public-layout-and-proxy-allowlist | v2.8 | 0/? | Not started | — |
 | 75. marketing-pages | v2.8 | 0/? | Not started | — |
 | 76. legal-pages | v2.8 | 0/? | Not started | — |
 | 77. seo-and-auth-polish | v2.8 | 0/? | Not started | — |
 
-**Total shipped: 68 phases · 263 plans complete**
-**Latest shipped: v2.6 Expenses & Transactions Refinement — Phases 65–68 (2026-07-22, tag v2.6). Active milestone: v2.8 Public Branding Site — Phases 73–77 (in progress).**
+**Total shipped: 73 phases through proto-design-variants · v2.7 complete (69–72) · v2.8 active (74–77 remaining)**
+**Latest shipped milestone: v2.7 Tag Dedicated View — Phases 69–72 (2026-07-22). Active: v2.8 Public Branding Site — Phase 73 complete (Winner = c); next Phase 74.**

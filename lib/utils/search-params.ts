@@ -101,3 +101,14 @@ export function parseSortDir(
   const validDir: 'asc' | 'desc' = rawDir === 'asc' ? 'asc' : 'desc'
   return { sort: validSort, dir: validDir }
 }
+
+/**
+ * Parses a dynamic route segment that must be a positive integer id (e.g. `/tags/[id]`).
+ * Returns null for anything else so the caller can render notFound() — rejecting
+ * non-numeric, non-safe and non-positive values before the value reaches the DAL.
+ */
+export function parsePositiveIntParam(value: string): number | null {
+  if (!/^\d+$/.test(value)) return null
+  const id = Number(value)
+  return Number.isSafeInteger(id) && id > 0 ? id : null
+}

@@ -131,3 +131,17 @@ export function formatMonthRange(first: Date, last: Date, locale = 'it-IT'): str
   // Different years — each side includes its own year
   return `${firstShort} ${firstYear}–${lastShort} ${lastYear}`
 }
+
+/**
+ * Optional-range label for entities carrying a nullable start/end pair (e.g. a tag's
+ * descriptive date range). Either bound missing means "no range" — a half-open range is not
+ * a meaningful label here.
+ */
+export function formatOptionalDateRange(
+  start: Date | null,
+  end: Date | null,
+  locale = 'it-IT',
+): string {
+  if (!start || !end) return 'Nessun intervallo'
+  return `${start.toLocaleDateString(locale)} — ${end.toLocaleDateString(locale)}`
+}

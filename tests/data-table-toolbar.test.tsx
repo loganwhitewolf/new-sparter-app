@@ -110,6 +110,25 @@ const mockConfig: TableConfig = {
   defaultSort: { key: 'occurredAt', dir: 'desc' },
 }
 
+// ---- Mock tag-filter TableConfig fixture (label-bearing chip, 71-01) ----
+// A select filter whose toChip renders the resolved option label (the tag NAME)
+// when present, falling back to the raw URL value (the id) otherwise.
+const tagConfig: TableConfig = {
+  id: 'transactions',
+  search: null,
+  filters: [
+    {
+      key: 'tag',
+      label: 'Tag',
+      type: 'select',
+      options: [],
+      toChip: (v, label) => `Tag: ${label ?? v}`,
+    },
+  ],
+  sortable: [],
+  defaultSort: { key: 'occurredAt', dir: 'desc' },
+}
+
 // ---- Import component after mocks ----------------------------------------
 const { DataTableToolbar } = await import('@/components/data-table/DataTableToolbar')
 
@@ -267,5 +286,59 @@ describe('DataTableToolbar cascade (lcp-01 Task 2)', () => {
     expect(html).toContain('Filtri (2)')
     expect(html).toContain('Tipo: in')
     expect(html).toContain('Natura: income')
+  })
+})
+
+// ─── Tag filter chip label resolution (71-01) ────────────────────────────────
+
+describe('DataTableToolbar tag chip label resolution (71-01)', () => {
+  beforeEach(() => {
+    mockSearchParams = new URLSearchParams()
+    mockReplace.mockClear()
+  })
+
+  it('renders the tag NAME (not the id) in the chip via the toChip label argument', () => {
+    // Value is the id (String(tag.id)); the chip must show the injected label.
+    mockSearchParams = new URLSearchParams('tag=5')
+
+    const html = renderToStaticMarkup(
+      <DataTableToolbar
+        config={tagConfig}
+        route="/transactions"
+        filterOptions={{ tag: [{ value: '5', label: 'Vacanze' }] }}
+      />,
+    )
+    expect(html).toContain('Tag: Vacanze')
+    // The bare id must not surface as the chip label
+    expect(html).not.toContain('Tag: 5')
+  })
+
+  it('renders the archived-marked label for an archived tag option', () => {
+    mockSearchParams = new URLSearchParams('tag=9')
+
+    const html = renderToStaticMarkup(
+      <DataTableToolbar
+        config={tagConfig}
+        route="/transactions"
+        filterOptions={{ tag: [{ value: '9', label: 'Ferie (archiviato)' }] }}
+      />,
+    )
+    expect(html).toContain('Tag: Ferie (archiviato)')
+  })
+
+  it('regression: platform chip still renders the slug when its toChip ignores the 2nd arg', () => {
+    // The existing platform filter's toChip reads only its first argument, so
+    // passing a resolved label as the 2nd argument must not change its chip.
+    mockSearchParams = new URLSearchParams('platform=revolut')
+
+    const html = renderToStaticMarkup(
+      <DataTableToolbar
+        config={mockConfig}
+        route="/transactions"
+        filterOptions={{ platform: [{ value: 'revolut', label: 'Revolut' }] }}
+      />,
+    )
+    expect(html).toContain('Piattaforma: revolut')
+    expect(html).not.toContain('Piattaforma: Revolut')
   })
 })

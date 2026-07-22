@@ -18,6 +18,7 @@ const suggestion = {
   pattern: 'netflix',
   matchCount: 3,
   sampleDescriptions: ['NETFLIX 10/01', 'NETFLIX 11/01'],
+  sampleAmounts: ['-12.99', '-12.99'],
 }
 
 const categories = [

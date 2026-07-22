@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArchiveTagDialog } from '@/components/tags/tag-mutation-dialogs'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { tagDetail } from '@/lib/routes'
 import type { TagTotalItem } from '@/lib/dal/tags'
 
 type Props = {
@@ -70,9 +71,9 @@ export function TagRankingList({ items }: Props) {
             <div className="min-w-0 space-y-1">
               <div className="flex min-w-0 items-center gap-2">
                 <Link
-                  href={`/transactions?tag=${item.tagId}`}
+                  href={tagDetail(item.tagId)}
                   className="block truncate text-sm font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={`${item.name}: apri transazioni`}
+                  aria-label={`${item.name}: apri il tag`}
                   title={item.name}
                 >
                   {item.name}

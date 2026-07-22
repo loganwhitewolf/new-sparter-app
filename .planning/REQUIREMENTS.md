@@ -1,8 +1,9 @@
-# Requirements: Sparter v2.8 — Public Branding Site
+# Requirements: Sparter — Active: v2.8 Public Branding Site
 
 **Defined:** 2026-07-22
 **Core Value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Milestone goal:** Ship a public branding façade on the same Next.js deploy that explains Sparter and links into the app, with design locked via `app/proto/` variants first.
+**Active milestone goal:** Ship a public branding façade on the same Next.js deploy that explains Sparter and links into the app, with design locked via `app/proto/` variants first.
+**Previous milestone:** v2.7 Tag Dedicated View shipped 2026-07-22 (phases 69–72 on main).
 
 ## v2.8 Requirements
 
@@ -34,7 +35,7 @@
 - [ ] **BRAND-12**: Public header is session-aware (hides Registrati when authenticated); CTAs navigate to existing `/login` and `/register`
 - [ ] **BRAND-13**: After sign-out, user lands on `/` (marketing homepage), not `/login`
 
-## Future Requirements
+## v2.8 Future Requirements
 
 Deferred beyond v2.8 soft go-live.
 
@@ -45,6 +46,37 @@ Deferred beyond v2.8 soft go-live.
 - **BRAND-F05**: English locale / i18n for public site
 - **BRAND-F06**: Product demo / sandbox without registration
 - **BRAND-F07**: Optional `motion` scroll storytelling if a future redesign needs it beyond CSS
+
+## v2.7 Requirements (shipped 2026-07-22)
+
+REQ-IDs continue the `TAG` category from v2.6 (TAG-01…TAG-05 shipped earlier).
+
+### Tag Dedicated View
+
+- [x] **TAG-06**: User can open a dedicated page for a single tag showing its all-time overview (every transaction carrying the tag, independent of any calendar period).
+- [x] **TAG-07**: The tag page shows three totals — Entrate, Uscite, and Valore finale (signed net) — computed with the same netting/exclusions as the dashboard (`getTagDetail`/`getTagTotals`), so the numbers reconcile with `/dashboard/tags`.
+- [x] **TAG-08**: The tag page shows the number of included transactions (matching the totals' transaction set).
+- [x] **TAG-09**: The tag page shows a per-category breakdown of the tag's transactions with signed amounts.
+- [x] **TAG-10**: The tag page shows a compact list of the included transactions (date · description · subcategory · signed amount), sorted by date descending.
+- [x] **TAG-11**: User can edit and archive the tag directly from the dedicated page.
+- [x] **TAG-12**: User can reach the tag page from `/tags` and from `/dashboard/tags`.
+
+### Dashboard Tag-Filter Removal
+
+- [x] **TAG-13**: The dashboard no longer offers a period-scoped tag filter — `?tag=` is removed from `/dashboard/overview` and `/dashboard/categories` (including `TagFilterSelect`, `tagId` threading through the overview/category DAL, the `no-data-for-tag` empty state, and `parseTagIdParam`). Per-tag analysis lives only in the dedicated all-time page.
+
+### Transactions Tag Filter
+
+- [x] **TAG-14**: User can filter the transactions table by tag from the transactions toolbar — a tag control integrated into the existing unified filter/sort system (writes `?tag=`, persisted, shown as an active chip, cleared by clear-all). The `?tag=` URL param, ownership guard, and `getTransactions` `tagId` support already exist; this adds the UI control.
+
+### Transactions Tag Indicator
+
+- [x] **TAG-15**: In the transactions list, a transaction that carries tags shows an inline tag chip on the same line as its title — after the ellipsis when the title is truncated — and hovering or tapping the chip reveals a small popover listing the linked tags.
+
+### v2.7 deferred
+
+- **TAG-F1**: Per-tag trend/sparkline over the tag's active span.
+- **TAG-F2**: Export a tag's transactions (CSV) from the dedicated page.
 
 ## Out of Scope
 
@@ -57,11 +89,11 @@ Deferred beyond v2.8 soft go-live.
 | Cookie banner without trackers | No third-party analytics in v2.8 |
 | Italian URL slugs (`/come-funziona`, `/termini`) | AGENTS.md: English route slugs; Italian in UI copy only |
 | Operator Vercel/Supabase/R2 go-live (R038/R039/R041) | Operational action; not this milestone's build scope |
-| v2.7 tags work | Shipped on main as phases 69–72 (Tag Dedicated View); branding renumbered to 73–77 |
+| Period-scoped per-tag analysis in the dashboard | Replaced by all-time dedicated page (v2.7 / TAG-06) |
+| `dateRange` as a hard filter on the tag's transactions | Descriptive label only (v2.7) |
+| New tag CRUD semantics | Create/edit/archive already shipped in v2.6 |
 
 ## Traceability
-
-Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
@@ -78,13 +110,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BRAND-11 | 77. seo-and-auth-polish | Pending |
 | BRAND-12 | 77. seo-and-auth-polish | Pending |
 | BRAND-13 | 77. seo-and-auth-polish | Pending |
+| TAG-06…TAG-12 | 69. tag-dedicated-page | Complete |
+| TAG-13 | 70. dashboard-tag-filter-removal | Complete |
+| TAG-14 | 71. transactions-tag-filter-control | Complete |
+| TAG-15 | 72. transactions-tag-indicator | Complete |
 
 **Coverage:**
 
-- v2.8 requirements: 13 total
-- Mapped to phases: 13
-- Unmapped: 0
+- v2.8 requirements: 13 total — 2 complete, 11 pending
+- v2.7 requirements: TAG-06…TAG-15 complete
 
 ---
 *Requirements defined: 2026-07-22*
-*Last updated: 2026-07-22 after v2.8 roadmap creation — 13/13 requirements mapped across Phases 73–77 (proto first, proxy allowlist precedes production pages)*
+*Last updated: 2026-07-22 — merge origin/main (v2.7) + local branding renumber to phases 73–77*

@@ -80,6 +80,16 @@ export const transactionsTableConfig: TableConfig = {
       toChip: (v) => `Sottocategoria: ${v}`,
     },
     {
+      key: 'tag',
+      label: 'Tag',
+      type: 'select',
+      options: [],
+      // The stored value is the tagId (opaque); `label` is the option label the toolbar
+      // resolved for it, so the chip shows the tag NAME. Falls back to the raw id if the
+      // tag is not in the option set (TAG-14, D1/D2).
+      toChip: (v, label) => `Tag: ${label ?? v}`,
+    },
+    {
       key: 'status',
       label: 'Categorizzazione',
       type: 'status',

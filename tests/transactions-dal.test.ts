@@ -254,7 +254,9 @@ describe("transaction DAL query helpers", () => {
   });
 
   describe("transactionLinkedExpenseCategorySortKey — Spesa collegata labels", () => {
-    const fragment = transactionLinkedExpenseCategorySortKey as {
+    // Deliberate structural introspection of a Drizzle SQL fragment's internals, which the
+    // public type does not expose — hence the double assertion through `unknown`.
+    const fragment = transactionLinkedExpenseCategorySortKey as unknown as {
       op: string;
       strings?: string[];
       values?: unknown[];

@@ -16,7 +16,6 @@ import { monthLabel, monthsBetween } from '@/lib/utils/date'
 import type { FlowNature } from '@/lib/utils/nature-labels'
 import { toDecimal } from '@/lib/utils/decimal'
 import { effectiveAmount, isNotSecondary } from '@/lib/dal/transaction-pairs-sql'
-import { tagScopedTransactions } from '@/lib/dal/transaction-tags-sql'
 import {
   buildOverviewData,
   getOverviewAmountTotals,
@@ -112,7 +111,7 @@ export const getYearsWithData = cache(async (): Promise<string[]> => {
  *
  * T-42-05 mitigated: verifySession() scopes all sub-queries to authenticated userId.
  */
-export const getOverview = cache(async (year: number, tagId?: number): Promise<OverviewData> => {
+export const getOverview = cache(async (year: number): Promise<OverviewData> => {
   const { userId } = await verifySession()
 
   try {
@@ -133,10 +132,10 @@ export const getOverview = cache(async (year: number, tagId?: number): Promise<O
     const previousTo = new Date(year - 1, lastMonthIdx + 1, 0, 23, 59, 59, 999)
 
     const [currentTotals, previousTotals, currentUncat, previousUncat] = await Promise.all([
-      getOverviewAmountTotals(userId, currentFrom, currentTo, tagId),
-      getOverviewAmountTotals(userId, previousFrom, previousTo, tagId),
-      getUncategorizedCount(userId, currentFrom, currentTo, tagId),
-      getUncategorizedCount(userId, previousFrom, previousTo, tagId),
+      getOverviewAmountTotals(userId, currentFrom, currentTo),
+      getOverviewAmountTotals(userId, previousFrom, previousTo),
+      getUncategorizedCount(userId, currentFrom, currentTo),
+      getUncategorizedCount(userId, previousFrom, previousTo),
     ])
 
     return buildOverviewData({
@@ -191,8 +190,7 @@ export const getMonthOverMonthCategoryChanges = cache(
     year: number,
     monthIndex = 0,
     directionParam: 'in' | 'out' | 'allocation' = 'out',
-    limit = 10,
-    tagId?: number
+    limit = 10
   ): Promise<MonthOverMonthChange[]> => {
     const { userId } = await verifySession()
 
@@ -252,8 +250,7 @@ export const getMonthOverMonthCategoryChanges = cache(
                 dateScopedTransactions(userId, currFrom, currTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, 'allocation'),
-                isNotSecondary(),
-                tagScopedTransactions(tagId)
+                isNotSecondary()
               )
             )
             .groupBy(natureTable.id, natureTable.labelIt, natureTable.code),
@@ -287,8 +284,7 @@ export const getMonthOverMonthCategoryChanges = cache(
                 dateScopedTransactions(userId, prevFrom, prevTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, 'allocation'),
-                isNotSecondary(),
-                tagScopedTransactions(tagId)
+                isNotSecondary()
               )
             )
             .groupBy(natureTable.id, natureTable.labelIt, natureTable.code),
@@ -334,8 +330,7 @@ export const getMonthOverMonthCategoryChanges = cache(
                 dateScopedTransactions(userId, currFrom, currTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, directionParam),
-                isNotSecondary(),
-                tagScopedTransactions(tagId)
+                isNotSecondary()
               )
             )
             .groupBy(category.id, category.name, category.slug),
@@ -370,8 +365,7 @@ export const getMonthOverMonthCategoryChanges = cache(
                 dateScopedTransactions(userId, prevFrom, prevTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, directionParam),
-                isNotSecondary(),
-                tagScopedTransactions(tagId)
+                isNotSecondary()
               )
             )
             .groupBy(category.id, category.name, category.slug),
@@ -476,7 +470,7 @@ export const getMonthOverMonthCategoryChanges = cache(
  *
  * T-42-05 mitigated: verifySession() scopes all sub-queries to authenticated userId.
  */
-export const getOverviewChart = cache(async (year: number, tagId?: number): Promise<OverviewChartPoint[]> => {
+export const getOverviewChart = cache(async (year: number): Promise<OverviewChartPoint[]> => {
   const { userId } = await verifySession()
 
   const from = new Date(year, 0, 1)
@@ -530,8 +524,7 @@ export const getOverviewChart = cache(async (year: number, tagId?: number): Prom
             WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
             LIMIT 1
           ) != 'transfer'`,
-          isNotSecondary(),
-          tagScopedTransactions(tagId)
+          isNotSecondary()
         )
       )
       .groupBy(monthSql, natureSql, directionCodeSql)

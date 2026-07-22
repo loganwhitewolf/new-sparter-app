@@ -67,7 +67,7 @@ const categories: CategoryWithSubCategories[] = [
     id: 3,
     name: 'Trasferimenti',
     slug: 'trasferimenti',
-    type: 'system',
+    type: 'transfer',
     userId: null,
     isOwned: false,
     subCategories: [
@@ -125,8 +125,8 @@ describe('buildCategoryOptions', () => {
     expect(opts.find((o) => o.value === '10')?.isOwned).toBe(false)
   })
 
-  it('filters to expense-compatible types (out + system), excluding income', () => {
-    const opts = buildCategoryOptions(categories, ['out', 'system'])
+  it('filters to expense-compatible types (out + transfer), excluding income', () => {
+    const opts = buildCategoryOptions(categories, ['out', 'transfer'])
     const values = opts.map((o) => o.value)
     expect(values).toContain('10')   // Spese > Ristoranti speciali
     expect(values).toContain('11')   // Spese > Casa vacanze

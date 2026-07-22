@@ -33,8 +33,11 @@ vi.mock('@/lib/logger', () => ({
 
 const { GET } = await import('@/app/api/files/[fileId]/download/route')
 
+// Object.assign, not a spread: spreading a Partial<FileRow> widens every overridden field to
+// `T | undefined`, which no longer satisfies FileRow. Object.assign types the merge as
+// FileRow & Partial<FileRow>, so the factory stays cast-free.
 function makeFile(overrides: Partial<FileRow> = {}): FileRow {
-  return {
+  const base: FileRow = {
     id: 'file-1',
     userId: 'user-1',
     originalName: 'estratto.csv',
@@ -53,12 +56,14 @@ function makeFile(overrides: Partial<FileRow> = {}): FileRow {
     referenceEndedAt: null,
     importFormatVersionId: 1,
     errorMessage: null,
+    analyzedAt: null,
+    importStartedAt: null,
     importedAt: new Date('2026-01-01T00:00:00.000Z'),
     uploadedAt: new Date('2026-01-01T00:00:00.000Z'),
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-    ...overrides,
   }
+  return Object.assign(base, overrides)
 }
 
 describe('GET /api/files/[fileId]/download', () => {

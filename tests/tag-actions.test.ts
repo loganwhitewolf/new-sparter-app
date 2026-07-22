@@ -136,14 +136,15 @@ describe('lib/actions/tags', () => {
       expect(mocks.revalidatePath).toHaveBeenCalledWith('/tags')
     })
 
-    it('revalidates BOTH /tags and /dashboard/tags on success (Pitfall 3 fix — 68-04)', async () => {
+    it('revalidates /tags, /dashboard/tags AND the detail route on success (Pitfall 3 fix — 68-04; detail route — 69-03 D5)', async () => {
       mocks.archiveTag.mockResolvedValue({ id: 1, archived: true })
 
       await archiveTagAction({ error: null }, formDataFrom({ id: '1' }))
 
-      expect(mocks.revalidatePath).toHaveBeenCalledTimes(2)
+      expect(mocks.revalidatePath).toHaveBeenCalledTimes(3)
       expect(mocks.revalidatePath).toHaveBeenNthCalledWith(1, '/tags')
       expect(mocks.revalidatePath).toHaveBeenNthCalledWith(2, '/dashboard/tags')
+      expect(mocks.revalidatePath).toHaveBeenNthCalledWith(3, '/tags/1')
     })
 
     it('does not call revalidatePath at all when the service call fails', async () => {

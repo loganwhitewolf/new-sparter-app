@@ -354,7 +354,18 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions,
         if (max) chips.push({ key: 'amountMax', label: `Max ${max} €`, onRemove: () => updateParam('amountMax', null) })
         return chips
       }
-      return [{ key: field.key, label: field.toChip(raw), onRemove: () => updateParam(field.key, null) }]
+      // Resolve the raw value against the field's effective option set and pass the matched
+      // label as toChip's 2nd argument. Fields whose chip derives from the raw value ignore it
+      // (platform still renders its slug); fields whose stored value is an opaque id — the tag
+      // filter — use it to render a human-readable name (71-01).
+      const matchedLabel = filterOptions?.[field.key]?.find((o) => o.value === raw)?.label
+      return [
+        {
+          key: field.key,
+          label: field.toChip(raw, matchedLabel),
+          onRemove: () => updateParam(field.key, null),
+        },
+      ]
     })
 
   // "Cancella tutto": clear all filter keys (including q) in one write.

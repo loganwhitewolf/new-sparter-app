@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-22)
 
 ## Current Position
 
-Phase: 70 — public layout and proxy allowlist
+Phase: 74 — public layout and proxy allowlist
 Plan: Not started
 Status: Ready to plan
 Last activity: 2026-07-22 — Phase 73 complete, transitioned to Phase 74
@@ -43,16 +43,26 @@ Last activity: 2026-07-22 — Phase 73 complete, transitioned to Phase 74
 | 76 | legal-pages | BRAND-09, BRAND-10 | Not started |
 | 77 | seo-and-auth-polish | BRAND-11, BRAND-12, BRAND-13 | Not started |
 
-**Coverage:** 13/13 v2.8 requirements mapped across Phases 73–77, none orphaned. Continues phase
-numbering from v2.6 (ended at Phase 68); v2.7 is reserved for a parallel tags milestone owned by
-another agent — not phase-numbered in this workspace. Order follows research SUMMARY.md guidance
+**Coverage:** 13/13 v2.8 requirements mapped across Phases 73–77, none orphaned. Phase
+numbering continues after v2.7 (phases 69–72 shipped on main). Order follows research SUMMARY.md guidance
 (proto → infra/proxy → pages → legal → SEO), consolidated from the suggested 6-phase split into 5:
 proto must ship first (design lock before production UI investment) and the `(public)` layout +
 `proxy.ts` allowlist (Phase 74) must precede any production marketing page (Phase 75+), since
 anonymous `/` is otherwise redirected to `/login`. English route slugs (`/how-it-works`,
 `/privacy`, `/terms`); Italian UI copy throughout. BRAND-13 (sign-out → `/`) is bundled with the
 other auth-polish items (session-aware header, SEO) in the final phase since all three are small,
-low-risk polish changes gated on the routes/pages built in Phases 70–72.
+low-risk polish changes gated on the routes/pages built in Phases 74–76.
+
+## Roadmap (v2.7 — Phases 69–72) — COMPLETE
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 69 | tag-dedicated-page | TAG-06…TAG-12 | Complete |
+| 70 | dashboard-tag-filter-removal | TAG-13 | Complete |
+| 71 | transactions-tag-filter-control | TAG-14 | Complete |
+| 72 | transactions-tag-indicator | TAG-15 | Complete |
+
+**Coverage:** TAG-06…TAG-15 delivered. Tags are event-shaped; `/tags/[id]` is the canonical all-time per-tag page; dashboard `?tag=` filter removed.
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -217,6 +227,8 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: 68-06: Added no-data-for-tag OverviewEmptyState variant + tagId-aware CategoryRankingList empty copy to satisfy the plan's locked must_haves copy contract (not spelled out in task action blocks)
 - [Phase ?]: 68-06: Category detail page renders no TagFilterSelect of its own — filter is set on the ranking-list page and carried through via ?tag= only, matching the existing preset/type no-second-control pattern
 - [Phase ?]: 68-07: MoverList rows built from categorySlug (never categoryId) per Pitfall 2; UI-SPEC's stale category={m.categoryId} snippet is superseded by the plan/PATTERNS.md
+- [Phase 70]: Dashboard legacy ?tag= URLs degrade silently — param not read, no redirect (Phase 70 D1)
+- [Phase 70]: Per-tag analysis lives only in /tags/[id]; no substitute affordance on the dashboard (Phase 70 D2)
 - [Phase ?]: Fraunces chosen as brandingDisplay face (Task 2) - editorial weight, avoids D-08 Playfair+warm-cream cliche pairing
 - [Phase ?]: Variant B/C ship as minimal labeled stub panels in the hub (plan-scoped, not a defect) - proves the switcher/whitelist path before Plan 02 fills them in
 - [Phase ?]: Variant B (editorial split: asymmetric type column + offset product frame) and Variant C (type-led stack: oversized brand+headline then full-width product band) ship as real compositions replacing the Plan 01 stubs; hub now mounts all three real variants
@@ -339,7 +351,7 @@ Items acknowledged and postponed:
 
 Last session: 2026-07-22T16:15:24.164Z
 
-**Next:** `/gsd-execute-phase 73`
+**Next:** `/gsd-discuss-phase 74`
 
 **Historical (discuss → plan):** Context gathered 2026-07-22; plan-phase completed same day with research + checker revision.
 
@@ -409,3 +421,5 @@ Last session: 2026-07-22T16:15:24.164Z
 | Phase 73 P01 | 7min | 2 tasks | 6 files |
 | Phase 73 P02 | 13min | 2 tasks | 3 files |
 | Phase 73 P03 | 3min | 2 tasks | 2 files |
+| Phase 69 P02 | 4min | 2 tasks | 4 files |
+| Phase 70 P01 | 8min | 3 tasks | 10 files |

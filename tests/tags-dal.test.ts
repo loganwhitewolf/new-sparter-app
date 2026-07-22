@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { toDecimal } from '@/lib/utils/decimal'
 
 const mocks = vi.hoisted(() => ({
   fromArgs: [] as unknown[],
@@ -208,7 +209,31 @@ const {
   resolveOwnedTagId,
   getTagTotals,
   buildTagTotalsData,
+  buildTagDetailData,
 } = await import('@/lib/dal/tags')
+
+// Minimal TagDetailQueryRow factory for the pure buildTagDetailData block — mirrors the
+// getTagDetail select shape (occurredAt is only carried through to the tx list, not the sums).
+// `directionCode` is accepted for readability of the test cases (it hints the expected sign) but
+// is IGNORED by buildTagDetailData — Entrate/Uscite are classified by the amount's sign, not by
+// subcategory direction. It is intentionally not carried into the returned row.
+function detailRow(overrides: {
+  transactionId: string
+  categoryName: string
+  amount: string
+  subCategoryName?: string
+  description?: string
+  directionCode?: string
+}) {
+  return {
+    transactionId: overrides.transactionId,
+    occurredAt: '2026-06-01T00:00:00.000Z',
+    description: overrides.description ?? 'Descrizione',
+    subCategoryName: overrides.subCategoryName ?? 'Sub',
+    categoryName: overrides.categoryName,
+    amount: overrides.amount,
+  }
+}
 
 describe('lib/dal/tags', () => {
   beforeEach(() => {
@@ -393,6 +418,78 @@ describe('lib/dal/tags', () => {
 
     it('returns an empty array for zero tags, never null/throw', () => {
       expect(buildTagTotalsData([])).toEqual([])
+    })
+  })
+
+  describe('buildTagDetailData (pure) — per-category breakdown (TAG-09) + reconciliation (TAG-07/TAG-08)', () => {
+    it('groups mixed category rows into one signed-Decimal-summed entry per category with the row count', () => {
+      const { breakdown } = buildTagDetailData([
+        detailRow({ transactionId: 't1', categoryName: 'Casa', directionCode: 'out', amount: '-100.00' }),
+        detailRow({ transactionId: 't2', categoryName: 'Casa', directionCode: 'out', amount: '-50.50' }),
+        detailRow({ transactionId: 't3', categoryName: 'Stipendio', directionCode: 'in', amount: '1200.00' }),
+      ])
+
+      const casa = breakdown.find((b) => b.categoryName === 'Casa')
+      const stipendio = breakdown.find((b) => b.categoryName === 'Stipendio')
+      expect(casa).toEqual({ categoryName: 'Casa', total: '-150.50', count: 2 })
+      expect(stipendio).toEqual({ categoryName: 'Stipendio', total: '1200.00', count: 1 })
+      expect(breakdown).toHaveLength(2)
+    })
+
+    it('sorts the breakdown by absolute total descending, regardless of sign', () => {
+      const { breakdown } = buildTagDetailData([
+        detailRow({ transactionId: 't1', categoryName: 'Small positive', directionCode: 'in', amount: '10.00' }),
+        detailRow({ transactionId: 't2', categoryName: 'Large negative', directionCode: 'out', amount: '-500.00' }),
+        detailRow({ transactionId: 't3', categoryName: 'Mid positive', directionCode: 'in', amount: '100.00' }),
+      ])
+
+      expect(breakdown.map((b) => b.categoryName)).toEqual([
+        'Large negative',
+        'Mid positive',
+        'Small positive',
+      ])
+    })
+
+    it('reconciles: Σ breakdown.total === net and Σ breakdown.count === count === transactions.length', () => {
+      const detail = buildTagDetailData([
+        detailRow({ transactionId: 't1', categoryName: 'Casa', directionCode: 'out', amount: '-100.00' }),
+        detailRow({ transactionId: 't2', categoryName: 'Stipendio', directionCode: 'in', amount: '1200.00' }),
+        detailRow({ transactionId: 't3', categoryName: 'Casa', directionCode: 'out', amount: '-50.50' }),
+      ])
+
+      const sumTotal = detail.breakdown.reduce((acc, b) => toDecimal(acc).plus(toDecimal(b.total)).toFixed(2), '0.00')
+      const sumCount = detail.breakdown.reduce((acc, b) => acc + b.count, 0)
+
+      expect(sumTotal).toBe(detail.net)
+      expect(sumCount).toBe(detail.count)
+      expect(sumCount).toBe(detail.transactions.length)
+    })
+
+    it('classifies inflow/outflow by amount sign — a positive row under a spend subcategory counts as Entrate', () => {
+      // Regression: a refund nets positive (+75) while sitting under an 'out' subcategory. It MUST
+      // land in inflow (Entrate), not be dropped. Entrate = Σ positive, Uscite = |Σ negative|, and
+      // the identity inflow − outflow === net always holds.
+      const detail = buildTagDetailData([
+        detailRow({ transactionId: 't1', categoryName: 'Rimborsi', directionCode: 'out', amount: '75.00' }),
+        detailRow({ transactionId: 't2', categoryName: 'Casa', directionCode: 'out', amount: '-25.00' }),
+      ])
+
+      expect(detail.inflow).toBe('75.00')
+      expect(detail.outflow).toBe('25.00')
+      expect(detail.net).toBe('50.00')
+      expect(toDecimal(detail.inflow).minus(toDecimal(detail.outflow)).toFixed(2)).toBe(detail.net)
+      const rimborsi = detail.breakdown.find((b) => b.categoryName === 'Rimborsi')
+      expect(rimborsi).toEqual({ categoryName: 'Rimborsi', total: '75.00', count: 1 })
+      const sumTotal = detail.breakdown.reduce((acc, b) => toDecimal(acc).plus(toDecimal(b.total)).toFixed(2), '0.00')
+      expect(sumTotal).toBe(detail.net)
+    })
+
+    it('returns an empty breakdown (and net 0.00, count 0) for zero rows', () => {
+      const detail = buildTagDetailData([])
+
+      expect(detail.breakdown).toEqual([])
+      expect(detail.net).toBe('0.00')
+      expect(detail.count).toBe(0)
     })
   })
 
