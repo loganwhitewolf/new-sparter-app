@@ -50,10 +50,9 @@ export function TagRankingList({ items }: Props) {
       <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-12 text-center text-muted-foreground">
         <p className="text-base font-medium text-foreground">Nessun tag creato</p>
         <p className="max-w-sm text-sm">
-          Crea un tag dalle impostazioni per raggruppare le transazioni di un viaggio, evento o
-          progetto.{' '}
-          <Link href="/settings/tags" className="text-primary underline-offset-4 hover:underline">
-            Vai a Impostazioni &rarr; Tag
+          Crea un tag per raggruppare le transazioni di un viaggio, evento o progetto.{' '}
+          <Link href="/tags" className="text-primary underline-offset-4 hover:underline">
+            Vai alla sezione Tag
           </Link>
         </p>
       </div>

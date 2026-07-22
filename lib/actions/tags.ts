@@ -50,7 +50,7 @@ export async function createTagAction(
       dateRangeStart: parsed.data.dateRangeStart ?? null,
       dateRangeEnd: parsed.data.dateRangeEnd ?? null,
     })
-    revalidatePath(APP_ROUTES.tagSettings)
+    revalidatePath(APP_ROUTES.tags)
     revalidatePath(APP_ROUTES.dashboardTags) // WR-02 — a new tag must appear in the dashboard Tag section
     return { error: null, tagId: created.id }
   } catch (error) {
@@ -83,7 +83,7 @@ export async function updateTagAction(
       dateRangeStart: parsed.data.dateRangeStart ?? undefined,
       dateRangeEnd: parsed.data.dateRangeEnd ?? undefined,
     })
-    revalidatePath(APP_ROUTES.tagSettings)
+    revalidatePath(APP_ROUTES.tags)
     revalidatePath(APP_ROUTES.dashboardTags) // WR-02 — a renamed tag must refresh in the dashboard Tag section
     return { error: null }
   } catch (error) {
@@ -105,7 +105,7 @@ export async function archiveTagAction(
 
   try {
     await archiveTagService({ userId, tagId: parsed.data.id })
-    revalidatePath(APP_ROUTES.tagSettings)
+    revalidatePath(APP_ROUTES.tags)
     revalidatePath(APP_ROUTES.dashboardTags) // Pitfall 3 fix — dashboard Tag section (Plan 68-08)
     return { error: null }
   } catch (error) {

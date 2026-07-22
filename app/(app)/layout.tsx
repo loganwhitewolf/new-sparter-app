@@ -23,12 +23,16 @@ export default async function AppLayout({
   const requestHeaders = await headers();
   const pathname = requestHeaders.get("x-pathname") ?? "";
 
-  // Exempt /onboarding, /settings/*, and /import/* from the zero-transaction redirect guard.
-  // /import is part of the data-ingestion flow (including the format-wizard reached from step 1).
+  // Exempt /onboarding, /settings/*, /import/*, /tags, and /patterns from the zero-transaction
+  // redirect guard. /import is part of the data-ingestion flow (including the format-wizard
+  // reached from step 1). /tags and /patterns moved out from under /settings/* and need the
+  // same exemption they had while nested there.
   const isExempt =
     pathname.startsWith(APP_ROUTES.onboarding) ||
     pathname.startsWith(APP_ROUTES.settings) ||
-    pathname.startsWith(APP_ROUTES.import);
+    pathname.startsWith(APP_ROUTES.import) ||
+    pathname.startsWith(APP_ROUTES.tags) ||
+    pathname.startsWith(APP_ROUTES.patterns);
   if (!isExempt) {
     const txCount = await getTransactionCount(userId);
     if (txCount === 0) {

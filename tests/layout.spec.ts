@@ -96,13 +96,18 @@ test.describe('Layout - DS-03: (app) route group', () => {
     await expect(page.getByRole('button', { name: 'Espandi barra laterale' })).toBeVisible()
   })
 
-  test('mobile bottom nav has an Impostazioni link to /settings (D-10)', async ({ page }) => {
+  test('mobile bottom nav has an Altro button that opens a bottom sheet (quick-260722-iys)', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
     await page.setExtraHTTPHeaders({ 'x-staging-key': requireStagingKey() })
     await page.goto('/dashboard')
 
     const bottomNav = page.locator('[data-bottom-nav]')
     await expect(bottomNav).toBeVisible()
-    await expect(bottomNav.locator('a[href="/settings"]')).toHaveCount(1)
+    await expect(bottomNav.locator('a[href="/settings"]')).toHaveCount(0)
+
+    await bottomNav.getByRole('button', { name: 'Altro' }).click()
+    await expect(page.getByRole('heading', { name: 'Altro' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Tag' })).toHaveAttribute('href', '/tags')
+    await expect(page.getByRole('link', { name: 'Pattern' })).toHaveAttribute('href', '/patterns')
   })
 })

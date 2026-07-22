@@ -54,6 +54,8 @@ vi.mock('@/lib/routes', () => ({
     settings: '/settings',
     dashboard: '/dashboard',
     import: '/import',
+    tags: '/tags',
+    patterns: '/patterns',
   },
 }))
 
@@ -110,6 +112,24 @@ describe('app/(app)/layout.tsx onboarding gate (R-OB-01)', () => {
 
   it('does NOT redirect when txCount === 0 and pathname starts with /settings (R-OB-01 exemption)', async () => {
     mockPathname('/settings/profile')
+    mocks.getTransactionCount.mockResolvedValue(0)
+
+    await expect(AppLayout({ children: null })).resolves.not.toThrow()
+
+    expect(mocks.redirect).not.toHaveBeenCalled()
+  })
+
+  it('does NOT redirect when txCount === 0 and pathname is /tags (Tag promoted out of /settings)', async () => {
+    mockPathname('/tags')
+    mocks.getTransactionCount.mockResolvedValue(0)
+
+    await expect(AppLayout({ children: null })).resolves.not.toThrow()
+
+    expect(mocks.redirect).not.toHaveBeenCalled()
+  })
+
+  it('does NOT redirect when txCount === 0 and pathname is /patterns (Pattern promoted out of /settings)', async () => {
+    mockPathname('/patterns')
     mocks.getTransactionCount.mockResolvedValue(0)
 
     await expect(AppLayout({ children: null })).resolves.not.toThrow()

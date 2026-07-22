@@ -104,7 +104,8 @@ async function deleteUnlinkedSubcategory(page: Page, seed: CategorySettingsSeed)
   await expect(row).toBeHidden()
 }
 
-async function createPatternFromCategoriesPage(page: Page, seed: CategorySettingsSeed) {
+async function createPatternFromPatternsPage(page: Page, seed: CategorySettingsSeed) {
+  await page.goto('/patterns')
   await page.getByRole('button', { name: 'Nuovo pattern' }).click()
   const dialog = page.getByRole('dialog', { name: 'Nuovo pattern personalizzato' })
   await expect(dialog).toBeVisible()
@@ -135,7 +136,6 @@ test.describe('/settings/categories acceptance flow', () => {
 
       await expect(page.getByRole('heading', { name: 'Categorie' })).toBeVisible()
       await expect(page.getByText('Gestione categorie')).toBeVisible()
-      await expect(page.getByText('Pattern di categorizzazione', { exact: true })).toBeVisible()
 
       await createCategory(page, seed)
       await createSubcategory(page, seed)
@@ -144,7 +144,7 @@ test.describe('/settings/categories acceptance flow', () => {
       await overrideSystemSubcategory(page, seed)
       await assertLinkedDeleteBlocked(page, seed)
       await deleteUnlinkedSubcategory(page, seed)
-      await createPatternFromCategoriesPage(page, seed)
+      await createPatternFromPatternsPage(page, seed)
     } finally {
       await cleanupCategorySettingsSeed(seed)
     }

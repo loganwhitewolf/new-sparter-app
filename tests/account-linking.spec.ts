@@ -17,16 +17,9 @@ async function openSettingsProfile(page: Page) {
 }
 
 test.describe('Account Linking - LINK-04: settings IA + Account collegati card', () => {
-  test('LINK-04 /settings hub renders (no redirect to /settings/categories)', async ({ page }) => {
+  test('LINK-04 /settings redirects to /settings/profile (quick-260722-iys — hub emptied)', async ({ page }) => {
     await openSettings(page)
-    await expect(page).toHaveURL(/\/settings$/)
-    await expect(page.getByRole('heading', { name: 'Impostazioni' })).toBeVisible()
-  })
-
-  test('LINK-04 /settings hub links to /settings/profile and /settings/categories (D-01)', async ({ page }) => {
-    await openSettings(page)
-    await expect(page.getByRole('link', { name: /profilo/i })).toHaveAttribute('href', '/settings/profile')
-    await expect(page.getByRole('link', { name: /categori/i })).toHaveAttribute('href', '/settings/categories')
+    await expect(page).toHaveURL(/\/settings\/profile/)
   })
 
   test('LINK-04 /settings/profile shows Account collegati card (D-09)', async ({ page }) => {

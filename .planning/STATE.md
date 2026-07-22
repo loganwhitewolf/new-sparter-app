@@ -6,9 +6,9 @@ current_phase: 68
 current_phase_name: tags-dashboard-and-navigation
 status: shipped
 stopped_at: v2.6 milestone shipped (tag v2.6) — audit passed 16/16; ready for /gsd-new-milestone
-last_updated: "2026-07-22T11:02:00.000Z"
+last_updated: "2026-07-22T11:50:00.000Z"
 last_activity: 2026-07-22
-last_activity_desc: "Merged quick (260721-mm0 + 260721-mrl) onto main — conflict resolve"
+last_activity_desc: "Completed quick task 260722-iys: /tags + /patterns nav IA, Altro sheet, theme in Profile"
 progress:
   total_phases: 4
   completed_phases: 4
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 Phase: Milestone v2.6 complete
 Plan: —
 Status: Shipped — ready for next milestone
-Last activity: 2026-07-22 — Merged quick (260721-mm0 + 260721-mrl); hub keeps Tag, Categorie in sidebar
+Last activity: 2026-07-22 — Completed quick task 260722-iys: /tags + /patterns in sidebar, Altro mobile sheet, theme in Profile
 
 Progress: [██████████] 100%
 
@@ -277,6 +277,7 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260711-gfd | Dashboard-wide filter chips + sustainability default (option B): nature chips lifted from the chart to OverviewDashboardSection and now drive KPI cards AND chart; KPIs derived client-side from monthly points (overview-kpi-derive.ts, Decimal); YoY deltas vs prior-year points under the same selection (page fetches year−1); default = recurring income vs all spending (Straordinarie excluse) so Bilancio/Tasso heroes ARE the structural numbers; reset → default; Reimposta shown when ≠ default. Verified in-browser (toggle updates cards+chart together) | 2026-07-11 | 2af669f |
 | 260721-mm0 | Fix: private format create drops secondaryDescriptionColumn (formData not forwarded in createPrivateImportFormatAction) | 2026-07-21 | 7904df5 |
 | 260721-mrl | Move Categorie into primary left sidebar; remove hub card; keep /settings/categories route | 2026-07-21 | eddc893 |
+| 260722-iys | Nav IA: /tags + /patterns primary; Patterns out of Categories; theme→Profile; /settings→Profilo; mobile Altro sheet | 2026-07-22 | fcb1646 |
 
 ## Deferred Items
 
