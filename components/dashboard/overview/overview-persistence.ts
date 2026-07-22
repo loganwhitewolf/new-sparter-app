@@ -7,8 +7,10 @@
  * (ADR 0009/0010) — remembered while the tab lives, forgotten on browser close.
  *
  * Two independent concerns:
- * - Chart chips (Entrate/Uscite/Accantonamento): stored as the EXCLUDED keys per
- *   group. Default is all-on, so the common case stores empty arrays.
+ * - Nature chips (Entrate/Uscite/Accantonamento): stored as the EXCLUDED keys per
+ *   group. Since 260711-gfd the chips are dashboard-wide (cards + chart) and the
+ *   default is the sustainability selection (DEFAULT_EXCLUDED_CHIPS — extraordinary
+ *   income excluded); absence of a stored value means that default, not all-on.
  * - Year selector: stored as the plain year string; the URL stays the source of
  *   truth, this only seeds a bare mount.
  *

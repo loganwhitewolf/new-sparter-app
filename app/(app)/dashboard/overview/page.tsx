@@ -13,8 +13,7 @@ import { resolveYear } from '@/components/dashboard/overview/resolve-year'
 import { OverviewEmptyState } from '@/components/dashboard/overview/overview-empty-state'
 import { OverviewHeader } from '@/components/dashboard/overview/overview-header'
 import { TagFilterSelect } from '@/components/dashboard/tag-filter-select'
-import { KpiRow } from '@/components/dashboard/overview/kpi-row'
-import { OverviewMoversSection } from '@/components/dashboard/overview/overview-movers-section'
+import { OverviewDashboardSection } from '@/components/dashboard/overview/overview-dashboard-section'
 import { OverviewPageSkeleton } from '@/components/dashboard/overview/overview-page-skeleton'
 import { OverviewNudge } from '@/components/dashboard/overview/overview-nudge'
 import { toDecimal } from '@/lib/utils/decimal'
@@ -67,9 +66,14 @@ async function OverviewDataSection({
   tagId?: number
   tags: TagRow[]
 }) {
-  const [overview, chart] = await Promise.all([
+  // Prior-year chart points feed the filtered YoY deltas on the KPI cards (260711-gfd):
+  // deltas compare the SAME chip selection year-over-year. A prior year with no data
+  // yields zero sums → null deltas (existing null handling). v2.6: tagId narrows all
+  // three fetches so the dashboard-wide tag filter reaches the KPI cards, chart, and deltas.
+  const [overview, chart, prevChart] = await Promise.all([
     getOverview(year, tagId),
     getOverviewChart(year, tagId),
+    getOverviewChart(year - 1, tagId),
   ])
 
   if (isYearWithNoData(overview.totalIn, overview.totalOut)) {
@@ -111,11 +115,12 @@ async function OverviewDataSection({
         />
         <TagFilterSelect tags={tags} value={tagId} />
       </div>
-      <KpiRow data={overview} year={year} />
-      {/* OverviewMoversSection owns the shared selectedMonth — chart + movers panel never drift.
-          All 3 directions are pre-fetched server-side and shown simultaneously in 3 columns. */}
-      <OverviewMoversSection
+      {/* 260711-gfd: chips + KPI cards + chart/movers share one dashboard-wide chip
+          selection — OverviewDashboardSection owns it (sustainability default).
+          v2.6: tagId flows through so the movers' client-side month-switch refetch keeps the tag filter. */}
+      <OverviewDashboardSection
         data={chart}
+        prevData={prevChart}
         year={year}
         defaultMonthIndex={defaultMonthIndex}
         initialMoversIn={initialMoversIn}
