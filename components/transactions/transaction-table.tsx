@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ExternalLink, MoreHorizontal, Split, Tag, Unlink } from 'lucide-react'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
+import { toDecimal } from '@/lib/utils/decimal'
 import { toast } from 'sonner'
 import { BulkDeleteTransactionsDialog } from '@/components/transactions/bulk-delete-transactions-dialog'
 import { TransactionBulkActionBar } from '@/components/transactions/transaction-bulk-action-bar'
@@ -13,6 +14,7 @@ import { DetachExpenseDialog } from '@/components/transactions/detach-expense-di
 import { TransactionPairPopover } from '@/components/transactions/transaction-pair-popover'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { BulkCategorizeDialog } from '@/components/expenses/bulk-categorize-dialog'
+import { BulkAssignTagsDialog } from '@/components/tags/bulk-assign-tags-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -50,6 +52,7 @@ import { deleteTransactionPairAction } from '@/lib/actions/transaction-pairs'
 import type { TransactionListRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
+import type { TagRow } from '@/lib/dal/tags'
 import type { TransactionSearchParams } from '@/lib/validations/transactions'
 import { importFileDetailHref, transactionDetailHref } from '@/lib/routes'
 import { amountToneClass } from '@/lib/utils/amount-tone'
@@ -61,6 +64,8 @@ type Props = {
   searchParams: TransactionSearchParams
   categories: CategoryWithSubCategories[]
   mostUsed: MostUsedSubcategory[]
+  tags: TagRow[]
+  tagsByTransactionId: Record<string, { tagId: number; tagName: string; archived: boolean }[]>
 }
 
 const PAGE_SIZE = 50
@@ -109,11 +114,22 @@ function isExpenseCategorized(status: TransactionListRow['expenseStatus']) {
 
 function transactionRowLabel(transaction: TransactionListRow) {
   const raw =
-    transaction.customTitle?.trim() || transaction.expenseTitle?.trim() || transaction.description
+    transaction.customTitle?.trim() ||
+    transaction.groupTitle?.trim() ||
+    transaction.expenseTitle?.trim() ||
+    transaction.description
   return raw.length > 80 ? `${raw.slice(0, 77)}…` : raw
 }
 
-export function TransactionTable({ transactions, route, searchParams, categories, mostUsed }: Props) {
+export function TransactionTable({
+  transactions,
+  route,
+  searchParams,
+  categories,
+  mostUsed,
+  tags,
+  tagsByTransactionId,
+}: Props) {
   const [loadedTransactions, setLoadedTransactions] = useState(transactions)
   const [hasMore, setHasMore] = useState(transactions.length === PAGE_SIZE)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -123,10 +139,20 @@ export function TransactionTable({ transactions, route, searchParams, categories
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [bulkCategorizeOpen, setBulkCategorizeOpen] = useState(false)
+  const [bulkAssignTagsOpen, setBulkAssignTagsOpen] = useState(false)
+  const [tagsByTx, setTagsByTx] = useState(tagsByTransactionId)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const [categorizeTarget, setCategorizeTarget] = useState<{ id: string; title: string } | null>(null)
-  // Pair target: set when "Collega rimborso" is selected (D-09, PAIR-01)
-  const [pairTarget, setPairTarget] = useState<{ id: string; amount: string; occurredAt: Date } | null>(null)
+  // Pair target: set when "Collega rimborso" is selected (D-09, PAIR-01).
+  // `description` is carried alongside id/amount/occurredAt (CR-03) so a
+  // successful pairing can optimistically set the *counterpart's* pairing fields
+  // (pairedDescription) on this row without waiting for a reload.
+  const [pairTarget, setPairTarget] = useState<{
+    id: string
+    amount: string
+    description: string
+    occurredAt: Date
+  } | null>(null)
   const [detachTarget, setDetachTarget] = useState<{
     transactionId: string
     defaultTitle: string
@@ -436,7 +462,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
                       id={transaction.id}
                       description={transaction.description}
                       customTitle={transaction.customTitle}
-                      fallbackTitle={transaction.expenseTitle}
+                      fallbackTitle={transaction.groupTitle ?? transaction.expenseTitle}
                       onSuccess={(newTitle) => updateTransactionTitle(transaction.id, newTitle)}
                     />
                     {/* Inline pair badge — shown when the row is paired (D-15, PAIR-02).
@@ -456,6 +482,17 @@ export function TransactionTable({ transactions, route, searchParams, categories
                           pairedOccurredAt={transaction.pairedOccurredAt}
                         />
                       )}
+                    {/* Tag chips (D-07b) — read-only display; bulk add/remove lives in
+                        BulkAssignTagsDialog, single add/remove lives on the detail page. */}
+                    {(tagsByTx[transaction.id]?.length ?? 0) > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {tagsByTx[transaction.id]!.map((t) => (
+                          <Badge key={t.tagId} variant="outline" className="text-[10px]">
+                            {t.tagName}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell
@@ -611,6 +648,7 @@ export function TransactionTable({ transactions, route, searchParams, categories
                             setPairTarget({
                               id: transaction.id,
                               amount: transaction.amount,
+                              description: transaction.description,
                               occurredAt: transaction.occurredAt,
                             })
                             setOpenDropdownId(null)
@@ -687,7 +725,37 @@ export function TransactionTable({ transactions, route, searchParams, categories
       selectedIds={selectedIds}
       canBulkCategorize={selectedExpenseIds.length > 0}
       onBulkCategorize={openBulkCategorize}
+      onBulkAssignTags={() => setBulkAssignTagsOpen(true)}
       onBulkDelete={() => setBulkDeleteOpen(true)}
+    />
+
+    <BulkAssignTagsDialog
+      open={bulkAssignTagsOpen}
+      onOpenChange={setBulkAssignTagsOpen}
+      transactionIds={selectedIds}
+      tags={tags}
+      onSuccess={({ mode, tagIds }) => {
+        setTagsByTx((prev) => {
+          const next = { ...prev }
+          for (const txId of selectedIds) {
+            const current = next[txId] ?? []
+            if (mode === 'assign') {
+              const toAdd = tagIds
+                .filter((id) => !current.some((c) => c.tagId === id))
+                .map((id) => ({
+                  tagId: id,
+                  tagName: tags.find((t) => t.id === id)?.name ?? '',
+                  archived: tags.find((t) => t.id === id)?.archived ?? false,
+                }))
+              next[txId] = [...current, ...toAdd]
+            } else {
+              next[txId] = current.filter((c) => !tagIds.includes(c.tagId))
+            }
+          }
+          return next
+        })
+        setSelectedIds([])
+      }}
     />
 
     <BulkCategorizeDialog
@@ -753,12 +821,50 @@ export function TransactionTable({ transactions, route, searchParams, categories
       transactionId={pairTarget?.id ?? ''}
       transactionAmount={pairTarget?.amount ?? ''}
       transactionOccurredAt={pairTarget?.occurredAt ?? new Date()}
-      onPaired={({ secondaryTransactionId, subCategoryId }) => {
+      onPaired={({ secondaryTransactionId, subCategoryId, counterpart }) => {
         // Repaint the refund (secondary) row as categorized when the server
         // inherited the spend's subcategory (decision 2). When subCategoryId is
         // undefined the refund was left untouched — nothing to repaint.
         if (subCategoryId !== undefined) {
           markExpenseCategorized(secondaryTransactionId, String(subCategoryId))
+        }
+
+        // CR-03: mirror handleUnpair's optimistic-update pattern for pair *creation* —
+        // set the pairing fields on BOTH legs of the new pair in local state so the
+        // TransactionPairPopover badge appears immediately, without a manual reload.
+        // `counterpart` is the selected counterpart's own data (its id may or may not
+        // be `secondaryTransactionId` — the server independently resolves which leg
+        // is "primary"/"secondary" by amount — but the pairing fields are symmetric
+        // regardless of that designation).
+        if (pairTarget && counterpart) {
+          const netAmount = toDecimal(pairTarget.amount).plus(counterpart.amount).toString()
+          const primaryId = pairTarget.id
+
+          setLoadedTransactions((prev) =>
+            prev.map((t) => {
+              if (t.id === primaryId) {
+                return {
+                  ...t,
+                  pairedWithId: counterpart.id,
+                  pairedNetAmount: netAmount,
+                  pairedAmount: counterpart.amount,
+                  pairedDescription: counterpart.description,
+                  pairedOccurredAt: counterpart.occurredAt,
+                }
+              }
+              if (t.id === counterpart.id) {
+                return {
+                  ...t,
+                  pairedWithId: primaryId,
+                  pairedNetAmount: netAmount,
+                  pairedAmount: pairTarget.amount,
+                  pairedDescription: pairTarget.description,
+                  pairedOccurredAt: pairTarget.occurredAt,
+                }
+              }
+              return t
+            }),
+          )
         }
       }}
     />

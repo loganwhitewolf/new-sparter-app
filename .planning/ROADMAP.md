@@ -18,8 +18,30 @@
 - ✅ **v2.3: Platform Identity & Format Ownership** — Phases 58–60 (shipped 2026-06-30, tag v2.3)
 - ✅ **v2.4: Standalone Expense** — Phase 61 (shipped 2026-07-01) · [archive](milestones/v2.4-ROADMAP.md)
 - ✅ **v2.5: Detail Pages** — Phases 62–64 (shipped 2026-07-07, tag v2.5) · [archive](milestones/v2.5-ROADMAP.md)
+- ✅ **v2.6: Expenses & Transactions Refinement** — Phases 65–68 (shipped 2026-07-22, tag v2.6) · [archive](milestones/v2.6-ROADMAP.md)
 
 ## Phases
+
+<details>
+<summary>✅ v2.6: Expenses & Transactions Refinement (Phases 65–68) — SHIPPED 2026-07-22 (tag v2.6)</summary>
+
+Expense Group same-merchant unification (grouping entity above intact Expenses, no physical
+merge — ADR 0017) + Transaction Tags (curated second axis, orthogonal to categories) +
+dashboard global tag filter and month→filtered-transactions navigation. Cross-cutting invariant:
+neither grouping nor tagging changes dashboard totals or category breakdowns. Audit passed 16/16.
+
+- [x] **Phase 65: expense-group-merge-and-view** (GRP-01, GRP-02, GRP-03, GRP-04, GRP-08)
+- [x] **Phase 66: expense-group-lifecycle** (GRP-05, GRP-06, GRP-07, GRP-09) — completed 2026-07-20
+- [x] **Phase 67: tags-foundation-and-assignment** (TAG-01, TAG-02, TAG-03, TAG-06)
+- [x] **Phase 68: tags-dashboard-and-navigation** (TAG-04, TAG-05, NAV-01)
+
+Post-milestone bugfixes: transactions free-text search matches Expense Group title; expenses
+"Data" column → detail "Periodo" row; dashboard Categorie tag-filter alignment; GRP-08 dashboard
+top-transactions group title; merge-dialog confirm spacing; workspace format-on-save disabled.
+
+Full details: `.planning/milestones/v2.6-ROADMAP.md`
+
+</details>
 
 <details>
 <summary>✅ v2.5: Detail Pages (Phases 62–64) — SHIPPED 2026-07-07 (tag v2.5)</summary>
@@ -230,10 +252,13 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 59. import-wizard-attach-format | v2.3 | 4/4 | Complete   | 2026-06-30 |
 | 60. seed-slug-linkage-and-docs | v2.3 | 2/2 | Complete   | 2026-06-30 |
 | 61. standalone-expense | v2.4 | 2/2 | Complete    | 2026-07-01 |
-
 | 62. transaction-edit-core | v2.5 | 2/2 | Complete    | 2026-07-05 |
 | 63. detail-pages-tx-expense | v2.5 | 4/4 | Complete    | 2026-07-05 |
 | 64. file-detail-and-navigation | v2.5 | 7/7 | Complete    | 2026-07-06 |
+| 65. expense-group-merge-and-view | v2.6 | 6/6 | Complete    | 2026-07-19 |
+| 66. expense-group-lifecycle | v2.6 | 5/5 | Complete    | 2026-07-20 |
+| 67. tags-foundation-and-assignment | v2.6 | 9/9 | Complete    | 2026-07-20 |
+| 68. tags-dashboard-and-navigation | v2.6 | 8/8 | Complete    | 2026-07-22 |
 
-**Total shipped: 64 phases · 235 plans complete**
-**Current milestone: none — planning next milestone**
+**Total shipped: 68 phases · 263 plans complete**
+**Latest shipped: v2.6 Expenses & Transactions Refinement — Phases 65–68 (2026-07-22, tag v2.6). Next milestone: TBD (run /gsd-new-milestone).**

@@ -13,6 +13,7 @@ type Props = {
   initialMoversIn: MonthOverMonthChange[]
   initialMoversOut: MonthOverMonthChange[]
   initialMoversAllocation: MonthOverMonthChange[]
+  tagId?: number
   // 260711-gfd: chip selection owned by OverviewDashboardSection — passed through to the chart.
   includedIncome: Set<IncomeKey>
   includedOut: Set<OutKey>
@@ -35,6 +36,7 @@ export function OverviewMoversSection({
   initialMoversIn,
   initialMoversOut,
   initialMoversAllocation,
+  tagId,
   includedIncome,
   includedOut,
   includedAllocation,
@@ -51,10 +53,13 @@ export function OverviewMoversSection({
 
     startTransition(async () => {
       // Fetch all 3 directions in parallel.
+      // 68-06 (Pitfall 4): forward tagId — the client-side half of the tag-narrowing fix,
+      // matching the 4th positional arg Plan 68-03 already added to fetchMovers/
+      // getMonthOverMonthCategoryChanges server-side.
       const [resultIn, resultOut, resultAllocation] = await Promise.all([
-        fetchMovers(year, monthIndex, 'in'),
-        fetchMovers(year, monthIndex, 'out'),
-        fetchMovers(year, monthIndex, 'allocation'),
+        fetchMovers(year, monthIndex, 'in', tagId),
+        fetchMovers(year, monthIndex, 'out', tagId),
+        fetchMovers(year, monthIndex, 'allocation', tagId),
       ])
 
       setMoversIn(resultIn.error ? [] : resultIn.movers)

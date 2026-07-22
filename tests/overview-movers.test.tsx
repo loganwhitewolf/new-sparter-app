@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { describe, expect, it, vi } from 'vitest'
+import type * as React from 'react'
 import {
   formatMoverLine,
   splitMovers,
@@ -8,10 +10,21 @@ import {
 } from '@/components/dashboard/overview/overview-movers-format'
 import type { MonthOverMonthChange } from '@/lib/dal/overview'
 
+vi.mock('next/link', () => ({
+  default: ({ href, children, ...props }: React.ComponentProps<'a'>) => (
+    <a href={String(href)} {...props}>
+      {children}
+    </a>
+  ),
+}))
+
+const { OverviewMoversPanel } = await import('@/components/dashboard/overview/overview-movers-panel')
+
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const positiveItem: MonthOverMonthChange = {
   categoryId: 1,
+  categorySlug: 'spesa',
   name: 'Spesa',
   delta: '42.50',
   isNew: false,
@@ -19,6 +32,7 @@ const positiveItem: MonthOverMonthChange = {
 
 const negativeItem: MonthOverMonthChange = {
   categoryId: 2,
+  categorySlug: 'bollette',
   name: 'Bollette',
   delta: '-30.00',
   isNew: false,
@@ -26,6 +40,7 @@ const negativeItem: MonthOverMonthChange = {
 
 const isNewItem: MonthOverMonthChange = {
   categoryId: 3,
+  categorySlug: 'palestra',
   name: 'Palestra',
   delta: '80.00',
   isNew: true,
@@ -33,6 +48,7 @@ const isNewItem: MonthOverMonthChange = {
 
 const isNewItemWithNegativeDelta: MonthOverMonthChange = {
   categoryId: 4,
+  categorySlug: 'abbonamento',
   name: 'Abbonamento',
   delta: '-20.00',
   isNew: true, // isNew wins regardless of delta sign
@@ -98,6 +114,7 @@ describe('formatMoverLine', () => {
 describe('takeTopMovers', () => {
   const makeItem = (id: number): MonthOverMonthChange => ({
     categoryId: id,
+    categorySlug: `cat-${id}`,
     name: `Cat ${id}`,
     delta: '10.00',
     isNew: false,
@@ -133,19 +150,19 @@ describe('takeTopMovers', () => {
 
 describe('moverAmountTone', () => {
   it('positive delta → "increase"', () => {
-    expect(moverAmountTone({ categoryId: 1, name: 'X', delta: '10.00', isNew: false })).toBe('increase')
+    expect(moverAmountTone({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '10.00', isNew: false })).toBe('increase')
   })
 
   it('isNew with negative delta → "increase" (isNew wins)', () => {
-    expect(moverAmountTone({ categoryId: 1, name: 'X', delta: '-20.00', isNew: true })).toBe('increase')
+    expect(moverAmountTone({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '-20.00', isNew: true })).toBe('increase')
   })
 
   it('negative delta, not new → "decrease"', () => {
-    expect(moverAmountTone({ categoryId: 1, name: 'X', delta: '-15.00', isNew: false })).toBe('decrease')
+    expect(moverAmountTone({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '-15.00', isNew: false })).toBe('decrease')
   })
 
   it('zero delta, not new → "decrease"', () => {
-    expect(moverAmountTone({ categoryId: 1, name: 'X', delta: '0.00', isNew: false })).toBe('decrease')
+    expect(moverAmountTone({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '0.00', isNew: false })).toBe('decrease')
   })
 })
 
@@ -153,19 +170,19 @@ describe('moverAmountTone', () => {
 
 describe('moverQualifier', () => {
   it('isNew → "spesa nuova"', () => {
-    expect(moverQualifier({ categoryId: 1, name: 'X', delta: '50.00', isNew: true })).toBe('spesa nuova')
+    expect(moverQualifier({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '50.00', isNew: true })).toBe('spesa nuova')
   })
 
   it('positive delta → "in più"', () => {
-    expect(moverQualifier({ categoryId: 1, name: 'X', delta: '30.00', isNew: false })).toBe('in più')
+    expect(moverQualifier({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '30.00', isNew: false })).toBe('in più')
   })
 
   it('negative delta → "in meno"', () => {
-    expect(moverQualifier({ categoryId: 1, name: 'X', delta: '-25.00', isNew: false })).toBe('in meno')
+    expect(moverQualifier({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '-25.00', isNew: false })).toBe('in meno')
   })
 
   it('isNew wins over positive delta', () => {
-    expect(moverQualifier({ categoryId: 1, name: 'X', delta: '100.00', isNew: true })).toBe('spesa nuova')
+    expect(moverQualifier({ categoryId: 1, categorySlug: 'x', name: 'X', delta: '100.00', isNew: true })).toBe('spesa nuova')
   })
 })
 
@@ -219,5 +236,85 @@ describe('splitMovers', () => {
     const result = splitMovers([negativeItem])
     expect(result.increases).toHaveLength(0)
     expect(result.savings).toHaveLength(1)
+  })
+})
+
+// ─── OverviewMoversPanel — NAV-01 movers-row click-through ──────────────────
+
+describe('OverviewMoversPanel (NAV-01 movers-row click-through)', () => {
+  const allocationItem: MonthOverMonthChange = {
+    categoryId: null,
+    categorySlug: null,
+    natureCode: 'risparmio',
+    name: 'Risparmio',
+    delta: '15.00',
+    isNew: false,
+  }
+
+  it('wraps a category-keyed row in a Link built from categorySlug (never categoryId), with a zero-padded month', () => {
+    const html = renderToStaticMarkup(
+      <OverviewMoversPanel
+        year={2026}
+        selectedMonth={2} // March (0-indexed) -> "2026-03"
+        moversIn={[positiveItem]}
+        moversOut={[]}
+        moversAllocation={[]}
+        isPending={false}
+      />
+    )
+    expect(html).toContain('href="/transactions?months=2026-03&amp;category=spesa"')
+    expect(html).not.toContain('category=1')
+  })
+
+  it('does not leak the numeric categoryId into any generated href', () => {
+    const html = renderToStaticMarkup(
+      <OverviewMoversPanel
+        year={2026}
+        selectedMonth={0} // January -> "2026-01"
+        moversIn={[]}
+        moversOut={[negativeItem]}
+        moversAllocation={[]}
+        isPending={false}
+      />
+    )
+    expect(html).toContain('href="/transactions?months=2026-01&amp;category=bollette"')
+    expect(html).not.toContain('category=2')
+  })
+
+  it('renders the Accantonamenti (allocation) column as plain non-clickable text, unchanged', () => {
+    const html = renderToStaticMarkup(
+      <OverviewMoversPanel
+        year={2026}
+        selectedMonth={5}
+        moversIn={[]}
+        moversOut={[]}
+        moversAllocation={[allocationItem]}
+        isPending={false}
+      />
+    )
+    expect(html).toContain('Risparmio')
+    expect(html).not.toContain('<a')
+  })
+
+  it('renders a defensive non-linked row when categorySlug is null/undefined in a category-keyed column', () => {
+    const nullSlugItem: MonthOverMonthChange = {
+      categoryId: 9,
+      categorySlug: null,
+      name: 'Senza slug',
+      delta: '5.00',
+      isNew: false,
+    }
+    const html = renderToStaticMarkup(
+      <OverviewMoversPanel
+        year={2026}
+        selectedMonth={3}
+        moversIn={[nullSlugItem]}
+        moversOut={[]}
+        moversAllocation={[]}
+        isPending={false}
+      />
+    )
+    expect(html).toContain('Senza slug')
+    expect(html).not.toContain('<a')
   })
 })

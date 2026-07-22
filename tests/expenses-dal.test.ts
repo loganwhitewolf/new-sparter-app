@@ -4,35 +4,8 @@ const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   selectedShapes: [] as unknown[],
   whereArgs: [] as unknown[],
-  orderByArgs: [] as unknown[],
-  limitArgs: [] as number[],
-  offsetArgs: [] as number[],
+  rawRows: [] as unknown[],
 }))
-
-function makeQueryChain(finalValue: unknown[] = []) {
-  const chain = {
-    from: vi.fn(() => chain),
-    leftJoin: vi.fn(() => chain),
-    where: vi.fn((arg: unknown) => {
-      mocks.whereArgs.push(arg)
-      return chain
-    }),
-    orderBy: vi.fn((...args: unknown[]) => {
-      mocks.orderByArgs.push(...args)
-      return chain
-    }),
-    limit: vi.fn((arg: number) => {
-      mocks.limitArgs.push(arg)
-      return chain
-    }),
-    offset: vi.fn((arg: number) => {
-      mocks.offsetArgs.push(arg)
-      return Promise.resolve(finalValue)
-    }),
-  }
-
-  return chain
-}
 
 vi.mock('server-only', () => ({}))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
@@ -61,7 +34,17 @@ vi.mock('@/lib/db', () => ({
           })),
         }
       }
-      return makeQueryChain([])
+      // getExpenses: fetches the full filtered+joined row set (no SQL .limit()/.offset()) —
+      // composition/sorting/pagination happens entirely in JS over mocks.rawRows (Task 1, GRP-03).
+      const chain = {
+        from: vi.fn(() => chain),
+        leftJoin: vi.fn(() => chain),
+        where: vi.fn((arg: unknown) => {
+          mocks.whereArgs.push(arg)
+          return Promise.resolve(mocks.rawRows)
+        }),
+      }
+      return chain
     },
   },
 }))
@@ -100,6 +83,17 @@ vi.mock('@/lib/db/schema', () => ({
     userId: 'expense.userId',
     subCategoryId: 'expense.subCategoryId',
     importedFromFileId: 'expense.importedFromFileId',
+    firstTransactionAt: 'expense.firstTransactionAt',
+    lastTransactionAt: 'expense.lastTransactionAt',
+  },
+  expenseGroup: {
+    id: 'expenseGroup.id',
+    title: 'expenseGroup.title',
+    subCategoryId: 'expenseGroup.subCategoryId',
+  },
+  expenseGroupMembership: {
+    groupId: 'expenseGroupMembership.groupId',
+    expenseId: 'expenseGroupMembership.expenseId',
   },
   file: {
     id: 'file.id',
@@ -141,43 +135,95 @@ const {
   EXPENSE_LIST_LIMIT,
   expenseTitleSortKey,
   expenseCategorySortKey,
-  expenseCategoryIncompleteBucket,
   expenseTotalAmountAbsSortKey,
   getExpenseSortColumn,
   getExpenses,
   getUncategorizedExpenseCount,
 } = await import('../lib/dal/expenses')
 
+type RawRow = {
+  id: string
+  title: string
+  status: '1' | '2' | '3' | '4'
+  notes: string | null
+  createdAt: Date
+  totalAmount: string
+  transactionCount: number
+  subCategoryId: number | null
+  subCategoryName: string | null
+  categoryName: string | null
+  categorySlug: string | null
+  categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
+  platformName: string | null
+  firstTransactionAt: Date | null
+  lastTransactionAt: Date | null
+  groupId: number | null
+  groupTitle: string | null
+}
+
+function makeRawRow(overrides: Partial<RawRow> = {}): RawRow {
+  const createdAt = overrides.createdAt ?? new Date('2026-01-01T00:00:00.000Z')
+  return {
+    id: 'exp-1',
+    title: 'Spesa',
+    status: '3',
+    notes: null,
+    createdAt,
+    totalAmount: '-10.00',
+    transactionCount: 1,
+    subCategoryId: 1,
+    subCategoryName: 'Supermercato',
+    categoryName: 'Casa',
+    categorySlug: 'casa',
+    categoryType: 'out',
+    platformName: 'Intesa SP',
+    firstTransactionAt: createdAt,
+    lastTransactionAt: createdAt,
+    groupId: null,
+    groupTitle: null,
+    ...overrides,
+  }
+}
+
 describe('expense DAL list pagination', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.selectedShapes.length = 0
     mocks.whereArgs.length = 0
-    mocks.orderByArgs.length = 0
-    mocks.limitArgs.length = 0
-    mocks.offsetArgs.length = 0
+    mocks.rawRows = []
     mocks.verifySession.mockResolvedValue({ userId: 'user-1' })
   })
 
   it('limits expenses to 50 rows by default for infinite loading', async () => {
-    await getExpenses()
+    mocks.rawRows = Array.from({ length: 60 }, (_, i) =>
+      makeRawRow({
+        id: `exp-${i}`,
+        createdAt: new Date(2026, 0, i + 1),
+      }),
+    )
+
+    const result = await getExpenses()
 
     expect(EXPENSE_LIST_LIMIT).toBe(50)
     expect(mocks.verifySession).toHaveBeenCalledTimes(1)
-    expect(mocks.limitArgs).toEqual([EXPENSE_LIST_LIMIT])
-    expect(mocks.offsetArgs).toEqual([0])
-    expect(mocks.orderByArgs).toEqual([
-      { op: 'desc', column: 'expense.createdAt' },
-      { op: 'desc', column: 'expense.id' },
-    ])
+    expect(result).toHaveLength(50)
+    // Default sort createdAt desc — most recent (highest index) first.
+    expect(result[0].id).toBe('exp-59')
+    expect(result[49].id).toBe('exp-10')
     expect((mocks.selectedShapes[0] as { subCategoryName: unknown }).subCategoryName).toMatchObject({ op: 'sql' })
   })
 
   it('applies explicit pagination offsets without changing user scoping', async () => {
-    await getExpenses({ status: 'categorized' }, { limit: 50, offset: 100 })
+    mocks.rawRows = Array.from({ length: 150 }, (_, i) =>
+      makeRawRow({ id: `exp-${i}`, createdAt: new Date(2026, 0, i + 1) }),
+    )
 
-    expect(mocks.limitArgs).toEqual([50])
-    expect(mocks.offsetArgs).toEqual([100])
+    const result = await getExpenses({ status: 'categorized' }, { limit: 50, offset: 100 })
+
+    expect(result).toHaveLength(50)
+    // offset 100 in a desc-by-createdAt list of 150 (idx 0..149) → idx 49..0
+    expect(result[0].id).toBe('exp-49')
+    expect(result[49].id).toBe('exp-0')
     expect(mocks.whereArgs[0]).toEqual({
       op: 'and',
       args: expect.arrayContaining([
@@ -189,31 +235,29 @@ describe('expense DAL list pagination', () => {
   })
 
   it('orders expenses by total amount when requested', async () => {
-    await getExpenses({ sort: 'totalAmount', dir: 'asc' })
+    mocks.rawRows = [
+      makeRawRow({ id: 'small', totalAmount: '-5.00' }),
+      makeRawRow({ id: 'large', totalAmount: '-500.00' }),
+      makeRawRow({ id: 'medium', totalAmount: '-50.00' }),
+    ]
 
-    expect(mocks.orderByArgs).toEqual([
-      { op: 'asc', column: expenseTotalAmountAbsSortKey },
-      { op: 'asc', column: 'expense.id' },
-    ])
+    const result = await getExpenses({ sort: 'totalAmount', dir: 'asc' })
+
+    expect(result.map((r) => r.id)).toEqual(['small', 'medium', 'large'])
   })
 
   it('orders category sort with incomplete rows last in both directions', async () => {
-    await getExpenses({ sort: 'category', dir: 'desc' })
+    mocks.rawRows = [
+      makeRawRow({ id: 'complete-b', categoryName: 'Casa', subCategoryName: 'Bollette' }),
+      makeRawRow({ id: 'incomplete', categoryName: null, subCategoryName: null }),
+      makeRawRow({ id: 'complete-a', categoryName: 'Auto', subCategoryName: 'Benzina' }),
+    ]
 
-    expect(mocks.orderByArgs).toEqual([
-      { op: 'asc', column: expenseCategoryIncompleteBucket },
-      { op: 'desc', column: expenseCategorySortKey },
-      { op: 'desc', column: 'expense.id' },
-    ])
+    const desc = await getExpenses({ sort: 'category', dir: 'desc' })
+    expect(desc.map((r) => r.id)).toEqual(['complete-b', 'complete-a', 'incomplete'])
 
-    mocks.orderByArgs.length = 0
-    await getExpenses({ sort: 'category', dir: 'asc' })
-
-    expect(mocks.orderByArgs).toEqual([
-      { op: 'asc', column: expenseCategoryIncompleteBucket },
-      { op: 'asc', column: expenseCategorySortKey },
-      { op: 'asc', column: 'expense.id' },
-    ])
+    const asc = await getExpenses({ sort: 'category', dir: 'asc' })
+    expect(asc.map((r) => r.id)).toEqual(['complete-a', 'complete-b', 'incomplete'])
   })
 
   it('maps sort keys to DAL columns and expressions', () => {
@@ -284,39 +328,37 @@ describe('expense DAL list pagination', () => {
     )
   })
 
-  // ── Wave 4: amountMin/amountMax ABS conditions ─────────────────────────────
+  // ── Wave 4: amountMin/amountMax now applied to the FINAL composed totals (Task 1) ──────
 
-  it('amountMin adds ABS(totalAmount::numeric) >= amountMin::numeric condition', async () => {
-    await getExpenses({ amountMin: '50' })
+  it('amountMin filters the composed output by |totalAmount| >= amountMin, not as a SQL condition', async () => {
+    mocks.rawRows = [
+      makeRawRow({ id: 'below', totalAmount: '-10.00' }),
+      makeRawRow({ id: 'above', totalAmount: '-100.00' }),
+    ]
 
+    const result = await getExpenses({ amountMin: '50' })
+
+    expect(result.map((r) => r.id)).toEqual(['above'])
     const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
-    const amountMinCondition = where.args.find(
+    const hasSqlAmountCondition = where.args.some(
       (arg) =>
         typeof arg === 'object' &&
         arg !== null &&
         (arg as { op?: string }).op === 'sql' &&
-        ((arg as { strings?: string[] }).strings ?? []).join('').includes('>='),
-    ) as { op: string; strings: string[]; values: unknown[] } | undefined
-
-    expect(amountMinCondition).toBeDefined()
-    expect(amountMinCondition!.strings.join('')).toContain('ABS')
-    expect(amountMinCondition!.values).toContain('50')
+        ((arg as { strings?: string[] }).strings ?? []).join('').includes('ABS'),
+    )
+    expect(hasSqlAmountCondition).toBe(false)
   })
 
-  it('amountMax adds ABS(totalAmount::numeric) <= amountMax::numeric condition', async () => {
-    await getExpenses({ amountMax: '500' })
+  it('amountMax filters the composed output by |totalAmount| <= amountMax, not as a SQL condition', async () => {
+    mocks.rawRows = [
+      makeRawRow({ id: 'below', totalAmount: '-10.00' }),
+      makeRawRow({ id: 'above', totalAmount: '-1000.00' }),
+    ]
 
-    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
-    const amountMaxCondition = where.args.find(
-      (arg) =>
-        typeof arg === 'object' &&
-        arg !== null &&
-        (arg as { op?: string }).op === 'sql' &&
-        ((arg as { strings?: string[] }).strings ?? []).join('').includes('<='),
-    ) as { op: string; strings: string[]; values: unknown[] } | undefined
+    const result = await getExpenses({ amountMax: '500' })
 
-    expect(amountMaxCondition).toBeDefined()
-    expect(amountMaxCondition!.values).toContain('500')
+    expect(result.map((r) => r.id)).toEqual(['below'])
   })
 
   // ── lcp-01 Task 3: cascade filters (nature / type / subCategoryId) ─────────
@@ -383,6 +425,123 @@ describe('expense DAL list pagination', () => {
       op: 'eq',
       left: 'subCategory.id',
       right: 42,
+    })
+  })
+
+  // ── Task 1 (65-03): search matches member title OR group title ────────────
+
+  it('search term (q) adds or(ilike(expense.title), ilike(expenseGroup.title)) condition', async () => {
+    await getExpenses({ q: 'super' })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    const orCondition = where.args.find(
+      (arg) =>
+        typeof arg === 'object' &&
+        arg !== null &&
+        (arg as { op?: string }).op === 'or' &&
+        (arg as { args?: unknown[] }).args?.some(
+          (a) => typeof a === 'object' && a !== null && (a as { op?: string }).op === 'ilike',
+        ),
+    ) as { op: string; args: Array<{ op: string; left: unknown; right: unknown }> } | undefined
+
+    expect(orCondition).toBeDefined()
+    expect(orCondition!.args).toContainEqual({ op: 'ilike', left: 'expense.title', right: '%super%' })
+    expect(orCondition!.args).toContainEqual({ op: 'ilike', left: 'expenseGroup.title', right: '%super%' })
+  })
+
+  // ── Task 1 (65-03): read-time Expense Group composition (GRP-03) ──────────
+
+  describe('Expense Group composition', () => {
+    it('is a pure pass-through when no row carries an expenseGroupMembership entry (regression safety)', async () => {
+      const row = makeRawRow({ id: 'exp-solo', platformName: 'Revolut' })
+      mocks.rawRows = [row]
+
+      const result = await getExpenses()
+
+      expect(result).toEqual([row])
+    })
+
+    it('collapses N grouped member rows into one composed row with Decimal.js-correct summed totals', async () => {
+      mocks.rawRows = [
+        makeRawRow({
+          id: 'member-1',
+          groupId: 5,
+          groupTitle: 'Spesa supermercato',
+          totalAmount: '-10.00',
+          transactionCount: 1,
+          firstTransactionAt: new Date('2026-01-05'),
+          lastTransactionAt: new Date('2026-01-05'),
+          platformName: 'Intesa SP',
+        }),
+        makeRawRow({
+          id: 'member-2',
+          groupId: 5,
+          groupTitle: 'Spesa supermercato',
+          totalAmount: '-20.50',
+          transactionCount: 2,
+          firstTransactionAt: new Date('2026-01-01'),
+          lastTransactionAt: new Date('2026-01-10'),
+          platformName: 'Revolut',
+        }),
+        makeRawRow({
+          id: 'member-3',
+          groupId: 5,
+          groupTitle: 'Spesa supermercato',
+          totalAmount: '-5.25',
+          transactionCount: 3,
+          firstTransactionAt: new Date('2026-01-15'),
+          lastTransactionAt: new Date('2026-01-20'),
+          platformName: 'Satispay',
+        }),
+      ]
+
+      const result = await getExpenses()
+
+      expect(result).toHaveLength(1)
+      const [group] = result
+      expect(group.id).toBe('group:5')
+      expect(group.title).toBe('Spesa supermercato')
+      expect(group.status).toBe('3')
+      expect(group.totalAmount).toBe('-35.75')
+      expect(group.transactionCount).toBe(6)
+      expect(group.firstTransactionAt).toEqual(new Date('2026-01-01'))
+      expect(group.lastTransactionAt).toEqual(new Date('2026-01-20'))
+      // A group spanning multiple platforms is not guessed — left null (GRP-03).
+      expect(group.platformName).toBeNull()
+      expect(group.groupId).toBe(5)
+      expect(group.groupTitle).toBe('Spesa supermercato')
+    })
+
+    it('never splits a group across two limit/offset pages', async () => {
+      mocks.rawRows = [
+        makeRawRow({ id: 'member-1', groupId: 5, groupTitle: 'Gruppo', createdAt: new Date('2026-01-10') }),
+        makeRawRow({ id: 'member-2', groupId: 5, groupTitle: 'Gruppo', createdAt: new Date('2026-01-10') }),
+        makeRawRow({ id: 'exp-solo-1', createdAt: new Date('2026-01-05') }),
+        makeRawRow({ id: 'exp-solo-2', createdAt: new Date('2026-01-01') }),
+      ]
+
+      // Composition happens before pagination: 4 raw rows collapse to 3 composed entities
+      // (1 group + 2 ungrouped) BEFORE the limit/offset slice is taken.
+      const page1 = await getExpenses({}, { limit: 1, offset: 0 })
+      expect(page1).toHaveLength(1)
+      expect(page1[0].id).toBe('group:5')
+
+      const page2 = await getExpenses({}, { limit: 1, offset: 1 })
+      expect(page2).toHaveLength(1)
+      expect(page2[0].id).toBe('exp-solo-1')
+
+      const page3 = await getExpenses({}, { limit: 1, offset: 2 })
+      expect(page3).toHaveLength(1)
+      expect(page3[0].id).toBe('exp-solo-2')
+    })
+
+    it("leaves an ungrouped expense's output fields unchanged from before this phase", async () => {
+      const row = makeRawRow({ id: 'exp-unchanged', groupId: null, groupTitle: null })
+      mocks.rawRows = [row]
+
+      const [result] = await getExpenses()
+
+      expect(result).toEqual(row)
     })
   })
 })

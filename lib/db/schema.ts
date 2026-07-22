@@ -471,6 +471,109 @@ export const transactionPair = pgTable(
   ],
 );
 
+// Expense Group — grouping entity above intact Expenses (Phase 65, ADR 0017).
+// Members keep their descriptionHash, aggregates, and Tier 2 history unchanged;
+// group totals are computed at read time and are deliberately NOT persisted here
+// (no totalAmount/transactionCount/firstTransactionAt/lastTransactionAt column).
+export const expenseGroup = pgTable(
+  "expense_group",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    subCategoryId: integer("sub_category_id").references(() => subCategory.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("expense_group_userId_idx").on(table.userId),
+    index("expense_group_subCategoryId_idx").on(table.subCategoryId),
+  ],
+);
+
+// Junction table: an expense belongs to at most one group at a time (D-04).
+// The standalone unique on expenseId — not just the (groupId, expenseId) pair —
+// is what actually enforces that invariant at the DB level.
+export const expenseGroupMembership = pgTable(
+  "expense_group_membership",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => expenseGroup.id, { onDelete: "cascade" }),
+    expenseId: text("expense_id")
+      .notNull()
+      .references(() => expense.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("expense_group_membership_group_expense_unique").on(table.groupId, table.expenseId),
+    unique("expense_group_membership_expense_unique").on(table.expenseId),
+    index("expense_group_membership_groupId_idx").on(table.groupId),
+    index("expense_group_membership_expenseId_idx").on(table.expenseId),
+  ],
+);
+
+// Tag — curated entity for Transaction Tags (Phase 67, TAG-01).
+// Name is displayed as typed; normalizedName is name.trim().toLowerCase(), computed by the
+// service layer (Plan 67-03), never derived in the DB. The standalone unique on
+// (userId, normalizedName) is the DB-level guard that makes D-02's case/whitespace-insensitive
+// uniqueness race-safe (TAG-01 concurrency edge), not merely a service pre-check.
+// `archived` is the only removal state — no hard-delete path exists (D-04).
+export const tag = pgTable(
+  "tag",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 100 }).notNull(),
+    normalizedName: varchar("normalized_name", { length: 100 }).notNull(),
+    dateRangeStart: timestamp("date_range_start", { withTimezone: true }),
+    dateRangeEnd: timestamp("date_range_end", { withTimezone: true }),
+    archived: boolean("archived").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    unique("tag_userId_normalizedName_unique").on(table.userId, table.normalizedName),
+    index("tag_userId_idx").on(table.userId),
+  ],
+);
+
+// Junction table: a transaction may carry N tags — unlike expenseGroupMembership, there is no
+// standalone single-column unique on transactionId (no "one tag per transaction" rule).
+// The composite unique on (tagId, transactionId) is what lets bulkAssignTags (Plan 67-04) use
+// onConflictDoNothing for D-06's additive-union semantics instead of a pre-check-then-insert race.
+export const transactionTag = pgTable(
+  "transaction_tag",
+  {
+    id: serial("id").primaryKey(),
+    tagId: integer("tag_id")
+      .notNull()
+      .references(() => tag.id, { onDelete: "cascade" }),
+    transactionId: text("transaction_id")
+      .notNull()
+      .references(() => transaction.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("transaction_tag_tagId_transactionId_unique").on(table.tagId, table.transactionId),
+    index("transaction_tag_tagId_idx").on(table.tagId),
+    index("transaction_tag_transactionId_idx").on(table.transactionId),
+  ],
+);
+
 export const categorizationPattern = pgTable(
   "categorization_pattern",
   {
@@ -544,6 +647,7 @@ export const userRelations = relations(user, ({ many }) => ({
   transactions: many(transaction),
   categorizationPatterns: many(categorizationPattern),
   expenseClassificationHistory: many(expenseClassificationHistory),
+  tags: many(tag),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -683,6 +787,26 @@ export const transactionRelations = relations(transaction, ({ one, many }) => ({
   // Phase 50: pairing relations (a transaction can be the primary or secondary in a pair)
   pairAsA: many(transactionPair, { relationName: "primaryTransaction" }),
   pairAsB: many(transactionPair, { relationName: "secondaryTransaction" }),
+  transactionTags: many(transactionTag),
+}));
+
+export const tagRelations = relations(tag, ({ one, many }) => ({
+  user: one(user, {
+    fields: [tag.userId],
+    references: [user.id],
+  }),
+  transactionTags: many(transactionTag),
+}));
+
+export const transactionTagRelations = relations(transactionTag, ({ one }) => ({
+  tag: one(tag, {
+    fields: [transactionTag.tagId],
+    references: [tag.id],
+  }),
+  transaction: one(transaction, {
+    fields: [transactionTag.transactionId],
+    references: [transaction.id],
+  }),
 }));
 
 export const transactionPairRelations = relations(transactionPair, ({ one }) => ({
@@ -695,6 +819,29 @@ export const transactionPairRelations = relations(transactionPair, ({ one }) => 
     fields: [transactionPair.transactionBId],
     references: [transaction.id],
     relationName: "secondaryTransaction",
+  }),
+}));
+
+export const expenseGroupRelations = relations(expenseGroup, ({ one, many }) => ({
+  user: one(user, {
+    fields: [expenseGroup.userId],
+    references: [user.id],
+  }),
+  subCategory: one(subCategory, {
+    fields: [expenseGroup.subCategoryId],
+    references: [subCategory.id],
+  }),
+  memberships: many(expenseGroupMembership),
+}));
+
+export const expenseGroupMembershipRelations = relations(expenseGroupMembership, ({ one }) => ({
+  group: one(expenseGroup, {
+    fields: [expenseGroupMembership.groupId],
+    references: [expenseGroup.id],
+  }),
+  expense: one(expense, {
+    fields: [expenseGroupMembership.expenseId],
+    references: [expense.id],
   }),
 }));
 

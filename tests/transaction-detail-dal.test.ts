@@ -47,6 +47,14 @@ vi.mock('@/lib/db/schema', () => ({
     subCategoryId: 'expense.subCategoryId',
     transactionCount: 'expense.transactionCount',
   },
+  expenseGroup: {
+    id: 'expenseGroup.id',
+    title: 'expenseGroup.title',
+  },
+  expenseGroupMembership: {
+    groupId: 'expenseGroupMembership.groupId',
+    expenseId: 'expenseGroupMembership.expenseId',
+  },
   file: {
     id: 'file.id',
     displayName: 'file.displayName',
@@ -150,6 +158,8 @@ function makeDetailRow(overrides: Record<string, unknown> = {}) {
     fileId: 'file-1',
     fileName: 'estratto-conto.csv',
     platformName: 'Intesa SP',
+    groupId: null,
+    groupTitle: null,
     pairedWithId: null,
     pairedAmount: null,
     pairedDescription: null,
@@ -171,6 +181,26 @@ describe('getTransactionForDetail', () => {
     const result = await getTransactionForDetail({ userId: 'user-1', id: 'tx-1' })
 
     expect(result).toEqual(row)
+  })
+
+  it('resolves groupId/groupTitle to null for a transaction whose expense is not grouped (Task 3, GRP-08)', async () => {
+    const row = makeDetailRow()
+    mocks.dbSelectChain.mockReturnValue(makeSelectChain([row]))
+
+    const result = await getTransactionForDetail({ userId: 'user-1', id: 'tx-1' })
+
+    expect(result?.groupId).toBeNull()
+    expect(result?.groupTitle).toBeNull()
+  })
+
+  it('passes groupId/groupTitle straight through when the linked expense is a group member', async () => {
+    const row = makeDetailRow({ groupId: 5, groupTitle: 'Spesa supermercato' })
+    mocks.dbSelectChain.mockReturnValue(makeSelectChain([row]))
+
+    const result = await getTransactionForDetail({ userId: 'user-1', id: 'tx-1' })
+
+    expect(result?.groupId).toBe(5)
+    expect(result?.groupTitle).toBe('Spesa supermercato')
   })
 
   it('returns undefined for a non-existent transaction id, without throwing', async () => {

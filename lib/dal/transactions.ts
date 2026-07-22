@@ -5,10 +5,13 @@ import { DETAIL_LINKED_TRANSACTIONS_PREVIEW_LIMIT } from '@/lib/constants/detail
 import { db, type DbOrTx } from '@/lib/db'
 import { toDecimal } from '@/lib/utils/decimal'
 import { verifySession } from '@/lib/dal/auth'
+import { tagScopedTransactions } from '@/lib/dal/transaction-tags-sql'
 import {
   category,
   direction,
   expense,
+  expenseGroup,
+  expenseGroupMembership,
   file as importFile,
   importFormatVersion,
   nature,
@@ -60,6 +63,8 @@ export type TransactionFilters = {
   name?: string
   categorySlug?: string
   subCategoryId?: number
+  /** Tag click-through filter — LOCKED DECISION 3 (68-01) — `/transactions?tag={tagId}` */
+  tagId?: number
   sort?: TransactionSort
   dir?: TransactionSortDirection
   // Wave 4 filter conditions (D-19..D-25):
@@ -95,6 +100,10 @@ export const transactionListSelect = {
   platformSlug: platform.slug,
   // Direction code from the nature→direction join (replaces the category.id placeholder)
   categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
+  // Group-title display precedence (Task 3, GRP-08): non-null only when the linked expense is
+  // an Expense Group member; display-only, never participates in sorting/filtering.
+  groupId: expenseGroupMembership.groupId,
+  groupTitle: expenseGroup.title,
   // Phase 50: pairing fields — correlated subqueries (no LEFT JOIN to preserve buildTransactionOrderBy)
   pairedWithId: sql<string | null>`(
     SELECT CASE
@@ -181,6 +190,9 @@ export type TransactionListRow = {
   platformSlug: string | null
   // Direction code from the nature→direction join
   categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
+  // Group-title display precedence (Task 3, GRP-08)
+  groupId: number | null
+  groupTitle: string | null
   // Phase 50: pairing fields (nullable — null when transaction is unpaired)
   pairedWithId: string | null
   pairedNetAmount: string | null
@@ -307,8 +319,9 @@ export const getTransactions = cache(
         or(
           ilike(transaction.description, pattern),
           ilike(transaction.customTitle, pattern),
-          // Matches table label: customTitle → expense title → bank description
+          // Matches table label: customTitle → group title → expense title → bank description
           ilike(expense.title, pattern),
+          ilike(expenseGroup.title, pattern),
         ),
       )
     }
@@ -319,6 +332,12 @@ export const getTransactions = cache(
 
     if (filters.subCategoryId) {
       conditions.push(eq(subCategory.id, filters.subCategoryId))
+    }
+
+    // Tag click-through filter (68-01) — EXISTS predicate, never a leftJoin against
+    // transaction_tag (a genuine N:M table; a join would fan out multi-tag rows).
+    if (filters.tagId) {
+      conditions.push(tagScopedTransactions(filters.tagId))
     }
 
     // Wave 4: months filter — OR across TO_CHAR(occurredAt, 'YYYY-MM') = ym (D-07/D-08)
@@ -368,6 +387,8 @@ export const getTransactions = cache(
       )
       .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
       .leftJoin(expense, eq(transaction.expenseId, expense.id))
+      .leftJoin(expenseGroupMembership, eq(expense.id, expenseGroupMembership.expenseId))
+      .leftJoin(expenseGroup, eq(expenseGroupMembership.groupId, expenseGroup.id))
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
       .leftJoin(nature, eq(subCategory.natureId, nature.id))
@@ -581,6 +602,9 @@ export type TransactionDetailRow = {
   fileId: string | null
   fileName: string | null
   platformName: string | null
+  // Group-title display precedence (Task 3, GRP-08)
+  groupId: number | null
+  groupTitle: string | null
   pairedWithId: string | null
   pairedAmount: string | null
   pairedDescription: string | null
@@ -627,6 +651,8 @@ export const getTransactionForDetail = cache(
         fileId: importFile.id,
         fileName: sql<string | null>`coalesce(nullif(trim(coalesce(${importFile.displayName}, '')), ''), ${importFile.originalName})`,
         platformName: platform.name,
+        groupId: expenseGroupMembership.groupId,
+        groupTitle: expenseGroup.title,
         pairedWithId: transactionListSelect.pairedWithId,
         pairedAmount: transactionListSelect.pairedAmount,
         pairedDescription: transactionListSelect.pairedDescription,
@@ -641,6 +667,8 @@ export const getTransactionForDetail = cache(
       )
       .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
       .leftJoin(expense, eq(transaction.expenseId, expense.id))
+      .leftJoin(expenseGroupMembership, eq(expense.id, expenseGroupMembership.expenseId))
+      .leftJoin(expenseGroup, eq(expenseGroupMembership.groupId, expenseGroup.id))
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
       .leftJoin(nature, eq(subCategory.natureId, nature.id))

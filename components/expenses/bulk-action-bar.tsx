@@ -6,9 +6,15 @@ type Props = {
   selectedIds: string[]
   onBulkCategorize: () => void
   onBulkDelete: () => void
+  onBulkMerge?: () => void
 }
 
-export function BulkActionBar({ selectedIds, onBulkCategorize, onBulkDelete }: Props) {
+export function BulkActionBar({
+  selectedIds,
+  onBulkCategorize,
+  onBulkDelete,
+  onBulkMerge,
+}: Props) {
   const count = selectedIds.length
 
   return (
@@ -27,6 +33,11 @@ export function BulkActionBar({ selectedIds, onBulkCategorize, onBulkDelete }: P
         <Button type="button" size="sm" onClick={onBulkCategorize}>
           Categorizza ({count})
         </Button>
+        {onBulkMerge ? (
+          <Button type="button" size="sm" onClick={onBulkMerge}>
+            Unisci ({count})
+          </Button>
+        ) : null}
         <Button type="button" size="sm" variant="destructive" onClick={onBulkDelete}>
           Elimina ({count})
         </Button>

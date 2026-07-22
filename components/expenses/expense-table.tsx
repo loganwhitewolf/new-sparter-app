@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { MoreHorizontal } from 'lucide-react'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 import { toast } from 'sonner'
@@ -42,10 +43,12 @@ import { BulkCategorizeDialog } from './bulk-categorize-dialog'
 import { BulkDeleteExpensesDialog } from './bulk-delete-expenses-dialog'
 import { ExpenseCategorizeDialog } from './expense-categorize-dialog'
 import { ExpenseTitleEdit } from './expense-title-edit'
+import { GroupCategorizeDialog } from './group-categorize-dialog'
+import { MergeExpensesDialog } from './merge-expenses-dialog'
 import type { ExpenseFilters, ExpenseRow } from '@/lib/dal/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
-import { expenseDetailHref } from '@/lib/routes'
+import { expenseDetailHref, expenseGroupDetailHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -69,7 +72,60 @@ function dedupeExpenseRows(rows: ExpenseRow[]): ExpenseRow[] {
   return unique
 }
 
+/**
+ * GRP-06/D-06 merge/add-to-group eligibility, extracted as a pure function so
+ * it is directly unit-testable without rendering (selection is internal
+ * component state, not a prop — this repo has no jsdom/interaction
+ * simulation). Mirrors mergeExpenses' create-group gate (2+ same-subcategory
+ * ungrouped rows) plus the new add-to-group gate (exactly 1 group row + 1+
+ * ungrouped rows that don't conflict with the group's subcategory); 2+ group
+ * rows is never eligible (D-06 — group-to-group merge is unsupported).
+ */
+export function computeMergeEligibility(
+  selectedRows: Pick<ExpenseRow, 'groupId' | 'subCategoryId' | 'title'>[],
+): {
+  mergeEligible: boolean
+  targetGroup: { id: number; title: string; subCategoryId: number } | null
+} {
+  const selectedGroupRows = selectedRows.filter((e) => e.groupId !== null)
+  const selectedUngroupedRows = selectedRows.filter((e) => e.groupId === null)
+  const targetGroupRow = selectedGroupRows.length === 1 ? selectedGroupRows[0] : null
+  const conflictingSubCategory = targetGroupRow
+    ? selectedUngroupedRows.some(
+        (e) => e.subCategoryId !== null && e.subCategoryId !== targetGroupRow.subCategoryId,
+      )
+    : false
+  const createGroupEligible =
+    selectedGroupRows.length === 0 &&
+    selectedUngroupedRows.length >= 2 &&
+    new Set(
+      selectedUngroupedRows.filter((e) => e.subCategoryId !== null).map((e) => e.subCategoryId),
+    ).size <= 1
+  const addToGroupEligible =
+    targetGroupRow !== null && selectedUngroupedRows.length >= 1 && !conflictingSubCategory
+  const mergeEligible = createGroupEligible || addToGroupEligible
+  const targetGroup =
+    targetGroupRow && addToGroupEligible
+      ? {
+          id: targetGroupRow.groupId as number,
+          title: targetGroupRow.title,
+          subCategoryId: targetGroupRow.subCategoryId as number,
+        }
+      : null
+  return { mergeEligible, targetGroup }
+}
+
+/**
+ * Whether the current selection includes 1+ group rows — gates the
+ * Categorizza/Elimina bulk actions off entirely (bulk categorize/delete are
+ * not meaningful operations on a group's synthetic id).
+ */
+export function selectedIncludesGroupRow(selectedRows: Pick<ExpenseRow, 'groupId'>[]): boolean {
+  return selectedRows.some((e) => e.groupId !== null)
+}
+
 export function ExpenseTable({ expenses, route, categories, mostUsed, filters }: Props) {
+  const router = useRouter()
   const [loadedExpenses, setLoadedExpenses] = useState(() => dedupeExpenseRows(expenses))
   const [hasMore, setHasMore] = useState(expenses.length === PAGE_SIZE)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -79,9 +135,14 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const [categorizeDialogExpense, setCategorizeDialogExpense] = useState<{
     id: string
+    title: string
+  } | null>(null)
+  const [categorizeGroupTarget, setCategorizeGroupTarget] = useState<{
+    id: number
     title: string
   } | null>(null)
 
@@ -89,6 +150,14 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
 
   const allSelected = loadedExpenses.length > 0 && selectedIds.length === loadedExpenses.length
   const someSelected = selectedIds.length > 0 && selectedIds.length < loadedExpenses.length
+
+  // GRP-01/GRP-06: merge eligibility covers both create-group (2+ ungrouped,
+  // same subcategory) and add-to-group (1 group row + 1+ ungrouped rows that
+  // don't conflict with the group's subcategory) — see computeMergeEligibility.
+  const selectedRows = loadedExpenses.filter((e) => selectedIds.includes(e.id))
+  const selectedUngroupedRows = selectedRows.filter((e) => e.groupId === null)
+  const { mergeEligible, targetGroup } = computeMergeEligibility(selectedRows)
+  const bulkActionsGated = selectedIncludesGroupRow(selectedRows)
 
   const loadNextPage = useCallback(async () => {
     if (isLoadingMoreRef.current || !hasMore) {
@@ -156,14 +225,6 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
     )
   }
 
-  function formatDate(date: Date): string {
-    return new Intl.DateTimeFormat('it-IT', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    }).format(new Date(date))
-  }
-
   // Display-only; never use for values written back to the DB.
   function formatAmount(amount: string): string {
     return formatAbsoluteAmount(amount)
@@ -193,7 +254,7 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
       <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
         <Table className="table-fixed w-full">
           <TableCaption className="sr-only">
-            Elenco spese con categoria, stato, totale e data.
+            Elenco spese con categoria, stato e totale.
           </TableCaption>
           <TableHeader>
             <TableRow className="bg-secondary/70">
@@ -224,14 +285,6 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                 onSort={onSort}
                 className="w-28 text-xs uppercase tracking-wide text-muted-foreground font-normal"
               />
-              <HeaderSortButton
-                column={{ key: 'createdAt', label: 'Data' }}
-                activeSort={activeSort}
-                activeDir={activeDir}
-                align="right"
-                onSort={onSort}
-                className="w-24 text-xs uppercase tracking-wide text-muted-foreground font-normal"
-              />
               <TableHead className="w-36 text-xs uppercase tracking-wide text-muted-foreground font-normal">
                 Piattaforma
               </TableHead>
@@ -253,6 +306,10 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
               const isSelected = selectedIds.includes(exp.id)
               const isCategorized = exp.status === '2' || exp.status === '3'
               const isIgnored = exp.status === '4'
+              const isGrouped = exp.groupId !== null
+              const detailsHref = isGrouped
+                ? expenseGroupDetailHref(exp.groupId as number)
+                : expenseDetailHref(exp.id)
 
               return (
                 <TableRow
@@ -272,17 +329,31 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                     />
                   </TableCell>
                   <TableCell className="max-w-0 w-full">
-                    <ExpenseTitleEdit
-                      id={exp.id}
-                      title={exp.title}
-                      onSuccess={(updatedTitle) => {
-                        setLoadedExpenses((prev) =>
-                          prev.map((e) =>
-                            e.id === exp.id ? { ...e, title: updatedTitle } : e
+                    {isGrouped ? (
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Link
+                          href={detailsHref}
+                          className="truncate text-sm font-medium hover:underline"
+                        >
+                          {exp.title}
+                        </Link>
+                        <Badge variant="outline" className="shrink-0 border-0 bg-muted text-muted-foreground">
+                          Unita
+                        </Badge>
+                      </div>
+                    ) : (
+                      <ExpenseTitleEdit
+                        id={exp.id}
+                        title={exp.title}
+                        onSuccess={(updatedTitle) => {
+                          setLoadedExpenses((prev) =>
+                            prev.map((e) =>
+                              e.id === exp.id ? { ...e, title: updatedTitle } : e
+                            )
                           )
-                        )
-                      }}
-                    />
+                        }}
+                      />
+                    )}
                   </TableCell>
                   <TableCell
                     className={cn(
@@ -291,9 +362,6 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                     )}
                   >
                     {formatAmount(exp.totalAmount)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums text-sm">
-                    {formatDate(exp.createdAt)}
                   </TableCell>
                   <TableCell className="truncate text-sm">{exp.platformName ?? '—'}</TableCell>
                   <TableCell>
@@ -352,19 +420,36 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
-                          <Link href={expenseDetailHref(exp.id)}>Dettagli</Link>
+                          <Link href={detailsHref}>Dettagli</Link>
                         </DropdownMenuItem>
-                        <IgnoreExpenseMenuItem
-                          expense={exp}
-                          onIgnored={() => setOpenDropdownId(null)}
-                        />
-                        <DeleteExpenseMenuItem
-                          expense={exp}
-                          onDeleted={() => {
-                            setSelectedIds((prev) => prev.filter((id) => id !== exp.id))
-                            setOpenDropdownId(null)
-                          }}
-                        />
+                        {!isGrouped ? (
+                          <>
+                            <IgnoreExpenseMenuItem
+                              expense={exp}
+                              onIgnored={() => setOpenDropdownId(null)}
+                            />
+                            <DeleteExpenseMenuItem
+                              expense={exp}
+                              onDeleted={() => {
+                                setSelectedIds((prev) => prev.filter((id) => id !== exp.id))
+                                setOpenDropdownId(null)
+                              }}
+                            />
+                          </>
+                        ) : (
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault()
+                              setCategorizeGroupTarget({
+                                id: exp.groupId as number,
+                                title: exp.title,
+                              })
+                              setOpenDropdownId(null)
+                            }}
+                          >
+                            Cambia categoria
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -397,8 +482,21 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
 
       <BulkActionBar
         selectedIds={selectedIds}
-        onBulkCategorize={() => setBulkDialogOpen(true)}
-        onBulkDelete={() => setBulkDeleteOpen(true)}
+        onBulkCategorize={() => {
+          if (bulkActionsGated) {
+            toast.error('Apri il gruppo per categorizzare o eliminare le spese che ne fanno parte.')
+            return
+          }
+          setBulkDialogOpen(true)
+        }}
+        onBulkDelete={() => {
+          if (bulkActionsGated) {
+            toast.error('Apri il gruppo per categorizzare o eliminare le spese che ne fanno parte.')
+            return
+          }
+          setBulkDeleteOpen(true)
+        }}
+        onBulkMerge={mergeEligible ? () => setMergeDialogOpen(true) : undefined}
       />
 
       <BulkDeleteExpensesDialog
@@ -437,6 +535,44 @@ export function ExpenseTable({ expenses, route, categories, mostUsed, filters }:
         categories={categories}
         mostUsed={mostUsed}
         onSuccess={() => setCategorizeDialogExpense(null)}
+      />
+
+      <GroupCategorizeDialog
+        open={categorizeGroupTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setCategorizeGroupTarget(null)
+        }}
+        group={categorizeGroupTarget ?? { id: 0, title: '' }}
+        categories={categories}
+        mostUsed={mostUsed}
+        onSuccess={() => {
+          setCategorizeGroupTarget(null)
+          router.refresh()
+        }}
+      />
+
+      <MergeExpensesDialog
+        open={mergeDialogOpen}
+        onOpenChange={setMergeDialogOpen}
+        selectedExpenses={(targetGroup ? selectedUngroupedRows : selectedRows).map((e) => ({
+          id: e.id,
+          subCategoryId: e.subCategoryId,
+        }))}
+        categories={categories}
+        mostUsed={mostUsed}
+        targetGroup={targetGroup}
+        onSuccess={() => {
+          // Add-to-group mode: only the ungrouped ids that were added disappear as
+          // standalone rows (they fold into the existing group's composed row on
+          // router.refresh()) — the group row's own id is never cleared.
+          const clearedIds = new Set(
+            (targetGroup ? selectedUngroupedRows : selectedRows).map((e) => e.id),
+          )
+          setLoadedExpenses((prev) => prev.filter((e) => !clearedIds.has(e.id)))
+          setSelectedIds([])
+          setMergeDialogOpen(false)
+          router.refresh()
+        }}
       />
     </>
   )

@@ -201,6 +201,8 @@ function makeExpenseDetailRow(overrides: Record<string, unknown> = {}) {
     categoryName: 'Spesa',
     categorySlug: 'spesa',
     platformName: 'Intesa SP',
+    groupId: null,
+    groupTitle: null,
     sourceFile: { id: 'file-1', name: 'estratto_conto.csv' },
     transactions: [
       {
@@ -301,5 +303,18 @@ describe('/expenses/[id] page', () => {
 
     expect(html).toContain('href="/transactions/tx-1"')
     expect(html).toContain('href="/transactions/tx-2"')
+  })
+
+  it('shows a "Parte di" link to the group route and hides "Cambia categoria" when grouped (GRP-08/D-03)', async () => {
+    pageMocks.getExpenseForDetail.mockResolvedValue(
+      makeExpenseDetailRow({ groupId: 1, groupTitle: 'Cherasco' }),
+    )
+    const html = await renderExpensePage()
+
+    expect(html).toContain('Parte di')
+    expect(html).toContain('href="/expenses/groups/1"')
+    expect(html).toContain('Cherasco')
+    expect(html).not.toContain('Cambia categoria')
+    expect(html).not.toContain('Assegna categoria')
   })
 })

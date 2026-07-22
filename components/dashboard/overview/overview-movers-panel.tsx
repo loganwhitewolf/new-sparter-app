@@ -1,5 +1,6 @@
 'use client'
 import { Loader2 } from 'lucide-react'
+import Link from 'next/link'
 import type { MonthOverMonthChange } from '@/lib/dal/overview'
 import { takeTopMovers, moverAmountTone, moverQualifier, splitMovers } from './overview-movers-format'
 import { formatEur } from './format'
@@ -35,29 +36,50 @@ type MoverListProps = {
   movers: MonthOverMonthChange[]
   emptyStateCopy: string
   toneOnIncrease: 'out' | 'in'
+  year: number
+  selectedMonth: number
 }
 
-function MoverList({ movers, emptyStateCopy, toneOnIncrease }: MoverListProps) {
+function MoverList({ movers, emptyStateCopy, toneOnIncrease, year, selectedMonth }: MoverListProps) {
   if (movers.length === 0) {
     return <p className="text-xs text-muted-foreground">{emptyStateCopy}</p>
   }
   return (
     <ul className="divide-y divide-border/40">
-      {movers.map((m, idx) => (
-        <li
-          key={m.categoryId ?? m.natureCode ?? m.name ?? idx}
-          className="flex items-center justify-between py-1.5 odd:bg-muted/30 rounded-sm px-1"
-        >
-          <span className="text-xs truncate mr-2">{m.name}</span>
-          <span className="text-xs font-medium whitespace-nowrap text-right shrink-0">
-            <span className={moverAmountTone(m) === 'increase' ? `text-[var(--total-${toneOnIncrease})]` : (toneOnIncrease === 'out' ? 'text-[var(--total-in)]' : 'text-[var(--total-out)]')}>
-              {formatEur(Math.abs(Number(m.delta)))}
+      {movers.map((m, idx) => {
+        const rowContent = (
+          <>
+            <span className="text-xs truncate mr-2">{m.name}</span>
+            <span className="text-xs font-medium whitespace-nowrap text-right shrink-0">
+              <span className={moverAmountTone(m) === 'increase' ? `text-[var(--total-${toneOnIncrease})]` : (toneOnIncrease === 'out' ? 'text-[var(--total-in)]' : 'text-[var(--total-out)]')}>
+                {formatEur(Math.abs(Number(m.delta)))}
+              </span>
+              {' '}
+              <span className="text-xs text-muted-foreground">{moverQualifier(m)}</span>
             </span>
-            {' '}
-            <span className="text-xs text-muted-foreground">{moverQualifier(m)}</span>
-          </span>
-        </li>
-      ))}
+          </>
+        )
+        const key = m.categoryId ?? m.natureCode ?? m.name ?? idx
+        if (m.categorySlug) {
+          return (
+            <Link
+              key={key}
+              href={`/transactions?months=${year}-${String(selectedMonth + 1).padStart(2, '0')}&category=${m.categorySlug}`}
+              className="flex items-center justify-between py-1.5 odd:bg-muted/30 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring rounded-sm px-1"
+            >
+              {rowContent}
+            </Link>
+          )
+        }
+        return (
+          <div
+            key={key}
+            className="flex items-center justify-between py-1.5 odd:bg-muted/30 rounded-sm px-1"
+          >
+            {rowContent}
+          </div>
+        )
+      })}
     </ul>
   )
 }
@@ -115,6 +137,8 @@ export function OverviewMoversPanel({
             movers={topIn}
             emptyStateCopy="Nessuna variazione significativa nelle entrate."
             toneOnIncrease="in"
+            year={year}
+            selectedMonth={selectedMonth}
           />
         </div>
 
@@ -126,6 +150,8 @@ export function OverviewMoversPanel({
             movers={outSavings}
             emptyStateCopy="Nessun risparmio significativo questo mese."
             toneOnIncrease="out"
+            year={year}
+            selectedMonth={selectedMonth}
           />
         </div>
 
@@ -137,6 +163,8 @@ export function OverviewMoversPanel({
             movers={outIncreases}
             emptyStateCopy="Nessuna spesa in aumento significativa."
             toneOnIncrease="out"
+            year={year}
+            selectedMonth={selectedMonth}
           />
         </div>
 

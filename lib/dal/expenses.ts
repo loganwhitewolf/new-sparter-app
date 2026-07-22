@@ -1,11 +1,12 @@
 import 'server-only'
 import { cache } from 'react'
 import { db } from '@/lib/db'
-import { category, direction, expense, file, importFormatVersion, nature, platform, subCategory, transaction, userSubcategoryOverride } from '@/lib/db/schema'
+import { category, direction, expense, expenseGroup, expenseGroupMembership, file, importFormatVersion, nature, platform, subCategory, transaction, userSubcategoryOverride } from '@/lib/db/schema'
 import { eq, and, count, gte, ilike, inArray, isNull, lte, or, asc, desc, sql } from 'drizzle-orm'
 import { verifySession } from '@/lib/dal/auth'
 import { periodToDateRange } from '@/lib/utils/date'
 import { writeClassificationHistory } from '@/lib/dal/classification-history'
+import { toDecimal, toDbDecimal } from '@/lib/utils/decimal'
 import type { ExpenseTransactionRow } from '@/lib/dal/transactions'
 
 export { periodToDateRange } from '@/lib/utils/date'
@@ -65,6 +66,13 @@ export type ExpenseRow = {
   categorySlug: string | null
   categoryType?: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
   platformName: string | null
+  /** Earliest/latest linked transaction dates (own for an ungrouped expense, MIN/MAX across
+   *  members for a composed group row) — GRP-03. */
+  firstTransactionAt: Date | null
+  lastTransactionAt: Date | null
+  /** Non-null when this row represents (or belongs to) an Expense Group — GRP-03/04. */
+  groupId: number | null
+  groupTitle: string | null
 }
 
 export type ExpenseSourceFile = {
@@ -153,6 +161,149 @@ export const getUncategorizedExpenseCount = cache(async (): Promise<number> => {
   return Number(rows[0]?.total ?? 0)
 })
 
+/** Raw per-member row shape fetched from the DB before group composition (Task 1, GRP-03). */
+type RawExpenseRow = ExpenseRow
+
+/**
+ * Collapses raw (per-expense) rows sharing an `expenseGroupMembership.groupId` into a single
+ * composed `ExpenseRow`, applies the amount-range filter to the FINAL (composed) totals, sorts
+ * with a JS mirror of `buildExpenseOrderBy`, and slices by `offset`/`limit` — all in JS, over the
+ * full filtered+joined set. This guarantees a group is never split across two pagination pages
+ * (65-RESEARCH.md pitfall #3) and that pagination never operates on a stale SQL LIMIT/OFFSET
+ * taken before grouping.
+ */
+function composeExpenseRows(
+  rawRows: RawExpenseRow[],
+  filters: Pick<ExpenseFilters, 'sort' | 'dir' | 'amountMin' | 'amountMax'>,
+  pagination: { limit: number; offset: number },
+): ExpenseRow[] {
+  const buckets = new Map<string, RawExpenseRow[]>()
+  for (const row of rawRows) {
+    const key = row.groupId != null ? `group:${row.groupId}` : `own:${row.id}`
+    const bucket = buckets.get(key)
+    if (bucket) bucket.push(row)
+    else buckets.set(key, [row])
+  }
+
+  let composed: ExpenseRow[] = [...buckets.values()].map((members) => {
+    const first = members[0]
+    if (first.groupId == null) {
+      // Ungrouped expense — pass through unchanged (regression safety).
+      return first
+    }
+
+    const totalAmount = members.reduce(
+      (sum, m) => sum.plus(toDecimal(m.totalAmount)),
+      toDecimal('0'),
+    )
+    const transactionCount = members.reduce((sum, m) => sum + m.transactionCount, 0)
+    const firstTransactionAt = members.reduce<Date | null>((min, m) => {
+      if (!m.firstTransactionAt) return min
+      return !min || m.firstTransactionAt < min ? m.firstTransactionAt : min
+    }, null)
+    const lastTransactionAt = members.reduce<Date | null>((max, m) => {
+      if (!m.lastTransactionAt) return max
+      return !max || m.lastTransactionAt > max ? m.lastTransactionAt : max
+    }, null)
+
+    return {
+      id: `group:${first.groupId}`,
+      title: first.groupTitle ?? '',
+      status: '3',
+      notes: null,
+      createdAt: first.createdAt,
+      totalAmount: toDbDecimal(totalAmount),
+      transactionCount,
+      // A group's members all share one non-null subcategory (merge gate, D-02) — the shared
+      // member-resolved category display fields are therefore identical to what a dedicated
+      // expenseGroup.subCategoryId join chain would resolve, without a second joined chain.
+      subCategoryId: first.subCategoryId,
+      subCategoryName: first.subCategoryName,
+      categoryName: first.categoryName,
+      categorySlug: first.categorySlug,
+      categoryType: first.categoryType,
+      // A group's members may span multiple platforms — composing that display is out of
+      // scope for GRP-03; left null rather than guessed.
+      platformName: null,
+      firstTransactionAt,
+      lastTransactionAt,
+      groupId: first.groupId,
+      groupTitle: first.groupTitle,
+    }
+  })
+
+  if (filters.amountMin !== undefined) {
+    const min = toDecimal(filters.amountMin)
+    composed = composed.filter((row) => toDecimal(row.totalAmount).abs().gte(min))
+  }
+  if (filters.amountMax !== undefined) {
+    const max = toDecimal(filters.amountMax)
+    composed = composed.filter((row) => toDecimal(row.totalAmount).abs().lte(max))
+  }
+
+  composed.sort(buildComposedExpenseComparator(filters))
+
+  return composed.slice(pagination.offset, pagination.offset + pagination.limit)
+}
+
+function compare(a: string | number, b: string | number): number {
+  if (a < b) return -1
+  if (a > b) return 1
+  return 0
+}
+
+/** Mirrors expenseCategoryIncompleteBucket's "—" bucket, over a composed ExpenseRow. */
+function composedCategoryIncompleteBucket(row: ExpenseRow): number {
+  if (!row.categoryName) return 1
+  if (!row.subCategoryName || row.subCategoryName.trim() === '') return 1
+  return 0
+}
+
+/** Mirrors expenseCategorySortKey's "Categoria · Sottocategoria" string, lowercased. */
+function composedCategorySortKey(row: ExpenseRow): string {
+  return `${row.categoryName ?? ''} · ${row.subCategoryName ?? ''}`.toLowerCase()
+}
+
+/**
+ * JS re-implementation of buildExpenseOrderBy's four sort options plus the row's own `id` as
+ * tiebreaker (mirroring the existing SQL order-by semantics), operating on the composed
+ * `ExpenseRow[]` after group collapsing.
+ */
+function buildComposedExpenseComparator(
+  filters: Pick<ExpenseFilters, 'sort' | 'dir'>,
+): (a: ExpenseRow, b: ExpenseRow) => number {
+  const sort = filters.sort ?? 'createdAt'
+  const dir = filters.dir ?? 'desc'
+  const sign = dir === 'asc' ? 1 : -1
+
+  return (a, b) => {
+    if (sort === 'category') {
+      // Incomplete category rows ("—") stay last in both ASC and DESC via bucket 0/1.
+      const bucketDiff = composedCategoryIncompleteBucket(a) - composedCategoryIncompleteBucket(b)
+      if (bucketDiff !== 0) return bucketDiff
+      const keyCmp = compare(composedCategorySortKey(a), composedCategorySortKey(b)) * sign
+      if (keyCmp !== 0) return keyCmp
+      return compare(a.id, b.id) * sign
+    }
+
+    let primary = 0
+    switch (sort) {
+      case 'title':
+        primary = compare(a.title.toLowerCase(), b.title.toLowerCase())
+        break
+      case 'totalAmount':
+        primary = toDecimal(a.totalAmount).abs().comparedTo(toDecimal(b.totalAmount).abs())
+        break
+      case 'createdAt':
+      default:
+        primary = compare(a.createdAt.getTime(), b.createdAt.getTime())
+        break
+    }
+    if (primary !== 0) return primary * sign
+    return compare(a.id, b.id) * sign
+  }
+}
+
 export const getExpenses = cache(async (
   filters: ExpenseFilters = {},
   pagination: ExpensePagination = {},
@@ -187,15 +338,9 @@ export const getExpenses = cache(async (
   const searchTerm = filters.q ?? filters.name
   if (searchTerm) {
     const pattern = `%${escapeLikePattern(searchTerm)}%`
-    conditions.push(ilike(expense.title, pattern))
-  }
-
-  // Wave 4: absolute-value amount range (D-20)
-  if (filters.amountMin !== undefined) {
-    conditions.push(sql`ABS(${expense.totalAmount}::numeric) >= ${filters.amountMin}::numeric`)
-  }
-  if (filters.amountMax !== undefined) {
-    conditions.push(sql`ABS(${expense.totalAmount}::numeric) <= ${filters.amountMax}::numeric`)
+    // Search matches either the member's own bank-derived title OR the group's display title
+    // (GRP-03) — a grouped member's own title stays searchable after the group gets a name.
+    conditions.push(or(ilike(expense.title, pattern), ilike(expenseGroup.title, pattern)))
   }
 
   // Wave 4: platform filter — via importedFromFileId → file → importFormatVersion → platform
@@ -222,7 +367,12 @@ export const getExpenses = cache(async (
     conditions.push(eq(subCategory.id, filters.subCategoryId))
   }
 
-  return db
+  // NOTE: no SQL .limit()/.offset() here (and amountMin/amountMax are NOT applied as SQL
+  // conditions) — the full filtered+joined per-expense row set is fetched, then
+  // composeExpenseRows() collapses group members into composed rows, applies the amount-range
+  // filter to the FINAL composed totals, sorts, and paginates entirely in JS (Task 1, GRP-03:
+  // pagination must happen AFTER grouping, never before).
+  const rawRows = await db
     .select({
       id: expense.id,
       title: expense.title,
@@ -237,6 +387,10 @@ export const getExpenses = cache(async (
       categorySlug: category.slug,
       categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
       platformName: platform.name,
+      firstTransactionAt: expense.firstTransactionAt,
+      lastTransactionAt: expense.lastTransactionAt,
+      groupId: expenseGroupMembership.groupId,
+      groupTitle: expenseGroup.title,
     })
     .from(expense)
     .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
@@ -254,10 +408,13 @@ export const getExpenses = cache(async (
     .leftJoin(file, eq(expense.importedFromFileId, file.id))
     .leftJoin(importFormatVersion, eq(file.importFormatVersionId, importFormatVersion.id))
     .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
+    // Group-composition join chain (Task 1, GRP-03): only materializes when the expense is a
+    // member of an Expense Group.
+    .leftJoin(expenseGroupMembership, eq(expense.id, expenseGroupMembership.expenseId))
+    .leftJoin(expenseGroup, eq(expenseGroupMembership.groupId, expenseGroup.id))
     .where(and(...conditions))
-    .orderBy(...buildExpenseOrderBy(filters))
-    .limit(limit)
-    .offset(offset)
+
+  return composeExpenseRows(rawRows, filters, { limit, offset })
 })
 
 export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | undefined> => {
@@ -277,6 +434,10 @@ export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | und
       categorySlug: category.slug,
       categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
       platformName: platform.name,
+      firstTransactionAt: expense.firstTransactionAt,
+      lastTransactionAt: expense.lastTransactionAt,
+      groupId: expenseGroupMembership.groupId,
+      groupTitle: expenseGroup.title,
     })
     .from(expense)
     .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
@@ -294,6 +455,8 @@ export const getExpenseById = cache(async (id: string): Promise<ExpenseRow | und
     .leftJoin(file, eq(expense.importedFromFileId, file.id))
     .leftJoin(importFormatVersion, eq(file.importFormatVersionId, importFormatVersion.id))
     .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
+    .leftJoin(expenseGroupMembership, eq(expense.id, expenseGroupMembership.expenseId))
+    .leftJoin(expenseGroup, eq(expenseGroupMembership.groupId, expenseGroup.id))
     .where(and(eq(expense.id, id), eq(expense.userId, userId)))
     .limit(1)
   return rows[0]
@@ -372,6 +535,10 @@ export const getExpenseForDetail = cache(
         fileId: file.id,
         displayName: file.displayName,
         originalName: file.originalName,
+        firstTransactionAt: expense.firstTransactionAt,
+        lastTransactionAt: expense.lastTransactionAt,
+        groupId: expenseGroupMembership.groupId,
+        groupTitle: expenseGroup.title,
       })
       .from(expense)
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
@@ -388,6 +555,10 @@ export const getExpenseForDetail = cache(
       .leftJoin(file, eq(expense.importedFromFileId, file.id))
       .leftJoin(importFormatVersion, eq(file.importFormatVersionId, importFormatVersion.id))
       .leftJoin(platform, eq(importFormatVersion.platformId, platform.id))
+      // Group precedence join chain (Task 1, GRP-04/GRP-08): resolves this expense's own
+      // groupId/groupTitle for "Parte di: {groupTitle}" — no composition, always one row.
+      .leftJoin(expenseGroupMembership, eq(expense.id, expenseGroupMembership.expenseId))
+      .leftJoin(expenseGroup, eq(expenseGroupMembership.groupId, expenseGroup.id))
       .where(and(eq(expense.id, id), eq(expense.userId, userId)))
       .limit(1)
 
@@ -419,7 +590,12 @@ export const getExpenseForDetail = cache(
       subCategoryName: row.subCategoryName,
       categoryName: row.categoryName,
       categorySlug: row.categorySlug,
+      categoryType: row.categoryType,
       platformName: row.platformName,
+      firstTransactionAt: row.firstTransactionAt,
+      lastTransactionAt: row.lastTransactionAt,
+      groupId: row.groupId,
+      groupTitle: row.groupTitle,
       sourceFile: row.fileId
         ? {
             id: row.fileId,
@@ -430,6 +606,137 @@ export const getExpenseForDetail = cache(
     }
   },
 )
+
+export type ExpenseGroupMemberRow = {
+  id: string
+  title: string
+  totalAmount: string
+  transactionCount: number
+}
+
+export type ExpenseGroupDetailRow = {
+  id: number
+  title: string
+  subCategoryId: number | null
+  subCategoryName: string | null
+  categoryName: string | null
+  categorySlug: string | null
+  categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
+  totalAmount: string
+  transactionCount: number
+  createdAt: Date
+  members: ExpenseGroupMemberRow[]
+  transactions: ExpenseTransactionRow[]
+}
+
+/**
+ * Ownership-scoped detail query for the group detail page (Task 2, GRP-04). Mirrors
+ * getExpenseForDetail's two-query shape: one query for the group + its subCategory/category
+ * join chain scoped to `expenseGroup.userId = userId AND expenseGroup.id = groupId` (T-65-07 —
+ * a groupId belonging to another user resolves to `undefined`, identical to a missing id, never
+ * throwing); a second query joining `expenseGroupMembership -> expense` for `members`, then a
+ * third loading every transaction belonging to any member expense, sorted `occurredAt` DESC
+ * across all members regardless of insertion order. A member with zero transactions renders
+ * normally in `members` (its own totalAmount/transactionCount, defaulting to '0.00'/0 at the
+ * expense-row level already) — no special-casing, no crash (GRP-04 empty edge).
+ */
+export const getExpenseGroupForDetail = cache(
+  async ({
+    userId,
+    groupId,
+  }: {
+    userId: string
+    groupId: number
+  }): Promise<ExpenseGroupDetailRow | undefined> => {
+    const groupRows = await db
+      .select({
+        id: expenseGroup.id,
+        title: expenseGroup.title,
+        subCategoryId: expenseGroup.subCategoryId,
+        subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
+        categoryName: category.name,
+        categorySlug: category.slug,
+        categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
+        createdAt: expenseGroup.createdAt,
+      })
+      .from(expenseGroup)
+      .leftJoin(subCategory, eq(expenseGroup.subCategoryId, subCategory.id))
+      .leftJoin(category, eq(subCategory.categoryId, category.id))
+      .leftJoin(nature, eq(subCategory.natureId, nature.id))
+      .leftJoin(direction, eq(nature.directionId, direction.id))
+      .leftJoin(
+        userSubcategoryOverride,
+        and(
+          eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+          eq(userSubcategoryOverride.userId, userId),
+        ),
+      )
+      .where(and(eq(expenseGroup.id, groupId), eq(expenseGroup.userId, userId)))
+      .limit(1)
+
+    const group = groupRows[0]
+    if (!group) return undefined
+
+    const members = await db
+      .select({
+        id: expense.id,
+        title: expense.title,
+        totalAmount: expense.totalAmount,
+        transactionCount: expense.transactionCount,
+      })
+      .from(expenseGroupMembership)
+      .innerJoin(expense, eq(expenseGroupMembership.expenseId, expense.id))
+      .where(eq(expenseGroupMembership.groupId, groupId))
+
+    const totalAmount = members.reduce(
+      (sum, m) => sum.plus(toDecimal(m.totalAmount)),
+      toDecimal('0'),
+    )
+    const transactionCount = members.reduce((sum, m) => sum + m.transactionCount, 0)
+
+    const memberIds = members.map((m) => m.id)
+    const transactions =
+      memberIds.length === 0
+        ? []
+        : await db
+            .select({
+              id: transaction.id,
+              description: transaction.description,
+              customTitle: transaction.customTitle,
+              amount: transaction.amount,
+              currency: transaction.currency,
+              occurredAt: transaction.occurredAt,
+            })
+            .from(transaction)
+            .where(and(inArray(transaction.expenseId, memberIds), eq(transaction.userId, userId)))
+            .orderBy(desc(transaction.occurredAt))
+
+    return {
+      id: group.id,
+      title: group.title,
+      subCategoryId: group.subCategoryId,
+      subCategoryName: group.subCategoryName,
+      categoryName: group.categoryName,
+      categorySlug: group.categorySlug,
+      categoryType: group.categoryType,
+      totalAmount: toDbDecimal(totalAmount),
+      transactionCount,
+      createdAt: group.createdAt,
+      members,
+      transactions,
+    }
+  },
+)
+
+/** Thin helper returning just the member expense ids for a group (Task 2). */
+export const getExpenseGroupMembers = cache(async (groupId: number): Promise<string[]> => {
+  const rows = await db
+    .select({ expenseId: expenseGroupMembership.expenseId })
+    .from(expenseGroupMembership)
+    .where(eq(expenseGroupMembership.groupId, groupId))
+
+  return rows.map((row) => row.expenseId)
+})
 
 export async function insertExpense(data: {
   userId: string

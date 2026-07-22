@@ -10,6 +10,8 @@ export const APP_ROUTES = {
   transactions: '/transactions',
   settings: '/settings',
   categorySettings: '/settings/categories',
+  tagSettings: '/settings/tags',
+  dashboardTags: '/dashboard/tags',
   profile: '/profile',                  // compatibility alias (D-04)
   profileSettings: '/settings/profile', // canonical (D-03)
 } as const
@@ -24,6 +26,7 @@ type DashboardCategoryFilters = {
   sort?: DashboardSort
   defaultPreset?: DashboardPreset
   defaultSort?: DashboardSort
+  tag?: number
 }
 
 export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters = {}) {
@@ -43,6 +46,10 @@ export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters =
     params.set('sort', filters.sort)
   }
 
+  if (filters.tag) {
+    params.set('tag', String(filters.tag))
+  }
+
   const search = params.toString()
   return APP_ROUTES.dashboardCategories + (search ? `?${search}` : '')
 }
@@ -57,6 +64,10 @@ export function transactionDetailHref(id: string) {
 
 export function expenseDetailHref(id: string) {
   return `${APP_ROUTES.expenses}/${encodeURIComponent(id)}`
+}
+
+export function expenseGroupDetailHref(groupId: number | string): string {
+  return `${APP_ROUTES.expenses}/groups/${encodeURIComponent(String(groupId))}`
 }
 
 export function importFileDetailHref(fileId: string): string {
@@ -81,6 +92,10 @@ export function buildDashboardCategoryDetailHref(
 
   if (filters.sort && filters.sort !== defaultSort) {
     params.set('sort', filters.sort)
+  }
+
+  if (filters.tag) {
+    params.set('tag', String(filters.tag))
   }
 
   const search = params.toString()
