@@ -122,7 +122,7 @@ describe('buildTypeNatureMap', () => {
     // The 'sistema' fixture has type: null — it should not create any bucket
     expect('sistema' in result).toBe(false)
     // The value null is never a key in the result record
-    expect(null in result).toBe(false)
+    expect('null' in result).toBe(false)
   })
 
   it("includes 'unclassified' option for every type bucket", () => {
@@ -159,7 +159,7 @@ describe('buildTypeNatureMap', () => {
     const result = buildTypeNatureMap(fixture)
     // null-type (unassigned direction) subcategory has effectiveNature null
     // it should not produce a separate bucket
-    expect(null in result).toBe(false)
+    expect('null' in result).toBe(false)
   })
 })
 
@@ -394,7 +394,6 @@ describe('buildDirectionNatureMap (Phase 49 — CAT-01)', () => {
     const result = buildDirectionNatureMap(directionFixture)
     // The null-type category (id=50) must not produce a 'null' key
     expect('null' in result).toBe(false)
-    expect(null in result).toBe(false)
     // Allocation and out buckets must still be populated despite the null-type category
     expect((result['allocation'] as unknown[])?.length).toBeGreaterThan(0)
     expect((result['out'] as unknown[])?.length).toBeGreaterThan(0)
@@ -405,7 +404,7 @@ describe('buildDirectionNatureMap (Phase 49 — CAT-01)', () => {
     const result = buildDirectionNatureMap(directionFixture)
     // No 'null' or 'system' key in result
     expect('system' in result).toBe(false)
-    expect(null in result).toBe(false)
+    expect('null' in result).toBe(false)
     // null-type subcategory (effectiveNature null) must not pollute any bucket
     for (const bucket of Object.values(result as Record<string, Array<{ value: string }>>)) {
       // effectiveNature is null — it should not produce a real option (only 'unclassified' sentinel is allowed)
