@@ -1,6 +1,7 @@
 'use server'
 
 import { verifySession } from '@/lib/dal/auth'
+import { getTagDetail, resolveOwnedTagId, type TagDetail } from '@/lib/dal/tags'
 import {
   TagMutationError,
   archiveTag as archiveTagService,
@@ -88,6 +89,26 @@ export async function updateTagAction(
     return { error: null }
   } catch (error) {
     return mapKnownTagError(error) ?? { error: GENERIC_ERROR }
+  }
+}
+
+// On-demand read for the Tag settings panel right column (quick task 260722-ked). The client
+// calls this when a tag is selected, so the potentially long per-tag transaction list is fetched
+// lazily rather than eagerly for every tag. resolveOwnedTagId is the documented IDOR belt-and-
+// suspenders (getTagDetail is already structurally scoped by transaction.userId).
+export type TagDetailResult = { detail: TagDetail | null; error: string | null }
+
+export async function getTagDetailAction(tagId: number): Promise<TagDetailResult> {
+  const { userId } = await verifySession()
+
+  const ownedTagId = await resolveOwnedTagId(userId, tagId)
+  if (ownedTagId === undefined) return { detail: null, error: GENERIC_ERROR }
+
+  try {
+    const detail = await getTagDetail(userId, ownedTagId)
+    return { detail, error: null }
+  } catch {
+    return { detail: null, error: GENERIC_ERROR }
   }
 }
 

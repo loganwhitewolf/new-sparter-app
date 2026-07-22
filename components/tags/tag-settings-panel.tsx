@@ -1,14 +1,149 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import type { TagRow } from '@/lib/dal/tags'
+import type { TagDetail, TagRow } from '@/lib/dal/tags'
+import { getTagDetailAction } from '@/lib/actions/tags'
 import { ArchiveTagDialog, CreateTagDialog, EditTagDialog } from './tag-mutation-dialogs'
 
 type Props = {
   tags: TagRow[]
+}
+
+const amountFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' })
+
+// Signed currency — keeps the leading minus so the net / outflow rows read as negative;
+// color (--total-in/--total-out) reinforces direction. Mirrors tag-ranking-list's formatter.
+function formatSignedAmount(value: string): string {
+  const amount = Number(value)
+  return amountFormatter.format(Number.isFinite(amount) ? amount : 0)
+}
+
+function formatAbsoluteAmount(value: string): string {
+  const amount = Number(value)
+  return amountFormatter.format(Math.abs(Number.isFinite(amount) ? amount : 0))
+}
+
+function formatTxDate(value: string): string {
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString('it-IT')
+}
+
+// Sign-based tone (a tag has no fixed direction) — same rule as tag-ranking-list's totalTone.
+function toneClass(value: string): string {
+  return Number(value) >= 0 ? 'text-[var(--total-in)]' : 'text-[var(--total-out)]'
+}
+
+function transactionCountLabel(count: number): string {
+  return count === 1 ? '1 transazione inclusa' : `${count} transazioni incluse`
+}
+
+function StatCard({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return (
+    <div className="rounded-lg border bg-card p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={cn('mt-1 text-base font-semibold tabular-nums', tone)}>{value}</p>
+    </div>
+  )
+}
+
+// On-demand detail: fetched via server action when the selected tag changes. `key={tag.id}` on
+// the caller remounts this per tag; the `cancelled` guard also drops any in-flight response for a
+// tag the user has since navigated away from (race-safe rapid selection).
+function TagDetailView({ tagId }: { tagId: number }) {
+  const [detail, setDetail] = useState<TagDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+
+  // `key={tag.id}` on the caller remounts this per tag, so the effect runs once per mount and
+  // the initial loading/failed state is already correct — no synchronous reset needed here.
+  useEffect(() => {
+    let cancelled = false
+
+    getTagDetailAction(tagId)
+      .then((result) => {
+        if (cancelled) return
+        if (result.error || !result.detail) {
+          setFailed(true)
+          setDetail(null)
+        } else {
+          setDetail(result.detail)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [tagId])
+
+  if (loading) {
+    return <p className="mt-4 text-sm text-muted-foreground">Caricamento del dettaglio…</p>
+  }
+
+  if (failed || !detail) {
+    return (
+      <p className="mt-4 text-sm text-muted-foreground">
+        Non è stato possibile caricare il dettaglio. Riprova.
+      </p>
+    )
+  }
+
+  return (
+    <div className="mt-4 space-y-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <StatCard
+          label="Entrate"
+          value={formatAbsoluteAmount(detail.inflow)}
+          tone="text-[var(--total-in)]"
+        />
+        <StatCard
+          label="Uscite"
+          value={formatAbsoluteAmount(detail.outflow)}
+          tone="text-[var(--total-out)]"
+        />
+        <StatCard
+          label="Valore finale"
+          value={formatSignedAmount(detail.net)}
+          tone={toneClass(detail.net)}
+        />
+      </div>
+
+      <p className="text-sm text-muted-foreground">{transactionCountLabel(detail.count)}</p>
+
+      {detail.transactions.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Nessuna transazione inclusa per questo tag.
+        </p>
+      ) : (
+        <ul className="max-h-[420px] divide-y overflow-y-auto rounded-md border">
+          {detail.transactions.map((tx) => (
+            <li
+              key={tx.transactionId}
+              className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                  {formatTxDate(tx.occurredAt)}
+                </span>
+                <span className="truncate">{tx.subCategoryName}</span>
+              </div>
+              <span className={cn('shrink-0 font-medium tabular-nums', toneClass(tx.amount))}>
+                {formatSignedAmount(tx.amount)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
 }
 
 function formatDateRange(tag: TagRow): string {
@@ -118,6 +253,7 @@ export function TagSettingsPanel({ tags }: Props) {
                       {!selectedTag.archived && <ArchiveTagDialog tag={selectedTag} />}
                     </div>
                   </div>
+                  <TagDetailView key={selectedTag.id} tagId={selectedTag.id} />
                 </section>
               ) : (
                 <p className="text-sm text-muted-foreground">Seleziona un tag dalla lista.</p>

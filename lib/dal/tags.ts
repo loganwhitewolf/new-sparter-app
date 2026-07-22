@@ -12,7 +12,7 @@ import {
   transactionTag,
   userSubcategoryOverride,
 } from '@/lib/db/schema'
-import { and, asc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
 import { effectiveAmount, isNotSecondary } from '@/lib/dal/transaction-pairs-sql'
 import { DASHBOARD_TOTAL_EXPENSE_STATUSES } from '@/lib/dal/dashboard'
 import { toDecimal } from '@/lib/utils/decimal'
@@ -249,4 +249,112 @@ export async function getTagTotals(userId: string): Promise<TagTotalItem[]> {
     .groupBy(tag.id, tag.name, tag.archived)
 
   return buildTagTotalsData(rows)
+}
+
+/**
+ * Per-tag detail for the Tag settings panel right column (quick task 260722-ked).
+ *
+ * Applies the SAME exclusion set as getTagTotals / getOverviewAmountTotals so the
+ * numbers stay consistent with the dashboard and with the tag-filtered transactions
+ * view: expenseStatus ∈ {1,2,3}, exclude `transfer` direction, drop secondary-of-pair
+ * rows, and use effectiveAmount() (pair-netted) as the per-row amount. Direction is
+ * resolved through the user's nature override, mirroring getOverviewAmountTotals.
+ *
+ * `net` (valore finale) is the signed sum over ALL included rows — it therefore equals
+ * this tag's `total` from getTagTotals (including any `allocation` rows, which contribute
+ * to net but not to the in/out split).
+ */
+export type TagDetailTransaction = {
+  transactionId: string
+  occurredAt: string // ISO string from the DB (`::text`); the client formats it
+  subCategoryName: string
+  amount: string // signed DECIMAL string — out is negative, in positive
+}
+
+export type TagDetail = {
+  inflow: string // positive magnitude of inflows
+  outflow: string // positive magnitude of outflows
+  net: string // signed net (inflow − outflow, incl. allocation)
+  count: number // transactions included in the totals (== transactions.length)
+  transactions: TagDetailTransaction[]
+}
+
+type TagDetailQueryRow = {
+  transactionId: string
+  occurredAt: string
+  subCategoryName: string
+  directionCode: string
+  amount: string
+}
+
+// Pure, unit-testable without a DB — mirrors buildTagTotalsData's query-vs-shaping split.
+// Decimal.js for every monetary accumulation (CLAUDE.md — never native arithmetic on money).
+export function buildTagDetailData(rows: TagDetailQueryRow[]): TagDetail {
+  let inflow = toDecimal('0')
+  let outflow = toDecimal('0') // accumulates the negative OUT amounts; abs()'d at the end
+  let net = toDecimal('0')
+
+  const transactions = rows.map((row) => {
+    const amount = toDecimal(row.amount)
+    net = net.plus(amount)
+    if (row.directionCode === 'in') inflow = inflow.plus(amount)
+    else if (row.directionCode === 'out') outflow = outflow.plus(amount)
+    return {
+      transactionId: row.transactionId,
+      occurredAt: row.occurredAt,
+      subCategoryName: row.subCategoryName,
+      amount: amount.toFixed(2),
+    }
+  })
+
+  return {
+    inflow: inflow.toFixed(2),
+    outflow: outflow.abs().toFixed(2),
+    net: net.toFixed(2),
+    count: rows.length,
+    transactions,
+  }
+}
+
+export async function getTagDetail(userId: string, tagId: number): Promise<TagDetail> {
+  // innerJoin on expense→…→direction (like getOverviewAmountTotals): rows without an
+  // expense/subcategory/direction would be excluded by the WHERE filters anyway, so the
+  // inner joins keep the row set identical to getTagTotals' FILTER-counted set.
+  const rows = await db
+    .select({
+      transactionId: transactionTable.id,
+      occurredAt: sql<string>`${transactionTable.occurredAt}::text`,
+      subCategoryName: subCategory.name,
+      directionCode: direction.code,
+      amount: sql<string>`(${effectiveAmount()})::text`,
+    })
+    .from(transactionTable)
+    .innerJoin(transactionTag, eq(transactionTag.transactionId, transactionTable.id))
+    .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+    .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+    .innerJoin(category, eq(subCategory.categoryId, category.id))
+    .leftJoin(
+      userSubcategoryOverride,
+      and(
+        eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+        eq(userSubcategoryOverride.userId, userId),
+      ),
+    )
+    .innerJoin(
+      nature,
+      eq(nature.id, sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`),
+    )
+    .innerJoin(direction, eq(nature.directionId, direction.id))
+    .where(
+      and(
+        eq(transactionTag.tagId, tagId),
+        eq(transactionTable.userId, userId),
+        inArray(expense.status, [...DASHBOARD_TOTAL_EXPENSE_STATUSES]),
+        ne(direction.code, 'transfer'),
+        isNotSecondary(),
+      ),
+    )
+    .orderBy(desc(transactionTable.occurredAt), desc(transactionTable.id))
+
+  return buildTagDetailData(rows)
 }
