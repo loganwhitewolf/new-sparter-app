@@ -59,6 +59,10 @@ export function dashboardCategoryDetail(id: number | string) {
   return `${APP_ROUTES.dashboardCategories}/${encodeURIComponent(String(id))}`
 }
 
+export function tagDetail(id: number | string) {
+  return `${APP_ROUTES.tags}/${encodeURIComponent(String(id))}`
+}
+
 export function transactionDetailHref(id: string) {
   return `${APP_ROUTES.transactions}/${encodeURIComponent(id)}`
 }
