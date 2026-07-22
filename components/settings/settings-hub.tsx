@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ChevronRight, FolderTree, Tags, UserCog } from 'lucide-react'
+import { ChevronRight, Tags, UserCog } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { APP_ROUTES } from '@/lib/routes'
@@ -8,7 +8,7 @@ interface HubItem {
   href: string
   title: string
   description: string
-  icon: typeof FolderTree
+  icon: typeof UserCog
 }
 
 const HUB_ITEMS: HubItem[] = [
@@ -17,12 +17,6 @@ const HUB_ITEMS: HubItem[] = [
     title: 'Profilo',
     description: 'Dati personali, piano, e account collegati.',
     icon: UserCog,
-  },
-  {
-    href: APP_ROUTES.categorySettings,
-    title: 'Categorie',
-    description: 'Tassonomia delle categorie e pattern di categorizzazione.',
-    icon: FolderTree,
   },
   {
     href: APP_ROUTES.tagSettings,

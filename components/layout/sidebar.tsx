@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
+  FolderTree,
   LayoutDashboard,
   List,
   LogOut,
@@ -43,6 +44,7 @@ const topNavItems = [
   { href: APP_ROUTES.transactions, label: 'Transazioni', icon: List },
   { href: APP_ROUTES.expenses, label: 'Spese', icon: Receipt },
   { href: APP_ROUTES.import, label: 'Importazioni', icon: Upload },
+  { href: APP_ROUTES.categorySettings, label: 'Categorie', icon: FolderTree },
 ]
 
 export function Sidebar({ user }: { user: UserDisplay }) {
@@ -126,10 +128,13 @@ export function Sidebar({ user }: { user: UserDisplay }) {
           })}
         </ul>
 
-        {/* SETTINGS LINK: direct access to /settings hub (categories + theme) */}
+        {/* SETTINGS LINK: Impostazioni hub (Profilo + Tag + theme) */}
         <Separator className="my-2" />
         {(() => {
-          const isActive = pathname === APP_ROUTES.settings || pathname.startsWith(`${APP_ROUTES.settings}/`)
+          const isActive =
+            pathname === APP_ROUTES.settings ||
+            (pathname.startsWith(`${APP_ROUTES.settings}/`) &&
+              !pathname.startsWith(APP_ROUTES.categorySettings))
           const linkNode = (
             <Link
               href={APP_ROUTES.settings}

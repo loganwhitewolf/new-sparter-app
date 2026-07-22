@@ -6,9 +6,9 @@ current_phase: 68
 current_phase_name: tags-dashboard-and-navigation
 status: shipped
 stopped_at: v2.6 milestone shipped (tag v2.6) — audit passed 16/16; ready for /gsd-new-milestone
-last_updated: "2026-07-21T13:38:16.168Z"
-last_activity: 2026-07-21
-last_activity_desc: v2.6 milestone archived and tagged
+last_updated: "2026-07-22T11:02:00.000Z"
+last_activity: 2026-07-22
+last_activity_desc: "Merged quick (260721-mm0 + 260721-mrl) onto main — conflict resolve"
 progress:
   total_phases: 4
   completed_phases: 4
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 ## Current Position
 
-Phase: 68 (tags-dashboard-and-navigation) — EXECUTING
-Plan: 8 of 8
-Status: Phase complete — ready for verification
-Last activity: 2026-07-21 — Phase 68 execution started
+Phase: Milestone v2.6 complete
+Plan: —
+Status: Shipped — ready for next milestone
+Last activity: 2026-07-22 — Merged quick (260721-mm0 + 260721-mrl); hub keeps Tag, Categorie in sidebar
 
 Progress: [██████████] 100%
 
@@ -275,6 +275,8 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260709-mf6 | Recurring-first KPI card restyle: ReadingKpiCard reworked to components-first (recurring/structural hero, total as summary line); Entrate/Uscite stacked additive rows, Bilancio/Tasso stacked structural label, sign-coloured. Verified in running app (light+dark) via throwaway proto | 2026-07-09 | d347a8b |
 | 260711-cbr | Composition-bar KPI card restyle (supersedes mf6): total = hero again; Entrate/Uscite mix as a single-hue composition bar + dominant legend (rest on hover); Tasso risparmio = rate + progress bar toward 20%; Bilancio/Accantonato = hero + reading. Compact top-right YoY delta chip. Chosen from 3 proposals informed by Copilot/KPI-card research. Verified light+dark+7-figure via throwaway proto | 2026-07-11 | dd7c017 |
 | 260711-gfd | Dashboard-wide filter chips + sustainability default (option B): nature chips lifted from the chart to OverviewDashboardSection and now drive KPI cards AND chart; KPIs derived client-side from monthly points (overview-kpi-derive.ts, Decimal); YoY deltas vs prior-year points under the same selection (page fetches year−1); default = recurring income vs all spending (Straordinarie excluse) so Bilancio/Tasso heroes ARE the structural numbers; reset → default; Reimposta shown when ≠ default. Verified in-browser (toggle updates cards+chart together) | 2026-07-11 | 2af669f |
+| 260721-mm0 | Fix: private format create drops secondaryDescriptionColumn (formData not forwarded in createPrivateImportFormatAction) | 2026-07-21 | 7904df5 |
+| 260721-mrl | Move Categorie into primary left sidebar; remove hub card; keep /settings/categories route | 2026-07-21 | eddc893 |
 
 ## Deferred Items
 

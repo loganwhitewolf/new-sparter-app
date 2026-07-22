@@ -18,7 +18,6 @@ vi.mock('next/link', () => ({
 vi.mock('@/lib/routes', () => ({
   APP_ROUTES: {
     profileSettings: '/settings/profile',
-    categorySettings: '/settings/categories',
     tagSettings: '/settings/tags',
   },
 }))
@@ -36,7 +35,6 @@ vi.mock('@/components/ui/card', () => ({
 
 vi.mock('lucide-react', () => ({
   ChevronRight: () => React.createElement('span', { 'data-icon': 'chevron-right' }),
-  FolderTree: () => React.createElement('span', { 'data-icon': 'folder-tree' }),
   Tags: () => React.createElement('span', { 'data-icon': 'tags' }),
   UserCog: () => React.createElement('span', { 'data-icon': 'user-cog' }),
 }))
@@ -69,10 +67,9 @@ describe('SettingsHub (D-11, D-12)', () => {
     expect(html).toContain('Chiaro o scuro')
   })
 
-  it('renders navigation links to Profilo and Categorie settings', () => {
+  it('renders a navigation link to Profilo settings', () => {
     const html = renderToStaticMarkup(React.createElement(SettingsHub))
     expect(html).toContain('/settings/profile')
-    expect(html).toContain('/settings/categories')
   })
 
   it('renders a navigation link to Tag settings (D-01)', () => {
