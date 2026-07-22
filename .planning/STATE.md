@@ -4,10 +4,10 @@ milestone: v2.8
 milestone_name: Public Branding Site
 current_phase: 69
 status: planned
-stopped_at: Phase 69 context gathered
-last_updated: "2026-07-22T14:23:48.783Z"
+stopped_at: Phase 69 research complete
+last_updated: "2026-07-22T14:45:00.000Z"
 last_activity: 2026-07-22
-last_activity_desc: v2.8 roadmap created (Phases 69–73, 13/13 requirements mapped)
+last_activity_desc: Phase 69 RESEARCH.md written (proto branding hub + switcher)
 progress:
   total_phases: 1
   completed_phases: 0
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 ## Current Position
 
-Phase: 69 — proto-design-variants (Not started)
+Phase: 69 — proto-design-variants (Context + research done, ready to plan)
 Plan: —
-Status: Roadmap created, ready to plan Phase 69
-Last activity: 2026-07-22 — v2.8 roadmap created (Phases 69–73, 13/13 requirements mapped)
+Status: 69-CONTEXT.md + 69-RESEARCH.md ready — next `/gsd-plan-phase` plans
+Last activity: 2026-07-22 — Phase 69 research complete (BRAND-01/02 proto hub)
 
 ## Roadmap (v2.8 — Phases 69-73)
 
