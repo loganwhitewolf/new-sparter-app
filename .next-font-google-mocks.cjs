@@ -34,4 +34,16 @@ module.exports = {
   src: url(${geistMono}) format('woff2');
 }
 `,
+  // Offline build mock for proto branding display font (Plan 69-01). Reuses Geist
+  // bytes — shape only matters for next/font compile, not visual fidelity in CI.
+  'https://fonts.googleapis.com/css2?family=Fraunces:wght@100..900&display=swap': `
+/* latin */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(${geistSans}) format('woff2');
+}
+`,
 }
