@@ -2,6 +2,7 @@
 import { brandingDisplay } from './fonts'
 import { PrototypeSwitcher } from './prototype-switcher'
 import { VariantA } from './variant-a'
+import { VariantB } from './variant-b'
 
 type BrandingProtoPageProps = {
   searchParams: Promise<{ variant?: string }>
@@ -31,7 +32,7 @@ export default async function BrandingProtoPage({ searchParams }: BrandingProtoP
   return (
     <div className={`${brandingDisplay.variable} min-h-screen`}>
       {variant === 'a' && <VariantA />}
-      {variant === 'b' && <VariantStub axis="Editorial split" />}
+      {variant === 'b' && <VariantB />}
       {variant === 'c' && <VariantStub axis="Type-led stack" />}
       <PrototypeSwitcher current={variant} />
     </div>
