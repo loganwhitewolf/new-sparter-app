@@ -1,5 +1,5 @@
 ---
-phase: 69-proto-design-variants
+phase: 73-proto-design-variants
 plan: 01
 subsystem: ui
 tags: [nextjs, tailwind, next-font, next-image, proto, marketing]
@@ -11,7 +11,7 @@ provides:
   - "Full-bleed app/proto/layout.tsx chrome (padding removed, gate/noindex unchanged)"
   - "Scoped marketing display font (Fraunces via --font-branding-display) isolated from root Geist"
   - "Labeled hero placeholder asset at app/proto/branding/assets/ shared across future variants"
-affects: [69-02, 69-03, 71-marketing-pages]
+affects: [73-02, 73-03, 71-marketing-pages]
 
 tech-stack:
   added: []
@@ -30,7 +30,7 @@ key-files:
     - app/proto/layout.tsx
 
 key-decisions:
-  - "Fraunces chosen as brandingDisplay face — editorial weight, avoids the Playfair + warm-cream/terracotta cliche flagged in 69-CONTEXT.md D-08"
+  - "Fraunces chosen as brandingDisplay face — editorial weight, avoids the Playfair + warm-cream/terracotta cliche flagged in 73-CONTEXT.md D-08"
   - "Variant B/C rendered as minimal labeled stub panels in the hub (plan-scoped placeholder, not a defect) so the switcher path is provably wired before Plan 02 fills them in"
 
 patterns-established:
@@ -74,7 +74,7 @@ completed: 2026-07-22
 status: complete
 ---
 
-# Phase 69 Plan 01: Tracer /proto/branding — Variant A shot-as-plane Summary
+# Phase 73 Plan 01: Tracer /proto/branding — Variant A shot-as-plane Summary
 
 **End-to-end `/proto/branding` hub with always-visible `?variant=` switcher and a production-quality Variant A (shot-as-plane): full-bleed hero placeholder, Italian import-first copy, Registrati/Entra CTAs, scoped Fraunces display font.**
 
@@ -115,8 +115,8 @@ status: complete
 
 - **Fraunces over Newsreader/Playfair** — RESEARCH's example font was illustrative only; Fraunces reads as a contemporary editorial serif without matching the D-08 warm-cream+terracotta cliche pairing.
 - **Tailwind arbitrary-value `font-[family-name:var(--font-branding-display)]`** on individual headings, rather than a global CSS class, to keep the font application scoped and explicit per element — consistent with "apply only on the branding wrapper, never touch root Geist" (D-08).
-- **Variant B/C as minimal labeled stub panels** inside the hub (not separate files yet) — proves the switcher/whitelist path end-to-end now; Plan 02 replaces the stubs with the real Editorial-split and Type-led-stack compositions per `69-PATTERNS.md`.
-- **Did not run `requirements mark-complete BRAND-01`** despite this plan's frontmatter listing `requirements: [BRAND-01]`. `REQUIREMENTS.md` states BRAND-01 as "compare 2–3 branding UI variants" and `69-02-PLAN.md`'s own success criteria says "BRAND-01 fully satisfied locally: three structural A+B variants." Both `69-01-PLAN.md` and `69-02-PLAN.md` frontmatter list the same requirement ID — running mark-complete after Plan 01 alone (1 real variant + 2 stubs) would have falsely flipped the checkbox before the compare surface exists. Caught and reverted (see Deviations); BRAND-01 should be marked complete after `69-02` (or `69-03`) actually delivers the three-way compare.
+- **Variant B/C as minimal labeled stub panels** inside the hub (not separate files yet) — proves the switcher/whitelist path end-to-end now; Plan 02 replaces the stubs with the real Editorial-split and Type-led-stack compositions per `73-PATTERNS.md`.
+- **Did not run `requirements mark-complete BRAND-01`** despite this plan's frontmatter listing `requirements: [BRAND-01]`. `REQUIREMENTS.md` states BRAND-01 as "compare 2–3 branding UI variants" and `73-02-PLAN.md`'s own success criteria says "BRAND-01 fully satisfied locally: three structural A+B variants." Both `73-01-PLAN.md` and `73-02-PLAN.md` frontmatter list the same requirement ID — running mark-complete after Plan 01 alone (1 real variant + 2 stubs) would have falsely flipped the checkbox before the compare surface exists. Caught and reverted (see Deviations); BRAND-01 should be marked complete after `73-02` (or `73-03`) actually delivers the three-way compare.
 
 ## Deviations from Plan
 
@@ -134,7 +134,7 @@ status: complete
 
 **2. [Rule 1 - Bug] Reverted premature `requirements mark-complete BRAND-01`**
 - **Found during:** State-update step, immediately after running `requirements mark-complete`
-- **Issue:** Blindly following this plan's frontmatter (`requirements: [BRAND-01]`) flipped `REQUIREMENTS.md`'s BRAND-01 checkbox and traceability row to complete, but BRAND-01 requires the full 2–3 variant compare surface — Plan 01 ships only Variant A plus two stub panels. `69-02-PLAN.md` (same requirement ID) explicitly states BRAND-01 is "fully satisfied" only after it lands.
+- **Issue:** Blindly following this plan's frontmatter (`requirements: [BRAND-01]`) flipped `REQUIREMENTS.md`'s BRAND-01 checkbox and traceability row to complete, but BRAND-01 requires the full 2–3 variant compare surface — Plan 01 ships only Variant A plus two stub panels. `73-02-PLAN.md` (same requirement ID) explicitly states BRAND-01 is "fully satisfied" only after it lands.
 - **Fix:** `git checkout -- .planning/REQUIREMENTS.md` to discard the premature edit before it was committed.
 - **Files modified:** `.planning/REQUIREMENTS.md` (reverted, no net change)
 - **Verification:** `git diff .planning/REQUIREMENTS.md` — empty
@@ -147,7 +147,7 @@ status: complete
 
 ## Known Stubs
 
-- **`app/proto/branding/page.tsx` — Variant B/C stub panels.** Rendered as a labeled "PROTOTYPE STUB" panel with the axis name when `?variant=b` or `?variant=c` is selected. This is the plan's own defined scope (frontmatter: "Variant B/C may stub until Plan 02") — not a defect. Plan 02 replaces both stubs with the real Editorial-split and Type-led-stack variant components per `69-PATTERNS.md`'s structural-axis table. Logged to the broken-windows ledger below for traceability.
+- **`app/proto/branding/page.tsx` — Variant B/C stub panels.** Rendered as a labeled "PROTOTYPE STUB" panel with the axis name when `?variant=b` or `?variant=c` is selected. This is the plan's own defined scope (frontmatter: "Variant B/C may stub until Plan 02") — not a defect. Plan 02 replaces both stubs with the real Editorial-split and Type-led-stack variant components per `73-PATTERNS.md`'s structural-axis table. Logged to the broken-windows ledger below for traceability.
 
 ## Issues Encountered
 
@@ -161,12 +161,12 @@ None beyond the plan's documented `user_setup` note — set `PROTOTYPES_ENABLED=
 
 - Hub/switcher/gate infrastructure is proven end-to-end; Plan 02 can focus purely on the Editorial-split and Type-led-stack compositions without touching `page.tsx`'s routing/whitelist logic or `prototype-switcher.tsx`.
 - `overview-hero-placeholder.svg` is shared and importable — Plan 02's variants should reuse the same asset path rather than duplicating a placeholder.
-- No blockers. Real `/dashboard/overview` capture still not in-repo — placeholder remains until a real screenshot is supplied (Assumptions Log A3 in `69-RESEARCH.md`).
+- No blockers. Real `/dashboard/overview` capture still not in-repo — placeholder remains until a real screenshot is supplied (Assumptions Log A3 in `73-RESEARCH.md`).
 
 ## Self-Check: PASSED
 
 All created files verified present on disk; both task commits (`03977e5`, `2508c84`) verified present in `git log --oneline --all`.
 
 ---
-*Phase: 69-proto-design-variants*
+*Phase: 73-proto-design-variants*
 *Completed: 2026-07-22*

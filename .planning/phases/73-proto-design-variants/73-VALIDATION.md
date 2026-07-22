@@ -1,5 +1,5 @@
 ---
-phase: 69
+phase: 73
 slug: proto-design-variants
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
@@ -9,7 +9,7 @@ wave_0_complete: true
 created: 2026-07-22
 ---
 
-# Phase 69 — Validation Strategy
+# Phase 73 — Validation Strategy
 
 > Per-phase validation contract for feedback sampling during execution.
 > D-09: no automated unit/e2e required beyond runnable pages. Gate on Preview checklist + typecheck/lint.
@@ -41,24 +41,24 @@ created: 2026-07-22
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------------|-----------------|-----------|-------------------|-------------|--------|
-| 69-01-T1 | 01 | 1 | BRAND-01 | T-69-01..04 | Env gate + noindex preserved; variant whitelist; hardcoded CTAs; no NODE_ENV hide | tsc + grep | see 69-01-PLAN Task 1 verify | ✅ after exec | ⬜ pending |
-| 69-01-T2 | 01 | 1 | BRAND-01 | T-69-01 | Scoped font + next/image asset; zero packages | tsc + grep | see 69-01-PLAN Task 2 verify | ✅ after exec | ⬜ pending |
-| 69-02-T1 | 02 | 2 | BRAND-01 | T-69-06..09 | VariantB CTAs hardcoded; import-first copy | tsc + grep | see 69-02-PLAN Task 1 verify | ✅ after exec | ⬜ pending |
-| 69-02-T2 | 02 | 2 | BRAND-01 | T-69-06..09 | VariantC mounted; three-way hub | tsc + grep | see 69-02-PLAN Task 2 verify | ✅ after exec | ⬜ pending |
-| 69-03-T1 | 03 | 3 | BRAND-02 | T-69-10 | NOTES template with Verdetto fields | grep | see 69-03-PLAN Task 1 verify | ✅ after exec | ⬜ pending |
-| 69-03-T2 | 03 | 3 | BRAND-02 | T-69-01 | Human fills Winner a\|b\|c; Production 404 confirmed | manual + post-resume grep | `grep -E 'Winner:[[:space:]]*[abcABC]' NOTES.md` | ❌ until PO | ⬜ pending |
+| 73-01-T1 | 01 | 1 | BRAND-01 | T-73-01..04 | Env gate + noindex preserved; variant whitelist; hardcoded CTAs; no NODE_ENV hide | tsc + grep | see 73-01-PLAN Task 1 verify | ✅ after exec | ⬜ pending |
+| 73-01-T2 | 01 | 1 | BRAND-01 | T-73-01 | Scoped font + next/image asset; zero packages | tsc + grep | see 73-01-PLAN Task 2 verify | ✅ after exec | ⬜ pending |
+| 73-02-T1 | 02 | 2 | BRAND-01 | T-69-06..09 | VariantB CTAs hardcoded; import-first copy | tsc + grep | see 73-02-PLAN Task 1 verify | ✅ after exec | ⬜ pending |
+| 73-02-T2 | 02 | 2 | BRAND-01 | T-69-06..09 | VariantC mounted; three-way hub | tsc + grep | see 73-02-PLAN Task 2 verify | ✅ after exec | ⬜ pending |
+| 73-03-T1 | 03 | 3 | BRAND-02 | T-69-10 | NOTES template with Verdetto fields | grep | see 73-03-PLAN Task 1 verify | ✅ after exec | ⬜ pending |
+| 73-03-T2 | 03 | 3 | BRAND-02 | T-73-01 | Human fills Winner a\|b\|c; Production 404 confirmed | manual + post-resume grep | `grep -E 'Winner:[[:space:]]*[abcABC]' NOTES.md` | ❌ until PO | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
-*Specless probe fallback: skipped this planning run (`phase_req_ids` null) — recorded in 69-01-PLAN objective; behaviors covered via CONTEXT + REQUIREMENTS must_haves.*
+*Specless probe fallback: skipped this planning run (`phase_req_ids` null) — recorded in 73-01-PLAN objective; behaviors covered via CONTEXT + REQUIREMENTS must_haves.*
 
 ---
 
 ## Wave 0 Requirements
 
 - [x] No automated test stubs required (D-09)
-- [x] NOTES.md template planned in 69-03 Task 1
-- [x] Manual checklist owned by 69-03 human-verify checkpoint
+- [x] NOTES.md template planned in 73-03 Task 1
+- [x] Manual checklist owned by 73-03 human-verify checkpoint
 
 ---
 

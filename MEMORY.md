@@ -42,9 +42,19 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
-### 2026-07-22 — Phase 69 PO winner: Variant C (type-led stack)
+### 2026-07-22 — Renumber v2.8 branding phases 69–73 → 73–77
 
-**Decided:** Production branding homepage direction = **Variant C** (type-led stack) among the three A+touch-of-B structural variants. Recorded in `app/proto/branding/NOTES.md` (BRAND-02 SoT). Steal: product-plane weight from A; editorial type / asymmetric text from B. Do not ship: A/B as primary homepage layout; no `components/marketing/*` extraction until Phase 71.
+**Decided:** After v2.7 (Tag Dedicated View) merged on main as phases 69–72, renumber local v2.8 Public Branding Site phases to **73–77** so path/ID space no longer collides. Mapping: 69→73 proto-design-variants, 70→74 public-layout, 71→75 marketing-pages, 72→76 legal-pages, 73→77 seo-and-auth-polish. Directory `.planning/phases/73-proto-design-variants/`. Historical git commit subjects still say `69-*` (no history rewrite).
+
+**Why:** Parallel milestone numbering conflict; merge with origin/main must not fight over `69-*` planning paths.
+
+**Rejected:**
+- Keeping 69–73 locally and resolving doc conflicts by hand on every merge
+- Decimal phases (69.1) — wrong semantics for a full milestone block
+
+### 2026-07-22 — Phase 73 PO winner: Variant C (type-led stack)
+
+**Decided:** Production branding homepage direction = **Variant C** (type-led stack) among the three A+touch-of-B structural variants. Recorded in `app/proto/branding/NOTES.md` (BRAND-02 SoT). Steal: product-plane weight from A; editorial type / asymmetric text from B. Do not ship: A/B as primary homepage layout; no `components/marketing/*` extraction until Phase 75.
 
 **Why:** Explicit PO call after live compare ("mi piace il prototipo 3").
 
@@ -52,15 +62,15 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 - Variant A (shot-as-plane) as primary
 - Variant B (editorial split) as primary
 
-### 2026-07-22 — v2.8 branding proto design lock (Phase 69)
+### 2026-07-22 — v2.8 branding proto design lock (Phase 73)
 
-**Decided:** Public branding proto direction = **A + touch of B** (dashboard-as-manifesto screenshot + editorial marketing typography). Compare UX = hub `/proto/branding` + `?variant=` switcher (3 structural variants). Winner recorded in `app/proto/branding/NOTES.md`. Full decisions: `.planning/phases/69-proto-design-variants/69-CONTEXT.md`.
+**Decided:** Public branding proto direction = **A + touch of B** (dashboard-as-manifesto screenshot + editorial marketing typography). Compare UX = hub `/proto/branding` + `?variant=` switcher (3 structural variants). Winner recorded in `app/proto/branding/NOTES.md`. Full decisions: `.planning/phases/73-proto-design-variants/73-CONTEXT.md`.
 
 **Why:** Cool but credible for Italian personal finance; real product visual builds trust; editorial type differentiates marketing from app chrome without lifestyle fluff.
 
 **Rejected:**
 - Pure editorial (B alone) — weak tool credibility
-- Three-beat Come funziona homepage (C) — defers to Phase 71 page
+- Three-beat Come funziona homepage (C) — defers to Phase 75 page
 - Separate `/proto/branding-a|b|c` as primary compare UX — hub+switcher faster for PO review
 
 ### 2026-05-20 — Session wrap-up

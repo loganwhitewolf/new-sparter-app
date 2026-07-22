@@ -1,17 +1,17 @@
 ---
-phase: 69-proto-design-variants
+phase: 73-proto-design-variants
 plan: 02
 subsystem: ui
 tags: [nextjs, tailwind, next-image, proto, marketing]
 
 requires:
-  - phase: 69-01
+  - phase: 73-01
     provides: "Hub + ?variant= switcher, Variant A (shot-as-plane), scoped Fraunces display font, shared hero placeholder asset"
 provides:
   - "Variant B (editorial split): asymmetric type column + offset product frame in a rounded card, not full-bleed like A"
   - "Variant C (type-led stack): oversized brand+headline dominate the first screen; full-width product band immediately below the CTA block"
   - "Hub page.tsx mounts real VariantA/B/C for all three ?variant= keys — no stub panels remain"
-affects: [69-03, 71-marketing-pages]
+affects: [73-03, 71-marketing-pages]
 
 tech-stack:
   added: []
@@ -63,7 +63,7 @@ completed: 2026-07-22
 status: complete
 ---
 
-# Phase 69 Plan 02: Variant B (editorial split) + Variant C (type-led stack) Summary
+# Phase 73 Plan 02: Variant B (editorial split) + Variant C (type-led stack) Summary
 
 **Two additional structurally distinct A+touch-of-B compositions (asymmetric split-column vs. oversized type-then-band) replace the Plan 01 stubs, completing the three-way `/proto/branding` compare surface for BRAND-01.**
 
@@ -102,7 +102,7 @@ status: complete
 - **Variant B is a split-grid, not full-bleed** — the image lives in a bordered, rounded, slightly offset card rather than as a background plane, which is the structural axis difference from A (D-06: layout/hierarchy must differ, not just color).
 - **Variant C has zero image in the first viewport** — the "type-led" axis is expressed literally: brand+headline+sub+CTA is the entire hero, and the product visual is a full-width band that appears immediately on scroll, not blended behind text. This is the most extreme structural departure from A of the three variants.
 - **Below-fold benefit block shape varies per variant** (grid vs. numbered-grid vs. stacked-centered) rather than reusing one shared component across all three — reinforces D-08's "no shared Layout shell that collapses structural difference" at the below-fold level too, not just the hero.
-- **BRAND-01 marked complete in REQUIREMENTS.md** at the end of this plan (not Plan 01) — per 69-01-SUMMARY's explicit note that the three-way compare surface (not just Variant A + stubs) is what satisfies BRAND-01.
+- **BRAND-01 marked complete in REQUIREMENTS.md** at the end of this plan (not Plan 01) — per 73-01-SUMMARY's explicit note that the three-way compare surface (not just Variant A + stubs) is what satisfies BRAND-01.
 
 ## Deviations from Plan
 
@@ -128,5 +128,5 @@ None beyond the plan's documented local-preview note (`PROTOTYPES_ENABLED=1 yarn
 Both created files (`app/proto/branding/variant-b.tsx`, `app/proto/branding/variant-c.tsx`) verified present on disk; both task commits (`50b8b87`, `c1a7c80`) verified present in `git log --oneline --all`.
 
 ---
-*Phase: 69-proto-design-variants*
+*Phase: 73-proto-design-variants*
 *Completed: 2026-07-22*

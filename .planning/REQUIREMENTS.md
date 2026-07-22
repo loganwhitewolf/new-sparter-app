@@ -57,7 +57,7 @@ Deferred beyond v2.8 soft go-live.
 | Cookie banner without trackers | No third-party analytics in v2.8 |
 | Italian URL slugs (`/come-funziona`, `/termini`) | AGENTS.md: English route slugs; Italian in UI copy only |
 | Operator Vercel/Supabase/R2 go-live (R038/R039/R041) | Operational action; not this milestone's build scope |
-| v2.7 tags work | Parallel milestone owned by other agent |
+| v2.7 tags work | Shipped on main as phases 69–72 (Tag Dedicated View); branding renumbered to 73–77 |
 
 ## Traceability
 
@@ -65,19 +65,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BRAND-01 | 69. proto-design-variants | Complete |
-| BRAND-02 | 69. proto-design-variants | Complete |
-| BRAND-03 | 70. public-layout-and-proxy-allowlist | Pending |
-| BRAND-04 | 70. public-layout-and-proxy-allowlist | Pending |
-| BRAND-05 | 70. public-layout-and-proxy-allowlist | Pending |
-| BRAND-06 | 71. marketing-pages | Pending |
-| BRAND-07 | 71. marketing-pages | Pending |
-| BRAND-08 | 71. marketing-pages | Pending |
-| BRAND-09 | 72. legal-pages | Pending |
-| BRAND-10 | 72. legal-pages | Pending |
-| BRAND-11 | 73. seo-and-auth-polish | Pending |
-| BRAND-12 | 73. seo-and-auth-polish | Pending |
-| BRAND-13 | 73. seo-and-auth-polish | Pending |
+| BRAND-01 | 73. proto-design-variants | Complete |
+| BRAND-02 | 73. proto-design-variants | Complete |
+| BRAND-03 | 74. public-layout-and-proxy-allowlist | Pending |
+| BRAND-04 | 74. public-layout-and-proxy-allowlist | Pending |
+| BRAND-05 | 74. public-layout-and-proxy-allowlist | Pending |
+| BRAND-06 | 75. marketing-pages | Pending |
+| BRAND-07 | 75. marketing-pages | Pending |
+| BRAND-08 | 75. marketing-pages | Pending |
+| BRAND-09 | 76. legal-pages | Pending |
+| BRAND-10 | 76. legal-pages | Pending |
+| BRAND-11 | 77. seo-and-auth-polish | Pending |
+| BRAND-12 | 77. seo-and-auth-polish | Pending |
+| BRAND-13 | 77. seo-and-auth-polish | Pending |
 
 **Coverage:**
 
@@ -87,4 +87,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-07-22*
-*Last updated: 2026-07-22 after v2.8 roadmap creation — 13/13 requirements mapped across Phases 69–73 (proto first, proxy allowlist precedes production pages)*
+*Last updated: 2026-07-22 after v2.8 roadmap creation — 13/13 requirements mapped across Phases 73–77 (proto first, proxy allowlist precedes production pages)*

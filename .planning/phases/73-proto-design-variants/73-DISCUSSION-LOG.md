@@ -1,10 +1,10 @@
-# Phase 69: proto-design-variants - Discussion Log
+# Phase 73: proto-design-variants - Discussion Log
 
 > **Audit trail only.** Do not use as input to planning, research, or execution agents.
 > Decisions are captured in CONTEXT.md — this log preserves the alternatives considered.
 
 **Date:** 2026-07-22
-**Phase:** 69-proto-design-variants
+**Phase:** 73-proto-design-variants
 **Areas discussed:** Design direction (proposals), Comparison UX (defaulted), Content scope (defaulted), Winner lock (defaulted)
 
 ---
@@ -45,7 +45,7 @@
 | Homepage + Come funziona stub | Extra page in proto | |
 
 **User's choice:** Accepted via proceed-as-proposed
-**Notes:** Come funziona deferred to Phase 71.
+**Notes:** Come funziona deferred to Phase 75.
 
 ---
 
@@ -58,7 +58,7 @@
 | Planning-only artifact | No in-tree NOTES | |
 
 **User's choice:** Accepted via proceed-as-proposed
-**Notes:** NOTES.md is design-lock SoT for Phase 71 handoff.
+**Notes:** NOTES.md is design-lock SoT for Phase 75 handoff.
 
 ---
 

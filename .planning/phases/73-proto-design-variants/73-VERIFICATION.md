@@ -1,5 +1,5 @@
 ---
-phase: 69-proto-design-variants
+phase: 73-proto-design-variants
 verified: 2026-07-22T18:20:00Z
 status: passed
 score: 9/9 must-haves verified
@@ -7,7 +7,7 @@ behavior_unverified: 0
 overrides_applied: 0
 ---
 
-# Phase 69: Proto Design Variants Verification Report
+# Phase 73: Proto Design Variants Verification Report
 
 **Phase Goal:** Deliver 2–3 throwaway branding UI variants under `app/proto/` (Preview-gated + `noindex`) so PO/stakeholder picks the production design direction (BRAND-01, BRAND-02) before any `(public)` page is built.
 **Verified:** 2026-07-22T18:20:00Z
@@ -27,7 +27,7 @@ overrides_applied: 0
 | 5 | Each variant keeps first-viewport content contract (brand + headline + sub + Registrati/Entra + one dominant visual) and below-fold two-benefit + closing-CTA structure | ✓ VERIFIED | All three files contain: "Sparter" label, one `h1` headline, one supporting `<p>`, CTA group (Registrati primary / Entra outline), exactly two benefit blocks (`Categorizzazione automatica`, `Scopri le deviazioni`), one closing `Registrati` CTA section |
 | 6 | Scroll silhouette differs across a/b/c, sharing fonts/asset helpers only — no shared Layout shell that collapses structural difference | ✓ VERIFIED | Each variant is a fully self-contained function component; only shared imports are `Button`, `Link`, `Image`, and the `overview-hero-placeholder.svg` asset path — no shared marketing Layout/wrapper component exists in `app/proto/branding/` |
 | 7 | `app/proto/branding/NOTES.md` exists as design-lock source of truth with Domanda, Come provarlo, Varianti a/b/c descriptions, and Verdetto PO fields (Winner / Steal from losers / Do not ship) per D-07 | ✓ VERIFIED | File present with all five required sections; Varianti section describes what was actually shipped (matches variant files) |
-| 8 | After human Preview review, Verdetto PO records the winning variant id and handoff notes for Phase 71 — REQUIREMENTS checkbox is not the SoT | ✓ VERIFIED | `NOTES.md`: `**Winner: c** — Type-led stack. Confermato dall'utente ("mi piace il prototipo 3", 2026-07-22).` plus filled "Steal from losers" and "Do not ship" lines; `REQUIREMENTS.md` BRAND-02 checkbox flipped only after this (per 69-03-SUMMARY commit order: `0d9a9cc` template → human checkpoint → `807787a` verdict → mark-complete) |
+| 8 | After human Preview review, Verdetto PO records the winning variant id and handoff notes for Phase 75 — REQUIREMENTS checkbox is not the SoT | ✓ VERIFIED | `NOTES.md`: `**Winner: c** — Type-led stack. Confermato dall'utente ("mi piace il prototipo 3", 2026-07-22).` plus filled "Steal from losers" and "Do not ship" lines; `REQUIREMENTS.md` BRAND-02 checkbox flipped only after this (per 73-03-SUMMARY commit order: `0d9a9cc` template → human checkpoint → `807787a` verdict → mark-complete) |
 | 9 | Proto remains throwaway Preview-gated noindex; no production marketing extraction in this phase | ✓ VERIFIED | `app/(public)/` does not exist in the repo; no files under `components/marketing/` were created/modified; `proxy.ts` unchanged for `/proto/*` (already exempt, comment confirms); all variant files carry `// PROTOTYPE — wipe me.` header |
 
 **Score:** 9/9 truths verified (0 present, behavior-unverified)
@@ -67,22 +67,22 @@ overrides_applied: 0
 | Proto layout gate/noindex/dynamic intact | Direct file read of `app/proto/layout.tsx` | `PROTOTYPES_ENABLED`, `force-dynamic`, `robots: {index:false}` all present | ✓ PASS |
 | Type-check phase files clean | `npx tsc --noEmit` (full workspace) | 21 pre-existing errors, all in unrelated files (`tests/suggestion-card.test.tsx`, `tests/suggestion-promote-form.test.tsx`, `tests/transactions-dal.test.ts`); zero errors touching `app/proto/**` | ✓ PASS |
 
-Note: a live browser render of `/proto/branding` was attempted in this verification session (`PROTOTYPES_ENABLED=1 yarn dev`) but could not complete — the sandbox blocked starting a dev server as an unauthorized operational step, and an earlier attempt failed on a sandboxed-network `uv_interface_addresses` OS error unrelated to the code. This is a re-run of the same environmental limitation the Plan 02 executor hit in its own session (documented in `69-02-SUMMARY.md` "Issues Encountered"). The `yarn build` route-compilation evidence above, combined with full structural code review of every variant file, is used as the substitute static-verification signal.
+Note: a live browser render of `/proto/branding` was attempted in this verification session (`PROTOTYPES_ENABLED=1 yarn dev`) but could not complete — the sandbox blocked starting a dev server as an unauthorized operational step, and an earlier attempt failed on a sandboxed-network `uv_interface_addresses` OS error unrelated to the code. This is a re-run of the same environmental limitation the Plan 02 executor hit in its own session (documented in `73-02-SUMMARY.md` "Issues Encountered"). The `yarn build` route-compilation evidence above, combined with full structural code review of every variant file, is used as the substitute static-verification signal.
 
 ### Requirements Coverage
 
 | Requirement | Source Plan(s) | Description | Status | Evidence |
 |--------------|----------------|--------------|--------|----------|
-| BRAND-01 | 69-01, 69-02 | Visitor on Vercel Preview can compare 2–3 branding UI variants under `app/proto/` (throwaway, `noindex`, `PROTOTYPES_ENABLED`-gated) | ✓ SATISFIED | Three structurally distinct variants (a/b/c) mounted on one hub with switcher; gate/noindex intact; `REQUIREMENTS.md` row: `BRAND-01 \| 69. proto-design-variants \| Complete` |
-| BRAND-02 | 69-03 | One proto variant is selected as the production design direction before shipping `(public)` page UI | ✓ SATISFIED | `NOTES.md` Verdetto PO records Winner = c with steal/do-not-ship notes; `REQUIREMENTS.md` row: `BRAND-02 \| 69. proto-design-variants \| Complete`; no `app/(public)` created |
+| BRAND-01 | 73-01, 73-02 | Visitor on Vercel Preview can compare 2–3 branding UI variants under `app/proto/` (throwaway, `noindex`, `PROTOTYPES_ENABLED`-gated) | ✓ SATISFIED | Three structurally distinct variants (a/b/c) mounted on one hub with switcher; gate/noindex intact; `REQUIREMENTS.md` row: `BRAND-01 \| 73. proto-design-variants \| Complete` |
+| BRAND-02 | 73-03 | One proto variant is selected as the production design direction before shipping `(public)` page UI | ✓ SATISFIED | `NOTES.md` Verdetto PO records Winner = c with steal/do-not-ship notes; `REQUIREMENTS.md` row: `BRAND-02 \| 73. proto-design-variants \| Complete`; no `app/(public)` created |
 
-No orphaned requirements — `REQUIREMENTS.md`'s Phase 69 traceability rows list exactly BRAND-01 and BRAND-02, matching all three plans' `requirements:` frontmatter combined.
+No orphaned requirements — `REQUIREMENTS.md`'s Phase 73 traceability rows list exactly BRAND-01 and BRAND-02, matching all three plans' `requirements:` frontmatter combined.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| `app/proto/branding/variant-{a,b,c}.tsx` | alt text | `"Placeholder per l'anteprima della dashboard Sparter"` | ℹ️ Info | Intentional and documented — D-08/Claude's-Discretion in `69-CONTEXT.md` explicitly allows a labeled placeholder asset until a real `/dashboard/overview` capture is available; not a stub, it renders and functions correctly |
+| `app/proto/branding/variant-{a,b,c}.tsx` | alt text | `"Placeholder per l'anteprima della dashboard Sparter"` | ℹ️ Info | Intentional and documented — D-08/Claude's-Discretion in `73-CONTEXT.md` explicitly allows a labeled placeholder asset until a real `/dashboard/overview` capture is available; not a stub, it renders and functions correctly |
 
 No `TBD`/`FIXME`/`XXX`/`TODO`/`HACK` markers found in any phase-touched file. No empty handlers, no hardcoded-empty stub returns, no `VariantStub`/"PROTOTYPE STUB" remnants (Plan 01's temporary stub panels were fully removed in Plan 02 — confirmed via grep, zero matches).
 
@@ -90,7 +90,7 @@ No `TBD`/`FIXME`/`XXX`/`TODO`/`HACK` markers found in any phase-touched file. No
 
 None outstanding. The phase's own design already routes the one genuinely subjective decision — "which design direction should ship" — through a `checkpoint:human-verify` gate (Plan 03, Task 2), and that gate was traversed: the PO reviewed all three variants on Preview and recorded an explicit verdict (`Winner: c`, "mi piace il prototipo 3") in `NOTES.md`, committed at `807787a`. This satisfies the phase goal's own definition of done ("so PO/stakeholder picks the production design direction") — there is no further human action this verification needs to request.
 
-(Retrospective note: `69-02-SUMMARY.md`'s coverage item D3 — "cycling a→b→c shows three genuinely different scroll silhouettes... CTAs work end-to-end" — was flagged `human_judgment: true` because that session's sandbox couldn't complete a live browser round-trip. The subsequent PO review in Plan 03, which required comparing and picking among the three rendered variants, is de facto confirmation that the switcher and all three variants rendered and worked as intended; treating this as closed rather than reopening a redundant human-verification item.)
+(Retrospective note: `73-02-SUMMARY.md`'s coverage item D3 — "cycling a→b→c shows three genuinely different scroll silhouettes... CTAs work end-to-end" — was flagged `human_judgment: true` because that session's sandbox couldn't complete a live browser round-trip. The subsequent PO review in Plan 03, which required comparing and picking among the three rendered variants, is de facto confirmation that the switcher and all three variants rendered and worked as intended; treating this as closed rather than reopening a redundant human-verification item.)
 
 ### Gaps Summary
 

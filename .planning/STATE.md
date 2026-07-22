@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.8
 milestone_name: Public Branding Site
-current_phase: 70
+current_phase: 74
 current_phase_name: public layout and proxy allowlist
 status: planning
-stopped_at: Completed 69-03-PLAN.md — Phase 69 (proto-design-variants) fully executed, BRAND-01 + BRAND-02 satisfied
+stopped_at: Completed 73-03-PLAN.md — Phase 73 (proto-design-variants) fully executed, BRAND-01 + BRAND-02 satisfied
 last_updated: "2026-07-22T16:22:30.859Z"
 last_activity: 2026-07-22
-last_activity_desc: Phase 69 complete, transitioned to Phase 70
+last_activity_desc: Phase 73 complete, transitioned to Phase 74
 progress:
   total_phases: 1
   completed_phases: 1
@@ -24,31 +24,31 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 70 — public-layout-and-proxy-allowlist
+**Current focus:** Phase 74 — public-layout-and-proxy-allowlist
 
 ## Current Position
 
 Phase: 70 — public layout and proxy allowlist
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-07-22 — Phase 69 complete, transitioned to Phase 70
+Last activity: 2026-07-22 — Phase 73 complete, transitioned to Phase 74
 
-## Roadmap (v2.8 — Phases 69-73)
+## Roadmap (v2.8 — Phases 73–77)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 69 | proto-design-variants | BRAND-01, BRAND-02 | Complete (Winner = c) |
-| 70 | public-layout-and-proxy-allowlist | BRAND-03, BRAND-04, BRAND-05 | Not started |
-| 71 | marketing-pages | BRAND-06, BRAND-07, BRAND-08 | Not started |
-| 72 | legal-pages | BRAND-09, BRAND-10 | Not started |
-| 73 | seo-and-auth-polish | BRAND-11, BRAND-12, BRAND-13 | Not started |
+| 73 | proto-design-variants | BRAND-01, BRAND-02 | Complete (Winner = c) |
+| 74 | public-layout-and-proxy-allowlist | BRAND-03, BRAND-04, BRAND-05 | Not started |
+| 75 | marketing-pages | BRAND-06, BRAND-07, BRAND-08 | Not started |
+| 76 | legal-pages | BRAND-09, BRAND-10 | Not started |
+| 77 | seo-and-auth-polish | BRAND-11, BRAND-12, BRAND-13 | Not started |
 
-**Coverage:** 13/13 v2.8 requirements mapped across Phases 69-73, none orphaned. Continues phase
+**Coverage:** 13/13 v2.8 requirements mapped across Phases 73–77, none orphaned. Continues phase
 numbering from v2.6 (ended at Phase 68); v2.7 is reserved for a parallel tags milestone owned by
 another agent — not phase-numbered in this workspace. Order follows research SUMMARY.md guidance
 (proto → infra/proxy → pages → legal → SEO), consolidated from the suggested 6-phase split into 5:
 proto must ship first (design lock before production UI investment) and the `(public)` layout +
-`proxy.ts` allowlist (Phase 70) must precede any production marketing page (Phase 71+), since
+`proxy.ts` allowlist (Phase 74) must precede any production marketing page (Phase 75+), since
 anonymous `/` is otherwise redirected to `/login`. English route slugs (`/how-it-works`,
 `/privacy`, `/terms`); Italian UI copy throughout. BRAND-13 (sign-out → `/`) is bundled with the
 other auth-polish items (session-aware header, SEO) in the final phase since all three are small,
@@ -221,7 +221,7 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: Variant B/C ship as minimal labeled stub panels in the hub (plan-scoped, not a defect) - proves the switcher/whitelist path before Plan 02 fills them in
 - [Phase ?]: Variant B (editorial split: asymmetric type column + offset product frame) and Variant C (type-led stack: oversized brand+headline then full-width product band) ship as real compositions replacing the Plan 01 stubs; hub now mounts all three real variants
 - [Phase ?]: BRAND-02 Winner = Variant C (Type-led stack), PO's explicit call after Preview compare; recorded in app/proto/branding/NOTES.md (D-07 SoT)
-- [Phase ?]: Steal from losers into C: a's dominant product-visual weight, b's editorial type/asymmetric-column treatment; do not ship a/b as primary layout, no components/marketing/* extraction yet (Phase 71)
+- [Phase ?]: Steal from losers into C: a's dominant product-visual weight, b's editorial type/asymmetric-column treatment; do not ship a/b as primary layout, no components/marketing/* extraction yet (Phase 75)
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -335,11 +335,11 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 69-03-PLAN.md — Phase 69 (proto-design-variants) fully executed, BRAND-01 + BRAND-02 satisfied
+**Stopped at:** Completed 73-03-PLAN.md — Phase 73 (proto-design-variants) fully executed, BRAND-01 + BRAND-02 satisfied
 
 Last session: 2026-07-22T16:15:24.164Z
 
-**Next:** `/gsd-execute-phase 69`
+**Next:** `/gsd-execute-phase 73`
 
 **Historical (discuss → plan):** Context gathered 2026-07-22; plan-phase completed same day with research + checker revision.
 
@@ -406,6 +406,6 @@ Last session: 2026-07-22T16:15:24.164Z
 | Phase 68 P08 | 20min | 2 tasks | 4 files |
 | Phase 68 P06 | 12min | 3 tasks | 7 files |
 | Phase 68 P07 | 15min | 1 tasks | 2 files |
-| Phase 69 P01 | 7min | 2 tasks | 6 files |
-| Phase 69 P02 | 13min | 2 tasks | 3 files |
-| Phase 69 P03 | 3min | 2 tasks | 2 files |
+| Phase 73 P01 | 7min | 2 tasks | 6 files |
+| Phase 73 P02 | 13min | 2 tasks | 3 files |
+| Phase 73 P03 | 3min | 2 tasks | 2 files |

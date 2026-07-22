@@ -1,4 +1,4 @@
-# Phase 69: proto-design-variants - Research
+# Phase 73: proto-design-variants - Research
 
 **Researched:** 2026-07-22
 **Domain:** Throwaway marketing branding UI under Next.js 16 `app/proto/` (Preview-gated, `noindex`)
@@ -8,15 +8,15 @@
 ## User Constraints (from CONTEXT.md)
 
 ### Locked Decisions
-- **D-01:** Primary direction is **A + touch of B** — “Dashboard as manifesto” (real `/dashboard/overview` screenshot as dominant visual plane) combined with editorial marketing typography and quiet atmosphere on the proto surface. Not pure lifestyle editorial; not pure app-chrome clone. — **Reversibility:** costly — Phase 71 promotes the winner into `components/marketing/*`; changing direction after promotion rewrites production marketing UI.
+- **D-01:** Primary direction is **A + touch of B** — “Dashboard as manifesto” (real `/dashboard/overview` screenshot as dominant visual plane) combined with editorial marketing typography and quiet atmosphere on the proto surface. Not pure lifestyle editorial; not pure app-chrome clone. — **Reversibility:** costly — Phase 75 promotes the winner into `components/marketing/*`; changing direction after promotion rewrites production marketing UI.
 - **D-02:** First viewport composition: brand (Sparter) as hero-level signal + one outcome headline + one short import-first supporting line + CTA group (primary Registrati, secondary Entra) + one dominant product visual. No cards, no stat strips, no floating badges/overlays on the hero media, no Pricing.
-- **D-03:** Below the fold (still in scope for the proto homepage): two short benefit blocks + closing CTA. Not a full feature dump. “Come funziona” page content is **out of this phase** (Phase 71).
+- **D-03:** Below the fold (still in scope for the proto homepage): two short benefit blocks + closing CTA. Not a full feature dump. “Come funziona” page content is **out of this phase** (Phase 75).
 - **D-04:** Positioning copy is import-first / privacy-aligned (e.g. estratti file, non “collega la banca”). Italian UI copy. Real product screenshot preferred over stock/illustration.
 - **D-05:** Single hub route with `?variant=` search param + floating bottom switcher (prototype skill UI pattern), not three disconnected URLs as the primary compare UX. Suggested path: `/proto/branding` (variants A/B/C via `?variant=a|b|c`). Separate `/proto/branding-a` style routes are optional aliases only if needed for share links — hub+switcher is the review surface. — **Reversibility:** reversible
 - **D-06:** Ship **three** structurally different variants inside the A+B frame (layout/hierarchy/visual weight differ — not three color tweaks). Cap at 3.
-- **D-07:** Record the PO pick in `app/proto/branding/NOTES.md` (same ritual as historical overview proto Notes): winning variant id, what to keep/steal from losers, explicit “do not ship” notes. That file is the handoff artifact for Phase 71. Updating REQUIREMENTS checkboxes happens at phase verification / milestone tracking — NOTES.md is the design-lock source of truth. — **Reversibility:** reversible
+- **D-07:** Record the PO pick in `app/proto/branding/NOTES.md` (same ritual as historical overview proto Notes): winning variant id, what to keep/steal from losers, explicit “do not ship” notes. That file is the handoff artifact for Phase 75. Updating REQUIREMENTS checkboxes happens at phase verification / milestone tracking — NOTES.md is the design-lock source of truth. — **Reversibility:** reversible
 - **D-08:** Marketing proto may use typography distinct from app Geist for editorial feel; reuse Tailwind tokens / shadcn Button where it speeds the proto. Avoid purple-on-white / purple-indigo gradients, warm-cream+terracotta serif cliché, broadsheet hairline layout, glow effects, emoji clusters.
-- **D-09:** Proto stays throwaway: no tests required beyond runnable pages; no production `(public)` components extraction in this phase (extraction is Phase 71). Keep existing `app/proto/layout.tsx` gate (`force-dynamic`, `notFound` without `PROTOTYPES_ENABLED`, robots noindex).
+- **D-09:** Proto stays throwaway: no tests required beyond runnable pages; no production `(public)` components extraction in this phase (extraction is Phase 75). Keep existing `app/proto/layout.tsx` gate (`force-dynamic`, `notFound` without `PROTOTYPES_ENABLED`, robots noindex).
 
 ### Claude's Discretion
 - Exact three structural axes within A+B (e.g. screenshot-dominant vs split vs type-led-with-shot-below) — planner/executor invent radical differences; user did not prescribe axes beyond A+B.
@@ -25,10 +25,10 @@
 - Switcher chrome styling (must be clearly “proto tool”, not part of the design under review).
 
 ### Deferred Ideas (OUT OF SCOPE)
-- `(public)` layout, proxy allowlist for `/`, `/how-it-works`, `/privacy`, `/terms` — Phase 70
-- Production homepage + Come funziona + `components/marketing/*` extraction — Phase 71
-- Legal MDX pages — Phase 72
-- SEO/sitemap/robots + session-aware header + sign-out → `/` — Phase 73
+- `(public)` layout, proxy allowlist for `/`, `/how-it-works`, `/privacy`, `/terms` — Phase 74
+- Production homepage + Come funziona + `components/marketing/*` extraction — Phase 75
+- Legal MDX pages — Phase 76
+- SEO/sitemap/robots + session-aware header + sign-out → `/` — Phase 77
 - Pricing, blog, analytics/CMP, video hero, English locale — BRAND-F* / out of scope
 - Optional `motion` library — only if CSS/`tw-animate-css` insufficient after proto (research deferred)
 </user_constraints>
@@ -39,12 +39,12 @@
 | ID | Description | Research Support |
 |----|-------------|------------------|
 | BRAND-01 | Visitor on Vercel Preview can compare 2–3 branding UI variants under `app/proto/` (throwaway, `noindex`, `PROTOTYPES_ENABLED`-gated) | Hub `/proto/branding` + `?variant=` + floating switcher; reuse existing proto layout gate; three structural variants A/B/C |
-| BRAND-02 | One proto variant is selected as the production design direction before shipping `(public)` page UI | `NOTES.md` winner ritual (historical overview pattern); handoff artifact for Phase 71 — not REQUIREMENTS checkbox as SoT |
+| BRAND-02 | One proto variant is selected as the production design direction before shipping `(public)` page UI | `NOTES.md` winner ritual (historical overview pattern); handoff artifact for Phase 75 — not REQUIREMENTS checkbox as SoT |
 </phase_requirements>
 
 ## Summary
 
-Phase 69 is a **design-lock sandbox**, not production marketing. Infrastructure already exists: `app/proto/layout.tsx` gates on `PROTOTYPES_ENABLED`, exports `robots: noindex`, forces dynamic rendering; `proxy.ts` already skips session for `/proto/*`. Historical overview/table-toolbar protos were deleted after PO lock — only the layout remains. Rebuild branding variants on the **hub + `?variant=` + floating switcher** pattern from `.claude/skills/prototype/UI.md` and the recovered overview switcher (`cbafe29`), **overriding** older v2.8 research that suggested separate `/proto/branding-{a,b,c}` routes.
+Phase 73 is a **design-lock sandbox**, not production marketing. Infrastructure already exists: `app/proto/layout.tsx` gates on `PROTOTYPES_ENABLED`, exports `robots: noindex`, forces dynamic rendering; `proxy.ts` already skips session for `/proto/*`. Historical overview/table-toolbar protos were deleted after PO lock — only the layout remains. Rebuild branding variants on the **hub + `?variant=` + floating switcher** pattern from `.claude/skills/prototype/UI.md` and the recovered overview switcher (`cbafe29`), **overriding** older v2.8 research that suggested separate `/proto/branding-{a,b,c}` routes.
 
 No new npm packages. Reuse Next.js 16.2.4, Tailwind 4 tokens, shadcn `Button`, `next/font` for a marketing display face scoped to the branding subtree, `next/image` for a dashboard screenshot (or labeled placeholder). Primary planner risk is **scope creep into `(public)`** and **layout padding** (`p-4 md:p-6` on proto `<main>`) which breaks full-bleed hero composition — fix that for branding before painting variants.
 
@@ -59,7 +59,7 @@ No new npm packages. Reuse Next.js 16.2.4, Tailwind 4 tokens, shadcn `Button`, `
 | Variant selection (`?variant=`) | Frontend Server (SSR) | Browser / Client | Page awaits `searchParams`; switcher updates URL via `router.replace` |
 | Branding UI variants | Browser / Client + SSR | CDN / Static | Mostly static RSC markup; switcher is client-only chrome |
 | Screenshot / placeholder asset | CDN / Static | — | Static import or `public/` / colocated asset; no R2 |
-| Winner lock (NOTES.md) | — (docs artifact) | — | Human PO write-up; Phase 71 consumes it |
+| Winner lock (NOTES.md) | — (docs artifact) | — | Human PO write-up; Phase 75 consumes it |
 | Auth CTAs (`/register`, `/login`) | Frontend Server | — | Plain `Link` to existing auth routes; no session logic in proto |
 
 ## Project Constraints (from .cursor/rules/)
@@ -99,7 +99,7 @@ No `.cursor/rules/` directory present in this workspace at research time. Projec
 **Installation:**
 
 ```bash
-# None — no new packages for Phase 69
+# None — no new packages for Phase 73
 ```
 
 **Version verification:** `next@16.2.4` in package.json (npm registry latest `16.2.11`); `tw-animate-css@^1.4.0` (registry `1.4.0`). [VERIFIED: npm registry / package.json]
@@ -141,7 +141,7 @@ Stakeholder browser (Vercel Preview URL)
                       └── router.replace(?variant=…) + ←/→ keys
                 │
                 ▼
-        NOTES.md (human) ──► Phase 71 promotes winner → components/marketing/*
+        NOTES.md (human) ──► Phase 75 promotes winner → components/marketing/*
 ```
 
 Graph note: `.planning/graphs/graph.json` exists but is **stale** (~870h / 1508 commits behind) — treat graph relationships as approximate; graph queries for proto/branding returned empty. [VERIFIED: gsd graphify status]
@@ -223,13 +223,13 @@ Avoid D-08 clichés: no purple gradients, no warm-cream+terracotta Playfair-styl
 
 ### Anti-Patterns to Avoid
 
-- **Shipping `(public)` or expanding `PUBLIC_ROUTES`:** Phase 70. Proto already public via `/proto` prefix.
+- **Shipping `(public)` or expanding `PUBLIC_ROUTES`:** Phase 74. Proto already public via `/proto` prefix.
 - **Three color themes of one layout:** Violates D-06 / prototype UI skill — structural axes required.
 - **Hiding switcher with `NODE_ENV !== 'production'`:** Vercel Preview runs `NODE_ENV=production`; would hide the review tool. Gate is already `PROTOTYPES_ENABLED`. [VERIFIED: historical switcher @ cbafe29 always visible; skill guidance conflicts with Sparter Preview]
 - **Copying proto `<main className="… p-4">` into production later:** Pitfall 8 / ARCHITECTURE — promote components, not proto shell.
 - **Pricing / Pro tier / bank-linking claims in hero:** Pitfall 15 + D-04.
-- **Come funziona page content:** Phase 71 (D-03).
-- **Extracting `components/marketing/*` now:** Phase 71 (D-09).
+- **Come funziona page content:** Phase 75 (D-03).
+- **Extracting `components/marketing/*` now:** Phase 75 (D-09).
 
 ## Don't Hand-Roll
 
@@ -271,7 +271,7 @@ All three: Italian import-first copy; CTAs Registrati (primary) / Entra (seconda
 **Warning signs:** Switcher works locally (`next dev`) but missing on Vercel Preview URL.
 
 ### Pitfall 3: Variants differ only by color/copy
-**What goes wrong:** PO cannot lock a direction; Phase 71 thrash.  
+**What goes wrong:** PO cannot lock a direction; Phase 75 thrash.  
 **Why it happens:** Fast theming instead of layout axes.  
 **How to avoid:** Enforce table of structural axes; if two look alike, redo one.  
 **Warning signs:** Switching variants changes hue but not scroll silhouette.
@@ -283,7 +283,7 @@ All three: Italian import-first copy; CTAs Registrati (primary) / Entra (seconda
 **Warning signs:** “Collega la banca”, “Piano Pro”, €/mese in hero.
 
 ### Pitfall 5: Scope leak into `(public)`
-**What goes wrong:** Partial Phase 70/71 work lands early; proxy/SEO incomplete.  
+**What goes wrong:** Partial Phase 74/71 work lands early; proxy/SEO incomplete.  
 **Why it happens:** Temptation to “just put the winner on `/`”.  
 **How to avoid:** Hard stop at `app/proto/branding/**` + NOTES.md; no `app/(public)/`, no `PUBLIC_ROUTES` edits.  
 **Warning signs:** Diff touches `proxy.ts` allowlist beyond comments, or adds `app/(public)`.
@@ -291,8 +291,8 @@ All three: Italian import-first copy; CTAs Registrati (primary) / Entra (seconda
 ### Pitfall 6: Proto confused with production later
 **What goes wrong:** Duplicate content / unfinished UX indexed.  
 **Why it happens:** Copying proto page into `(public)` wholesale.  
-**How to avoid:** Keep noindex + Preview gate; Phase 71 extracts components. Verify Production `/proto/branding` → 404.  
-**Warning signs:** Proto paths in sitemap (Phase 73 concern, but don’t add them now).
+**How to avoid:** Keep noindex + Preview gate; Phase 75 extracts components. Verify Production `/proto/branding` → 404.  
+**Warning signs:** Proto paths in sitemap (Phase 77 concern, but don’t add them now).
 
 ## Code Examples
 
@@ -412,7 +412,7 @@ export function CtaGroup() {
 ```markdown
 # PROTOTYPE — branding variants · NOTES
 
-> Throwaway. Design-lock source of truth for Phase 71. Delete/archive after promotion.
+> Throwaway. Design-lock source of truth for Phase 75. Delete/archive after promotion.
 
 ## Domanda
 Quale direzione A+B diventa la homepage di produzione?
@@ -545,7 +545,7 @@ Step 2.6: external deps are Node/Yarn/env only — no Docker/Redis/ffmpeg requir
 
 - `app/proto/layout.tsx` — env gate, `force-dynamic`, noindex [VERIFIED: codebase]
 - `proxy.ts` — `/proto` public prefix [VERIFIED: codebase]
-- `.planning/phases/69-proto-design-variants/69-CONTEXT.md` — locked decisions D-01…D-09
+- `.planning/phases/73-proto-design-variants/73-CONTEXT.md` — locked decisions D-01…D-09
 - `.planning/REQUIREMENTS.md` — BRAND-01, BRAND-02
 - `.planning/research/{SUMMARY,ARCHITECTURE,FEATURES,PITFALLS}.md` — v2.8 marketing research (hub route overridden by CONTEXT)
 - Historical proto @ `cbafe29` / NOTES deleted in `b89380d` — switcher + verdict ritual [VERIFIED: git]

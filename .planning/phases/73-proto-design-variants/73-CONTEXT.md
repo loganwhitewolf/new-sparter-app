@@ -1,4 +1,4 @@
-# Phase 69: proto-design-variants - Context
+# Phase 73: proto-design-variants - Context
 
 **Gathered:** 2026-07-22
 **Status:** Ready for planning
@@ -16,9 +16,9 @@ This phase does **not** implement `(public)` layout, proxy allowlist expansion f
 ## Implementation Decisions
 
 ### Design direction (locked)
-- **D-01:** Primary direction is **A + touch of B** — “Dashboard as manifesto” (real `/dashboard/overview` screenshot as dominant visual plane) combined with editorial marketing typography and quiet atmosphere on the proto surface. Not pure lifestyle editorial; not pure app-chrome clone. — **Reversibility:** costly — Phase 71 promotes the winner into `components/marketing/*`; changing direction after promotion rewrites production marketing UI.
+- **D-01:** Primary direction is **A + touch of B** — “Dashboard as manifesto” (real `/dashboard/overview` screenshot as dominant visual plane) combined with editorial marketing typography and quiet atmosphere on the proto surface. Not pure lifestyle editorial; not pure app-chrome clone. — **Reversibility:** costly — Phase 75 promotes the winner into `components/marketing/*`; changing direction after promotion rewrites production marketing UI.
 - **D-02:** First viewport composition: brand (Sparter) as hero-level signal + one outcome headline + one short import-first supporting line + CTA group (primary Registrati, secondary Entra) + one dominant product visual. No cards, no stat strips, no floating badges/overlays on the hero media, no Pricing.
-- **D-03:** Below the fold (still in scope for the proto homepage): two short benefit blocks + closing CTA. Not a full feature dump. “Come funziona” page content is **out of this phase** (Phase 71).
+- **D-03:** Below the fold (still in scope for the proto homepage): two short benefit blocks + closing CTA. Not a full feature dump. “Come funziona” page content is **out of this phase** (Phase 75).
 - **D-04:** Positioning copy is import-first / privacy-aligned (e.g. estratti file, non “collega la banca”). Italian UI copy. Real product screenshot preferred over stock/illustration.
 
 ### Comparison UX
@@ -26,11 +26,11 @@ This phase does **not** implement `(public)` layout, proxy allowlist expansion f
 - **D-06:** Ship **three** structurally different variants inside the A+B frame (layout/hierarchy/visual weight differ — not three color tweaks). Cap at 3.
 
 ### Winner lock (BRAND-02)
-- **D-07:** Record the PO pick in `app/proto/branding/NOTES.md` (same ritual as historical overview proto Notes): winning variant id, what to keep/steal from losers, explicit “do not ship” notes. That file is the handoff artifact for Phase 71. Updating REQUIREMENTS checkboxes happens at phase verification / milestone tracking — NOTES.md is the design-lock source of truth. — **Reversibility:** reversible
+- **D-07:** Record the PO pick in `app/proto/branding/NOTES.md` (same ritual as historical overview proto Notes): winning variant id, what to keep/steal from losers, explicit “do not ship” notes. That file is the handoff artifact for Phase 75. Updating REQUIREMENTS checkboxes happens at phase verification / milestone tracking — NOTES.md is the design-lock source of truth. — **Reversibility:** reversible
 
 ### Visual / brand constraints
 - **D-08:** Marketing proto may use typography distinct from app Geist for editorial feel; reuse Tailwind tokens / shadcn Button where it speeds the proto. Avoid purple-on-white / purple-indigo gradients, warm-cream+terracotta serif cliché, broadsheet hairline layout, glow effects, emoji clusters.
-- **D-09:** Proto stays throwaway: no tests required beyond runnable pages; no production `(public)` components extraction in this phase (extraction is Phase 71). Keep existing `app/proto/layout.tsx` gate (`force-dynamic`, `notFound` without `PROTOTYPES_ENABLED`, robots noindex).
+- **D-09:** Proto stays throwaway: no tests required beyond runnable pages; no production `(public)` components extraction in this phase (extraction is Phase 75). Keep existing `app/proto/layout.tsx` gate (`force-dynamic`, `notFound` without `PROTOTYPES_ENABLED`, robots noindex).
 
 ### Claude's Discretion
 - Exact three structural axes within A+B (e.g. screenshot-dominant vs split vs type-led-with-shot-below) — planner/executor invent radical differences; user did not prescribe axes beyond A+B.
@@ -47,9 +47,9 @@ This phase does **not** implement `(public)` layout, proxy allowlist expansion f
 
 ### Requirements & roadmap
 - `.planning/REQUIREMENTS.md` — BRAND-01, BRAND-02; deferred BRAND-F*; out of scope (Pricing, bank linking, Italian slugs)
-- `.planning/ROADMAP.md` — Phase 69 goal; Phase 70+ boundary (do not implement public layout/proxy here)
+- `.planning/ROADMAP.md` — Phase 73 goal; Phase 74+ boundary (do not implement public layout/proxy here)
 - `.planning/PROJECT.md` — Current Milestone v2.8: proto variants before production pages
-- `.planning/STATE.md` — Active focus Phase 69
+- `.planning/STATE.md` — Active focus Phase 73
 
 ### Research (v2.8)
 - `.planning/research/SUMMARY.md` — Proto-first phase order; stack; pitfalls overview
@@ -101,10 +101,10 @@ This phase does **not** implement `(public)` layout, proxy allowlist expansion f
 <deferred>
 ## Deferred Ideas
 
-- `(public)` layout, proxy allowlist for `/`, `/how-it-works`, `/privacy`, `/terms` — Phase 70
-- Production homepage + Come funziona + `components/marketing/*` extraction — Phase 71
-- Legal MDX pages — Phase 72
-- SEO/sitemap/robots + session-aware header + sign-out → `/` — Phase 73
+- `(public)` layout, proxy allowlist for `/`, `/how-it-works`, `/privacy`, `/terms` — Phase 74
+- Production homepage + Come funziona + `components/marketing/*` extraction — Phase 75
+- Legal MDX pages — Phase 76
+- SEO/sitemap/robots + session-aware header + sign-out → `/` — Phase 77
 - Pricing, blog, analytics/CMP, video hero, English locale — BRAND-F* / out of scope
 - Optional `motion` library — only if CSS/`tw-animate-css` insufficient after proto (research deferred)
 
@@ -114,5 +114,5 @@ None — discussion stayed within phase scope for deliverables; deferred items a
 
 ---
 
-*Phase: 69-proto-design-variants*
+*Phase: 73-proto-design-variants*
 *Context gathered: 2026-07-22*

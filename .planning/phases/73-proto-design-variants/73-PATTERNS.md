@@ -1,4 +1,4 @@
-# Phase 69: proto-design-variants - Pattern Map
+# Phase 73: proto-design-variants - Pattern Map
 
 **Mapped:** 2026-07-22
 **Files analyzed:** 9
@@ -260,7 +260,7 @@ Apply `brandingDisplay.variable` on the branding wrapper in `page.tsx` only. Roo
 ```markdown
 # PROTOTYPE — branding variants · NOTES
 
-> Throwaway. Design-lock source of truth for Phase 71. Delete/archive after promotion.
+> Throwaway. Design-lock source of truth for Phase 75. Delete/archive after promotion.
 
 ## Domanda
 Quale direzione A+B diventa la homepage di produzione?
@@ -342,7 +342,7 @@ const isPublicRoute = PUBLIC_ROUTES.includes(path) || path.startsWith('/proto')
 **Apply to:** all branding source files  
 - Top comment: `// PROTOTYPE — wipe me.` / NOTES “Throwaway” banner  
 - No unit/e2e required (D-09); gate on `tsc`/`lint` + manual Preview checklist  
-- Do not extract `components/marketing/*` this phase (Phase 71)
+- Do not extract `components/marketing/*` this phase (Phase 75)
 
 ### Full-bleed vs padded shell
 **Source:** RESEARCH Pitfall 1 + current `layout.tsx` line 21  

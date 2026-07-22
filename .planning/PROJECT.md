@@ -15,7 +15,7 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v2.6 (Phases 1–68) complete; v2.8 Public Branding Site is active (v2.7 reserved for parallel tags work). **Phase 69 complete** — throwaway `/proto/branding` compare hub with three structural A+touch-of-B variants; PO locked **Winner = c (Type-led stack)** in `app/proto/branding/NOTES.md` (BRAND-01, BRAND-02). Next: Phase 70 public layout + proxy allowlist. The app now has:
+All milestones M001–v2.6 (Phases 1–68) complete; v2.8 Public Branding Site is active (v2.7 Tag Dedicated View shipped on main as phases 69–72; branding is phases 73–77). **Phase 73 complete** — throwaway `/proto/branding` compare hub with three structural A+touch-of-B variants; PO locked **Winner = c (Type-led stack)** in `app/proto/branding/NOTES.md` (BRAND-01, BRAND-02). Next: Phase 74 public layout + proxy allowlist. The app now has:
 - Expense Groups + Transaction Tags (v2.6): bulk-merge same-subcategory expenses into titled Expense Groups (ADR 0017 — grouping entity above intact Expenses, no physical merge; rendered as one row everywhere, full lifecycle recategorize/add/remove/dissolve with dashboard totals structurally unchanged); a curated Transaction Tags axis orthogonal to categories (create/edit/archive, never delete; bulk-assign; date-range suggestions on create + each import); a global dashboard tag filter threaded through every widget (EXISTS predicate, totals reconcile), a `/dashboard/tags` section with independent per-tag all-time totals, and a month→filtered-transactions click-through from the movers/deviations rows
 - Uniform detail pages (v2.5): `/transactions/[id]`, `/expenses/[id]`, `/import/[fileId]` as the single place to view and edit everything editable about each entity, with pencil-inline editing, cross-references between entities, atomic derived-field reconciliation, and a pair-coherence guard that blocks amount edits breaking a refund pair
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
@@ -44,10 +44,10 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 - Minimal legal pages: Privacy + Termini (no Pricing — offer not defined yet)
 - Smart root: anonymous visitors see marketing; authenticated users go to dashboard
 - Dedicated public route-group layout (separate from `(app)` / `(auth)`)
-- Phase 69 done: 3 UI variants in `app/proto/branding` → Winner **c** (type-led stack) locked in NOTES.md → implement production pages from Phase 70+
+- Phase 73 done: 3 UI variants in `app/proto/branding` → Winner **c** (type-led stack) locked in NOTES.md → implement production pages from Phase 74+
 
 **Constraints:**
-- v2.7 reserved for parallel tags milestone (other agent); this work is v2.8
+- v2.7 Tag Dedicated View shipped on main as phases 69–72; branding renumbered to 73–77 (other agent); this work is v2.8
 - Operator deploy R038/R039/R041 remains pending — this milestone is the public façade, not the infra go-live
 
 ## Last Shipped Milestone: v2.6 — Expenses & Transactions Refinement (shipped 2026-07-22, tag v2.6)
@@ -342,4 +342,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-22 — Phase 69 complete (Winner = c type-led stack); next Phase 70*
+*Last updated: 2026-07-22 — Phase 73 complete (Winner = c type-led stack); next Phase 74*
