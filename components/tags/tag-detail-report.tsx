@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import type { TagDetail } from '@/lib/dal/tags'
+import type { TagBreakdownItem, TagDetail } from '@/lib/dal/tags'
 
 type Props = {
   detail: TagDetail
@@ -48,10 +48,41 @@ function KpiCard({ label, value, tone }: { label: string; value: string; tone: s
   )
 }
 
-// Presentational server component (D4 "report verticale" body, minus the per-category breakdown
-// added in Plan 69-02): 3 KPI cards → included-transaction count → date-descending tx list.
+// One breakdown row: category name + signed amount, over a CSS bar whose width encodes |total| /
+// max|total| and whose color follows the sign (--total-in / --total-out). No charting dependency
+// (D4, CONTEXT out-of-scope). `total` is signed, so `>= 0` picks the inflow color.
+function CategoryBar({ item, maxAbs }: { item: TagBreakdownItem; maxAbs: number }) {
+  const value = Number(item.total)
+  const widthPct = (Math.abs(value) / maxAbs) * 100
+  const barColor = value >= 0 ? 'var(--total-in)' : 'var(--total-out)'
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span className="truncate font-medium">{item.categoryName}</span>
+        <span className={cn('shrink-0 tabular-nums', toneClass(item.total))}>
+          {formatSignedAmount(item.total)}
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full"
+          style={{ width: `${widthPct}%`, backgroundColor: barColor }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// Presentational server component (D4 "report verticale" body): 3 KPI cards → included-transaction
+// count → per-category breakdown (CSS bars) → date-descending tx list.
 // Pure formatting over props — deliberately NOT a client component.
 export function TagDetailReport({ detail }: Props) {
+  // Bar scale: the widest bar (100%) is the category with the largest |total|. Guard with 1 so an
+  // all-zero (or empty) breakdown never divides by zero. Number() is presentation-only — the
+  // signed Decimal reconciliation already happened in buildTagDetailData (CLAUDE.md money rule).
+  const maxAbs = Math.max(...detail.breakdown.map((b) => Math.abs(Number(b.total))), 1)
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -73,6 +104,19 @@ export function TagDetailReport({ detail }: Props) {
       </div>
 
       <p className="text-sm text-muted-foreground">{transactionCountLabel(detail.count)}</p>
+
+      {detail.breakdown.length > 0 && (
+        <Card className="gap-3 py-4">
+          <CardHeader className="px-4">
+            <CardTitle className="text-sm font-medium">Per categoria</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 px-4">
+            {detail.breakdown.map((item) => (
+              <CategoryBar key={item.categoryName} item={item} maxAbs={maxAbs} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {detail.transactions.length === 0 ? (
         <p className="text-sm text-muted-foreground">

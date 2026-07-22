@@ -33,6 +33,10 @@ const fixture: TagDetail = {
       amount: '-450.50',
     },
   ],
+  breakdown: [
+    { categoryName: 'Reddito', total: '1200.00', count: 1 },
+    { categoryName: 'Ristorazione', total: '-450.50', count: 1 },
+  ],
 }
 
 describe('TagDetailReport (populated fixture)', () => {
@@ -56,6 +60,20 @@ describe('TagDetailReport (populated fixture)', () => {
   it('renders the it-IT-formatted signed net (TAG-07)', () => {
     expect(html).toContain(amountFormatter.format(749.5))
   })
+
+  it('renders the "Per categoria" breakdown card with both category names (TAG-09)', () => {
+    expect(html).toContain('Per categoria')
+    expect(html).toContain('Reddito')
+    expect(html).toContain('Ristorazione')
+  })
+
+  it('renders both signed breakdown amounts, sign-colored (TAG-09)', () => {
+    expect(html).toContain(amountFormatter.format(1200))
+    expect(html).toContain(amountFormatter.format(-450.5))
+    // Sign-driven bar/tone colors: the positive category uses --total-in, the negative --total-out.
+    expect(html).toContain('var(--total-in)')
+    expect(html).toContain('var(--total-out)')
+  })
 })
 
 describe('TagDetailReport (empty transactions)', () => {
@@ -65,6 +83,7 @@ describe('TagDetailReport (empty transactions)', () => {
     net: '0.00',
     count: 0,
     transactions: [],
+    breakdown: [],
   }
   const html = renderToStaticMarkup(createElement(TagDetailReport, { detail: empty }))
 
@@ -74,5 +93,9 @@ describe('TagDetailReport (empty transactions)', () => {
 
   it('renders the plural "0 transazioni incluse" count line', () => {
     expect(html).toContain('0 transazioni incluse')
+  })
+
+  it('renders no "Per categoria" card when the breakdown is empty', () => {
+    expect(html).not.toContain('Per categoria')
   })
 })
