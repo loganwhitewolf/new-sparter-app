@@ -19,11 +19,11 @@
 - ✅ **v2.4: Standalone Expense** — Phase 61 (shipped 2026-07-01) · [archive](milestones/v2.4-ROADMAP.md)
 - ✅ **v2.5: Detail Pages** — Phases 62–64 (shipped 2026-07-07, tag v2.5) · [archive](milestones/v2.5-ROADMAP.md)
 - ✅ **v2.6: Expenses & Transactions Refinement** — Phases 65–68 (shipped 2026-07-22, tag v2.6) · [archive](milestones/v2.6-ROADMAP.md)
-- 🚧 **v2.7: Tag Dedicated View** — Phases 69–71 (in progress) — dedicated all-time per-tag page + `?tag=` dashboard-filter removal
+- 🚧 **v2.7: Tag Dedicated View** — Phases 69–72 (in progress) — dedicated all-time per-tag page + `?tag=` dashboard-filter removal
 
 ## Phases
 
-### v2.7: Tag Dedicated View (Phases 69–71) — IN PROGRESS
+### v2.7: Tag Dedicated View (Phases 69–72) — IN PROGRESS
 
 Make a dedicated per-tag page the canonical, all-time view of a tag (event-shaped),
 replacing the period-scoped `?tag=` dashboard filter so a tag shows one reconciled set of
@@ -35,7 +35,8 @@ Layout: Variant A "report verticale" (prototype `proto/tag-view`).
 
 - [x] **Phase 69: tag-dedicated-page** - Dedicated per-tag mini-dashboard (Variant A) with edit/archive in place and entry points from /tags and /dashboard/tags (TAG-06, TAG-07, TAG-08, TAG-09, TAG-10, TAG-11, TAG-12)
 - [ ] **Phase 70: dashboard-tag-filter-removal** - Remove the period-scoped `?tag=` filter and its wiring from /dashboard/overview and /dashboard/categories (TAG-13)
-- [ ] **Phase 71: transactions-tag-filter-control** - Add a tag filter control to the transactions toolbar, integrated into the unified filter/sort system (TAG-14)
+- [x] **Phase 71: transactions-tag-filter-control** - Add a tag filter control to the transactions toolbar, integrated into the unified filter/sort system (TAG-14)
+- [x] **Phase 72: transactions-tag-indicator** - Inline tag chip on the transaction title line with a hover/tap popover listing the linked tags (TAG-15)
 
 ### Phase 69: tag-dedicated-page
 
@@ -85,7 +86,7 @@ Layout: Variant A "report verticale" (prototype `proto/tag-view`).
 
 **Plans**: 1 plan
 
-- [ ] 71-01-PLAN.md — Tag filter control: add `tag` entry to `transactionsTableConfig`, inject user tags as options in page.tsx, resolve chip label to the tag name (toChip 2nd arg) + human-verify [wave 1]
+- [x] 71-01-PLAN.md — Tag filter control: add `tag` entry to `transactionsTableConfig`, inject user tags as options in page.tsx, resolve chip label to the tag name (toChip 2nd arg) + human-verify [wave 1]
 
 <details>
 <summary>✅ v2.6: Expenses & Transactions Refinement (Phases 65–68) — SHIPPED 2026-07-22 (tag v2.6)</summary>

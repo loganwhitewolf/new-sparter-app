@@ -23,7 +23,11 @@ Requirements for this milestone. Each maps to a roadmap phase. REQ-IDs continue 
 
 ### Transactions Tag Filter
 
-- [ ] **TAG-14**: User can filter the transactions table by tag from the transactions toolbar — a tag control integrated into the existing unified filter/sort system (writes `?tag=`, persisted, shown as an active chip, cleared by clear-all). The `?tag=` URL param, ownership guard, and `getTransactions` `tagId` support already exist; this adds the UI control. (Complements TAG-13: the dashboard loses the tag *analysis* filter, the transactions list gains a tag *navigation* filter.)
+- [x] **TAG-14**: User can filter the transactions table by tag from the transactions toolbar — a tag control integrated into the existing unified filter/sort system (writes `?tag=`, persisted, shown as an active chip, cleared by clear-all). The `?tag=` URL param, ownership guard, and `getTransactions` `tagId` support already exist; this adds the UI control. (Complements TAG-13: the dashboard loses the tag *analysis* filter, the transactions list gains a tag *navigation* filter.)
+
+### Transactions Tag Indicator
+
+- [x] **TAG-15**: In the transactions list, a transaction that carries tags shows an inline tag chip on the same line as its title — after the ellipsis when the title is truncated — and hovering or tapping the chip reveals a small popover listing the linked tags. Replaces the previous wrapping name-chips block (keeps every row one line tall).
 
 ## v2 Requirements (deferred)
 
@@ -55,4 +59,5 @@ Filled at roadmap creation (2026-07-22).
 | TAG-11 | Phase 69 | Complete |
 | TAG-12 | Phase 69 | Complete |
 | TAG-13 | Phase 70 | Pending |
-| TAG-14 | Phase 71 | Pending |
+| TAG-14 | Phase 71 | Complete |
+| TAG-15 | Phase 72 | Complete |
