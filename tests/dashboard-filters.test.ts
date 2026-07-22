@@ -5,7 +5,7 @@ import {
   buildDashboardCategoryDetailHref,
   dashboardCategoryDetail,
 } from '@/lib/routes'
-import { parseDashboardFilters } from '@/lib/validations/dashboard'
+import { parseDashboardFilters, parseTagIdParam } from '@/lib/validations/dashboard'
 
 describe('parseDashboardFilters', () => {
   test('uses preset as the canonical period parameter', () => {
@@ -99,6 +99,26 @@ describe('parseDashboardFilters', () => {
   })
 })
 
+describe('parseTagIdParam (68-01)', () => {
+  test('parses a valid positive integer string', () => {
+    expect(parseTagIdParam({ tag: '3' })).toBe(3)
+  })
+
+  test('returns undefined when tag is absent', () => {
+    expect(parseTagIdParam({ tag: undefined })).toBeUndefined()
+  })
+
+  test('returns undefined for non-positive-integer values', () => {
+    expect(parseTagIdParam({ tag: '0' })).toBeUndefined()
+    expect(parseTagIdParam({ tag: '-1' })).toBeUndefined()
+    expect(parseTagIdParam({ tag: 'abc' })).toBeUndefined()
+  })
+
+  test('uses the first array value', () => {
+    expect(parseTagIdParam({ tag: ['7', '9'] })).toBe(7)
+  })
+})
+
 describe('buildDashboardTabHref', () => {
   test('preserves only dashboard filter params across tabs', () => {
     const currentParams = new URLSearchParams({
@@ -125,6 +145,26 @@ describe('buildDashboardTabHref', () => {
     const current = new URLSearchParams({ preset: 'last-3-months', sort: 'amount' })
     expect(buildDashboardTabHref('/dashboard/categories', current)).toBe(
       '/dashboard/categories?preset=last-3-months&sort=amount'
+    )
+  })
+
+  test('forwards ?tag= across Overview <-> Categorie <-> Tag tab switches (68-05)', () => {
+    const current = new URLSearchParams({ tag: '5' })
+
+    expect(buildDashboardTabHref('/dashboard/overview', current)).toBe(
+      '/dashboard/overview?tag=5'
+    )
+    expect(buildDashboardTabHref('/dashboard/categories', current)).toBe(
+      '/dashboard/categories?tag=5'
+    )
+    expect(buildDashboardTabHref('/dashboard/tags', current)).toBe('/dashboard/tags?tag=5')
+  })
+
+  test('omits ?tag= (not empty-string) when absent from the current params', () => {
+    const current = new URLSearchParams({ preset: 'last-3-months' })
+
+    expect(buildDashboardTabHref('/dashboard/tags', current)).toBe(
+      '/dashboard/tags?preset=last-3-months'
     )
   })
 })

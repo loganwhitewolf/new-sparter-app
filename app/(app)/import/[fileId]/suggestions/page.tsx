@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation'
 import { ProceedToImportsCta } from '@/components/import/proceed-to-imports-cta'
 import { SuggestionSection } from '@/components/import/suggestion-section'
+import { TagSuggestionSection } from '@/components/import/tag-suggestion-section'
 import { verifySession } from '@/lib/dal/auth'
 import { getCategories } from '@/lib/dal/categories'
 import { getFileForUser, getPlatformIdForUserFile } from '@/lib/dal/files'
 import { discoverRegexCandidates } from '@/lib/services/regex-discovery'
+import { computeAllTagSuggestions } from '@/lib/services/tag-suggestions'
 
 export default async function SuggestionsPage({
   params,
@@ -24,10 +26,13 @@ export default async function SuggestionsPage({
     notFound()
   }
 
-  // D-04: platform-scoped discovery (not file-scoped) — intentional, consistent with apply path
-  const [discovery, categories] = await Promise.all([
+  // D-04: platform-scoped discovery (not file-scoped) — intentional, consistent with apply path.
+  // D-08b: computeAllTagSuggestions takes only userId — it re-scans every tag's FULL date range
+  // against ALL of the user's transactions on every visit, never scoped to this file/platform.
+  const [discovery, categories, tagSuggestionGroups] = await Promise.all([
     discoverRegexCandidates({ userId, scope: { platformId } }),
     getCategories(),
+    computeAllTagSuggestions({ userId }),
   ])
 
   return (
@@ -54,6 +59,7 @@ export default async function SuggestionsPage({
           fileId={fileId}
         />
       )}
+      <TagSuggestionSection groups={tagSuggestionGroups} />
     </div>
   )
 }

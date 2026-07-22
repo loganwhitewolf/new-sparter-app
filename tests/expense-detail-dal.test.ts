@@ -42,6 +42,17 @@ vi.mock('@/lib/db/schema', () => ({
     transactionCount: 'expense.transactionCount',
     subCategoryId: 'expense.subCategoryId',
     importedFromFileId: 'expense.importedFromFileId',
+    firstTransactionAt: 'expense.firstTransactionAt',
+    lastTransactionAt: 'expense.lastTransactionAt',
+  },
+  expenseGroup: {
+    id: 'expenseGroup.id',
+    title: 'expenseGroup.title',
+    subCategoryId: 'expenseGroup.subCategoryId',
+  },
+  expenseGroupMembership: {
+    groupId: 'expenseGroupMembership.groupId',
+    expenseId: 'expenseGroupMembership.expenseId',
   },
   transaction: {
     id: 'transaction.id',
@@ -145,10 +156,15 @@ function makeExpenseRow(overrides: Record<string, unknown> = {}) {
     subCategoryName: 'Supermercato',
     categoryName: 'Casa',
     categorySlug: 'casa',
+    categoryType: 'out',
     platformName: 'Intesa SP',
     fileId: 'file-1',
     displayName: 'estratto-conto.csv',
     originalName: 'estratto-conto-raw.csv',
+    firstTransactionAt: new Date('2026-01-05'),
+    lastTransactionAt: new Date('2026-01-10'),
+    groupId: null,
+    groupTitle: null,
     ...overrides,
   }
 }
@@ -194,6 +210,34 @@ describe('getExpenseForDetail', () => {
     expect(result?.id).toBe('exp-1')
     expect(result?.sourceFile).toEqual({ id: 'file-1', name: 'estratto-conto.csv' })
     expect(result?.transactions).toEqual(txRows)
+  })
+
+  it('passes groupId/groupTitle straight through when the expense is a group member (Task 1, GRP-04/GRP-08)', async () => {
+    const expenseRow = makeExpenseRow({ groupId: 5, groupTitle: 'Spesa supermercato' })
+    let callCount = 0
+    mocks.dbSelectChain.mockImplementation(() => {
+      callCount += 1
+      return callCount === 1 ? makeSelectChain([expenseRow]) : makeSelectChain([])
+    })
+
+    const result = await getExpenseForDetail({ userId: 'user-1', id: 'exp-1' })
+
+    expect(result?.groupId).toBe(5)
+    expect(result?.groupTitle).toBe('Spesa supermercato')
+  })
+
+  it('resolves groupId/groupTitle to null when the expense is not a group member', async () => {
+    const expenseRow = makeExpenseRow()
+    let callCount = 0
+    mocks.dbSelectChain.mockImplementation(() => {
+      callCount += 1
+      return callCount === 1 ? makeSelectChain([expenseRow]) : makeSelectChain([])
+    })
+
+    const result = await getExpenseForDetail({ userId: 'user-1', id: 'exp-1' })
+
+    expect(result?.groupId).toBeNull()
+    expect(result?.groupTitle).toBeNull()
   })
 
   it('resolves sourceFile to null when the expense has no linked file', async () => {

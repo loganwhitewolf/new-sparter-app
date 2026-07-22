@@ -2,7 +2,7 @@ import 'server-only'
 
 import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { expense, transaction as transactionTable } from '@/lib/db/schema'
+import { expense, expenseGroupMembership, transaction as transactionTable } from '@/lib/db/schema'
 
 export type DeleteExpensesResult = {
   deletedExpenseIds: string[]
@@ -32,6 +32,21 @@ export async function deleteExpensesWithOptions(input: {
     const expenseIdsToDelete = ownedExpenses.map((row) => row.id)
     if (expenseIdsToDelete.length === 0) {
       return { deletedExpenseIds: [], deletedTransactionIds: [] }
+    }
+
+    // D-03 defense-in-depth: a grouped expense's category/lifecycle is owned by the
+    // group (ADR 0017) — deleting a member directly would silently shrink or orphan
+    // its expense_group via ON DELETE CASCADE with zero warning to the user. Reject
+    // before any delete runs; nothing is written.
+    const groupedMemberships = await tx
+      .select({ expenseId: expenseGroupMembership.expenseId })
+      .from(expenseGroupMembership)
+      .where(inArray(expenseGroupMembership.expenseId, expenseIdsToDelete))
+
+    if (groupedMemberships.length > 0) {
+      throw new Error(
+        'Una o più spese fanno parte di un gruppo: rimuovile dal gruppo prima di eliminarle.',
+      )
     }
 
     let deletedTransactionIds: string[] = []

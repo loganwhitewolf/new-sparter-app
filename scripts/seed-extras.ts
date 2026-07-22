@@ -940,6 +940,61 @@ async function ensureTradeRepublicCsvGlobalFormat(database: Db): Promise<void> {
   )
 }
 
+// Phase 67 TAG-06 (D-11/D-12/D-13): audit the `vacanze` (Viaggi) category so it holds only
+// intrinsically-travel spend. Deactivates the two overlapping subcategories
+// (`attivita-e-intrattenimento`, `cibo-e-bevande`) and, BEFORE deactivating, resets any expense
+// currently linked to either one back to "da categorizzare" (subCategoryId=null, status='1') —
+// never a best-effort auto-remap (D-12: correctness over convenience — the right fine
+// subcategory can't be safely guessed). The lookup select deliberately does NOT filter on
+// isActive, so a second run after deactivation still resolves the two ids and safely re-runs
+// both UPDATEs as 0-row no-ops (idempotent, T-67-05). The `categoryId: 4` filter is deliberate
+// belt-and-suspenders scoping to `vacanze`'s own rows even though the two slugs are already
+// unique system-wide — the three kept siblings (alloggio, trasporto, assicurazione-viaggio)
+// share the SAME parent category but are never touched by this step (T-67-04).
+async function vacanzeAudit(database: Db): Promise<void> {
+  const targets = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(
+      and(
+        inArray(subCategory.slug, ['attivita-e-intrattenimento', 'cibo-e-bevande']),
+        eq(subCategory.categoryId, 4),
+        isNull(subCategory.userId),
+      ),
+    )
+
+  if (targets.length === 0) {
+    console.log(
+      '    vacanze-audit-deactivate-subcategories: target subcategories not found — skipping',
+    )
+    return
+  }
+
+  const targetIds = targets.map((row) => row.id)
+
+  // (1) Reset affected expenses to "da categorizzare" BEFORE deactivating the subcategories —
+  // no expense may ever transiently reference a since-deactivated subcategory (D-12 ordering).
+  const resetResult = await database
+    .update(expense)
+    .set({ subCategoryId: null, status: '1' })
+    .where(inArray(expense.subCategoryId, targetIds))
+  const resetCount = (resetResult as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(
+    `    vacanze-audit-deactivate-subcategories: reset ${resetCount} expenses to da categorizzare`,
+  )
+
+  // (2) Deactivate the two overlapping subcategories (D-11). Must run even when (1) affected 0
+  // rows (empty-edge must-have) — never gated on the reset's row count.
+  const deactivateResult = await database
+    .update(subCategory)
+    .set({ isActive: false })
+    .where(inArray(subCategory.id, targetIds))
+  const deactivateCount = (deactivateResult as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(
+    `    vacanze-audit-deactivate-subcategories: deactivated ${deactivateCount} subcategories`,
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Registry — append new taxonomy migration steps here (not regex patterns — see seed-patterns.ts)
 // ---------------------------------------------------------------------------
@@ -962,6 +1017,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'set-satispay-secondary-description-column', run: setSatispaySecondaryDescriptionColumn },
   { name: 'backfill-truncated-expense-titles', run: backfillTruncatedExpenseTitles },
   { name: 'ensure-trade-republic-csv-global-format', run: ensureTradeRepublicCsvGlobalFormat },
+  { name: 'vacanze-audit-deactivate-subcategories', run: vacanzeAudit },
 ]
 
 export const STEP_NAMES = STEPS.map((step) => step.name)

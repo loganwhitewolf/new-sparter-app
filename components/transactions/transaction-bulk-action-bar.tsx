@@ -7,6 +7,7 @@ type Props = {
   selectedIds: string[]
   canBulkCategorize: boolean
   onBulkCategorize: () => void
+  onBulkAssignTags: () => void
   onBulkDelete: () => void
 }
 
@@ -14,6 +15,7 @@ export function TransactionBulkActionBar({
   selectedIds,
   canBulkCategorize,
   onBulkCategorize,
+  onBulkAssignTags,
   onBulkDelete,
 }: Props) {
   const count = selectedIds.length
@@ -38,6 +40,9 @@ export function TransactionBulkActionBar({
           disabled={!canBulkCategorize}
         >
           Categorizza ({count})
+        </Button>
+        <Button type="button" size="sm" onClick={onBulkAssignTags}>
+          Assegna tag ({count})
         </Button>
         <Button type="button" size="sm" variant="destructive" onClick={onBulkDelete}>
           Elimina ({count})

@@ -52,12 +52,23 @@ describe('seed-extras STEPS registry', () => {
     expect(STEP_NAMES).toContain('backfill-truncated-expense-titles')
   })
 
-  it('registers ensure-trade-republic-csv-global-format LAST (append-only invariant)', () => {
+  it('registers ensure-trade-republic-csv-global-format after backfill-truncated-expense-titles (append-only invariant)', () => {
     expect(STEP_NAMES).toContain('ensure-trade-republic-csv-global-format')
-    expect(STEP_NAMES.indexOf('ensure-trade-republic-csv-global-format')).toBe(STEP_NAMES.length - 1)
-    // Must run after the older last step, never before it (append-only).
+    // No longer necessarily LAST — Phase 67 appends vacanze-audit-deactivate-subcategories
+    // after it. Relative order vs. the older step still holds.
     expect(STEP_NAMES.indexOf('ensure-trade-republic-csv-global-format')).toBeGreaterThan(
       STEP_NAMES.indexOf('backfill-truncated-expense-titles'),
     )
+  })
+
+  it('registers vacanze-audit-deactivate-subcategories LAST (append-only invariant)', () => {
+    expect(STEP_NAMES.indexOf('vacanze-audit-deactivate-subcategories')).toBe(STEP_NAMES.length - 1)
+    expect(STEP_NAMES.indexOf('vacanze-audit-deactivate-subcategories')).toBeGreaterThan(
+      STEP_NAMES.indexOf('ensure-trade-republic-csv-global-format'),
+    )
+  })
+
+  it('D-13: registers vacanze-audit-deactivate-subcategories (TAG-06 additive taxonomy step)', () => {
+    expect(STEP_NAMES).toContain('vacanze-audit-deactivate-subcategories')
   })
 })

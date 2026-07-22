@@ -108,6 +108,14 @@ vi.mock("@/lib/db/schema", () => ({
     title: "expense.title",
     userId: "expense.userId",
   },
+  expenseGroup: {
+    id: "expenseGroup.id",
+    title: "expenseGroup.title",
+  },
+  expenseGroupMembership: {
+    groupId: "expenseGroupMembership.groupId",
+    expenseId: "expenseGroupMembership.expenseId",
+  },
   file: {
     id: "file.id",
     displayName: "file.displayName",
@@ -339,11 +347,25 @@ describe("transaction DAL query helpers", () => {
       op: "sql",
     });
     expect(transactionListSelect.fileName).toMatchObject({ op: "sql" });
+    // Task 3 (65-03, GRP-08): group-title display precedence fields.
+    expect(transactionListSelect.groupId).toBe("expenseGroupMembership.groupId");
+    expect(transactionListSelect.groupTitle).toBe("expenseGroup.title");
     expect(transactionPlatformSelect).toEqual({
       id: "platform.id",
       name: "platform.name",
       slug: "platform.slug",
     });
+  });
+
+  it("resolves groupId/groupTitle to null for the non-grouped majority — zero regression (Task 3, GRP-08)", async () => {
+    // groupId/groupTitle participate in display only, via a LEFT JOIN that is null
+    // for any transaction whose expense is not an Expense Group member — identical
+    // query cost and shape to every other existing field on an ungrouped row.
+    await getTransactions();
+
+    expect(mocks.selectedShapes[0]).toBe(transactionListSelect);
+    // Adding the join chain does not change buildTransactionOrderBy's default sort.
+    expect(mocks.orderByArgs[0]).toEqual({ op: "desc", column: "transaction.occurredAt" });
   });
 
   it("verifies the session, scopes transaction rows to the user and file owner, and applies filters safely", async () => {
@@ -654,7 +676,7 @@ describe("transaction DAL query helpers", () => {
     expect(amountMaxCondition!.values).toContain("200");
   });
 
-  it("name filter uses substring ILIKE on description, customTitle, and expense title", async () => {
+  it("name filter uses substring ILIKE on description, customTitle, expense title, and expense group title", async () => {
     await getTransactions({ name: "esselunga" });
 
     const where = mocks.whereArgs[0] as { op: string; args: unknown[] };
@@ -678,6 +700,7 @@ describe("transaction DAL query helpers", () => {
         { op: "ilike", left: "transaction.description", right: "%esselunga%" },
         { op: "ilike", left: "transaction.customTitle", right: "%esselunga%" },
         { op: "ilike", left: "expense.title", right: "%esselunga%" },
+        { op: "ilike", left: "expenseGroup.title", right: "%esselunga%" },
       ]),
     );
   });
@@ -702,6 +725,41 @@ describe("transaction DAL query helpers", () => {
         { op: "isNotNull", column: "expense.subCategoryId" },
       ]),
     );
+  });
+
+  it("narrows via the tagScopedTransactions EXISTS fragment when tagId is set (68-01, never a leftJoin)", async () => {
+    await getTransactions({ tagId: 7 });
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] };
+    const tagCondition = where.args.find(
+      (arg) =>
+        typeof arg === "object" &&
+        arg !== null &&
+        (arg as { op?: string }).op === "sql" &&
+        ((arg as { strings?: string[] }).strings ?? [])
+          .join("")
+          .includes("EXISTS"),
+    ) as { op: string; strings: string[]; values: unknown[] } | undefined;
+
+    expect(tagCondition).toBeDefined();
+    expect(tagCondition!.strings.join("")).toContain("transaction_tag");
+    expect(tagCondition!.values).toContain(7);
+  });
+
+  it("adds no tag condition when tagId is absent (falsy guard)", async () => {
+    await getTransactions({});
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] };
+    const hasTagCondition = where.args.some(
+      (arg) =>
+        typeof arg === "object" &&
+        arg !== null &&
+        (arg as { op?: string }).op === "sql" &&
+        ((arg as { strings?: string[] }).strings ?? [])
+          .join("")
+          .includes("transaction_tag"),
+    );
+    expect(hasTagCondition).toBe(false);
   });
 
   it("no months condition added when months array is empty", async () => {

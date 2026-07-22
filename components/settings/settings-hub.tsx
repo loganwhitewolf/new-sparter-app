@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ChevronRight, UserCog } from 'lucide-react'
+import { ChevronRight, Tags, UserCog } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { APP_ROUTES } from '@/lib/routes'
@@ -17,6 +17,12 @@ const HUB_ITEMS: HubItem[] = [
     title: 'Profilo',
     description: 'Dati personali, piano, e account collegati.',
     icon: UserCog,
+  },
+  {
+    href: APP_ROUTES.tagSettings,
+    title: 'Tag',
+    description: 'Crea e gestisci i tag per organizzare le tue transazioni.',
+    icon: Tags,
   },
 ]
 

@@ -128,7 +128,7 @@ export function Sidebar({ user }: { user: UserDisplay }) {
           })}
         </ul>
 
-        {/* SETTINGS LINK: Impostazioni hub (Profilo + theme) */}
+        {/* SETTINGS LINK: Impostazioni hub (Profilo + Tag + theme) */}
         <Separator className="my-2" />
         {(() => {
           const isActive =

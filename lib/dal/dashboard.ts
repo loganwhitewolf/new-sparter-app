@@ -19,6 +19,8 @@ import {
   category,
   direction,
   expense,
+  expenseGroup,
+  expenseGroupMembership,
   nature,
   subCategory,
   transaction as transactionTable,
@@ -36,6 +38,7 @@ import {
 } from '@/lib/utils/dashboard'
 import { toDecimal } from '@/lib/utils/decimal'
 import { effectiveAmount, isNotSecondary } from '@/lib/dal/transaction-pairs-sql'
+import { tagScopedTransactions } from '@/lib/dal/transaction-tags-sql'
 
 export type OverviewData = {
   totalIn: string
@@ -178,6 +181,7 @@ export type DeviationDateRanges = {
 export type CategoryDeviationsInput = {
   type: 'in' | 'out' | 'all'
   categoryId?: number
+  tagId?: number
 }
 
 type BreakdownCategoryDraft = Omit<BreakdownCategory, 'percentage' | 'subCategories'> & {
@@ -264,6 +268,7 @@ type CategoryDetailTopTransactionRow = {
   categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
   description: string | null
   customTitle: string | null
+  groupTitle: string | null
   amount: string | null
   occurredAt: Date | string | null
 }
@@ -430,7 +435,7 @@ function expenseStatusIncludedInDashboardTotals() {
   return inArray(expense.status, [...DASHBOARD_TOTAL_EXPENSE_STATUSES])
 }
 
-export async function getUncategorizedCount(userId: string, from: Date, to: Date): Promise<number> {
+export async function getUncategorizedCount(userId: string, from: Date, to: Date, tagId?: number): Promise<number> {
   try {
     const rows = await db
       .select({ total: countDistinct(expense.id) })
@@ -442,7 +447,8 @@ export async function getUncategorizedCount(userId: string, from: Date, to: Date
         and(
           dateScopedTransactions(userId, from, to),
           expenseStatusUncategorized(),
-          isNull(expense.subCategoryId)
+          isNull(expense.subCategoryId),
+          tagScopedTransactions(tagId)
         )
       )
 
@@ -452,7 +458,7 @@ export async function getUncategorizedCount(userId: string, from: Date, to: Date
   }
 }
 
-export async function getOverviewAmountTotals(userId: string, from: Date, to: Date): Promise<OverviewAggregateRow> {
+export async function getOverviewAmountTotals(userId: string, from: Date, to: Date, tagId?: number): Promise<OverviewAggregateRow> {
   try {
     const rows = await db
       .select({
@@ -490,7 +496,8 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
           dateScopedTransactions(userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
           ne(direction.code, 'transfer'),
-          isNotSecondary()
+          isNotSecondary(),
+          tagScopedTransactions(tagId)
         )
       )
 
@@ -904,7 +911,7 @@ export function buildCategoryDetailData(input: {
       return [
         {
           id: row.id,
-          title: row.customTitle ?? row.description,
+          title: row.customTitle ?? row.groupTitle ?? row.description,
           description: row.description,
           date,
           amount: normalizeAmount(toDecimal(row.amount ?? 0).abs().toString()),
@@ -1029,7 +1036,7 @@ export const getCategoriesBreakdown = cache(
 )
 
 export const getCategoryRanking = cache(
-  async (filters: DashboardFilters): Promise<CategoryRankingItem[]> => {
+  async (filters: DashboardFilters, tagId?: number): Promise<CategoryRankingItem[]> => {
     const { userId } = await verifySession()
     const { from, to } = dashboardPresetToDateRange(filters.preset)
     const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
@@ -1075,7 +1082,8 @@ export const getCategoryRanking = cache(
             expenseStatusIncludedInDashboardTotals(),
             eq(direction.includedInTotals, true),
             isNotSecondary(),
-            typeFilter
+            typeFilter,
+            tagScopedTransactions(tagId)
           )
         )
         .groupBy(category.id, monthSql, direction.code)
@@ -1136,7 +1144,8 @@ export const getCategoryDeviations = cache(
               eq(direction.includedInTotals, true),
               isNotSecondary(),
               typeFilter,
-              categoryScope
+              categoryScope,
+              tagScopedTransactions(input.tagId)
             )
           )
           .groupBy(groupColumn),
@@ -1172,7 +1181,8 @@ export const getCategoryDeviations = cache(
               eq(direction.includedInTotals, true),
               isNotSecondary(),
               typeFilter,
-              categoryScope
+              categoryScope,
+              tagScopedTransactions(input.tagId)
             )
           )
           .groupBy(groupColumn, monthSql),
@@ -1197,7 +1207,7 @@ export const getCategoryDeviations = cache(
 )
 
 export const getCategoryDetail = cache(
-  async (categoryId: number, filters: DashboardFilters): Promise<CategoryDetailData> => {
+  async (categoryId: number, filters: DashboardFilters, tagId?: number): Promise<CategoryDetailData> => {
     const { userId } = await verifySession()
     const { from, to } = dashboardPresetToDateRange(filters.preset)
     const emptyData = () => emptyCategoryDetailData(null, from, to)
@@ -1307,7 +1317,8 @@ export const getCategoryDetail = cache(
               activeScopedCategory,
               activeScopedSubCategory,
               eq(direction.includedInTotals, true),
-              isNotSecondary()
+              isNotSecondary(),
+              tagScopedTransactions(tagId)
             )
           )
           .groupBy(category.id, monthSql, direction.code)
@@ -1350,7 +1361,8 @@ export const getCategoryDetail = cache(
               activeScopedCategory,
               activeScopedSubCategory,
               eq(direction.includedInTotals, true),
-              isNotSecondary()
+              isNotSecondary(),
+              tagScopedTransactions(tagId)
             )
           )
           .groupBy(category.id, subCategory.id, userSubcategoryOverride.customName, direction.code)
@@ -1364,11 +1376,14 @@ export const getCategoryDetail = cache(
             categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
             description: transactionTable.description,
             customTitle: transactionTable.customTitle,
+            groupTitle: expenseGroup.title,
             amount: transactionTable.amount,
             occurredAt: transactionTable.occurredAt,
           })
           .from(transactionTable)
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+          .leftJoin(expenseGroupMembership, eq(expense.id, expenseGroupMembership.expenseId))
+          .leftJoin(expenseGroup, eq(expenseGroupMembership.groupId, expenseGroup.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
           .leftJoin(
@@ -1393,7 +1408,8 @@ export const getCategoryDetail = cache(
               activeScopedCategory,
               activeScopedSubCategory,
               eq(direction.includedInTotals, true),
-              isNotSecondary()
+              isNotSecondary(),
+              tagScopedTransactions(tagId)
             )
           )
           .orderBy(desc(sql`abs(${effectiveAmount()})`), desc(transactionTable.occurredAt), transactionTable.id)

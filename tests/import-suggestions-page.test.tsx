@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   getPlatformIdForUserFile: vi.fn(),
   discoverRegexCandidates: vi.fn(),
   getCategories: vi.fn(),
+  computeAllTagSuggestions: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error('notFound')
   }),
@@ -40,6 +41,10 @@ vi.mock('@/lib/dal/categories', () => ({
 
 vi.mock('@/lib/services/regex-discovery', () => ({
   discoverRegexCandidates: mocks.discoverRegexCandidates,
+}))
+
+vi.mock('@/lib/services/tag-suggestions', () => ({
+  computeAllTagSuggestions: mocks.computeAllTagSuggestions,
 }))
 
 const FILE_ID = 'file-1'
@@ -100,6 +105,7 @@ describe('suggestions page', () => {
     mocks.getPlatformIdForUserFile.mockReset()
     mocks.discoverRegexCandidates.mockReset()
     mocks.getCategories.mockReset()
+    mocks.computeAllTagSuggestions.mockReset()
     mocks.notFound.mockReset()
     mocks.notFound.mockImplementation(() => {
       throw new Error('notFound')
@@ -111,6 +117,9 @@ describe('suggestions page', () => {
     mocks.getPlatformIdForUserFile.mockResolvedValue(PLATFORM_ID)
     mocks.discoverRegexCandidates.mockResolvedValue(makeEmptyDiscovery())
     mocks.getCategories.mockResolvedValue([])
+    // TAG-03 (D-08b): default to zero tag-suggestion groups so pre-existing cases
+    // (which know nothing about tags) are unaffected by this addition.
+    mocks.computeAllTagSuggestions.mockResolvedValue([])
   })
 
   // --- notFound guard tests (preserved from Phase 53) ---
@@ -293,5 +302,67 @@ describe('suggestions page', () => {
     // Section 2 heading (count preserved)
     expect(html).toContain('Transazioni identiche')
     expect(html).toContain('Categorizzale manualmente dalla pagina Spese.')
+  })
+
+  // --- TAG-03: post-import tag suggestions (D-08b) ---
+
+  describe('TAG-03: post-import tag suggestions (D-08b)', () => {
+    function makeTagSuggestionGroup(overrides: Record<string, unknown> = {}) {
+      return {
+        tagId: 1,
+        tagName: 'Sharm 2026',
+        matches: [
+          {
+            transactionId: 'tx-1',
+            occurredAt: new Date('2026-01-10'),
+            description: 'Hotel Sharm',
+            customTitle: null,
+            amount: '-120.00',
+            currency: 'EUR',
+          },
+          {
+            transactionId: 'tx-2',
+            occurredAt: new Date('2026-01-11'),
+            description: 'Escursione deserto',
+            customTitle: null,
+            amount: '-45.00',
+            currency: 'EUR',
+          },
+        ],
+        ...overrides,
+      }
+    }
+
+    it('zero groups: the rendered HTML does not contain "Suggerimenti tag" (section omitted)', async () => {
+      mocks.computeAllTagSuggestions.mockResolvedValue([])
+
+      const html = await renderPage()
+
+      expect(html).not.toContain('Suggerimenti tag')
+    })
+
+    it('one group with two matches: HTML contains "Suggerimenti tag", the tag name, and both matches', async () => {
+      mocks.computeAllTagSuggestions.mockResolvedValue([makeTagSuggestionGroup()])
+
+      const html = await renderPage()
+
+      expect(html).toContain('Suggerimenti tag')
+      expect(html).toContain('Sharm 2026')
+      expect(html).toContain('Hotel Sharm')
+      expect(html).toContain('Escursione deserto')
+    })
+
+    it('the pattern-suggestions empty-state still renders alongside a non-empty tag-suggestions block', async () => {
+      mocks.discoverRegexCandidates.mockResolvedValue(makeEmptyDiscovery())
+      mocks.computeAllTagSuggestions.mockResolvedValue([makeTagSuggestionGroup()])
+
+      const html = await renderPage()
+
+      expect(html).toContain(
+        'Nessun suggerimento trovato — tutte le transazioni risultano già categorizzate o non sono stati rilevati pattern ricorrenti.',
+      )
+      expect(html).toContain('Suggerimenti tag')
+      expect(html).toContain('Sharm 2026')
+    })
   })
 })

@@ -30,6 +30,9 @@ type Props = {
   initialMoversIn: MonthOverMonthChange[]
   initialMoversOut: MonthOverMonthChange[]
   initialMoversAllocation: MonthOverMonthChange[]
+  /** v2.6: dashboard-wide tag filter — forwarded to OverviewMoversSection so its
+   *  client-side month-switch refetch (fetchMovers) keeps the tag narrowing. */
+  tagId?: number
 }
 
 function toIncludedSets(excluded: ExcludedChips) {
@@ -60,6 +63,7 @@ export function OverviewDashboardSection({
   initialMoversIn,
   initialMoversOut,
   initialMoversAllocation,
+  tagId,
 }: Props) {
   const defaults = toIncludedSets(DEFAULT_EXCLUDED_CHIPS)
   const [includedIncome, setIncludedIncome] = useState<Set<IncomeKey>>(defaults.income)
@@ -147,6 +151,7 @@ export function OverviewDashboardSection({
       />
       <OverviewMoversSection
         data={data}
+        tagId={tagId}
         year={year}
         defaultMonthIndex={defaultMonthIndex}
         initialMoversIn={initialMoversIn}

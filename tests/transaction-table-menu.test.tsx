@@ -94,6 +94,8 @@ function makeTransaction(overrides: Partial<TransactionListRow> = {}): Transacti
     platformName: null,
     platformSlug: null,
     categoryType: null,
+    groupId: null,
+    groupTitle: null,
     pairedWithId: null,
     pairedNetAmount: null,
     pairedAmount: null,
@@ -111,6 +113,8 @@ function render(transactions: TransactionListRow[]) {
       searchParams: {},
       categories: [],
       mostUsed: [],
+      tags: [],
+      tagsByTransactionId: {},
     }),
   )
 }
@@ -149,6 +153,37 @@ describe('TransactionTable — row menu Dettagli entry (DET-07)', () => {
     const html = render([makeTransaction()])
 
     expect(html).toContain('Elimina')
+  })
+})
+
+describe('TransactionTable — group title precedence (GRP-08)', () => {
+  it('renders the group title ahead of the expense title when the linked expense is grouped', () => {
+    const html = render([
+      makeTransaction({
+        expenseId: 'expense-1',
+        expenseTitle: 'Cherasco 57 SRL',
+        groupId: 1,
+        groupTitle: 'Cherasco',
+      }),
+    ])
+
+    expect(html).toContain('Cherasco')
+    expect(html).not.toContain('Cherasco 57 SRL')
+  })
+
+  it('still shows customTitle over both groupTitle and expenseTitle when set', () => {
+    const html = render([
+      makeTransaction({
+        customTitle: 'Rinominata da me',
+        expenseId: 'expense-1',
+        expenseTitle: 'Cherasco 57 SRL',
+        groupId: 1,
+        groupTitle: 'Cherasco',
+      }),
+    ])
+
+    expect(html).toContain('Rinominata da me')
+    expect(html).not.toContain('Cherasco')
   })
 })
 

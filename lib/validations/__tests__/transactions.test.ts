@@ -69,6 +69,13 @@ describe("parseTransactionFilters", () => {
     expect(parseTransactionFilters({ subCategory: "1.5" }).subCategoryId).toBeUndefined()
   })
 
+  it("parses the tag click-through param as a positive integer (LOCKED DECISION 3, 68-01)", () => {
+    expect(parseTransactionFilters({ tag: "7" }).tagId).toBe(7)
+    expect(parseTransactionFilters({ tag: "abc" }).tagId).toBeUndefined()
+    expect(parseTransactionFilters({ tag: "-1" }).tagId).toBeUndefined()
+    expect(parseTransactionFilters({ tag: "0" }).tagId).toBeUndefined()
+  })
+
   it("falls back safely for unknown sort and direction values", () => {
     expect(
       parseTransactionFilters({

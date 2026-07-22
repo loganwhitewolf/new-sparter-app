@@ -18,6 +18,7 @@ vi.mock('next/link', () => ({
 vi.mock('@/lib/routes', () => ({
   APP_ROUTES: {
     profileSettings: '/settings/profile',
+    tagSettings: '/settings/tags',
   },
 }))
 
@@ -34,6 +35,7 @@ vi.mock('@/components/ui/card', () => ({
 
 vi.mock('lucide-react', () => ({
   ChevronRight: () => React.createElement('span', { 'data-icon': 'chevron-right' }),
+  Tags: () => React.createElement('span', { 'data-icon': 'tags' }),
   UserCog: () => React.createElement('span', { 'data-icon': 'user-cog' }),
 }))
 
@@ -68,5 +70,11 @@ describe('SettingsHub (D-11, D-12)', () => {
   it('renders a navigation link to Profilo settings', () => {
     const html = renderToStaticMarkup(React.createElement(SettingsHub))
     expect(html).toContain('/settings/profile')
+  })
+
+  it('renders a navigation link to Tag settings (D-01)', () => {
+    const html = renderToStaticMarkup(React.createElement(SettingsHub))
+    expect(html).toContain('/settings/tags')
+    expect(html).toContain('data-icon="tags"')
   })
 })

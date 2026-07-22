@@ -56,6 +56,68 @@ export const IgnoreExpenseSchema = z.object({
   id: z.string().min(1, { error: 'ID spesa mancante.' }),
 })
 
+// Merge (Unisci) — Phase 65, ADR 0017. Pure regrouping: deliberately carries no
+// category field (D-02) — the merge dialog categorizes uncategorized selections
+// via the pre-existing BulkCategorizeSchema/bulkCategorize action first, as a
+// separate call, before this schema's input is ever submitted.
+export const MergeExpensesSchema = z.object({
+  selectedExpenseIds: z
+    .array(z.string().uuid())
+    .min(2, { error: 'Seleziona almeno due spese per unire.' })
+    .max(500, { error: 'Puoi unire al massimo 500 spese alla volta.' })
+    // WR-03: enforce "at least two DISTINCT expenses" — without this, a duplicated id
+    // (e.g. ["a", "a"]) passes .min(2) on the raw array but dedupes to a single real
+    // expense downstream in mergeExpenses, silently creating a one-member "group".
+    .refine((ids) => new Set(ids).size === ids.length, {
+      error: 'Spese duplicate nella selezione.',
+    }),
+  groupTitle: z
+    .string()
+    .trim()
+    .min(2, { error: 'Il titolo del gruppo deve contenere almeno 2 caratteri.' })
+    .max(500, { error: 'Il titolo del gruppo non può superare i 500 caratteri.' }),
+})
+
+export const RenameExpenseGroupSchema = z.object({
+  groupId: z.coerce.number().int().positive({ error: 'Gruppo non valido.' }),
+  title: z
+    .string()
+    .trim()
+    .min(2, { error: 'Il titolo deve contenere almeno 2 caratteri.' })
+    .max(500, { error: 'Il titolo non può superare i 500 caratteri.' }),
+})
+
+// GRP-05: whole-group recategorize (D-01/D-02) — singular groupId, no array.
+export const CategorizeExpenseGroupSchema = z.object({
+  groupId: z.coerce.number().int().positive({ error: 'Gruppo non valido.' }),
+  subCategoryId: z.number().int().positive({ error: 'Seleziona una categoria prima di confermare.' }),
+})
+
+// GRP-06: add-to-group (D-04/D-05). Mirrors MergeExpensesSchema's WR-03 dedupe
+// refine, but .min(1) not .min(2) — a single addition to an existing group is
+// valid, unlike create-group which needs 2+ members to form a group.
+export const AddExpensesToGroupSchema = z.object({
+  groupId: z.coerce.number().int().positive({ error: 'Gruppo non valido.' }),
+  expenseIds: z
+    .array(z.string().uuid())
+    .min(1, { error: 'Seleziona almeno una spesa da aggiungere.' })
+    .max(500, { error: 'Puoi aggiungere al massimo 500 spese alla volta.' })
+    .refine((ids) => new Set(ids).size === ids.length, {
+      error: 'Spese duplicate nella selezione.',
+    }),
+})
+
+// GRP-07: single-member removal (D-07/D-08).
+export const RemoveExpenseFromGroupSchema = z.object({
+  groupId: z.coerce.number().int().positive({ error: 'Gruppo non valido.' }),
+  expenseId: z.string().uuid({ error: 'Spesa non valida.' }),
+})
+
+// GRP-07: whole-group dissolve (D-07/D-08).
+export const DissolveExpenseGroupSchema = z.object({
+  groupId: z.coerce.number().int().positive({ error: 'Gruppo non valido.' }),
+})
+
 export type CreateExpenseInput = z.infer<typeof CreateExpenseSchema>
 export type UpdateExpenseInput = z.infer<typeof UpdateExpenseSchema>
 export type UpdateExpenseTitleInput = z.infer<typeof UpdateExpenseTitleSchema>
@@ -63,6 +125,12 @@ export type BulkCategorizeInput = z.infer<typeof BulkCategorizeSchema>
 export type BulkDeleteExpensesInput = z.infer<typeof BulkDeleteExpensesSchema>
 export type SingleCategorizeInput = z.infer<typeof SingleCategorizeSchema>
 export type IgnoreExpenseInput = z.infer<typeof IgnoreExpenseSchema>
+export type MergeExpensesInput = z.infer<typeof MergeExpensesSchema>
+export type RenameExpenseGroupInput = z.infer<typeof RenameExpenseGroupSchema>
+export type CategorizeExpenseGroupInput = z.infer<typeof CategorizeExpenseGroupSchema>
+export type AddExpensesToGroupInput = z.infer<typeof AddExpensesToGroupSchema>
+export type RemoveExpenseFromGroupInput = z.infer<typeof RemoveExpenseFromGroupSchema>
+export type DissolveExpenseGroupInput = z.infer<typeof DissolveExpenseGroupSchema>
 export type ActionState = { error: string | null }
 
 // ─── Shared filter parser for the Expenses page toolbar ───────────────────────
