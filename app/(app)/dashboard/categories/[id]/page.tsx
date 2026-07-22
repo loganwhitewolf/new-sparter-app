@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { parsePositiveIntParam } from '@/lib/utils/search-params'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { CategoryDetailEmptyState } from '@/components/dashboard/category-detail-empty-state'
@@ -44,15 +45,6 @@ function CategoryFiltersFallback() {
       <div className="h-9 w-40 animate-pulse rounded-md bg-muted" />
     </div>
   )
-}
-
-function parseCategoryId(value: string): number | null {
-  if (!/^\d+$/.test(value)) {
-    return null
-  }
-
-  const id = Number(value)
-  return Number.isSafeInteger(id) && id > 0 ? id : null
 }
 
 function parseCategoryDetailFilters(
@@ -146,7 +138,7 @@ async function CategoryDetailContent({
 export default async function DashboardCategoryDetailPage({ params, searchParams }: Props) {
   await verifySession()
   const [{ id }, query] = await Promise.all([params, searchParams])
-  const categoryId = parseCategoryId(id)
+  const categoryId = parsePositiveIntParam(id)
   const filters = parseCategoryDetailFilters(query)
 
   const backHref = buildDashboardCategoriesHref({

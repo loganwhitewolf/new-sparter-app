@@ -312,11 +312,8 @@ export function buildTagDetailData(rows: TagDetailQueryRow[]): TagDetail {
   const transactions = rows.map((row) => {
     const amount = toDecimal(row.amount)
     net = net.plus(amount)
-    // Classify Entrate/Uscite by the amount's SIGN, NOT the subcategory direction. A tag is
-    // event-shaped and its rows can carry a positive amount while sitting under an 'out'
-    // subcategory — e.g. a refund is categorized under the spend's subcategory (direction 'out')
-    // yet nets positive. Grouping by direction left inflow empty and dumped everything into
-    // outflow. Entrate = Σ positive, Uscite = |Σ negative| → inflow − outflow === net.
+    // Classify by the amount's SIGN, not the subcategory direction: a refund sits under the
+    // spend's 'out' subcategory yet nets positive. inflow − outflow === net.
     if (amount.greaterThan(0)) inflow = inflow.plus(amount)
     else if (amount.lessThan(0)) outflow = outflow.plus(amount)
 

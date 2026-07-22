@@ -2,6 +2,10 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { amountToneClass } from '@/lib/utils/amount-tone'
+import { toDecimal } from '@/lib/utils/decimal'
+import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
+import type Decimal from 'decimal.js'
 import { transactionsByTagHref } from '@/lib/routes'
 import type { TagBreakdownItem, TagDetail } from '@/lib/dal/tags'
 
@@ -12,27 +16,16 @@ type Props = {
 
 const amountFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' })
 
-// Signed currency — keeps the leading minus so the net / outflow rows read as negative;
-// color (--total-in/--total-out) reinforces direction. Lifted from the former TagDetailView
-// (D4 locked presentation rules), which was the tag-settings-panel inline detail.
+// Signed currency — keeps the leading minus so net / outflow rows read as negative.
+// (The shared formatAbsoluteAmount strips the sign by design, hence this local variant.)
 function formatSignedAmount(value: string): string {
   const amount = Number(value)
   return amountFormatter.format(Number.isFinite(amount) ? amount : 0)
 }
 
-function formatAbsoluteAmount(value: string): string {
-  const amount = Number(value)
-  return amountFormatter.format(Math.abs(Number.isFinite(amount) ? amount : 0))
-}
-
 function formatTxDate(value: string): string {
   const parsed = new Date(value)
   return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString('it-IT')
-}
-
-// Sign-based tone (a tag has no fixed direction) — same rule as tag-ranking-list's totalTone.
-function toneClass(value: string): string {
-  return Number(value) >= 0 ? 'text-[var(--total-in)]' : 'text-[var(--total-out)]'
 }
 
 function transactionCountLabel(count: number): string {
@@ -55,16 +48,18 @@ function KpiCard({ label, value, tone }: { label: string; value: string; tone: s
 // One breakdown row: category name + signed amount, over a CSS bar whose width encodes |total| /
 // max|total| and whose color follows the sign (--total-in / --total-out). No charting dependency
 // (D4, CONTEXT out-of-scope). `total` is signed, so `>= 0` picks the inflow color.
-function CategoryBar({ item, maxAbs }: { item: TagBreakdownItem; maxAbs: number }) {
-  const value = Number(item.total)
-  const widthPct = (Math.abs(value) / maxAbs) * 100
-  const barColor = value >= 0 ? 'var(--total-in)' : 'var(--total-out)'
+function CategoryBar({ item, maxAbs }: { item: TagBreakdownItem; maxAbs: Decimal }) {
+  const total = toDecimal(item.total)
+  // Decimal all the way to the percentage: the ratio derives from monetary amounts, so it stays
+  // on Decimal per the money rule; toNumber() happens only at the CSS boundary.
+  const widthPct = total.abs().div(maxAbs).times(100).toNumber()
+  const barColor = total.isNegative() ? 'var(--total-out)' : 'var(--total-in)'
 
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-3 text-sm">
         <span className="truncate font-medium">{item.categoryName}</span>
-        <span className={cn('shrink-0 tabular-nums', toneClass(item.total))}>
+        <span className={cn('shrink-0 tabular-nums', amountToneClass(item.total))}>
           {formatSignedAmount(item.total)}
         </span>
       </div>
@@ -82,10 +77,12 @@ function CategoryBar({ item, maxAbs }: { item: TagBreakdownItem; maxAbs: number 
 // count → per-category breakdown (CSS bars) → date-descending tx list.
 // Pure formatting over props — deliberately NOT a client component.
 export function TagDetailReport({ detail, tagId }: Props) {
-  // Bar scale: the widest bar (100%) is the category with the largest |total|. Guard with 1 so an
-  // all-zero (or empty) breakdown never divides by zero. Number() is presentation-only — the
-  // signed Decimal reconciliation already happened in buildTagDetailData (CLAUDE.md money rule).
-  const maxAbs = Math.max(...detail.breakdown.map((b) => Math.abs(Number(b.total))), 1)
+  // Bar scale: the widest bar (100%) is the category with the largest |total|. Floor of 1 so an
+  // all-zero (or empty) breakdown never divides by zero.
+  const maxAbs = detail.breakdown.reduce(
+    (max, b) => (toDecimal(b.total).abs().greaterThan(max) ? toDecimal(b.total).abs() : max),
+    toDecimal(1),
+  )
 
   return (
     <div className="space-y-6">
@@ -103,7 +100,7 @@ export function TagDetailReport({ detail, tagId }: Props) {
         <KpiCard
           label="Valore finale"
           value={formatSignedAmount(detail.net)}
-          tone={toneClass(detail.net)}
+          tone={amountToneClass(detail.net)}
         />
       </div>
 
@@ -159,7 +156,7 @@ export function TagDetailReport({ detail, tagId }: Props) {
                   <p className="truncate text-xs text-muted-foreground">{tx.subCategoryName}</p>
                 </div>
               </div>
-              <span className={cn('shrink-0 pt-0.5 font-medium tabular-nums', toneClass(tx.amount))}>
+              <span className={cn('shrink-0 pt-0.5 font-medium tabular-nums', amountToneClass(tx.amount))}>
                 {formatSignedAmount(tx.amount)}
               </span>
             </li>
