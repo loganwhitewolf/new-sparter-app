@@ -116,6 +116,7 @@ status: complete
 - **Fraunces over Newsreader/Playfair** — RESEARCH's example font was illustrative only; Fraunces reads as a contemporary editorial serif without matching the D-08 warm-cream+terracotta cliche pairing.
 - **Tailwind arbitrary-value `font-[family-name:var(--font-branding-display)]`** on individual headings, rather than a global CSS class, to keep the font application scoped and explicit per element — consistent with "apply only on the branding wrapper, never touch root Geist" (D-08).
 - **Variant B/C as minimal labeled stub panels** inside the hub (not separate files yet) — proves the switcher/whitelist path end-to-end now; Plan 02 replaces the stubs with the real Editorial-split and Type-led-stack compositions per `69-PATTERNS.md`.
+- **Did not run `requirements mark-complete BRAND-01`** despite this plan's frontmatter listing `requirements: [BRAND-01]`. `REQUIREMENTS.md` states BRAND-01 as "compare 2–3 branding UI variants" and `69-02-PLAN.md`'s own success criteria says "BRAND-01 fully satisfied locally: three structural A+B variants." Both `69-01-PLAN.md` and `69-02-PLAN.md` frontmatter list the same requirement ID — running mark-complete after Plan 01 alone (1 real variant + 2 stubs) would have falsely flipped the checkbox before the compare surface exists. Caught and reverted (see Deviations); BRAND-01 should be marked complete after `69-02` (or `69-03`) actually delivers the three-way compare.
 
 ## Deviations from Plan
 
@@ -131,8 +132,18 @@ status: complete
 
 ---
 
-**Total deviations:** 1 auto-fixed (Rule 1 bug fix)
-**Impact on plan:** Cosmetic wording fix only; no scope creep, no behavior change.
+**2. [Rule 1 - Bug] Reverted premature `requirements mark-complete BRAND-01`**
+- **Found during:** State-update step, immediately after running `requirements mark-complete`
+- **Issue:** Blindly following this plan's frontmatter (`requirements: [BRAND-01]`) flipped `REQUIREMENTS.md`'s BRAND-01 checkbox and traceability row to complete, but BRAND-01 requires the full 2–3 variant compare surface — Plan 01 ships only Variant A plus two stub panels. `69-02-PLAN.md` (same requirement ID) explicitly states BRAND-01 is "fully satisfied" only after it lands.
+- **Fix:** `git checkout -- .planning/REQUIREMENTS.md` to discard the premature edit before it was committed.
+- **Files modified:** `.planning/REQUIREMENTS.md` (reverted, no net change)
+- **Verification:** `git diff .planning/REQUIREMENTS.md` — empty
+- **Committed in:** not committed — reverted before any commit touched this file
+
+---
+
+**Total deviations:** 2 auto-fixed (1 cosmetic wording fix, 1 caught-and-reverted premature requirement completion)
+**Impact on plan:** No scope creep, no behavior change; the second item is a state-tracking correction, not a code change.
 
 ## Known Stubs
 
@@ -151,6 +162,10 @@ None beyond the plan's documented `user_setup` note — set `PROTOTYPES_ENABLED=
 - Hub/switcher/gate infrastructure is proven end-to-end; Plan 02 can focus purely on the Editorial-split and Type-led-stack compositions without touching `page.tsx`'s routing/whitelist logic or `prototype-switcher.tsx`.
 - `overview-hero-placeholder.svg` is shared and importable — Plan 02's variants should reuse the same asset path rather than duplicating a placeholder.
 - No blockers. Real `/dashboard/overview` capture still not in-repo — placeholder remains until a real screenshot is supplied (Assumptions Log A3 in `69-RESEARCH.md`).
+
+## Self-Check: PASSED
+
+All created files verified present on disk; both task commits (`03977e5`, `2508c84`) verified present in `git log --oneline --all`.
 
 ---
 *Phase: 69-proto-design-variants*
