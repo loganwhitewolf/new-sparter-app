@@ -4,10 +4,10 @@ milestone: v2.8
 milestone_name: Public Branding Site
 current_phase: 69
 status: planned
-stopped_at: Phase 69 plans created — ready to execute
-last_updated: "2026-07-22T14:55:00.000Z"
+stopped_at: Phase 69 plans revised after checker — ready to execute
+last_updated: "2026-07-22T14:58:00.000Z"
 last_activity: 2026-07-22
-last_activity_desc: Phase 69 PLAN.md set written (3 plans, 3 waves)
+last_activity_desc: Phase 69 plans revised (checker: research_resolution, nyquist, AC/verify, must_haves)
 progress:
   total_phases: 1
   completed_phases: 0
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 Phase: 69 — proto-design-variants (Planned — 3 plans ready)
 Plan: 69-01 (next)
 Status: Plans created — next `/gsd-execute-phase 69`
-Last activity: 2026-07-22 — Phase 69 planning complete (69-01..03 PLAN.md)
+Last activity: 2026-07-22 — Phase 69 plans revised from checker feedback
 
 ## Roadmap (v2.8 — Phases 69-73)
 
