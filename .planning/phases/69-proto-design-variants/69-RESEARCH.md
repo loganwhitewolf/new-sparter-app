@@ -453,17 +453,19 @@ Quale direzione A+B diventa la homepage di produzione?
 | A3 | No real overview screenshot exists in repo yet; first Preview may ship labeled placeholder | Discretion / Assets | Stakeholder feedback on “cool” may wait on capture — flag in NOTES |
 | A4 | `Button` `asChild` + `Link` works with current shadcn Slot setup | Code Examples | If not, use `Link` styled as button — verify at implement |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Real dashboard screenshot availability**
+1. **Real dashboard screenshot availability** — RESOLVED
    - What we know: D-04 prefers real `/dashboard/overview` capture; none found under `public/` or `app/proto/`.
    - What's unclear: Who captures (PO vs executor) and light vs dark theme preference.
    - Recommendation: Plan Wave includes optional asset task; ship labeled placeholder if capture missing; update asset before PO final pick.
+   - **Plan choice:** Placeholder OK — Plan 01 Task 2 ships labeled `overview-hero-placeholder.svg` (or substitutes a real capture under `assets/` if one appears in-repo); PO may refresh the asset before final pick.
 
-2. **Whether to tweak `app/proto/layout.tsx` padding globally**
+2. **Whether to tweak `app/proto/layout.tsx` padding globally** — RESOLVED
    - What we know: Only branding will live under proto initially.
    - What's unclear: Desire to keep padded shell for future non-marketing protos.
    - Recommendation: Prefer remove padding globally; document that proto pages own their inset.
+   - **Plan choice:** Remove proto layout padding (`p-4` / `md:p-6`) globally so children own inset; branding heroes stay full-bleed (D-09 / Plan 01 tracer).
 
 ## Environment Availability
 
