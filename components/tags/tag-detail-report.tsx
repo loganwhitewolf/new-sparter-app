@@ -127,15 +127,18 @@ export function TagDetailReport({ detail }: Props) {
           {detail.transactions.map((tx) => (
             <li
               key={tx.transactionId}
-              className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+              className="flex items-start justify-between gap-3 px-3 py-2 text-sm"
             >
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+              <div className="flex min-w-0 items-start gap-2">
+                <span className="w-16 shrink-0 pt-0.5 text-xs tabular-nums text-muted-foreground">
                   {formatTxDate(tx.occurredAt)}
                 </span>
-                <span className="truncate">{tx.subCategoryName}</span>
+                <div className="min-w-0">
+                  <p className="truncate">{tx.description}</p>
+                  <p className="truncate text-xs text-muted-foreground">{tx.subCategoryName}</p>
+                </div>
               </div>
-              <span className={cn('shrink-0 font-medium tabular-nums', toneClass(tx.amount))}>
+              <span className={cn('shrink-0 pt-0.5 font-medium tabular-nums', toneClass(tx.amount))}>
                 {formatSignedAmount(tx.amount)}
               </span>
             </li>

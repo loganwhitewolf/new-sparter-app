@@ -267,6 +267,7 @@ export async function getTagTotals(userId: string): Promise<TagTotalItem[]> {
 export type TagDetailTransaction = {
   transactionId: string
   occurredAt: string // ISO string from the DB (`::text`); the client formats it
+  description: string // raw transaction description (immutable) — shown as the row's primary line
   subCategoryName: string
   amount: string // signed DECIMAL string — out is negative, in positive
 }
@@ -291,6 +292,7 @@ export type TagDetail = {
 type TagDetailQueryRow = {
   transactionId: string
   occurredAt: string
+  description: string
   subCategoryName: string
   categoryName: string
   directionCode: string
@@ -325,6 +327,7 @@ export function buildTagDetailData(rows: TagDetailQueryRow[]): TagDetail {
     return {
       transactionId: row.transactionId,
       occurredAt: row.occurredAt,
+      description: row.description,
       subCategoryName: row.subCategoryName,
       amount: amount.toFixed(2),
     }
@@ -354,6 +357,7 @@ export async function getTagDetail(userId: string, tagId: number): Promise<TagDe
     .select({
       transactionId: transactionTable.id,
       occurredAt: sql<string>`${transactionTable.occurredAt}::text`,
+      description: transactionTable.description,
       subCategoryName: subCategory.name,
       // category is ALREADY innerJoined below — this adds a COLUMN, never a row, so the netted
       // row set (and therefore `net`) is unchanged and still reconciles with getTagTotals (TAG-07).

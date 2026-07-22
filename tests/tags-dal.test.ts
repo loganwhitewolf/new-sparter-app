@@ -220,10 +220,12 @@ function detailRow(overrides: {
   directionCode: string
   amount: string
   subCategoryName?: string
+  description?: string
 }) {
   return {
     transactionId: overrides.transactionId,
     occurredAt: '2026-06-01T00:00:00.000Z',
+    description: overrides.description ?? 'Descrizione',
     subCategoryName: overrides.subCategoryName ?? 'Sub',
     categoryName: overrides.categoryName,
     directionCode: overrides.directionCode,

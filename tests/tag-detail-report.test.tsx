@@ -23,12 +23,14 @@ const fixture: TagDetail = {
     {
       transactionId: 'tx-1',
       occurredAt: '2026-06-10T00:00:00.000Z',
+      description: 'ACCREDITO STIPENDIO ACME SPA',
       subCategoryName: 'Stipendio',
       amount: '1200.00',
     },
     {
       transactionId: 'tx-2',
       occurredAt: '2026-06-05T00:00:00.000Z',
+      description: 'PAGAMENTO POS TRATTORIA DA MARIO',
       subCategoryName: 'Ristoranti',
       amount: '-450.50',
     },
@@ -55,6 +57,11 @@ describe('TagDetailReport (populated fixture)', () => {
   it('renders each fixture subcategory name (TAG-10)', () => {
     expect(html).toContain('Stipendio')
     expect(html).toContain('Ristoranti')
+  })
+
+  it('renders each fixture transaction description (TAG-10)', () => {
+    expect(html).toContain('ACCREDITO STIPENDIO ACME SPA')
+    expect(html).toContain('PAGAMENTO POS TRATTORIA DA MARIO')
   })
 
   it('renders the it-IT-formatted signed net (TAG-07)', () => {
