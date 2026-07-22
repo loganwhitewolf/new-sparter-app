@@ -37,7 +37,7 @@ Last activity: 2026-07-22 — Phase 69 plans revised from checker feedback
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 69 | proto-design-variants | BRAND-01, BRAND-02 | Planned (0/3 plans) |
+| 69 | proto-design-variants | BRAND-01, BRAND-02 | Planned (3 plans ready) |
 | 70 | public-layout-and-proxy-allowlist | BRAND-03, BRAND-04, BRAND-05 | Not started |
 | 71 | marketing-pages | BRAND-06, BRAND-07, BRAND-08 | Not started |
 | 72 | legal-pages | BRAND-09, BRAND-10 | Not started |
