@@ -46,11 +46,11 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 69-02-PLAN.md — Variants B (editorial split) + C (type-led stack) for full BRAND-01 compare
+- [x] 69-02-PLAN.md — Variants B (editorial split) + C (type-led stack) for full BRAND-01 compare
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 69-03-PLAN.md — NOTES.md template + PO Preview verdict checkpoint (BRAND-02)
+- [x] 69-03-PLAN.md — NOTES.md template + PO Preview verdict checkpoint (BRAND-02)
 
 - [ ] **Phase 70: public-layout-and-proxy-allowlist** (BRAND-03, BRAND-04, BRAND-05) — Dedicated `(public)` route-group layout (header/nav/footer, no AppShell/sidebar/onboarding gate); `lib/routes.ts` single-source-of-truth allowlist wired into `proxy.ts`; smart root (anon → marketing, auth → `/dashboard`).
 - [ ] **Phase 71: marketing-pages** (BRAND-06, BRAND-07, BRAND-08) — Italian homepage (hero, import-first value prop, CTA Registrati/Entra, mobile-responsive) promoted from the winning proto; `/how-it-works` 3–5 step explainer; public nav/footer links (Come funziona, Privacy, Termini, Entra, Registrati — no Pricing).

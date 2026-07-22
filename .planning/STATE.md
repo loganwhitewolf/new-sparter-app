@@ -4,17 +4,17 @@ milestone: v2.8
 milestone_name: Public Branding Site
 current_phase: 69
 current_phase_name: proto-design-variants
-status: executing
-stopped_at: Completed 69-02-PLAN.md
-last_updated: "2026-07-22T15:36:10.912Z"
+status: verifying
+stopped_at: Completed 69-03-PLAN.md — Phase 69 (proto-design-variants) fully executed, BRAND-01 + BRAND-02 satisfied
+last_updated: "2026-07-22T16:15:24.173Z"
 last_activity: 2026-07-22
 last_activity_desc: Phase 69 execution started
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 1
-  percent: 0
+  completed_plans: 3
+  percent: 100
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 Phase: 69 (proto-design-variants) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-22 — Phase 69 execution started
 
 ## Roadmap (v2.8 — Phases 69-73)
@@ -220,6 +220,8 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: Fraunces chosen as brandingDisplay face (Task 2) - editorial weight, avoids D-08 Playfair+warm-cream cliche pairing
 - [Phase ?]: Variant B/C ship as minimal labeled stub panels in the hub (plan-scoped, not a defect) - proves the switcher/whitelist path before Plan 02 fills them in
 - [Phase ?]: Variant B (editorial split: asymmetric type column + offset product frame) and Variant C (type-led stack: oversized brand+headline then full-width product band) ship as real compositions replacing the Plan 01 stubs; hub now mounts all three real variants
+- [Phase ?]: BRAND-02 Winner = Variant C (Type-led stack), PO's explicit call after Preview compare; recorded in app/proto/branding/NOTES.md (D-07 SoT)
+- [Phase ?]: Steal from losers into C: a's dominant product-visual weight, b's editorial type/asymmetric-column treatment; do not ship a/b as primary layout, no components/marketing/* extraction yet (Phase 71)
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -333,9 +335,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 69-02-PLAN.md
+**Stopped at:** Completed 69-03-PLAN.md — Phase 69 (proto-design-variants) fully executed, BRAND-01 + BRAND-02 satisfied
 
-Last session: 2026-07-22T15:36:10.904Z
+Last session: 2026-07-22T16:15:24.164Z
 
 **Next:** `/gsd-execute-phase 69`
 
@@ -406,3 +408,4 @@ Last session: 2026-07-22T15:36:10.904Z
 | Phase 68 P07 | 15min | 1 tasks | 2 files |
 | Phase 69 P01 | 7min | 2 tasks | 6 files |
 | Phase 69 P02 | 13min | 2 tasks | 3 files |
+| Phase 69 P03 | 3min | 2 tasks | 2 files |
