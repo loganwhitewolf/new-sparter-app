@@ -66,7 +66,7 @@ export default async function TagDetailPage({ params }: Props) {
           </div>
         </header>
 
-        <TagDetailReport detail={detail} />
+        <TagDetailReport detail={detail} tagId={tag.id} />
       </div>
     </div>
   )

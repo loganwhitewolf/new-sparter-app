@@ -1,9 +1,13 @@
+import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { transactionsByTagHref } from '@/lib/routes'
 import type { TagBreakdownItem, TagDetail } from '@/lib/dal/tags'
 
 type Props = {
   detail: TagDetail
+  tagId: number
 }
 
 const amountFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' })
@@ -77,7 +81,7 @@ function CategoryBar({ item, maxAbs }: { item: TagBreakdownItem; maxAbs: number 
 // Presentational server component (D4 "report verticale" body): 3 KPI cards → included-transaction
 // count → per-category breakdown (CSS bars) → date-descending tx list.
 // Pure formatting over props — deliberately NOT a client component.
-export function TagDetailReport({ detail }: Props) {
+export function TagDetailReport({ detail, tagId }: Props) {
   // Bar scale: the widest bar (100%) is the category with the largest |total|. Guard with 1 so an
   // all-zero (or empty) breakdown never divides by zero. Number() is presentation-only — the
   // signed Decimal reconciliation already happened in buildTagDetailData (CLAUDE.md money rule).
@@ -103,7 +107,21 @@ export function TagDetailReport({ detail }: Props) {
         />
       </div>
 
-      <p className="text-sm text-muted-foreground">{transactionCountLabel(detail.count)}</p>
+      {/* Count + the bridge from analysis to navigation: this page is the all-time per-tag
+          report, the transactions table is where you act on individual rows. `?tag=` is the
+          transactions filter (TAG-14); the link is hidden when the tag has no transactions. */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">{transactionCountLabel(detail.count)}</p>
+        {detail.count > 0 && (
+          <Link
+            href={transactionsByTagHref(tagId)}
+            className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Apri nella lista transazioni
+            <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
+        )}
+      </div>
 
       {detail.breakdown.length > 0 && (
         <Card className="gap-3 py-4">

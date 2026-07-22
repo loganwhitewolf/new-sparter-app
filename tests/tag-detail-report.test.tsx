@@ -42,12 +42,17 @@ const fixture: TagDetail = {
 }
 
 describe('TagDetailReport (populated fixture)', () => {
-  const html = renderToStaticMarkup(createElement(TagDetailReport, { detail: fixture }))
+  const html = renderToStaticMarkup(createElement(TagDetailReport, { detail: fixture, tagId: 7 }))
 
   it('renders the three KPI labels', () => {
     expect(html).toContain('Entrate')
     expect(html).toContain('Uscite')
     expect(html).toContain('Valore finale')
+  })
+
+  it('links to the tag-filtered transactions list', () => {
+    expect(html).toContain('href="/transactions?tag=7"')
+    expect(html).toContain('Apri nella lista transazioni')
   })
 
   it('renders the count line matching the fixture transaction length (TAG-08)', () => {
@@ -92,7 +97,7 @@ describe('TagDetailReport (empty transactions)', () => {
     transactions: [],
     breakdown: [],
   }
-  const html = renderToStaticMarkup(createElement(TagDetailReport, { detail: empty }))
+  const html = renderToStaticMarkup(createElement(TagDetailReport, { detail: empty, tagId: 7 }))
 
   it('renders the empty-state copy', () => {
     expect(html).toContain('Nessuna transazione inclusa per questo tag.')
@@ -100,6 +105,10 @@ describe('TagDetailReport (empty transactions)', () => {
 
   it('renders the plural "0 transazioni incluse" count line', () => {
     expect(html).toContain('0 transazioni incluse')
+  })
+
+  it('hides the transactions link when the tag has no transactions to open', () => {
+    expect(html).not.toContain('Apri nella lista transazioni')
   })
 
   it('renders no "Per categoria" card when the breakdown is empty', () => {
