@@ -21,10 +21,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-18)
+See: .planning/PROJECT.md (updated 2026-07-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 69 — proto-design-variants
+**Current focus:** Phase 70 — public-layout-and-proxy-allowlist
 
 ## Current Position
 
@@ -37,7 +37,7 @@ Last activity: 2026-07-22 — Phase 69 complete, transitioned to Phase 70
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 69 | proto-design-variants | BRAND-01, BRAND-02 | Planned (3 plans ready) |
+| 69 | proto-design-variants | BRAND-01, BRAND-02 | Complete (Winner = c) |
 | 70 | public-layout-and-proxy-allowlist | BRAND-03, BRAND-04, BRAND-05 | Not started |
 | 71 | marketing-pages | BRAND-06, BRAND-07, BRAND-08 | Not started |
 | 72 | legal-pages | BRAND-09, BRAND-10 | Not started |
