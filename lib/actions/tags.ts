@@ -1,7 +1,6 @@
 'use server'
 
 import { verifySession } from '@/lib/dal/auth'
-import { getTagDetail, resolveOwnedTagId, type TagDetail } from '@/lib/dal/tags'
 import {
   TagMutationError,
   archiveTag as archiveTagService,
@@ -11,7 +10,7 @@ import {
 import { ArchiveTagSchema, CreateTagSchema, UpdateTagSchema } from '@/lib/validations/tags'
 import type { ActionState } from '@/lib/validations/category'
 import { revalidatePath } from 'next/cache'
-import { APP_ROUTES } from '@/lib/routes'
+import { APP_ROUTES, tagDetail } from '@/lib/routes'
 
 const GENERIC_ERROR = 'Si è verificato un errore. Riprova tra qualche secondo.'
 
@@ -86,29 +85,10 @@ export async function updateTagAction(
     })
     revalidatePath(APP_ROUTES.tags)
     revalidatePath(APP_ROUTES.dashboardTags) // WR-02 — a renamed tag must refresh in the dashboard Tag section
+    revalidatePath(tagDetail(parsed.data.id)) // D5 — in-place rename on the dedicated page
     return { error: null }
   } catch (error) {
     return mapKnownTagError(error) ?? { error: GENERIC_ERROR }
-  }
-}
-
-// On-demand read for the Tag settings panel right column (quick task 260722-ked). The client
-// calls this when a tag is selected, so the potentially long per-tag transaction list is fetched
-// lazily rather than eagerly for every tag. resolveOwnedTagId is the documented IDOR belt-and-
-// suspenders (getTagDetail is already structurally scoped by transaction.userId).
-export type TagDetailResult = { detail: TagDetail | null; error: string | null }
-
-export async function getTagDetailAction(tagId: number): Promise<TagDetailResult> {
-  const { userId } = await verifySession()
-
-  const ownedTagId = await resolveOwnedTagId(userId, tagId)
-  if (ownedTagId === undefined) return { detail: null, error: GENERIC_ERROR }
-
-  try {
-    const detail = await getTagDetail(userId, ownedTagId)
-    return { detail, error: null }
-  } catch {
-    return { detail: null, error: GENERIC_ERROR }
   }
 }
 
@@ -128,6 +108,7 @@ export async function archiveTagAction(
     await archiveTagService({ userId, tagId: parsed.data.id })
     revalidatePath(APP_ROUTES.tags)
     revalidatePath(APP_ROUTES.dashboardTags) // Pitfall 3 fix — dashboard Tag section (Plan 68-08)
+    revalidatePath(tagDetail(parsed.data.id)) // D5 — stay on the dedicated page; Archiviato badge updates in place
     return { error: null }
   } catch (error) {
     return mapKnownTagError(error) ?? { error: GENERIC_ERROR }
