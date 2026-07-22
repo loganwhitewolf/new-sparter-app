@@ -4,11 +4,11 @@ milestone: v2.6
 milestone_name: Expenses & Transactions Refinement
 current_phase: 68
 current_phase_name: tags-dashboard-and-navigation
-status: verifying
-stopped_at: Phase 68 executed + WR-02/WR-04 fixed; verification human_needed (1 visual UAT item); v2.6 ready to complete after UAT
+status: shipped
+stopped_at: v2.6 milestone shipped (tag v2.6) — audit passed 16/16; ready for /gsd-new-milestone
 last_updated: "2026-07-21T13:38:16.168Z"
 last_activity: 2026-07-21
-last_activity_desc: Phase 68 execution started
+last_activity_desc: v2.6 milestone archived and tagged
 progress:
   total_phases: 4
   completed_phases: 4

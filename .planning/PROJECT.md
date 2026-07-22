@@ -15,7 +15,8 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v2.5 (Phases 1–64) complete. The app now has:
+All milestones M001–v2.6 (Phases 1–68) complete. The app now has:
+- Expense Groups + Transaction Tags (v2.6): bulk-merge same-subcategory expenses into titled Expense Groups (ADR 0017 — grouping entity above intact Expenses, no physical merge; rendered as one row everywhere, full lifecycle recategorize/add/remove/dissolve with dashboard totals structurally unchanged); a curated Transaction Tags axis orthogonal to categories (create/edit/archive, never delete; bulk-assign; date-range suggestions on create + each import); a global dashboard tag filter threaded through every widget (EXISTS predicate, totals reconcile), a `/dashboard/tags` section with independent per-tag all-time totals, and a month→filtered-transactions click-through from the movers/deviations rows
 - Uniform detail pages (v2.5): `/transactions/[id]`, `/expenses/[id]`, `/import/[fileId]` as the single place to view and edit everything editable about each entity, with pencil-inline editing, cross-references between entities, atomic derived-field reconciliation, and a pair-coherence guard that blocks amount edits breaking a refund pair
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
 - Import management, categorization (Tier 1 regex, Tier 2 history, Tier 3 AI gated)
