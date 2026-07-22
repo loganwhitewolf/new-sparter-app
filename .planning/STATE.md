@@ -278,6 +278,7 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260721-mm0 | Fix: private format create drops secondaryDescriptionColumn (formData not forwarded in createPrivateImportFormatAction) | 2026-07-21 | 7904df5 |
 | 260721-mrl | Move Categorie into primary left sidebar; remove hub card; keep /settings/categories route | 2026-07-21 | eddc893 |
 | 260722-iys | Nav IA: /tags + /patterns primary; Patterns out of Categories; theme→Profile; /settings→Profilo; mobile Altro sheet | 2026-07-22 | fcb1646 |
+| 260722-ked | Enrich tag detail panel: Entrate/Uscite/Valore finale totals + included-tx count + compact tx list (date·subcat·signed amount), lazy via getTagDetailAction; dashboard-consistent netting (getTagDetail/buildTagDetailData) | 2026-07-22 | 1cce578 |
 
 ## Deferred Items
 
