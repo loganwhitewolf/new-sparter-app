@@ -20,6 +20,7 @@ Quale direzione A+B diventa la homepage di produzione?
 
 ## Verdetto PO (compilare dopo review)
 
-- **Winner:** _
-- **Steal from losers:** _
-- **Do not ship:** _
+- **Winner: c** — Type-led stack. Confermato dall'utente ("mi piace il prototipo 3", 2026-07-22).
+- **Steal from losers:** da a — peso dello screenshot prodotto come piano visivo dominante (sotto fold o in banda); da b — peso tipografico editoriale / colonna testo asimmetrica dove serve senza riprendere lo split a due colonne
+- **Do not ship:** a e b come layout homepage primario; non estrarre ancora `components/marketing/*` (Phase 71)
+
