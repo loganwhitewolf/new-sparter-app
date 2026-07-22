@@ -72,7 +72,7 @@ Layout: Variant A "report verticale" (prototype `proto/tag-view`).
 
 **Plans**: 2 plans
 
-- [ ] 70-01-PLAN.md — Surface removal: tag control + `?tag=` read gone from all three dashboard pages, both href builders, ranking-list copy, and the movers prop/action chain [wave 1]
+- [x] 70-01-PLAN.md — Surface removal: tag control + `?tag=` read gone from all three dashboard pages, both href builders, ranking-list copy, and the movers prop/action chain [wave 1]
 - [ ] 70-02-PLAN.md — DAL de-threading + orphan deletion (component, `parseTagIdParam`, their tests) + regression gates proving `tagScopedTransactions` / `/transactions?tag=` survive [wave 2]
 
 ### Phase 71: transactions-tag-filter-control
@@ -329,7 +329,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 67. tags-foundation-and-assignment | v2.6 | 9/9 | Complete    | 2026-07-20 |
 | 68. tags-dashboard-and-navigation | v2.6 | 8/8 | Complete    | 2026-07-22 |
 | 69. tag-dedicated-page | v2.7 | 3/3 | Complete | 2026-07-22 |
-| 70. dashboard-tag-filter-removal | v2.7 | 0/2 | Not started | - |
+| 70. dashboard-tag-filter-removal | v2.7 | 0/2 | In Progress|  |
 | 71. transactions-tag-filter-control | v2.7 | 0/1 | Not started | - |
 
 **Total shipped: 68 phases · 263 plans complete**

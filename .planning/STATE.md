@@ -3,17 +3,18 @@ gsd_state_version: 1.0
 milestone: v2.7
 milestone_name: Tag Dedicated View
 current_phase: 70
+current_phase_name: dashboard-tag-filter-removal (1/2 plans — 70-02 pending)
 status: in_progress
-stopped_at: Completed Phase 69 (3/3 plans, gsd-verifier GOAL ACHIEVED)
-last_updated: "2026-07-22T14:30:00.000Z"
+stopped_at: Completed 70-01-PLAN.md
+last_updated: "2026-07-22T15:40:17.311Z"
 last_activity: 2026-07-22
-last_activity_desc: Phase 69 complete + verified; added Phase 71 (transactions tag filter, TAG-14)
+last_activity_desc: Phase 70 plan 01 — removed every dashboard ?tag= call site (TAG-13, wave 1)
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 33
+  completed_phases: 2
+  total_plans: 6
+  completed_plans: 5
+  percent: 67
 ---
 
 # Project State
@@ -27,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 ## Current Position
 
-Phase: 69 — tag-dedicated-page (COMPLETE ✓, verified GOAL ACHIEVED)
-Plan: 3 of 3 complete (69-01 tracer, 69-02 breakdown, 69-03 index+cleanup); operator checkpoint approved
-Status: Phase 69 done. Milestone v2.7 remaining: Phase 70 (dashboard tag-filter removal) + Phase 71 (transactions tag-filter control, TAG-14). Next up: Phase 71 (user-requested).
-Last activity: 2026-07-22 — Phase 69 verified; +description in tx list, +Entrate/Uscite sign-fix; added Phase 71
+Phase: 70 — dashboard-tag-filter-removal (in progress)
+Plan: 1 of 2 complete (70-01 call-site removal); 70-02 removes the dashboard DAL `tagId` parameters
+Status: Phases 69 and 71 done. Wave 1 of Phase 70 shipped: no dashboard page, component or Server Action reads or forwards a tag id any more; `/transactions?tag=` and the TAG-14 toolbar filter are untouched.
+Last activity: 2026-07-22 — Phase 70 plan 01 executed (3 tasks, 3 commits, full suite green)
 
 ## Roadmap (v2.7 — Phases 69-70)
 
@@ -224,6 +225,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 68-06: Added no-data-for-tag OverviewEmptyState variant + tagId-aware CategoryRankingList empty copy to satisfy the plan's locked must_haves copy contract (not spelled out in task action blocks)
 - [Phase ?]: 68-06: Category detail page renders no TagFilterSelect of its own — filter is set on the ranking-list page and carried through via ?tag= only, matching the existing preset/type no-second-control pattern
 - [Phase ?]: 68-07: MoverList rows built from categorySlug (never categoryId) per Pitfall 2; UI-SPEC's stale category={m.categoryId} snippet is superseded by the plan/PATTERNS.md
+- [Phase 70]: Dashboard legacy ?tag= URLs degrade silently — param not read, no redirect (Phase 70 D1)
+- [Phase 70]: Per-tag analysis lives only in /tags/[id]; no substitute affordance on the dashboard (Phase 70 D2)
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -338,9 +341,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 69-02-PLAN.md
+**Stopped at:** Completed 70-01-PLAN.md
 
-Last session: 2026-07-22T13:59:18.071Z
+Last session: 2026-07-22T15:40:09.434Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
@@ -406,3 +409,4 @@ Last session: 2026-07-22T13:59:18.071Z
 | Phase 68 P06 | 12min | 3 tasks | 7 files |
 | Phase 68 P07 | 15min | 1 tasks | 2 files |
 | Phase 69 P02 | 4min | 2 tasks | 4 files |
+| Phase 70 P01 | 8min | 3 tasks | 10 files |
