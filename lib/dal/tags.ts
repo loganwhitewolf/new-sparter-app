@@ -271,18 +271,28 @@ export type TagDetailTransaction = {
   amount: string // signed DECIMAL string — out is negative, in positive
 }
 
+// Per-category breakdown entry (TAG-09, D3). `total` is a SIGNED DECIMAL string — a category
+// can net positive or negative — so Σ breakdown.total reconciles exactly with TagDetail.net.
+export type TagBreakdownItem = {
+  categoryName: string
+  total: string // signed DECIMAL string — out negative, in positive
+  count: number
+}
+
 export type TagDetail = {
   inflow: string // positive magnitude of inflows
   outflow: string // positive magnitude of outflows
   net: string // signed net (inflow − outflow, incl. allocation)
   count: number // transactions included in the totals (== transactions.length)
   transactions: TagDetailTransaction[]
+  breakdown: TagBreakdownItem[] // per-category signed totals, sorted by |total| desc; Σ total === net
 }
 
 type TagDetailQueryRow = {
   transactionId: string
   occurredAt: string
   subCategoryName: string
+  categoryName: string
   directionCode: string
   amount: string
 }
@@ -294,11 +304,24 @@ export function buildTagDetailData(rows: TagDetailQueryRow[]): TagDetail {
   let outflow = toDecimal('0') // accumulates the negative OUT amounts; abs()'d at the end
   let net = toDecimal('0')
 
+  // Per-category accumulator — signed Decimal running total + integer row count. Keyed by
+  // categoryName; iteration order preserved so the pre-sort order is insertion order.
+  const byCategory = new Map<string, { total: ReturnType<typeof toDecimal>; count: number }>()
+
   const transactions = rows.map((row) => {
     const amount = toDecimal(row.amount)
     net = net.plus(amount)
     if (row.directionCode === 'in') inflow = inflow.plus(amount)
     else if (row.directionCode === 'out') outflow = outflow.plus(amount)
+
+    const bucket = byCategory.get(row.categoryName)
+    if (bucket) {
+      bucket.total = bucket.total.plus(amount)
+      bucket.count += 1
+    } else {
+      byCategory.set(row.categoryName, { total: amount, count: 1 })
+    }
+
     return {
       transactionId: row.transactionId,
       occurredAt: row.occurredAt,
@@ -307,12 +330,19 @@ export function buildTagDetailData(rows: TagDetailQueryRow[]): TagDetail {
     }
   })
 
+  // Sort by absolute total descending — same rule as buildTagTotalsData. Signed `total` string
+  // preserves the sign; Σ breakdown.total therefore reconciles with `net` (TAG-07/TAG-08).
+  const breakdown: TagBreakdownItem[] = Array.from(byCategory.entries())
+    .map(([categoryName, acc]) => ({ categoryName, total: acc.total.toFixed(2), count: acc.count }))
+    .sort((a, b) => toDecimal(b.total).abs().comparedTo(toDecimal(a.total).abs()))
+
   return {
     inflow: inflow.toFixed(2),
     outflow: outflow.abs().toFixed(2),
     net: net.toFixed(2),
     count: rows.length,
     transactions,
+    breakdown,
   }
 }
 
@@ -325,6 +355,9 @@ export async function getTagDetail(userId: string, tagId: number): Promise<TagDe
       transactionId: transactionTable.id,
       occurredAt: sql<string>`${transactionTable.occurredAt}::text`,
       subCategoryName: subCategory.name,
+      // category is ALREADY innerJoined below — this adds a COLUMN, never a row, so the netted
+      // row set (and therefore `net`) is unchanged and still reconciles with getTagTotals (TAG-07).
+      categoryName: category.name,
       directionCode: direction.code,
       amount: sql<string>`(${effectiveAmount()})::text`,
     })
