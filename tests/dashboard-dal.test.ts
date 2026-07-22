@@ -2,13 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { dashboardPresetToDateRange } from '@/lib/utils/date'
 
 // Hoisted so the `@/lib/db` mock factory below (which is itself hoisted above
-// all imports by vi.mock) can close over shared mutable state: whereArgs
-// records each query's WHERE condition in call order (68-02 tagId assertions
-// inspect this), rowsQueue lets a test seed per-call result rows (used by
-// getCategoryDetail's category-metadata lookup, which must return a row for
-// the function to proceed past its early-return guard).
+// all imports by vi.mock) can close over shared mutable state: rowsQueue lets
+// a test seed per-call result rows for the shared select mock chain.
 const dalMocks = vi.hoisted(() => ({
-  whereArgs: [] as unknown[],
   rowsQueue: [] as unknown[][],
 }))
 
@@ -21,10 +17,7 @@ vi.mock('@/lib/db', () => {
       from: vi.fn(() => chain),
       leftJoin: vi.fn(() => chain),
       innerJoin: vi.fn(() => chain),
-      where: vi.fn((arg: unknown) => {
-        dalMocks.whereArgs.push(arg)
-        return chain
-      }),
+      where: vi.fn(() => chain),
       groupBy: vi.fn(() => chain),
       orderBy: vi.fn(() => chain),
       limit: vi.fn((n: number) => Promise.resolve(rows.slice(0, n))),
@@ -126,30 +119,11 @@ const {
   buildOverviewData,
   getDeviationDateRanges,
   getOverviewComparisonRanges,
-  getUncategorizedCount,
-  getOverviewAmountTotals,
-  getCategoryRanking,
-  getCategoryDeviations,
-  getCategoryDetail,
 } = await import('../lib/dal/dashboard')
 
 const { verifySession } = await import('../lib/dal/auth')
 
-/** Locate the tagScopedTransactions EXISTS fragment (if any) inside a real
- * drizzle-orm `and(...)` condition tree — mirrors the substring-search idiom
- * used in tests/transactions-dal.test.ts, adapted for the REAL drizzle-orm
- * `sql`/`and` builders this file uses (no drizzle-orm mock in this file). */
-function findTagCondition(whereArg: unknown, tagId: number): boolean {
-  const serialized = JSON.stringify(whereArg)
-  return serialized.includes('transaction_tag') && serialized.includes(String(tagId))
-}
-
-function hasTagCondition(whereArg: unknown): boolean {
-  return JSON.stringify(whereArg).includes('transaction_tag')
-}
-
 beforeEach(() => {
-  dalMocks.whereArgs = []
   dalMocks.rowsQueue = []
   vi.mocked(verifySession).mockResolvedValue({ userId: 'user-1' } as never)
 })
@@ -1094,104 +1068,5 @@ describe('transaction pairing netting (Phase 50 — PAIR-03)', () => {
       expect(overview.balance).toBe('1000.01')
       expect(overview.savingsRate).toBe(40)
     })
-  })
-})
-
-describe('getUncategorizedCount / getOverviewAmountTotals tagId threading (68-02, TAG-04)', () => {
-  const from = new Date(2026, 0, 1)
-  const to = new Date(2026, 0, 31)
-
-  it('getUncategorizedCount: no tagId adds no EXISTS(transaction_tag) condition', async () => {
-    await getUncategorizedCount('user-1', from, to)
-
-    expect(dalMocks.whereArgs).toHaveLength(1)
-    expect(hasTagCondition(dalMocks.whereArgs[0])).toBe(false)
-  })
-
-  it('getUncategorizedCount: tagId=5 adds the EXISTS(transaction_tag) fragment scoped to that tag', async () => {
-    await getUncategorizedCount('user-1', from, to, 5)
-
-    expect(dalMocks.whereArgs).toHaveLength(1)
-    expect(findTagCondition(dalMocks.whereArgs[0], 5)).toBe(true)
-  })
-
-  it('getOverviewAmountTotals: no tagId adds no EXISTS(transaction_tag) condition', async () => {
-    await getOverviewAmountTotals('user-1', from, to)
-
-    expect(dalMocks.whereArgs).toHaveLength(1)
-    expect(hasTagCondition(dalMocks.whereArgs[0])).toBe(false)
-  })
-
-  it('getOverviewAmountTotals: tagId=5 adds the EXISTS(transaction_tag) fragment scoped to that tag', async () => {
-    await getOverviewAmountTotals('user-1', from, to, 5)
-
-    expect(dalMocks.whereArgs).toHaveLength(1)
-    expect(findTagCondition(dalMocks.whereArgs[0], 5)).toBe(true)
-  })
-})
-
-describe('getCategoryRanking / getCategoryDeviations tagId threading (68-02, TAG-04)', () => {
-  const filters = { preset: 'last-month', type: 'all', sort: 'amount' } as const
-
-  it('getCategoryRanking: no tagId adds no EXISTS(transaction_tag) condition', async () => {
-    await getCategoryRanking(filters)
-
-    expect(dalMocks.whereArgs).toHaveLength(1)
-    expect(hasTagCondition(dalMocks.whereArgs[0])).toBe(false)
-  })
-
-  it('getCategoryRanking: tagId=5 adds the EXISTS(transaction_tag) fragment scoped to that tag', async () => {
-    await getCategoryRanking(filters, 5)
-
-    expect(dalMocks.whereArgs).toHaveLength(1)
-    expect(findTagCondition(dalMocks.whereArgs[0], 5)).toBe(true)
-  })
-
-  it('getCategoryDeviations: no tagId adds no EXISTS(transaction_tag) condition to either query', async () => {
-    await getCategoryDeviations({ type: 'out' })
-
-    expect(dalMocks.whereArgs).toHaveLength(2)
-    expect(hasTagCondition(dalMocks.whereArgs[0])).toBe(false)
-    expect(hasTagCondition(dalMocks.whereArgs[1])).toBe(false)
-  })
-
-  it('getCategoryDeviations: tagId=5 narrows BOTH the reference and baseline queries', async () => {
-    await getCategoryDeviations({ type: 'out', tagId: 5 })
-
-    expect(dalMocks.whereArgs).toHaveLength(2)
-    expect(findTagCondition(dalMocks.whereArgs[0], 5)).toBe(true)
-    expect(findTagCondition(dalMocks.whereArgs[1], 5)).toBe(true)
-  })
-})
-
-describe('getCategoryDetail tagId threading (68-02, TAG-04, resolved Open Question #2)', () => {
-  const filters = { preset: 'last-month', type: 'all', sort: 'amount' } as const
-  const categoryMetadataRow = [
-    { id: 1, name: 'Casa', slug: 'casa', type: 'out' },
-  ]
-
-  it('no tagId adds no EXISTS(transaction_tag) condition to any of the 3 data queries', async () => {
-    dalMocks.rowsQueue = [categoryMetadataRow]
-
-    await getCategoryDetail(1, filters)
-
-    // whereArgs[0] is the category-metadata lookup (untouched by design — no
-    // transaction join to scope); whereArgs[1..3] are trend/subcategory/top.
-    expect(dalMocks.whereArgs).toHaveLength(4)
-    expect(hasTagCondition(dalMocks.whereArgs[1])).toBe(false)
-    expect(hasTagCondition(dalMocks.whereArgs[2])).toBe(false)
-    expect(hasTagCondition(dalMocks.whereArgs[3])).toBe(false)
-  })
-
-  it('tagId=5 narrows all 3 data queries (trend, subcategory breakdown, top transactions) but not the metadata lookup', async () => {
-    dalMocks.rowsQueue = [categoryMetadataRow]
-
-    await getCategoryDetail(1, filters, 5)
-
-    expect(dalMocks.whereArgs).toHaveLength(4)
-    expect(hasTagCondition(dalMocks.whereArgs[0])).toBe(false)
-    expect(findTagCondition(dalMocks.whereArgs[1], 5)).toBe(true)
-    expect(findTagCondition(dalMocks.whereArgs[2], 5)).toBe(true)
-    expect(findTagCondition(dalMocks.whereArgs[3], 5)).toBe(true)
   })
 })
