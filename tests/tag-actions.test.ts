@@ -63,7 +63,7 @@ describe('lib/actions/tags', () => {
         dateRangeStart: null,
         dateRangeEnd: null,
       })
-      expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/tags')
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/tags')
       // WR-02 — a newly created tag must also refresh the dashboard Tag section
       expect(mocks.revalidatePath).toHaveBeenCalledWith('/dashboard/tags')
     })
@@ -104,7 +104,7 @@ describe('lib/actions/tags', () => {
       expect(mocks.updateTag).toHaveBeenCalledWith(
         expect.objectContaining({ userId: 'user-1', tagId: 1, name: 'Sharm 2027' }),
       )
-      expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/tags')
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/tags')
       // WR-02 — a renamed tag must also refresh the dashboard Tag section
       expect(mocks.revalidatePath).toHaveBeenCalledWith('/dashboard/tags')
     })
@@ -133,16 +133,16 @@ describe('lib/actions/tags', () => {
 
       expect(result).toEqual({ error: null })
       expect(mocks.archiveTag).toHaveBeenCalledWith({ userId: 'user-1', tagId: 1 })
-      expect(mocks.revalidatePath).toHaveBeenCalledWith('/settings/tags')
+      expect(mocks.revalidatePath).toHaveBeenCalledWith('/tags')
     })
 
-    it('revalidates BOTH /settings/tags and /dashboard/tags on success (Pitfall 3 fix — 68-04)', async () => {
+    it('revalidates BOTH /tags and /dashboard/tags on success (Pitfall 3 fix — 68-04)', async () => {
       mocks.archiveTag.mockResolvedValue({ id: 1, archived: true })
 
       await archiveTagAction({ error: null }, formDataFrom({ id: '1' }))
 
       expect(mocks.revalidatePath).toHaveBeenCalledTimes(2)
-      expect(mocks.revalidatePath).toHaveBeenNthCalledWith(1, '/settings/tags')
+      expect(mocks.revalidatePath).toHaveBeenNthCalledWith(1, '/tags')
       expect(mocks.revalidatePath).toHaveBeenNthCalledWith(2, '/dashboard/tags')
     })
 

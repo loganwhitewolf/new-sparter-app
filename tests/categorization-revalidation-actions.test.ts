@@ -4,6 +4,7 @@ const EXPECTED_CATEGORY_REVALIDATION_ROUTES = [
   '/dashboard',
   '/expenses',
   '/import',
+  '/patterns',
   '/settings/categories',
   '/transactions',
 ]

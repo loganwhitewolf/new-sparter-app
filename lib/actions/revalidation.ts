@@ -8,6 +8,7 @@ export function revalidateCategorizationSurfaces() {
   revalidatePath(APP_ROUTES.transactions)
   revalidatePath(APP_ROUTES.dashboard)
   revalidatePath(APP_ROUTES.categorySettings)
+  revalidatePath(APP_ROUTES.patterns)
   // Suggestions page reads expense.subCategoryId; promoted patterns clear suggestions when applied.
   revalidatePath(APP_ROUTES.import, 'layout')
   refresh()

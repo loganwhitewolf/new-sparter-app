@@ -10,7 +10,8 @@ export const APP_ROUTES = {
   transactions: '/transactions',
   settings: '/settings',
   categorySettings: '/settings/categories',
-  tagSettings: '/settings/tags',
+  tags: '/tags',
+  patterns: '/patterns',
   dashboardTags: '/dashboard/tags',
   profile: '/profile',                  // compatibility alias (D-04)
   profileSettings: '/settings/profile', // canonical (D-03)

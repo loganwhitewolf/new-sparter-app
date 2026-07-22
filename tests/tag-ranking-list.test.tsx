@@ -81,7 +81,7 @@ describe('TagRankingList', () => {
     const html = renderToStaticMarkup(createElement(TagRankingList, { items: [] }))
 
     expect(html).toContain('Nessun tag creato')
-    expect(html).toContain('href="/settings/tags"')
+    expect(html).toContain('href="/tags"')
     expect(html).toContain('border-dashed')
   })
 
