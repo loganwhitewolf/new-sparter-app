@@ -40,14 +40,21 @@ legal pages (Privacy/Termini), and SEO + auth-polish hardening. English route sl
 **Plans:** 3 plans
 
 Plans:
-- [ ] 69-01-PLAN.md — Tracer hub `/proto/branding` + switcher + Variant A (shot-as-plane) + fonts/placeholder
-- [ ] 69-02-PLAN.md — Variants B (editorial split) + C (type-led stack) for full BRAND-01 compare
-- [ ] 69-03-PLAN.md — NOTES.md template + PO Preview verdict checkpoint (BRAND-02)
+**Wave 1**
 
+- [ ] 69-01-PLAN.md — Tracer hub `/proto/branding` + switcher + Variant A (shot-as-plane) + fonts/placeholder
 - [ ] **Phase 70: public-layout-and-proxy-allowlist** (BRAND-03, BRAND-04, BRAND-05) — Dedicated `(public)` route-group layout (header/nav/footer, no AppShell/sidebar/onboarding gate); `lib/routes.ts` single-source-of-truth allowlist wired into `proxy.ts`; smart root (anon → marketing, auth → `/dashboard`).
 - [ ] **Phase 71: marketing-pages** (BRAND-06, BRAND-07, BRAND-08) — Italian homepage (hero, import-first value prop, CTA Registrati/Entra, mobile-responsive) promoted from the winning proto; `/how-it-works` 3–5 step explainer; public nav/footer links (Come funziona, Privacy, Termini, Entra, Registrati — no Pricing).
 - [ ] **Phase 72: legal-pages** (BRAND-09, BRAND-10) — `/privacy` GDPR-minimum policy naming real sub-processors (Vercel, Supabase, R2, Better Auth/OAuth); `/terms` usage terms (no financial advice, as-is, no pricing clauses); both footer-linked.
 - [ ] **Phase 73: seo-and-auth-polish** (BRAND-11, BRAND-12, BRAND-13) — Per-page Italian SEO metadata; `app/sitemap.ts` + `app/robots.ts` listing indexable public routes (`app/proto/*` stays `noindex`); session-aware public header (hides Registrati when authenticated); sign-out lands on `/`.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 69-02-PLAN.md — Variants B (editorial split) + C (type-led stack) for full BRAND-01 compare
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 69-03-PLAN.md — NOTES.md template + PO Preview verdict checkpoint (BRAND-02)
 
 <details>
 <summary>✅ v2.6: Expenses & Transactions Refinement (Phases 65–68) — SHIPPED 2026-07-22 (tag v2.6)</summary>
