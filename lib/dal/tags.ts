@@ -295,7 +295,6 @@ type TagDetailQueryRow = {
   description: string
   subCategoryName: string
   categoryName: string
-  directionCode: string
   amount: string
 }
 
@@ -313,8 +312,13 @@ export function buildTagDetailData(rows: TagDetailQueryRow[]): TagDetail {
   const transactions = rows.map((row) => {
     const amount = toDecimal(row.amount)
     net = net.plus(amount)
-    if (row.directionCode === 'in') inflow = inflow.plus(amount)
-    else if (row.directionCode === 'out') outflow = outflow.plus(amount)
+    // Classify Entrate/Uscite by the amount's SIGN, NOT the subcategory direction. A tag is
+    // event-shaped and its rows can carry a positive amount while sitting under an 'out'
+    // subcategory — e.g. a refund is categorized under the spend's subcategory (direction 'out')
+    // yet nets positive. Grouping by direction left inflow empty and dumped everything into
+    // outflow. Entrate = Σ positive, Uscite = |Σ negative| → inflow − outflow === net.
+    if (amount.greaterThan(0)) inflow = inflow.plus(amount)
+    else if (amount.lessThan(0)) outflow = outflow.plus(amount)
 
     const bucket = byCategory.get(row.categoryName)
     if (bucket) {
@@ -362,7 +366,6 @@ export async function getTagDetail(userId: string, tagId: number): Promise<TagDe
       // category is ALREADY innerJoined below — this adds a COLUMN, never a row, so the netted
       // row set (and therefore `net`) is unchanged and still reconciles with getTagTotals (TAG-07).
       categoryName: category.name,
-      directionCode: direction.code,
       amount: sql<string>`(${effectiveAmount()})::text`,
     })
     .from(transactionTable)

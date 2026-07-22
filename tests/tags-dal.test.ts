@@ -214,13 +214,16 @@ const {
 
 // Minimal TagDetailQueryRow factory for the pure buildTagDetailData block — mirrors the
 // getTagDetail select shape (occurredAt is only carried through to the tx list, not the sums).
+// `directionCode` is accepted for readability of the test cases (it hints the expected sign) but
+// is IGNORED by buildTagDetailData — Entrate/Uscite are classified by the amount's sign, not by
+// subcategory direction. It is intentionally not carried into the returned row.
 function detailRow(overrides: {
   transactionId: string
   categoryName: string
-  directionCode: string
   amount: string
   subCategoryName?: string
   description?: string
+  directionCode?: string
 }) {
   return {
     transactionId: overrides.transactionId,
@@ -228,7 +231,6 @@ function detailRow(overrides: {
     description: overrides.description ?? 'Descrizione',
     subCategoryName: overrides.subCategoryName ?? 'Sub',
     categoryName: overrides.categoryName,
-    directionCode: overrides.directionCode,
     amount: overrides.amount,
   }
 }
@@ -463,16 +465,19 @@ describe('lib/dal/tags', () => {
       expect(sumCount).toBe(detail.transactions.length)
     })
 
-    it('keeps the invariant when an allocation-style row contributes to net but neither inflow nor outflow', () => {
-      // directionCode is neither 'in' nor 'out' → it lands in no in/out bucket, yet must still
-      // net and land in its category's breakdown bucket (inflow − outflow ≠ net here).
+    it('classifies inflow/outflow by amount sign — a positive row under a spend subcategory counts as Entrate', () => {
+      // Regression: a refund nets positive (+75) while sitting under an 'out' subcategory. It MUST
+      // land in inflow (Entrate), not be dropped. Entrate = Σ positive, Uscite = |Σ negative|, and
+      // the identity inflow − outflow === net always holds.
       const detail = buildTagDetailData([
-        detailRow({ transactionId: 't1', categoryName: 'Rimborsi', directionCode: 'allocation', amount: '75.00' }),
+        detailRow({ transactionId: 't1', categoryName: 'Rimborsi', directionCode: 'out', amount: '75.00' }),
         detailRow({ transactionId: 't2', categoryName: 'Casa', directionCode: 'out', amount: '-25.00' }),
       ])
 
+      expect(detail.inflow).toBe('75.00')
+      expect(detail.outflow).toBe('25.00')
       expect(detail.net).toBe('50.00')
-      expect(toDecimal(detail.inflow).minus(toDecimal(detail.outflow)).toFixed(2)).not.toBe(detail.net)
+      expect(toDecimal(detail.inflow).minus(toDecimal(detail.outflow)).toFixed(2)).toBe(detail.net)
       const rimborsi = detail.breakdown.find((b) => b.categoryName === 'Rimborsi')
       expect(rimborsi).toEqual({ categoryName: 'Rimborsi', total: '75.00', count: 1 })
       const sumTotal = detail.breakdown.reduce((acc, b) => toDecimal(acc).plus(toDecimal(b.total)).toFixed(2), '0.00')
