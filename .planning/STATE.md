@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.6
-milestone_name: Expenses & Transactions Refinement
-current_phase: 68
-current_phase_name: tags-dashboard-and-navigation
-status: shipped
-stopped_at: v2.6 milestone shipped (tag v2.6) — audit passed 16/16; ready for /gsd-new-milestone
-last_updated: "2026-07-22T11:50:00.000Z"
+milestone: v2.7
+milestone_name: Tag Dedicated View
+status: planning
+last_updated: "2026-07-22T13:16:52.676Z"
 last_activity: 2026-07-22
-last_activity_desc: "Completed quick task 260722-iys: /tags + /patterns nav IA, Altro sheet, theme in Profile"
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 28
-  completed_plans: 28
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -28,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 ## Current Position
 
-Phase: Milestone v2.6 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Shipped — ready for next milestone
-Last activity: 2026-07-22 — Completed quick task 260722-iys: /tags + /patterns in sidebar, Altro mobile sheet, theme in Profile
-
-Progress: [██████████] 100%
+Status: Defining requirements
+Last activity: 2026-07-22 — Milestone v2.7 started
 
 ## Roadmap (v2.6 — Phases 65-68)
 
