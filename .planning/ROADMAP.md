@@ -46,7 +46,10 @@ Layout: Variant A "report verticale" (prototype `proto/tag-view`).
   3. The page shows the included-transaction count and a per-category breakdown of the tag's transactions with signed amounts (CSS bars, no charting dependency).
   4. The page shows a compact list of the included transactions (date · subcategory · signed amount) sorted by date descending.
   5. User can edit and archive the tag directly from the page.
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 69-01-PLAN.md — Tracer: /tags/[id] RSC page rendering real getTagDetail (header + KPI + count + tx list) [wave 1]
+- [ ] 69-02-PLAN.md — Per-category breakdown: extend getTagDetail/buildTagDetailData + CSS-bar card [wave 2]
+- [ ] 69-03-PLAN.md — Entry points + cleanup: /tags index links, /dashboard/tags re-point, remove orphaned action, human-verify [wave 2]
 **UI hint**: yes
 
 ### Phase 70: dashboard-tag-filter-removal
