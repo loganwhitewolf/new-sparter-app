@@ -15,7 +15,7 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v2.6 (Phases 1–68) complete. The app now has:
+All milestones M001–v2.6 (Phases 1–68) complete; v2.8 Public Branding Site is active (v2.7 reserved for parallel tags work). The app now has:
 - Expense Groups + Transaction Tags (v2.6): bulk-merge same-subcategory expenses into titled Expense Groups (ADR 0017 — grouping entity above intact Expenses, no physical merge; rendered as one row everywhere, full lifecycle recategorize/add/remove/dissolve with dashboard totals structurally unchanged); a curated Transaction Tags axis orthogonal to categories (create/edit/archive, never delete; bulk-assign; date-range suggestions on create + each import); a global dashboard tag filter threaded through every widget (EXISTS predicate, totals reconcile), a `/dashboard/tags` section with independent per-tag all-time totals, and a month→filtered-transactions click-through from the movers/deviations rows
 - Uniform detail pages (v2.5): `/transactions/[id]`, `/expenses/[id]`, `/import/[fileId]` as the single place to view and edit everything editable about each entity, with pencil-inline editing, cross-references between entities, atomic derived-field reconciliation, and a pair-coherence guard that blocks amount edits breaking a refund pair
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
@@ -34,16 +34,29 @@ All milestones M001–v2.6 (Phases 1–68) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Current Milestone: v2.6 — Expenses & Transactions Refinement
+## Current Milestone: v2.8 — Public Branding Site
+
+**Goal:** Ship a public branding surface on the same Next.js deploy that explains what Sparter is, links into the app, and establishes a dedicated public layout — design direction locked via throwaway `app/proto/` variants before production implementation.
+
+**Target features:**
+- Homepage `/` — hero, product explanation, CTA to Entra/Registrati
+- “Come funziona” page
+- Minimal legal pages: Privacy + Termini (no Pricing — offer not defined yet)
+- Smart root: anonymous visitors see marketing; authenticated users go to dashboard
+- Dedicated public route-group layout (separate from `(app)` / `(auth)`)
+- Phase 1: 2–3 UI variants in `app/proto/` → pick direction → implement production pages
+
+**Constraints:**
+- v2.7 reserved for parallel tags milestone (other agent); this work is v2.8
+- Operator deploy R038/R039/R041 remains pending — this milestone is the public façade, not the infra go-live
+
+## Last Shipped Milestone: v2.6 — Expenses & Transactions Refinement (shipped 2026-07-22, tag v2.6)
 
 **Goal:** Refine the expenses/transactions section with same-merchant unification (Expense Group), a second orthogonal analysis axis (Transaction Tags), and dashboard-to-transactions filtered navigation.
 
-**Target features:**
-- Expense Group: manual bulk "Unisci" of same-merchant expenses seen from different platforms — grouping entity above intact expenses, same-subcategory gate, group as categorization unit, Scomponi/remove-member, no import-time auto-merge (model locked in ADR 0017, grill 2026-07-18)
-- Transaction Tags: curated tag entity (optional date range, N per transaction, archived flag), bulk-tagging from transactions page, tag as global dashboard filter, Tag section with per-tag totals, date-range suggestion on tag creation and import, Viaggi category audit + categorizer rule updates (design source: Obsidian note 2026-07-06; excluded: per-tag breakdowns, status/behavioral tags, AI tagging pass)
-- Dashboard month → transactions link: per-row link in the savings/deviations view navigating to the transactions section with filters pre-applied from the dashboard's current settings
+**Delivered:** Expense Groups (ADR 0017), Transaction Tags (curated entity, bulk-tagging, dashboard filter, `/dashboard/tags`, date-range suggestions), dashboard month → filtered transactions link, `/tags` + `/patterns` nav IA.
 
-**Cross-cutting constraint:** neither merging nor tagging moves dashboard values — structural for Expense Group (pure regrouping, read-time totals); for tags via the "tag = filter, never breakdown" rule.
+**Cross-cutting constraint:** neither merging nor tagging moves dashboard values — structural for Expense Group; tags = filter, never breakdown.
 
 ## Last Shipped Milestone: v2.5 — Detail Pages (shipped 2026-07-07, tag v2.5)
 
@@ -207,6 +220,14 @@ quick-task entries acknowledged as deferred at milestone close — see STATE.md 
 - [ ] R039 — Supabase Free Postgres production database (operator-pending)
 - [ ] R041 — Cloudflare R2 production storage (operator-pending)
 
+### Active (v2.8 — Public Branding Site)
+
+- [ ] Public homepage explaining Sparter + CTA to login/register
+- [ ] “Come funziona” page
+- [ ] Privacy + Termini pages (no Pricing)
+- [ ] Smart root routing (anon → marketing, auth → dashboard)
+- [ ] Dedicated public layout; design locked via `app/proto/` variants first
+
 ### Out of Scope
 
 - Mobile app — web-first; PWA acceptable later
@@ -241,7 +262,9 @@ quick-task entries acknowledged as deferred at milestone close — see STATE.md 
 - [x] v2.3: Platform Identity & Format Ownership — Platform as globally shared moderated identity (pending→approved), private ownership on Import Format only, seed slug-linkage fix (ADR 0015). Shipped 2026-06-30 (PR #31, tag v2.3).
 - [x] v2.4: Standalone Expense — general "treat as standalone / don't aggregate" action in categorization + in-place single-transaction isolation, lifting the SINGLE_TRANSACTION_EXPENSE guard (ADR 0016). Shipped 2026-07-01, tag v2.4.
 - [x] v2.5: Detail Pages — uniform `/transactions/[id]`, `/expenses/[id]`, `/import/[fileId]` detail pages with pencil-inline editing, atomic derived-field reconciliation, pair-coherence guard, and consistent navigation wiring across all three tables. Shipped 2026-07-07, tag v2.5.
-- [ ] v2.6: Expenses & Transactions Refinement — Expense Group same-merchant unification (ADR 0017), Transaction Tags (curated entity, bulk-tagging, dashboard filter, date-range suggestion, Viaggi audit), dashboard month → filtered transactions link. In progress.
+- [x] v2.6: Expenses & Transactions Refinement — Expense Group same-merchant unification (ADR 0017), Transaction Tags (curated entity, bulk-tagging, dashboard filter, date-range suggestion, Viaggi audit), dashboard month → filtered transactions link. Shipped 2026-07-22.
+- [ ] v2.7: Tags milestone (parallel, other agent) — reserved numbering; not owned by this workspace session.
+- [ ] v2.8: Public Branding Site — homepage, Come funziona, Privacy/Termini, smart root, public layout; proto variants first. In progress.
 
 ## Key Decisions
 
@@ -319,4 +342,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-18 — milestone v2.6 Expenses & Transactions Refinement started (Expense Group model locked in ADR 0017)*
+*Last updated: 2026-07-22 — milestone v2.8 Public Branding Site started (v2.7 reserved for parallel tags work)*
