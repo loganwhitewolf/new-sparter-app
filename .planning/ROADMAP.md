@@ -31,7 +31,19 @@ root make anonymous marketing pages reachable, followed by the homepage/how-it-w
 legal pages (Privacy/Termini), and SEO + auth-polish hardening. English route slugs
 (`/how-it-works`, `/privacy`, `/terms`); Italian UI copy. No Pricing page (offer undefined).
 
-- [ ] **Phase 69: proto-design-variants** (BRAND-01, BRAND-02) — 2–3 throwaway branding UI variants under `app/proto/`, Preview-gated + `noindex`; PO/stakeholder picks the production design direction before any `(public)` page is built.
+### Phase 69: proto-design-variants
+
+**Goal:** Deliver 2–3 throwaway branding UI variants under `app/proto/` (Preview-gated + `noindex`) so PO/stakeholder picks the production design direction (BRAND-01, BRAND-02) before any `(public)` page is built.
+
+**Requirements:** BRAND-01, BRAND-02
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 69-01-PLAN.md — Tracer hub `/proto/branding` + switcher + Variant A (shot-as-plane) + fonts/placeholder
+- [ ] 69-02-PLAN.md — Variants B (editorial split) + C (type-led stack) for full BRAND-01 compare
+- [ ] 69-03-PLAN.md — NOTES.md template + PO Preview verdict checkpoint (BRAND-02)
+
 - [ ] **Phase 70: public-layout-and-proxy-allowlist** (BRAND-03, BRAND-04, BRAND-05) — Dedicated `(public)` route-group layout (header/nav/footer, no AppShell/sidebar/onboarding gate); `lib/routes.ts` single-source-of-truth allowlist wired into `proxy.ts`; smart root (anon → marketing, auth → `/dashboard`).
 - [ ] **Phase 71: marketing-pages** (BRAND-06, BRAND-07, BRAND-08) — Italian homepage (hero, import-first value prop, CTA Registrati/Entra, mobile-responsive) promoted from the winning proto; `/how-it-works` 3–5 step explainer; public nav/footer links (Come funziona, Privacy, Termini, Entra, Registrati — no Pricing).
 - [ ] **Phase 72: legal-pages** (BRAND-09, BRAND-10) — `/privacy` GDPR-minimum policy naming real sub-processors (Vercel, Supabase, R2, Better Auth/OAuth); `/terms` usage terms (no financial advice, as-is, no pricing clauses); both footer-linked.
@@ -274,7 +286,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 66. expense-group-lifecycle | v2.6 | 5/5 | Complete    | 2026-07-20 |
 | 67. tags-foundation-and-assignment | v2.6 | 9/9 | Complete    | 2026-07-20 |
 | 68. tags-dashboard-and-navigation | v2.6 | 8/8 | Complete    | 2026-07-22 |
-| 69. proto-design-variants | v2.8 | 0/? | Not started | — |
+| 69. proto-design-variants | v2.8 | 0/3 | Planned | — |
 | 70. public-layout-and-proxy-allowlist | v2.8 | 0/? | Not started | — |
 | 71. marketing-pages | v2.8 | 0/? | Not started | — |
 | 72. legal-pages | v2.8 | 0/? | Not started | — |

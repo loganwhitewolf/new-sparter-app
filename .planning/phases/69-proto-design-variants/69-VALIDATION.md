@@ -5,7 +5,7 @@ slug: proto-design-variants
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
 status: draft
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-07-22
 ---
 
@@ -22,16 +22,16 @@ created: 2026-07-22
 |----------|-------|
 | **Framework** | Vitest ^4.1.5 + Playwright (e2e) — existing; waived for proto UI per D-09 |
 | **Config file** | Existing project scripts |
-| **Quick run command** | `npx tsc --noEmit` + `yarn lint` (touched `app/proto/**`) |
+| **Quick run command** | `npx tsc --noEmit` + file existence / grep gates in each PLAN verify |
 | **Full suite command** | Same + manual `PROTOTYPES_ENABLED=1` smoke of all three variants |
-| **Estimated runtime** | ~30–90 seconds (tsc/lint); manual Preview separate |
+| **Estimated runtime** | ~30–90 seconds (tsc); manual Preview separate |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** `npx tsc --noEmit` + `yarn lint` for touched proto files
-- **After every plan wave:** Same + local smoke of `/proto/branding?variant=a|b|c`
+- **After every task commit:** `npx tsc --noEmit` (plans 01–02) or NOTES grep gates (plan 03)
+- **After every plan wave:** Local smoke of `/proto/branding?variant=a|b|c` when UI exists
 - **Before `/gsd-verify-work`:** Preview URL shared; NOTES.md verdict filled; Production `/proto` still 404
 - **Max feedback latency:** ~90 seconds for automated checks
 
@@ -41,21 +41,24 @@ created: 2026-07-22
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD | 01+ | 1+ | BRAND-01 | — | Env gate + noindex via layout | manual + tsc/lint | `PROTOTYPES_ENABLED=1 yarn dev` + browser | ❌ Wave 0 intentional | ⬜ pending |
-| TBD | 01+ | 1+ | BRAND-01 | — | Without env → 404 | manual | Visit without env | ✅ layout | ⬜ pending |
-| TBD | 01+ | 1+ | BRAND-02 | — | Winner in NOTES.md | manual artifact | Human edit after PO review | ❌ (doc task) | ⬜ pending |
+| 69-01-T1 | 01 | 1 | BRAND-01 | T-69-01..04 | Env gate + noindex preserved; variant whitelist; hardcoded CTAs; no NODE_ENV hide | tsc + grep | see 69-01-PLAN Task 1 verify | ✅ after exec | ⬜ pending |
+| 69-01-T2 | 01 | 1 | BRAND-01 | T-69-01 | Scoped font + next/image asset; zero packages | tsc + grep | see 69-01-PLAN Task 2 verify | ✅ after exec | ⬜ pending |
+| 69-02-T1 | 02 | 2 | BRAND-01 | T-69-06..09 | VariantB CTAs hardcoded; import-first copy | tsc + grep | see 69-02-PLAN Task 1 verify | ✅ after exec | ⬜ pending |
+| 69-02-T2 | 02 | 2 | BRAND-01 | T-69-06..09 | VariantC mounted; three-way hub | tsc + grep | see 69-02-PLAN Task 2 verify | ✅ after exec | ⬜ pending |
+| 69-03-T1 | 03 | 3 | BRAND-02 | T-69-10 | NOTES template with Verdetto fields | grep | see 69-03-PLAN Task 1 verify | ✅ after exec | ⬜ pending |
+| 69-03-T2 | 03 | 3 | BRAND-02 | T-69-01 | Human fills Winner a\|b\|c; Production 404 confirmed | manual + post-resume grep | `grep -E 'Winner:[[:space:]]*[abcABC]' NOTES.md` | ❌ until PO | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
-*Planner fills concrete Task IDs when PLAN.md files are written.*
+*Specless probe fallback: skipped this planning run (`phase_req_ids` null) — recorded in 69-01-PLAN objective; behaviors covered via CONTEXT + REQUIREMENTS must_haves.*
 
 ---
 
 ## Wave 0 Requirements
 
-- Existing infrastructure covers phase requirements (D-09 waives proto unit tests)
-- Optional: NOTES.md template in first implement task (not a test gap)
-- Manual checklist in plan SUMMARY: env gate, three variants, switcher, CTAs, no Pricing, Italian copy
+- [x] No automated test stubs required (D-09)
+- [x] NOTES.md template planned in 69-03 Task 1
+- [x] Manual checklist owned by 69-03 human-verify checkpoint
 
 ---
 
@@ -71,10 +74,10 @@ created: 2026-07-22
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify (tsc/lint) or explicit manual accept per D-09
+- [ ] All tasks have `<automated>` verify (tsc/lint/grep) or explicit manual accept per D-09
 - [ ] Sampling continuity: no 3 consecutive tasks without tsc/lint or manual checklist
-- [ ] Wave 0: no automated test stubs required
-- [ ] No watch-mode flags
+- [x] Wave 0: no automated test stubs required
+- [x] No watch-mode flags
 - [ ] Feedback latency < 90s for automated checks
 - [ ] `nyquist_compliant: true` set in frontmatter when validate-phase approves
 
