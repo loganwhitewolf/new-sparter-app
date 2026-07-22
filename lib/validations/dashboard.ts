@@ -16,22 +16,6 @@ export type DashboardPreset = z.infer<typeof DashboardPresetSchema>
 export type DashboardType = z.infer<typeof DashboardTypeSchema>
 export type DashboardFilters = z.infer<typeof DashboardFiltersSchema>
 
-/**
- * Sync candidate-tagId parser for the dashboard's `?tag=` searchParam — same
- * numeric-parse idiom as the transactions `tag`/`subCategoryId` handling
- * (accept string or string[], take the first value, reject non-positive
- * integers). This only produces a CANDIDATE id; callers MUST pass the result
- * through resolveOwnedTagId() (lib/dal/tags.ts) before trusting it, since
- * this function performs no ownership check (68-01, IDOR defense-in-depth).
- */
-export function parseTagIdParam(input: { tag?: string | string[] }): number | undefined {
-  const rawTag = Array.isArray(input.tag) ? input.tag[0] : input.tag
-  const trimmed = rawTag?.trim()
-  const parsed = trimmed ? Number(trimmed) : NaN
-
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
-}
-
 export function parseDashboardFilters(
   input: {
     preset?: string | string[]

@@ -119,14 +119,14 @@ export async function updateTagRow(
 }
 
 /**
- * IDOR defense-in-depth for the dashboard `?tag=` filter (68-01, T-68-01).
+ * IDOR defense-in-depth for the transactions `?tag=` filter (TAG-14, T-68-01).
  *
  * Ownership is already enforced structurally: tagScopedTransactions() only
  * narrows rows already scoped by eq(transaction.userId, userId) in the same
  * query's WHERE clause, so a foreign tagId matches zero rows — no leak is
  * possible even without this check. This helper is the belt-and-suspenders
- * addition every RSC page reading `?tag=` in Wave 3/4 of this phase MUST call
- * before forwarding a user-supplied tagId to any DAL function.
+ * addition; app/(app)/transactions/page.tsx is the caller, and it resolves the
+ * user-supplied tagId here before forwarding it to getTransactions().
  *
  * Fail-closed by design: a tagId that does not belong to the authenticated
  * user (or does not exist) is silently ignored (resolves to undefined),
