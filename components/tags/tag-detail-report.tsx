@@ -141,7 +141,10 @@ export function TagDetailReport({ detail, tagId }: Props) {
           Nessuna transazione inclusa per questo tag.
         </p>
       ) : (
-        <ul className="max-h-[420px] divide-y overflow-y-auto rounded-md border">
+        {/* No fixed height / inner scrollbar: the list flows to its natural length so the page
+            has ONE scroll instead of a nested one (a tag's transaction count is bounded — it
+            never approaches the volume that would justify virtualisation). */}
+        <ul className="divide-y rounded-md border">
           {detail.transactions.map((tx) => (
             <li
               key={tx.transactionId}
