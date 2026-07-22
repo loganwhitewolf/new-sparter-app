@@ -3,6 +3,7 @@ import { getUserProfile } from '@/lib/dal/users'
 import { ProfileForm } from '@/components/profile/profile-form'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConnectedAccountsCard } from '@/components/profile/connected-accounts-card'
+import { ThemeToggle } from '@/components/theme-toggle'
 import type { Provider } from '@/components/auth/social-provider-buttons'
 
 export const metadata = {
@@ -84,6 +85,17 @@ export default async function ProfileSettingsPage({
           </div>
         </CardContent>
       </Card>
+
+      <div>
+        <p className="mb-3 text-sm font-medium text-muted-foreground">Aspetto</p>
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div>
+            <p className="text-sm font-medium">Tema</p>
+            <p className="text-xs text-muted-foreground">Chiaro o scuro</p>
+          </div>
+          <ThemeToggle />
+        </div>
+      </div>
 
       <ProfileForm profile={profile} />
 

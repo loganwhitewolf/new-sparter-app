@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   getCategories: vi.fn(),
-  getUserPatterns: vi.fn(),
   createCategoryAction: vi.fn(),
   renameCategoryAction: vi.fn(),
   deleteCategoryAction: vi.fn(),
@@ -13,15 +12,11 @@ const mocks = vi.hoisted(() => ({
   renameSubcategoryAction: vi.fn(),
   deleteSubcategoryAction: vi.fn(),
   setSubcategoryNatureAction: vi.fn(),
-  createPatternAction: vi.fn(),
-  updatePatternAction: vi.fn(),
-  deletePatternAction: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
 vi.mock('@/lib/dal/categories', () => ({ getCategories: mocks.getCategories }))
-vi.mock('@/lib/dal/patterns', () => ({ getUserPatterns: mocks.getUserPatterns }))
 vi.mock('@/lib/actions/categories', () => ({
   createCategoryAction: mocks.createCategoryAction,
   renameCategoryAction: mocks.renameCategoryAction,
@@ -30,11 +25,6 @@ vi.mock('@/lib/actions/categories', () => ({
   renameSubcategoryAction: mocks.renameSubcategoryAction,
   deleteSubcategoryAction: mocks.deleteSubcategoryAction,
   setSubcategoryNatureAction: mocks.setSubcategoryNatureAction,
-}))
-vi.mock('@/lib/actions/patterns', () => ({
-  createPatternAction: mocks.createPatternAction,
-  updatePatternAction: mocks.updatePatternAction,
-  deletePatternAction: mocks.deletePatternAction,
 }))
 
 const { default: CategoriesPage } = await import('../app/(app)/settings/categories/page')
@@ -83,35 +73,6 @@ const categories = [
   },
 ]
 
-const patterns = [
-  {
-    id: 7,
-    userId: 'user-abc',
-    pattern: 'netflix',
-    subCategoryId: 10,
-    amountSign: 'negative' as const,
-    confidence: '0.90',
-    priority: 100,
-    description: 'Streaming',
-    isActive: true,
-    createdAt: new Date('2026-01-01T00:00:00Z'),
-    updatedAt: new Date('2026-01-01T00:00:00Z'),
-  },
-  {
-    id: 8,
-    userId: 'user-abc',
-    pattern: 'old-shop',
-    subCategoryId: 999,
-    amountSign: 'negative' as const,
-    confidence: '0.80',
-    priority: 100,
-    description: null,
-    isActive: true,
-    createdAt: new Date('2026-01-01T00:00:00Z'),
-    updatedAt: new Date('2026-01-01T00:00:00Z'),
-  },
-]
-
 async function renderCategoriesPage() {
   const element = await CategoriesPage()
   return renderToStaticMarkup(createElement(() => element))
@@ -127,10 +88,9 @@ describe('/settings/categories UI', () => {
       role: 'user',
     })
     mocks.getCategories.mockResolvedValue(categories)
-    mocks.getUserPatterns.mockResolvedValue(patterns)
   })
 
-  it('renders the category heading, create affordance, ownership badges, override hints, delete warning, and pattern panel', async () => {
+  it('renders the category heading, create affordance, ownership badges, override hints, and delete warning', async () => {
     const html = await renderCategoriesPage()
 
     expect(html).toContain('Categorie')
@@ -141,10 +101,6 @@ describe('/settings/categories UI', () => {
     expect(html).toContain('Nome originale: Alimentari')
     expect(html).toContain('Questo nome vale solo per te')
     expect(html).toContain('Le eliminazioni sono disponibili solo per voci personali')
-    expect(html).toContain('Pattern di categorizzazione')
-    expect(html).toContain('Nuovo pattern')
-    expect(html).toContain('Spese → Alimentari speciali')
-    expect(html).toContain('Sottocategoria non trovata (#999)')
     expect(html).toContain('data-testid="subcategory-row-10"')
   })
 
