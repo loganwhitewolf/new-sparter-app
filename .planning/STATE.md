@@ -5,8 +5,8 @@ milestone_name: Public Branding Site
 current_phase: 69
 current_phase_name: proto-design-variants
 status: executing
-stopped_at: Completed 69-01-PLAN.md
-last_updated: "2026-07-22T15:13:04.530Z"
+stopped_at: Completed 69-02-PLAN.md
+last_updated: "2026-07-22T15:36:10.912Z"
 last_activity: 2026-07-22
 last_activity_desc: Phase 69 execution started
 progress:
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 69 (proto-design-variants) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-22 — Phase 69 execution started
 
@@ -219,6 +219,7 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: 68-07: MoverList rows built from categorySlug (never categoryId) per Pitfall 2; UI-SPEC's stale category={m.categoryId} snippet is superseded by the plan/PATTERNS.md
 - [Phase ?]: Fraunces chosen as brandingDisplay face (Task 2) - editorial weight, avoids D-08 Playfair+warm-cream cliche pairing
 - [Phase ?]: Variant B/C ship as minimal labeled stub panels in the hub (plan-scoped, not a defect) - proves the switcher/whitelist path before Plan 02 fills them in
+- [Phase ?]: Variant B (editorial split: asymmetric type column + offset product frame) and Variant C (type-led stack: oversized brand+headline then full-width product band) ship as real compositions replacing the Plan 01 stubs; hub now mounts all three real variants
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -332,9 +333,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 69-01-PLAN.md
+**Stopped at:** Completed 69-02-PLAN.md
 
-Last session: 2026-07-22T15:13:04.522Z
+Last session: 2026-07-22T15:36:10.904Z
 
 **Next:** `/gsd-execute-phase 69`
 
@@ -404,3 +405,4 @@ Last session: 2026-07-22T15:13:04.522Z
 | Phase 68 P06 | 12min | 3 tasks | 7 files |
 | Phase 68 P07 | 15min | 1 tasks | 2 files |
 | Phase 69 P01 | 7min | 2 tasks | 6 files |
+| Phase 69 P02 | 13min | 2 tasks | 3 files |

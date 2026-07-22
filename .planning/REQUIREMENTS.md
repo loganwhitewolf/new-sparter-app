@@ -8,7 +8,7 @@
 
 ### Design (proto)
 
-- [ ] **BRAND-01**: Visitor on Vercel Preview can compare 2–3 branding UI variants under `app/proto/` (throwaway, `noindex`, `PROTOTYPES_ENABLED`-gated)
+- [x] **BRAND-01**: Visitor on Vercel Preview can compare 2–3 branding UI variants under `app/proto/` (throwaway, `noindex`, `PROTOTYPES_ENABLED`-gated)
 - [ ] **BRAND-02**: One proto variant is selected as the production design direction before shipping `(public)` page UI
 
 ### Infrastructure
@@ -65,7 +65,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BRAND-01 | 69. proto-design-variants | Pending |
+| BRAND-01 | 69. proto-design-variants | Complete |
 | BRAND-02 | 69. proto-design-variants | Pending |
 | BRAND-03 | 70. public-layout-and-proxy-allowlist | Pending |
 | BRAND-04 | 70. public-layout-and-proxy-allowlist | Pending |
@@ -80,6 +80,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BRAND-13 | 73. seo-and-auth-polish | Pending |
 
 **Coverage:**
+
 - v2.8 requirements: 13 total
 - Mapped to phases: 13
 - Unmapped: 0
