@@ -19,7 +19,7 @@ Requirements for this milestone. Each maps to a roadmap phase. REQ-IDs continue 
 
 ### Dashboard Tag-Filter Removal
 
-- [ ] **TAG-13**: The dashboard no longer offers a period-scoped tag filter — `?tag=` is removed from `/dashboard/overview` and `/dashboard/categories` (including `TagFilterSelect`, `tagId` threading through the overview/category DAL, the `no-data-for-tag` empty state, and `parseTagIdParam`). Per-tag analysis lives only in the dedicated all-time page.
+- [x] **TAG-13**: The dashboard no longer offers a period-scoped tag filter — `?tag=` is removed from `/dashboard/overview` and `/dashboard/categories` (including `TagFilterSelect`, `tagId` threading through the overview/category DAL, the `no-data-for-tag` empty state, and `parseTagIdParam`). Per-tag analysis lives only in the dedicated all-time page.
 
 ### Transactions Tag Filter
 
@@ -58,6 +58,6 @@ Filled at roadmap creation (2026-07-22).
 | TAG-10 | Phase 69 | Complete |
 | TAG-11 | Phase 69 | Complete |
 | TAG-12 | Phase 69 | Complete |
-| TAG-13 | Phase 70 | In progress (70-01 done, 70-02 pending) |
+| TAG-13 | Phase 70 | Complete |
 | TAG-14 | Phase 71 | Complete |
 | TAG-15 | Phase 72 | Complete |

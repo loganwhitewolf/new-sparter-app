@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v2.7
 milestone_name: Tag Dedicated View
-current_phase: 70
-current_phase_name: dashboard-tag-filter-removal (1/2 plans — 70-02 pending)
-status: in_progress
-stopped_at: Completed 70-01-PLAN.md
+current_phase: 72
+current_phase_name: milestone v2.7 complete (phases 69-72)
+status: complete
+stopped_at: Milestone v2.7 complete — all phases shipped, operator checkpoints approved
 last_updated: "2026-07-22T15:40:17.311Z"
 last_activity: 2026-07-22
-last_activity_desc: Phase 70 plan 01 — removed every dashboard ?tag= call site (TAG-13, wave 1)
+last_activity_desc: Phase 70 verified by operator; v2.7 complete (tag page, dashboard filter removed, tx filter + chip)
 progress:
-  total_phases: 3
-  completed_phases: 2
+  total_phases: 4
+  completed_phases: 4
   total_plans: 6
-  completed_plans: 5
-  percent: 67
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 ## Current Position
 
-Phase: 70 — dashboard-tag-filter-removal (in progress)
-Plan: 1 of 2 complete (70-01 call-site removal); 70-02 removes the dashboard DAL `tagId` parameters
-Status: Phases 69 and 71 done. Wave 1 of Phase 70 shipped: no dashboard page, component or Server Action reads or forwards a tag id any more; `/transactions?tag=` and the TAG-14 toolbar filter are untouched.
-Last activity: 2026-07-22 — Phase 70 plan 01 executed (3 tasks, 3 commits, full suite green)
+Phase: — (milestone v2.7 COMPLETE: phases 69, 70, 71, 72 all shipped)
+Plan: 6 of 6 complete; both operator checkpoints (69-03, 70-02) approved
+Status: v2.7 done. Tags are event-shaped: `/tags/[id]` is the canonical all-time per-tag page; the period-scoped `?tag=` dashboard filter is gone; the transactions table gained a tag filter + inline tag chip. Next: PR + release tag on main (branch `gsd/v2.7-tag-dedicated-view`).
+Last activity: 2026-07-22 — Phase 70 operator-verified; milestone closed
 
 ## Roadmap (v2.7 — Phases 69-70)
 

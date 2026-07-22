@@ -111,7 +111,7 @@ coverage:
 # Metrics
 duration: 5min
 completed: 2026-07-22
-status: awaiting-human-verify
+status: complete
 ---
 
 # Phase 70 Plan 02: Dashboard DAL tag-parameter removal Summary
@@ -205,7 +205,7 @@ Held, and re-proven at both task boundaries:
 
 ## PENDING — Task 3: blocking human-verify checkpoint
 
-**Status: pending operator.** Not performed by the executor. TAG-13 is not discharged and this plan is not complete until an operator runs the dev server and confirms:
+**Status: APPROVED by operator 2026-07-22 ("controlli fatti e tutto funziona").** Not performed by the executor. TAG-13 is not discharged and this plan is not complete until an operator runs the dev server and confirms:
 
 **Removal (TAG-13)**
 1. `/dashboard/overview` — no tag control next to the year selector; KPI cards / chart / movers show pre-phase numbers.
