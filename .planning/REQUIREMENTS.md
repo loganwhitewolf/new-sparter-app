@@ -39,15 +39,15 @@ Requirements for this milestone. Each maps to a roadmap phase. REQ-IDs continue 
 
 ## Traceability
 
-Filled during roadmap creation.
+Filled at roadmap creation (2026-07-22).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TAG-06 | TBD | Pending |
-| TAG-07 | TBD | Pending |
-| TAG-08 | TBD | Pending |
-| TAG-09 | TBD | Pending |
-| TAG-10 | TBD | Pending |
-| TAG-11 | TBD | Pending |
-| TAG-12 | TBD | Pending |
-| TAG-13 | TBD | Pending |
+| TAG-06 | Phase 69 | Pending |
+| TAG-07 | Phase 69 | Pending |
+| TAG-08 | Phase 69 | Pending |
+| TAG-09 | Phase 69 | Pending |
+| TAG-10 | Phase 69 | Pending |
+| TAG-11 | Phase 69 | Pending |
+| TAG-12 | Phase 69 | Pending |
+| TAG-13 | Phase 70 | Pending |

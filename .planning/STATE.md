@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.7
 milestone_name: Tag Dedicated View
 status: planning
-last_updated: "2026-07-22T13:16:52.676Z"
+last_updated: "2026-07-22T14:05:00.000Z"
 last_activity: 2026-07-22
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,32 +20,37 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 68 — tags-dashboard-and-navigation
+**Current focus:** Phase 69 — tag-dedicated-page (v2.7 roadmap drafted)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 69 — tag-dedicated-page (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-22 — Milestone v2.7 started
+Status: Roadmap drafted; ready to plan Phase 69
+Last activity: 2026-07-22 — Milestone v2.7 roadmap created (Phases 69–70)
 
-## Roadmap (v2.6 — Phases 65-68)
+## Roadmap (v2.7 — Phases 69-70)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 65 | expense-group-merge-and-view | GRP-01, GRP-02, GRP-03, GRP-04, GRP-08 | Not started |
-| 66 | expense-group-lifecycle | GRP-05, GRP-06, GRP-07, GRP-09 | Not started |
-| 67 | tags-foundation-and-assignment | TAG-01, TAG-02, TAG-03, TAG-06 | Not started |
-| 68 | tags-dashboard-and-navigation | TAG-04, TAG-05, NAV-01 | Not started |
+| 69 | tag-dedicated-page | TAG-06, TAG-07, TAG-08, TAG-09, TAG-10, TAG-11, TAG-12 | Not started |
+| 70 | dashboard-tag-filter-removal | TAG-13 | Not started |
 
-**Coverage:** 16/16 v2.6 requirements mapped across Phases 65-68, none orphaned. Expense Group
-model LOCKED in `docs/adr/0017-expense-group-over-physical-merge.md` (grill 2026-07-18) — no
-discovery to redo: grouping entity above intact Expenses, same-subcategory gate, group is the
-categorization unit, no import-time auto-merge, read-time totals never persisted. Transaction
-Tags design LOCKED in `.planning/REQUIREMENTS.md` notes (source: Obsidian "sparter-tag-transazioni",
-2026-07-06) — tag = filter, never breakdown; curated entity, never deleted. Cross-cutting
-invariant across both features (GRP-09 testable requirement): neither grouping nor tagging may
-change dashboard totals or category breakdowns.
+**Coverage:** 8/8 v2.7 requirements mapped across Phases 69-70, none orphaned. Model LOCKED
+(2026-07-22): tags are event-shaped; the canonical per-tag view is all-time (every transaction
+carrying the tag, regardless of calendar) — `dateRange` is a descriptive label, not a filter.
+Single numeric source `getTagDetail`/`getTagTotals` already exists in the branch base (quick task
+260722-ked absorbed); only the per-category breakdown query is new. Phase 69 builds the dedicated
+Variant A page (header + 3 KPI + included count + per-category breakdown bars + compact tx list,
+edit/archive in place, entry from /tags and /dashboard/tags); Phase 70 removes the period-scoped
+`?tag=` dashboard filter and all its wiring. No discovery to redo — prototype Variant A won on
+branch `proto/tag-view`.
+
+## Roadmap (v2.6 — Phases 65-68, shipped 2026-07-22, tag v2.6)
+
+Expense Group (ADR 0017) + Transaction Tags + dashboard global tag filter and
+month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16. Archived to
+`.planning/milestones/v2.6-ROADMAP.md`.
 
 ## Roadmap (v2.5 — Phases 62-64, shipped)
 
@@ -60,6 +65,30 @@ change dashboard totals or category breakdowns.
 ## Accumulated Context
 
 ### Decisions
+
+**v2.7 milestone contract (locked at roadmap creation, 2026-07-22):**
+
+- **Tags are event-shaped; the canonical per-tag view is all-time.** Every transaction carrying
+  the tag is included regardless of the calendar; `dateRange` is a descriptive label, never a
+  hard filter on the transaction set (TAG-06). Per-tag analysis lives only in the dedicated page.
+
+- **Single numeric source.** The dedicated page's three totals (Entrate / Uscite / Valore finale,
+  signed net) and included-transaction count come from `getTagDetail` / `getTagTotals` — the same
+  netting/exclusions as the dashboard — so the page reconciles with `/dashboard/tags` (TAG-07).
+  These already exist in the branch base (quick task 260722-ked absorbed); only the per-category
+  breakdown query is new.
+
+- **Layout: Variant A ("report verticale", prototype `proto/tag-view`).** Header (name +
+  date-range label + Edit/Archive) → 3 KPI → included count → per-category breakdown with CSS
+  bars (no charting dependency) → compact transaction list (date · subcategory · signed amount,
+  date-descending).
+
+- **`?tag=` dashboard filter is removed, not kept alongside.** The period-scoped filter and its
+  wiring (`TagFilterSelect`, `tagId` threading through the overview/category DAL,
+  `no-data-for-tag` empty state, `parseTagIdParam`) are deleted in Phase 70, sequenced after the
+  dedicated page ships in Phase 69 (TAG-13).
+
+---
 
 **v2.6 milestone contract (locked at roadmap creation, 2026-07-18):**
 
@@ -304,13 +333,13 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/68-tags-dashboard-and-navigation/68-UAT.md
+**Resume file:** .planning/ROADMAP.md (v2.7 section, Phases 69–70)
 
-**Stopped at:** Phase 68 executed + WR-02/WR-04 fixed; verification human_needed (1 visual UAT item); v2.6 ready to complete after UAT
+**Stopped at:** v2.7 roadmap created — Phase 69 (tag-dedicated-page) + Phase 70 (dashboard-tag-filter-removal); 8/8 requirements mapped, none orphaned
 
-Last session: 2026-07-21T13:38:16.160Z
+Last session: 2026-07-22
 
-**Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
+**Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
 ## Operator Next Steps
 
