@@ -24,7 +24,9 @@ import { APP_ROUTES } from '@/lib/routes'
 
 /** Returns true when any filter param that narrows results is active */
 function hasActiveTransactionFilters(params: TransactionSearchParams): boolean {
-  const keys = ['q', 'name', 'months', 'amountMin', 'amountMax', 'platform', 'category', 'subCategory', 'status', 'nature', 'type']
+  // 'tag' included (71-01): with the toolbar tag control, a tag filter matching zero rows must
+  // render the "no-result" empty state, not the "no-data" ("import a file") one.
+  const keys = ['q', 'name', 'months', 'amountMin', 'amountMax', 'platform', 'category', 'subCategory', 'status', 'nature', 'type', 'tag']
   return keys.some((k) => {
     const v = params[k]
     return Array.isArray(v) ? v.length > 0 : Boolean(v)
@@ -111,6 +113,14 @@ export default async function TransactionsPage({
     {} as Record<string, { tagId: number; tagName: string; archived: boolean }[]>,
   )
 
+  // Tag filter options (TAG-14, D2): value is the tagId — the `?tag=` param the page already
+  // parses — and the label is the tag name (archived ones marked, since they still carry
+  // historical transactions). Order follows getTags (createdAt, id).
+  const tagOptions = tags.map((t) => ({
+    value: String(t.id),
+    label: t.archived ? `${t.name} (archiviato)` : t.name,
+  }))
+
   const platformOptions = platforms.map((p) => ({ value: p.slug, label: p.name }))
   const categoryOptions = categories
     .map((c) => ({ value: c.slug, label: c.name }))
@@ -163,6 +173,7 @@ export default async function TransactionsPage({
             category: categoryOptions,
             nature: natureOptions,
             direction: directionOptions,
+            tag: tagOptions,
           }}
           dependentOptions={dependentOptions}
         />

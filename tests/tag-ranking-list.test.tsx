@@ -89,7 +89,9 @@ describe('TagRankingList', () => {
     const html = renderToStaticMarkup(createElement(TagRankingList, { items: [baseTag] }))
 
     expect(html).toContain('Vacanza Sharm 2026')
-    expect(html).toContain('href="/transactions?tag=1"')
+    // Phase 69 (69-03, D6): the primary name link now points at the dedicated per-tag page,
+    // not the tag-filtered transactions list.
+    expect(html).toContain('href="/tags/1"')
     expect(html).not.toContain('Nessun tag creato')
   })
 
