@@ -136,14 +136,14 @@ export function TagDetailReport({ detail, tagId }: Props) {
         </Card>
       )}
 
+      {/* The list has no fixed height / inner scrollbar: it flows to its natural length so the
+          page has ONE scroll instead of a nested one (a tag's transaction count is bounded — it
+          never approaches the volume that would justify virtualisation). */}
       {detail.transactions.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           Nessuna transazione inclusa per questo tag.
         </p>
       ) : (
-        {/* No fixed height / inner scrollbar: the list flows to its natural length so the page
-            has ONE scroll instead of a nested one (a tag's transaction count is bounded — it
-            never approaches the volume that would justify virtualisation). */}
         <ul className="divide-y rounded-md border">
           {detail.transactions.map((tx) => (
             <li
