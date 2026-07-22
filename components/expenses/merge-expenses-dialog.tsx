@@ -244,7 +244,7 @@ export function MergeExpensesDialog({
 
           {targetGroup ? (
             <p className="text-sm text-muted-foreground">
-              Stai per aggiungere <strong>{selectedExpenses.length} spese</strong> al gruppo
+              Stai per aggiungere <strong>{selectedExpenses.length} spese</strong>{' '}al gruppo
               &ldquo;{targetGroup.title}&rdquo;.
               {getUncategorizedIds(selectedExpenses).length > 0 ? (
                 <>
@@ -256,7 +256,7 @@ export function MergeExpensesDialog({
             </p>
           ) : step === 'confirm' ? (
             <p className="text-sm text-muted-foreground">
-              Stai per unire <strong>{selectedExpenses.length} spese</strong> nel gruppo
+              Stai per unire <strong>{selectedExpenses.length} spese</strong>{' '}nel gruppo
               &ldquo;{groupTitle}&rdquo;.
             </p>
           ) : null}
