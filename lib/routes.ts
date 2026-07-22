@@ -27,7 +27,6 @@ type DashboardCategoryFilters = {
   sort?: DashboardSort
   defaultPreset?: DashboardPreset
   defaultSort?: DashboardSort
-  tag?: number
 }
 
 export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters = {}) {
@@ -47,10 +46,6 @@ export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters =
     params.set('sort', filters.sort)
   }
 
-  if (filters.tag) {
-    params.set('tag', String(filters.tag))
-  }
-
   const search = params.toString()
   return APP_ROUTES.dashboardCategories + (search ? `?${search}` : '')
 }
@@ -59,8 +54,19 @@ export function dashboardCategoryDetail(id: number | string) {
   return `${APP_ROUTES.dashboardCategories}/${encodeURIComponent(String(id))}`
 }
 
+export function tagDetail(id: number | string) {
+  return `${APP_ROUTES.tags}/${encodeURIComponent(String(id))}`
+}
+
 export function transactionDetailHref(id: string) {
   return `${APP_ROUTES.transactions}/${encodeURIComponent(id)}`
+}
+
+// Transactions list narrowed to one tag. `?tag=` is the transactions filter param (TAG-14) —
+// read by parseTransactionFilters and guarded by resolveOwnedTagId on the page. Distinct from
+// the dashboard, which no longer has a tag filter at all (TAG-13).
+export function transactionsByTagHref(tagId: number | string) {
+  return `${APP_ROUTES.transactions}?tag=${encodeURIComponent(String(tagId))}`
 }
 
 export function expenseDetailHref(id: string) {
@@ -93,10 +99,6 @@ export function buildDashboardCategoryDetailHref(
 
   if (filters.sort && filters.sort !== defaultSort) {
     params.set('sort', filters.sort)
-  }
-
-  if (filters.tag) {
-    params.set('tag', String(filters.tag))
   }
 
   const search = params.toString()

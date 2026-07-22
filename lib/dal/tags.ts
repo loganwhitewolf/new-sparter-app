@@ -12,7 +12,7 @@ import {
   transactionTag,
   userSubcategoryOverride,
 } from '@/lib/db/schema'
-import { and, asc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
 import { effectiveAmount, isNotSecondary } from '@/lib/dal/transaction-pairs-sql'
 import { DASHBOARD_TOTAL_EXPENSE_STATUSES } from '@/lib/dal/dashboard'
 import { toDecimal } from '@/lib/utils/decimal'
@@ -119,14 +119,14 @@ export async function updateTagRow(
 }
 
 /**
- * IDOR defense-in-depth for the dashboard `?tag=` filter (68-01, T-68-01).
+ * IDOR defense-in-depth for the transactions `?tag=` filter (TAG-14, T-68-01).
  *
  * Ownership is already enforced structurally: tagScopedTransactions() only
  * narrows rows already scoped by eq(transaction.userId, userId) in the same
  * query's WHERE clause, so a foreign tagId matches zero rows — no leak is
  * possible even without this check. This helper is the belt-and-suspenders
- * addition every RSC page reading `?tag=` in Wave 3/4 of this phase MUST call
- * before forwarding a user-supplied tagId to any DAL function.
+ * addition; app/(app)/transactions/page.tsx is the caller, and it resolves the
+ * user-supplied tagId here before forwarding it to getTransactions().
  *
  * Fail-closed by design: a tagId that does not belong to the authenticated
  * user (or does not exist) is silently ignored (resolves to undefined),
@@ -249,4 +249,152 @@ export async function getTagTotals(userId: string): Promise<TagTotalItem[]> {
     .groupBy(tag.id, tag.name, tag.archived)
 
   return buildTagTotalsData(rows)
+}
+
+/**
+ * Per-tag detail for the Tag settings panel right column (quick task 260722-ked).
+ *
+ * Applies the SAME exclusion set as getTagTotals / getOverviewAmountTotals so the
+ * numbers stay consistent with the dashboard and with the tag-filtered transactions
+ * view: expenseStatus ∈ {1,2,3}, exclude `transfer` direction, drop secondary-of-pair
+ * rows, and use effectiveAmount() (pair-netted) as the per-row amount. Direction is
+ * resolved through the user's nature override, mirroring getOverviewAmountTotals.
+ *
+ * `net` (valore finale) is the signed sum over ALL included rows — it therefore equals
+ * this tag's `total` from getTagTotals (including any `allocation` rows, which contribute
+ * to net but not to the in/out split).
+ */
+export type TagDetailTransaction = {
+  transactionId: string
+  occurredAt: string // ISO string from the DB (`::text`); the client formats it
+  description: string // raw transaction description (immutable) — shown as the row's primary line
+  subCategoryName: string
+  amount: string // signed DECIMAL string — out is negative, in positive
+}
+
+// Per-category breakdown entry (TAG-09, D3). `total` is a SIGNED DECIMAL string — a category
+// can net positive or negative — so Σ breakdown.total reconciles exactly with TagDetail.net.
+export type TagBreakdownItem = {
+  categoryName: string
+  total: string // signed DECIMAL string — out negative, in positive
+  count: number
+}
+
+export type TagDetail = {
+  inflow: string // positive magnitude of inflows
+  outflow: string // positive magnitude of outflows
+  net: string // signed net (inflow − outflow, incl. allocation)
+  count: number // transactions included in the totals (== transactions.length)
+  transactions: TagDetailTransaction[]
+  breakdown: TagBreakdownItem[] // per-category signed totals, sorted by |total| desc; Σ total === net
+}
+
+type TagDetailQueryRow = {
+  transactionId: string
+  occurredAt: string
+  description: string
+  subCategoryName: string
+  categoryName: string
+  amount: string
+}
+
+// Pure, unit-testable without a DB — mirrors buildTagTotalsData's query-vs-shaping split.
+// Decimal.js for every monetary accumulation (CLAUDE.md — never native arithmetic on money).
+export function buildTagDetailData(rows: TagDetailQueryRow[]): TagDetail {
+  let inflow = toDecimal('0')
+  let outflow = toDecimal('0') // accumulates the negative OUT amounts; abs()'d at the end
+  let net = toDecimal('0')
+
+  // Per-category accumulator — signed Decimal running total + integer row count. Keyed by
+  // categoryName; iteration order preserved so the pre-sort order is insertion order.
+  const byCategory = new Map<string, { total: ReturnType<typeof toDecimal>; count: number }>()
+
+  const transactions = rows.map((row) => {
+    const amount = toDecimal(row.amount)
+    net = net.plus(amount)
+    // Classify Entrate/Uscite by the amount's SIGN, NOT the subcategory direction. A tag is
+    // event-shaped and its rows can carry a positive amount while sitting under an 'out'
+    // subcategory — e.g. a refund is categorized under the spend's subcategory (direction 'out')
+    // yet nets positive. Grouping by direction left inflow empty and dumped everything into
+    // outflow. Entrate = Σ positive, Uscite = |Σ negative| → inflow − outflow === net.
+    if (amount.greaterThan(0)) inflow = inflow.plus(amount)
+    else if (amount.lessThan(0)) outflow = outflow.plus(amount)
+
+    const bucket = byCategory.get(row.categoryName)
+    if (bucket) {
+      bucket.total = bucket.total.plus(amount)
+      bucket.count += 1
+    } else {
+      byCategory.set(row.categoryName, { total: amount, count: 1 })
+    }
+
+    return {
+      transactionId: row.transactionId,
+      occurredAt: row.occurredAt,
+      description: row.description,
+      subCategoryName: row.subCategoryName,
+      amount: amount.toFixed(2),
+    }
+  })
+
+  // Sort by absolute total descending — same rule as buildTagTotalsData. Signed `total` string
+  // preserves the sign; Σ breakdown.total therefore reconciles with `net` (TAG-07/TAG-08).
+  const breakdown: TagBreakdownItem[] = Array.from(byCategory.entries())
+    .map(([categoryName, acc]) => ({ categoryName, total: acc.total.toFixed(2), count: acc.count }))
+    .sort((a, b) => toDecimal(b.total).abs().comparedTo(toDecimal(a.total).abs()))
+
+  return {
+    inflow: inflow.toFixed(2),
+    outflow: outflow.abs().toFixed(2),
+    net: net.toFixed(2),
+    count: rows.length,
+    transactions,
+    breakdown,
+  }
+}
+
+export async function getTagDetail(userId: string, tagId: number): Promise<TagDetail> {
+  // innerJoin on expense→…→direction (like getOverviewAmountTotals): rows without an
+  // expense/subcategory/direction would be excluded by the WHERE filters anyway, so the
+  // inner joins keep the row set identical to getTagTotals' FILTER-counted set.
+  const rows = await db
+    .select({
+      transactionId: transactionTable.id,
+      occurredAt: sql<string>`${transactionTable.occurredAt}::text`,
+      description: transactionTable.description,
+      subCategoryName: subCategory.name,
+      // category is ALREADY innerJoined below — this adds a COLUMN, never a row, so the netted
+      // row set (and therefore `net`) is unchanged and still reconciles with getTagTotals (TAG-07).
+      categoryName: category.name,
+      amount: sql<string>`(${effectiveAmount()})::text`,
+    })
+    .from(transactionTable)
+    .innerJoin(transactionTag, eq(transactionTag.transactionId, transactionTable.id))
+    .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+    .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+    .innerJoin(category, eq(subCategory.categoryId, category.id))
+    .leftJoin(
+      userSubcategoryOverride,
+      and(
+        eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+        eq(userSubcategoryOverride.userId, userId),
+      ),
+    )
+    .innerJoin(
+      nature,
+      eq(nature.id, sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`),
+    )
+    .innerJoin(direction, eq(nature.directionId, direction.id))
+    .where(
+      and(
+        eq(transactionTag.tagId, tagId),
+        eq(transactionTable.userId, userId),
+        inArray(expense.status, [...DASHBOARD_TOTAL_EXPENSE_STATUSES]),
+        ne(direction.code, 'transfer'),
+        isNotSecondary(),
+      ),
+    )
+    .orderBy(desc(transactionTable.occurredAt), desc(transactionTable.id))
+
+  return buildTagDetailData(rows)
 }

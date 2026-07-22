@@ -34,16 +34,23 @@ All milestones M001–v2.6 (Phases 1–68) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Current Milestone: v2.6 — Expenses & Transactions Refinement
+## Current Milestone: v2.7 — Tag Dedicated View
+
+**Goal:** Make a dedicated per-tag page the canonical, all-time view of a tag (event-shaped), replacing the period-scoped `?tag=` dashboard filter so a tag shows one reconciled set of numbers everywhere.
+
+**Target features:**
+- Dedicated per-tag page (mini-dashboard, "report verticale" layout — prototype Variant A on branch `proto/tag-view`): header (name + date-range label + Edit/Archive) → 3 KPI (Entrate / Uscite / Valore finale, signed net) → included-transaction count → per-category breakdown with bars → compact transaction list (date · subcategory · signed amount)
+- Remove the period-scoped `?tag=` filter from `dashboard/overview` and `dashboard/categories`, plus its wiring (TagFilterSelect, tagId threading through the overview/category DAL, `no-data-for-tag` empty state, `parseTagIdParam`)
+- Routing/entry points to the new page (from `/tags` and from `/dashboard/tags`)
+
+**Model decision (2026-07-22):** tags are event-shaped; the canonical per-tag view is all-time (every transaction carrying the tag, regardless of the calendar) — `dateRange` is a descriptive label, not a filter. Single numeric source: `getTagDetail` / `getTagTotals` (already in the branch base; the enrichment quick task 260722-ked is absorbed into this milestone).
+
+## Last Shipped Milestone: v2.6 — Expenses & Transactions Refinement (shipped 2026-07-22, tag v2.6)
 
 **Goal:** Refine the expenses/transactions section with same-merchant unification (Expense Group), a second orthogonal analysis axis (Transaction Tags), and dashboard-to-transactions filtered navigation.
 
-**Target features:**
-- Expense Group: manual bulk "Unisci" of same-merchant expenses seen from different platforms — grouping entity above intact expenses, same-subcategory gate, group as categorization unit, Scomponi/remove-member, no import-time auto-merge (model locked in ADR 0017, grill 2026-07-18)
-- Transaction Tags: curated tag entity (optional date range, N per transaction, archived flag), bulk-tagging from transactions page, tag as global dashboard filter, Tag section with per-tag totals, date-range suggestion on tag creation and import, Viaggi category audit + categorizer rule updates (design source: Obsidian note 2026-07-06; excluded: per-tag breakdowns, status/behavioral tags, AI tagging pass)
-- Dashboard month → transactions link: per-row link in the savings/deviations view navigating to the transactions section with filters pre-applied from the dashboard's current settings
-
-**Cross-cutting constraint:** neither merging nor tagging moves dashboard values — structural for Expense Group (pure regrouping, read-time totals); for tags via the "tag = filter, never breakdown" rule.
+- Expense Group (ADR 0017): bulk "Unisci" of same-subcategory expenses into a titled grouping entity above intact Expenses, full lifecycle, dashboard totals structurally unchanged
+- Transaction Tags: curated tag axis orthogonal to categories (create/edit/archive, bulk-assign, date-range suggestions), a global dashboard `?tag=` filter, `/dashboard/tags` per-tag all-time totals, month→filtered-transactions click-through
 
 ## Last Shipped Milestone: v2.5 — Detail Pages (shipped 2026-07-07, tag v2.5)
 
@@ -319,4 +326,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-18 — milestone v2.6 Expenses & Transactions Refinement started (Expense Group model locked in ADR 0017)*
+*Last updated: 2026-07-22 — milestone v2.7 Tag Dedicated View started (tags are event-shaped; dedicated all-time per-tag page replaces the period-scoped `?tag=` dashboard filter; prototype Variant A won)*

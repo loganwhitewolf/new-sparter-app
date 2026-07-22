@@ -3,11 +3,10 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
 /**
- * TagSettingsPanel static-render tests (repo constraint: no jsdom — the panel is a plain
- * controlled-component list/detail view with no multi-step decision logic to extract, unlike
- * tag-mutation-dialogs.tsx, so a static render covers its structure directly). Dialog triggers
- * are stubbed as flat marker elements (same technique as bulk-assign-tags-dialog's mocks
- * elsewhere in this repo).
+ * TagSettingsPanel static-render tests (repo constraint: no jsdom — the panel is now a plain
+ * index of links into /tags/[id] with no client state, so a static render covers its structure
+ * directly). The CreateTagDialog trigger is stubbed as a flat marker element (same technique as
+ * bulk-assign-tags-dialog's mocks elsewhere in this repo).
  */
 
 vi.mock('@/components/tags/tag-mutation-dialogs', () => ({
@@ -70,10 +69,10 @@ describe('TagSettingsPanel (mixed active + archived fixture, D-04)', () => {
     expect(html).toContain('Archiviato')
   })
 
-  it('selects the first tag by default and renders its detail pane with Edit + Archive triggers', () => {
+  it('renders each tag row as a link to its dedicated /tags/[id] page', () => {
     const html = renderToStaticMarkup(createElement(TagSettingsPanel, { tags }))
-    expect(html).toContain('data-slot="edit-tag-dialog"')
-    expect(html).toContain('data-slot="archive-tag-dialog"')
+    expect(html).toContain('href="/tags/1"')
+    expect(html).toContain('href="/tags/2"')
   })
 
   it('renders "Nessun intervallo" for a tag with no date range', () => {

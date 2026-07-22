@@ -23,8 +23,16 @@ export type FilterField = {
    * (or the '' all-bucket when the parent is unset). Pure types only — no runtime code.
    */
   dependsOn?: string
-  /** Converts raw URL value to display chip label */
-  toChip: (v: string) => string
+  /**
+   * Converts the raw URL value to a display chip label.
+   * The optional second argument is the resolved option label for select /
+   * multi-select fields (the toolbar matches the raw value against the effective
+   * option set and passes the matched label). Filters whose chip is derived
+   * purely from the raw value ignore it; filters whose stored value is an id
+   * (e.g. the tag filter) use it to show a human-readable name. Additive and
+   * backward-compatible — single-parameter toChip implementations stay assignable.
+   */
+  toChip: (v: string, label?: string) => string
 }
 
 export type SortColumn = {

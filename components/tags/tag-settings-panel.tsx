@@ -1,11 +1,9 @@
-'use client'
-
-import { useState } from 'react'
+import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
 import type { TagRow } from '@/lib/dal/tags'
-import { ArchiveTagDialog, CreateTagDialog, EditTagDialog } from './tag-mutation-dialogs'
+import { tagDetail } from '@/lib/routes'
+import { CreateTagDialog } from './tag-mutation-dialogs'
 
 type Props = {
   tags: TagRow[]
@@ -18,40 +16,31 @@ function formatDateRange(tag: TagRow): string {
   return `${start} — ${end}`
 }
 
-function TagListItem({
-  tag,
-  isSelected,
-  onSelect,
-}: {
-  tag: TagRow
-  isSelected: boolean
-  onSelect: () => void
-}) {
+// Index row: the whole item is a link to the dedicated tag page (/tags/[id]); the inline detail
+// pane was refolded into that page (D2). Name truncates; archived tags stay listed with a badge.
+function TagListItem({ tag }: { tag: TagRow }) {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        'flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground',
-        isSelected && 'bg-accent text-accent-foreground font-medium',
-      )}
-      aria-current={isSelected ? 'true' : undefined}
+    <Link
+      href={tagDetail(tag.id)}
+      className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <span className="truncate">{tag.name}</span>
+      <span className="min-w-0">
+        <span className="block truncate font-medium">{tag.name}</span>
+        <span className="mt-0.5 block text-xs text-muted-foreground">{formatDateRange(tag)}</span>
+      </span>
       {tag.archived && (
         <Badge variant="secondary" className="ml-2 shrink-0 text-[10px]">
           Archiviato
         </Badge>
       )}
-    </button>
+    </Link>
   )
 }
 
-// D-01: mirrors CategorySettingsPanel's sidebar+detail layout, simplified (no hierarchy, every
-// tag is user-owned). D-04: archived tags stay visible and selectable, badged "Archiviato".
+// /tags is an index (D2): a single-column list of links into /tags/[id]. Detail (KPI + count +
+// breakdown + tx list) and Edit/Archive now live on the dedicated page (see tag-detail-report.tsx
+// and app/(app)/tags/[id]/page.tsx). Archived tags stay visible, grouped under "Archiviati" (D-04).
 export function TagSettingsPanel({ tags }: Props) {
-  const [selectedId, setSelectedId] = useState<number | null>(tags.length > 0 ? tags[0].id : null)
-  const selectedTag = tags.find((t) => t.id === selectedId) ?? null
   const activeTags = tags.filter((t) => !t.archived)
   const archivedTags = tags.filter((t) => t.archived)
 
@@ -70,60 +59,21 @@ export function TagSettingsPanel({ tags }: Props) {
             transazioni.
           </div>
         ) : (
-          <div className="grid grid-cols-[200px_1fr] gap-6 min-h-[300px]">
-            <div className="border-r pr-4">
-              <nav className="flex flex-col gap-1" aria-label="Tag">
-                {activeTags.map((tag) => (
-                  <TagListItem
-                    key={tag.id}
-                    tag={tag}
-                    isSelected={selectedId === tag.id}
-                    onSelect={() => setSelectedId(tag.id)}
-                  />
+          <nav className="flex flex-col gap-2" aria-label="Tag">
+            {activeTags.map((tag) => (
+              <TagListItem key={tag.id} tag={tag} />
+            ))}
+            {archivedTags.length > 0 && (
+              <>
+                <p className="mt-3 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Archiviati
+                </p>
+                {archivedTags.map((tag) => (
+                  <TagListItem key={tag.id} tag={tag} />
                 ))}
-                {archivedTags.length > 0 && (
-                  <>
-                    <p className="mt-3 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Archiviati
-                    </p>
-                    {archivedTags.map((tag) => (
-                      <TagListItem
-                        key={tag.id}
-                        tag={tag}
-                        isSelected={selectedId === tag.id}
-                        onSelect={() => setSelectedId(tag.id)}
-                      />
-                    ))}
-                  </>
-                )}
-              </nav>
-            </div>
-            <div className="min-w-0">
-              {selectedTag ? (
-                <section aria-labelledby="tag-detail-heading">
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 id="tag-detail-heading" className="text-lg font-semibold">
-                          {selectedTag.name}
-                        </h3>
-                        {selectedTag.archived && <Badge variant="secondary">Archiviato</Badge>}
-                      </div>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {formatDateRange(selectedTag)}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <EditTagDialog tag={selectedTag} />
-                      {!selectedTag.archived && <ArchiveTagDialog tag={selectedTag} />}
-                    </div>
-                  </div>
-                </section>
-              ) : (
-                <p className="text-sm text-muted-foreground">Seleziona un tag dalla lista.</p>
-              )}
-            </div>
-          </div>
+              </>
+            )}
+          </nav>
         )}
       </CardContent>
     </Card>
