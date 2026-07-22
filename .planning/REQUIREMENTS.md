@@ -65,25 +65,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BRAND-01 | — | Pending |
-| BRAND-02 | — | Pending |
-| BRAND-03 | — | Pending |
-| BRAND-04 | — | Pending |
-| BRAND-05 | — | Pending |
-| BRAND-06 | — | Pending |
-| BRAND-07 | — | Pending |
-| BRAND-08 | — | Pending |
-| BRAND-09 | — | Pending |
-| BRAND-10 | — | Pending |
-| BRAND-11 | — | Pending |
-| BRAND-12 | — | Pending |
-| BRAND-13 | — | Pending |
+| BRAND-01 | 69. proto-design-variants | Pending |
+| BRAND-02 | 69. proto-design-variants | Pending |
+| BRAND-03 | 70. public-layout-and-proxy-allowlist | Pending |
+| BRAND-04 | 70. public-layout-and-proxy-allowlist | Pending |
+| BRAND-05 | 70. public-layout-and-proxy-allowlist | Pending |
+| BRAND-06 | 71. marketing-pages | Pending |
+| BRAND-07 | 71. marketing-pages | Pending |
+| BRAND-08 | 71. marketing-pages | Pending |
+| BRAND-09 | 72. legal-pages | Pending |
+| BRAND-10 | 72. legal-pages | Pending |
+| BRAND-11 | 73. seo-and-auth-polish | Pending |
+| BRAND-12 | 73. seo-and-auth-polish | Pending |
+| BRAND-13 | 73. seo-and-auth-polish | Pending |
 
 **Coverage:**
 - v2.8 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13 (filled by roadmapper)
+- Mapped to phases: 13
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-07-22*
-*Last updated: 2026-07-22 after milestone v2.8 scoping (+ BRAND-13 sign-out → `/`)*
+*Last updated: 2026-07-22 after v2.8 roadmap creation — 13/13 requirements mapped across Phases 69–73 (proto first, proxy allowlist precedes production pages)*

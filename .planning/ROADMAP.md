@@ -19,8 +19,23 @@
 - ✅ **v2.4: Standalone Expense** — Phase 61 (shipped 2026-07-01) · [archive](milestones/v2.4-ROADMAP.md)
 - ✅ **v2.5: Detail Pages** — Phases 62–64 (shipped 2026-07-07, tag v2.5) · [archive](milestones/v2.5-ROADMAP.md)
 - ✅ **v2.6: Expenses & Transactions Refinement** — Phases 65–68 (shipped 2026-07-22, tag v2.6) · [archive](milestones/v2.6-ROADMAP.md)
+- 🔄 **v2.8: Public Branding Site** — Phases 69–73 (in progress; v2.7 reserved for parallel tags milestone)
 
 ## Phases
+
+### 🔄 v2.8: Public Branding Site (Phases 69–73) — IN PROGRESS
+
+Public marketing façade inside the existing Next.js monolith: throwaway proto variants pick the
+design direction first, then a dedicated `(public)` route group + `proxy.ts` allowlist + smart
+root make anonymous marketing pages reachable, followed by the homepage/how-it-works content,
+legal pages (Privacy/Termini), and SEO + auth-polish hardening. English route slugs
+(`/how-it-works`, `/privacy`, `/terms`); Italian UI copy. No Pricing page (offer undefined).
+
+- [ ] **Phase 69: proto-design-variants** (BRAND-01, BRAND-02) — 2–3 throwaway branding UI variants under `app/proto/`, Preview-gated + `noindex`; PO/stakeholder picks the production design direction before any `(public)` page is built.
+- [ ] **Phase 70: public-layout-and-proxy-allowlist** (BRAND-03, BRAND-04, BRAND-05) — Dedicated `(public)` route-group layout (header/nav/footer, no AppShell/sidebar/onboarding gate); `lib/routes.ts` single-source-of-truth allowlist wired into `proxy.ts`; smart root (anon → marketing, auth → `/dashboard`).
+- [ ] **Phase 71: marketing-pages** (BRAND-06, BRAND-07, BRAND-08) — Italian homepage (hero, import-first value prop, CTA Registrati/Entra, mobile-responsive) promoted from the winning proto; `/how-it-works` 3–5 step explainer; public nav/footer links (Come funziona, Privacy, Termini, Entra, Registrati — no Pricing).
+- [ ] **Phase 72: legal-pages** (BRAND-09, BRAND-10) — `/privacy` GDPR-minimum policy naming real sub-processors (Vercel, Supabase, R2, Better Auth/OAuth); `/terms` usage terms (no financial advice, as-is, no pricing clauses); both footer-linked.
+- [ ] **Phase 73: seo-and-auth-polish** (BRAND-11, BRAND-12, BRAND-13) — Per-page Italian SEO metadata; `app/sitemap.ts` + `app/robots.ts` listing indexable public routes (`app/proto/*` stays `noindex`); session-aware public header (hides Registrati when authenticated); sign-out lands on `/`.
 
 <details>
 <summary>✅ v2.6: Expenses & Transactions Refinement (Phases 65–68) — SHIPPED 2026-07-22 (tag v2.6)</summary>
@@ -259,6 +274,11 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 66. expense-group-lifecycle | v2.6 | 5/5 | Complete    | 2026-07-20 |
 | 67. tags-foundation-and-assignment | v2.6 | 9/9 | Complete    | 2026-07-20 |
 | 68. tags-dashboard-and-navigation | v2.6 | 8/8 | Complete    | 2026-07-22 |
+| 69. proto-design-variants | v2.8 | 0/? | Not started | — |
+| 70. public-layout-and-proxy-allowlist | v2.8 | 0/? | Not started | — |
+| 71. marketing-pages | v2.8 | 0/? | Not started | — |
+| 72. legal-pages | v2.8 | 0/? | Not started | — |
+| 73. seo-and-auth-polish | v2.8 | 0/? | Not started | — |
 
 **Total shipped: 68 phases · 263 plans complete**
-**Latest shipped: v2.6 Expenses & Transactions Refinement — Phases 65–68 (2026-07-22, tag v2.6). Next milestone: TBD (run /gsd-new-milestone).**
+**Latest shipped: v2.6 Expenses & Transactions Refinement — Phases 65–68 (2026-07-22, tag v2.6). Active milestone: v2.8 Public Branding Site — Phases 69–73 (in progress).**

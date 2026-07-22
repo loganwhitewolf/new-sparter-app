@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v2.8
 milestone_name: Public Branding Site
-status: planning
-last_updated: "2026-07-22T13:51:04.165Z"
+status: planned
+last_updated: "2026-07-22T16:12:00.000Z"
 last_activity: 2026-07-22
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,35 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 68 — tags-dashboard-and-navigation
+**Current focus:** Phase 69 — proto-design-variants
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 69 — proto-design-variants (Not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-22 — Milestone v2.8 started
+Status: Roadmap created, ready to plan Phase 69
+Last activity: 2026-07-22 — v2.8 roadmap created (Phases 69–73, 13/13 requirements mapped)
+
+## Roadmap (v2.8 — Phases 69-73)
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 69 | proto-design-variants | BRAND-01, BRAND-02 | Not started |
+| 70 | public-layout-and-proxy-allowlist | BRAND-03, BRAND-04, BRAND-05 | Not started |
+| 71 | marketing-pages | BRAND-06, BRAND-07, BRAND-08 | Not started |
+| 72 | legal-pages | BRAND-09, BRAND-10 | Not started |
+| 73 | seo-and-auth-polish | BRAND-11, BRAND-12, BRAND-13 | Not started |
+
+**Coverage:** 13/13 v2.8 requirements mapped across Phases 69-73, none orphaned. Continues phase
+numbering from v2.6 (ended at Phase 68); v2.7 is reserved for a parallel tags milestone owned by
+another agent — not phase-numbered in this workspace. Order follows research SUMMARY.md guidance
+(proto → infra/proxy → pages → legal → SEO), consolidated from the suggested 6-phase split into 5:
+proto must ship first (design lock before production UI investment) and the `(public)` layout +
+`proxy.ts` allowlist (Phase 70) must precede any production marketing page (Phase 71+), since
+anonymous `/` is otherwise redirected to `/login`. English route slugs (`/how-it-works`,
+`/privacy`, `/terms`); Italian UI copy throughout. BRAND-13 (sign-out → `/`) is bundled with the
+other auth-polish items (session-aware header, SEO) in the final phase since all three are small,
+low-risk polish changes gated on the routes/pages built in Phases 70–72.
 
 ## Roadmap (v2.6 — Phases 65-68)
 
@@ -303,13 +324,15 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/68-tags-dashboard-and-navigation/68-UAT.md
+**Resume file:** .planning/ROADMAP.md (v2.8 section)
 
-**Stopped at:** Phase 68 executed + WR-02/WR-04 fixed; verification human_needed (1 visual UAT item); v2.6 ready to complete after UAT
+**Stopped at:** v2.8 roadmap created (Phases 69–73, 13/13 requirements mapped); ready to plan Phase 69
 
-Last session: 2026-07-21T13:38:16.160Z
+Last session: 2026-07-22T16:12:00.000Z
 
-**Next:** `/gsd-plan-phase 65` to plan the Expense Group merge-and-view phase
+**Next:** `/gsd-plan-phase 69` to plan the proto-design-variants phase
+
+**Historical (v2.6, shipped 2026-07-22):** Resume file was `.planning/phases/68-tags-dashboard-and-navigation/68-UAT.md`; stopped at Phase 68 executed + WR-02/WR-04 fixed, verification human_needed (1 visual UAT item), v2.6 ready to complete after UAT. Last session before that: 2026-07-21T13:38:16.160Z.
 
 ## Operator Next Steps
 
