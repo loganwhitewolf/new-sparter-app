@@ -1,4 +1,5 @@
 // PROTOTYPE — wipe me.
+import { brandingDisplay } from './fonts'
 import { PrototypeSwitcher } from './prototype-switcher'
 import { VariantA } from './variant-a'
 
@@ -28,7 +29,7 @@ export default async function BrandingProtoPage({ searchParams }: BrandingProtoP
   const variant = resolveVariant(raw)
 
   return (
-    <div className="min-h-screen">
+    <div className={`${brandingDisplay.variable} min-h-screen`}>
       {variant === 'a' && <VariantA />}
       {variant === 'b' && <VariantStub axis="Editorial split" />}
       {variant === 'c' && <VariantStub axis="Type-led stack" />}
