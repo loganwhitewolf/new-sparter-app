@@ -11,7 +11,8 @@ import {
   List,
   LogOut,
   Receipt,
-  Settings,
+  Regex,
+  Tags,
   Upload,
   User,
 } from 'lucide-react'
@@ -45,6 +46,8 @@ const topNavItems = [
   { href: APP_ROUTES.expenses, label: 'Spese', icon: Receipt },
   { href: APP_ROUTES.import, label: 'Importazioni', icon: Upload },
   { href: APP_ROUTES.categorySettings, label: 'Categorie', icon: FolderTree },
+  { href: APP_ROUTES.tags, label: 'Tag', icon: Tags },
+  { href: APP_ROUTES.patterns, label: 'Pattern', icon: Regex },
 ]
 
 export function Sidebar({ user }: { user: UserDisplay }) {
@@ -91,7 +94,7 @@ export function Sidebar({ user }: { user: UserDisplay }) {
         </button>
       </div>
 
-      {/* NAV LIST + SETTINGS LINK: wrapped in a single TooltipProvider so collapsed tooltips work */}
+      {/* NAV LIST: wrapped in a TooltipProvider so collapsed tooltips work */}
       <TooltipProvider>
         <ul className="flex flex-1 flex-col gap-1">
           {topNavItems.map(({ href, label, icon: Icon }) => {
@@ -127,36 +130,6 @@ export function Sidebar({ user }: { user: UserDisplay }) {
             )
           })}
         </ul>
-
-        {/* SETTINGS LINK: Impostazioni hub (Profilo + Tag + theme) */}
-        <Separator className="my-2" />
-        {(() => {
-          const isActive =
-            pathname === APP_ROUTES.settings ||
-            (pathname.startsWith(`${APP_ROUTES.settings}/`) &&
-              !pathname.startsWith(APP_ROUTES.categorySettings))
-          const linkNode = (
-            <Link
-              href={APP_ROUTES.settings}
-              className={cn(
-                'flex items-center rounded-md py-2 text-sm font-medium transition-colors',
-                collapsed ? 'justify-center px-2' : 'gap-3 px-3',
-                isActive
-                  ? 'border-l-2 border-primary bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-              )}
-            >
-              <ClientMountIcon icon={Settings} className="h-4 w-4 shrink-0" />
-              {!collapsed && <span className="flex-1">Impostazioni</span>}
-            </Link>
-          )
-          return collapsed && mounted ? (
-            <Tooltip>
-              <TooltipTrigger asChild>{linkNode}</TooltipTrigger>
-              <TooltipContent side="right">Impostazioni</TooltipContent>
-            </Tooltip>
-          ) : linkNode
-        })()}
       </TooltipProvider>
 
       {/* BOTTOM SLOT: user avatar dropdown migrated from topbar (D-07/D-08) */}

@@ -1,9 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, List, Receipt, Settings, Upload } from 'lucide-react'
+import { LayoutDashboard, List, MoreHorizontal, Receipt, Upload } from 'lucide-react'
 import { ClientMountIcon } from '@/components/ui/client-mount-icon'
+import { MobileMoreSheet, MORE_SHEET_ROUTES } from '@/components/layout/mobile-more-sheet'
 import { cn } from '@/lib/utils'
 import { APP_ROUTES } from '@/lib/routes'
 
@@ -12,7 +14,6 @@ const navItems = [
   { href: APP_ROUTES.expenses, label: 'Spese', icon: Receipt },
   { href: APP_ROUTES.transactions, label: 'Transazioni', icon: List },
   { href: APP_ROUTES.import, label: 'Importazioni', icon: Upload },
-  { href: APP_ROUTES.settings, label: 'Impostazioni', icon: Settings },
 ]
 
 interface BottomNavProps {
@@ -21,33 +22,53 @@ interface BottomNavProps {
 
 export function BottomNav({ className }: BottomNavProps) {
   const pathname = usePathname()
+  const [moreOpen, setMoreOpen] = useState(false)
+
+  const isMoreActive = MORE_SHEET_ROUTES.some(
+    (href) => pathname === href || pathname.startsWith(`${href}/`)
+  )
 
   return (
-    <nav
-      aria-label="Navigazione mobile"
-      data-bottom-nav
-      className={cn(
-        'fixed inset-x-0 bottom-0 z-50 flex h-16 items-center border-t border-border bg-background',
-        className
-      )}
-    >
-      {navItems.map(({ href, label, icon: Icon }) => {
-        const isActive = pathname === href || pathname.startsWith(`${href}/`)
+    <>
+      <nav
+        aria-label="Navigazione mobile"
+        data-bottom-nav
+        className={cn(
+          'fixed inset-x-0 bottom-0 z-50 flex h-16 items-center border-t border-border bg-background',
+          className
+        )}
+      >
+        {navItems.map(({ href, label, icon: Icon }) => {
+          const isActive = pathname === href || pathname.startsWith(`${href}/`)
 
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              'flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1 py-2 text-xs',
-              isActive ? 'text-primary' : 'text-muted-foreground'
-            )}
-          >
-            <ClientMountIcon icon={Icon} className="h-5 w-5" />
-            <span>{label}</span>
-          </Link>
-        )
-      })}
-    </nav>
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                'flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1 py-2 text-xs',
+                isActive ? 'text-primary' : 'text-muted-foreground'
+              )}
+            >
+              <ClientMountIcon icon={Icon} className="h-5 w-5" />
+              <span>{label}</span>
+            </Link>
+          )
+        })}
+        <button
+          type="button"
+          aria-label="Altro"
+          onClick={() => setMoreOpen(true)}
+          className={cn(
+            'flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1 py-2 text-xs',
+            isMoreActive ? 'text-primary' : 'text-muted-foreground'
+          )}
+        >
+          <ClientMountIcon icon={MoreHorizontal} className="h-5 w-5" />
+          <span>Altro</span>
+        </button>
+      </nav>
+      <MobileMoreSheet open={moreOpen} onOpenChange={setMoreOpen} />
+    </>
   )
 }

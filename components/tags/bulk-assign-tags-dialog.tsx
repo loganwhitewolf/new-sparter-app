@@ -157,7 +157,7 @@ function TagCheckboxList({
   if (tags.length === 0) {
     return (
       <p className="py-4 text-sm text-muted-foreground">
-        Nessun tag disponibile — creane uno da Impostazioni → Tag.
+        Nessun tag disponibile — creane uno dalla sezione Tag.
       </p>
     )
   }
