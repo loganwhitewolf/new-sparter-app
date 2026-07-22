@@ -10,9 +10,9 @@ Requirements for this milestone. Each maps to a roadmap phase. REQ-IDs continue 
 ### Tag Dedicated View
 
 - [ ] **TAG-06**: User can open a dedicated page for a single tag showing its all-time overview (every transaction carrying the tag, independent of any calendar period).
-- [ ] **TAG-07**: The tag page shows three totals — Entrate, Uscite, and Valore finale (signed net) — computed with the same netting/exclusions as the dashboard (`getTagDetail`/`getTagTotals`), so the numbers reconcile with `/dashboard/tags`.
-- [ ] **TAG-08**: The tag page shows the number of included transactions (matching the totals' transaction set).
-- [ ] **TAG-09**: The tag page shows a per-category breakdown of the tag's transactions with signed amounts.
+- [x] **TAG-07**: The tag page shows three totals — Entrate, Uscite, and Valore finale (signed net) — computed with the same netting/exclusions as the dashboard (`getTagDetail`/`getTagTotals`), so the numbers reconcile with `/dashboard/tags`.
+- [x] **TAG-08**: The tag page shows the number of included transactions (matching the totals' transaction set).
+- [x] **TAG-09**: The tag page shows a per-category breakdown of the tag's transactions with signed amounts.
 - [ ] **TAG-10**: The tag page shows a compact list of the included transactions (date · subcategory · signed amount), sorted by date descending.
 - [ ] **TAG-11**: User can edit and archive the tag directly from the dedicated page.
 - [ ] **TAG-12**: User can reach the tag page from `/tags` and from `/dashboard/tags`.
@@ -44,9 +44,9 @@ Filled at roadmap creation (2026-07-22).
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TAG-06 | Phase 69 | Pending |
-| TAG-07 | Phase 69 | Pending |
-| TAG-08 | Phase 69 | Pending |
-| TAG-09 | Phase 69 | Pending |
+| TAG-07 | Phase 69 | Complete |
+| TAG-08 | Phase 69 | Complete |
+| TAG-09 | Phase 69 | Complete |
 | TAG-10 | Phase 69 | Pending |
 | TAG-11 | Phase 69 | Pending |
 | TAG-12 | Phase 69 | Pending |
