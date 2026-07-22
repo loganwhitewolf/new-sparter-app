@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.8
 milestone_name: Public Branding Site
-current_phase: 69
-current_phase_name: proto-design-variants
-status: verifying
+current_phase: 70
+current_phase_name: public layout and proxy allowlist
+status: planning
 stopped_at: Completed 69-03-PLAN.md — Phase 69 (proto-design-variants) fully executed, BRAND-01 + BRAND-02 satisfied
-last_updated: "2026-07-22T16:15:24.173Z"
+last_updated: "2026-07-22T16:22:30.859Z"
 last_activity: 2026-07-22
-last_activity_desc: Phase 69 execution started
+last_activity_desc: Phase 69 complete, transitioned to Phase 70
 progress:
   total_phases: 1
   completed_phases: 1
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 ## Current Position
 
-Phase: 69 (proto-design-variants) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-07-22 — Phase 69 execution started
+Phase: 70 — public layout and proxy allowlist
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-22 — Phase 69 complete, transitioned to Phase 70
 
 ## Roadmap (v2.8 — Phases 69-73)
 

@@ -37,7 +37,7 @@ legal pages (Privacy/Termini), and SEO + auth-polish hardening. English route sl
 
 **Requirements:** BRAND-01, BRAND-02
 
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 **Wave 1**
@@ -294,7 +294,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 66. expense-group-lifecycle | v2.6 | 5/5 | Complete    | 2026-07-20 |
 | 67. tags-foundation-and-assignment | v2.6 | 9/9 | Complete    | 2026-07-20 |
 | 68. tags-dashboard-and-navigation | v2.6 | 8/8 | Complete    | 2026-07-22 |
-| 69. proto-design-variants | v2.8 | 0/3 | In Progress|  |
+| 69. proto-design-variants | v2.8 | 0/3 | Complete    | 2026-07-22 |
 | 70. public-layout-and-proxy-allowlist | v2.8 | 0/? | Not started | — |
 | 71. marketing-pages | v2.8 | 0/? | Not started | — |
 | 72. legal-pages | v2.8 | 0/? | Not started | — |
