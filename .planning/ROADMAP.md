@@ -19,11 +19,11 @@
 - ✅ **v2.4: Standalone Expense** — Phase 61 (shipped 2026-07-01) · [archive](milestones/v2.4-ROADMAP.md)
 - ✅ **v2.5: Detail Pages** — Phases 62–64 (shipped 2026-07-07, tag v2.5) · [archive](milestones/v2.5-ROADMAP.md)
 - ✅ **v2.6: Expenses & Transactions Refinement** — Phases 65–68 (shipped 2026-07-22, tag v2.6) · [archive](milestones/v2.6-ROADMAP.md)
-- 🚧 **v2.7: Tag Dedicated View** — Phases 69–70 (in progress) — dedicated all-time per-tag page + `?tag=` dashboard-filter removal
+- 🚧 **v2.7: Tag Dedicated View** — Phases 69–71 (in progress) — dedicated all-time per-tag page + `?tag=` dashboard-filter removal
 
 ## Phases
 
-### v2.7: Tag Dedicated View (Phases 69–70) — IN PROGRESS
+### v2.7: Tag Dedicated View (Phases 69–71) — IN PROGRESS
 
 Make a dedicated per-tag page the canonical, all-time view of a tag (event-shaped),
 replacing the period-scoped `?tag=` dashboard filter so a tag shows one reconciled set of
@@ -83,7 +83,9 @@ Layout: Variant A "report verticale" (prototype `proto/tag-view`).
   3. The tag filter participates in the unified filter system like the others — active-state visible (chip/label), persisted across bare navigation (sessionStorage restore layer), and reset by clear-all.
   4. Does NOT reuse the dashboard `TagFilterSelect` (removed in Phase 70) — the control lives in the transactions filter component.
 
-**Plans**: TBD
+**Plans**: 1 plan
+
+- [ ] 71-01-PLAN.md — Tag filter control: add `tag` entry to `transactionsTableConfig`, inject user tags as options in page.tsx, resolve chip label to the tag name (toChip 2nd arg) + human-verify [wave 1]
 
 <details>
 <summary>✅ v2.6: Expenses & Transactions Refinement (Phases 65–68) — SHIPPED 2026-07-22 (tag v2.6)</summary>
@@ -324,7 +326,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 68. tags-dashboard-and-navigation | v2.6 | 8/8 | Complete    | 2026-07-22 |
 | 69. tag-dedicated-page | v2.7 | 3/3 | Complete | 2026-07-22 |
 | 70. dashboard-tag-filter-removal | v2.7 | — | Not started | - |
-| 71. transactions-tag-filter-control | v2.7 | — | Not started | - |
+| 71. transactions-tag-filter-control | v2.7 | 0/1 | Not started | - |
 
 **Total shipped: 68 phases · 263 plans complete**
 **Latest shipped: v2.6 Expenses & Transactions Refinement — Phases 65–68 (2026-07-22, tag v2.6). Active: v2.7 Tag Dedicated View — Phases 69–70 (roadmap drafted 2026-07-22; next: `/gsd-plan-phase 69`).**
