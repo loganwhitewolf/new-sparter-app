@@ -13,6 +13,15 @@ This CONTEXT captures decisions already locked with the user (grill + prototype,
 
 - **D3 — Single numeric source, one query.** Extend the EXISTING `getTagDetail(userId, tagId)` in `lib/dal/tags.ts` (do NOT add a parallel query): add `category.name` to the existing select and derive a **per-category breakdown** inside the pure `buildTagDetailData` (group by category name, signed `Decimal` sum + count, sort by |total| desc). Same exclusion set already in place (effectiveAmount + isNotSecondary, exclude `transfer`, `expense.status ∈ {1,2,3}`, direction via user override). Extend the `TagDetail` type with `breakdown: { categoryName, total, count }[]`. **Reconciliation (TAG-07):** `TagDetail.net` MUST equal `getTagTotals`' `total` for the same tag.
 
+- **D7 — (added post-checkpoint, 2026-07-22) Transactions link + list refinements.** Three
+  changes were requested by the user AFTER the phase checkpoint and shipped on top of D4's
+  layout; recorded here so the spec matches the code:
+  (a) the transaction list row shows the raw `transaction.description` as its primary line with
+  the subcategory beneath it; (b) an "Apri nella lista transazioni" link sits on the
+  included-count row, pointing at `transactionsByTagHref(tagId)` (`/transactions?tag=`), hidden
+  when the tag has no transactions; (c) the list flows at its natural height — no `max-h` /
+  inner scrollbar — so the page scrolls once.
+
 - **D4 — Layout = prototype Variant A** ("report verticale"). Reference: `app/proto/tag-view/variant-a.tsx` (throwaway on branch `proto/tag-view`). Top-to-bottom: header (name + date-range label + Edit/Archive) → 3 KPI cards (Entrate / Uscite / Valore finale, signed net, sign-colored) → "{n} transazioni incluse" → per-category breakdown with CSS bars (bar color by sign: `--total-in` / `--total-out`) → compact transaction list (date · subcategory · signed amount, date-descending, scrollable). Reuse `it-IT` currency/date formatting and `tabular-nums`. `formatDateRange` returns "Nessun intervallo" when no range (as in the current panel).
 
 - **D5 — Edit / Archive.** Reuse `EditTagDialog` and `ArchiveTagDialog` from `components/tags/tag-mutation-dialogs.tsx` in the page header. Show an "Archiviato" badge when archived; render `ArchiveTagDialog` only when NOT archived (mirror the current panel). The existing actions already `revalidatePath(APP_ROUTES.tags)` + `dashboardTags` — also `revalidatePath` the new detail route. User stays on the page after archive (badge updates); no forced redirect.

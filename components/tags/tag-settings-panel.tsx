@@ -2,18 +2,12 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { TagRow } from '@/lib/dal/tags'
+import { formatOptionalDateRange } from '@/lib/utils/date'
 import { tagDetail } from '@/lib/routes'
 import { CreateTagDialog } from './tag-mutation-dialogs'
 
 type Props = {
   tags: TagRow[]
-}
-
-function formatDateRange(tag: TagRow): string {
-  if (!tag.dateRangeStart || !tag.dateRangeEnd) return 'Nessun intervallo'
-  const start = tag.dateRangeStart.toLocaleDateString('it-IT')
-  const end = tag.dateRangeEnd.toLocaleDateString('it-IT')
-  return `${start} — ${end}`
 }
 
 // Index row: the whole item is a link to the dedicated tag page (/tags/[id]); the inline detail
@@ -26,7 +20,7 @@ function TagListItem({ tag }: { tag: TagRow }) {
     >
       <span className="min-w-0">
         <span className="block truncate font-medium">{tag.name}</span>
-        <span className="mt-0.5 block text-xs text-muted-foreground">{formatDateRange(tag)}</span>
+        <span className="mt-0.5 block text-xs text-muted-foreground">{formatOptionalDateRange(tag.dateRangeStart, tag.dateRangeEnd)}</span>
       </span>
       {tag.archived && (
         <Badge variant="secondary" className="ml-2 shrink-0 text-[10px]">

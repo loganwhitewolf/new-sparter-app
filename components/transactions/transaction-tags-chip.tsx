@@ -18,14 +18,10 @@ type Props = {
 /**
  * Compact inline tag indicator for a transactions-table row.
  *
- * Sits on the SAME line as the title: the title truncates with an ellipsis and this chip stays
- * visible right after it (the chip is `shrink-0`, the title owns the flexible space), so a long
- * description reads "DESCRIZIONE MOLTO LUN… [🏷 2]". The tag NAMES are revealed on demand rather
- * than inline, which keeps every row exactly one line tall regardless of how many tags it carries.
- *
- * Opens on hover (desktop) and on click/tap (touch, where hover does not exist) — the Popover's
- * open state is controlled so both gestures drive it. Read-only, like the chips it replaces:
- * bulk add/remove lives in BulkAssignTagsDialog, single add/remove on the detail page.
+ * Shares the title's line: the title truncates, this chip is `shrink-0` and stays visible after
+ * the ellipsis, so every row is one line tall whatever its tag count. Names are revealed in the
+ * popover, opened by hover (desktop) or tap (touch) via controlled open state.
+ * Read-only — add/remove lives in BulkAssignTagsDialog and the detail page.
  */
 export function TransactionTagsChip({ tags }: Props) {
   const [open, setOpen] = useState(false)
