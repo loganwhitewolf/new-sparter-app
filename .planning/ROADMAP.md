@@ -33,8 +33,9 @@ not a filter. Single numeric source `getTagDetail` / `getTagTotals` already exis
 branch base (quick task 260722-ked absorbed); only the per-category breakdown query is new.
 Layout: Variant A "report verticale" (prototype `proto/tag-view`).
 
-- [ ] **Phase 69: tag-dedicated-page** - Dedicated per-tag mini-dashboard (Variant A) with edit/archive in place and entry points from /tags and /dashboard/tags (TAG-06, TAG-07, TAG-08, TAG-09, TAG-10, TAG-11, TAG-12)
+- [x] **Phase 69: tag-dedicated-page** - Dedicated per-tag mini-dashboard (Variant A) with edit/archive in place and entry points from /tags and /dashboard/tags (TAG-06, TAG-07, TAG-08, TAG-09, TAG-10, TAG-11, TAG-12)
 - [ ] **Phase 70: dashboard-tag-filter-removal** - Remove the period-scoped `?tag=` filter and its wiring from /dashboard/overview and /dashboard/categories (TAG-13)
+- [ ] **Phase 71: transactions-tag-filter-control** - Add a tag filter control to the transactions toolbar, integrated into the unified filter/sort system (TAG-14)
 
 ### Phase 69: tag-dedicated-page
 
@@ -53,7 +54,7 @@ Layout: Variant A "report verticale" (prototype `proto/tag-view`).
 
 - [x] 69-01-PLAN.md — Tracer: /tags/[id] RSC page rendering real getTagDetail (header + KPI + count + tx list) [wave 1]
 - [x] 69-02-PLAN.md — Per-category breakdown: extend getTagDetail/buildTagDetailData + CSS-bar card [wave 2]
-- [ ] 69-03-PLAN.md — Entry points + cleanup: /tags index links, /dashboard/tags re-point, remove orphaned action, human-verify [wave 2]
+- [x] 69-03-PLAN.md — Entry points + cleanup: /tags index links, /dashboard/tags re-point, remove orphaned action, human-verify [wave 2]
 
 **UI hint**: yes
 
@@ -67,6 +68,20 @@ Layout: Variant A "report verticale" (prototype `proto/tag-view`).
   1. Neither /dashboard/overview nor /dashboard/categories shows a tag-filter control anymore (`TagFilterSelect` removed).
   2. A dashboard URL carrying a legacy `?tag=<id>` renders the normal all-transactions dashboard — the param is ignored, with no `no-data-for-tag` empty state and no error.
   3. Dashboard totals and category breakdowns match the pre-existing unfiltered numbers, with the filter wiring (`tagId` threading through the overview/category DAL, `parseTagIdParam`, and the `no-data-for-tag` empty state) fully removed.
+
+**Plans**: TBD
+
+### Phase 71: transactions-tag-filter-control
+
+**Goal**: Users can filter the transactions table by tag from the toolbar. A tag control is integrated into the transactions' existing unified filter/sort system (persisted, chip, clear-all) and writes `?tag=`. The `?tag=` URL param, IDOR guard, and `getTransactions` `tagId` support already exist — this phase adds the missing UI control only.
+**Depends on**: Nothing (independent of Phase 70 — 70 removes the dashboard tag filter, 71 adds the transactions tag filter; different surfaces, different components)
+**Requirements**: TAG-14
+**Success Criteria** (what must be TRUE):
+
+  1. The transactions toolbar shows a tag filter control listing the user's tags (with a "Tutti i tag" / clear option), sitting alongside the existing filters.
+  2. Selecting a tag filters the table to that tag's transactions (writes `?tag=<id>`, reusing the existing param + `getTransactions` tagId path); clearing it removes the filter.
+  3. The tag filter participates in the unified filter system like the others — active-state visible (chip/label), persisted across bare navigation (sessionStorage restore layer), and reset by clear-all.
+  4. Does NOT reuse the dashboard `TagFilterSelect` (removed in Phase 70) — the control lives in the transactions filter component.
 
 **Plans**: TBD
 
@@ -307,8 +322,9 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 66. expense-group-lifecycle | v2.6 | 5/5 | Complete    | 2026-07-20 |
 | 67. tags-foundation-and-assignment | v2.6 | 9/9 | Complete    | 2026-07-20 |
 | 68. tags-dashboard-and-navigation | v2.6 | 8/8 | Complete    | 2026-07-22 |
-| 69. tag-dedicated-page | v2.7 | — | In Progress|  |
+| 69. tag-dedicated-page | v2.7 | 3/3 | Complete | 2026-07-22 |
 | 70. dashboard-tag-filter-removal | v2.7 | — | Not started | - |
+| 71. transactions-tag-filter-control | v2.7 | — | Not started | - |
 
 **Total shipped: 68 phases · 263 plans complete**
 **Latest shipped: v2.6 Expenses & Transactions Refinement — Phases 65–68 (2026-07-22, tag v2.6). Active: v2.7 Tag Dedicated View — Phases 69–70 (roadmap drafted 2026-07-22; next: `/gsd-plan-phase 69`).**

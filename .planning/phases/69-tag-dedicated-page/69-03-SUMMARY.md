@@ -142,8 +142,8 @@ status: complete
 - `./node_modules/.bin/eslint` on all five touched files — clean.
 - `yarn check:language` — passed.
 
-## Pending Operator — Task 3 human-verify checkpoint (NOT executed)
-Task 3 (`type="checkpoint:human-verify"`, gate="blocking") was deliberately not performed in this run — it requires a running app and human judgment. It remains for the human operator to run `yarn dev`, sign in to an account with at least one tag that has transactions, and confirm:
+## Task 3 human-verify checkpoint — APPROVED (operator, 2026-07-22)
+The operator ran the app and confirmed all five checks pass ("ok ora funziona"). Two refinements were applied during the checkpoint and committed before approval: transaction description added to the tx list (2278d26), and the Entrate/Uscite sign-classification bug fixed (6b44d09). gsd-verifier subsequently returned GOAL ACHIEVED (5/5). Checks confirmed:
 1. `/tags` is a list; clicking a tag lands on `/tags/{id}` for that tag (TAG-12, D2).
 2. `/dashboard/tags` name link lands on the same `/tags/{id}` page (TAG-12, D6); note the tag's total there.
 3. On `/tags/{id}`, the "Valore finale" KPI equals that dashboard total (cross-query reconciliation, TAG-07); "Entrate"/"Uscite" are sign-colored; "{n} transazioni incluse" matches the list length (TAG-08); "Per categoria" bars are sign-colored and sorted largest-first (TAG-09); the transaction list is date-descending (TAG-10).

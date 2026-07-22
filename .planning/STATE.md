@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v2.7
 milestone_name: Tag Dedicated View
-current_phase: 69
-status: planning
-stopped_at: Completed 69-02-PLAN.md
-last_updated: "2026-07-22T13:59:18.078Z"
+current_phase: 70
+status: in_progress
+stopped_at: Completed Phase 69 (3/3 plans, gsd-verifier GOAL ACHIEVED)
+last_updated: "2026-07-22T14:30:00.000Z"
 last_activity: 2026-07-22
-last_activity_desc: Milestone v2.7 roadmap created (Phases 69–70)
+last_activity_desc: Phase 69 complete + verified; added Phase 71 (transactions tag filter, TAG-14)
 progress:
-  total_phases: 2
-  completed_phases: 0
+  total_phases: 3
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 0
+  completed_plans: 3
+  percent: 33
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 ## Current Position
 
-Phase: 69 — tag-dedicated-page (in progress)
-Plan: 2 of 3 complete (69-01 tracer, 69-02 per-category breakdown)
-Status: Plan 69-02 executed; ready for Plan 69-03 (entry-point wiring + human-verify checkpoint)
-Last activity: 2026-07-22 — Executed 69-02: per-category breakdown (getTagDetail + CSS-bar card)
+Phase: 69 — tag-dedicated-page (COMPLETE ✓, verified GOAL ACHIEVED)
+Plan: 3 of 3 complete (69-01 tracer, 69-02 breakdown, 69-03 index+cleanup); operator checkpoint approved
+Status: Phase 69 done. Milestone v2.7 remaining: Phase 70 (dashboard tag-filter removal) + Phase 71 (transactions tag-filter control, TAG-14). Next up: Phase 71 (user-requested).
+Last activity: 2026-07-22 — Phase 69 verified; +description in tx list, +Entrate/Uscite sign-fix; added Phase 71
 
 ## Roadmap (v2.7 — Phases 69-70)
 
