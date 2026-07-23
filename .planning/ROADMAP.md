@@ -67,7 +67,12 @@ Plans:
   2. Public marketing paths are allowlisted in `proxy.ts` via a single source of truth in `lib/routes.ts` (anon access without 307 to `/login`).
   3. Unauthenticated `/` serves the marketing homepage shell; authenticated `/` redirects to `/dashboard`.
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 74-01-PLAN.md — Tracer: routes SoT + proxy smart root + `(public)` homepage shell + D-07 Vitest
+- [ ] 74-02-PLAN.md — Public SiteHeader/SiteFooter chrome (UI-SPEC + D-08 Dashboard)
+- [ ] 74-03-PLAN.md — Stub pages (how-it-works/privacy/terms) + human verify
 
 **UI hint**: yes
 
@@ -376,7 +381,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 72. transactions-tag-indicator | v2.7 | direct | Complete | 2026-07-22 |
 
 | 73. proto-design-variants | v2.9 | 3/3 | Complete    | 2026-07-22 |
-| 74. public-layout-and-proxy-allowlist | v2.9 | 0/? | Not started | — |
+| 74. public-layout-and-proxy-allowlist | v2.9 | 0/3 | Planned | — |
 | 75. marketing-pages | v2.9 | 0/? | Not started | — |
 | 76. legal-pages | v2.9 | 0/? | Not started | — |
 | 77. seo-and-auth-polish | v2.9 | 0/? | Not started | — |
