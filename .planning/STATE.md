@@ -1,20 +1,20 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.7
-milestone_name: Tag Dedicated View
-current_phase: 72
-current_phase_name: milestone v2.7 complete (phases 69-72)
-status: complete
-stopped_at: Milestone v2.7 complete — all phases shipped, operator checkpoints approved
-last_updated: "2026-07-22T15:40:17.311Z"
-last_activity: 2026-07-22
-last_activity_desc: Phase 70 verified by operator; v2.7 complete (tag page, dashboard filter removed, tx filter + chip)
+milestone: none
+milestone_name: (awaiting next milestone)
+current_phase: null
+current_phase_name: v2.7 archived — no active milestone
+status: milestone_archived
+stopped_at: v2.7 archived (roadmap + requirements → milestones/); run /gsd-new-milestone to start the next cycle
+last_updated: "2026-07-23T00:00:00.000Z"
+last_activity: 2026-07-23
+last_activity_desc: Archived v2.7 milestone (ROADMAP collapsed, REQUIREMENTS archived, PROJECT.md evolved)
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -24,14 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 69 — tag-dedicated-page (v2.7 roadmap drafted)
+**Current focus:** none — v2.7 archived; awaiting the next milestone.
 
 ## Current Position
 
-Phase: — (milestone v2.7 COMPLETE: phases 69, 70, 71, 72 all shipped)
-Plan: 6 of 6 complete; both operator checkpoints (69-03, 70-02) approved
-Status: v2.7 done. Tags are event-shaped: `/tags/[id]` is the canonical all-time per-tag page; the period-scoped `?tag=` dashboard filter is gone; the transactions table gained a tag filter + inline tag chip. Next: PR + release tag on main (branch `gsd/v2.7-tag-dedicated-view`).
-Last activity: 2026-07-22 — Phase 70 operator-verified; milestone closed
+Phase: — (no active milestone; v2.7 shipped, tagged, and archived on 2026-07-23)
+Plan: —
+Status: v2.7 Tag Dedicated View shipped (tag `v2.7`, merged to `main`) and archived to `.planning/milestones/`. ROADMAP collapsed to a one-line link, requirements archived, PROJECT.md evolved. Fresh `REQUIREMENTS.md` will be created by `/gsd-new-milestone`.
+Next: `/gsd-new-milestone` — candidates: shared-subscription/refunds (ADR 0016), platform-scoped patterns (ADR 0015 follow-up), or live operator deploy (R038/R039/R041).
+Last activity: 2026-07-23 — v2.7 milestone archived
 
 ## Roadmap (v2.7 — Phases 69-70)
 

@@ -1,5 +1,21 @@
 # Milestones
 
+## v2.7 Tag Dedicated View (Shipped: 2026-07-22)
+
+**Phases completed:** 4 phases, 6 plans, 50 commits (`v2.6..v2.7`), 185 files (+5177 / −1251)
+
+**Key accomplishments:**
+
+- `/tags/[id]` — the canonical all-time per-tag page (Variant A "report verticale"): three reconciled totals (Entrate / Uscite / Valore finale via the single numeric source `getTagDetail`/`getTagTotals`), included-transaction count, per-category CSS-bar breakdown with signed amounts, and a compact date-descending transaction list — no charting dependency.
+- In-place edit/archive of the tag directly from the page, with entry points from both `/tags` and `/dashboard/tags`.
+- Removed the period-scoped `?tag=` dashboard filter entirely — `TagFilterSelect`, `tagId` threading through the overview/category DAL, the `no-data-for-tag` empty state, and `parseTagIdParam` — so per-tag analysis now lives only in the dedicated all-time page; legacy `?tag=` dashboard URLs render the normal unfiltered dashboard.
+- Transactions toolbar gained a tag filter control integrated into the existing unified filter/sort system (writes `?tag=`, persisted via the sessionStorage restore layer, shown as an active chip, cleared by clear-all) — the list keeps a tag *navigation* filter while the dashboard loses the tag *analysis* filter.
+- Inline tag chip on the transaction title line (after the ellipsis when truncated) with a hover/tap popover listing the linked tags — replaced the wrapping name-chips block, keeping every row one line tall.
+
+**Model note:** tags are event-shaped — the canonical per-tag view is all-time (every transaction carrying the tag, regardless of calendar); `dateRange` is a descriptive label, not a filter.
+
+---
+
 ## v2.5 Detail Pages (Shipped: 2026-07-07)
 
 **Phases completed:** 3 phases, 13 plans, 23 tasks

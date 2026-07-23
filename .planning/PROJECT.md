@@ -15,7 +15,8 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v2.6 (Phases 1–68) complete. The app now has:
+All milestones M001–v2.7 (Phases 1–72) complete. The app now has:
+- Tag Dedicated View (v2.7): `/tags/[id]` is the canonical all-time per-tag page (Variant A "report verticale" — three reconciled totals via `getTagDetail`/`getTagTotals`, included count, per-category CSS-bar breakdown, compact tx list, in-place edit/archive, entry from `/tags` + `/dashboard/tags`); the period-scoped `?tag=` dashboard filter and all its wiring (`TagFilterSelect`, `tagId` DAL threading, `no-data-for-tag`, `parseTagIdParam`) were removed — per-tag analysis lives only in the dedicated page; the transactions toolbar gained a tag *navigation* filter (unified filter/sort, persisted, chip, clear-all) and an inline tag chip + popover on each transaction title line. Model: tags are event-shaped — the canonical view is all-time; `dateRange` is a label, not a filter
 - Expense Groups + Transaction Tags (v2.6): bulk-merge same-subcategory expenses into titled Expense Groups (ADR 0017 — grouping entity above intact Expenses, no physical merge; rendered as one row everywhere, full lifecycle recategorize/add/remove/dissolve with dashboard totals structurally unchanged); a curated Transaction Tags axis orthogonal to categories (create/edit/archive, never delete; bulk-assign; date-range suggestions on create + each import); a global dashboard tag filter threaded through every widget (EXISTS predicate, totals reconcile), a `/dashboard/tags` section with independent per-tag all-time totals, and a month→filtered-transactions click-through from the movers/deviations rows
 - Uniform detail pages (v2.5): `/transactions/[id]`, `/expenses/[id]`, `/import/[fileId]` as the single place to view and edit everything editable about each entity, with pencil-inline editing, cross-references between entities, atomic derived-field reconciliation, and a pair-coherence guard that blocks amount edits breaking a refund pair
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
@@ -34,25 +35,29 @@ All milestones M001–v2.6 (Phases 1–68) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Current Milestone: v2.7 — Tag Dedicated View
+## Current Milestone: none — awaiting next milestone
+
+v2.7 shipped and archived (2026-07-22). Start the next cycle with `/gsd-new-milestone`.
+
+**Standing candidates** (from planning memory): shared-subscription/refunds build (ADR 0016 — netting per subcategory + Standalone Expense to isolate inflows), platform-scoped patterns (ADR 0015 follow-up — `platformId` on `categorizationPattern` for ambiguous descriptions), and live operator deploy (R038 / R039 / R041 — code, config, runbook complete; deploy is operator-pending).
+
+## Last Shipped Milestone: v2.7 — Tag Dedicated View (shipped 2026-07-22, tag v2.7)
 
 **Goal:** Make a dedicated per-tag page the canonical, all-time view of a tag (event-shaped), replacing the period-scoped `?tag=` dashboard filter so a tag shows one reconciled set of numbers everywhere.
 
-**Target features:**
-- Dedicated per-tag page (mini-dashboard, "report verticale" layout — prototype Variant A on branch `proto/tag-view`): header (name + date-range label + Edit/Archive) → 3 KPI (Entrate / Uscite / Valore finale, signed net) → included-transaction count → per-category breakdown with bars → compact transaction list (date · subcategory · signed amount)
-- Remove the period-scoped `?tag=` filter from `dashboard/overview` and `dashboard/categories`, plus its wiring (TagFilterSelect, tagId threading through the overview/category DAL, `no-data-for-tag` empty state, `parseTagIdParam`)
-- Routing/entry points to the new page (from `/tags` and from `/dashboard/tags`)
+- `/tags/[id]` canonical all-time page (Variant A): 3 reconciled totals (`getTagDetail`/`getTagTotals`), included count, per-category CSS-bar breakdown, compact tx list, in-place edit/archive, entry from `/tags` + `/dashboard/tags`
+- Period-scoped `?tag=` dashboard filter + wiring removed (`TagFilterSelect`, `tagId` DAL threading, `no-data-for-tag`, `parseTagIdParam`)
+- Transactions toolbar tag filter (unified filter/sort, persisted, chip, clear-all) + inline tag chip/popover on the transaction title line
+- Model: tags are event-shaped — canonical view is all-time; `dateRange` is a descriptive label, not a filter
 
-**Model decision (2026-07-22):** tags are event-shaped; the canonical per-tag view is all-time (every transaction carrying the tag, regardless of the calendar) — `dateRange` is a descriptive label, not a filter. Single numeric source: `getTagDetail` / `getTagTotals` (already in the branch base; the enrichment quick task 260722-ked is absorbed into this milestone).
-
-## Last Shipped Milestone: v2.6 — Expenses & Transactions Refinement (shipped 2026-07-22, tag v2.6)
+## Earlier Shipped Milestone: v2.6 — Expenses & Transactions Refinement (shipped 2026-07-22, tag v2.6)
 
 **Goal:** Refine the expenses/transactions section with same-merchant unification (Expense Group), a second orthogonal analysis axis (Transaction Tags), and dashboard-to-transactions filtered navigation.
 
 - Expense Group (ADR 0017): bulk "Unisci" of same-subcategory expenses into a titled grouping entity above intact Expenses, full lifecycle, dashboard totals structurally unchanged
 - Transaction Tags: curated tag axis orthogonal to categories (create/edit/archive, bulk-assign, date-range suggestions), a global dashboard `?tag=` filter, `/dashboard/tags` per-tag all-time totals, month→filtered-transactions click-through
 
-## Last Shipped Milestone: v2.5 — Detail Pages (shipped 2026-07-07, tag v2.5)
+## Earlier Shipped Milestone: v2.5 — Detail Pages (shipped 2026-07-07, tag v2.5)
 
 **Goal:** Uniform detail pages for the three core entities — `/transactions/[id]`,
 `/expenses/[id]`, `/import/[fileId]` — as the single place to view and edit
