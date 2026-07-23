@@ -51,8 +51,18 @@
   4. A linked refund is excluded from its own month and its amount nets into the anchor's cost month everywhere `effectiveAmount`/`isNotSecondary` are applied.
   5. Anchoring on an inflow, or linking an outflow as a refund, is rejected by the invariant.
 
-**Plans**: TBD
-**Open for discuss/plan** (details, not architecture): (Q2) whether a multi-month anchor is constrained to one netting-month or attributed per-transaction (holiday confirmed "single-period"); (Q3) verifying per-transaction `effectiveAmount` attribution holds when an Expense anchor has multiple transactions.
+**Plans**: 4 plans
+
+Plans:
+- [ ] 73-01-PLAN.md — reimbursement + reimbursement_refund schema, migration, and netting generalization (tracer + N=1 regression proof)
+- [ ] 73-02-PLAN.md — D-02 invariant enforcement + full regression matrix (dinner, adjacency, ordering, Q3, migration-backfill correctness)
+- [ ] 73-03-PLAN.md — repoint transactions.ts paired-* fields and the transaction-edit.ts amount-edit guard
+- [ ] 73-04-PLAN.md — repoint the live pairing write path (createPair/deletePairByTransactionId/getEligibleCounterparts) and finalize transaction_pair's fate
+
+**Q2/Q3 resolved during planning** (per 73-RESEARCH.md, verified against the codebase): Q2 —
+single-period netting by the anchor's own `occurredAt` month, no code change needed. Q3 — an
+Expense with multiple transactions nets only its earliest transaction (by `occurredAt`, tie-break
+`id`); this tie-break is implemented in Plan 73-01 and explicitly tested in Plan 73-02.
 
 ### Phase 74: group-anchor-and-reconciliation
 
