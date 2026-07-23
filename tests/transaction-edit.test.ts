@@ -24,9 +24,9 @@ vi.mock('@/lib/db/schema', () => ({
     description: 'transaction.description',
     customTitle: 'transaction.customTitle',
   },
-  transactionPair: {
-    transactionAId: 'transactionPair.transactionAId',
-    transactionBId: 'transactionPair.transactionBId',
+  reimbursement: {
+    id: 'reimbursement.id',
+    expenseId: 'reimbursement.expenseId',
   },
   expense: {
     id: 'expense.id',
@@ -122,8 +122,10 @@ describe('updateTransaction', () => {
       let callCount = 0
       mocks.dbSelectChain.mockImplementation(() => {
         callCount += 1
-        // 1: transaction row load; 2: transactionPair lookup — unpaired, returns [].
-        return callCount === 1 ? makeSelectChain([row]) : makeSelectChain([])
+        // 1: transaction row load; 2: reimbursement role lookup — unpaired (both null).
+        return callCount === 1
+          ? makeSelectChain([row])
+          : makeSelectChain([{ asRefundReimbursementId: null, asAnchorReimbursementId: null }])
       })
       const updateChain = makeUpdateChain()
       mocks.dbUpdateChain.mockReturnValue(updateChain)
@@ -194,8 +196,10 @@ describe('updateTransaction', () => {
         callCount += 1
         // 1: transaction row load
         if (callCount === 1) return makeSelectChain([row])
-        // 2: transactionPair lookup — unpaired, returns [].
-        if (callCount === 2) return makeSelectChain([])
+        // 2: reimbursement role lookup — unpaired (both null).
+        if (callCount === 2) {
+          return makeSelectChain([{ asRefundReimbursementId: null, asAnchorReimbursementId: null }])
+        }
         // 3: loadAggregatesForExpenses (grouped select)
         if (callCount === 3) {
           return makeSelectChain([
@@ -233,8 +237,10 @@ describe('updateTransaction', () => {
       let callCount = 0
       mocks.dbSelectChain.mockImplementation(() => {
         callCount += 1
-        // 1: transaction row load; 2: transactionPair lookup — unpaired, returns [].
-        return callCount === 1 ? makeSelectChain([row]) : makeSelectChain([])
+        // 1: transaction row load; 2: reimbursement role lookup — unpaired (both null).
+        return callCount === 1
+          ? makeSelectChain([row])
+          : makeSelectChain([{ asRefundReimbursementId: null, asAnchorReimbursementId: null }])
       })
       const updateChain = makeUpdateChain()
       mocks.dbUpdateChain.mockReturnValue(updateChain)
@@ -245,21 +251,22 @@ describe('updateTransaction', () => {
     })
   })
 
-  // ── DET-03: pair guard ──────────────────────────────────────────────────────
+  // ── DET-03: pair guard (Phase 73, T-73-10: repointed onto reimbursement/reimbursement_refund) ──
   describe('DET-03 — pair guard', () => {
     it('blocks an amount edit that would make both pair legs the same sign', async () => {
+      // tx-1 is the reimbursement ANCHOR (outflow -100.00) with one linked refund (+100.00).
       const row = makeTxRow({ id: 'tx-1', amount: '-100.00', expenseId: null })
       let callCount = 0
       mocks.dbSelectChain.mockImplementation(() => {
         callCount += 1
         // 1: transaction row load
         if (callCount === 1) return makeSelectChain([row])
-        // 2: transactionPair lookup — this tx is paired
+        // 2: reimbursement role lookup — this tx is the anchor of reimbursement id 1
         if (callCount === 2) {
-          return makeSelectChain([{ transactionAId: 'tx-1', transactionBId: 'tx-2' }])
+          return makeSelectChain([{ asRefundReimbursementId: null, asAnchorReimbursementId: 1 }])
         }
-        // 3: counterpart transaction amount lookup
-        return makeSelectChain([{ amount: '+100.00' }])
+        // 3: refunds-sum lookup — one linked refund summing to +100.00
+        return makeSelectChain([{ refundsSum: '100.00' }])
       })
       const updateChain = makeUpdateChain()
       mocks.dbUpdateChain.mockReturnValue(updateChain)
@@ -278,9 +285,9 @@ describe('updateTransaction', () => {
         callCount += 1
         if (callCount === 1) return makeSelectChain([row])
         if (callCount === 2) {
-          return makeSelectChain([{ transactionAId: 'tx-1', transactionBId: 'tx-2' }])
+          return makeSelectChain([{ asRefundReimbursementId: null, asAnchorReimbursementId: 1 }])
         }
-        return makeSelectChain([{ amount: '+100.00' }])
+        return makeSelectChain([{ refundsSum: '100.00' }])
       })
       const updateChain = makeUpdateChain()
       mocks.dbUpdateChain.mockReturnValue(updateChain)
@@ -292,14 +299,14 @@ describe('updateTransaction', () => {
       expect(mocks.dbUpdateChain).toHaveBeenCalled()
     })
 
-    it('does not affect unpaired transactions and never runs counterpart pair logic beyond the empty check', async () => {
+    it('does not affect unpaired transactions and never runs counterpart pair logic beyond the role check', async () => {
       const row = makeTxRow({ id: 'tx-1', amount: '-100.00', expenseId: null })
       let callCount = 0
       mocks.dbSelectChain.mockImplementation(() => {
         callCount += 1
         if (callCount === 1) return makeSelectChain([row])
-        // 2: transactionPair lookup — no pair found
-        return makeSelectChain([])
+        // 2: reimbursement role lookup — unpaired (both null)
+        return makeSelectChain([{ asRefundReimbursementId: null, asAnchorReimbursementId: null }])
       })
       const updateChain = makeUpdateChain()
       mocks.dbUpdateChain.mockReturnValue(updateChain)
@@ -309,6 +316,55 @@ describe('updateTransaction', () => {
       ).resolves.toEqual({ success: true })
 
       expect(callCount).toBe(2)
+    })
+
+    it('blocks a refund-side amount edit against the anchor + other-refunds sum (N>1 generalization)', async () => {
+      // tx-2 is a REFUND (+40.00) linked to a reimbursement whose anchor is -100.00 and whose
+      // OTHER linked refund is +60.00 — otherSum = -100.00 + 60.00 = -40.00 (still negative).
+      // Editing tx-2 to +40.00 stays opposite-sign (allowed); editing it to -10.00 (now negative,
+      // matching otherSum's sign) must be blocked.
+      const row = makeTxRow({ id: 'tx-2', amount: '+40.00', expenseId: null })
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([row])
+        // 2: reimbursement role lookup — tx-2 is a refund of reimbursement id 7
+        if (callCount === 2) {
+          return makeSelectChain([{ asRefundReimbursementId: 7, asAnchorReimbursementId: null }])
+        }
+        // 3: anchor amount + other-refunds sum lookup (excludes tx-2 itself)
+        return makeSelectChain([{ anchorAmount: '-100.00', otherRefundsSum: '60.00' }])
+      })
+      const updateChain = makeUpdateChain()
+      mocks.dbUpdateChain.mockReturnValue(updateChain)
+
+      await expect(
+        updateTransaction({ userId: 'user-1', transactionId: 'tx-2', amount: '-10.00' }),
+      ).rejects.toThrow('Scollega prima il rimborso')
+
+      expect(mocks.dbUpdateChain).not.toHaveBeenCalled()
+    })
+
+    it('imposes no guard on an anchor edit when the reimbursement has zero linked refunds', async () => {
+      const row = makeTxRow({ id: 'tx-1', amount: '-100.00', expenseId: null })
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([row])
+        if (callCount === 2) {
+          return makeSelectChain([{ asRefundReimbursementId: null, asAnchorReimbursementId: 1 }])
+        }
+        // 3: refunds-sum lookup — SUM over zero refunds is NULL
+        return makeSelectChain([{ refundsSum: null }])
+      })
+      const updateChain = makeUpdateChain()
+      mocks.dbUpdateChain.mockReturnValue(updateChain)
+
+      await expect(
+        updateTransaction({ userId: 'user-1', transactionId: 'tx-1', amount: '+50.00' }),
+      ).resolves.toEqual({ success: true })
+
+      expect(mocks.dbUpdateChain).toHaveBeenCalled()
     })
   })
 })

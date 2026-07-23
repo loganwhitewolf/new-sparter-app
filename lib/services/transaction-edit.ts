@@ -1,8 +1,8 @@
 import 'server-only'
 
-import { and, eq, or } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { transaction, transactionPair } from '@/lib/db/schema'
+import { reimbursement, transaction } from '@/lib/db/schema'
 import {
   applyExpenseReconciliation,
   buildReconcilePlan,
@@ -37,12 +37,21 @@ export type UpdateTransactionInput = {
  * recomputed via the same reconciliation helpers used elsewhere, inside this
  * same db.transaction (tx, never db).
  *
- * Pair guard (DET-03 / T-62-03, T-62-01): an amount edit on a paired
- * transaction that would break the pair's opposite-sign/nonzero invariant is
- * rejected with the Italian message "Scollega prima il rimborso" before any
- * write runs. Ownership (T-62-01) is enforced by scoping the initial SELECT
- * to both id and userId — an absent or foreign-owned row throws the same
- * generic "Transazione non trovata." message (no user enumeration).
+ * Pair guard (DET-03 / T-62-03, T-62-01; repointed Phase 73, T-73-10, ADR 0018):
+ * an amount edit on a transaction linked to a reimbursement (as anchor or
+ * refund) that would break the reimbursement's opposite-sign/nonzero
+ * invariant is rejected with the Italian message "Scollega prima il
+ * rimborso" before any write runs. Generalizes the old 1:1 transaction_pair
+ * single-counterpart check to a SUM over every OTHER linked refund (or, when
+ * editing the anchor, every linked refund) — correct for any N, not a
+ * scope-reduced N=1 special case. A reimbursement with zero linked refunds
+ * imposes no guard (nothing to protect). RMB-09 (Phase 74) is about
+ * UX/reconciliation choices beyond this block (e.g. distinguishing WHICH
+ * refund broke the invariant when N>1) — not about this correctness check,
+ * which already holds for any N. Ownership (T-62-01) is enforced by scoping
+ * the initial SELECT to both id and userId — an absent or foreign-owned row
+ * throws the same generic "Transazione non trovata." message (no user
+ * enumeration).
  */
 export async function updateTransaction(
   input: UpdateTransactionInput,
@@ -69,38 +78,107 @@ export async function updateTransaction(
     }
 
     if (input.amount !== undefined) {
-      const pairRows = await tx
+      // Phase 73 (D-05/D-06, T-73-10, ADR 0018): a transaction can be linked as EITHER a
+      // refund (reimbursement_refund.transaction_id = this id) OR the anchor of a
+      // reimbursement (a reimbursement row's expense_id matches this transaction's expense_id
+      // AND this transaction is the earliest transaction of that expense — the same Q3
+      // tie-break used by effectiveAmount() in lib/dal/transaction-pairs-sql.ts). Both checks
+      // run as correlated subqueries in a single SELECT to avoid an extra round trip.
+      const roleRows = await tx
         .select({
-          transactionAId: transactionPair.transactionAId,
-          transactionBId: transactionPair.transactionBId,
+          asRefundReimbursementId: sql<number | null>`(
+            SELECT rr.reimbursement_id FROM reimbursement_refund rr
+            WHERE rr.transaction_id = ${input.transactionId}
+            LIMIT 1
+          )`,
+          asAnchorReimbursementId: sql<number | null>`(
+            SELECT r.id FROM reimbursement r
+            WHERE r.expense_id = ${row.expenseId}
+            AND ${input.transactionId} = (
+              SELECT t2.id FROM transaction t2
+              WHERE t2.expense_id = ${row.expenseId}
+              ORDER BY t2.occurred_at ASC, t2.id ASC
+              LIMIT 1
+            )
+            LIMIT 1
+          )`,
         })
-        .from(transactionPair)
-        .where(
-          or(
-            eq(transactionPair.transactionAId, input.transactionId),
-            eq(transactionPair.transactionBId, input.transactionId),
-          ),
-        )
+        .from(transaction)
+        .where(eq(transaction.id, input.transactionId))
         .limit(1)
 
-      const pair = pairRows[0]
-      if (pair) {
-        const counterId =
-          pair.transactionAId === input.transactionId ? pair.transactionBId : pair.transactionAId
+      const roleRow = roleRows[0]
+      const reimbursementId =
+        roleRow?.asRefundReimbursementId ?? roleRow?.asAnchorReimbursementId ?? null
+      const isRefundEdit = roleRow?.asRefundReimbursementId != null
 
-        const counterRows = await tx
-          .select({ amount: transaction.amount })
-          .from(transaction)
-          .where(eq(transaction.id, counterId))
-          .limit(1)
-
+      if (reimbursementId != null) {
         const newAmount = toDecimal(input.amount)
-        const counterAmount = toDecimal(counterRows[0]?.amount ?? '0')
-        const oppositeSign =
-          (newAmount.gt(0) && counterAmount.lt(0)) || (newAmount.lt(0) && counterAmount.gt(0))
 
-        if (!oppositeSign) {
-          throw new Error('Scollega prima il rimborso')
+        if (isRefundEdit) {
+          // Editing a refund: "other side" = the anchor's own amount + every OTHER refund's
+          // amount (excluding the one being edited) — generalizes the old single-counterpart
+          // lookup to a SUM, correct for any N.
+          const sumRows = await tx
+            .select({
+              anchorAmount: sql<string | null>`(
+                SELECT t2.amount FROM transaction t2
+                WHERE t2.id = (
+                  SELECT t3.id FROM transaction t3
+                  WHERE t3.expense_id = ${reimbursement.expenseId}
+                  ORDER BY t3.occurred_at ASC, t3.id ASC
+                  LIMIT 1
+                )
+              )`,
+              otherRefundsSum: sql<string | null>`(
+                SELECT SUM(rt.amount::numeric)::text
+                FROM reimbursement_refund rr
+                INNER JOIN transaction rt ON rt.id = rr.transaction_id
+                WHERE rr.reimbursement_id = ${reimbursement.id}
+                  AND rr.transaction_id != ${input.transactionId}
+              )`,
+            })
+            .from(reimbursement)
+            .where(eq(reimbursement.id, reimbursementId))
+            .limit(1)
+
+          const sumRow = sumRows[0]
+          const otherSum = toDecimal(sumRow?.anchorAmount ?? '0').plus(
+            toDecimal(sumRow?.otherRefundsSum ?? '0'),
+          )
+          const oppositeSign =
+            (newAmount.gt(0) && otherSum.lt(0)) || (newAmount.lt(0) && otherSum.gt(0))
+
+          if (!oppositeSign) {
+            throw new Error('Scollega prima il rimborso')
+          }
+        } else {
+          // Editing the anchor: "other side" = SUM of every linked refund. A reimbursement
+          // with zero linked refunds (SUM over an empty set = NULL) has nothing to protect
+          // and imposes no guard.
+          const sumRows = await tx
+            .select({
+              refundsSum: sql<string | null>`(
+                SELECT SUM(rt.amount::numeric)::text
+                FROM reimbursement_refund rr
+                INNER JOIN transaction rt ON rt.id = rr.transaction_id
+                WHERE rr.reimbursement_id = ${reimbursementId}
+              )`,
+            })
+            .from(reimbursement)
+            .where(eq(reimbursement.id, reimbursementId))
+            .limit(1)
+
+          const refundsSumRaw = sumRows[0]?.refundsSum
+          if (refundsSumRaw != null) {
+            const otherSum = toDecimal(refundsSumRaw)
+            const oppositeSign =
+              (newAmount.gt(0) && otherSum.lt(0)) || (newAmount.lt(0) && otherSum.gt(0))
+
+            if (!oppositeSign) {
+              throw new Error('Scollega prima il rimborso')
+            }
+          }
         }
       }
     }
