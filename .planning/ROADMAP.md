@@ -70,8 +70,16 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 74-01-PLAN.md — Tracer: routes SoT + proxy smart root + `(public)` homepage shell + D-07 Vitest
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 74-02-PLAN.md — Public SiteHeader/SiteFooter chrome (UI-SPEC + D-08 Dashboard)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 74-03-PLAN.md — Stub pages (how-it-works/privacy/terms) + human verify
 
 **UI hint**: yes
