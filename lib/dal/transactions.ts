@@ -80,7 +80,7 @@ export type TransactionFilters = {
 /**
  * Phase 73 (D-05/D-06, T-73-09, ADR 0018): resolves the transaction id of the OTHER
  * participant in `${transaction.id}`'s reimbursement, for the paired-* display fields below.
- * Repoints the Phase 50 1:1 `transaction_pair` popover onto the generalized
+ * Repoints the Phase 50 1:1 legacy-pair-table popover onto the generalized
  * `reimbursement`/`reimbursement_refund` tables.
  *
  * - Refund role (this id exists in reimbursement_refund): counterpart = the reimbursement's
@@ -205,7 +205,7 @@ export const transactionListSelect = {
   groupId: expenseGroupMembership.groupId,
   groupTitle: expenseGroup.title,
   // Phase 73 (D-05/D-06, T-73-09, ADR 0018): pairing fields repointed from the 1:1
-  // `transaction_pair` table to the generalized `reimbursement`/`reimbursement_refund` tables
+  // legacy 1:1 pair table to the generalized `reimbursement`/`reimbursement_refund` tables
   // — correlated subqueries (no LEFT JOIN, to preserve buildTransactionOrderBy). See
   // pairedCounterpartIdExpr()/pairedReimbursementIdExpr() above for role-resolution rules.
   pairedWithId: sql<string | null>`${pairedCounterpartIdExpr()}`,

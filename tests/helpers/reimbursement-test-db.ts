@@ -3,7 +3,6 @@
 // This is the ONLY place in the suite that connects to and TRUNCATEs a real Postgres database
 // (T-73-03). It is hard-guarded to localhost/127.0.0.1 only — never the app's ambient
 // DATABASE_URL, never staging or production, even via TEST_DATABASE_URL override.
-import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -11,7 +10,6 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { Pool } from 'pg'
 import { vi } from 'vitest'
 import * as schema from '@/lib/db/schema'
-import { transaction as transactionTable } from '@/lib/db/schema'
 
 const DEFAULT_TEST_DATABASE_URL = 'postgres://postgres:sparter@localhost:5432/sparter'
 const CONNECT_TIMEOUT_MS = 1500
@@ -123,7 +121,6 @@ const FIXTURE_TABLES = [
   'tag',
   'reimbursement_refund',
   'reimbursement',
-  'transaction_pair',
   'transaction',
   'expense_group_membership',
   'expense_group',
@@ -143,51 +140,23 @@ export async function resetReimbursementFixtures(db: ReimbursementTestDb): Promi
   await db.execute(sql.raw(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE;`))
 }
 
-/**
- * Applies drizzle/migrations/0029_reimbursement_backfill.sql verbatim against the harness DB —
- * the ACTUAL migration file, not a hand-duplicated copy that could drift from it. Statements are
- * split on the same `--> statement-breakpoint` marker drizzle-kit uses.
- */
-export async function applyReimbursementBackfillMigration(db: ReimbursementTestDb): Promise<void> {
-  const migrationPath = path.join(MIGRATIONS_FOLDER, '0029_reimbursement_backfill.sql')
-  const fileContents = await readFile(migrationPath, 'utf8')
-  const statements = fileContents
-    .split('--> statement-breakpoint')
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0)
+// `applyReimbursementBackfillMigration` (re-applying drizzle/migrations/0029_reimbursement_
+// backfill.sql standalone against an already-migrated harness DB) was retired in Plan 73-04
+// Task 3: migration 0029 reads FROM transaction_pair, which no longer exists once migration
+// 0030_drop_transaction_pair.sql has run (locked option-b, applied automatically by this
+// harness's own migrate() call above) — there is nothing left to re-apply it against. Its only
+// callers (tests/migration-backfill.test.ts, the N=1 regression's "before" capture) are retired
+// alongside it; the numeric correctness it proved is preserved in 73-01-SUMMARY.md /
+// 73-02-SUMMARY.md.
 
-  for (const statement of statements) {
-    await db.execute(sql.raw(statement))
-  }
-}
-
-// The frozen, pre-Task-2 effectiveAmount()/isNotSecondary() implementation — captured from
-// lib/dal/transaction-pairs-sql.ts as it read BEFORE this plan's Task 2 rewrite (retrievable via
-// `git show HEAD~1:lib/dal/transaction-pairs-sql.ts` once Task 2 has committed). This is the
-// regression baseline: what "before" meant, reproduced verbatim rather than assumed.
-function frozenEffectiveAmount() {
-  return sql`(
-    CASE
-      WHEN EXISTS (
-        SELECT 1 FROM transaction_pair tp WHERE tp.transaction_a_id = ${transactionTable.id}
-      )
-      THEN ${transactionTable.amount}::numeric + (
-        SELECT t2.amount::numeric
-        FROM transaction_pair tp2
-        INNER JOIN transaction t2 ON t2.id = tp2.transaction_b_id
-        WHERE tp2.transaction_a_id = ${transactionTable.id}
-      )
-      ELSE ${transactionTable.amount}::numeric
-    END
-  )`
-}
-
-function frozenIsNotSecondary() {
-  return sql`NOT EXISTS (
-    SELECT 1 FROM transaction_pair tp
-    WHERE tp.transaction_b_id = ${transactionTable.id}
-  )`
-}
+// The frozen, pre-Task-2 effectiveAmount()/isNotSecondary() implementation that used to read
+// transaction_pair directly (Phase 73 Plan 01/02's "before" comparison baseline) was retired
+// in Plan 73-04 Task 3, alongside the `useFrozenFragment` snapshot mode below: transaction_pair
+// no longer exists once migration 0030_drop_transaction_pair.sql has run (locked option-b), so
+// there is no longer a live "before" data source to construct that comparison from. The
+// before/after byte-identical proof this mode enabled is preserved historically in
+// 73-01-SUMMARY.md / 73-02-SUMMARY.md (test run 177d200 / 8306086); this harness now only proves
+// the CURRENT reimbursement/reimbursement_refund read path.
 
 export type CaptureAggregationSnapshotInput = {
   harnessDb: ReimbursementTestDb
@@ -195,7 +164,6 @@ export type CaptureAggregationSnapshotInput = {
   dateRange: { from: Date; to: Date }
   categoryId: number
   tagId: number
-  useFrozenFragment: boolean
 }
 
 // Loosely typed on purpose: the 10 functions live across 3 modules with return shapes that are
@@ -204,30 +172,21 @@ export type CaptureAggregationSnapshotInput = {
 export type AggregationSnapshot = Record<string, unknown>
 
 /**
- * The reusable technique both this task and Plan 73-02's regression suite use to prove equality
- * across every aggregation function that consumes effectiveAmount()/isNotSecondary() — not only
- * the two research inventoried. Runs the REAL, unmodified production query bodies (dashboard.ts /
- * overview.ts / tags.ts) against the harness's own host-guarded db client, swapping only which
- * netting fragment they read (frozen pre-Task-2 vs the current, Task-2-rewritten one).
+ * The reusable technique the regression suite uses to prove correctness across every
+ * aggregation function that consumes effectiveAmount()/isNotSecondary() — not only the two
+ * research inventoried. Runs the REAL, unmodified production query bodies (dashboard.ts /
+ * overview.ts / tags.ts) against the harness's own host-guarded db client.
  */
 export async function captureAggregationSnapshot(
   input: CaptureAggregationSnapshotInput,
 ): Promise<AggregationSnapshot> {
-  const { harnessDb, userId, dateRange, categoryId, tagId, useFrozenFragment } = input
+  const { harnessDb, userId, dateRange, categoryId, tagId } = input
 
   // CRITICAL: never let the 10 production functions build their own connection off the ambient
   // process.env.DATABASE_URL (lib/db/index.ts constructs a fresh pg.Pool from that env var at
   // module-eval time) — feed them the harness's own already-host-guarded client instead.
   vi.doMock('@/lib/db', () => ({ db: harnessDb }))
-
-  if (useFrozenFragment) {
-    vi.doMock('@/lib/dal/transaction-pairs-sql', () => ({
-      effectiveAmount: frozenEffectiveAmount,
-      isNotSecondary: frozenIsNotSecondary,
-    }))
-  } else {
-    vi.doUnmock('@/lib/dal/transaction-pairs-sql')
-  }
+  vi.doUnmock('@/lib/dal/transaction-pairs-sql')
 
   vi.resetModules()
 

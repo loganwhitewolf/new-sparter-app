@@ -10,7 +10,7 @@ import { transaction as transactionTable } from '@/lib/db/schema'
  * A refund is a row where reimbursement_refund.transaction_id = transaction.id exists.
  * Anchor transactions are kept. Transactions not linked to any reimbursement are kept.
  *
- * Generalizes the Phase 50 1:1 `transaction_pair` fragment (D-05/D-06, Phase 73, ADR 0018):
+ * Generalizes the Phase 50 1:1 legacy-pair-table fragment (D-05/D-06, Phase 73, ADR 0018):
  * the single secondary becomes the set of linked refunds in `reimbursement_refund`.
  *
  * Usage: add to the `and(...)` in every aggregation query WHERE clause alongside
@@ -31,7 +31,7 @@ export function isNotSecondary() {
  * (anchor.amount + SUM of every linked refund transaction's amount). For every other
  * transaction (unlinked, or a linked refund itself), returns the row's own amount.
  *
- * Generalizes the Phase 50 1:1 `transaction_pair` fragment (D-05/D-06, Phase 73, ADR 0018):
+ * Generalizes the Phase 50 1:1 legacy-pair-table fragment (D-05/D-06, Phase 73, ADR 0018):
  * "the one secondary" becomes "the set of linked refunds."
  *
  * Anchor resolution (Q3, 73-CONTEXT.md Claude's Discretion): D-03's `reimbursement.expenseId`

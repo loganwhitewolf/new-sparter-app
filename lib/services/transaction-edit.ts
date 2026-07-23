@@ -41,7 +41,7 @@ export type UpdateTransactionInput = {
  * an amount edit on a transaction linked to a reimbursement (as anchor or
  * refund) that would break the reimbursement's opposite-sign/nonzero
  * invariant is rejected with the Italian message "Scollega prima il
- * rimborso" before any write runs. Generalizes the old 1:1 transaction_pair
+ * rimborso" before any write runs. Generalizes the old 1:1 legacy-pair-table
  * single-counterpart check to a SUM over every OTHER linked refund (or, when
  * editing the anchor, every linked refund) — correct for any N, not a
  * scope-reduced N=1 special case. A reimbursement with zero linked refunds

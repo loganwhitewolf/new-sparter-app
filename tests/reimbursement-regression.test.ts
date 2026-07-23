@@ -1,8 +1,19 @@
 // Real-Postgres regression proof (Phase 73, ADR 0018 D-07 — the phase's acceptance gate).
 //
-// Proves the migrated N=1 case (the Amazon order/refund) produces byte-identical results, via
-// Decimal.js comparison (never string equality), across all 10 verified aggregation call sites
-// before and after migration — plus the empty-refund probe (RMB-04).
+// Proves the reimbursement/reimbursement_refund netting path produces correct results across
+// all 10 verified aggregation call sites — plus the empty-refund probe (RMB-04).
+//
+// The N=1 (Amazon order/refund) scenario used to be proven via a before/after byte-identical
+// comparison: seeding a legacy transaction_pair row, capturing a "before" snapshot reading a
+// frozen pre-Task-2 fragment against it, migrating it into reimbursement/reimbursement_refund
+// (migration 0029), then capturing an "after" snapshot to prove identity (Plan 73-01/73-02).
+// That comparison is retired (Plan 73-04 Task 3, locked option-b): transaction_pair itself was
+// dropped (migration 0030_drop_transaction_pair.sql) once every consumer was repointed, so there
+// is no longer a live "before" data source to construct. The before/after identity this proved
+// is preserved historically in 73-01-SUMMARY.md / 73-02-SUMMARY.md (test runs 177d200, 8306086).
+// This suite now seeds the scenario natively (seedReimbursement) and asserts the CURRENT
+// reimbursement/reimbursement_refund read path against the same expected numeric values that
+// "after" was already proven to produce.
 //
 // Requires local Docker Postgres (`yarn db:up`). Skips gracefully (console warning, no failure)
 // when unreachable, so `vitest run` stays green in sandboxes without Docker.
@@ -15,7 +26,6 @@ import { reimbursement as reimbursementTable, transaction as transactionTable } 
 import { dashboardPresetToDateRange, monthKey } from '@/lib/utils/date'
 import { toDecimal } from '@/lib/utils/decimal'
 import {
-  applyReimbursementBackfillMigration,
   captureAggregationSnapshot,
   connectReimbursementTestDb,
   resetReimbursementFixtures,
@@ -25,7 +35,6 @@ import {
 import {
   attachTagToTransaction,
   seedExpenseWithTransaction,
-  seedLegacyPair,
   seedMinimalTaxonomy,
   seedReimbursement,
   seedTag,
@@ -59,8 +68,7 @@ afterAll(async () => {
 })
 
 describeIfReachable('reimbursement N=1 regression (Phase 73, ADR 0018 D-07)', () => {
-  let before: AggregationSnapshot
-  let after: AggregationSnapshot
+  let snapshot: AggregationSnapshot
   let essentialCategoryId: number
 
   beforeAll(async () => {
@@ -77,13 +85,14 @@ describeIfReachable('reimbursement N=1 regression (Phase 73, ADR 0018 D-07)', ()
     const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 15, 12, 0, 0)
 
     // The Amazon order/refund case (N=1): one outflow (-100.00), one inflow refund (+50.00).
-    const { transactionId: outflowTransactionId } = await seedExpenseWithTransaction(db, {
-      userId,
-      subCategoryId: taxonomy.essentialSubCategoryId,
-      amount: '-100.00',
-      occurredAt,
-      title: 'Amazon order',
-    })
+    const { expenseId: outflowExpenseId, transactionId: outflowTransactionId } =
+      await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-100.00',
+        occurredAt,
+        title: 'Amazon order',
+      })
     const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
       userId,
       subCategoryId: taxonomy.essentialSubCategoryId,
@@ -93,146 +102,109 @@ describeIfReachable('reimbursement N=1 regression (Phase 73, ADR 0018 D-07)', ()
     })
     await attachTagToTransaction(db, { tagId, transactionId: outflowTransactionId })
 
-    // D-10: primary = the outflow (sign-based resolution), not the legacy magnitude rule.
-    await seedLegacyPair(db, {
-      primaryTransactionId: outflowTransactionId,
-      secondaryTransactionId: refundTransactionId,
+    // D-02: anchor = the outflow (sign-based resolution). Seeded natively into
+    // reimbursement/reimbursement_refund — this scenario used to be constructed by seeding a
+    // legacy transaction_pair row and running migration 0029's backfill (Plan 73-01); that path
+    // is gone now that transaction_pair itself has been dropped (Plan 73-04 Task 3).
+    await seedReimbursement(db, {
+      userId,
+      title: 'Amazon order',
+      expenseId: outflowExpenseId,
+      refundTransactionIds: [refundTransactionId],
     })
 
-    // "Before" — the frozen pre-Task-2 fragment, reading transaction_pair directly. Proves what
-    // "before" meant using the real production query bodies for all 10 functions, without
-    // requiring the old production code to still exist on disk.
-    before = await captureAggregationSnapshot({
+    // Expected values below were captured from this exact scenario against the CURRENT
+    // (Task-2-rewritten) reimbursement/reimbursement_refund read path — the same numbers Plan
+    // 73-01/73-02 already proved byte-identical to the pre-migration "before" baseline (test
+    // runs 177d200, 8306086). This is the single, current source of truth going forward.
+    snapshot = await captureAggregationSnapshot({
       harnessDb: db,
       userId,
       dateRange,
       categoryId: essentialCategoryId,
       tagId,
-      useFrozenFragment: true,
-    })
-
-    // Apply the ACTUAL migration file (drizzle/migrations/0029_reimbursement_backfill.sql),
-    // not a hand-duplicated copy — migrates this seeded legacy pair into reimbursement +
-    // reimbursement_refund.
-    await applyReimbursementBackfillMigration(db)
-
-    // "After" — the REAL, current (Task-2-rewritten) fragment, reading reimbursement/
-    // reimbursement_refund.
-    after = await captureAggregationSnapshot({
-      harnessDb: db,
-      userId,
-      dateRange,
-      categoryId: essentialCategoryId,
-      tagId,
-      useFrozenFragment: false,
     })
   })
 
-  it('getOverviewAmountTotals: totalOut identical before/after (net = 100.00 - 50.00 = 50.00)', () => {
-    const b = before.getOverviewAmountTotals as { totalOut: string }
-    const a = after.getOverviewAmountTotals as { totalOut: string }
-    expect(toDecimal(a.totalOut).equals(toDecimal(b.totalOut))).toBe(true)
-    expect(toDecimal(a.totalOut).equals(toDecimal('50.00'))).toBe(true)
+  it('getOverviewAmountTotals: totalOut nets the refund against the spend (100.00 - 50.00 = 50.00)', () => {
+    const totals = snapshot.getOverviewAmountTotals as { totalOut: string }
+    expect(toDecimal(totals.totalOut).equals(toDecimal('50.00'))).toBe(true)
   })
 
-  it('getCategoriesBreakdown: essential category amount identical before/after', () => {
-    const bRow = (before.getCategoriesBreakdown as Array<{ id: number; amount: string }>).find(
-      (row) => row.id === essentialCategoryId,
+  it('getCategoriesBreakdown: essential category amount is the netted 50.00', () => {
+    const row = (snapshot.getCategoriesBreakdown as Array<{ id: number; amount: string }>).find(
+      (r) => r.id === essentialCategoryId,
     )
-    const aRow = (after.getCategoriesBreakdown as Array<{ id: number; amount: string }>).find(
-      (row) => row.id === essentialCategoryId,
+    expect(row).toBeDefined()
+    expect(toDecimal(row!.amount).equals(toDecimal('50.00'))).toBe(true)
+  })
+
+  it('getCategoryRanking: essential category amount is the netted 50.00', () => {
+    const row = (snapshot.getCategoryRanking as Array<{ id: number; amount: string }>).find(
+      (r) => r.id === essentialCategoryId,
     )
-    expect(bRow).toBeDefined()
-    expect(aRow).toBeDefined()
-    expect(toDecimal(aRow!.amount).equals(toDecimal(bRow!.amount))).toBe(true)
+    expect(row).toBeDefined()
+    expect(toDecimal(row!.amount).equals(toDecimal('50.00'))).toBe(true)
   })
 
-  it('getCategoryRanking: essential category amount identical before/after', () => {
-    const bRow = (before.getCategoryRanking as Array<{ id: number; amount: string }>).find(
-      (row) => row.id === essentialCategoryId,
-    )
-    const aRow = (after.getCategoryRanking as Array<{ id: number; amount: string }>).find(
-      (row) => row.id === essentialCategoryId,
-    )
-    expect(bRow).toBeDefined()
-    expect(aRow).toBeDefined()
-    expect(toDecimal(aRow!.amount).equals(toDecimal(bRow!.amount))).toBe(true)
+  it('getCategoryDeviations: no baseline period data yields isNew=true and a null deviation', () => {
+    const map = snapshot.getCategoryDeviations as Map<
+      number,
+      { deviation: number | null; isNew: boolean; belowNoiseThreshold: boolean }
+    >
+    const entry = map.get(essentialCategoryId)
+    expect(entry).toBeDefined()
+    expect(entry!.isNew).toBe(true)
+    expect(entry!.deviation).toBeNull()
   })
 
-  it('getCategoryDeviations: essential category deviation entry identical before/after', () => {
-    const bMap = before.getCategoryDeviations as Map<number, { deviation: number | null; isNew: boolean; belowNoiseThreshold: boolean }>
-    const aMap = after.getCategoryDeviations as Map<number, { deviation: number | null; isNew: boolean; belowNoiseThreshold: boolean }>
-    const bEntry = bMap.get(essentialCategoryId)
-    const aEntry = aMap.get(essentialCategoryId)
-    expect(bEntry).toBeDefined()
-    expect(aEntry).toBeDefined()
-    expect(aEntry!.isNew).toBe(bEntry!.isNew)
-    if (bEntry!.deviation === null || aEntry!.deviation === null) {
-      expect(aEntry!.deviation).toBe(bEntry!.deviation)
-    } else {
-      expect(toDecimal(aEntry!.deviation).equals(toDecimal(bEntry!.deviation))).toBe(true)
-    }
+  it('getCategoryDetail: summary total is the netted 50.00', () => {
+    const detail = snapshot.getCategoryDetail as { summary: { total: string } }
+    expect(toDecimal(detail.summary.total).equals(toDecimal('50.00'))).toBe(true)
   })
 
-  it('getCategoryDetail: summary total identical before/after', () => {
-    const b = before.getCategoryDetail as { summary: { total: string } }
-    const a = after.getCategoryDetail as { summary: { total: string } }
-    expect(toDecimal(a.summary.total).equals(toDecimal(b.summary.total))).toBe(true)
-  })
-
-  it('getMonthlyTrendByNature: essential segment identical before/after', () => {
+  it('getMonthlyTrendByNature: essential segment preserves sign (-50.00, net outflow)', () => {
     const dateRange = dashboardPresetToDateRange('last-month')
     const targetMonth = monthKey(dateRange.from)
-    const bPoint = (before.getMonthlyTrendByNature as Array<{ month: string; segments: Record<string, string> }>).find(
-      (point) => point.month === targetMonth,
-    )
-    const aPoint = (after.getMonthlyTrendByNature as Array<{ month: string; segments: Record<string, string> }>).find(
-      (point) => point.month === targetMonth,
-    )
-    expect(bPoint).toBeDefined()
-    expect(aPoint).toBeDefined()
-    expect(toDecimal(aPoint!.segments.essential).equals(toDecimal(bPoint!.segments.essential))).toBe(true)
+    const point = (
+      snapshot.getMonthlyTrendByNature as Array<{ month: string; segments: Record<string, string> }>
+    ).find((p) => p.month === targetMonth)
+    expect(point).toBeDefined()
+    expect(toDecimal(point!.segments.essential).equals(toDecimal('-50.00'))).toBe(true)
   })
 
-  it('getMonthOverMonthCategoryChanges: essential category delta identical before/after', () => {
-    const bRow = (before.getMonthOverMonthCategoryChanges as Array<{ categoryId: number | null; delta: string; isNew: boolean }>).find(
-      (row) => row.categoryId === essentialCategoryId,
-    )
-    const aRow = (after.getMonthOverMonthCategoryChanges as Array<{ categoryId: number | null; delta: string; isNew: boolean }>).find(
-      (row) => row.categoryId === essentialCategoryId,
-    )
-    expect(bRow).toBeDefined()
-    expect(aRow).toBeDefined()
-    expect(aRow!.isNew).toBe(bRow!.isNew)
-    expect(toDecimal(aRow!.delta).equals(toDecimal(bRow!.delta))).toBe(true)
+  it('getMonthOverMonthCategoryChanges: no prior-month data yields isNew=true and delta=50.00', () => {
+    const row = (
+      snapshot.getMonthOverMonthCategoryChanges as Array<{
+        categoryId: number | null
+        delta: string
+        isNew: boolean
+      }>
+    ).find((r) => r.categoryId === essentialCategoryId)
+    expect(row).toBeDefined()
+    expect(row!.isNew).toBe(true)
+    expect(toDecimal(row!.delta).equals(toDecimal('50.00'))).toBe(true)
   })
 
-  it('getOverviewChart: out.essential identical before/after', () => {
+  it('getOverviewChart: out.essential is the abs()-bucketed 50.00', () => {
     const dateRange = dashboardPresetToDateRange('last-month')
     const targetMonth = monthKey(dateRange.from)
-    const bPoint = (before.getOverviewChart as Array<{ month: string; out: { essential: string } }>).find(
-      (point) => point.month === targetMonth,
-    )
-    const aPoint = (after.getOverviewChart as Array<{ month: string; out: { essential: string } }>).find(
-      (point) => point.month === targetMonth,
-    )
-    expect(bPoint).toBeDefined()
-    expect(aPoint).toBeDefined()
-    expect(toDecimal(aPoint!.out.essential).equals(toDecimal(bPoint!.out.essential))).toBe(true)
+    const point = (
+      snapshot.getOverviewChart as Array<{ month: string; out: { essential: string } }>
+    ).find((p) => p.month === targetMonth)
+    expect(point).toBeDefined()
+    expect(toDecimal(point!.out.essential).equals(toDecimal('50.00'))).toBe(true)
   })
 
-  it('getTagTotals: tagged (outflow) total identical before/after', () => {
-    const bRow = (before.getTagTotals as Array<{ tagId: number; total: string }>)[0]
-    const aRow = (after.getTagTotals as Array<{ tagId: number; total: string }>)[0]
-    expect(bRow).toBeDefined()
-    expect(aRow).toBeDefined()
-    expect(toDecimal(aRow!.total).equals(toDecimal(bRow!.total))).toBe(true)
+  it('getTagTotals: tagged (outflow) total preserves sign (-50.00, net outflow)', () => {
+    const row = (snapshot.getTagTotals as Array<{ tagId: number; total: string }>)[0]
+    expect(row).toBeDefined()
+    expect(toDecimal(row!.total).equals(toDecimal('-50.00'))).toBe(true)
   })
 
-  it('getTagDetail: net identical before/after', () => {
-    const b = before.getTagDetail as { net: string }
-    const a = after.getTagDetail as { net: string }
-    expect(toDecimal(a.net).equals(toDecimal(b.net))).toBe(true)
+  it('getTagDetail: net preserves sign (-50.00, net outflow)', () => {
+    const detail = snapshot.getTagDetail as { net: string }
+    expect(toDecimal(detail.net).equals(toDecimal('-50.00'))).toBe(true)
   })
 })
 
@@ -282,7 +254,6 @@ describeIfReachable('empty-refund probe (RMB-04)', () => {
       dateRange,
       categoryId: taxonomy.essentialCategoryId,
       tagId,
-      useFrozenFragment: false,
     })
     const totals = snapshot.getOverviewAmountTotals as { totalOut: string }
     expect(toDecimal(totals.totalOut).equals(toDecimal('42.00'))).toBe(true)
@@ -293,9 +264,9 @@ describeIfReachable('empty-refund probe (RMB-04)', () => {
 // Phase 73 Plan 02 — expanded regression matrix (dinner N=3, both adjacency directions,
 // refund-order determinism, Q3 multi-transaction-Expense tie-break). Every scenario computes
 // its expected value via Decimal.js from the same seeded inputs (never hand-typed), and asserts
-// it via captureAggregationSnapshot with useFrozenFragment: false (none of these N>1 shapes have
-// a legacy transaction_pair equivalent to compare against — see 73-01-SUMMARY.md's "Known
-// Limitations": a legacy pair can only ever express N=1).
+// it via captureAggregationSnapshot (none of these N>1 shapes have a legacy transaction_pair
+// equivalent to compare against — see 73-01-SUMMARY.md's "Known Limitations": a legacy pair
+// could only ever express N=1).
 // ---------------------------------------------------------------------------------------------
 
 describeIfReachable(
@@ -366,7 +337,6 @@ describeIfReachable(
         dateRange,
         categoryId: taxonomy.essentialCategoryId,
         tagId,
-        useFrozenFragment: false,
       })
 
       const monthTarget = monthKey(dateRange.from)
@@ -483,7 +453,6 @@ describeIfReachable(
         dateRange,
         categoryId: taxonomy.essentialCategoryId,
         tagId,
-        useFrozenFragment: false,
       })
 
       const monthTarget = monthKey(dateRange.from)
@@ -602,7 +571,6 @@ describeIfReachable(
         dateRange,
         categoryId: taxonomy.essentialCategoryId,
         tagId,
-        useFrozenFragment: false,
       })
 
       const monthTarget = monthKey(dateRange.from)
@@ -747,7 +715,6 @@ describeIfReachable(
         dateRange,
         categoryId: taxonomy.essentialCategoryId,
         tagId,
-        useFrozenFragment: false,
       })
 
       const monthTarget = monthKey(dateRange.from)
