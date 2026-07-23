@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v2.8
 milestone_name: "Reimbursements 1:N"
 status: planning
-last_updated: "2026-07-23T09:01:14.074Z"
+last_updated: "2026-07-23T14:30:00.000Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
+  total_plans: 4
   completed_plans: 0
   percent: 0
 ---
@@ -25,15 +25,15 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 73 (reimbursement-schema-and-netting) — planned, not started
-Plan: —
-Status: Roadmap created (v2.8, Phases 73–76); ready for `/gsd-plan-phase 73`
-Last activity: 2026-07-23 — v2.8 roadmap created (11/11 RMB requirements mapped)
+Plan: — (4 plans across 3 waves)
+Status: Ready to execute — `/gsd-execute-phase 73`
+Last activity: 2026-07-23 — Phase 73 planned: CONTEXT from ADR 0018 ingest, research + pattern map, 4 plans, checker passed at iteration 2
 
 ## Roadmap (v2.8 — Phases 73-76)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 73 | reimbursement-schema-and-netting | RMB-01, RMB-03, RMB-04, RMB-05 | Not started |
+| 73 | reimbursement-schema-and-netting | RMB-01, RMB-03, RMB-04, RMB-05 | Planned (4 plans) |
 | 74 | group-anchor-and-reconciliation | RMB-02, RMB-06, RMB-09 | Not started |
 | 75 | linking-surfaces-and-lifecycle | RMB-07, RMB-08 | Not started |
 | 76 | reimbursements-section | RMB-10, RMB-11 | Not started |

@@ -54,9 +54,17 @@
 **Plans**: 4 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 73-01-PLAN.md — reimbursement + reimbursement_refund schema, migration, and netting generalization (tracer + N=1 regression proof)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 73-02-PLAN.md — D-02 invariant enforcement + full regression matrix (dinner, adjacency, ordering, Q3, migration-backfill correctness)
 - [ ] 73-03-PLAN.md — repoint transactions.ts paired-* fields and the transaction-edit.ts amount-edit guard
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 73-04-PLAN.md — repoint the live pairing write path (createPair/deletePairByTransactionId/getEligibleCounterparts) and finalize transaction_pair's fate
 
 **Q2/Q3 resolved during planning** (per 73-RESEARCH.md, verified against the codebase): Q2 —
