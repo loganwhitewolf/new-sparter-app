@@ -5,10 +5,10 @@ milestone_name: Public Branding Site
 current_phase: 74
 current_phase_name: public layout and proxy allowlist
 status: planning
-stopped_at: Phase 74 discuss in progress (merge origin/main → v2.9)
-last_updated: "2026-07-23T08:34:13.501Z"
+stopped_at: Phase 74 context gathered
+last_updated: "2026-07-23T11:47:55.887Z"
 last_activity: 2026-07-23
-last_activity_desc: 74-UI-SPEC.md created (public chrome contract)
+last_activity_desc: merged origin/main; branding milestone → v2.9; discuss Phase 74
 progress:
   total_phases: 5
   completed_phases: 1
@@ -346,11 +346,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/74-public-layout-and-proxy-allowlist/74-UI-SPEC.md
+**Resume file:** .planning/phases/74-public-layout-and-proxy-allowlist/74-CONTEXT.md
 
-**Stopped at:** Phase 74 UI-SPEC approved
+**Stopped at:** Phase 74 context gathered
 
-Last session: 2026-07-23T08:34:13.491Z
+Last session: 2026-07-23T11:47:55.878Z
 
 **Next:** UI-SPEC checker → `/gsd-plan-phase 74` (or continue `/gsd-ui-phase 74` verification)
 
