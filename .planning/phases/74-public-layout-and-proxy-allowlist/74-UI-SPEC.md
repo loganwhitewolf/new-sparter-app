@@ -2,7 +2,8 @@
 gsd_state_version: 1.0
 phase: 74
 slug: public-layout-and-proxy-allowlist
-status: draft
+status: approved
+reviewed_at: "2026-07-23T10:22:00+02:00"
 shadcn_initialized: true
 preset: "style=new-york, baseColor=zinc, cssVariables=true, iconLibrary=lucide, rsc=true"
 created: 2026-07-23
@@ -154,7 +155,7 @@ Minimal **type-led placeholder** proving chrome + smart root — **not** full Va
 1. Centered column (`max-w-xl mx-auto px-4 py-12 text-center` or similar)
 2. Wordmark or short brand line “Sparter”
 3. One supporting sentence (Italian, import-first — see Copywriting)
-4. CTA group: primary `Registrati` + secondary outline `Entra` (`size="lg"`, `gap-3`)
+4. CTA group: primary `Registrati` + secondary outline `Entra` (`size="lg"`, `gap-4` — md / 16px on spacing scale)
 
 Authenticated `/` never renders this shell — proxy redirects to `/dashboard` (infra; no UI).
 
@@ -200,23 +201,20 @@ Stub pages: Heading role + Body role only. No fake legal prose (avoids Pitfall: 
 ## UI Considerations
 
 > Shape-rooted state coverage for public chrome elements. Empty/error **copy** lives in Copywriting above — this section covers state coverage only.
+> Probe kinds confirmed 2026-07-23: E1 header=`nav`+`interactive-control`; E2 sheet=`nav`+`interactive-control`; E3 footer=`nav`+`static-content`; E4 homepage shell=`static-content`+`interactive-control`; E5 stubs=`static-content`. Categories empty/populated/partial/zero-one-many not applicable (no collections/media/forms).
 
-Applicable state considerations resolved: **6 covered, 2 dismissed, 0 unresolved**
+Applicable state considerations resolved: **16 covered, 0 dismissed, 0 unresolved**
 
 | Category | Element(s) | Status | Resolution / Reason |
 |----------|------------|--------|---------------------|
-| loading | header nav, footer nav | ✅ covered | Static RSC links — no loading UI; chrome renders immediately with the layout |
-| error | header nav, footer nav | ✅ covered | No data fetch in chrome; broken destinations are prevented by stub pages for every linked public path |
-| overflow | header nav | ✅ covered | Below `md`, desktop link row collapses into Sheet; desktop row does not wrap into a second header line |
-| overflow | footer link row | ✅ covered | Footer links wrap (`flex-wrap gap-x-4 gap-y-2`); no horizontal page scroll |
-| long-text | nav / footer labels | ✅ covered | Labels are fixed short Italian strings; no user-generated text in chrome |
-| long-text | homepage shell supporting line | ✅ covered | Single sentence, `max-w-xl`, wraps naturally at 16px/1.5 |
-| empty | homepage shell / stubs | ✅ covered | Shell always shows brand + CTA group; stubs always show heading + “Contenuto in arrivo.” — never a blank main |
-| empty | media | ✅ covered (dismissed as N/A) | Phase 74 chrome ships no hero media; product band is Phase 75 |
-| populated | n/a list-collection | ✅ covered (dismissed as N/A) | No collections in Phase 74 chrome |
-| partial | n/a | ✅ covered (dismissed as N/A) | No multi-field forms in chrome |
-| zero-one-many | n/a | ✅ covered (dismissed as N/A) | No collections |
-| loading / error (media) | n/a | ✅ covered (dismissed as N/A) | No media |
+| loading | E1 SiteHeader, E2 Sheet, E3 Footer | ✅ covered | Static RSC chrome — no loading UI; links/buttons render with the layout |
+| error | E1 SiteHeader, E2 Sheet, E3 Footer | ✅ covered | No data fetch in chrome; every linked public path has a stub page so nav never 404s into blank chrome |
+| overflow | E1 SiteHeader | ✅ covered | Below `md`, desktop link row collapses into Sheet; desktop row does not wrap into a second header line |
+| overflow | E3 Footer | ✅ covered | Footer links wrap (`flex-wrap gap-x-4 gap-y-2`); no horizontal page scroll |
+| overflow | E4 Homepage shell, E5 Stubs | ✅ covered | Shell uses `max-w-xl`; stubs use normal main scroll — no clip/truncate of body |
+| long-text | E1–E3 nav/footer labels | ✅ covered | Labels are fixed short Italian strings; no user-generated text in chrome |
+| long-text | E4 Homepage shell supporting line | ✅ covered | Single sentence, `max-w-xl`, wraps naturally at 16px/1.5 — see Copywriting |
+| long-text | E5 Stub body | ✅ covered | Fixed stub copy “Contenuto in arrivo.” — see Copywriting |
 
 ---
 
@@ -264,11 +262,11 @@ Applicable state considerations resolved: **6 covered, 2 dismissed, 0 unresolved
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS (FLAG cleared — homepage CTA `gap-3` → `gap-4`)
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved (gsd-ui-checker 2026-07-23)

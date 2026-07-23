@@ -53,10 +53,67 @@ Plans:
 
 - [x] 73-03-PLAN.md — NOTES.md template + PO Preview verdict checkpoint (BRAND-02)
 
-- [ ] **Phase 74: public-layout-and-proxy-allowlist** (BRAND-03, BRAND-04, BRAND-05) — Dedicated `(public)` route-group layout (header/nav/footer, no AppShell/sidebar/onboarding gate); `lib/routes.ts` single-source-of-truth allowlist wired into `proxy.ts`; smart root (anon → marketing, auth → `/dashboard`).
-- [ ] **Phase 75: marketing-pages** (BRAND-06, BRAND-07, BRAND-08) — Italian homepage (hero, import-first value prop, CTA Registrati/Entra, mobile-responsive) promoted from the winning proto; `/how-it-works` 3–5 step explainer; public nav/footer links (Come funziona, Privacy, Termini, Entra, Registrati — no Pricing).
-- [ ] **Phase 76: legal-pages** (BRAND-09, BRAND-10) — `/privacy` GDPR-minimum policy naming real sub-processors (Vercel, Supabase, R2, Better Auth/OAuth); `/terms` usage terms (no financial advice, as-is, no pricing clauses); both footer-linked.
-- [ ] **Phase 77: seo-and-auth-polish** (BRAND-11, BRAND-12, BRAND-13) — Per-page Italian SEO metadata; `app/sitemap.ts` + `app/robots.ts` listing indexable public routes (`app/proto/*` stays `noindex`); session-aware public header (hides Registrati when authenticated); sign-out lands on `/`.
+**UI hint**: yes (proto variants — throwaway)
+
+### Phase 74: public-layout-and-proxy-allowlist
+
+**Goal:** Dedicated `(public)` route-group layout (header/nav/footer, no AppShell/sidebar/onboarding gate); `lib/routes.ts` single-source-of-truth allowlist wired into `proxy.ts`; smart root (anon → marketing homepage, auth → `/dashboard`).
+**Depends on:** Phase 73 (PO winner lock in `app/proto/branding/NOTES.md` — Winner = c type-led stack)
+**Requirements:** BRAND-03, BRAND-04, BRAND-05
+**Success Criteria** (what must be TRUE):
+
+  1. Anonymous visitor can reach marketing paths under a dedicated `(public)` layout with header/nav/footer — no AppShell, sidebar, or onboarding gate.
+  2. Public marketing paths are allowlisted in `proxy.ts` via a single source of truth in `lib/routes.ts` (anon access without 307 to `/login`).
+  3. Unauthenticated `/` serves the marketing homepage shell; authenticated `/` redirects to `/dashboard`.
+
+**Plans:** TBD
+
+**UI hint**: yes
+
+### Phase 75: marketing-pages
+
+**Goal:** Italian homepage (hero, import-first value prop, CTA Registrati/Entra, mobile-responsive) promoted from the winning proto (Variant C + steal notes); `/how-it-works` 3–5 step explainer; public nav/footer links (Come funziona, Privacy, Termini, Entra, Registrati — no Pricing).
+**Depends on:** Phase 74 (`(public)` layout + allowlist + smart root)
+**Requirements:** BRAND-06, BRAND-07, BRAND-08
+**Success Criteria** (what must be TRUE):
+
+  1. Production homepage at `/` matches locked Variant C direction (type-led stack) with steal notes from NOTES.md.
+  2. `/how-it-works` explains the product in 3–5 steps in Italian.
+  3. Public nav and footer expose Come funziona, Privacy, Termini, Entra, Registrati — no Pricing link.
+
+**Plans:** TBD
+
+**UI hint**: yes
+
+### Phase 76: legal-pages
+
+**Goal:** `/privacy` GDPR-minimum policy naming real sub-processors (Vercel, Supabase, R2, Better Auth/OAuth); `/terms` usage terms (no financial advice, as-is, no pricing clauses); both footer-linked.
+**Depends on:** Phase 74 (public layout + footer link slots)
+**Requirements:** BRAND-09, BRAND-10
+**Success Criteria** (what must be TRUE):
+
+  1. `/privacy` publishes a GDPR-minimum policy naming real sub-processors.
+  2. `/terms` publishes usage terms with no financial-advice claims and no pricing clauses.
+  3. Both pages are linked from the public footer.
+
+**Plans:** TBD
+
+**UI hint**: yes
+
+### Phase 77: seo-and-auth-polish
+
+**Goal:** Per-page Italian SEO metadata; `app/sitemap.ts` + `app/robots.ts` listing indexable public routes (`app/proto/*` stays `noindex`); session-aware public header (hides Registrati when authenticated); sign-out lands on `/`.
+**Depends on:** Phases 74–76 (public surfaces exist before SEO/auth polish)
+**Requirements:** BRAND-11, BRAND-12, BRAND-13
+**Success Criteria** (what must be TRUE):
+
+  1. Each public marketing/legal page has Italian SEO metadata.
+  2. Sitemap and robots list indexable public routes; `app/proto/*` remains `noindex`.
+  3. Authenticated visitors see a session-aware public header (Registrati hidden); sign-out lands on `/`.
+
+**Plans:** TBD
+
+**UI hint**: yes
 
 ### ✅ v2.7: Tag Dedicated View (Phases 69–72) — COMPLETE
 
