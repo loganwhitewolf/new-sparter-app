@@ -5,16 +5,16 @@ milestone_name: Public Branding Site
 current_phase: 74
 current_phase_name: public layout and proxy allowlist
 status: planning
-stopped_at: Phase 74 UI-SPEC drafted (public chrome contract) — awaiting checker
-last_updated: "2026-07-23T08:25:00.000Z"
+stopped_at: Phase 74 UI-SPEC approved
+last_updated: "2026-07-23T08:34:13.501Z"
 last_activity: 2026-07-23
-last_activity_desc: Phase 74 UI-SPEC written for public layout chrome
+last_activity_desc: 74-UI-SPEC.md created (public chrome contract)
 progress:
-  total_phases: 1
+  total_phases: 5
   completed_phases: 1
   total_plans: 3
   completed_plans: 3
-  percent: 100
+  percent: 20
 ---
 
 # Project State
@@ -345,11 +345,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** None
+**Resume file:** .planning/phases/74-public-layout-and-proxy-allowlist/74-UI-SPEC.md
 
-**Stopped at:** Phase 74 UI-SPEC drafted (`74-UI-SPEC.md`) — public chrome contract; checker next
+**Stopped at:** Phase 74 UI-SPEC approved
 
-Last session: 2026-07-23T08:25:00.000Z
+Last session: 2026-07-23T08:34:13.491Z
 
 **Next:** UI-SPEC checker → `/gsd-plan-phase 74` (or continue `/gsd-ui-phase 74` verification)
 
