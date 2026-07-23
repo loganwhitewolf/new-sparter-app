@@ -5,10 +5,10 @@ milestone_name: Public Branding Site
 current_phase: 74
 current_phase_name: public layout and proxy allowlist
 status: planning
-stopped_at: Phase 74 context gathered
-last_updated: "2026-07-23T11:47:55.887Z"
+stopped_at: Phase 74 research complete
+last_updated: "2026-07-23T14:16:00.000Z"
 last_activity: 2026-07-23
-last_activity_desc: merged origin/main; branding milestone → v2.9; discuss Phase 74
+last_activity_desc: Phase 74 RESEARCH.md written — ready for planning
 progress:
   total_phases: 5
   completed_phases: 1
@@ -31,15 +31,15 @@ See: .planning/PROJECT.md (updated 2026-07-22)
 
 Phase: 74 — public layout and proxy allowlist
 Plan: Not started
-Status: UI-SPEC approved; discuss-phase in progress after merge with origin/main
-Last activity: 2026-07-23 — merged origin/main; branding milestone → v2.9; discuss Phase 74
+Status: Research complete (74-RESEARCH.md); UI-SPEC approved; ready for `/gsd-plan-phase` planning
+Last activity: 2026-07-23 — Phase 74 research complete (proxy SoT, `(public)` layout, D-07 Vitest)
 
 ## Roadmap (v2.9 — Phases 73–77)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
 | 73 | proto-design-variants | BRAND-01, BRAND-02 | Complete (Winner = c) |
-| 74 | public-layout-and-proxy-allowlist | BRAND-03, BRAND-04, BRAND-05 | Not started |
+| 74 | public-layout-and-proxy-allowlist | BRAND-03, BRAND-04, BRAND-05 | Research complete |
 | 75 | marketing-pages | BRAND-06, BRAND-07, BRAND-08 | Not started |
 | 76 | legal-pages | BRAND-09, BRAND-10 | Not started |
 | 77 | seo-and-auth-polish | BRAND-11, BRAND-12, BRAND-13 | Not started |
