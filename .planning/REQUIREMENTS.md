@@ -46,18 +46,18 @@ Model locked in **ADR 0018** (`docs/adr/0018-reimbursement-1n-linking-supersedes
 
 ## Traceability
 
-Filled at roadmap creation.
+Filled at roadmap creation (2026-07-23). 11/11 RMB requirements mapped across Phases 73–76, none orphaned.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RMB-01 | TBD | Pending |
-| RMB-02 | TBD | Pending |
-| RMB-03 | TBD | Pending |
-| RMB-04 | TBD | Pending |
-| RMB-05 | TBD | Pending |
-| RMB-06 | TBD | Pending |
-| RMB-07 | TBD | Pending |
-| RMB-08 | TBD | Pending |
-| RMB-09 | TBD | Pending |
-| RMB-10 | TBD | Pending |
-| RMB-11 | TBD | Pending |
+| RMB-01 | Phase 73 | Pending |
+| RMB-02 | Phase 74 | Pending |
+| RMB-03 | Phase 73 | Pending |
+| RMB-04 | Phase 73 | Pending |
+| RMB-05 | Phase 73 | Pending |
+| RMB-06 | Phase 74 | Pending |
+| RMB-07 | Phase 75 | Pending |
+| RMB-08 | Phase 75 | Pending |
+| RMB-09 | Phase 74 | Pending |
+| RMB-10 | Phase 76 | Pending |
+| RMB-11 | Phase 76 | Pending |

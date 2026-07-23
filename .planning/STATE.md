@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-07-23T09:01:14.074Z"
 last_activity: 2026-07-23
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,53 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** none — v2.7 archived; awaiting the next milestone.
+**Current focus:** v2.8 Reimbursements 1:N — generalize 1:1 pairing into explicit outflow→N-inflows reimbursements (ADR 0018). Roadmap created; Phase 73 next.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 73 (reimbursement-schema-and-netting) — planned, not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-23 — Milestone v2.8 started
+Status: Roadmap created (v2.8, Phases 73–76); ready for `/gsd-plan-phase 73`
+Last activity: 2026-07-23 — v2.8 roadmap created (11/11 RMB requirements mapped)
+
+## Roadmap (v2.8 — Phases 73-76)
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 73 | reimbursement-schema-and-netting | RMB-01, RMB-03, RMB-04, RMB-05 | Not started |
+| 74 | group-anchor-and-reconciliation | RMB-02, RMB-06, RMB-09 | Not started |
+| 75 | linking-surfaces-and-lifecycle | RMB-07, RMB-08 | Not started |
+| 76 | reimbursements-section | RMB-10, RMB-11 | Not started |
+
+**Coverage:** 11/11 v2.8 RMB requirements mapped across Phases 73-76, none orphaned. Model
+**LOCKED in ADR 0018** (supersedes ADR 0016 §1): a reimbursement is one explicit **outflow → N
+inflows** link — one mechanism, the 1:1 `transaction_pair` generalized to 1:N (the old pair is the
+N=1 case, migrated and subsumed, not kept alongside). Invariants: the anchor is **always an
+outflow** (an Expense or an Expense Group); refunds are inflows; a positive-anchored reimbursement
+is rejected. Netting is **Mondo Netto** — `effectiveAmount`/`isNotSecondary` generalize from the
+single secondary to the linked-refund set; the net lands in the **cost's month**, each refund is
+excluded from its own month, and dashboard entrate/uscite/per-category totals stay correct at every
+aggregation site (the highest-risk piece — regression-gated in Phase 73). Residual =
+`Σoutflow + Σ(refunds so far)`, surfaced while negative. Dedicated `/reimbursements` section +
+per-reimbursement page reuse the `/tags/[id]` and Expense Group RSC scaffolding.
+
+**Phase sequencing rationale:** the schema+migration+netting backend is the risky core, so it is
+an early tracer phase (73) with a dashboard-totals regression gate **before any UI**; the Expense
+Group anchor + residual + generalized edit-guard complete the model (74); the linking surfaces
+(Expense detail page + Expense Group) come next (75); the dedicated section ships last (76).
+
+**Left OPEN for the per-phase discuss/plan stage** (details, not architecture — do NOT resolve in
+the roadmap):
+1. **Refund→subcategory attribution** when the anchor spans multiple subcategories — invisible on
+   top-line entrate/uscite, matters only for the per-category breakdown (surfaces with a Group
+   anchor → Phase 74).
+2. **Multi-month anchor handling** — constrain an anchor to one netting-month or attribute
+   per-transaction (holiday confirmed "single-period") → Phase 73.
+3. **Verifying per-transaction `effectiveAmount` attribution** when an Expense anchor has multiple
+   transactions → Phase 73.
+
+**Out of scope** (no phases): subscription temporal amortization (RMB-F1 — projection/fan-out, a
+focused later milestone), inflow-anchored reimbursements (invariant RMB-03), one-inflow fan-out.
 
 ## Roadmap (v2.7 — Phases 69-70)
 

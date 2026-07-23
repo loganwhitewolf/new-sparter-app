@@ -2,6 +2,7 @@
 
 ## Milestones
 
+- 🚧 **v2.8: Reimbursements 1:N** — Phases 73–76 (in progress) · model locked ADR 0018 (supersedes 0016 §1)
 - ✅ **M001–M006** — Foundation → Dashboard Insight Suite (Phases 1–23, shipped ~2026-05)
 - ✅ **M007: Zero-cost Production Deploy** — Phases 24–28 (shipped 2026-05-19)
 - ✅ **v1.8 / M008: Dashboard Intelligence** — Phase 29 (shipped 2026-05-20)
@@ -22,6 +23,80 @@
 - ✅ **v2.7: Tag Dedicated View** — Phases 69–72 (shipped 2026-07-22, tag v2.7) · [archive](milestones/v2.7-ROADMAP.md)
 
 ## Phases
+
+> 🚧 **v2.8: Reimbursements 1:N — IN PROGRESS (Phases 73–76).** Replace the 1:1 `transaction_pair`
+> with an explicit **one outflow → N inflows** reimbursement: one mechanism, generalized (the old
+> pair is the N=1 case — migrated and subsumed, not kept alongside). The anchor is **always an
+> outflow** Expense or Expense Group; linked refunds net into the cost's month (Mondo Netto);
+> residual ("still owed €25") is first-class. Model **locked in ADR 0018** (supersedes ADR 0016 §1)
+> — no discovery to redo. Risk is concentrated in the schema+migration+netting core (Phase 73):
+> regression-gate dashboard totals **before any UI**. Out of scope: subscription amortization
+> (RMB-F1), inflow-anchored reimbursements, one-inflow fan-out.
+
+- [ ] **Phase 73: reimbursement-schema-and-netting** - New `reimbursement` + `reimbursement_refund` schema; generalize `effectiveAmount`/`isNotSecondary` to the refund set; migrate `transaction_pair` (N=1); dashboard regression gate (RMB-01, RMB-03, RMB-04, RMB-05)
+- [ ] **Phase 74: group-anchor-and-reconciliation** - Anchor on an outflow Expense Group; residual as a first-class value; amount-edit guard generalized to 1:N (RMB-02, RMB-06, RMB-09)
+- [ ] **Phase 75: linking-surfaces-and-lifecycle** - Create/manage a reimbursement from the Expense detail page + Expense Group; add/remove refunds; unlink/delete restores baseline (RMB-07, RMB-08)
+- [ ] **Phase 76: reimbursements-section** - Dedicated `/reimbursements` list + per-reimbursement page (anchor, refunds, net, residual; edit/add/remove/delete in place) (RMB-10, RMB-11)
+
+### Phase 73: reimbursement-schema-and-netting
+
+**Goal**: Generalize the 1:1 transaction pairing into a 1:N reimbursement data model and netting layer, migrating every existing pair with zero change to dashboard numbers.
+**Depends on**: Nothing new (first v2.8 phase; builds on the shipped v2.0 pairing and v2.6 Expense Group model)
+**Requirements**: RMB-01, RMB-03, RMB-04, RMB-05
+**Success Criteria** (what must be TRUE):
+
+  1. A single outflow anchor can carry N linked inflow refund transactions in the new `reimbursement` + `reimbursement_refund` tables; the former 1:1 pair is the N=1 case.
+  2. Every existing `transaction_pair` row is migrated to a reimbursement (anchor = the primary's Expense, refund = the secondary), and `transaction_pair` is no longer the live netting source.
+  3. Dashboard entrate / uscite / per-category totals are identical before and after the migration — the regression gate is green across every aggregation site.
+  4. A linked refund is excluded from its own month and its amount nets into the anchor's cost month everywhere `effectiveAmount`/`isNotSecondary` are applied.
+  5. Anchoring on an inflow, or linking an outflow as a refund, is rejected by the invariant.
+
+**Plans**: TBD
+**Open for discuss/plan** (details, not architecture): (Q2) whether a multi-month anchor is constrained to one netting-month or attributed per-transaction (holiday confirmed "single-period"); (Q3) verifying per-transaction `effectiveAmount` attribution holds when an Expense anchor has multiple transactions.
+
+### Phase 74: group-anchor-and-reconciliation
+
+**Goal**: Let an outflow Expense Group carry a reimbursement, expose the residual as a first-class value, and keep amount edits from silently corrupting the net.
+**Depends on**: Phase 73
+**Requirements**: RMB-02, RMB-06, RMB-09
+**Success Criteria** (what must be TRUE):
+
+  1. A reimbursement can be anchored on an outflow Expense Group (a group of transactions), not only a single Expense; netting over the group's member transactions stays correct.
+  2. Each reimbursement exposes `residual = Σoutflow + Σ(refunds linked so far)`, negative while money is still owed (e.g. "still owed €25" when 3 of 4 friends have repaid).
+  3. Editing an anchor or refund amount that would break the reimbursement is handled coherently — blocked with an Italian message or reconciled — never silently corrupting the net (the v2.5 pair guard, generalized to 1:N).
+
+**Plans**: TBD
+**Open for discuss/plan** (details, not architecture): (Q1) how a refund attributes to a subcategory when the anchor spans multiple subcategories (arises with a Group anchor) — invisible on the top-line entrate/uscite, matters only for the per-category breakdown.
+
+### Phase 75: linking-surfaces-and-lifecycle
+
+**Goal**: Let the user create and manage a reimbursement in place from the Expense detail page and the Expense Group — pick the anchor, attach and remove refunds, with unlink/delete restoring baseline.
+**Depends on**: Phase 74
+**Requirements**: RMB-07, RMB-08
+**Success Criteria** (what must be TRUE):
+
+  1. From the Expense detail page (`/expenses/[id]`) and from an Expense Group, the user can create a reimbursement and attach eligible inflow transactions as refunds.
+  2. The user can add and remove individual refund links on an existing reimbursement.
+  3. Unlinking a refund or deleting the reimbursement restores baseline — the refund reappears as a normal inflow in its own month and the anchor's net reverts.
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 76: reimbursements-section
+
+**Goal**: Give reimbursements a dedicated home — a list of all reimbursement groups and a per-reimbursement page showing anchor, refunds, net and residual with in-place management — reusing the `/tags/[id]` and Expense Group scaffolding.
+**Depends on**: Phase 75
+**Requirements**: RMB-10, RMB-11
+**Success Criteria** (what must be TRUE):
+
+  1. A `/reimbursements` section lists every reimbursement group with title, anchor, net, and residual/status, using the unified table + RSC scaffolding.
+  2. A per-reimbursement page shows the anchor outflow(s), the linked refunds, the net, and the residual.
+  3. The per-reimbursement page supports edit-title, add/remove refund, and delete in place, reusing the `/tags/[id]` + Expense Group detail scaffolding.
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
 
 <details>
 <summary>✅ v2.7: Tag Dedicated View (Phases 69–72) — SHIPPED 2026-07-22 (tag v2.7)</summary>
@@ -281,6 +356,12 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 70. dashboard-tag-filter-removal | v2.7 | 2/2 | Complete | 2026-07-22 |
 | 71. transactions-tag-filter-control | v2.7 | 1/1 | Complete | 2026-07-22 |
 | 72. transactions-tag-indicator | v2.7 | direct | Complete | 2026-07-22 |
+| 73. reimbursement-schema-and-netting | v2.8 | TBD | Not started | - |
+| 74. group-anchor-and-reconciliation | v2.8 | TBD | Not started | - |
+| 75. linking-surfaces-and-lifecycle | v2.8 | TBD | Not started | - |
+| 76. reimbursements-section | v2.8 | TBD | Not started | - |
 
 **Total shipped: 72 phases · 269 plans complete**
 **Latest shipped: v2.7 Tag Dedicated View — Phases 69–72 (2026-07-22). All TAG-06…TAG-15 delivered: dedicated all-time per-tag page, dashboard `?tag=` filter removed, transactions tag filter + inline tag chip.**
+
+**In planning: v2.8 Reimbursements 1:N — Phases 73–76 (roadmap created 2026-07-23). 11/11 RMB requirements mapped, none orphaned. Model locked in ADR 0018 (supersedes 0016 §1). Next: `/gsd-plan-phase 73`.**
