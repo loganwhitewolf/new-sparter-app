@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Public Branding Site
-current_phase: 74
-current_phase_name: public-layout-and-proxy-allowlist
-status: verifying
+current_phase: 75
+current_phase_name: marketing-pages
+status: planning
 stopped_at: Completed 74-03-PLAN.md — Phase 74 human-approved end-to-end
-last_updated: "2026-07-23T12:55:44.789Z"
+last_updated: "2026-07-23T13:03:43.205Z"
 last_activity: 2026-07-23
-last_activity_desc: Phase 74 execution started
+last_activity_desc: Phase 74 complete, transitioned to Phase 75
 progress:
   total_phases: 5
   completed_phases: 2
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-07-22)
 
 ## Current Position
 
-Phase: 74 (public-layout-and-proxy-allowlist) — VERIFYING
-Plan: 3 of 3 (complete)
-Status: Phase complete — human-approved, ready for verification
-Last activity: 2026-07-23 — Phase 74 execution completed (74-03 human checkpoint approved)
+Phase: 75 — marketing-pages
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-23 — Phase 74 complete, transitioned to Phase 75
 
 ## Roadmap (v2.9 — Phases 73–77)
 

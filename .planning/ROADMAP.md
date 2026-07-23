@@ -67,7 +67,7 @@ Plans:
   2. Public marketing paths are allowlisted in `proxy.ts` via a single source of truth in `lib/routes.ts` (anon access without 307 to `/login`).
   3. Unauthenticated `/` serves the marketing homepage shell; authenticated `/` redirects to `/dashboard`.
 
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 **Wave 1**
