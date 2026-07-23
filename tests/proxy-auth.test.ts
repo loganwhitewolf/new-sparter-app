@@ -89,4 +89,22 @@ describe('proxy auth handling', () => {
     expect(response.status).toBe(307)
     expect(response.headers.get('location')).toBe('https://app.example.test/login')
   })
+
+  it('redirects authenticated users away from the login page', async () => {
+    mocks.getAuthSessionOrNull.mockResolvedValue({ user: { id: 'u1' } })
+
+    const response = await proxy(request('/login'))
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('https://app.example.test/dashboard')
+  })
+
+  it('redirects authenticated users away from the register page', async () => {
+    mocks.getAuthSessionOrNull.mockResolvedValue({ user: { id: 'u1' } })
+
+    const response = await proxy(request('/register'))
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('https://app.example.test/dashboard')
+  })
 })
