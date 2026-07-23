@@ -17,6 +17,38 @@ export const APP_ROUTES = {
   profileSettings: '/settings/profile', // canonical (D-03)
 } as const
 
+export const MARKETING_ROUTES = {
+  home: '/',
+  howItWorks: '/how-it-works',
+  privacy: '/privacy',
+  terms: '/terms',
+} as const
+
+export const AUTH_PAGE_ROUTES = {
+  login: '/login',
+  register: '/register',
+} as const
+
+export const PUBLIC_MARKETING_ROUTES = [
+  MARKETING_ROUTES.home,
+  MARKETING_ROUTES.howItWorks,
+  MARKETING_ROUTES.privacy,
+  MARKETING_ROUTES.terms,
+] as const
+
+export const AUTH_ROUTES = [AUTH_PAGE_ROUTES.login, AUTH_PAGE_ROUTES.register] as const
+
+export const PUBLIC_ROUTES = [...PUBLIC_MARKETING_ROUTES, ...AUTH_ROUTES] as const
+
+/** Exact allowlist helper — avoids `as const` Array.includes type narrowing pain */
+export function isPublicPath(path: string): boolean {
+  return (PUBLIC_ROUTES as readonly string[]).includes(path)
+}
+
+export function isAuthPath(path: string): boolean {
+  return (AUTH_ROUTES as readonly string[]).includes(path)
+}
+
 export const ONBOARDING_STEP_AFTER_PRIVATE_PLATFORM_CREATION = 2
 export const ONBOARDING_AFTER_PRIVATE_PLATFORM_CREATION_ROUTE =
   `${APP_ROUTES.onboarding}?step=${ONBOARDING_STEP_AFTER_PRIVATE_PLATFORM_CREATION}` as const

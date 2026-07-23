@@ -1,8 +1,12 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { getAuthSessionOrNull } from '@/lib/auth-session'
-
-const PUBLIC_ROUTES = ['/login', '/register']
-const AUTH_ROUTES = ['/login', '/register']
+import {
+  APP_ROUTES,
+  AUTH_PAGE_ROUTES,
+  isAuthPath,
+  isPublicPath,
+  MARKETING_ROUTES,
+} from '@/lib/routes'
 
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
@@ -35,17 +39,23 @@ export async function proxy(request: NextRequest) {
   // /proto/* is the public prototype area (throwaway demos). It carries no auth and is
   // gated to Vercel Preview via PROTOTYPES_ENABLED in its own layout, so skip the login
   // redirect here. Production never sets that env, so the route 404s there regardless.
-  const isPublicRoute = PUBLIC_ROUTES.includes(path) || path.startsWith('/proto')
-  const isAuthRoute = AUTH_ROUTES.includes(path)
+  const isPublicRoute = isPublicPath(path) || path.startsWith('/proto')
 
   // Redirect authenticated users away from auth pages
-  if (isAuthRoute && isAuthenticated) {
-    return NextResponse.redirect(new URL('/dashboard', request.nextUrl))
+  if (isAuthPath(path) && isAuthenticated) {
+    return NextResponse.redirect(new URL(APP_ROUTES.dashboard, request.nextUrl))
+  }
+
+  // BRAND-05 / D-01 / D-02: smart root — authenticated visitors to `/` always go
+  // to the dashboard. Must run even though `/` is public, and only in this layer
+  // (never duplicated in the (public) RSC page).
+  if (path === MARKETING_ROUTES.home && isAuthenticated) {
+    return NextResponse.redirect(new URL(APP_ROUTES.dashboard, request.nextUrl))
   }
 
   // Redirect unauthenticated users from protected pages
   if (!isPublicRoute && !isAuthenticated) {
-    return NextResponse.redirect(new URL('/login', request.nextUrl))
+    return NextResponse.redirect(new URL(AUTH_PAGE_ROUTES.login, request.nextUrl))
   }
 
   // Forward the pathname as a request header so RSC layouts can read it

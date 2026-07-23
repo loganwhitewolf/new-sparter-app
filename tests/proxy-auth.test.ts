@@ -52,4 +52,41 @@ describe('proxy auth handling', () => {
     expect(response.status).toBe(200)
     expect(response.headers.get('location')).toBeNull()
   })
+
+  // D-07: allowlist SoT + smart root (BRAND-04, BRAND-05)
+  it('allows anonymous marketing home without redirect to login', async () => {
+    mocks.getAuthSessionOrNull.mockResolvedValue(null)
+
+    const response = await proxy(request('/'))
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('location')).toBeNull()
+  })
+
+  it('redirects authenticated home to dashboard', async () => {
+    mocks.getAuthSessionOrNull.mockResolvedValue({ user: { id: 'u1' } })
+
+    const response = await proxy(request('/'))
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('https://app.example.test/dashboard')
+  })
+
+  it('allows authenticated marketing deep link', async () => {
+    mocks.getAuthSessionOrNull.mockResolvedValue({ user: { id: 'u1' } })
+
+    const response = await proxy(request('/how-it-works'))
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('location')).toBeNull()
+  })
+
+  it('still gates non-allowlisted paths for anonymous users', async () => {
+    mocks.getAuthSessionOrNull.mockResolvedValue(null)
+
+    const response = await proxy(request('/dashboard'))
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('https://app.example.test/login')
+  })
 })
