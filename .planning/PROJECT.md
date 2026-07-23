@@ -35,11 +35,19 @@ All milestones M001–v2.7 (Phases 1–72) complete. The app now has:
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Current Milestone: none — awaiting next milestone
+## Current Milestone: v2.8 Reimbursements 1:N
 
-v2.7 shipped and archived (2026-07-22). Start the next cycle with `/gsd-new-milestone`.
+**Goal:** Replace the 1:1 transaction pairing with an explicit **one outflow → N inflows** link, so a spend (or an Expense Group) can be reconciled by many reimbursements, with the net landing in the cost's month and a visible residual.
 
-**Standing candidates** (from planning memory): shared-subscription/refunds build (ADR 0016 — netting per subcategory + Standalone Expense to isolate inflows), platform-scoped patterns (ADR 0015 follow-up — `platformId` on `categorizationPattern` for ambiguous descriptions), and live operator deploy (R038 / R039 / R041 — code, config, runbook complete; deploy is operator-pending).
+**Target features:**
+- `reimbursement` entity (anchor = an outflow Expense **or** Expense Group) + `reimbursement_refund` join (N inflow transactions); subsumes and migrates `transaction_pair`
+- 1:N netting (Mondo Netto): `effectiveAmount` / `isNotSecondary` generalized from the single secondary to the set of linked refunds; net stays in the cost's month
+- Residual / reconciliation ("still owed €25") as a first-class value
+- Dedicated `/reimbursements` section + a per-group page, reusing the `/tags/[id]` + Expense Group RSC scaffolding
+
+**Key context:** model locked in **ADR 0018** (supersedes ADR 0016 §1 — reimbursements move from unlinked net-by-subcategory to explicit linking). Invariant: the anchor is always an outflow. **Out of scope:** subscription temporal amortization (fan-out of one inflow across future months) → a focused later milestone. Left for discuss/plan: refund→subcategory attribution on a cross-subcategory anchor, multi-month anchor handling, and verifying per-transaction `effectiveAmount` when an Expense anchor has multiple transactions.
+
+**Standing candidates for later** (from planning memory): subscription amortization view (ADR 0016 deferred temporal normalization), platform-scoped patterns (ADR 0015 follow-up — `platformId` on `categorizationPattern`), live operator deploy (R038 / R039 / R041 — code/config/runbook complete, deploy operator-pending).
 
 ## Last Shipped Milestone: v2.7 — Tag Dedicated View (shipped 2026-07-22, tag v2.7)
 

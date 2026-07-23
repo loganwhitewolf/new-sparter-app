@@ -1,14 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: (awaiting next milestone)
-current_phase: null
-current_phase_name: v2.7 archived — no active milestone
-status: milestone_archived
-stopped_at: v2.7 archived (roadmap + requirements → milestones/); run /gsd-new-milestone to start the next cycle
-last_updated: "2026-07-23T00:00:00.000Z"
+milestone: v2.8
+milestone_name: "Reimbursements 1:N"
+status: planning
+last_updated: "2026-07-23T09:01:14.074Z"
 last_activity: 2026-07-23
-last_activity_desc: Archived v2.7 milestone (ROADMAP collapsed, REQUIREMENTS archived, PROJECT.md evolved)
 progress:
   total_phases: 0
   completed_phases: 0
@@ -28,11 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 ## Current Position
 
-Phase: — (no active milestone; v2.7 shipped, tagged, and archived on 2026-07-23)
+Phase: Not started (defining requirements)
 Plan: —
-Status: v2.7 Tag Dedicated View shipped (tag `v2.7`, merged to `main`) and archived to `.planning/milestones/`. ROADMAP collapsed to a one-line link, requirements archived, PROJECT.md evolved. Fresh `REQUIREMENTS.md` will be created by `/gsd-new-milestone`.
-Next: `/gsd-new-milestone` — candidates: shared-subscription/refunds (ADR 0016), platform-scoped patterns (ADR 0015 follow-up), or live operator deploy (R038/R039/R041).
-Last activity: 2026-07-23 — v2.7 milestone archived
+Status: Defining requirements
+Last activity: 2026-07-23 — Milestone v2.8 started
 
 ## Roadmap (v2.7 — Phases 69-70)
 
