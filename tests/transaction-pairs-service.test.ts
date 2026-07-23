@@ -13,7 +13,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('server-only', () => ({}))
 
-// Mock schema so module imports resolve without real Drizzle types
+// Mock schema so module imports resolve without real Drizzle types.
+// `reimbursement`/`reimbursementRefund` are reference-distinct objects so
+// db.insert(table)/db.delete(table) mocks can branch on which table is targeted.
 vi.mock('@/lib/db/schema', () => ({
   transaction: {
     id: 'transaction.id',
@@ -22,36 +24,43 @@ vi.mock('@/lib/db/schema', () => ({
     occurredAt: 'transaction.occurredAt',
     expenseId: 'transaction.expenseId',
   },
-  transactionPair: {
-    transactionAId: 'transactionPair.transactionAId',
-    transactionBId: 'transactionPair.transactionBId',
-  },
   expense: {
     id: 'expense.id',
     userId: 'expense.userId',
     subCategoryId: 'expense.subCategoryId',
     title: 'expense.title',
   },
+  reimbursement: {
+    id: 'reimbursement.id',
+    userId: 'reimbursement.userId',
+    title: 'reimbursement.title',
+    expenseId: 'reimbursement.expenseId',
+  },
+  reimbursementRefund: {
+    id: 'reimbursementRefund.id',
+    reimbursementId: 'reimbursementRefund.reimbursementId',
+    transactionId: 'reimbursementRefund.transactionId',
+  },
 }))
 
 // Mock the detach cleanup core: createPair calls applyDetachCleanupTx to
-// categorize the refund (secondary) expense under the primary's subcategory.
+// categorize the refund expense under the anchor's subcategory.
 vi.mock('@/lib/services/transaction-detach', () => ({
   applyDetachCleanupTx: mocks.applyDetachCleanupTx,
 }))
 
 vi.mock('drizzle-orm', () => ({
   eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
-  or: (...args: unknown[]) => ({ op: 'or', args }),
   and: (...args: unknown[]) => ({ op: 'and', args }),
 }))
 
 // ---------------------------------------------------------------------------
 // db mock — controllable select/insert/delete chain
 // The service calls:
-//   db.select({...}).from(table).where(...).limit(1)  → [row] | []
-//   db.insert(table).values({...})                    → void
-//   db.delete(table).where(...)                       → void
+//   db.select({...}).from(table).where(...).limit(1)                  → [row] | []
+//   db.insert(reimbursement).values({...}).returning({...})           → [{ id }]
+//   db.insert(reimbursementRefund).values({...})                      → thenable, resolves []
+//   db.delete(table).where(...)                                       → void
 // ---------------------------------------------------------------------------
 function makeSelectChain(rows: unknown[]) {
   const chain = {
@@ -63,9 +72,21 @@ function makeSelectChain(rows: unknown[]) {
   return chain
 }
 
-function makeInsertChain() {
+// Supports both `await tx.insert(t).values(v)` (awaited directly, via `.then`)
+// and `await tx.insert(t).values(v).returning({...})` (explicit `.returning()`).
+function makeInsertChain(returningRows: unknown[] = [], onValues?: (v: unknown) => void) {
   const chain = {
-    values: vi.fn(() => Promise.resolve([])),
+    values: vi.fn((v: unknown) => {
+      onValues?.(v)
+      const result: {
+        then: (resolve: (value: unknown[]) => void) => void
+        returning: ReturnType<typeof vi.fn>
+      } = {
+        then: (resolve) => resolve([]),
+        returning: vi.fn(() => Promise.resolve(returningRows)),
+      }
+      return result
+    }),
   }
   return chain
 }
@@ -83,8 +104,8 @@ function makeDeleteChain() {
 vi.mock('@/lib/db', () => {
   const db: Record<string, unknown> = {
     select: vi.fn(() => mocks.dbSelectChain()),
-    insert: vi.fn(() => mocks.dbInsertChain()),
-    delete: vi.fn(() => mocks.dbDeleteChain()),
+    insert: vi.fn((table: unknown) => mocks.dbInsertChain(table)),
+    delete: vi.fn((table: unknown) => mocks.dbDeleteChain(table)),
   }
   db.transaction = vi.fn(async (cb: (tx: unknown) => unknown) => cb(db))
   return { db }
@@ -92,31 +113,33 @@ vi.mock('@/lib/db', () => {
 
 // ---------------------------------------------------------------------------
 // Helpers: build transaction-row fixtures with Decimal-string amounts (PAIR-01)
-// The service reads: id, amount (DECIMAL string), occurredAt, userId
+// The service reads: id, amount (DECIMAL string), occurredAt, userId, expenseId
 // ---------------------------------------------------------------------------
 function makeTx(
   id: string,
   amount: string,
   occurredAt: Date,
   userId = 'user-1',
+  expenseId: string | null = 'exp-default',
 ) {
-  return { id, amount, occurredAt, userId }
+  return { id, amount, occurredAt, userId, expenseId }
 }
 
 // ---------------------------------------------------------------------------
-// Import module under test AFTER mocks are declared (RED until Plan 03 lands)
+// Import module under test AFTER mocks are declared
 // ---------------------------------------------------------------------------
 const { createPair, deletePairByTransactionId } = await import(
   '@/lib/services/transaction-pairs'
 )
 
 // ---------------------------------------------------------------------------
-// createPair — ownership, primary resolution, double-link guard (PAIR-01, T-50-01, T-50-02)
+// createPair — ownership, sign-based anchor resolution, double-link guard
+// (PAIR-01, T-50-01, T-50-02, Phase 73 T-73-12)
 // ---------------------------------------------------------------------------
 describe('createPair', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.dbInsertChain.mockReturnValue(makeInsertChain())
+    mocks.dbInsertChain.mockReturnValue(makeInsertChain([{ id: 1 }]))
     mocks.dbDeleteChain.mockReturnValue(makeDeleteChain())
   })
 
@@ -186,125 +209,96 @@ describe('createPair', () => {
     })
   })
 
-  // ── (b) Primary resolution — larger |amount| wins (D-10, PAIR-01) ────────
-  describe('primary resolution by |amount|', () => {
-    it('inserts the larger-absolute-value transaction as transactionAId (primary)', async () => {
-      // tx-A: -100.00 (larger |amount|), tx-B: +50.00 (smaller)
-      const txA = makeTx('tx-big', '-100.00', new Date('2026-01-15'), 'user-1')
-      const txB = makeTx('tx-small', '+50.00', new Date('2026-01-10'), 'user-1')
+  // ── (b) Anchor resolution — by SIGN, never |amount| magnitude ────────────
+  // Phase 73 (D-02, T-73-12, ADR 0018): retires the Phase 50 magnitude-based
+  // primary/secondary tie-break, which could anchor on the wrong leg when a
+  // refund's |amount| exceeded its spend's. The negative leg is always the
+  // anchor; the positive leg is always the refund — regardless of magnitude.
+  describe('anchor resolution by sign (D-02, retires magnitude tie-break)', () => {
+    it('anchors on the negative (outflow) leg even when its |amount| is SMALLER than the refund', async () => {
+      // A €30 outflow paired with a €50 refund still anchors on the €30 outflow —
+      // the OLD magnitude-based tie-break would have picked the €50 leg as "primary".
+      const outflow = makeTx('tx-outflow', '-30.00', new Date('2026-01-10'), 'user-1', 'exp-spend')
+      const refund = makeTx('tx-refund', '+50.00', new Date('2026-01-15'), 'user-1', 'exp-refund')
 
       let callCount = 0
       mocks.dbSelectChain.mockImplementation(() => {
         callCount += 1
-        const row = callCount === 1 ? txA : txB
-        return makeSelectChain([row])
+        if (callCount === 1) return makeSelectChain([outflow])
+        if (callCount === 2) return makeSelectChain([refund])
+        // call 3: anchor-expense lookup (uncategorized — skip cleanup)
+        return makeSelectChain([{ expenseId: 'exp-spend', subCategoryId: null, title: 'Spesa Piccola' }])
       })
 
-      const insertedValues: unknown[] = []
-      const insertChain = {
-        values: vi.fn((v: unknown) => {
-          insertedValues.push(v)
-          return Promise.resolve([])
-        }),
-      }
-      mocks.dbInsertChain.mockReturnValue(insertChain)
+      const reimbursementValues: unknown[] = []
+      const refundValues: unknown[] = []
+      mocks.dbInsertChain.mockImplementation((table: unknown) => {
+        if ((table as { title?: string }).title === 'reimbursement.title') {
+          return makeInsertChain([{ id: 42 }], (v) => reimbursementValues.push(v))
+        }
+        return makeInsertChain([], (v) => refundValues.push(v))
+      })
 
-      await createPair({ userId: 'user-1', transactionId: 'tx-big', counterpartId: 'tx-small' })
+      const result = await createPair({
+        userId: 'user-1',
+        transactionId: 'tx-outflow',
+        counterpartId: 'tx-refund',
+      })
 
-      expect(insertedValues).toHaveLength(1)
-      const inserted = insertedValues[0] as { transactionAId: string; transactionBId: string }
-      // Primary (larger |amount| = -100.00) must be transactionAId
-      expect(inserted.transactionAId).toBe('tx-big')
-      expect(inserted.transactionBId).toBe('tx-small')
+      expect(reimbursementValues[0]).toMatchObject({ expenseId: 'exp-spend' })
+      expect(refundValues[0]).toMatchObject({ reimbursementId: 42, transactionId: 'tx-refund' })
+      expect(result.secondaryTransactionId).toBe('tx-refund')
     })
 
-    it('swaps primary when user initiates from the smaller-amount side (D-10 silent swap)', async () => {
-      // User initiates from tx-small (+50.00), but tx-big (-100.00) is the real primary
-      const txSmall = makeTx('tx-small', '+50.00', new Date('2026-01-10'), 'user-1')
-      const txBig = makeTx('tx-big', '-100.00', new Date('2026-01-15'), 'user-1')
+    it('anchors on the negative leg even when initiated from the positive (refund) side', async () => {
+      const refund = makeTx('tx-refund', '+50.00', new Date('2026-01-15'), 'user-1', 'exp-refund')
+      const outflow = makeTx('tx-outflow', '-30.00', new Date('2026-01-10'), 'user-1', 'exp-spend')
 
       let callCount = 0
       mocks.dbSelectChain.mockImplementation(() => {
         callCount += 1
-        // transactionId=tx-small passed first, counterpartId=tx-big second
-        const row = callCount === 1 ? txSmall : txBig
-        return makeSelectChain([row])
+        // transactionId=tx-refund passed first, counterpartId=tx-outflow second
+        if (callCount === 1) return makeSelectChain([refund])
+        if (callCount === 2) return makeSelectChain([outflow])
+        return makeSelectChain([{ expenseId: 'exp-spend', subCategoryId: null, title: 'Spesa Piccola' }])
       })
 
-      const insertedValues: unknown[] = []
-      const insertChain = {
-        values: vi.fn((v: unknown) => {
-          insertedValues.push(v)
-          return Promise.resolve([])
-        }),
-      }
-      mocks.dbInsertChain.mockReturnValue(insertChain)
-
-      await createPair({ userId: 'user-1', transactionId: 'tx-small', counterpartId: 'tx-big' })
-
-      const inserted = insertedValues[0] as { transactionAId: string; transactionBId: string }
-      // System silently promotes tx-big to primary even though user started from tx-small
-      expect(inserted.transactionAId).toBe('tx-big')
-      expect(inserted.transactionBId).toBe('tx-small')
-    })
-  })
-
-  // ── (c) Tie-break by occurredAt when |amounts| are equal (D-10) ──────────
-  describe('primary resolution tie-break by occurredAt', () => {
-    it('makes the earlier-occurredAt transaction primary when amounts are equal in absolute value', async () => {
-      const txEarlier = makeTx('tx-earlier', '-75.00', new Date('2026-01-05'), 'user-1')
-      const txLater = makeTx('tx-later', '+75.00', new Date('2026-01-20'), 'user-1')
-
-      let callCount = 0
-      mocks.dbSelectChain.mockImplementation(() => {
-        callCount += 1
-        const row = callCount === 1 ? txEarlier : txLater
-        return makeSelectChain([row])
+      const reimbursementValues: unknown[] = []
+      const refundValues: unknown[] = []
+      mocks.dbInsertChain.mockImplementation((table: unknown) => {
+        if ((table as { title?: string }).title === 'reimbursement.title') {
+          return makeInsertChain([{ id: 1 }], (v) => reimbursementValues.push(v))
+        }
+        return makeInsertChain([], (v) => refundValues.push(v))
       })
 
-      const insertedValues: unknown[] = []
-      const insertChain = {
-        values: vi.fn((v: unknown) => {
-          insertedValues.push(v)
-          return Promise.resolve([])
-        }),
-      }
-      mocks.dbInsertChain.mockReturnValue(insertChain)
+      const result = await createPair({
+        userId: 'user-1',
+        transactionId: 'tx-refund',
+        counterpartId: 'tx-outflow',
+      })
 
-      await createPair({ userId: 'user-1', transactionId: 'tx-earlier', counterpartId: 'tx-later' })
-
-      const inserted = insertedValues[0] as { transactionAId: string; transactionBId: string }
-      expect(inserted.transactionAId).toBe('tx-earlier')
-      expect(inserted.transactionBId).toBe('tx-later')
+      // The outflow is always the anchor, regardless of which side initiated the pair.
+      expect(reimbursementValues[0]).toMatchObject({ expenseId: 'exp-spend' })
+      expect(result.secondaryTransactionId).toBe('tx-refund')
     })
 
-    it('makes later-initiated tx secondary even when it arrives as transactionId arg if its date is later', async () => {
-      const txEarlier = makeTx('tx-jan-01', '-50.00', new Date('2026-01-01'), 'user-1')
-      const txLater = makeTx('tx-jan-15', '+50.00', new Date('2026-01-15'), 'user-1')
+    it('rejects an anchor with no linked Expense (D-03 XOR would otherwise be violated)', async () => {
+      const outflow = makeTx('tx-outflow', '-30.00', new Date('2026-01-10'), 'user-1', null)
+      const refund = makeTx('tx-refund', '+50.00', new Date('2026-01-15'), 'user-1', 'exp-refund')
 
-      // User initiates from tx-jan-15 (later date), counterpart is tx-jan-01 (earlier)
       let callCount = 0
       mocks.dbSelectChain.mockImplementation(() => {
         callCount += 1
-        const row = callCount === 1 ? txLater : txEarlier
-        return makeSelectChain([row])
+        if (callCount === 1) return makeSelectChain([outflow])
+        if (callCount === 2) return makeSelectChain([refund])
+        // call 3: anchor-expense lookup — inner join yields no row (no Expense)
+        return makeSelectChain([])
       })
 
-      const insertedValues: unknown[] = []
-      const insertChain = {
-        values: vi.fn((v: unknown) => {
-          insertedValues.push(v)
-          return Promise.resolve([])
-        }),
-      }
-      mocks.dbInsertChain.mockReturnValue(insertChain)
-
-      await createPair({ userId: 'user-1', transactionId: 'tx-jan-15', counterpartId: 'tx-jan-01' })
-
-      const inserted = insertedValues[0] as { transactionAId: string; transactionBId: string }
-      // tx-jan-01 is earlier → promoted to primary
-      expect(inserted.transactionAId).toBe('tx-jan-01')
-      expect(inserted.transactionBId).toBe('tx-jan-15')
+      await expect(
+        createPair({ userId: 'user-1', transactionId: 'tx-outflow', counterpartId: 'tx-refund' }),
+      ).rejects.toThrow('non è associata a nessuna spesa')
     })
   })
 
@@ -317,13 +311,19 @@ describe('createPair', () => {
       let callCount = 0
       mocks.dbSelectChain.mockImplementation(() => {
         callCount += 1
-        const row = callCount === 1 ? tx1 : tx2
-        return makeSelectChain([row])
+        if (callCount === 1) return makeSelectChain([tx1])
+        if (callCount === 2) return makeSelectChain([tx2])
+        return makeSelectChain([{ expenseId: 'exp-default', subCategoryId: null, title: 'Spesa X' }])
       })
 
-      // Simulate unique constraint violation from DB
+      // Simulate unique constraint violation from DB on the reimbursement insert
       const insertChain = {
-        values: vi.fn(() => Promise.reject(new Error('duplicate key value violates unique constraint'))),
+        values: vi.fn(() => ({
+          then: (resolve: (v: unknown[]) => void) => resolve([]),
+          returning: vi.fn(() =>
+            Promise.reject(new Error('duplicate key value violates unique constraint')),
+          ),
+        })),
       }
       mocks.dbInsertChain.mockReturnValue(insertChain)
 
@@ -339,14 +339,24 @@ describe('createPair', () => {
       let callCount = 0
       mocks.dbSelectChain.mockImplementation(() => {
         callCount += 1
-        const row = callCount === 1 ? tx1 : tx2
-        return makeSelectChain([row])
+        if (callCount === 1) return makeSelectChain([tx1])
+        if (callCount === 2) return makeSelectChain([tx2])
+        return makeSelectChain([{ expenseId: 'exp-default', subCategoryId: null, title: 'Spesa X' }])
       })
 
-      // Drizzle/pg surface the SQLSTATE on error.cause.code
-      const pgError = new Error('duplicate key value violates unique constraint "transaction_pair_a_unique"')
+      // Drizzle/pg surface the SQLSTATE on error.cause.code — now triggered by
+      // reimbursement_expenseId_unique / reimbursement_refund_transactionId_unique
+      // instead of transaction_pair's old uniques.
+      const pgError = new Error(
+        'duplicate key value violates unique constraint "reimbursement_expenseId_unique"',
+      )
       ;(pgError as unknown as { cause: { code: string } }).cause = { code: '23505' }
-      const insertChain = { values: vi.fn(() => Promise.reject(pgError)) }
+      const insertChain = {
+        values: vi.fn(() => ({
+          then: (resolve: (v: unknown[]) => void) => resolve([]),
+          returning: vi.fn(() => Promise.reject(pgError)),
+        })),
+      }
       mocks.dbInsertChain.mockReturnValue(insertChain)
 
       let errorMsg = ''
@@ -359,7 +369,7 @@ describe('createPair', () => {
       // No DB internals leak; the user sees the localized message.
       expect(errorMsg).toContain('già collegata')
       expect(errorMsg).not.toContain('unique constraint')
-      expect(errorMsg).not.toContain('transaction_pair_a_unique')
+      expect(errorMsg).not.toContain('reimbursement_expenseId_unique')
     })
 
     it('re-throws a non-unique-violation insert error unchanged (WR-03)', async () => {
@@ -369,11 +379,17 @@ describe('createPair', () => {
       let callCount = 0
       mocks.dbSelectChain.mockImplementation(() => {
         callCount += 1
-        const row = callCount === 1 ? tx1 : tx2
-        return makeSelectChain([row])
+        if (callCount === 1) return makeSelectChain([tx1])
+        if (callCount === 2) return makeSelectChain([tx2])
+        return makeSelectChain([{ expenseId: 'exp-default', subCategoryId: null, title: 'Spesa X' }])
       })
 
-      const insertChain = { values: vi.fn(() => Promise.reject(new Error('connection reset'))) }
+      const insertChain = {
+        values: vi.fn(() => ({
+          then: (resolve: (v: unknown[]) => void) => resolve([]),
+          returning: vi.fn(() => Promise.reject(new Error('connection reset'))),
+        })),
+      }
       mocks.dbInsertChain.mockReturnValue(insertChain)
 
       await expect(
@@ -429,7 +445,7 @@ describe('createPair', () => {
       ).rejects.toThrow('segno opposto')
     })
 
-    it('does NOT insert a pair when the sign check fails', async () => {
+    it('does NOT insert a reimbursement when the sign check fails', async () => {
       const tx1 = makeTx('tx-1', '+30.00', new Date('2026-01-10'), 'user-1')
       const tx2 = makeTx('tx-2', '+30.00', new Date('2026-01-15'), 'user-1')
       let callCount = 0
@@ -437,7 +453,7 @@ describe('createPair', () => {
         callCount += 1
         return makeSelectChain([callCount === 1 ? tx1 : tx2])
       })
-      const insertChain = { values: vi.fn(() => Promise.resolve([])) }
+      const insertChain = makeInsertChain()
       mocks.dbInsertChain.mockReturnValue(insertChain)
 
       await expect(
@@ -449,16 +465,18 @@ describe('createPair', () => {
 
   // ── (i) Atomicity — read-then-write runs inside db.transaction (CR-02) ────
   describe('atomic write path', () => {
-    it('performs the ownership read and insert inside db.transaction', async () => {
+    it('performs the ownership read and both inserts inside db.transaction', async () => {
       const { db } = await import('@/lib/db')
       const tx1 = makeTx('tx-1', '-100.00', new Date('2026-01-10'), 'user-1')
       const tx2 = makeTx('tx-2', '+50.00', new Date('2026-01-15'), 'user-1')
       let callCount = 0
       mocks.dbSelectChain.mockImplementation(() => {
         callCount += 1
-        return makeSelectChain([callCount === 1 ? tx1 : tx2])
+        if (callCount === 1) return makeSelectChain([tx1])
+        if (callCount === 2) return makeSelectChain([tx2])
+        return makeSelectChain([{ expenseId: 'exp-default', subCategoryId: null, title: 'Spesa X' }])
       })
-      mocks.dbInsertChain.mockReturnValue(makeInsertChain())
+      mocks.dbInsertChain.mockReturnValue(makeInsertChain([{ id: 1 }]))
 
       await createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' })
 
@@ -468,12 +486,10 @@ describe('createPair', () => {
 })
 
 // ---------------------------------------------------------------------------
-// createPair — refund cleanup on pairing (decision 2)
-// After the pair insert, the refund (secondary) expense inherits the refunded
-// spend's (primary's) subcategory via applyDetachCleanupTx — but only when the
-// primary is categorized and the secondary has its own distinct expense.
+// createPair — refund cleanup on pairing (decision 2, UNRELATED to Phase 73's
+// sign-based anchor change — kept as-is, just re-pointed to the new inserts)
 // ---------------------------------------------------------------------------
-// A transaction leg row as loaded by createPair (now includes expenseId).
+// A transaction leg row as loaded by createPair (includes expenseId).
 function makeLeg(
   id: string,
   amount: string,
@@ -484,31 +500,31 @@ function makeLeg(
   return { id, amount, occurredAt, userId, expenseId }
 }
 
-// Drive the sequential selects createPair performs: legA, legB, the primary-expense
-// join, then (only on the cleanup path) the secondary-expense title lookup used to
+// Drive the sequential selects createPair performs: legA, legB, the anchor-expense
+// join, then (only on the cleanup path) the refund-expense title lookup used to
 // compose the refund title. Promise.all preserves array order, so legA is call 1
-// (transactionId) and legB is call 2 (counterpartId); primary-expense is call 3 and
-// the secondary-expense title is call 4.
+// (transactionId) and legB is call 2 (counterpartId); anchor-expense is call 3 and
+// the refund-expense title is call 4.
 function mockPairSelects(
   legA: unknown,
   legB: unknown,
-  primaryExpenseRow: unknown | null,
-  secondaryExpenseTitle?: string,
+  anchorExpenseRow: unknown | null,
+  refundExpenseTitle?: string,
 ) {
   let callCount = 0
   mocks.dbSelectChain.mockImplementation(() => {
     callCount += 1
     if (callCount === 1) return makeSelectChain([legA])
     if (callCount === 2) return makeSelectChain([legB])
-    if (callCount === 3) return makeSelectChain(primaryExpenseRow ? [primaryExpenseRow] : [])
-    return makeSelectChain(secondaryExpenseTitle != null ? [{ title: secondaryExpenseTitle }] : [])
+    if (callCount === 3) return makeSelectChain(anchorExpenseRow ? [anchorExpenseRow] : [])
+    return makeSelectChain(refundExpenseTitle != null ? [{ title: refundExpenseTitle }] : [])
   })
 }
 
 describe('createPair — refund cleanup (decision 2)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.dbInsertChain.mockReturnValue(makeInsertChain())
+    mocks.dbInsertChain.mockReturnValue(makeInsertChain([{ id: 1 }]))
     mocks.dbDeleteChain.mockReturnValue(makeDeleteChain())
     mocks.applyDetachCleanupTx.mockResolvedValue({
       newExpenseId: 'exp-refund',
@@ -517,7 +533,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
   })
 
   it('inherits the spend subcategory onto the refund expense (1:1 inherit path)', async () => {
-    // Spend -100.00 (primary, categorized), refund +50.00 (secondary, own expense).
+    // Spend -100.00 (anchor, categorized), refund +50.00 (own expense).
     const spend = makeLeg('tx-spend', '-100.00', new Date('2026-01-10'), 'exp-spend')
     const refund = makeLeg('tx-refund', '+50.00', new Date('2026-01-15'), 'exp-refund')
     mockPairSelects(
@@ -541,7 +557,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
       title: 'Giulia Bianchi — rimborso Spesa X',
       subCategoryId: 7,
     })
-    // The service surfaces the resolved secondary + inherited subcategory for the UI.
+    // The service surfaces the resolved refund + inherited subcategory for the UI.
     expect(result).toEqual({
       secondaryTransactionId: 'tx-refund',
       inheritedSubCategoryId: 7,
@@ -557,8 +573,13 @@ describe('createPair — refund cleanup (decision 2)', () => {
       title: 'Spesa X',
     })
 
-    const insertChain = { values: vi.fn(() => Promise.resolve([])) }
-    mocks.dbInsertChain.mockReturnValue(insertChain)
+    const insertedValues: unknown[] = []
+    mocks.dbInsertChain.mockImplementation((table: unknown) => {
+      if ((table as { title?: string }).title === 'reimbursement.title') {
+        return makeInsertChain([{ id: 1 }], (v) => insertedValues.push(v))
+      }
+      return makeInsertChain([], (v) => insertedValues.push(v))
+    })
 
     const result = await createPair({
       userId: 'user-1',
@@ -567,12 +588,12 @@ describe('createPair — refund cleanup (decision 2)', () => {
     })
 
     expect(mocks.applyDetachCleanupTx).not.toHaveBeenCalled()
-    // The pair is still inserted.
-    expect(insertChain.values).toHaveBeenCalledTimes(1)
+    // The reimbursement is still inserted (both inserts fire).
+    expect(insertedValues).toHaveLength(2)
     expect(result).toEqual({ secondaryTransactionId: 'tx-refund' })
   })
 
-  it('skips cleanup when primary and secondary share the same expense', async () => {
+  it('skips cleanup when anchor and refund share the same expense', async () => {
     const spend = makeLeg('tx-spend', '-100.00', new Date('2026-01-10'), 'exp-shared')
     const refund = makeLeg('tx-refund', '+50.00', new Date('2026-01-15'), 'exp-shared')
     mockPairSelects(spend, refund, {
@@ -590,7 +611,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
     expect(mocks.applyDetachCleanupTx).not.toHaveBeenCalled()
   })
 
-  it('skips cleanup when the secondary has no linked expense', async () => {
+  it('skips cleanup when the refund has no linked expense', async () => {
     const spend = makeLeg('tx-spend', '-100.00', new Date('2026-01-10'), 'exp-spend')
     const refund = makeLeg('tx-refund', '+50.00', new Date('2026-01-15'), null)
     mockPairSelects(spend, refund, {
@@ -608,9 +629,9 @@ describe('createPair — refund cleanup (decision 2)', () => {
     expect(mocks.applyDetachCleanupTx).not.toHaveBeenCalled()
   })
 
-  it('targets the secondary (refund) even when initiated from the smaller-|amount| leg', async () => {
-    // User initiates from the refund (+50.00, smaller). The spend (-100.00) is
-    // still resolved as primary; cleanup targets the refund as secondary.
+  it('targets the refund even when initiated from the refund (positive) leg', async () => {
+    // User initiates from the refund (+50.00). The spend (-100.00) is still
+    // resolved as anchor by sign; cleanup targets the refund.
     const refund = makeLeg('tx-refund', '+50.00', new Date('2026-01-15'), 'exp-refund')
     const spend = makeLeg('tx-spend', '-100.00', new Date('2026-01-10'), 'exp-spend')
     // call 1 = transactionId (tx-refund), call 2 = counterpartId (tx-spend)
@@ -637,8 +658,8 @@ describe('createPair — refund cleanup (decision 2)', () => {
     expect(result.secondaryTransactionId).toBe('tx-refund')
   })
 
-  it('resolves primary by earlier occurredAt on an |amount| tie and cleans up the later leg', async () => {
-    // Equal |amount|: earlier date is primary (the spend), later is the refund.
+  it('anchors on the negative leg regardless of |amount| and cleans up the positive leg', async () => {
+    // Equal |amount| no longer matters — sign alone resolves anchor vs refund.
     const spend = makeLeg('tx-early', '-75.00', new Date('2026-01-05'), 'exp-spend')
     const refund = makeLeg('tx-late', '+75.00', new Date('2026-01-20'), 'exp-refund')
     mockPairSelects(
@@ -686,12 +707,13 @@ describe('createPair — refund cleanup (decision 2)', () => {
 })
 
 // ---------------------------------------------------------------------------
-// deletePairByTransactionId — ownership validation + or-predicate delete (PAIR-03)
+// deletePairByTransactionId — ownership validation + role-resolution delete
+// (PAIR-03, Phase 73 T-73-10: repointed onto reimbursement/reimbursement_refund)
 // ---------------------------------------------------------------------------
 describe('deletePairByTransactionId', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.dbInsertChain.mockReturnValue(makeInsertChain())
+    mocks.dbInsertChain.mockReturnValue(makeInsertChain([{ id: 1 }]))
   })
 
   // ── (e) Ownership validation before delete ────────────────────────────────
@@ -713,11 +735,18 @@ describe('deletePairByTransactionId', () => {
       ).rejects.toThrow()
     })
 
-    // Unpair regression (decision 4): unlinking only removes the pair — it never
-    // runs the detach cleanup, so the inherited subcategory + synthetic hash persist.
+    // Unpair regression (decision 4): unlinking only removes the reimbursement
+    // link — it never runs the detach cleanup, so the inherited subcategory +
+    // synthetic hash persist.
     it('never invokes the detach cleanup when unlinking', async () => {
       const tx = makeTx('tx-1', '-100.00', new Date('2026-01-10'), 'user-1')
-      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([tx]))
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([tx])
+        // refund-role lookup → not a refund
+        return makeSelectChain([])
+      })
       mocks.dbDeleteChain.mockReturnValue(makeDeleteChain())
 
       await deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-1' })
@@ -726,74 +755,176 @@ describe('deletePairByTransactionId', () => {
     })
   })
 
-  // ── (f) or-predicate delete covers both FK sides (PAIR-03 unlink contract) ─
-  describe('unlink-restores-baseline — or-predicate delete', () => {
-    it('deletes the pair where the transaction appears as transactionAId OR transactionBId', async () => {
-      const tx = makeTx('tx-1', '-100.00', new Date('2026-01-10'), 'user-1')
-      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([tx]))
+  // ── (f) Refund-side unlink: removes reimbursement_refund, cascades empty
+  //        reimbursement (PAIR-03 unlink-restores-baseline) ─────────────────
+  describe('unlink-restores-baseline — refund side', () => {
+    it('removes the reimbursement_refund row when unlinking a refund transaction', async () => {
+      const tx = makeTx('tx-refund', '+50.00', new Date('2026-01-10'), 'user-1', 'exp-refund')
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([tx])
+        // refund-role lookup: this transaction IS a refund of reimbursement 7
+        if (callCount === 2) return makeSelectChain([{ id: 99, reimbursementId: 7 }])
+        // remaining-refunds check: no other refunds left
+        return makeSelectChain([])
+      })
 
-      const { db } = await import('@/lib/db')
-      const capturedWhereArgs: unknown[] = []
-      const deleteChain = {
-        where: vi.fn((arg: unknown) => {
-          capturedWhereArgs.push(arg)
-          return Promise.resolve([])
-        }),
-      }
-      mocks.dbDeleteChain.mockReturnValue(deleteChain)
+      const deletedTables: unknown[] = []
+      const deletedWhereArgs: unknown[] = []
+      mocks.dbDeleteChain.mockImplementation((table: unknown) => {
+        deletedTables.push(table)
+        return {
+          where: vi.fn((arg: unknown) => {
+            deletedWhereArgs.push(arg)
+            return Promise.resolve([])
+          }),
+        }
+      })
 
-      await deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-1' })
+      await deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-refund' })
 
-      // delete must have been called with a WHERE clause
-      expect(db.delete).toHaveBeenCalledTimes(1)
-      expect(deleteChain.where).toHaveBeenCalledTimes(1)
-
-      // The WHERE predicate must be an OR combining both FK sides
-      const whereArg = capturedWhereArgs[0] as { op: string; args: unknown[] }
-      expect(whereArg.op).toBe('or')
-      expect(whereArg.args).toHaveLength(2)
+      // First delete: the reimbursement_refund row itself.
+      expect((deletedTables[0] as { reimbursementId?: string }).reimbursementId).toBe(
+        'reimbursementRefund.reimbursementId',
+      )
+      expect(deletedWhereArgs[0]).toMatchObject({ op: 'eq', right: 99 })
     })
 
-    it('includes transactionAId equality in the or-predicate (primary side)', async () => {
-      const tx = makeTx('tx-1', '-100.00', new Date('2026-01-10'), 'user-1')
-      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([tx]))
+    it('also removes the reimbursement row when the unlinked refund was the ONLY one', async () => {
+      const tx = makeTx('tx-refund', '+50.00', new Date('2026-01-10'), 'user-1', 'exp-refund')
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([tx])
+        if (callCount === 2) return makeSelectChain([{ id: 99, reimbursementId: 7 }])
+        // No remaining refunds → reimbursement row must also be deleted.
+        return makeSelectChain([])
+      })
 
-      const capturedWhereArgs: unknown[] = []
-      const deleteChain = {
-        where: vi.fn((arg: unknown) => {
-          capturedWhereArgs.push(arg)
-          return Promise.resolve([])
-        }),
-      }
-      mocks.dbDeleteChain.mockReturnValue(deleteChain)
+      const deletedTables: unknown[] = []
+      mocks.dbDeleteChain.mockImplementation((table: unknown) => {
+        deletedTables.push(table)
+        return { where: vi.fn(() => Promise.resolve([])) }
+      })
 
-      await deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-1' })
+      await deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-refund' })
 
-      const whereArg = capturedWhereArgs[0] as { op: string; args: { op: string; left: string; right: string }[] }
-      const eqArgs = whereArg.args.map((a) => a.right)
-      // Both sides of the OR must reference 'tx-1' (the transactionId)
-      expect(eqArgs).toContain('tx-1')
+      // Both the reimbursement_refund row AND the now-empty reimbursement row are deleted.
+      expect(deletedTables).toHaveLength(2)
+      expect((deletedTables[1] as { title?: string }).title).toBe('reimbursement.title')
     })
 
-    it('succeeds when the user owns the transaction', async () => {
-      const tx = makeTx('tx-1', '-100.00', new Date('2026-01-10'), 'user-1')
-      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([tx]))
-      mocks.dbDeleteChain.mockReturnValue(makeDeleteChain())
+    it('does NOT remove the reimbursement row when other refunds remain', async () => {
+      const tx = makeTx('tx-refund', '+50.00', new Date('2026-01-10'), 'user-1', 'exp-refund')
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([tx])
+        if (callCount === 2) return makeSelectChain([{ id: 99, reimbursementId: 7 }])
+        // A sibling refund still exists.
+        return makeSelectChain([{ id: 100 }])
+      })
 
-      await expect(
-        deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-1' }),
-      ).resolves.toBeUndefined()
+      const deletedTables: unknown[] = []
+      mocks.dbDeleteChain.mockImplementation((table: unknown) => {
+        deletedTables.push(table)
+        return { where: vi.fn(() => Promise.resolve([])) }
+      })
+
+      await deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-refund' })
+
+      // Only the reimbursement_refund row is deleted; the reimbursement stays.
+      expect(deletedTables).toHaveLength(1)
     })
 
     it('performs the ownership read and delete inside db.transaction (CR-02)', async () => {
       const { db } = await import('@/lib/db')
-      const tx = makeTx('tx-1', '-100.00', new Date('2026-01-10'), 'user-1')
-      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([tx]))
+      const tx = makeTx('tx-refund', '+50.00', new Date('2026-01-10'), 'user-1', 'exp-refund')
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([tx])
+        if (callCount === 2) return makeSelectChain([{ id: 99, reimbursementId: 7 }])
+        return makeSelectChain([])
+      })
       mocks.dbDeleteChain.mockReturnValue(makeDeleteChain())
 
-      await deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-1' })
+      await deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-refund' })
 
       expect(db.transaction).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  // ── (g) Anchor-side unlink: removes the reimbursement row (cascades) ──────
+  describe('unlink-restores-baseline — anchor side', () => {
+    it('removes the reimbursement row when unlinking the anchor transaction', async () => {
+      const tx = makeTx('tx-anchor', '-100.00', new Date('2026-01-10'), 'user-1', 'exp-spend')
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([tx])
+        // refund-role lookup: NOT a refund
+        if (callCount === 2) return makeSelectChain([])
+        // anchor-role lookup: this expense_id has a reimbursement
+        return makeSelectChain([{ id: 7 }])
+      })
+
+      const deletedTables: unknown[] = []
+      const deletedWhereArgs: unknown[] = []
+      mocks.dbDeleteChain.mockImplementation((table: unknown) => {
+        deletedTables.push(table)
+        return {
+          where: vi.fn((arg: unknown) => {
+            deletedWhereArgs.push(arg)
+            return Promise.resolve([])
+          }),
+        }
+      })
+
+      await deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-anchor' })
+
+      expect(deletedTables).toHaveLength(1)
+      expect((deletedTables[0] as { title?: string }).title).toBe('reimbursement.title')
+      expect(deletedWhereArgs[0]).toMatchObject({ op: 'eq', right: 7 })
+    })
+
+    it('is a no-op when the transaction is neither a refund nor an anchor (already unpaired)', async () => {
+      const tx = makeTx('tx-lonely', '-100.00', new Date('2026-01-10'), 'user-1', 'exp-lonely')
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([tx])
+        // Neither refund lookup nor anchor lookup finds anything.
+        return makeSelectChain([])
+      })
+
+      const deletedTables: unknown[] = []
+      mocks.dbDeleteChain.mockImplementation((table: unknown) => {
+        deletedTables.push(table)
+        return { where: vi.fn(() => Promise.resolve([])) }
+      })
+
+      await expect(
+        deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-lonely' }),
+      ).resolves.toBeUndefined()
+      expect(deletedTables).toHaveLength(0)
+    })
+
+    it('succeeds when the user owns the transaction', async () => {
+      const tx = makeTx('tx-anchor', '-100.00', new Date('2026-01-10'), 'user-1', 'exp-spend')
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([tx])
+        if (callCount === 2) return makeSelectChain([])
+        return makeSelectChain([{ id: 7 }])
+      })
+      mocks.dbDeleteChain.mockReturnValue(makeDeleteChain())
+
+      await expect(
+        deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-anchor' }),
+      ).resolves.toBeUndefined()
     })
   })
 })
