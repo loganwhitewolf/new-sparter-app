@@ -5,15 +5,15 @@ milestone_name: "Reimbursements 1:N"
 current_phase: 73
 current_phase_name: reimbursement-schema-and-netting
 status: executing
-stopped_at: Completed 73-01-PLAN.md
-last_updated: "2026-07-23T15:00:16.122Z"
+stopped_at: Completed 73-02-PLAN.md
+last_updated: "2026-07-23T21:06:30.330Z"
 last_activity: 2026-07-23
 last_activity_desc: Phase 73 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 73 (reimbursement-schema-and-netting) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-07-23 — Phase 73 execution started
 
@@ -271,6 +271,9 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: Phase 73 Task 1 (locked): option-b — drop transaction_pair at phase end (Plan 73-04 Task 3), not kept dormant
 - [Phase ?]: Migration 0029 resolves the reimbursement anchor by transaction sign (amount < 0), not the legacy magnitude-based 'primary' label — closes a theoretical D-02 violation (Rule 2, user-approved)
 - [Phase ?]: Migration 0029 groups backfill by anchor expense_id (one reimbursement, N refunds) rather than one reimbursement per transaction_pair row — required by the reimbursement_expenseId_unique partial index (Rule 2, user-approved)
+- [Phase ?]: Phase 73 Plan 02: Q3 per-transaction attribution proven via raw effectiveAmount() probe per sibling + combined category/month total (no function exposes per-row netted amounts; 5/8 functions hard-code 'last-month' date scope)
+- [Phase ?]: Phase 73 Plan 02: getOverviewChart's out.* segments are abs()'d (unlike getMonthlyTrendByNature's raw signed sum) — corrected sign-flip assertions accordingly
+- [Phase ?]: Phase 73 Plan 02: connectReimbursementTestDb() now serializes cross-file access via a Postgres advisory lock (idleTimeoutMillis: 0) after discovering two harness test files corrupt each other's fixtures when run together under vitest's default file parallelism
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -385,9 +388,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 73-01-PLAN.md
+**Stopped at:** Completed 73-02-PLAN.md
 
-Last session: 2026-07-23T15:00:16.115Z
+Last session: 2026-07-23T21:06:30.323Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
@@ -455,3 +458,4 @@ Last session: 2026-07-23T15:00:16.115Z
 | Phase 69 P02 | 4min | 2 tasks | 4 files |
 | Phase 70 P01 | 8min | 3 tasks | 10 files |
 | Phase 73 P01 | 95min | 3 tasks | 8 files |
+| Phase 73 P02 | 55min | 2 tasks | 6 files |
