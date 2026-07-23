@@ -23,14 +23,20 @@ vi.mock('@/lib/db/schema', () => ({
     occurredAt: 'transaction.occurredAt',
     description: 'transaction.description',
     customTitle: 'transaction.customTitle',
+    expenseId: 'transaction.expenseId',
   },
   expense: {
     id: 'expense.id',
     subCategoryId: 'expense.subCategoryId',
   },
-  transactionPair: {
-    transactionAId: 'transactionPair.transactionAId',
-    transactionBId: 'transactionPair.transactionBId',
+  reimbursement: {
+    id: 'reimbursement.id',
+    expenseId: 'reimbursement.expenseId',
+  },
+  reimbursementRefund: {
+    id: 'reimbursementRefund.id',
+    reimbursementId: 'reimbursementRefund.reimbursementId',
+    transactionId: 'reimbursementRefund.transactionId',
   },
   direction: {
     id: 'direction.id',
@@ -251,8 +257,8 @@ describe('getEligibleCounterparts', () => {
     expect(hasNegativeFilter).toBe(true)
   })
 
-  // ── Already-paired exclusion: NOT EXISTS transaction_pair (D-14) ──────────
-  it('includes a NOT EXISTS predicate to exclude already-paired transactions (D-14)', async () => {
+  // ── Already-paired exclusion: NOT EXISTS reimbursement_refund/reimbursement (D-14) ──
+  it('includes a NOT EXISTS predicate excluding already-paired transactions via reimbursement_refund/reimbursement (D-14, Phase 73 repoint)', async () => {
     await getEligibleCounterparts({
       referenceId: 'tx-ref',
       referenceAmount: '-100.00',
@@ -262,16 +268,21 @@ describe('getEligibleCounterparts', () => {
 
     const args = getWhereAndArgs()
 
-    // Look for a sql fragment mentioning transaction_pair (NOT EXISTS exclusion)
-    const hasNotExistsPaired = args.some((a) => {
+    // Look for the sql fragment mentioning reimbursement_refund and reimbursement,
+    // and confirm transaction_pair is no longer referenced (T-73-14 regression).
+    const notAlreadyPairedFragment = args.find((a) => {
       if (typeof a !== 'object' || a === null) return false
       const typed = a as { op?: string; strings?: string[] }
       if (typed.op !== 'sql') return false
       const sqlText = (typed.strings ?? []).join('')
-      return sqlText.includes('transaction_pair')
-    })
+      return sqlText.includes('reimbursement_refund') || sqlText.includes('reimbursement')
+    }) as { strings?: string[] } | undefined
 
-    expect(hasNotExistsPaired).toBe(true)
+    expect(notAlreadyPairedFragment).toBeDefined()
+    const sqlText = (notAlreadyPairedFragment?.strings ?? []).join('')
+    expect(sqlText).toContain('reimbursement_refund')
+    expect(sqlText).toContain('reimbursement')
+    expect(sqlText).not.toContain('transaction_pair')
   })
 
   it('returns the counterpart rows resolved by the query (empty in mock context)', async () => {

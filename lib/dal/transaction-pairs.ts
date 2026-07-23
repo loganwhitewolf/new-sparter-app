@@ -28,7 +28,7 @@ export type CounterpartRow = {
  *  - gte(occurredAt, dateFrom)              — configurable ±90-day window
  *  - lte(occurredAt, dateTo)
  *  - ne(transaction.id, referenceId)        — self-exclusion
- *  - NOT EXISTS transaction_pair            — already-paired exclusion (D-14)
+ *  - NOT EXISTS reimbursement_refund/reimbursement — already-paired exclusion (D-14)
  *
  * Wrapped in `cache` because this query is session-scoped and called from RSC context.
  * The sign decision uses Decimal.js — never native JS comparison on DECIMAL strings.
@@ -54,12 +54,18 @@ export const getEligibleCounterparts = cache(
         ? gt(transaction.amount, '0')
         : sql`false`
 
-    // Already-paired exclusion (D-14): exclude any transaction already in a pair
-    // as either the primary (A) or secondary (B).
+    // Already-paired exclusion (D-14, Phase 73 repoint, ADR 0018): exclude a
+    // transaction already linked as a refund (present in reimbursement_refund)
+    // OR whose expense_id already has a reimbursement (already an anchor).
+    // The anchor check is intentionally at the Expense level, matching the
+    // reimbursement_expenseId_unique partial index invariant that guarantees at
+    // most one reimbursement per expenseId — no per-transaction tie-break needed.
     const notAlreadyPaired = sql`NOT EXISTS (
-      SELECT 1 FROM transaction_pair tp
-      WHERE tp.transaction_a_id = ${transaction.id}
-         OR tp.transaction_b_id = ${transaction.id}
+      SELECT 1 FROM reimbursement_refund rr
+      WHERE rr.transaction_id = ${transaction.id}
+    ) AND NOT EXISTS (
+      SELECT 1 FROM reimbursement r
+      WHERE r.expense_id = ${transaction.expenseId}
     )`
 
     return db
