@@ -5,10 +5,10 @@ milestone_name: Public Branding Site
 current_phase: 74
 current_phase_name: public layout and proxy allowlist
 status: planned
-stopped_at: Phase 74 plans created — ready for execute
-last_updated: "2026-07-23T14:30:00.000Z"
+stopped_at: Phase 74 plans revised from checker feedback — ready for execute
+last_updated: "2026-07-23T14:35:00.000Z"
 last_activity: 2026-07-23
-last_activity_desc: Phase 74 PLAN.md set written (3 plans, waves 1–3)
+last_activity_desc: Phase 74 plans revised (checker: RESEARCH Q1/Q2, 74-02 verify/active-nav, 74-03 stub greps)
 progress:
   total_phases: 5
   completed_phases: 1
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-07-22)
 Phase: 74 — public layout and proxy allowlist
 Plan: 01 (next) of 03
 Status: Planned — 74-01/02/03-PLAN.md ready for `/gsd-execute-phase 74`
-Last activity: 2026-07-23 — Phase 74 plans created (tracer → chrome → stubs)
+Last activity: 2026-07-23 — Phase 74 plans revised after checker feedback
 
 ## Roadmap (v2.9 — Phases 73–77)
 

@@ -457,17 +457,15 @@ Stub body: **Contenuto in arrivo.** + **Torna alla home** → `MARKETING_ROUTES.
 
 **If this table is empty:** N/A — three low-impact assumptions listed.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Named constant export names**
-   - What we know: D-05 mandates array names; D-06 mandates named constants for chrome.
-   - What's unclear: Exact object names (`MARKETING_ROUTES` vs extending `APP_ROUTES`).
-   - Recommendation: Do **not** put marketing paths on `APP_ROUTES` (semantic: app vs public). Use parallel `MARKETING_ROUTES` / `AUTH_PAGE_ROUTES` objects feeding the mandated arrays.
+1. **Named constant export names** — **RESOLVED:** parallel `MARKETING_ROUTES` / `AUTH_PAGE_ROUTES` objects feed the mandated arrays (`PUBLIC_MARKETING_ROUTES`, `AUTH_ROUTES`, `PUBLIC_ROUTES`). Do **not** put marketing paths on `APP_ROUTES`.
+   - What we knew: D-05 mandates array names; D-06 mandates named constants for chrome.
+   - Decision: Exact object names are `MARKETING_ROUTES` + `AUTH_PAGE_ROUTES` (not extending `APP_ROUTES`).
 
-2. **Optional layout-level smoke test**
-   - What we know: D-07 is proxy-focused; UI-SPEC is visual contract.
-   - What's unclear: Whether planner wants a light RTL render test for SiteHeader links.
-   - Recommendation: Not required for phase gate; proxy unit tests + manual UI-SPEC check sufficient. Add RTL only if wave capacity allows.
+2. **Optional layout-level smoke test** — **RESOLVED:** skip RTL for SiteHeader; rely on Vitest proxy tests (D-07) + human checkpoint in Plan 03.
+   - What we knew: D-07 is proxy-focused; UI-SPEC is visual contract.
+   - Decision: No light RTL render test required for phase gate.
 
 ## Environment Availability
 
