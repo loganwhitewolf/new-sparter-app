@@ -77,6 +77,106 @@ export type TransactionFilters = {
   direction?: string
 }
 
+/**
+ * Phase 73 (D-05/D-06, T-73-09, ADR 0018): resolves the transaction id of the OTHER
+ * participant in `${transaction.id}`'s reimbursement, for the paired-* display fields below.
+ * Repoints the Phase 50 1:1 `transaction_pair` popover onto the generalized
+ * `reimbursement`/`reimbursement_refund` tables.
+ *
+ * - Refund role (this id exists in reimbursement_refund): counterpart = the reimbursement's
+ *   anchor transaction — the earliest transaction of the anchor Expense, the exact tie-break
+ *   Plan 73-01 built into effectiveAmount() (lib/dal/transaction-pairs-sql.ts), reused here
+ *   rather than inventing a second tie-break rule.
+ * - Anchor role (a `reimbursement` row's expense_id matches this transaction's expense_id AND
+ *   this transaction IS that earliest transaction — Q3 tie-break): counterpart = the
+ *   earliest-LINKED refund (`reimbursement_refund.created_at ASC, transaction_id ASC` —
+ *   T-73-11, a documented single-counterpart display limitation: only ONE refund is shown
+ *   here when N>1 exist; a full multi-refund popover is Phase 75/76 scope, not silently
+ *   dropped — pairedNetAmount below is NOT limited this way).
+ * - Neither role: NULL (unpaired, unchanged from today).
+ */
+function pairedCounterpartIdExpr() {
+  return sql`(
+    CASE
+      WHEN EXISTS (
+        SELECT 1 FROM reimbursement_refund rr
+        WHERE rr.transaction_id = ${transaction.id}
+      )
+      THEN (
+        SELECT t2.id
+        FROM reimbursement_refund rr
+        INNER JOIN reimbursement r ON r.id = rr.reimbursement_id
+        INNER JOIN transaction t2 ON t2.id = (
+          SELECT t3.id FROM transaction t3
+          WHERE t3.expense_id = r.expense_id
+          ORDER BY t3.occurred_at ASC, t3.id ASC
+          LIMIT 1
+        )
+        WHERE rr.transaction_id = ${transaction.id}
+      )
+      WHEN EXISTS (
+        SELECT 1 FROM reimbursement r
+        WHERE r.expense_id = ${transaction.expenseId}
+        AND ${transaction.id} = (
+          SELECT t3.id FROM transaction t3
+          WHERE t3.expense_id = ${transaction.expenseId}
+          ORDER BY t3.occurred_at ASC, t3.id ASC
+          LIMIT 1
+        )
+      )
+      THEN (
+        SELECT rr2.transaction_id
+        FROM reimbursement r2
+        INNER JOIN reimbursement_refund rr2 ON rr2.reimbursement_id = r2.id
+        WHERE r2.expense_id = ${transaction.expenseId}
+        ORDER BY rr2.created_at ASC, rr2.transaction_id ASC
+        LIMIT 1
+      )
+      ELSE NULL
+    END
+  )`
+}
+
+/**
+ * Resolves the reimbursement id `${transaction.id}` participates in (as either anchor or
+ * refund role — same rules as pairedCounterpartIdExpr() above), for pairedNetAmount, which
+ * needs the FULL reimbursement (anchor + every linked refund), not just the displayed
+ * single counterpart.
+ */
+function pairedReimbursementIdExpr() {
+  return sql`(
+    CASE
+      WHEN EXISTS (
+        SELECT 1 FROM reimbursement_refund rr
+        WHERE rr.transaction_id = ${transaction.id}
+      )
+      THEN (
+        SELECT rr.reimbursement_id
+        FROM reimbursement_refund rr
+        WHERE rr.transaction_id = ${transaction.id}
+        LIMIT 1
+      )
+      WHEN EXISTS (
+        SELECT 1 FROM reimbursement r
+        WHERE r.expense_id = ${transaction.expenseId}
+        AND ${transaction.id} = (
+          SELECT t3.id FROM transaction t3
+          WHERE t3.expense_id = ${transaction.expenseId}
+          ORDER BY t3.occurred_at ASC, t3.id ASC
+          LIMIT 1
+        )
+      )
+      THEN (
+        SELECT r2.id
+        FROM reimbursement r2
+        WHERE r2.expense_id = ${transaction.expenseId}
+        LIMIT 1
+      )
+      ELSE NULL
+    END
+  )`
+}
+
 export const transactionListSelect = {
   id: transaction.id,
   description: transaction.description,
@@ -104,61 +204,38 @@ export const transactionListSelect = {
   // an Expense Group member; display-only, never participates in sorting/filtering.
   groupId: expenseGroupMembership.groupId,
   groupTitle: expenseGroup.title,
-  // Phase 50: pairing fields — correlated subqueries (no LEFT JOIN to preserve buildTransactionOrderBy)
-  pairedWithId: sql<string | null>`(
-    SELECT CASE
-      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
-      ELSE tp.transaction_a_id
-    END
-    FROM transaction_pair tp
-    WHERE tp.transaction_a_id = ${transaction.id}
-       OR tp.transaction_b_id = ${transaction.id}
-    LIMIT 1
-  )`,
+  // Phase 73 (D-05/D-06, T-73-09, ADR 0018): pairing fields repointed from the 1:1
+  // `transaction_pair` table to the generalized `reimbursement`/`reimbursement_refund` tables
+  // — correlated subqueries (no LEFT JOIN, to preserve buildTransactionOrderBy). See
+  // pairedCounterpartIdExpr()/pairedReimbursementIdExpr() above for role-resolution rules.
+  pairedWithId: sql<string | null>`${pairedCounterpartIdExpr()}`,
   pairedNetAmount: sql<string | null>`(
-    SELECT (${transaction.amount}::numeric + t2.amount::numeric)::text
-    FROM transaction_pair tp
-    JOIN transaction t2 ON t2.id = CASE
-      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
-      ELSE tp.transaction_a_id
-    END
-    WHERE tp.transaction_a_id = ${transaction.id}
-       OR tp.transaction_b_id = ${transaction.id}
-    LIMIT 1
+    SELECT (
+      t_anchor.amount::numeric + COALESCE((
+        SELECT SUM(rt.amount::numeric)
+        FROM reimbursement_refund rr
+        INNER JOIN transaction rt ON rt.id = rr.transaction_id
+        WHERE rr.reimbursement_id = r.id
+      ), 0)
+    )::text
+    FROM reimbursement r
+    INNER JOIN transaction t_anchor ON t_anchor.id = (
+      SELECT t2.id FROM transaction t2
+      WHERE t2.expense_id = r.expense_id
+      ORDER BY t2.occurred_at ASC, t2.id ASC
+      LIMIT 1
+    )
+    WHERE r.id = ${pairedReimbursementIdExpr()}
   )`,
   // Counterpart's OWN original amount (not the net) — shown as "Importo" in the pair popover.
   pairedAmount: sql<string | null>`(
-    SELECT t2.amount::text
-    FROM transaction_pair tp
-    JOIN transaction t2 ON t2.id = CASE
-      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
-      ELSE tp.transaction_a_id
-    END
-    WHERE tp.transaction_a_id = ${transaction.id}
-       OR tp.transaction_b_id = ${transaction.id}
-    LIMIT 1
+    SELECT t2.amount::text FROM transaction t2 WHERE t2.id = ${pairedCounterpartIdExpr()}
   )`,
   pairedDescription: sql<string | null>`(
-    SELECT t2.description
-    FROM transaction_pair tp
-    JOIN transaction t2 ON t2.id = CASE
-      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
-      ELSE tp.transaction_a_id
-    END
-    WHERE tp.transaction_a_id = ${transaction.id}
-       OR tp.transaction_b_id = ${transaction.id}
-    LIMIT 1
+    SELECT t2.description FROM transaction t2 WHERE t2.id = ${pairedCounterpartIdExpr()}
   )`,
   pairedOccurredAt: sql<Date | null>`(
-    SELECT t2.occurred_at
-    FROM transaction_pair tp
-    JOIN transaction t2 ON t2.id = CASE
-      WHEN tp.transaction_a_id = ${transaction.id} THEN tp.transaction_b_id
-      ELSE tp.transaction_a_id
-    END
-    WHERE tp.transaction_a_id = ${transaction.id}
-       OR tp.transaction_b_id = ${transaction.id}
-    LIMIT 1
+    SELECT t2.occurred_at FROM transaction t2 WHERE t2.id = ${pairedCounterpartIdExpr()}
   )`,
 }
 
