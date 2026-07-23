@@ -4,17 +4,17 @@ milestone: v2.9
 milestone_name: Public Branding Site
 current_phase: 74
 current_phase_name: public-layout-and-proxy-allowlist
-status: executing
-stopped_at: Completed 74-02-PLAN.md
-last_updated: "2026-07-23T12:40:34.319Z"
+status: verifying
+stopped_at: Completed 74-03-PLAN.md — Phase 74 human-approved end-to-end
+last_updated: "2026-07-23T12:55:44.789Z"
 last_activity: 2026-07-23
 last_activity_desc: Phase 74 execution started
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 20
+  completed_plans: 6
+  percent: 40
 ---
 
 # Project State
@@ -29,17 +29,17 @@ See: .planning/PROJECT.md (updated 2026-07-22)
 
 ## Current Position
 
-Phase: 74 (public-layout-and-proxy-allowlist) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-07-23 — Phase 74 execution started
+Phase: 74 (public-layout-and-proxy-allowlist) — VERIFYING
+Plan: 3 of 3 (complete)
+Status: Phase complete — human-approved, ready for verification
+Last activity: 2026-07-23 — Phase 74 execution completed (74-03 human checkpoint approved)
 
 ## Roadmap (v2.9 — Phases 73–77)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
 | 73 | proto-design-variants | BRAND-01, BRAND-02 | Complete (Winner = c) |
-| 74 | public-layout-and-proxy-allowlist | BRAND-03, BRAND-04, BRAND-05 | Planned (3 plans) |
+| 74 | public-layout-and-proxy-allowlist | BRAND-03, BRAND-04, BRAND-05 | Complete (human-approved) |
 | 75 | marketing-pages | BRAND-06, BRAND-07, BRAND-08 | Not started |
 | 76 | legal-pages | BRAND-09, BRAND-10 | Not started |
 | 77 | seo-and-auth-polish | BRAND-11, BRAND-12, BRAND-13 | Not started |
@@ -236,6 +236,7 @@ change dashboard totals or category breakdowns.
 - [Phase ?]: BRAND-02 Winner = Variant C (Type-led stack), PO's explicit call after Preview compare; recorded in app/proto/branding/NOTES.md (D-07 SoT)
 - [Phase ?]: Steal from losers into C: a's dominant product-visual weight, b's editorial type/asymmetric-column treatment; do not ship a/b as primary layout, no components/marketing/* extraction yet (Phase 75)
 - [Phase ?]: Phase 74-02: Sheet link order locked Come funziona -> Entra -> Registrati -> separator -> Privacy -> Termini -> Dashboard (Dashboard last, D-08)
+- [Phase ?]: Phase 74-03: Stub pages inline the shared D-10 JSX shape directly (no StubPage component extraction) per D-12 scope fence; components/marketing/* deferred to Phase 75
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -349,9 +350,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 74-02-PLAN.md
+**Stopped at:** Completed 74-03-PLAN.md — Phase 74 human-approved end-to-end
 
-Last session: 2026-07-23T12:40:34.311Z
+Last session: 2026-07-23T12:55:44.781Z
 
 **Next:** UI-SPEC checker → `/gsd-plan-phase 74` (or continue `/gsd-ui-phase 74` verification)
 
@@ -427,3 +428,4 @@ Last session: 2026-07-23T12:40:34.311Z
 | Phase 70 P01 | 8min | 3 tasks | 10 files |
 | Phase 74 P01 | 15min | 2 tasks | 6 files |
 | Phase 74 P02 | 6min | 2 tasks | 3 files |
+| Phase 74 P03 | 5min | 2 tasks | 3 files |

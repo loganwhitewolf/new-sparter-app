@@ -80,7 +80,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 74-03-PLAN.md — Stub pages (how-it-works/privacy/terms) + human verify
+- [x] 74-03-PLAN.md — Stub pages (how-it-works/privacy/terms) + human verify
 
 **UI hint**: yes
 
