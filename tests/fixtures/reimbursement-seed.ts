@@ -7,6 +7,8 @@ import {
   direction as directionTable,
   expense as expenseTable,
   nature as natureTable,
+  reimbursement as reimbursementTable,
+  reimbursementRefund as reimbursementRefundTable,
   subCategory as subCategoryTable,
   tag as tagTable,
   transaction as transactionTable,
@@ -215,4 +217,88 @@ export async function attachTagToTransaction(
   input: { tagId: number; transactionId: string },
 ): Promise<void> {
   await db.insert(transactionTagTable).values({ tagId: input.tagId, transactionId: input.transactionId })
+}
+
+/**
+ * Inserts a reimbursement + its N reimbursement_refund rows directly into the new schema
+ * (Phase 73 Plan 02) — for scenarios built natively rather than migrated from a legacy
+ * transaction_pair, since a legacy pair can only ever express N=1 and cannot express the
+ * dinner (N=3), adjacency-exceeds (N=2), or ordering (N=2) scenarios.
+ *
+ * Refund rows are inserted ONE AT A TIME (not as a single bulk values() array) so each gets
+ * its own `created_at` at insert time — required by the ordering scenario, which links the
+ * same two refund amounts in both possible sequences across two sub-tests.
+ */
+export async function seedReimbursement(
+  db: ReimbursementTestDb,
+  input: {
+    userId: string
+    title: string
+    expenseId: string
+    refundTransactionIds: string[]
+  },
+): Promise<{ reimbursementId: number }> {
+  const [row] = await db
+    .insert(reimbursementTable)
+    .values({ userId: input.userId, title: input.title, expenseId: input.expenseId })
+    .returning({ id: reimbursementTable.id })
+
+  for (const transactionId of input.refundTransactionIds) {
+    await db.insert(reimbursementRefundTable).values({ reimbursementId: row.id, transactionId })
+  }
+
+  return { reimbursementId: row.id }
+}
+
+/**
+ * Seeds one fully independent legacy transaction_pair row: its own user, its own outflow
+ * expense/transaction, and its own inflow refund expense/transaction — for the
+ * migration-backfill bulk correctness suite (K independent pairs across different users).
+ *
+ * `taxonomy` is passed in (seeded ONCE by the caller, shared across all K calls) rather than
+ * seeded fresh per call: `direction.code` and `nature.code` carry a global UNIQUE constraint
+ * (not user-scoped), so calling seedMinimalTaxonomy() once per independent pair would violate
+ * it on the second call. Sharing one taxonomy across the K users does not affect backfill
+ * correctness — the migration keys strictly on transaction/expense/reimbursement user_id, never
+ * on which user "owns" the category/subcategory a transaction happens to reference.
+ *
+ * `index` only seeds distinct occurredAt/title values across calls; it is not an ownership or
+ * ordering signal.
+ */
+export async function seedIndependentLegacyPair(
+  db: ReimbursementTestDb,
+  input: { index: number; taxonomy: MinimalTaxonomy },
+): Promise<{
+  userId: string
+  outflowExpenseId: string
+  outflowTransactionId: string
+  refundTransactionId: string
+  pairId: number
+}> {
+  const { userId } = await seedUser(db, { name: `Backfill User ${input.index}` })
+  const occurredAt = new Date(2026, 0, 1 + input.index, 12, 0, 0)
+
+  const { expenseId: outflowExpenseId, transactionId: outflowTransactionId } =
+    await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: input.taxonomy.essentialSubCategoryId,
+      amount: '-30.00',
+      occurredAt,
+      title: `Backfill outflow ${input.index}`,
+    })
+
+  const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
+    userId,
+    subCategoryId: input.taxonomy.incomeSubCategoryId,
+    amount: '15.00',
+    occurredAt,
+    title: `Backfill refund ${input.index}`,
+  })
+
+  const { pairId } = await seedLegacyPair(db, {
+    primaryTransactionId: outflowTransactionId,
+    secondaryTransactionId: refundTransactionId,
+  })
+
+  return { userId, outflowExpenseId, outflowTransactionId, refundTransactionId, pairId }
 }

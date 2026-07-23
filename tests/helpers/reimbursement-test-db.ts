@@ -17,6 +17,10 @@ const DEFAULT_TEST_DATABASE_URL = 'postgres://postgres:sparter@localhost:5432/sp
 const CONNECT_TIMEOUT_MS = 1500
 const MIGRATIONS_FOLDER = path.join(process.cwd(), 'drizzle/migrations')
 
+// Arbitrary fixed key (Phase 73 Plan 02) for a session-level Postgres advisory lock — see the
+// serialization comment in connectReimbursementTestDb() below.
+const HARNESS_ADVISORY_LOCK_KEY = 731_302
+
 export type ReimbursementTestDb = ReturnType<typeof drizzle<typeof schema>>
 
 export type ReimbursementTestDbHandle =
@@ -56,7 +60,14 @@ function resolveConnectionString(): string {
  */
 export async function connectReimbursementTestDb(): Promise<ReimbursementTestDbHandle> {
   const connectionString = resolveConnectionString()
-  const pool = new Pool({ connectionString, connectionTimeoutMillis: CONNECT_TIMEOUT_MS })
+  // idleTimeoutMillis: 0 disables pg's default 10s idle-connection reaping. Required so the
+  // advisory-lock-holding connection below is never silently closed (which would release the
+  // lock early) purely because it sat idle between this file's queries.
+  const pool = new Pool({
+    connectionString,
+    connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
+    idleTimeoutMillis: 0,
+  })
 
   try {
     await pool.query('SELECT 1')
@@ -66,6 +77,29 @@ export async function connectReimbursementTestDb(): Promise<ReimbursementTestDbH
       '[reimbursement-test-db] Local Postgres unreachable at ' +
         `${connectionString.replace(/:[^:@]+@/, ':***@')} — run \`yarn db:up\` to start it.`,
     )
+    return { ok: false }
+  }
+
+  // Serialize cross-FILE access to this shared local Postgres instance (Phase 73 Plan 02,
+  // discovered during Task 2): vitest runs separate test files in parallel worker
+  // processes/threads by default, and each file that uses this harness opens its OWN pool and
+  // calls resetReimbursementFixtures() (TRUNCATE) independently. Without serialization, two
+  // files' resets/inserts against overlapping tables interleave and corrupt each other's
+  // fixtures (observed: FK violations, unique-constraint violations across
+  // reimbursement-regression.test.ts and migration-backfill.test.ts running together).
+  //
+  // A session-level Postgres advisory lock, acquired on a dedicated connection and held for
+  // this pool's entire lifetime, guarantees only one file's suite touches the harness DB at a
+  // time — a second file's connectReimbursementTestDb() call blocks here until the first file's
+  // afterAll calls pool.end() and the lock-holding connection closes (which releases every
+  // session-level advisory lock it held, per Postgres semantics — no explicit unlock needed).
+  try {
+    const lockClient = await pool.connect()
+    await lockClient.query('SELECT pg_advisory_lock($1)', [HARNESS_ADVISORY_LOCK_KEY])
+    lockClient.release()
+  } catch (error) {
+    await pool.end().catch(() => undefined)
+    console.warn('[reimbursement-test-db] Failed to acquire the harness advisory lock:', error)
     return { ok: false }
   }
 
