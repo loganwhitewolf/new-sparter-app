@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   numeric,
   jsonb,
+  check,
 } from "drizzle-orm/pg-core";
 
 export const subscriptionPlanEnum = pgEnum("subscription_plan", [
@@ -521,6 +522,72 @@ export const expenseGroupMembership = pgTable(
   ],
 );
 
+// Reimbursement — one outflow anchor (Expense XOR Expense Group) linking N inflow refunds
+// (Phase 73, ADR 0018). Generalizes the 1:1 `transactionPair` into 1:N; `transactionPair` is
+// migrated into this shape and stops being the live netting source (D-06). No userId-scoped
+// ownership beyond the `userId` column itself is enforced at this table — service-layer callers
+// must still validate ownership via the anchor's expense/expenseGroup and refund transactions.
+//
+// Anchor XOR (D-03): exactly one of expenseId / expenseGroupId is set, never both, never neither.
+// Enforced at the DB level by the `reimbursement_anchor_xor` CHECK constraint below (not just a
+// service-level check) — an inflow-anchored reimbursement is structurally impossible (D-02).
+// Group-anchor *behaviour* (netting over member transactions) is Phase 74; this phase only lands
+// the shape.
+export const reimbursement = pgTable(
+  "reimbursement",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    expenseId: text("expense_id").references(() => expense.id, { onDelete: "cascade" }),
+    expenseGroupId: integer("expense_group_id").references(() => expenseGroup.id, {
+      onDelete: "cascade",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    check(
+      "reimbursement_anchor_xor",
+      sql`(${table.expenseId} IS NOT NULL) <> (${table.expenseGroupId} IS NOT NULL)`,
+    ),
+    index("reimbursement_userId_idx").on(table.userId),
+    index("reimbursement_expenseId_idx").on(table.expenseId),
+    index("reimbursement_expenseGroupId_idx").on(table.expenseGroupId),
+    // At most one reimbursement per anchor (Expense or Expense Group) — mirrors transactionPair's
+    // old at-most-once-per-side uniqueness, generalized to the anchor unit.
+    uniqueIndex("reimbursement_expenseId_unique")
+      .on(table.expenseId)
+      .where(sql`${table.expenseId} IS NOT NULL`),
+    uniqueIndex("reimbursement_expenseGroupId_unique")
+      .on(table.expenseGroupId)
+      .where(sql`${table.expenseGroupId} IS NOT NULL`),
+  ],
+);
+
+// Reimbursement Refund — N inflow transactions linked to one reimbursement (Phase 73, ADR 0018).
+// A transaction refunds at most one reimbursement (unique on transactionId) — generalizes
+// transactionPair's old transaction_b_id uniqueness.
+export const reimbursementRefund = pgTable(
+  "reimbursement_refund",
+  {
+    id: serial("id").primaryKey(),
+    reimbursementId: integer("reimbursement_id")
+      .notNull()
+      .references(() => reimbursement.id, { onDelete: "cascade" }),
+    transactionId: text("transaction_id")
+      .notNull()
+      .references(() => transaction.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("reimbursement_refund_transactionId_unique").on(table.transactionId),
+    index("reimbursement_refund_reimbursementId_idx").on(table.reimbursementId),
+    index("reimbursement_refund_transactionId_idx").on(table.transactionId),
+  ],
+);
+
 // Tag — curated entity for Transaction Tags (Phase 67, TAG-01).
 // Name is displayed as typed; normalizedName is name.trim().toLowerCase(), computed by the
 // service layer (Plan 67-03), never derived in the DB. The standalone unique on
@@ -842,6 +909,33 @@ export const expenseGroupMembershipRelations = relations(expenseGroupMembership,
   expense: one(expense, {
     fields: [expenseGroupMembership.expenseId],
     references: [expense.id],
+  }),
+}));
+
+export const reimbursementRelations = relations(reimbursement, ({ one, many }) => ({
+  user: one(user, {
+    fields: [reimbursement.userId],
+    references: [user.id],
+  }),
+  expense: one(expense, {
+    fields: [reimbursement.expenseId],
+    references: [expense.id],
+  }),
+  expenseGroup: one(expenseGroup, {
+    fields: [reimbursement.expenseGroupId],
+    references: [expenseGroup.id],
+  }),
+  refunds: many(reimbursementRefund),
+}));
+
+export const reimbursementRefundRelations = relations(reimbursementRefund, ({ one }) => ({
+  reimbursement: one(reimbursement, {
+    fields: [reimbursementRefund.reimbursementId],
+    references: [reimbursement.id],
+  }),
+  transaction: one(transaction, {
+    fields: [reimbursementRefund.transactionId],
+    references: [transaction.id],
   }),
 }));
 
