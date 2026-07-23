@@ -146,6 +146,10 @@ None - no external service configuration required.
 - Plan 03 can now build the `/how-it-works`, `/privacy`, `/terms` stub pages and the homepage-shell polish knowing every chrome link target already resolves inside the `(public)` layout.
 - Visual/interactive confirmation of the Sheet (open/close animation, 44px touch targets, active-route highlighting in a running browser) is flagged `human_judgment: true` (D1) for a later UAT pass — consistent with 74-01's same deferral pattern for the homepage shell.
 
+## Self-Check: PASSED
+
+All created files confirmed on disk (`site-header.tsx`, `site-footer.tsx`, this summary) and both task commits (`f94ad00`, `bb821aa`) confirmed in `git log`.
+
 ---
 *Phase: 74-public-layout-and-proxy-allowlist*
 *Completed: 2026-07-23*

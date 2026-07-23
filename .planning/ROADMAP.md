@@ -76,7 +76,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 74-02-PLAN.md — Public SiteHeader/SiteFooter chrome (UI-SPEC + D-08 Dashboard)
+- [x] 74-02-PLAN.md — Public SiteHeader/SiteFooter chrome (UI-SPEC + D-08 Dashboard)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
