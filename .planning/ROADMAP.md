@@ -61,7 +61,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 73-02-PLAN.md — D-02 invariant enforcement + full regression matrix (dinner, adjacency, ordering, Q3, migration-backfill correctness)
-- [ ] 73-03-PLAN.md — repoint transactions.ts paired-* fields and the transaction-edit.ts amount-edit guard
+- [x] 73-03-PLAN.md — repoint transactions.ts paired-* fields and the transaction-edit.ts amount-edit guard
 
 **Wave 3** *(blocked on Wave 2 completion)*
 

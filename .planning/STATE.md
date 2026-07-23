@@ -5,15 +5,15 @@ milestone_name: "Reimbursements 1:N"
 current_phase: 73
 current_phase_name: reimbursement-schema-and-netting
 status: executing
-stopped_at: Completed 73-02-PLAN.md
-last_updated: "2026-07-23T21:06:30.330Z"
+stopped_at: Completed 73-03-PLAN.md
+last_updated: "2026-07-23T21:18:43.409Z"
 last_activity: 2026-07-23
 last_activity_desc: Phase 73 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 73 (reimbursement-schema-and-netting) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-07-23 — Phase 73 execution started
 
@@ -274,6 +274,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: Phase 73 Plan 02: Q3 per-transaction attribution proven via raw effectiveAmount() probe per sibling + combined category/month total (no function exposes per-row netted amounts; 5/8 functions hard-code 'last-month' date scope)
 - [Phase ?]: Phase 73 Plan 02: getOverviewChart's out.* segments are abs()'d (unlike getMonthlyTrendByNature's raw signed sum) — corrected sign-flip assertions accordingly
 - [Phase ?]: Phase 73 Plan 02: connectReimbursementTestDb() now serializes cross-file access via a Postgres advisory lock (idleTimeoutMillis: 0) after discovering two harness test files corrupt each other's fixtures when run together under vitest's default file parallelism
+- [Phase ?]: 73-03: Shared role-resolution SQL helpers (pairedCounterpartIdExpr/pairedReimbursementIdExpr) reused across transactions.ts's 5 paired-* fields instead of duplicating the anchor/refund tie-break CASE per field.
+- [Phase ?]: 73-03: Amount-edit guard's role detection (refund vs anchor) resolved via one combined SELECT with two correlated subquery columns, keeping the unpaired-case round-trip count at 2, matching the old 1:1 guard's shape.
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -388,9 +390,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 73-02-PLAN.md
+**Stopped at:** Completed 73-03-PLAN.md
 
-Last session: 2026-07-23T21:06:30.323Z
+Last session: 2026-07-23T21:18:43.403Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
@@ -459,3 +461,4 @@ Last session: 2026-07-23T21:06:30.323Z
 | Phase 70 P01 | 8min | 3 tasks | 10 files |
 | Phase 73 P01 | 95min | 3 tasks | 8 files |
 | Phase 73 P02 | 55min | 2 tasks | 6 files |
+| Phase 73 P03 | 25min | 2 tasks | 4 files |
