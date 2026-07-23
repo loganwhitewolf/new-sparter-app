@@ -35,6 +35,9 @@ export function SiteFooter() {
             </Link>
           </nav>
         </div>
+        {/* Evaluated at build time — the (public) group is statically prerendered, so this
+            year is baked in and goes stale across a calendar-year boundary until the next
+            deploy. Accepted: forcing dynamic rendering here would cost the static win. */}
         <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Sparter</p>
       </div>
     </footer>
