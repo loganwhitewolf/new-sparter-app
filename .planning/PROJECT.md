@@ -15,8 +15,9 @@ The user can safely import real bank transactions, see where their money goes ca
 
 ## Current State
 
-All milestones M001–v2.6 (Phases 1–68) complete; v2.8 Public Branding Site is active (v2.7 Tag Dedicated View shipped on main as phases 69–72; branding is phases 73–77). **Phase 73 complete** — throwaway `/proto/branding` compare hub with three structural A+touch-of-B variants; PO locked **Winner = c (Type-led stack)** in `app/proto/branding/NOTES.md` (BRAND-01, BRAND-02). Next: Phase 74 public layout + proxy allowlist. The app now has:
-- Expense Groups + Transaction Tags (v2.6): bulk-merge same-subcategory expenses into titled Expense Groups (ADR 0017 — grouping entity above intact Expenses, no physical merge; rendered as one row everywhere, full lifecycle recategorize/add/remove/dissolve with dashboard totals structurally unchanged); a curated Transaction Tags axis orthogonal to categories (create/edit/archive, never delete; bulk-assign; date-range suggestions on create + each import); curated Transaction Tags with dedicated all-time `/tags/[id]` page (v2.7); dashboard period-scoped `?tag=` filter removed; transactions toolbar tag filter + inline tag chip; `/dashboard/tags` per-tag all-time totals; month→filtered-transactions click-through
+All milestones M001–v2.7 (Phases 1–72) complete. On `main`, **v2.8 Reimbursements 1:N** is the declared next milestone (ADR 0018). This branch (`feat/v29-public-branding`) develops **v2.9 Public Branding Site** (phases 73–77; Phase 73 complete — Winner = c). The app now has:
+- Tag Dedicated View (v2.7): `/tags/[id]` is the canonical all-time per-tag page (Variant A "report verticale" — three reconciled totals via `getTagDetail`/`getTagTotals`, included count, per-category CSS-bar breakdown, compact tx list, in-place edit/archive, entry from `/tags` + `/dashboard/tags`); the period-scoped `?tag=` dashboard filter and all its wiring (`TagFilterSelect`, `tagId` DAL threading, `no-data-for-tag`, `parseTagIdParam`) were removed — per-tag analysis lives only in the dedicated page; the transactions toolbar gained a tag *navigation* filter (unified filter/sort, persisted, chip, clear-all) and an inline tag chip + popover on each transaction title line. Model: tags are event-shaped — the canonical view is all-time; `dateRange` is a label, not a filter
+- Expense Groups + Transaction Tags (v2.6): bulk-merge same-subcategory expenses into titled Expense Groups (ADR 0017 — grouping entity above intact Expenses, no physical merge; rendered as one row everywhere, full lifecycle recategorize/add/remove/dissolve with dashboard totals structurally unchanged); a curated Transaction Tags axis orthogonal to categories (create/edit/archive, never delete; bulk-assign; date-range suggestions on create + each import); a global dashboard tag filter threaded through every widget (EXISTS predicate, totals reconcile), a `/dashboard/tags` section with independent per-tag all-time totals, and a month→filtered-transactions click-through from the movers/deviations rows
 - Uniform detail pages (v2.5): `/transactions/[id]`, `/expenses/[id]`, `/import/[fileId]` as the single place to view and edit everything editable about each entity, with pencil-inline editing, cross-references between entities, atomic derived-field reconciliation, and a pair-coherence guard that blocks amount edits breaking a refund pair
 - Email/password + Google/GitHub OAuth auth with account linking (link/unlink from /settings/profile)
 - Import management, categorization (Tier 1 regex, Tier 2 history, Tier 3 AI gated)
@@ -34,7 +35,24 @@ All milestones M001–v2.6 (Phases 1–68) complete; v2.8 Public Branding Site i
 
 Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, config, and runbook are complete.
 
-## Current Milestone: v2.8 — Public Branding Site
+## Current Milestone: v2.8 Reimbursements 1:N
+
+**Goal:** Replace the 1:1 transaction pairing with an explicit **one outflow → N inflows** link, so a spend (or an Expense Group) can be reconciled by many reimbursements, with the net landing in the cost's month and a visible residual.
+
+**Target features:**
+- `reimbursement` entity (anchor = an outflow Expense **or** Expense Group) + `reimbursement_refund` join (N inflow transactions); subsumes and migrates `transaction_pair`
+- 1:N netting (Mondo Netto): `effectiveAmount` / `isNotSecondary` generalized from the single secondary to the set of linked refunds; net stays in the cost's month
+- Residual / reconciliation ("still owed €25") as a first-class value
+- Dedicated `/reimbursements` section + a per-group page, reusing the `/tags/[id]` + Expense Group RSC scaffolding
+
+**Key context:** model locked in **ADR 0018** (supersedes ADR 0016 §1 — reimbursements move from unlinked net-by-subcategory to explicit linking). Invariant: the anchor is always an outflow. **Out of scope:** subscription temporal amortization (fan-out of one inflow across future months) → a focused later milestone. Left for discuss/plan: refund→subcategory attribution on a cross-subcategory anchor, multi-month anchor handling, and verifying per-transaction `effectiveAmount` when an Expense anchor has multiple transactions.
+
+**Standing candidates for later** (from planning memory): subscription amortization view (ADR 0016 deferred temporal normalization), platform-scoped patterns (ADR 0015 follow-up — `platformId` on `categorizationPattern`), live operator deploy (R038 / R039 / R041 — code/config/runbook complete, deploy operator-pending).
+
+## Parallel Branch Milestone: v2.9 — Public Branding Site (this branch)
+
+**Branch:** `feat/v29-public-branding`  
+**Why v2.9:** `origin/main` claimed **v2.8** for Reimbursements 1:N; branding renumbered so both can proceed without fighting the milestone slot.
 
 **Goal:** Ship a public branding surface on the same Next.js deploy that explains what Sparter is, links into the app, and establishes a dedicated public layout — design direction locked via throwaway `app/proto/` variants before production implementation.
 
@@ -47,26 +65,30 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 - Phase 73 done: 3 UI variants in `app/proto/branding` → Winner **c** (type-led stack) locked in NOTES.md → implement production pages from Phase 74+
 
 **Constraints:**
-- v2.7 Tag Dedicated View shipped on main as phases 69–72; branding is phases 73–77
+- Phase numbers 73–77 (after v2.7’s 69–72); milestone label is **v2.9**
 - Operator deploy R038/R039/R041 remains pending — this milestone is the public façade, not the infra go-live
+- Do not block or overwrite v2.8 Reimbursements planning on `main`
 
-## Last Shipped Milestone: v2.7 — Tag Dedicated View (shipped 2026-07-22)
+**Active requirements file on this branch:** `.planning/REQUIREMENTS.md` (BRAND-*).  
+**v2.8 requirements snapshot from main:** `.planning/milestones/v2.8-REQUIREMENTS.md`
+
+## Last Shipped Milestone: v2.7 — Tag Dedicated View (shipped 2026-07-22, tag v2.7)
 
 **Goal:** Make a dedicated per-tag page the canonical, all-time view of a tag (event-shaped), replacing the period-scoped `?tag=` dashboard filter so a tag shows one reconciled set of numbers everywhere.
 
-**Delivered:** `/tags/[id]` all-time mini-dashboard (Variant A); dashboard `?tag=` filter removed; transactions toolbar tag filter; inline tag chip on transaction title line. TAG-06…TAG-15 complete.
+- `/tags/[id]` canonical all-time page (Variant A): 3 reconciled totals (`getTagDetail`/`getTagTotals`), included count, per-category CSS-bar breakdown, compact tx list, in-place edit/archive, entry from `/tags` + `/dashboard/tags`
+- Period-scoped `?tag=` dashboard filter + wiring removed (`TagFilterSelect`, `tagId` DAL threading, `no-data-for-tag`, `parseTagIdParam`)
+- Transactions toolbar tag filter (unified filter/sort, persisted, chip, clear-all) + inline tag chip/popover on the transaction title line
+- Model: tags are event-shaped — canonical view is all-time; `dateRange` is a descriptive label, not a filter
 
-**Model:** tags are event-shaped; `dateRange` is a descriptive label, not a filter. Single numeric source: `getTagDetail` / `getTagTotals`.
-
-## Last Shipped Milestone: v2.6 — Expenses & Transactions Refinement (shipped 2026-07-22, tag v2.6)
+## Earlier Shipped Milestone: v2.6 — Expenses & Transactions Refinement (shipped 2026-07-22, tag v2.6)
 
 **Goal:** Refine the expenses/transactions section with same-merchant unification (Expense Group), a second orthogonal analysis axis (Transaction Tags), and dashboard-to-transactions filtered navigation.
 
-**Delivered:** Expense Groups (ADR 0017), Transaction Tags (curated entity, bulk-tagging, dashboard filter, `/dashboard/tags`, date-range suggestions), dashboard month → filtered transactions link, `/tags` + `/patterns` nav IA.
+- Expense Group (ADR 0017): bulk "Unisci" of same-subcategory expenses into a titled grouping entity above intact Expenses, full lifecycle, dashboard totals structurally unchanged
+- Transaction Tags: curated tag axis orthogonal to categories (create/edit/archive, bulk-assign, date-range suggestions), a global dashboard `?tag=` filter, `/dashboard/tags` per-tag all-time totals, month→filtered-transactions click-through
 
-**Cross-cutting constraint:** neither merging nor tagging moves dashboard values — structural for Expense Group; tags = filter, never breakdown.
-
-## Last Shipped Milestone: v2.5 — Detail Pages (shipped 2026-07-07, tag v2.5)
+## Earlier Shipped Milestone: v2.5 — Detail Pages (shipped 2026-07-07, tag v2.5)
 
 **Goal:** Uniform detail pages for the three core entities — `/transactions/[id]`,
 `/expenses/[id]`, `/import/[fileId]` — as the single place to view and edit
@@ -228,14 +250,6 @@ quick-task entries acknowledged as deferred at milestone close — see STATE.md 
 - [ ] R039 — Supabase Free Postgres production database (operator-pending)
 - [ ] R041 — Cloudflare R2 production storage (operator-pending)
 
-### Active (v2.8 — Public Branding Site)
-
-- [ ] Public homepage explaining Sparter + CTA to login/register
-- [ ] “Come funziona” page
-- [ ] Privacy + Termini pages (no Pricing)
-- [ ] Smart root routing (anon → marketing, auth → dashboard)
-- [ ] Dedicated public layout; design locked via `app/proto/` variants first
-
 ### Out of Scope
 
 - Mobile app — web-first; PWA acceptable later
@@ -270,9 +284,7 @@ quick-task entries acknowledged as deferred at milestone close — see STATE.md 
 - [x] v2.3: Platform Identity & Format Ownership — Platform as globally shared moderated identity (pending→approved), private ownership on Import Format only, seed slug-linkage fix (ADR 0015). Shipped 2026-06-30 (PR #31, tag v2.3).
 - [x] v2.4: Standalone Expense — general "treat as standalone / don't aggregate" action in categorization + in-place single-transaction isolation, lifting the SINGLE_TRANSACTION_EXPENSE guard (ADR 0016). Shipped 2026-07-01, tag v2.4.
 - [x] v2.5: Detail Pages — uniform `/transactions/[id]`, `/expenses/[id]`, `/import/[fileId]` detail pages with pencil-inline editing, atomic derived-field reconciliation, pair-coherence guard, and consistent navigation wiring across all three tables. Shipped 2026-07-07, tag v2.5.
-- [x] v2.6: Expenses & Transactions Refinement — Expense Group same-merchant unification (ADR 0017), Transaction Tags (curated entity, bulk-tagging, dashboard filter, date-range suggestion, Viaggi audit), dashboard month → filtered transactions link. Shipped 2026-07-22.
-- [ ] v2.7: Tags milestone (parallel, other agent) — reserved numbering; not owned by this workspace session.
-- [ ] v2.8: Public Branding Site — homepage, Come funziona, Privacy/Termini, smart root, public layout; proto variants first. In progress.
+- [ ] v2.6: Expenses & Transactions Refinement — Expense Group same-merchant unification (ADR 0017), Transaction Tags (curated entity, bulk-tagging, dashboard filter, date-range suggestion, Viaggi audit), dashboard month → filtered transactions link. In progress.
 
 ## Key Decisions
 
@@ -350,4 +362,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-22 — merged origin/main (v2.7); Phase 73 complete (Winner = c); next Phase 74*
+*Last updated: 2026-07-22 — milestone v2.7 Tag Dedicated View started (tags are event-shaped; dedicated all-time per-tag page replaces the period-scoped `?tag=` dashboard filter; prototype Variant A won)*

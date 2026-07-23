@@ -449,5 +449,5 @@ No sitemap requirement in v2.8 unless operator wants one later (`app/sitemap.ts`
 - Onboarding gate pattern: D-11 — RSC layout + `x-pathname`; public routes avoid `(app)` layout entirely
 
 ---
-*Architecture research for: v2.8 Public Branding Site*
+*Architecture research for: v2.9 Public Branding Site*
 *Researched: 2026-07-22*

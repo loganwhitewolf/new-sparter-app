@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.8
+milestone: v2.9
 milestone_name: Public Branding Site
 current_phase: 74
 current_phase_name: public layout and proxy allowlist
 status: planning
-stopped_at: Phase 74 UI-SPEC approved
+stopped_at: Phase 74 discuss in progress (merge origin/main → v2.9)
 last_updated: "2026-07-23T08:34:13.501Z"
 last_activity: 2026-07-23
 last_activity_desc: 74-UI-SPEC.md created (public chrome contract)
@@ -24,16 +24,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 74 — public-layout-and-proxy-allowlist
+**Current focus:** Phase 74 — public-layout-and-proxy-allowlist (milestone **v2.9** on `feat/v29-public-branding`)
+**Note:** `origin/main` owns **v2.8 Reimbursements 1:N**; branding was renumbered to v2.9 to avoid the milestone collision.
 
 ## Current Position
 
 Phase: 74 — public layout and proxy allowlist
 Plan: Not started
-Status: UI-SPEC draft complete — ready for ui-checker / plan-phase
-Last activity: 2026-07-23 — 74-UI-SPEC.md created (public chrome contract)
+Status: UI-SPEC approved; discuss-phase in progress after merge with origin/main
+Last activity: 2026-07-23 — merged origin/main; branding milestone → v2.9; discuss Phase 74
 
-## Roadmap (v2.8 — Phases 73–77)
+## Roadmap (v2.9 — Phases 73–77)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
@@ -43,7 +44,7 @@ Last activity: 2026-07-23 — 74-UI-SPEC.md created (public chrome contract)
 | 76 | legal-pages | BRAND-09, BRAND-10 | Not started |
 | 77 | seo-and-auth-polish | BRAND-11, BRAND-12, BRAND-13 | Not started |
 
-**Coverage:** 13/13 v2.8 requirements mapped across Phases 73–77, none orphaned. Phase
+**Coverage:** 13/13 v2.9 requirements mapped across Phases 73–77, none orphaned. Phase
 numbering continues after v2.7 (phases 69–72 shipped on main). Order follows research SUMMARY.md guidance
 (proto → infra/proxy → pages → legal → SEO), consolidated from the suggested 6-phase split into 5:
 proto must ship first (design lock before production UI investment) and the `(public)` layout +

@@ -42,6 +42,16 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
+### 2026-07-23 — Public Branding Site renumbered to v2.9
+
+**Decided:** After merging `origin/main`, **v2.8** stays **Reimbursements 1:N** (ADR 0018 / RMB-*). Local Public Branding work (phases 73–77) becomes milestone **v2.9** on branch `feat/v29-public-branding`. Phase numbers unchanged.
+
+**Why:** Branding will take longer; origin already claimed the v2.8 slot. Avoids fighting REQUIREMENTS/ROADMAP on every main sync.
+
+**Rejected:**
+- Keeping branding as v2.8 on this branch (would fight main forever)
+- Renumbering branding phases away from 73–77 (unnecessary — only the milestone label collided)
+
 ### 2026-07-22 — Renumber v2.8 branding phases 69–73 → 73–77
 
 **Decided:** After v2.7 (Tag Dedicated View) merged on main as phases 69–72, renumber local v2.8 Public Branding Site phases to **73–77** so path/ID space no longer collides. Mapping: 69→73 proto-design-variants, 70→74 public-layout, 71→75 marketing-pages, 72→76 legal-pages, 73→77 seo-and-auth-polish. Directory `.planning/phases/73-proto-design-variants/`. Historical git commit subjects still say `69-*` (no history rewrite).

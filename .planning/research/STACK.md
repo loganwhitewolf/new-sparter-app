@@ -299,5 +299,5 @@ Add `mdx-components.tsx` at repo root (required by App Router).
 - Sparter repo: `package.json`, `proxy.ts`, `app/layout.tsx`, `app/fonts.ts`, `app/page.tsx`, `app/proto/layout.tsx` — HIGH — integration constraints
 
 ---
-*Stack research for: Sparter v2.8 Public Branding Site*
+*Stack research for: Sparter v2.9 Public Branding Site*
 *Researched: 2026-07-22*

@@ -1,6 +1,6 @@
 # Project Research Summary
 
-**Project:** Sparter v2.8 — Public Branding Site
+**Project:** Sparter v2.9 — Public Branding Site
 **Domain:** Public branding / marketing site inside existing Next.js 16 App Router monolith (Italian personal-finance SaaS)
 **Researched:** 2026-07-22
 **Confidence:** HIGH

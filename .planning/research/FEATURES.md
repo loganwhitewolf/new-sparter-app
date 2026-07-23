@@ -201,5 +201,5 @@ How each page should behave for anon vs authenticated users — informs routing 
 - Personal-finance marketing conventions: import-first tools (YNAB file-based, Monarch CSV) vs sync-first (Copilot, Monarch default)
 
 ---
-*Feature research for: Sparter v2.8 — Public Branding Site*
+*Feature research for: Sparter v2.9 — Public Branding Site*
 *Researched: 2026-07-22*

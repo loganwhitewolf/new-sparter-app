@@ -2,7 +2,7 @@
 
 ## Status
 
-accepted (extends [ADR 0004](./0004-nature-segments-algebraic-sum.md) on the refund/netting model; applies the categorization doctrine in [CONTEXT.md](../../CONTEXT.md))
+accepted, **§1 superseded by [ADR 0018](./0018-reimbursement-1n-linking-supersedes-net-by-subcategory.md)** (reimbursements are now recorded by explicit 1:N linking, not by unlinked net-by-subcategory). §2–§4 (the general "Standalone Expense" action and the in-place single-transaction re-hash, shipped in v2.4) remain valid. Extends [ADR 0004](./0004-nature-segments-algebraic-sum.md) on the refund/netting model; applies the categorization doctrine in [CONTEXT.md](../../CONTEXT.md).
 
 ## Context
 

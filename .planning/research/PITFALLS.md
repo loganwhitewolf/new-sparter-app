@@ -426,5 +426,5 @@ Explain product value and categorization tiers qualitatively; link to app regist
 - Industry: GuardLayer / TheCodeForge — matcher performance and static asset exclusion (MEDIUM confidence)
 
 ---
-*Pitfalls research for: Sparter v2.8 — Public Branding Site*
+*Pitfalls research for: Sparter v2.9 — Public Branding Site*
 *Researched: 2026-07-22*
