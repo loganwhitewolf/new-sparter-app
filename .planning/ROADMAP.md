@@ -65,7 +65,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 73-04-PLAN.md — repoint the live pairing write path (createPair/deletePairByTransactionId/getEligibleCounterparts) and finalize transaction_pair's fate
+- [x] 73-04-PLAN.md — repoint the live pairing write path (createPair/deletePairByTransactionId/getEligibleCounterparts) and finalize transaction_pair's fate
 
 **Q2/Q3 resolved during planning** (per 73-RESEARCH.md, verified against the codebase): Q2 —
 single-period netting by the anchor's own `occurredAt` month, no code change needed. Q3 — an
