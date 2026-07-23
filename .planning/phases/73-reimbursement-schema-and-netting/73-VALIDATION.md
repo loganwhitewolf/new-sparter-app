@@ -48,19 +48,26 @@ reduces the passing count without an explicit, planned deletion is a regression.
 
 ## Gate Surface (D-07)
 
-Per the orchestrator-verified inventory correction in `73-RESEARCH.md`, the regression gate is
-**not** satisfied by diffing dashboard totals alone. All five surfaces must be compared
-before/after migration:
+Per the orchestrator-verified inventory correction in `73-RESEARCH.md`, further verified directly
+against source on 2026-07-23 during plan revision (see `73-01-PLAN.md` Task 3), the regression gate
+is **not** satisfied by diffing dashboard totals alone, and the underlying function inventory is
+**10 aggregation functions**, not the 8 `73-RESEARCH.md` originally named (it missed
+`getMonthlyTrendByNature` entirely, only vaguely described `overview.ts`'s two functions, and
+misnamed `getTagTotals` as `getTotalByTag`, which does not exist). All six surfaces below must be
+compared before/after migration (surfaces 1-4 cover the 10 functions collectively):
 
-| # | Surface | Where | Why it is in the gate |
-|---|---------|-------|-----------------------|
-| 1 | Dashboard entrate / uscite | `lib/dal/dashboard.ts`, `lib/dal/overview.ts` | Primary success criterion |
-| 2 | Per-category breakdown & ranking | `lib/dal/dashboard.ts` | Netting can be right in total and wrong per category |
-| 3 | Tag totals & tag detail | `lib/dal/tags.ts` | Separate aggregation path over the same helpers |
-| 4 | Transaction-list `paired*` fields | `lib/dal/transactions.ts` (5 raw-SQL subqueries) | Bypass the helpers entirely; `LIMIT 1` is semantically wrong under 1:N |
-| 5 | Amount-edit guard firing behaviour | `lib/services/transaction-edit.ts` | Reads `transaction_pair` directly; can silently stop firing with totals still correct |
+| # | Surface | Where (verified function names) | Why it is in the gate |
+|---|---------|----------------------------------|-----------------------|
+| 1 | Dashboard entrate / uscite (top-line KPIs) | `lib/dal/dashboard.ts::getOverviewAmountTotals` | Primary success criterion |
+| 2 | Per-category breakdown, ranking, deviations, detail, monthly-by-nature trend | `lib/dal/dashboard.ts::getCategoriesBreakdown`, `getCategoryRanking`, `getCategoryDeviations`, `getCategoryDetail`, `getMonthlyTrendByNature` | Netting can be right in total and wrong per category/month; `getMonthlyTrendByNature` was missing from the original inventory entirely |
+| 3 | Overview month-over-month & yearly chart | `lib/dal/overview.ts::getMonthOverMonthCategoryChanges`, `getOverviewChart` | Separate aggregation path over the same helpers; the original inventory only said "overview.ts" without naming either function (`getOverview` itself merely delegates to `getOverviewAmountTotals` and needs no separate assertion) |
+| 4 | Tag totals & tag detail | `lib/dal/tags.ts::getTagTotals`, `getTagDetail` | Separate aggregation path over the same helpers; corrects the original inventory's `getTotalByTag`, which does not exist — the real export is `getTagTotals` |
+| 5 | Transaction-list `paired*` fields | `lib/dal/transactions.ts` (5 raw-SQL subqueries) | Bypass the helpers entirely; `LIMIT 1` is semantically wrong under 1:N |
+| 6 | Amount-edit guard firing behaviour | `lib/services/transaction-edit.ts` | Reads `transaction_pair` directly; can silently stop firing with totals still correct |
 
-Surfaces 4 and 5 are the ones a naive gate misses.
+Surfaces 5 and 6 are the ones a naive gate misses. Surfaces 1-4 (the 10 aggregation functions) are
+asserted before/after via `73-01-PLAN.md` Task 3's `captureAggregationSnapshot` helper (N=1) and
+`73-02-PLAN.md` Task 2's expanded scenario matrix (N=3 dinner, adjacency, ordering, Q3).
 
 ---
 
@@ -71,7 +78,7 @@ Surfaces 4 and 5 are the ones a naive gate misses.
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | TBD | TBD | 0 | RMB-03 | Invariant D-02 | Inflow anchor / outflow refund rejected, exception thrown, no write | unit | `./node_modules/.bin/vitest run tests/reimbursement-invariant.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | 0 | RMB-04, RMB-05 | Silent netting drift | Totals identical before/after across all 5 gate surfaces | integration | `./node_modules/.bin/vitest run tests/reimbursement-regression.test.ts` | ❌ W0 | ⬜ pending |
+| TBD | TBD | 0 | RMB-04, RMB-05 | Silent netting drift | Totals identical before/after across all 10 verified aggregation functions (gate surfaces 1-4) | integration | `./node_modules/.bin/vitest run tests/reimbursement-regression.test.ts` | ❌ W0 | ⬜ pending |
 | TBD | TBD | 0 | RMB-05 | Row loss during backfill | Row counts and mapping verified pair→reimbursement | integration | `./node_modules/.bin/vitest run tests/migration-backfill.test.ts` | ❌ W0 | ⬜ pending |
 | TBD | TBD | 1+ | RMB-01 | — | Schema shape + XOR constraint generate cleanly | schema | `yarn db:generate` (then review the emitted SQL) | ✅ | ⬜ pending |
 
@@ -84,10 +91,12 @@ Surfaces 4 and 5 are the ones a naive gate misses.
 Wave 0 must land the harness **before** any netting code changes — the gate only means something if
 it captures the pre-migration baseline first.
 
-- [ ] `tests/reimbursement-regression.test.ts` — before/after comparison across all 5 gate surfaces.
-      Shape: seed known transactions → capture old-model results → run migration → capture new-model
-      results → assert equality. **All money comparisons via `Decimal.js`** (`@/lib/utils/decimal`),
-      never native JS arithmetic on the DECIMAL strings.
+- [ ] `tests/reimbursement-regression.test.ts` — before/after comparison across all 10 verified
+      aggregation functions (gate surfaces 1-4). Shape: seed known transactions → capture old-model
+      results via `captureAggregationSnapshot({ useFrozenFragment: true })` → run migration →
+      capture new-model results via `captureAggregationSnapshot({ useFrozenFragment: false })` →
+      assert equality per function. **All money comparisons via `Decimal.js`**
+      (`@/lib/utils/decimal`), never native JS arithmetic on the DECIMAL strings.
 - [ ] `tests/reimbursement-invariant.test.ts` — D-02 enforcement: outflow anchor + inflow refunds
       succeeds; inflow anchor throws; any outflow refund throws.
 - [ ] `tests/migration-backfill.test.ts` — every `transaction_pair` row maps to exactly one
@@ -117,7 +126,7 @@ so there is no UI to verify manually.
 - [ ] All tasks have `<automated>` verify or Wave 0 dependencies
 - [ ] Sampling continuity: no 3 consecutive tasks without automated verify
 - [ ] Wave 0 covers all MISSING references (3 test files + fixtures)
-- [ ] Regression harness covers all 5 gate surfaces, not just dashboard totals
+- [ ] Regression harness covers all 6 gate surfaces (10 aggregation functions + transaction-list paired-* fields + amount-edit guard), not just dashboard totals
 - [ ] No watch-mode flags (`vitest run`, never bare `vitest`)
 - [ ] Feedback latency < 10s
 - [ ] `nyquist_compliant: true` set in frontmatter
