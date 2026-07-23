@@ -56,7 +56,7 @@
 Plans:
 **Wave 1**
 
-- [ ] 73-01-PLAN.md — reimbursement + reimbursement_refund schema, migration, and netting generalization (tracer + N=1 regression proof)
+- [x] 73-01-PLAN.md — reimbursement + reimbursement_refund schema, migration, and netting generalization (tracer + N=1 regression proof)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -374,7 +374,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 70. dashboard-tag-filter-removal | v2.7 | 2/2 | Complete | 2026-07-22 |
 | 71. transactions-tag-filter-control | v2.7 | 1/1 | Complete | 2026-07-22 |
 | 72. transactions-tag-indicator | v2.7 | direct | Complete | 2026-07-22 |
-| 73. reimbursement-schema-and-netting | v2.8 | TBD | Not started | - |
+| 73. reimbursement-schema-and-netting | v2.8 | TBD | In Progress|  |
 | 74. group-anchor-and-reconciliation | v2.8 | TBD | Not started | - |
 | 75. linking-surfaces-and-lifecycle | v2.8 | TBD | Not started | - |
 | 76. reimbursements-section | v2.8 | TBD | Not started | - |

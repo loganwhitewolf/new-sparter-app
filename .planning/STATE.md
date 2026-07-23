@@ -2,15 +2,18 @@
 gsd_state_version: 1.0
 milestone: v2.8
 milestone_name: "Reimbursements 1:N"
-status: planning
-last_updated: "2026-07-23T14:30:00.000Z"
+current_phase: 73
+current_phase_name: reimbursement-schema-and-netting
+status: executing
+stopped_at: Completed 73-01-PLAN.md
+last_updated: "2026-07-23T15:00:16.122Z"
 last_activity: 2026-07-23
+last_activity_desc: Phase 73 execution started
 progress:
-  total_phases: 4
+  total_phases: 1
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
 ---
 
 # Project State
@@ -20,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** v2.8 Reimbursements 1:N — generalize 1:1 pairing into explicit outflow→N-inflows reimbursements (ADR 0018). Roadmap created; Phase 73 next.
+**Current focus:** Phase 73 — reimbursement-schema-and-netting
 
 ## Current Position
 
-Phase: 73 (reimbursement-schema-and-netting) — planned, not started
-Plan: — (4 plans across 3 waves)
-Status: Ready to execute — `/gsd-execute-phase 73`
-Last activity: 2026-07-23 — Phase 73 planned: CONTEXT from ADR 0018 ingest, research + pattern map, 4 plans, checker passed at iteration 2
+Phase: 73 (reimbursement-schema-and-netting) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-07-23 — Phase 73 execution started
 
 ## Roadmap (v2.8 — Phases 73-76)
 
@@ -57,11 +60,14 @@ Group anchor + residual + generalized edit-guard complete the model (74); the li
 
 **Left OPEN for the per-phase discuss/plan stage** (details, not architecture — do NOT resolve in
 the roadmap):
+
 1. **Refund→subcategory attribution** when the anchor spans multiple subcategories — invisible on
    top-line entrate/uscite, matters only for the per-category breakdown (surfaces with a Group
    anchor → Phase 74).
+
 2. **Multi-month anchor handling** — constrain an anchor to one netting-month or attribute
    per-transaction (holiday confirmed "single-period") → Phase 73.
+
 3. **Verifying per-transaction `effectiveAmount` attribution** when an Expense anchor has multiple
    transactions → Phase 73.
 
@@ -262,6 +268,9 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 68-07: MoverList rows built from categorySlug (never categoryId) per Pitfall 2; UI-SPEC's stale category={m.categoryId} snippet is superseded by the plan/PATTERNS.md
 - [Phase 70]: Dashboard legacy ?tag= URLs degrade silently — param not read, no redirect (Phase 70 D1)
 - [Phase 70]: Per-tag analysis lives only in /tags/[id]; no substitute affordance on the dashboard (Phase 70 D2)
+- [Phase ?]: Phase 73 Task 1 (locked): option-b — drop transaction_pair at phase end (Plan 73-04 Task 3), not kept dormant
+- [Phase ?]: Migration 0029 resolves the reimbursement anchor by transaction sign (amount < 0), not the legacy magnitude-based 'primary' label — closes a theoretical D-02 violation (Rule 2, user-approved)
+- [Phase ?]: Migration 0029 groups backfill by anchor expense_id (one reimbursement, N refunds) rather than one reimbursement per transaction_pair row — required by the reimbursement_expenseId_unique partial index (Rule 2, user-approved)
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -376,9 +385,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 70-01-PLAN.md
+**Stopped at:** Completed 73-01-PLAN.md
 
-Last session: 2026-07-22T15:40:09.434Z
+Last session: 2026-07-23T15:00:16.115Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
@@ -445,3 +454,4 @@ Last session: 2026-07-22T15:40:09.434Z
 | Phase 68 P07 | 15min | 1 tasks | 2 files |
 | Phase 69 P02 | 4min | 2 tasks | 4 files |
 | Phase 70 P01 | 8min | 3 tasks | 10 files |
+| Phase 73 P01 | 95min | 3 tasks | 8 files |
