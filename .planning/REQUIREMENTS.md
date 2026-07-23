@@ -16,8 +16,8 @@
 ### Infrastructure
 
 - [ ] **BRAND-03**: Anonymous visitor sees marketing pages under a dedicated `(public)` layout (header/nav/footer) without AppShell, sidebar, or onboarding gate
-- [ ] **BRAND-04**: Public marketing paths are allowlisted in `proxy.ts` via a single source of truth in `lib/routes.ts` (anon access without 307 to `/login`)
-- [ ] **BRAND-05**: Smart root — unauthenticated `/` serves the marketing homepage; authenticated `/` redirects to `/dashboard`
+- [x] **BRAND-04**: Public marketing paths are allowlisted in `proxy.ts` via a single source of truth in `lib/routes.ts` (anon access without 307 to `/login`)
+- [x] **BRAND-05**: Smart root — unauthenticated `/` serves the marketing homepage; authenticated `/` redirects to `/dashboard`
 
 ### Marketing pages
 
@@ -70,8 +70,8 @@ Deferred beyond v2.9 soft go-live.
 | BRAND-01 | 73. proto-design-variants | Complete |
 | BRAND-02 | 73. proto-design-variants | Complete |
 | BRAND-03 | 74. public-layout-and-proxy-allowlist | Pending |
-| BRAND-04 | 74. public-layout-and-proxy-allowlist | Pending |
-| BRAND-05 | 74. public-layout-and-proxy-allowlist | Pending |
+| BRAND-04 | 74. public-layout-and-proxy-allowlist | Complete |
+| BRAND-05 | 74. public-layout-and-proxy-allowlist | Complete |
 | BRAND-06 | 75. marketing-pages | Pending |
 | BRAND-07 | 75. marketing-pages | Pending |
 | BRAND-08 | 75. marketing-pages | Pending |

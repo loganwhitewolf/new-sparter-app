@@ -72,7 +72,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 74-01-PLAN.md — Tracer: routes SoT + proxy smart root + `(public)` homepage shell + D-07 Vitest
+- [x] 74-01-PLAN.md — Tracer: routes SoT + proxy smart root + `(public)` homepage shell + D-07 Vitest
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
