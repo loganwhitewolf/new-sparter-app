@@ -5,10 +5,10 @@ milestone_name: Public Branding Site
 current_phase: 74
 current_phase_name: public layout and proxy allowlist
 status: planning
-stopped_at: Completed 73-03-PLAN.md — Phase 73 (proto-design-variants) fully executed, BRAND-01 + BRAND-02 satisfied
-last_updated: "2026-07-22T16:22:30.859Z"
-last_activity: 2026-07-22
-last_activity_desc: Phase 73 complete, transitioned to Phase 74
+stopped_at: Phase 74 UI-SPEC drafted (public chrome contract) — awaiting checker
+last_updated: "2026-07-23T08:25:00.000Z"
+last_activity: 2026-07-23
+last_activity_desc: Phase 74 UI-SPEC written for public layout chrome
 progress:
   total_phases: 1
   completed_phases: 1
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-07-22)
 
 Phase: 74 — public layout and proxy allowlist
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-07-22 — Phase 73 complete, transitioned to Phase 74
+Status: UI-SPEC draft complete — ready for ui-checker / plan-phase
+Last activity: 2026-07-23 — 74-UI-SPEC.md created (public chrome contract)
 
 ## Roadmap (v2.8 — Phases 73–77)
 
@@ -347,11 +347,11 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 73-03-PLAN.md — Phase 73 (proto-design-variants) fully executed, BRAND-01 + BRAND-02 satisfied
+**Stopped at:** Phase 74 UI-SPEC drafted (`74-UI-SPEC.md`) — public chrome contract; checker next
 
-Last session: 2026-07-22T16:15:24.164Z
+Last session: 2026-07-23T08:25:00.000Z
 
-**Next:** `/gsd-discuss-phase 74`
+**Next:** UI-SPEC checker → `/gsd-plan-phase 74` (or continue `/gsd-ui-phase 74` verification)
 
 **Historical (discuss → plan):** Context gathered 2026-07-22; plan-phase completed same day with research + checker revision.
 
