@@ -620,9 +620,9 @@ describeIfReachable(
 )
 
 describeIfReachable(
-  'Q3 — multi-transaction Expense anchor tie-break (Phase 73 Plan 02, scenario 5)',
+  'Q3 — multi-transaction Expense anchor proportional spread (Phase 73 Plan 02 scenario 5, superseded by Phase 74 D-01/D-02 proportional spread)',
   () => {
-    it('nets only the earliest transaction of the anchor expense; the later sibling stays at its raw amount — proven via a direct raw-fragment probe per sibling, then via the combined category/month total across the aggregation surface (uniquely distinguishes correct Q3 behaviour from both failure modes: no netting = -100.00; over-netting both legs = 0.00)', async () => {
+    it('spreads the refund net proportionally across both sibling transactions (both -50.00 members, 50.00 refund -> each absorbs 25.00) — proven via a direct raw-fragment probe per sibling, then via the combined category/month total across the aggregation surface (uniquely distinguishes correct spread behaviour from both failure modes: no netting = -100.00; over-netting one leg to zero = 0.00/-50.00 split)', async () => {
       const db = requireHarnessDb()
       await resetReimbursementFixtures(db)
 
@@ -686,20 +686,22 @@ describeIfReachable(
         refundTransactionIds: [refundTransactionId],
       })
 
-      // Direct raw-fragment probe per sibling — the crisp, concrete proof of the tie-break rule
-      // itself. There is no legacy transaction_pair equivalent for a multi-transaction Expense
-      // anchor, so this is the only place this exact rule can be pinned per-transaction.
+      // Direct raw-fragment probe per sibling — the crisp, concrete proof of the proportional
+      // spread mechanism itself (D-01/D-02: ΣmemberOutflow = -100.00, refund_total = 50.00, so
+      // each member's raw_share = ROUND(50 * -50 / -100, 2) = 25.00 exactly, no remainder).
+      // There is no legacy transaction_pair equivalent for a multi-transaction Expense anchor, so
+      // this is the only place this exact rule can be pinned per-transaction.
       const earlierRows = await db
         .select({ amount: sql<string>`(${effectiveAmount()})::text` })
         .from(transactionTable)
         .where(eq(transactionTable.id, earlierTransactionId))
-      expect(toDecimal(earlierRows[0].amount).equals('0.00')).toBe(true)
+      expect(toDecimal(earlierRows[0].amount).equals('-25.00')).toBe(true)
 
       const laterRows = await db
         .select({ amount: sql<string>`(${effectiveAmount()})::text` })
         .from(transactionTable)
         .where(eq(transactionTable.id, laterTransactionId))
-      expect(toDecimal(laterRows[0].amount).equals('-50.00')).toBe(true)
+      expect(toDecimal(laterRows[0].amount).equals('-25.00')).toBe(true)
 
       // Aggregation-surface proof. Both siblings share one Expense (hence one subCategoryId),
       // so they land in the SAME category/month group — none of the 8 non-tag-scoped functions
