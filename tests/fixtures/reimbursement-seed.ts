@@ -2,6 +2,7 @@
 // All monetary inputs/outputs go through toDecimal()/toDbDecimal() — never raw JS string
 // concatenation of an amount (CLAUDE.md — Decimal.js for money).
 import { randomUUID } from 'node:crypto'
+import { eq } from 'drizzle-orm'
 import {
   category as categoryTable,
   direction as directionTable,
@@ -10,6 +11,7 @@ import {
   expenseGroupMembership as expenseGroupMembershipTable,
   nature as natureTable,
   reimbursement as reimbursementTable,
+  reimbursementAnchorTransaction as reimbursementAnchorTransactionTable,
   reimbursementRefund as reimbursementRefundTable,
   subCategory as subCategoryTable,
   tag as tagTable,
@@ -208,6 +210,15 @@ export async function attachTagToTransaction(
  * Refund rows are inserted ONE AT A TIME (not as a single bulk values() array) so each gets
  * its own `created_at` at insert time — required by the ordering scenario, which links the
  * same two refund amounts in both possible sequences across two sub-tests.
+ *
+ * Phase 75 (D-08, the frozen anchored-transaction set): ALSO inserts one
+ * reimbursement_anchor_transaction row per transaction CURRENTLY belonging to `input.expenseId` —
+ * mirrors migration 0031's backfill (INSERT ... SELECT r.id, t.id FROM reimbursement r INNER JOIN
+ * transaction t ON t.expense_id = r.expense_id). Queried rather than accepting a single
+ * transactionId param because the Q3 multi-transaction-Expense scenario (this file's siblings
+ * test) seeds TWO transactions under one expenseId, and effectiveAmount()'s frozen-set Branch A
+ * must see both — omitting either would silently exclude a real member from the spread and every
+ * existing regression assertion would read an incomplete (or empty) member set post-CTE-change.
  */
 export async function seedReimbursement(
   db: ReimbursementTestDb,
@@ -225,6 +236,17 @@ export async function seedReimbursement(
 
   for (const transactionId of input.refundTransactionIds) {
     await db.insert(reimbursementRefundTable).values({ reimbursementId: row.id, transactionId })
+  }
+
+  const anchorTransactionRows = await db
+    .select({ id: transactionTable.id })
+    .from(transactionTable)
+    .where(eq(transactionTable.expenseId, input.expenseId))
+
+  for (const { id: transactionId } of anchorTransactionRows) {
+    await db
+      .insert(reimbursementAnchorTransactionTable)
+      .values({ reimbursementId: row.id, transactionId })
   }
 
   return { reimbursementId: row.id }

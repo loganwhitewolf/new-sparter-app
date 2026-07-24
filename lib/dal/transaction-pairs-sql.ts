@@ -52,10 +52,24 @@ export function isNotSecondary() {
  * expense_id OR expense_group_id (via expense_group_membership) contains the outer row's
  * expense — at most one match given the existing reimbursement_expenseId_unique /
  * reimbursement_expenseGroupId_unique / expense_group_membership_expense_unique constraints.
- * `member_expense_ids` resolves the anchor's member Expense id(s): exactly `{anchor.expense_id}`
- * for an Expense-shaped anchor, or every member's expense_id for a Group-shaped anchor.
  * `refund_total` resolves by reimbursement id (not expense_id directly) so it covers Group
  * anchors identically to Expense anchors.
+ *
+ * Member-set resolution is a UNION ALL of two branches, split by anchor shape (Phase 75, ADR
+ * 0018 D-08 — the anchor-contamination fix):
+ *
+ * - Branch A (Expense anchor): resolves EXCLUSIVELY via the frozen `reimbursement_anchor_transaction`
+ *   join — the exact transaction id(s) recorded at link time (createPair, transaction-pairs.ts).
+ *   This is the D-08 fix: import.ts upserts Expenses by (userId, descriptionHash), so a later
+ *   same-merchant purchase reusing the SAME expense_id is NEVER a row in the frozen set and is
+ *   therefore structurally excluded from the spread — it can never inherit a share of a refund
+ *   linked before it existed. Superseded here: the old `member_expense_ids`-via-`expense_id`
+ *   resolution for Expense anchors (Phase 74 and earlier).
+ * - Branch B (Group anchor): BYTE-IDENTICAL to pre-Phase-75 behavior — `member_expense_ids` still
+ *   resolves every member Expense id via `expense_group_membership` (unchanged, already
+ *   contamination-safe per ADR 0017 §1's explicit/immutable membership), narrowed to only produce
+ *   rows for a Group anchor (`a.expense_group_id IS NOT NULL`) since Branch A no longer needs it
+ *   to resolve Expense anchors at all.
  *
  * A transaction with no anchor at all resolves an empty `anchor` CTE, so every downstream CTE is
  * empty too, and the outer COALESCE falls back to 0 — identical to today's ELSE branch, now
@@ -83,11 +97,21 @@ export function effectiveAmount() {
         LIMIT 1
       ),
       member_expense_ids AS (
-        SELECT COALESCE(a.expense_id, egm2.expense_id) AS expense_id
+        SELECT egm2.expense_id AS expense_id
         FROM anchor a
-        LEFT JOIN expense_group_membership egm2 ON egm2.group_id = a.expense_group_id
+        INNER JOIN expense_group_membership egm2 ON egm2.group_id = a.expense_group_id
+        WHERE a.expense_group_id IS NOT NULL
       ),
       member_transactions AS (
+        SELECT m.id, m.amount::numeric AS amount, m.occurred_at
+        FROM transaction m
+        INNER JOIN reimbursement_anchor_transaction rat ON rat.transaction_id = m.id
+        INNER JOIN anchor a ON a.reimbursement_id = rat.reimbursement_id
+        WHERE a.expense_id IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM reimbursement_refund rr2 WHERE rr2.transaction_id = m.id
+          )
+        UNION ALL
         SELECT m.id, m.amount::numeric AS amount, m.occurred_at
         FROM transaction m
         WHERE m.expense_id IN (SELECT expense_id FROM member_expense_ids)

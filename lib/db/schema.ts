@@ -566,6 +566,41 @@ export const reimbursementRefund = pgTable(
   ],
 );
 
+// Reimbursement Anchor Transaction — the frozen anchored-transaction set (Phase 75, ADR 0018
+// D-08). Closes the anchor-contamination gap: import.ts upserts Expenses by
+// (userId, descriptionHash), so a later same-merchant purchase would otherwise silently join the
+// SAME expense_id as an already-linked anchor and inherit a share of past refunds via
+// effectiveAmount()'s member resolution. Recording the exact transaction id(s) that constituted
+// the anchor AT LINK TIME, and resolving effectiveAmount()'s Expense-anchor branch exclusively
+// from this frozen set (never from "all transactions of the anchor's expense_id"), makes the
+// import-time contamination structurally impossible: a new same-merchant transaction is never a
+// row in this table, so it can never be picked up by the netting spread.
+//
+// Expense-anchor ONLY (D-08): a Group anchor's membership (expense_group_membership) is already
+// explicit and immutable (ADR 0017 §1) and is NEVER routed through this table — Group anchors are
+// out of D-08's scope and stay byte-identical to pre-Phase-75 behavior.
+export const reimbursementAnchorTransaction = pgTable(
+  "reimbursement_anchor_transaction",
+  {
+    id: serial("id").primaryKey(),
+    reimbursementId: integer("reimbursement_id")
+      .notNull()
+      .references(() => reimbursement.id, { onDelete: "cascade" }),
+    transactionId: text("transaction_id")
+      .notNull()
+      .references(() => transaction.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("reimbursement_anchor_transaction_reimbursement_transaction_unique").on(
+      table.reimbursementId,
+      table.transactionId,
+    ),
+    index("reimbursement_anchor_transaction_reimbursementId_idx").on(table.reimbursementId),
+    index("reimbursement_anchor_transaction_transactionId_idx").on(table.transactionId),
+  ],
+);
+
 // Tag — curated entity for Transaction Tags (Phase 67, TAG-01).
 // Name is displayed as typed; normalizedName is name.trim().toLowerCase(), computed by the
 // service layer (Plan 67-03), never derived in the DB. The standalone unique on
@@ -888,6 +923,7 @@ export const reimbursementRelations = relations(reimbursement, ({ one, many }) =
     references: [expenseGroup.id],
   }),
   refunds: many(reimbursementRefund),
+  anchorTransactions: many(reimbursementAnchorTransaction),
 }));
 
 export const reimbursementRefundRelations = relations(reimbursementRefund, ({ one }) => ({
@@ -900,6 +936,20 @@ export const reimbursementRefundRelations = relations(reimbursementRefund, ({ on
     references: [transaction.id],
   }),
 }));
+
+export const reimbursementAnchorTransactionRelations = relations(
+  reimbursementAnchorTransaction,
+  ({ one }) => ({
+    reimbursement: one(reimbursement, {
+      fields: [reimbursementAnchorTransaction.reimbursementId],
+      references: [reimbursement.id],
+    }),
+    transaction: one(transaction, {
+      fields: [reimbursementAnchorTransaction.transactionId],
+      references: [transaction.id],
+    }),
+  }),
+);
 
 export const categorizationPatternRelations = relations(categorizationPattern, ({ one, many }) => ({
   user: one(user, {
