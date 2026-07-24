@@ -102,10 +102,16 @@ export async function updateTransaction(
     if (input.amount !== undefined) {
       // Phase 73 (D-05/D-06, T-73-10, ADR 0018): a transaction can be linked as EITHER a
       // refund (reimbursement_refund.transaction_id = this id) OR the anchor of a
-      // reimbursement (a reimbursement row's expense_id matches this transaction's expense_id
-      // AND this transaction is the earliest transaction of that expense — the same Q3
-      // tie-break used by effectiveAmount() in lib/dal/transaction-pairs-sql.ts). Both checks
-      // run as correlated subqueries in a single SELECT to avoid an extra round trip.
+      // reimbursement. The anchor check has TWO shapes (Phase 74 CR-01, ADR 0018 D-01/D-02):
+      // an Expense-shaped anchor (a reimbursement row's expense_id matches this transaction's
+      // expense_id AND this transaction is the earliest transaction of that expense — the same
+      // Q3 tie-break used by effectiveAmount() in lib/dal/transaction-pairs-sql.ts, unchanged
+      // from Phase 73/before), OR a Group-shaped anchor (a reimbursement row's expense_group_id
+      // matches the group this transaction's expense belongs to, via expense_group_membership —
+      // every member transaction of the group is capable of triggering the guard, mirroring
+      // effectiveAmount()'s member-set semantics, since a Group anchor is inherently
+      // multi-transaction; there is no "earliest member" special-casing for this branch). Both
+      // checks run as correlated subqueries in a single SELECT to avoid an extra round trip.
       const roleRows = await tx
         .select({
           asRefundReimbursementId: sql<number | null>`(
@@ -115,12 +121,17 @@ export async function updateTransaction(
           )`,
           asAnchorReimbursementId: sql<number | null>`(
             SELECT r.id FROM reimbursement r
-            WHERE r.expense_id = ${row.expenseId}
-            AND ${input.transactionId} = (
-              SELECT t2.id FROM transaction t2
-              WHERE t2.expense_id = ${row.expenseId}
-              ORDER BY t2.occurred_at ASC, t2.id ASC
-              LIMIT 1
+            WHERE (
+              r.expense_id = ${row.expenseId}
+              AND ${input.transactionId} = (
+                SELECT t2.id FROM transaction t2
+                WHERE t2.expense_id = ${row.expenseId}
+                ORDER BY t2.occurred_at ASC, t2.id ASC
+                LIMIT 1
+              )
+            ) OR r.expense_group_id = (
+              SELECT egm.group_id FROM expense_group_membership egm
+              WHERE egm.expense_id = ${row.expenseId}
             )
             LIMIT 1
           )`,
@@ -141,22 +152,76 @@ export async function updateTransaction(
           // Editing a refund: "other side" = the anchor's own amount + every OTHER refund's
           // amount (excluding the one being edited) — generalizes the old single-counterpart
           // lookup to a SUM, correct for any N.
+          //
+          // anchorAmount has TWO shapes (Phase 74 CR-02, ADR 0018 D-01/D-02), selected by which
+          // XOR column is set on this reimbursement row:
+          //  - Expense-shaped anchor: the earliest transaction of that expense (unchanged from
+          //    Phase 73/before — the Expense-anchor path stays byte-identical).
+          //  - Group-shaped anchor: reimbursement.expenseId is NULL here, so the old
+          //    Expense-only subquery matched nothing and silently resolved to NULL (CR-02) —
+          //    for a Group anchor the anchor is inherently multi-transaction, so its real
+          //    outflow is ΣmemberOutflow across every member Expense's own transactions,
+          //    resolved via expense_group_membership exactly as effectiveAmount()'s
+          //    member_transactions CTE does (lib/dal/transaction-pairs-sql.ts), excluding any
+          //    transaction that is itself a linked refund of some other reimbursement.
+          //
+          // IMPORTANT (discovered while proving this against real Postgres, Phase 74-04): every
+          // reference to the anchor's own expense_id/expense_group_id below goes through the
+          // `anchor` CTE as a WRAPPED scalar subquery `(SELECT ... FROM anchor)`, correlated by
+          // the already-resolved `reimbursementId` JS value (a bound parameter) — NEVER a bare
+          // Drizzle column proxy (`${reimbursement.expenseId}`) spliced directly into a nested
+          // correlated subquery. A bare, unqualified column reference resolves to the INNERMOST
+          // enclosing scope that has a same-named column, not necessarily the intended outer
+          // `reimbursement` row: the old (pre-Phase-74-04, also pre-existing) shape --
+          // `WHERE t3.expense_id = ${reimbursement.expenseId}` rendered as the bare identifier
+          // `WHERE t3.expense_id = "expense_id"`, which Postgres binds to `t3.expense_id` itself
+          // (a tautology, `t3.expense_id = t3.expense_id`, true for every row) since `t3` already
+          // has its own "expense_id" column at that scope — silently returning an
+          // arbitrary/globally-earliest transaction instead of the anchor's, for EVERY
+          // Expense-anchored refund edit, group or not. Wrapping every reference in its own
+          // `(SELECT ... FROM anchor)` subquery forces unambiguous resolution against the
+          // single-row `anchor` CTE, closing this out for both anchor shapes.
           const sumRows = await tx
             .select({
               anchorAmount: sql<string | null>`(
-                SELECT t2.amount FROM transaction t2
-                WHERE t2.id = (
-                  SELECT t3.id FROM transaction t3
-                  WHERE t3.expense_id = ${reimbursement.expenseId}
-                  ORDER BY t3.occurred_at ASC, t3.id ASC
-                  LIMIT 1
+                WITH anchor AS (
+                  SELECT r.expense_id, r.expense_group_id FROM reimbursement r WHERE r.id = ${reimbursementId}
                 )
+                SELECT CASE
+                  WHEN (SELECT expense_id FROM anchor) IS NOT NULL THEN (
+                    SELECT t2.amount::text FROM transaction t2
+                    WHERE t2.id = (
+                      SELECT t3.id FROM transaction t3
+                      WHERE t3.expense_id = (SELECT expense_id FROM anchor)
+                      ORDER BY t3.occurred_at ASC, t3.id ASC
+                      LIMIT 1
+                    )
+                  )
+                  ELSE (
+                    SELECT COALESCE(SUM(mt.amount::numeric), 0)::text
+                    FROM expense_group_membership egm
+                    INNER JOIN transaction mt ON mt.expense_id = egm.expense_id
+                    WHERE egm.group_id = (SELECT expense_group_id FROM anchor)
+                      AND NOT EXISTS (
+                        SELECT 1 FROM reimbursement_refund rr2 WHERE rr2.transaction_id = mt.id
+                      )
+                  )
+                END
               )`,
+              // NOTE: correlate via the already-resolved `reimbursementId` JS value (a bound
+              // parameter), NOT a bare ${reimbursement.id} column reference — the latter is
+              // ambiguous once this subquery's FROM list also carries an "id" column of its own
+              // (reimbursement_refund.id and, once joined, transaction.id), which either throws
+              // "column reference \"id\" is ambiguous" (this INNER JOIN'd fragment) or, worse,
+              // silently binds to the wrong local "id" candidate with no join present (a
+              // pre-existing bug in refundCount below, fixed alongside CR-02 since it sits in
+              // the same query and the refund-edit branch cannot be proven correct without it —
+              // confirmed by the first real-Postgres exercise of this code path, Phase 74-04).
               otherRefundsSum: sql<string | null>`(
                 SELECT SUM(rt.amount::numeric)::text
                 FROM reimbursement_refund rr
                 INNER JOIN transaction rt ON rt.id = rr.transaction_id
-                WHERE rr.reimbursement_id = ${reimbursement.id}
+                WHERE rr.reimbursement_id = ${reimbursementId}
                   AND rr.transaction_id != ${input.transactionId}
               )`,
               reimbursementTitle: reimbursement.title,
@@ -164,7 +229,7 @@ export async function updateTransaction(
               // the full count is what determines message ambiguity, RMB-09.
               refundCount: sql<number>`(
                 SELECT COUNT(*)::int FROM reimbursement_refund rr
-                WHERE rr.reimbursement_id = ${reimbursement.id}
+                WHERE rr.reimbursement_id = ${reimbursementId}
               )`,
             })
             .from(reimbursement)
