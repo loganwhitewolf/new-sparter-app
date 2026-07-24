@@ -1,6 +1,7 @@
 // Real-Postgres regression proof for Phase 75 Plan 02 (D-05/D-06/D-08 generalization of the
 // reimbursement write path — create-or-append, dual anchor shape, multi-exclusion candidate
-// loading). Exercises the REAL createPair()/createPairTx() service and the REAL
+// loading) plus Plan 03 Task 1 (D-10 pre-link snapshot recording). Exercises the REAL
+// createPair()/createPairTx() service and the REAL
 // getEligibleCounterparts()/getGroupOccurrenceInterval() DAL functions against the same local
 // Postgres harness used by tests/reimbursement-regression.test.ts.
 //
@@ -10,9 +11,12 @@ import { eq } from 'drizzle-orm'
 import { afterAll, describe, expect, it, vi } from 'vitest'
 import { verifySession } from '@/lib/dal/auth'
 import {
+  expense as expenseTable,
   reimbursement as reimbursementTable,
   reimbursementAnchorTransaction as reimbursementAnchorTransactionTable,
   reimbursementRefund as reimbursementRefundTable,
+  reimbursementRefundSnapshot as reimbursementRefundSnapshotTable,
+  transaction as transactionTable,
 } from '@/lib/db/schema'
 import type {
   getEligibleCounterparts as GetEligibleCounterparts,
@@ -448,6 +452,244 @@ describeIfReachable(
       await expect(
         getGroupOccurrenceInterval({ userId: otherUserId, groupId }),
       ).resolves.toBeUndefined()
+    })
+  },
+)
+
+// Reads the single reimbursement_refund_snapshot row for a refund transaction, if any — the
+// join every Task 1/Task 2 test below uses to inspect what createPairTx recorded / what
+// restoreRefundBaseline is reading from.
+async function loadSnapshotForRefund(
+  db: ReimbursementTestDb,
+  refundTransactionId: string,
+): Promise<
+  | {
+      expenseId: string | null
+      expenseTitle: string | null
+      expenseDescriptionHash: string | null
+      expenseSubCategoryId: number | null
+      expenseStatus: string | null
+    }
+  | undefined
+> {
+  const rows = await db
+    .select({
+      expenseId: reimbursementRefundSnapshotTable.expenseId,
+      expenseTitle: reimbursementRefundSnapshotTable.expenseTitle,
+      expenseDescriptionHash: reimbursementRefundSnapshotTable.expenseDescriptionHash,
+      expenseSubCategoryId: reimbursementRefundSnapshotTable.expenseSubCategoryId,
+      expenseStatus: reimbursementRefundSnapshotTable.expenseStatus,
+    })
+    .from(reimbursementRefundTable)
+    .innerJoin(
+      reimbursementRefundSnapshotTable,
+      eq(reimbursementRefundSnapshotTable.reimbursementRefundId, reimbursementRefundTable.id),
+    )
+    .where(eq(reimbursementRefundTable.transactionId, refundTransactionId))
+    .limit(1)
+
+  return rows[0]
+}
+
+// ---------------------------------------------------------------------------------------------
+// Plan 03 Task 1 — reimbursement_refund_snapshot schema + record-on-link (D-10)
+// ---------------------------------------------------------------------------------------------
+describeIfReachable(
+  'reimbursement_refund_snapshot — record-on-link (Phase 75 Plan 03 Task 1, D-10)',
+  () => {
+    it('Test 1: linking a refund whose expense was categorized records exactly one snapshot row capturing its pre-link state', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+      const { transactionId: anchorTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-100.00',
+        occurredAt,
+        title: 'Ordine Amazon',
+      })
+      const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.incomeSubCategoryId,
+        amount: '50.00',
+        occurredAt,
+        title: 'Rimborso Amazon',
+      })
+
+      await createPair({
+        userId,
+        anchor: { transactionId: anchorTransactionId },
+        counterpartId: refundTransactionId,
+      })
+
+      const snapshot = await loadSnapshotForRefund(db, refundTransactionId)
+      expect(snapshot).toBeDefined()
+      // The pre-link values are the refund's ORIGINAL seed state (before applyDetachCleanupTx
+      // re-hashed/re-titled/re-categorized it), not the anchor's subcategory it inherited after.
+      // seedExpenseWithTransaction never sets expense.descriptionHash (only transaction's), so
+      // its true pre-link value is null — the snapshot must match that exactly, not invent one.
+      expect(snapshot!.expenseTitle).toBe('Rimborso Amazon')
+      expect(snapshot!.expenseDescriptionHash).toBeNull()
+      expect(snapshot!.expenseSubCategoryId).toBe(taxonomy.incomeSubCategoryId)
+      expect(snapshot!.expenseStatus).toBe('3')
+
+      // Exactly one row — no duplicate snapshot writes.
+      const allSnapshotRows = await db
+        .select({ id: reimbursementRefundSnapshotTable.id })
+        .from(reimbursementRefundSnapshotTable)
+      expect(allSnapshotRows).toHaveLength(1)
+    })
+
+    it('Test 2: linking a refund whose refund-cleanup is skipped (anchor uncategorized, or refund shares the anchor Expense) records NO snapshot row', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+      // Sub-scenario A: the anchor itself is UNCATEGORIZED (subCategoryId null) — refund cleanup
+      // never runs (anchorSubCategoryId !== null guard), so no snapshot is recorded.
+      const uncategorizedAnchorExpenseId = crypto.randomUUID()
+      const uncategorizedAnchorTransactionId = crypto.randomUUID()
+      await db.insert(expenseTable).values({
+        id: uncategorizedAnchorExpenseId,
+        userId,
+        title: 'Spesa non categorizzata',
+        subCategoryId: null,
+        totalAmount: '-40.00',
+        transactionCount: 1,
+        firstTransactionAt: occurredAt,
+        lastTransactionAt: occurredAt,
+        status: '1',
+      })
+      await db.insert(transactionTable).values({
+        id: uncategorizedAnchorTransactionId,
+        userId,
+        expenseId: uncategorizedAnchorExpenseId,
+        transactionHash: `hash-${uncategorizedAnchorTransactionId}`,
+        description: 'Spesa non categorizzata',
+        descriptionHash: `dh-${uncategorizedAnchorTransactionId}`,
+        amount: '-40.00',
+        occurredAt,
+        rowIndex: 0,
+      })
+      const { transactionId: refundATransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.incomeSubCategoryId,
+        amount: '40.00',
+        occurredAt,
+        title: 'Rimborso non categorizzato',
+      })
+
+      await createPair({
+        userId,
+        anchor: { transactionId: uncategorizedAnchorTransactionId },
+        counterpartId: refundATransactionId,
+      })
+
+      expect(await loadSnapshotForRefund(db, refundATransactionId)).toBeUndefined()
+
+      // Sub-scenario B: the refund's OWN expense IS the anchor's Expense (a second transaction
+      // under the SAME expense_id as the categorized anchor) — refund cleanup is skipped by the
+      // anchorMemberExpenseIds same-expense guard, so no snapshot is recorded either.
+      const { expenseId: sharedExpenseId, transactionId: anchorBTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.essentialSubCategoryId,
+          amount: '-90.00',
+          occurredAt,
+          title: 'Spesa condivisa',
+        })
+      const refundBTransactionId = crypto.randomUUID()
+      await db.insert(transactionTable).values({
+        id: refundBTransactionId,
+        userId,
+        expenseId: sharedExpenseId,
+        transactionHash: `hash-${refundBTransactionId}`,
+        description: 'Rimborso stessa spesa',
+        descriptionHash: `dh-${refundBTransactionId}`,
+        amount: '30.00',
+        occurredAt,
+        rowIndex: 1,
+      })
+
+      await createPair({
+        userId,
+        anchor: { transactionId: anchorBTransactionId },
+        counterpartId: refundBTransactionId,
+      })
+
+      expect(await loadSnapshotForRefund(db, refundBTransactionId)).toBeUndefined()
+
+      // Neither sub-scenario ever wrote a snapshot row.
+      const allSnapshotRows = await db
+        .select({ id: reimbursementRefundSnapshotTable.id })
+        .from(reimbursementRefundSnapshotTable)
+      expect(allSnapshotRows).toHaveLength(0)
+    })
+
+    it('Test 3: appending a second refund (Plan 75-02 append path) ALSO records a snapshot for that refund', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+      const { transactionId: anchorTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-90.00',
+        occurredAt,
+        title: 'Cena in tre',
+      })
+      const { transactionId: refundATransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.incomeSubCategoryId,
+        amount: '30.00',
+        occurredAt,
+        title: 'Rimborso Carlo',
+      })
+      const { transactionId: refundBTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.incomeSubCategoryId,
+        amount: '30.00',
+        occurredAt,
+        title: 'Rimborso Giulia',
+      })
+
+      // First link — CREATE.
+      await createPair({
+        userId,
+        anchor: { transactionId: anchorTransactionId },
+        counterpartId: refundATransactionId,
+      })
+      // Second link on the SAME anchor — APPEND (Plan 75-02's create-or-append path).
+      await createPair({
+        userId,
+        anchor: { transactionId: anchorTransactionId },
+        counterpartId: refundBTransactionId,
+      })
+
+      const snapshotA = await loadSnapshotForRefund(db, refundATransactionId)
+      const snapshotB = await loadSnapshotForRefund(db, refundBTransactionId)
+      expect(snapshotA).toBeDefined()
+      expect(snapshotB).toBeDefined()
+      expect(snapshotB!.expenseTitle).toBe('Rimborso Giulia')
+      expect(snapshotB!.expenseSubCategoryId).toBe(taxonomy.incomeSubCategoryId)
+
+      const allSnapshotRows = await db
+        .select({ id: reimbursementRefundSnapshotTable.id })
+        .from(reimbursementRefundSnapshotTable)
+      expect(allSnapshotRows).toHaveLength(2)
     })
   },
 )

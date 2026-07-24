@@ -29,6 +29,8 @@ vi.mock('@/lib/db/schema', () => ({
     userId: 'expense.userId',
     subCategoryId: 'expense.subCategoryId',
     title: 'expense.title',
+    descriptionHash: 'expense.descriptionHash',
+    status: 'expense.status',
   },
   reimbursement: {
     id: 'reimbursement.id',
@@ -41,6 +43,15 @@ vi.mock('@/lib/db/schema', () => ({
     id: 'reimbursementRefund.id',
     reimbursementId: 'reimbursementRefund.reimbursementId',
     transactionId: 'reimbursementRefund.transactionId',
+  },
+  reimbursementRefundSnapshot: {
+    id: 'reimbursementRefundSnapshot.id',
+    reimbursementRefundId: 'reimbursementRefundSnapshot.reimbursementRefundId',
+    expenseId: 'reimbursementRefundSnapshot.expenseId',
+    expenseTitle: 'reimbursementRefundSnapshot.expenseTitle',
+    expenseDescriptionHash: 'reimbursementRefundSnapshot.expenseDescriptionHash',
+    expenseSubCategoryId: 'reimbursementRefundSnapshot.expenseSubCategoryId',
+    expenseStatus: 'reimbursementRefundSnapshot.expenseStatus',
   },
   reimbursementAnchorTransaction: {
     id: 'reimbursementAnchorTransaction.id',
@@ -254,8 +265,12 @@ describe('createPair', () => {
       const reimbursementValues: unknown[] = []
       const refundValues: unknown[] = []
       mocks.dbInsertChain.mockImplementation((table: unknown) => {
-        if ((table as { title?: string }).title === 'reimbursement.title') {
+        const t = table as { title?: string; reimbursementId?: string }
+        if (t.title === 'reimbursement.title') {
           return makeInsertChain([{ id: 42 }], (v) => reimbursementValues.push(v))
+        }
+        if (t.reimbursementId === 'reimbursementRefund.reimbursementId') {
+          return makeInsertChain([{ id: 99 }], (v) => refundValues.push(v))
         }
         return makeInsertChain([], (v) => refundValues.push(v))
       })
@@ -291,8 +306,12 @@ describe('createPair', () => {
       const reimbursementValues: unknown[] = []
       const refundValues: unknown[] = []
       mocks.dbInsertChain.mockImplementation((table: unknown) => {
-        if ((table as { title?: string }).title === 'reimbursement.title') {
+        const t = table as { title?: string; reimbursementId?: string }
+        if (t.title === 'reimbursement.title') {
           return makeInsertChain([{ id: 1 }], (v) => reimbursementValues.push(v))
+        }
+        if (t.reimbursementId === 'reimbursementRefund.reimbursementId') {
+          return makeInsertChain([{ id: 99 }], (v) => refundValues.push(v))
         }
         return makeInsertChain([], (v) => refundValues.push(v))
       })
@@ -619,8 +638,12 @@ describe('createPair — refund cleanup (decision 2)', () => {
 
     const insertedValues: unknown[] = []
     mocks.dbInsertChain.mockImplementation((table: unknown) => {
-      if ((table as { title?: string }).title === 'reimbursement.title') {
+      const t = table as { title?: string; reimbursementId?: string }
+      if (t.title === 'reimbursement.title') {
         return makeInsertChain([{ id: 1 }], (v) => insertedValues.push(v))
+      }
+      if (t.reimbursementId === 'reimbursementRefund.reimbursementId') {
+        return makeInsertChain([{ id: 99 }], (v) => insertedValues.push(v))
       }
       return makeInsertChain([], (v) => insertedValues.push(v))
     })

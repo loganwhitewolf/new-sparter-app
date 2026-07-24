@@ -601,6 +601,47 @@ export const reimbursementAnchorTransaction = pgTable(
   ],
 );
 
+// Reimbursement Refund Snapshot — the pre-link state of a refund's expense (Phase 75 Plan 03,
+// ADR 0018 D-10). Recorded at link time, immediately BEFORE applyDetachCleanupTx mutates the
+// refund's expense (title/descriptionHash/subCategoryId/status re-hash/recategorize), so unlink
+// can restore that exact prior state (RMB-07 "reappears as a normal inflow in its own month").
+// One row per reimbursement_refund link — standalone unique on reimbursementRefundId, mirroring
+// expenseGroupMembership's standalone-unique convention. Written only when refund-cleanup
+// actually ran (createPairTx's existing anchorSubCategoryId !== null && not-self-member guard) —
+// a refund that skipped cleanup gets no snapshot row, matching "nothing to restore" on unlink.
+//
+// expenseId is deliberately NULLABLE with onDelete:'set null' (not cascade): this lets restore
+// logic distinguish "the original expense still exists" (expenseId present — UPDATE it back) from
+// "it was deleted after linking" (snapshot row present, expenseId nulled by Postgres — INSERT a
+// fresh replacement expense from the snapshot's stored field values) purely by checking the
+// column, with no manual existence SELECT needed.
+export const reimbursementRefundSnapshot = pgTable(
+  "reimbursement_refund_snapshot",
+  {
+    id: serial("id").primaryKey(),
+    reimbursementRefundId: integer("reimbursement_refund_id")
+      .notNull()
+      .references(() => reimbursementRefund.id, { onDelete: "cascade" }),
+    expenseId: text("expense_id").references(() => expense.id, { onDelete: "set null" }),
+    expenseTitle: text("expense_title"),
+    expenseDescriptionHash: varchar("expense_description_hash", { length: 64 }),
+    expenseSubCategoryId: integer("expense_sub_category_id").references(() => subCategory.id, {
+      onDelete: "set null",
+    }),
+    expenseStatus: expenseStatusEnum("expense_status"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("reimbursement_refund_snapshot_reimbursementRefundId_unique").on(
+      table.reimbursementRefundId,
+    ),
+    index("reimbursement_refund_snapshot_reimbursementRefundId_idx").on(
+      table.reimbursementRefundId,
+    ),
+    index("reimbursement_refund_snapshot_expenseId_idx").on(table.expenseId),
+  ],
+);
+
 // Tag — curated entity for Transaction Tags (Phase 67, TAG-01).
 // Name is displayed as typed; normalizedName is name.trim().toLowerCase(), computed by the
 // service layer (Plan 67-03), never derived in the DB. The standalone unique on
@@ -935,7 +976,25 @@ export const reimbursementRefundRelations = relations(reimbursementRefund, ({ on
     fields: [reimbursementRefund.transactionId],
     references: [transaction.id],
   }),
-}));
+  snapshot: one(reimbursementRefundSnapshot, {
+    fields: [reimbursementRefund.id],
+    references: [reimbursementRefundSnapshot.reimbursementRefundId],
+  }),
+}))
+
+export const reimbursementRefundSnapshotRelations = relations(
+  reimbursementRefundSnapshot,
+  ({ one }) => ({
+    reimbursementRefund: one(reimbursementRefund, {
+      fields: [reimbursementRefundSnapshot.reimbursementRefundId],
+      references: [reimbursementRefund.id],
+    }),
+    expense: one(expense, {
+      fields: [reimbursementRefundSnapshot.expenseId],
+      references: [expense.id],
+    }),
+  }),
+);
 
 export const reimbursementAnchorTransactionRelations = relations(
   reimbursementAnchorTransaction,

@@ -225,6 +225,13 @@
       "when": 1784906061422,
       "tag": "0031_reimbursement_anchor_transaction",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1784914580457,
+      "tag": "0032_reimbursement_refund_snapshot",
+      "breakpoints": true
     }
   ]
 }

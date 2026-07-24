@@ -9,6 +9,7 @@ import {
   reimbursement,
   reimbursementAnchorTransaction,
   reimbursementRefund,
+  reimbursementRefundSnapshot,
   transaction,
 } from '@/lib/db/schema'
 import {
@@ -284,6 +285,9 @@ export async function createPairTx(
     .limit(1)
 
   let reimbursementId: number
+  // Captured in both CREATE and APPEND branches — Task 1's pre-link snapshot (D-10) references
+  // this id, and the write site is shared by both paths (Plan 75-02's single createPairTx core).
+  let reimbursementRefundId: number
 
   try {
     if (existingReimbursementRows[0]) {
@@ -291,10 +295,15 @@ export async function createPairTx(
       // the new refund row, never re-insert reimbursement, never re-run the frozen-set write.
       reimbursementId = existingReimbursementRows[0].id
 
-      await tx.insert(reimbursementRefund).values({
-        reimbursementId,
-        transactionId: refund.id,
-      })
+      const insertedRefund = await tx
+        .insert(reimbursementRefund)
+        .values({
+          reimbursementId,
+          transactionId: refund.id,
+        })
+        .returning({ id: reimbursementRefund.id })
+
+      reimbursementRefundId = insertedRefund[0].id
     } else {
       // CREATE: first link on this anchor.
       const insertedReimbursement = await tx
@@ -309,10 +318,15 @@ export async function createPairTx(
 
       reimbursementId = insertedReimbursement[0].id
 
-      await tx.insert(reimbursementRefund).values({
-        reimbursementId,
-        transactionId: refund.id,
-      })
+      const insertedRefund = await tx
+        .insert(reimbursementRefund)
+        .values({
+          reimbursementId,
+          transactionId: refund.id,
+        })
+        .returning({ id: reimbursementRefund.id })
+
+      reimbursementRefundId = insertedRefund[0].id
 
       // D-08 (Phase 75) — Expense-anchor ONLY: freeze the anchor transaction into the frozen
       // anchored-transaction set UNCONDITIONALLY on every CREATE (Pitfall 3: never skip this
@@ -343,10 +357,17 @@ export async function createPairTx(
     refundExpenseId &&
     !anchorMemberExpenseIds.includes(refundExpenseId)
   ) {
-    // Compose the refund title as "{refund's own title} — rimborso {spend title}" so the refund
-    // row keeps the sender's name and reads as a refund of that specific spend.
+    // Read the refund's CURRENT expense state — used both for title composition (unchanged) and
+    // as the pre-link snapshot (D-10, Phase 75 Plan 03) recorded BEFORE applyDetachCleanupTx
+    // mutates title/descriptionHash/subCategoryId/status below.
     const refundExpenseRows = await tx
-      .select({ title: expense.title })
+      .select({
+        id: expense.id,
+        title: expense.title,
+        descriptionHash: expense.descriptionHash,
+        subCategoryId: expense.subCategoryId,
+        status: expense.status,
+      })
       .from(transaction)
       .innerJoin(expense, eq(transaction.expenseId, expense.id))
       .where(
@@ -358,10 +379,29 @@ export async function createPairTx(
       )
       .limit(1)
 
-    const refundOwnTitle = refundExpenseRows[0]?.title?.trim() ?? ''
+    const refundExpenseSnapshot = refundExpenseRows[0]
+
+    // Compose the refund title as "{refund's own title} — rimborso {spend title}" so the refund
+    // row keeps the sender's name and reads as a refund of that specific spend.
+    const refundOwnTitle = refundExpenseSnapshot?.title?.trim() ?? ''
     const refundTitle = refundOwnTitle
       ? `${refundOwnTitle} — rimborso ${anchorTitle}`
       : `Rimborso ${anchorTitle}`
+
+    // Pre-link snapshot (D-10): records exactly one row per reimbursement_refund link, capturing
+    // the refund's expense state AS IT WAS before the mutation below — the same write site covers
+    // both the create path and Plan 75-02's append path (createPairTx is the single core both
+    // go through).
+    if (refundExpenseSnapshot) {
+      await tx.insert(reimbursementRefundSnapshot).values({
+        reimbursementRefundId,
+        expenseId: refundExpenseSnapshot.id,
+        expenseTitle: refundExpenseSnapshot.title,
+        expenseDescriptionHash: refundExpenseSnapshot.descriptionHash,
+        expenseSubCategoryId: refundExpenseSnapshot.subCategoryId,
+        expenseStatus: refundExpenseSnapshot.status,
+      })
+    }
 
     await applyDetachCleanupTx(tx, {
       userId: input.userId,
