@@ -20,6 +20,29 @@
 -- different refund) must land as ONE reimbursement with two reimbursement_refund rows, not
 -- two conflicting reimbursement rows.
 
+-- Preflight guard (CR-01): fail the backfill — and therefore block the irreversible
+-- DROP in migration 0030 — if ANY transaction_pair row cannot be resolved to a non-null
+-- outflow anchor expense_id. Such a row (its outflow leg's expense_id was nulled by a
+-- prior expense deletion; transaction.expense_id is ON DELETE SET NULL) would otherwise be
+-- silently excluded by the `WHERE outflow_expense_id IS NOT NULL` filters below and then
+-- permanently lost once 0030 drops the source table. Failing here keeps the loss impossible:
+-- the operator must reconcile the orphaned pair(s) before the migration can proceed.
+DO $$
+DECLARE
+  unresolved_count integer;
+BEGIN
+  SELECT COUNT(*) INTO unresolved_count
+  FROM "transaction_pair" tp
+  INNER JOIN "transaction" tx_a ON tx_a."id" = tp."transaction_a_id"
+  INNER JOIN "transaction" tx_b ON tx_b."id" = tp."transaction_b_id"
+  WHERE (CASE WHEN tx_a."amount"::numeric < 0 THEN tx_a."expense_id" ELSE tx_b."expense_id" END) IS NULL;
+
+  IF unresolved_count > 0 THEN
+    RAISE EXCEPTION 'reimbursement backfill aborted: % transaction_pair row(s) have an outflow anchor with no expense_id and would be silently dropped before the 0030 DROP TABLE. Reconcile these pairs (re-link the anchor transaction to an expense, or delete the stale pair) before re-running.', unresolved_count;
+  END IF;
+END $$;
+--> statement-breakpoint
+
 -- Step 1: one reimbursement per distinct outflow-anchor expense across all migrated pairs.
 WITH resolved_pairs AS (
   SELECT
