@@ -4,15 +4,15 @@ milestone: v2.8
 milestone_name: "Reimbursements 1:N"
 current_phase: 75
 current_phase_name: linking-surfaces-and-lifecycle
-status: planning
+status: executing
 stopped_at: Phase 75 context gathered
-last_updated: "2026-07-24T13:41:19.497Z"
+last_updated: "2026-07-24T15:08:34.149Z"
 last_activity: 2026-07-24
 last_activity_desc: Phase 74 complete, transitioned to Phase 75
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 7
+  total_plans: 11
   completed_plans: 7
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 Phase: 75 — linking-surfaces-and-lifecycle
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-07-24 — Phase 74 complete, transitioned to Phase 75
 
 ## Roadmap (v2.8 — Phases 73-76)
