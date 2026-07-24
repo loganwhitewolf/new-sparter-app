@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.8
 milestone_name: "Reimbursements 1:N"
-current_phase: 74
-current_phase_name: group-anchor-and-reconciliation
-status: verifying
+current_phase: 75
+current_phase_name: linking-surfaces-and-lifecycle
+status: planning
 stopped_at: "Completed 74-04-PLAN.md (gap-closure: CR-01/CR-02 pair-guard fix)"
-last_updated: "2026-07-24T12:39:45.505Z"
+last_updated: "2026-07-24T12:45:40.248Z"
 last_activity: 2026-07-24
-last_activity_desc: Phase 74 gap-closure (74-04) complete — CR-01/CR-02 pair-guard fixes verified
+last_activity_desc: Phase 74 complete, transitioned to Phase 75
 progress:
   total_phases: 2
   completed_phases: 2
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 ## Current Position
 
-Phase: 74 (group-anchor-and-reconciliation) — EXECUTING
-Plan: 3 of 3 (+ gap-closure plan 74-04)
-Status: Phase complete, gap-closure (74-04) verified — ready for verification
-Last activity: 2026-07-24 — Phase 74 gap-closure (74-04) complete: CR-01/CR-02 pair-guard fixes verified with real-Postgres tests
+Phase: 75 — linking-surfaces-and-lifecycle
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-24 — Phase 74 complete, transitioned to Phase 75
 
 ## Roadmap (v2.8 — Phases 73-76)
 
