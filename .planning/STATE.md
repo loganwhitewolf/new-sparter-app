@@ -5,15 +5,15 @@ milestone_name: "Reimbursements 1:N"
 current_phase: 74
 current_phase_name: group-anchor-and-reconciliation
 status: executing
-stopped_at: Completed 74-01-PLAN.md
-last_updated: "2026-07-24T10:02:40.384Z"
+stopped_at: Completed 74-02-PLAN.md
+last_updated: "2026-07-24T10:14:59.706Z"
 last_activity: 2026-07-24
 last_activity_desc: Phase 74 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 74 (group-anchor-and-reconciliation) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-24 — Phase 74 execution started
 
@@ -279,6 +279,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: Phase 73 Plan 04: executed locked option-b — dropped transaction_pair (migration 0030) after repointing createPair/deletePairByTransactionId and getEligibleCounterparts; retired the before/after byte-identical regression harness (transaction_pair-dependent) in favor of native seedReimbursement fixtures; full suite green (141 files, 1756 tests).
 - [Phase ?]: 74-01: effectiveAmount() rewritten as one uniform proportional-spread CTE chain (anchor -> member_expense_ids -> member_transactions -> refund_total -> raw_shares -> member_shares) covering both Expense and Expense Group anchors (D-01/D-02); largest-remainder cent assignment tie-broken by ABS(amount) DESC, occurredAt ASC, id ASC; zero-sum member set guarded via NULLIF/COALESCE, never divides by zero
 - [Phase ?]: 74-01: split the plan's single-CTE member_shares pseudocode into raw_shares + member_shares (Postgres disallows referencing a SELECT-list alias from another expression at the same query level) -- pure SQL-structuring fix, formula/tie-break/guard semantics unchanged (Rule 1)
+- [Phase ?]: 74-02: getReimbursementAggregates() uses raw db.execute(sql) with an explicit r alias for the outer reimbursement row -- Drizzle's typed column proxies render as bare unqualified column names, ambiguous inside correlated subqueries joining tables (reimbursement_refund, transaction) that share an id column
+- [Phase ?]: 74-02: residual = outflowSum + refundSum (Decimal.js), state owed/settled/surplus purely by sign, no magnitude guard (D-03) -- computed on the fly via computeReimbursementResidual(), never a stored column
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -393,9 +395,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 74-01-PLAN.md
+**Stopped at:** Completed 74-02-PLAN.md
 
-Last session: 2026-07-24T10:02:40.377Z
+Last session: 2026-07-24T10:14:59.699Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
@@ -467,3 +469,4 @@ Last session: 2026-07-24T10:02:40.377Z
 | Phase 73 P03 | 25min | 2 tasks | 4 files |
 | Phase 73 P04 | 90min | 3 tasks | 16 files |
 | Phase 74 P01 | 75min | 2 tasks | 3 files |
+| Phase 74 P02 | 40min | 2 tasks | 3 files |

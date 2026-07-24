@@ -17,7 +17,7 @@ Model locked in **ADR 0018** (`docs/adr/0018-reimbursement-1n-linking-supersedes
 
 ### Reconciliation
 
-- [ ] **RMB-06**: Each reimbursement exposes a **residual** = `Σoutflow + Σ(refunds linked so far)`, surfaced while still negative ("still owed €25"), so partial reimbursement (3 of 4 friends repaid) is visible.
+- [x] **RMB-06**: Each reimbursement exposes a **residual** = `Σoutflow + Σ(refunds linked so far)`, surfaced while still negative ("still owed €25"), so partial reimbursement (3 of 4 friends repaid) is visible.
 - [ ] **RMB-07**: A user can **add** and **remove** individual refund links on a reimbursement; **unlinking a refund or deleting the reimbursement restores baseline** — the refund reappears as a normal inflow in its own month and the anchor's net reverts.
 
 ### Linking Surfaces
@@ -55,7 +55,7 @@ Filled at roadmap creation (2026-07-23). 11/11 RMB requirements mapped across Ph
 | RMB-03 | Phase 73 | Complete |
 | RMB-04 | Phase 73 | Complete |
 | RMB-05 | Phase 73 | Complete |
-| RMB-06 | Phase 74 | Pending |
+| RMB-06 | Phase 74 | Complete |
 | RMB-07 | Phase 75 | Pending |
 | RMB-08 | Phase 75 | Pending |
 | RMB-09 | Phase 74 | Pending |
