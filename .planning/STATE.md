@@ -4,15 +4,15 @@ milestone: v2.8
 milestone_name: "Reimbursements 1:N"
 current_phase: 74
 current_phase_name: group-anchor-and-reconciliation
-status: planning
+status: executing
 stopped_at: Phase 74 context gathered
-last_updated: "2026-07-24T07:47:45.023Z"
+last_updated: "2026-07-24T08:47:04.100Z"
 last_activity: 2026-07-24
 last_activity_desc: Phase 73 complete, transitioned to Phase 74
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 4
+  total_plans: 7
   completed_plans: 4
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 Phase: 74 — group-anchor-and-reconciliation
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-07-24 — Phase 73 complete, transitioned to Phase 74
 
 ## Roadmap (v2.8 — Phases 73-76)
