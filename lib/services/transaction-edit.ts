@@ -26,6 +26,28 @@ export type UpdateTransactionInput = {
 }
 
 /**
+ * Builds the pair-guard rejection message (RMB-09, Phase 74).
+ *
+ * Naming a SPECIFIC blocking refund is not meaningful for an anchor edit — the
+ * invariant is a SUM across all N refunds, not any single one — so the
+ * reimbursement's own title is the actionable identifier when N>1. For a
+ * refund-edit conflict the user already knows which refund they're editing,
+ * so no further "which refund" disambiguation is needed there either.
+ *
+ * N<=1 keeps the exact, unchanged message from before Phase 74 (no regression
+ * in the common case).
+ */
+export function buildPairGuardMessage(input: {
+  refundCount: number
+  reimbursementTitle: string
+}): string {
+  if (input.refundCount > 1) {
+    return `Scollega prima il rimborso "${input.reimbursementTitle}"`
+  }
+  return 'Scollega prima il rimborso'
+}
+
+/**
  * Edits a transaction's amount, occurredAt, and/or customTitle atomically.
  *
  * Immutability (T-62-02): transactionHash, descriptionHash, and description
@@ -137,6 +159,13 @@ export async function updateTransaction(
                 WHERE rr.reimbursement_id = ${reimbursement.id}
                   AND rr.transaction_id != ${input.transactionId}
               )`,
+              reimbursementTitle: reimbursement.title,
+              // Total N of linked refunds (not excluding the one being edited) —
+              // the full count is what determines message ambiguity, RMB-09.
+              refundCount: sql<number>`(
+                SELECT COUNT(*)::int FROM reimbursement_refund rr
+                WHERE rr.reimbursement_id = ${reimbursement.id}
+              )`,
             })
             .from(reimbursement)
             .where(eq(reimbursement.id, reimbursementId))
@@ -150,7 +179,12 @@ export async function updateTransaction(
             (newAmount.gt(0) && otherSum.lt(0)) || (newAmount.lt(0) && otherSum.gt(0))
 
           if (!oppositeSign) {
-            throw new Error('Scollega prima il rimborso')
+            throw new Error(
+              buildPairGuardMessage({
+                refundCount: sumRow?.refundCount ?? 0,
+                reimbursementTitle: sumRow?.reimbursementTitle ?? '',
+              }),
+            )
           }
         } else {
           // Editing the anchor: "other side" = SUM of every linked refund. A reimbursement
@@ -164,19 +198,30 @@ export async function updateTransaction(
                 INNER JOIN transaction rt ON rt.id = rr.transaction_id
                 WHERE rr.reimbursement_id = ${reimbursementId}
               )`,
+              reimbursementTitle: reimbursement.title,
+              refundCount: sql<number>`(
+                SELECT COUNT(*)::int FROM reimbursement_refund rr
+                WHERE rr.reimbursement_id = ${reimbursementId}
+              )`,
             })
             .from(reimbursement)
             .where(eq(reimbursement.id, reimbursementId))
             .limit(1)
 
-          const refundsSumRaw = sumRows[0]?.refundsSum
+          const sumRow = sumRows[0]
+          const refundsSumRaw = sumRow?.refundsSum
           if (refundsSumRaw != null) {
             const otherSum = toDecimal(refundsSumRaw)
             const oppositeSign =
               (newAmount.gt(0) && otherSum.lt(0)) || (newAmount.lt(0) && otherSum.gt(0))
 
             if (!oppositeSign) {
-              throw new Error('Scollega prima il rimborso')
+              throw new Error(
+                buildPairGuardMessage({
+                  refundCount: sumRow?.refundCount ?? 0,
+                  reimbursementTitle: sumRow?.reimbursementTitle ?? '',
+                }),
+              )
             }
           }
         }

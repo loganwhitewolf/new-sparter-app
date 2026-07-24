@@ -27,6 +27,7 @@ vi.mock('@/lib/db/schema', () => ({
   reimbursement: {
     id: 'reimbursement.id',
     expenseId: 'reimbursement.expenseId',
+    title: 'reimbursement.title',
   },
   expense: {
     id: 'expense.id',
@@ -365,6 +366,83 @@ describe('updateTransaction', () => {
       ).resolves.toEqual({ success: true })
 
       expect(mocks.dbUpdateChain).toHaveBeenCalled()
+    })
+
+    // ── RMB-09 (Phase 74): N>1 message enrichment + zero-amount boundary ──────
+    it('enriches the anchor-edit N>1 message with the blocking reimbursement title', async () => {
+      const row = makeTxRow({ id: 'tx-1', amount: '-100.00', expenseId: null })
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([row])
+        if (callCount === 2) {
+          return makeSelectChain([{ asRefundReimbursementId: null, asAnchorReimbursementId: 1 }])
+        }
+        // 3: refunds-sum lookup — 2 linked refunds summing to +100.00
+        return makeSelectChain([
+          { refundsSum: '100.00', reimbursementTitle: 'Cena di gruppo', refundCount: 2 },
+        ])
+      })
+      const updateChain = makeUpdateChain()
+      mocks.dbUpdateChain.mockReturnValue(updateChain)
+
+      await expect(
+        updateTransaction({ userId: 'user-1', transactionId: 'tx-1', amount: '+50.00' }),
+      ).rejects.toThrow(/Scollega prima il rimborso.*Cena di gruppo/)
+
+      expect(mocks.dbUpdateChain).not.toHaveBeenCalled()
+    })
+
+    it('enriches the refund-edit N>1 message with the blocking reimbursement title', async () => {
+      const row = makeTxRow({ id: 'tx-2', amount: '+40.00', expenseId: null })
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([row])
+        if (callCount === 2) {
+          return makeSelectChain([{ asRefundReimbursementId: 7, asAnchorReimbursementId: null }])
+        }
+        // 3: anchor amount + other-refunds sum lookup — reimbursement has 2 total refunds
+        return makeSelectChain([
+          {
+            anchorAmount: '-100.00',
+            otherRefundsSum: '60.00',
+            reimbursementTitle: 'Cena di gruppo',
+            refundCount: 2,
+          },
+        ])
+      })
+      const updateChain = makeUpdateChain()
+      mocks.dbUpdateChain.mockReturnValue(updateChain)
+
+      await expect(
+        updateTransaction({ userId: 'user-1', transactionId: 'tx-2', amount: '-10.00' }),
+      ).rejects.toThrow(/Scollega prima il rimborso.*Cena di gruppo/)
+
+      expect(mocks.dbUpdateChain).not.toHaveBeenCalled()
+    })
+
+    it('blocks an edit that would bring the amount to exactly 0.00 (boundary)', async () => {
+      // 0 is neither gt(0) nor lt(0), so the existing oppositeSign check already rejects it —
+      // this proves the pre-existing logic covers the boundary with no code change needed.
+      const row = makeTxRow({ id: 'tx-1', amount: '-100.00', expenseId: null })
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([row])
+        if (callCount === 2) {
+          return makeSelectChain([{ asRefundReimbursementId: null, asAnchorReimbursementId: 1 }])
+        }
+        return makeSelectChain([{ refundsSum: '100.00' }])
+      })
+      const updateChain = makeUpdateChain()
+      mocks.dbUpdateChain.mockReturnValue(updateChain)
+
+      await expect(
+        updateTransaction({ userId: 'user-1', transactionId: 'tx-1', amount: '0.00' }),
+      ).rejects.toThrow('Scollega prima il rimborso')
+
+      expect(mocks.dbUpdateChain).not.toHaveBeenCalled()
     })
   })
 })
