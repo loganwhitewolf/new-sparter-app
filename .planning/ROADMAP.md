@@ -129,7 +129,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 75-02-PLAN.md — D-05/D-06 create-or-append write path (dual anchor shape: Expense or Group) + generalized eligible-counterparts window
+- [x] 75-02-PLAN.md — D-05/D-06 create-or-append write path (dual anchor shape: Expense or Group) + generalized eligible-counterparts window
 
 **Wave 3** *(blocked on Wave 2 completion)*
 

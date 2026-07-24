@@ -5,15 +5,15 @@ milestone_name: "Reimbursements 1:N"
 current_phase: 75
 current_phase_name: linking-surfaces-and-lifecycle
 status: executing
-stopped_at: Completed 75-01-PLAN.md
-last_updated: "2026-07-24T15:40:24.467Z"
+stopped_at: Completed 75-02-PLAN.md
+last_updated: "2026-07-24T17:33:29.494Z"
 last_activity: 2026-07-24
 last_activity_desc: Phase 75 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 11
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 75 (linking-surfaces-and-lifecycle) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-07-24 — Phase 75 execution started
 
@@ -288,6 +288,9 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: [Phase 75-01] effectiveAmount()'s member_transactions CTE split into a UNION ALL of two branches by anchor shape (Expense frozen-set / Group expense_group_membership unchanged), not a runtime CASE, so the Group branch stays provably byte-identical
 - [Phase ?]: [Phase 75-01] seedReimbursement() fixture populates the frozen set from ALL transactions currently under the anchor expenseId (not a single passed-in id), required by the pre-existing Q3 multi-transaction-Expense sibling scenario
 - [Phase ?]: [Phase 75-01] requirements.mark-complete NOT run for RMB-08 — this plan delivers only the D-08 backend prerequisite; the user-facing linking UI (RMB-08's actual capability) ships in Plan 75-04
+- [Phase ?]: 75-02: createPair signature changed to anchor: {transactionId}|{groupId}; all existing callers updated in same wave (Rule 3)
+- [Phase ?]: 75-02: Group anchor subCategoryId resolved from expenseGroup.subCategoryId (group's own column), not per-member ambiguity
+- [Phase ?]: 75-02: requirements mark-complete NOT run for RMB-07/RMB-08 — backend-only plan, user-facing linking UI ships in Plan 75-04
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -402,9 +405,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 75-01-PLAN.md
+**Stopped at:** Completed 75-02-PLAN.md
 
-Last session: 2026-07-24T15:40:24.459Z
+Last session: 2026-07-24T17:33:29.486Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
@@ -480,3 +483,4 @@ Last session: 2026-07-24T15:40:24.459Z
 | Phase 74 P03 | 20min | 2 tasks | 3 files |
 | Phase 74 P04-gap-closure | 55min | 1 tasks | 2 files |
 | Phase 75 P01 | 27min | 2 tasks | 9 files |
+| Phase 75 P02 | 110min | 2 tasks | 7 files |

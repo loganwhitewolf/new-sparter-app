@@ -197,3 +197,7 @@ None — no external service configuration required, no schema migration in this
 ---
 *Phase: 75-linking-surfaces-and-lifecycle*
 *Completed: 2026-07-24*
+
+## Self-Check: PASSED
+
+All 8 declared files verified present on disk; both task commits (`b7d974a`, `feaad54`) verified present in git history.
