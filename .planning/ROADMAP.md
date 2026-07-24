@@ -33,7 +33,7 @@
 > regression-gate dashboard totals **before any UI**. Out of scope: subscription amortization
 > (RMB-F1), inflow-anchored reimbursements, one-inflow fan-out.
 
-- [ ] **Phase 73: reimbursement-schema-and-netting** - New `reimbursement` + `reimbursement_refund` schema; generalize `effectiveAmount`/`isNotSecondary` to the refund set; migrate `transaction_pair` (N=1); dashboard regression gate (RMB-01, RMB-03, RMB-04, RMB-05)
+- [x] **Phase 73: reimbursement-schema-and-netting** - New `reimbursement` + `reimbursement_refund` schema; generalize `effectiveAmount`/`isNotSecondary` to the refund set; migrate `transaction_pair` (N=1); dashboard regression gate (RMB-01, RMB-03, RMB-04, RMB-05) (completed 2026-07-24)
 - [ ] **Phase 74: group-anchor-and-reconciliation** - Anchor on an outflow Expense Group; residual as a first-class value; amount-edit guard generalized to 1:N (RMB-02, RMB-06, RMB-09)
 - [ ] **Phase 75: linking-surfaces-and-lifecycle** - Create/manage a reimbursement from the Expense detail page + Expense Group; add/remove refunds; unlink/delete restores baseline (RMB-07, RMB-08)
 - [ ] **Phase 76: reimbursements-section** - Dedicated `/reimbursements` list + per-reimbursement page (anchor, refunds, net, residual; edit/add/remove/delete in place) (RMB-10, RMB-11)
@@ -374,7 +374,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 70. dashboard-tag-filter-removal | v2.7 | 2/2 | Complete | 2026-07-22 |
 | 71. transactions-tag-filter-control | v2.7 | 1/1 | Complete | 2026-07-22 |
 | 72. transactions-tag-indicator | v2.7 | direct | Complete | 2026-07-22 |
-| 73. reimbursement-schema-and-netting | v2.8 | TBD | In Progress|  |
+| 73. reimbursement-schema-and-netting | v2.8 | TBD | Complete    | 2026-07-24 |
 | 74. group-anchor-and-reconciliation | v2.8 | TBD | Not started | - |
 | 75. linking-surfaces-and-lifecycle | v2.8 | TBD | Not started | - |
 | 76. reimbursements-section | v2.8 | TBD | Not started | - |

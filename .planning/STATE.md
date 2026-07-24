@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.8
 milestone_name: "Reimbursements 1:N"
-current_phase: 73
-current_phase_name: reimbursement-schema-and-netting
-status: verifying
+current_phase: 74
+current_phase_name: group-anchor-and-reconciliation
+status: planning
 stopped_at: Completed 73-04-PLAN.md
-last_updated: "2026-07-23T21:41:47.986Z"
-last_activity: 2026-07-23
-last_activity_desc: Phase 73 execution started
+last_updated: "2026-07-24T06:16:01.989Z"
+last_activity: 2026-07-24
+last_activity_desc: Phase 73 complete, transitioned to Phase 74
 progress:
   total_phases: 1
   completed_phases: 1
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 ## Current Position
 
-Phase: 73 (reimbursement-schema-and-netting) — EXECUTING
-Plan: 4 of 4
-Status: Phase complete — ready for verification
-Last activity: 2026-07-23 — Phase 73 execution started
+Phase: 74 — group-anchor-and-reconciliation
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-24 — Phase 73 complete, transitioned to Phase 74
 
 ## Roadmap (v2.8 — Phases 73-76)
 
