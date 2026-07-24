@@ -28,7 +28,14 @@ findings:
   warning: 3
   info: 2
   total: 6
-status: issues_found
+  critical_resolved: 1
+status: warnings_open
+resolution: >
+  CR-01 (critical, silent backfill data loss) fixed in commit fab20ec — a preflight
+  DO-block RAISE EXCEPTION now aborts migration 0029 (blocking 0030's irreversible DROP)
+  if any transaction_pair resolves to a null outflow-anchor expense_id. Full suite green
+  after a fresh re-migrate. WR-01/WR-02/WR-03 (warnings) and IN-01/IN-02 (info) were
+  reviewed and consciously deferred by the developer, not applied this phase.
 ---
 
 # Phase 73: Code Review Report
