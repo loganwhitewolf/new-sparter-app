@@ -125,7 +125,7 @@ separate subcategory-allocation mechanism, implemented in Plan 74-01.
 Plans:
 **Wave 1**
 
-- [ ] 75-01-PLAN.md — D-08 frozen anchored-transaction set: schema, migration, backfill, effectiveAmount() CTE repoint (tracer + N=1 regression proof)
+- [x] 75-01-PLAN.md — D-08 frozen anchored-transaction set: schema, migration, backfill, effectiveAmount() CTE repoint (tracer + N=1 regression proof)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -417,7 +417,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 72. transactions-tag-indicator | v2.7 | direct | Complete | 2026-07-22 |
 | 73. reimbursement-schema-and-netting | v2.8 | TBD | Complete    | 2026-07-24 |
 | 74. group-anchor-and-reconciliation | v2.8 | TBD | Complete    | 2026-07-24 |
-| 75. linking-surfaces-and-lifecycle | v2.8 | 0/4 | Planned | - |
+| 75. linking-surfaces-and-lifecycle | v2.8 | 0/4 | In Progress|  |
 | 76. reimbursements-section | v2.8 | TBD | Not started | - |
 
 **Total shipped: 72 phases · 269 plans complete**

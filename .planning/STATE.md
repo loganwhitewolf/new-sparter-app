@@ -5,15 +5,15 @@ milestone_name: "Reimbursements 1:N"
 current_phase: 75
 current_phase_name: linking-surfaces-and-lifecycle
 status: executing
-stopped_at: Phase 75 context gathered
-last_updated: "2026-07-24T15:08:34.149Z"
+stopped_at: Completed 75-01-PLAN.md
+last_updated: "2026-07-24T15:40:24.467Z"
 last_activity: 2026-07-24
-last_activity_desc: Phase 74 complete, transitioned to Phase 75
+last_activity_desc: Phase 75 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 11
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 74 — group-anchor-and-reconciliation
+**Current focus:** Phase 75 — linking-surfaces-and-lifecycle
 
 ## Current Position
 
-Phase: 75 — linking-surfaces-and-lifecycle
-Plan: Not started
+Phase: 75 (linking-surfaces-and-lifecycle) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-07-24 — Phase 74 complete, transitioned to Phase 75
+Last activity: 2026-07-24 — Phase 75 execution started
 
 ## Roadmap (v2.8 — Phases 73-76)
 
@@ -284,6 +284,10 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 74-03: buildPairGuardMessage() N>1 message enriched with reimbursement title, N<=1 unchanged; guard block condition itself untouched (RMB-09)
 - [Phase ?]: 74-03: refund-edit branch's refundCount counts ALL linked refunds (not excluding the edited one) -- total N determines message ambiguity
 - [Phase ?]: Phase 74-04 gap-closure: fixed CR-01 (group-anchor member edits were unguarded) and CR-02 (refund-edit anchor magnitude silently defaulted to 0 for group anchors) in updateTransaction()'s pair guard; also fixed a correlation-ambiguity bug (bare Drizzle column proxy bound to the wrong local column in a nested subquery) discovered by the new real-Postgres tests, which had silently broken the refund-edit branch for all anchor shapes
+- [Phase ?]: [Phase 75-01] Frozen anchored-transaction set stored as a new join table (reimbursement_anchor_transaction), mirroring expense_group_membership's composite-unique + both-side-index shape
+- [Phase ?]: [Phase 75-01] effectiveAmount()'s member_transactions CTE split into a UNION ALL of two branches by anchor shape (Expense frozen-set / Group expense_group_membership unchanged), not a runtime CASE, so the Group branch stays provably byte-identical
+- [Phase ?]: [Phase 75-01] seedReimbursement() fixture populates the frozen set from ALL transactions currently under the anchor expenseId (not a single passed-in id), required by the pre-existing Q3 multi-transaction-Expense sibling scenario
+- [Phase ?]: [Phase 75-01] requirements.mark-complete NOT run for RMB-08 — this plan delivers only the D-08 backend prerequisite; the user-facing linking UI (RMB-08's actual capability) ships in Plan 75-04
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -396,11 +400,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/75-linking-surfaces-and-lifecycle/75-CONTEXT.md
+**Resume file:** None
 
-**Stopped at:** Phase 75 context gathered
+**Stopped at:** Completed 75-01-PLAN.md
 
-Last session: 2026-07-24T13:41:19.485Z
+Last session: 2026-07-24T15:40:24.459Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
@@ -475,3 +479,4 @@ Last session: 2026-07-24T13:41:19.485Z
 | Phase 74 P02 | 40min | 2 tasks | 3 files |
 | Phase 74 P03 | 20min | 2 tasks | 3 files |
 | Phase 74 P04-gap-closure | 55min | 1 tasks | 2 files |
+| Phase 75 P01 | 27min | 2 tasks | 9 files |

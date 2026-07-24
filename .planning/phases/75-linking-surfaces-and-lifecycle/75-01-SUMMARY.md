@@ -174,3 +174,7 @@ None - no external service configuration required. `yarn db:migrate` was already
 ---
 *Phase: 75-linking-surfaces-and-lifecycle*
 *Completed: 2026-07-24*
+
+## Self-Check: PASSED
+
+All 8 declared files verified present on disk; both task commits (`6358403`, `47e4b7d`) verified present in git history.
