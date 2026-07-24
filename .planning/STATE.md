@@ -5,12 +5,12 @@ milestone_name: "Reimbursements 1:N"
 current_phase: 75
 current_phase_name: linking-surfaces-and-lifecycle
 status: planning
-stopped_at: "Completed 74-04-PLAN.md (gap-closure: CR-01/CR-02 pair-guard fix)"
-last_updated: "2026-07-24T12:45:40.248Z"
+stopped_at: Phase 75 context gathered
+last_updated: "2026-07-24T13:41:19.497Z"
 last_activity: 2026-07-24
 last_activity_desc: Phase 74 complete, transitioned to Phase 75
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
   total_plans: 7
   completed_plans: 7
@@ -396,11 +396,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** None
+**Resume file:** .planning/phases/75-linking-surfaces-and-lifecycle/75-CONTEXT.md
 
-**Stopped at:** Completed 74-04-PLAN.md (gap-closure: CR-01/CR-02 pair-guard fix)
+**Stopped at:** Phase 75 context gathered
 
-Last session: 2026-07-24T12:39:34.051Z
+Last session: 2026-07-24T13:41:19.485Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
