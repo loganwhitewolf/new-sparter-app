@@ -6,9 +6,9 @@
 // Requires local Docker Postgres (`yarn db:up`). Skips gracefully (console warning, no failure)
 // when unreachable, so `vitest run` stays green in sandboxes without Docker — same pattern as
 // tests/reimbursement-regression.test.ts.
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { getReimbursementAggregates } from '@/lib/dal/reimbursement'
-import { computeReimbursementResidual } from '@/lib/services/reimbursement'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import type { getReimbursementAggregates as GetReimbursementAggregates } from '@/lib/dal/reimbursement'
+import type { computeReimbursementResidual as ComputeReimbursementResidual } from '@/lib/services/reimbursement'
 import { toDecimal } from '@/lib/utils/decimal'
 import {
   connectReimbursementTestDb,
@@ -27,7 +27,21 @@ import {
 
 const harness = await connectReimbursementTestDb()
 
-if (!harness.ok) {
+let getReimbursementAggregates: typeof GetReimbursementAggregates
+let computeReimbursementResidual: typeof ComputeReimbursementResidual
+
+if (harness.ok) {
+  // Same technique as captureAggregationSnapshot() (tests/helpers/reimbursement-test-db.ts):
+  // never let lib/dal/reimbursement.ts build its own connection off the ambient
+  // process.env.DATABASE_URL (lib/db/index.ts constructs a fresh pg.Pool at module-eval time)
+  // -- feed it the harness's own already-host-guarded client instead.
+  vi.doMock('@/lib/db', () => ({ db: harness.db }))
+  vi.resetModules()
+  const dalModule = await import('@/lib/dal/reimbursement')
+  const serviceModule = await import('@/lib/services/reimbursement')
+  getReimbursementAggregates = dalModule.getReimbursementAggregates
+  computeReimbursementResidual = serviceModule.computeReimbursementResidual
+} else {
   console.warn(
     '[reimbursement-residual] Local Postgres unreachable — run `yarn db:up` to enable this suite. Skipping.',
   )
