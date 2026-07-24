@@ -22,7 +22,12 @@ import { eq, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { verifySession } from '@/lib/dal/auth'
 import { effectiveAmount, isNotSecondary } from '@/lib/dal/transaction-pairs-sql'
-import { reimbursement as reimbursementTable, transaction as transactionTable } from '@/lib/db/schema'
+import {
+  reimbursement as reimbursementTable,
+  reimbursementAnchorTransaction as reimbursementAnchorTransactionTable,
+  transaction as transactionTable,
+} from '@/lib/db/schema'
+import type { createPair as CreatePair } from '@/lib/services/transaction-pairs'
 import { dashboardPresetToDateRange, monthKey } from '@/lib/utils/date'
 import { toDecimal } from '@/lib/utils/decimal'
 import {
@@ -56,6 +61,19 @@ if (!harness.ok) {
 }
 
 const describeIfReachable = harness.ok ? describe : describe.skip
+
+// createPair — the live write path under test in the Task 2 blocks below. Same technique as
+// tests/reimbursement-guard-group-anchor.test.ts: never let lib/services/transaction-pairs.ts
+// build its own connection off the ambient process.env.DATABASE_URL — feed it the harness's own
+// already-host-guarded client instead.
+let createPair: typeof CreatePair
+
+if (harness.ok) {
+  vi.doMock('@/lib/db', () => ({ db: harness.db }))
+  vi.resetModules()
+  const servicesModule = await import('@/lib/services/transaction-pairs')
+  createPair = servicesModule.createPair
+}
 
 function requireHarnessDb(): ReimbursementTestDb {
   if (!harness.ok) {
@@ -1053,6 +1071,141 @@ describeIfReachable(
       const overviewTotals = snapshot.getOverviewAmountTotals as { totalOut: string }
       const expectedTotalOut = toDecimal('-50.00').plus('50.00').abs()
       expect(toDecimal(overviewTotals.totalOut).equals(expectedTotalOut)).toBe(true)
+    })
+  },
+)
+
+// ---------------------------------------------------------------------------------------------
+// Phase 75 Plan 01 Task 2 — createPair's frozen-set write + the contamination guard it exists to
+// prove (D-08). Exercises the REAL createPair() service (not seedReimbursement's direct-insert
+// fixture) against the same real-Postgres harness, so the assertion below proves the live write
+// path — not just that the CTE reads a frozen set correctly when one happens to be seeded.
+// ---------------------------------------------------------------------------------------------
+
+describeIfReachable(
+  'createPair frozen-set write — records the frozen anchor-transaction set unconditionally (Phase 75 Plan 01 Task 2, D-08 Pitfall 3)',
+  () => {
+    it('a fresh createPair call (first ever link on that anchor) records exactly one reimbursement_anchor_transaction row for the anchor transaction id — never skipped because "there is only one transaction anyway"', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const dateRange = dashboardPresetToDateRange('last-month')
+      const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 5, 12, 0, 0)
+
+      const { expenseId: anchorExpenseId, transactionId: anchorTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.essentialSubCategoryId,
+          amount: '-100.00',
+          occurredAt,
+          title: 'Spesa Task 2 (frozen-set write)',
+        })
+      const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '50.00',
+        occurredAt,
+        title: 'Rimborso Task 2 (frozen-set write)',
+      })
+
+      await createPair({
+        userId,
+        transactionId: anchorTransactionId,
+        counterpartId: refundTransactionId,
+      })
+
+      const reimbursementRows = await db
+        .select({ id: reimbursementTable.id })
+        .from(reimbursementTable)
+        .where(eq(reimbursementTable.expenseId, anchorExpenseId))
+      expect(reimbursementRows).toHaveLength(1)
+
+      const anchorRows = await db
+        .select({
+          id: reimbursementAnchorTransactionTable.id,
+          reimbursementId: reimbursementAnchorTransactionTable.reimbursementId,
+        })
+        .from(reimbursementAnchorTransactionTable)
+        .where(eq(reimbursementAnchorTransactionTable.transactionId, anchorTransactionId))
+
+      expect(anchorRows).toHaveLength(1)
+      expect(anchorRows[0]!.reimbursementId).toBe(reimbursementRows[0]!.id)
+    })
+  },
+)
+
+describeIfReachable(
+  'createPair frozen-set write — contamination guard: a same-expense_id transaction imported AFTER linking never inherits a share of the linked refund (Phase 75 Plan 01 Task 2, D-08)',
+  () => {
+    it("a later same-merchant transaction inserted directly into the anchor's expense_id (simulating import.ts's descriptionHash upsert) is excluded from effectiveAmount()'s member set, returning exactly its own raw amount, and the original anchor transaction's share is unchanged from before the second transaction existed", async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const dateRange = dashboardPresetToDateRange('last-month')
+      const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 5, 12, 0, 0)
+
+      const { expenseId: anchorExpenseId, transactionId: anchorTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.essentialSubCategoryId,
+          amount: '-100.00',
+          occurredAt,
+          title: 'Amazon order (contamination guard)',
+        })
+      const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '50.00',
+        occurredAt,
+        title: 'Amazon refund (contamination guard)',
+      })
+
+      await createPair({
+        userId,
+        transactionId: anchorTransactionId,
+        counterpartId: refundTransactionId,
+      })
+
+      const probe = async (transactionId: string) => {
+        const rows = await db
+          .select({ amount: sql<string>`(${effectiveAmount()})::text` })
+          .from(transactionTable)
+          .where(eq(transactionTable.id, transactionId))
+        return toDecimal(rows[0]!.amount)
+      }
+
+      // Baseline BEFORE the contaminating import: the anchor is fully netted against its refund.
+      const anchorShareBefore = await probe(anchorTransactionId)
+      expect(anchorShareBefore.equals('-50.00')).toBe(true)
+
+      // Simulate import.ts's (userId, descriptionHash) upsert: a later same-merchant purchase
+      // reuses the SAME expense_id as the already-linked anchor, with NO frozen-set row of its
+      // own (createPair was never called for this transaction).
+      const laterTransactionId = randomUUID()
+      await db.insert(transactionTable).values({
+        id: laterTransactionId,
+        userId,
+        expenseId: anchorExpenseId,
+        transactionHash: `hash-${laterTransactionId}`,
+        description: 'Amazon order — seconda visita',
+        descriptionHash: `dh-${laterTransactionId}`,
+        amount: '-80.00',
+        occurredAt: new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 20, 12, 0, 0),
+        rowIndex: 1,
+      })
+
+      // The new transaction is NEVER a row in the frozen set — it returns its own raw amount,
+      // unchanged (0 inherited share) — the contamination this table exists to prevent.
+      const laterAmount = await probe(laterTransactionId)
+      expect(laterAmount.equals('-80.00')).toBe(true)
+
+      // The original anchor's share is UNCHANGED by the contaminating import.
+      const anchorShareAfter = await probe(anchorTransactionId)
+      expect(anchorShareAfter.equals(anchorShareBefore)).toBe(true)
     })
   },
 )

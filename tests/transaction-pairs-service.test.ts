@@ -41,6 +41,11 @@ vi.mock('@/lib/db/schema', () => ({
     reimbursementId: 'reimbursementRefund.reimbursementId',
     transactionId: 'reimbursementRefund.transactionId',
   },
+  reimbursementAnchorTransaction: {
+    id: 'reimbursementAnchorTransaction.id',
+    reimbursementId: 'reimbursementAnchorTransaction.reimbursementId',
+    transactionId: 'reimbursementAnchorTransaction.transactionId',
+  },
 }))
 
 // Mock the detach cleanup core: createPair calls applyDetachCleanupTx to
@@ -588,8 +593,10 @@ describe('createPair — refund cleanup (decision 2)', () => {
     })
 
     expect(mocks.applyDetachCleanupTx).not.toHaveBeenCalled()
-    // The reimbursement is still inserted (both inserts fire).
-    expect(insertedValues).toHaveLength(2)
+    // The reimbursement, refund, and frozen anchor-transaction row are all inserted
+    // (Phase 75 D-08: the anchor-transaction insert is unconditional, independent of
+    // whether refund cleanup runs).
+    expect(insertedValues).toHaveLength(3)
     expect(result).toEqual({ secondaryTransactionId: 'tx-refund' })
   })
 

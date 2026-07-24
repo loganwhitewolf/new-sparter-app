@@ -2,7 +2,13 @@ import 'server-only'
 
 import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { expense, reimbursement, reimbursementRefund, transaction } from '@/lib/db/schema'
+import {
+  expense,
+  reimbursement,
+  reimbursementAnchorTransaction,
+  reimbursementRefund,
+  transaction,
+} from '@/lib/db/schema'
 import {
   assertInflowRefundAmount,
   assertOutflowAnchorAmount,
@@ -188,6 +194,17 @@ export async function createPair(input: {
       await tx.insert(reimbursementRefund).values({
         reimbursementId: insertedReimbursement[0].id,
         transactionId: refund.id,
+      })
+
+      // D-08 (Phase 75) — freeze the anchor transaction into the frozen anchored-transaction
+      // set UNCONDITIONALLY, on every createPair call (Pitfall 3: never skip this because
+      // "there's only one transaction anyway" — that's exactly how N=1 misses the fix).
+      // effectiveAmount()'s Expense-anchor branch resolves its member set EXCLUSIVELY from this
+      // table, so a later same-merchant import reusing anchor.expenseId is never recorded here
+      // and can never inherit a share of this reimbursement's refunds.
+      await tx.insert(reimbursementAnchorTransaction).values({
+        reimbursementId: insertedReimbursement[0].id,
+        transactionId: anchor.id,
       })
     } catch (e) {
       if (errorCauseCode(e) === '23505') {
