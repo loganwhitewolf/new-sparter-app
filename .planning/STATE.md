@@ -5,10 +5,10 @@ milestone_name: "Reimbursements 1:N"
 current_phase: 74
 current_phase_name: group-anchor-and-reconciliation
 status: verifying
-stopped_at: Completed 74-03-PLAN.md
-last_updated: "2026-07-24T10:19:17.068Z"
+stopped_at: "Completed 74-04-PLAN.md (gap-closure: CR-01/CR-02 pair-guard fix)"
+last_updated: "2026-07-24T12:39:45.505Z"
 last_activity: 2026-07-24
-last_activity_desc: Phase 74 execution started
+last_activity_desc: Phase 74 gap-closure (74-04) complete — CR-01/CR-02 pair-guard fixes verified
 progress:
   total_phases: 2
   completed_phases: 2
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 74 (group-anchor-and-reconciliation) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-07-24 — Phase 74 execution started
+Plan: 3 of 3 (+ gap-closure plan 74-04)
+Status: Phase complete, gap-closure (74-04) verified — ready for verification
+Last activity: 2026-07-24 — Phase 74 gap-closure (74-04) complete: CR-01/CR-02 pair-guard fixes verified with real-Postgres tests
 
 ## Roadmap (v2.8 — Phases 73-76)
 
@@ -283,6 +283,7 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 74-02: residual = outflowSum + refundSum (Decimal.js), state owed/settled/surplus purely by sign, no magnitude guard (D-03) -- computed on the fly via computeReimbursementResidual(), never a stored column
 - [Phase ?]: 74-03: buildPairGuardMessage() N>1 message enriched with reimbursement title, N<=1 unchanged; guard block condition itself untouched (RMB-09)
 - [Phase ?]: 74-03: refund-edit branch's refundCount counts ALL linked refunds (not excluding the edited one) -- total N determines message ambiguity
+- [Phase ?]: Phase 74-04 gap-closure: fixed CR-01 (group-anchor member edits were unguarded) and CR-02 (refund-edit anchor magnitude silently defaulted to 0 for group anchors) in updateTransaction()'s pair guard; also fixed a correlation-ambiguity bug (bare Drizzle column proxy bound to the wrong local column in a nested subquery) discovered by the new real-Postgres tests, which had silently broken the refund-edit branch for all anchor shapes
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -397,9 +398,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 74-03-PLAN.md
+**Stopped at:** Completed 74-04-PLAN.md (gap-closure: CR-01/CR-02 pair-guard fix)
 
-Last session: 2026-07-24T10:19:17.062Z
+Last session: 2026-07-24T12:39:34.051Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
@@ -473,3 +474,4 @@ Last session: 2026-07-24T10:19:17.062Z
 | Phase 74 P01 | 75min | 2 tasks | 3 files |
 | Phase 74 P02 | 40min | 2 tasks | 3 files |
 | Phase 74 P03 | 20min | 2 tasks | 3 files |
+| Phase 74 P04-gap-closure | 55min | 1 tasks | 2 files |

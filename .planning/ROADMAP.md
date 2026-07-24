@@ -95,6 +95,16 @@ Plans:
 - [x] 74-02-PLAN.md — `residual` computation, computed on the fly, owed/settled/surplus states (D-03, RMB-06)
 - [x] 74-03-PLAN.md — amount-edit guard N>1 message enrichment naming the blocking reimbursement (D-04, RMB-09)
 
+**Gap closure** *(post-review, not part of the original 3-plan wave breakdown)*
+
+- [x] 74-04 (gap-closure, no PLAN.md) — 74-REVIEW.md found the pair guard blind to Group anchors
+  (CR-01: group-member edits entirely unguarded; CR-02: refund-edit anchor magnitude silently
+  defaulted to 0 for a Group anchor). Both closed in `lib/services/transaction-edit.ts`, plus a
+  correlation-ambiguity bug in the same query block (a bare Drizzle column proxy silently bound to
+  the wrong local column inside a nested subquery) discovered by this plan's own real-Postgres
+  tests — the first time `updateTransaction()` had ever been exercised against a real database.
+  See 74-04-SUMMARY.md.
+
 **Q1 resolved during planning** (per 74-CONTEXT.md D-05): a refund's subcategory attribution when
 the anchor spans multiple subcategories falls out of the same proportional spread as D-01 — no
 separate subcategory-allocation mechanism, implemented in Plan 74-01.
