@@ -133,7 +133,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 75-03-PLAN.md — D-10 pre-link snapshot + unlink/delete-reimbursement baseline restore (RMB-07)
+- [x] 75-03-PLAN.md — D-10 pre-link snapshot + unlink/delete-reimbursement baseline restore (RMB-07)
 
 **Wave 4** *(blocked on Waves 2+3 completion)*
 
