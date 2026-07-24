@@ -83,8 +83,21 @@ Expense with multiple transactions nets only its earliest transaction (by `occur
   2. Each reimbursement exposes `residual = Σoutflow + Σ(refunds linked so far)`, negative while money is still owed (e.g. "still owed €25" when 3 of 4 friends have repaid).
   3. Editing an anchor or refund amount that would break the reimbursement is handled coherently — blocked with an Italian message or reconciled — never silently corrupting the net (the v2.5 pair guard, generalized to 1:N).
 
-**Plans**: TBD
-**Open for discuss/plan** (details, not architecture): (Q1) how a refund attributes to a subcategory when the anchor spans multiple subcategories (arises with a Group anchor) — invisible on the top-line entrate/uscite, matters only for the per-category breakdown.
+**Plans**: 3 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 74-01-PLAN.md — proportional-spread `effectiveAmount()` rewrite (D-01/D-02) + N=1/N=2-member regression proof, including the Group-anchor multi-subcategory/largest-remainder/division-by-zero matrix (RMB-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 74-02-PLAN.md — `residual` computation, computed on the fly, owed/settled/surplus states (D-03, RMB-06)
+- [ ] 74-03-PLAN.md — amount-edit guard N>1 message enrichment naming the blocking reimbursement (D-04, RMB-09)
+
+**Q1 resolved during planning** (per 74-CONTEXT.md D-05): a refund's subcategory attribution when
+the anchor spans multiple subcategories falls out of the same proportional spread as D-01 — no
+separate subcategory-allocation mechanism, implemented in Plan 74-01.
 
 ### Phase 75: linking-surfaces-and-lifecycle
 
