@@ -1,7 +1,9 @@
 import 'server-only'
 
-import { sql } from 'drizzle-orm'
+import { and, asc, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
+import { reimbursement, reimbursementRefund, transaction } from '@/lib/db/schema'
+import { computeReimbursementResidual, type ReimbursementResidualState } from '@/lib/services/reimbursement'
 
 /**
  * Raw Decimal-safe aggregates for one reimbursement: the anchor's own outflow sum and the sum
@@ -78,4 +80,118 @@ export async function getReimbursementAggregates(input: {
   }
 
   return { outflowSum: row.outflow_sum, refundSum: row.refund_sum }
+}
+
+/** One linked refund row, as rendered by the management panel (Phase 75 Plan 04). */
+export type ReimbursementPanelRefund = {
+  id: string
+  description: string
+  customTitle: string | null
+  amount: string
+  occurredAt: Date
+}
+
+/**
+ * The full read model `ReimbursementPanel` (components/transactions/reimbursement-panel.tsx)
+ * renders — either for a transaction anchor (`/transactions/[id]`, D-02) or a Group anchor
+ * (Expense Group detail, D-03). One reusable shape for both hosts.
+ */
+export type ReimbursementPanelData = {
+  reimbursementId: number
+  title: string
+  refunds: ReimbursementPanelRefund[]
+  residual: string
+  state: ReimbursementResidualState
+}
+
+/**
+ * Resolves the panel's full read model for either anchor shape (D-01/D-02/D-03, Phase 75 Plan
+ * 04): the linked reimbursement (if any), its refunds in deterministic order, and the net/
+ * residual/status the surface shows inline (D-04).
+ *
+ * Anchor resolution mirrors `createPairTx`'s create-or-append lookup (Plan 75-02) — same lookup
+ * shape, read-only here:
+ *  - `{ transactionId }`: resolve the transaction's `expense_id` (ownership-scoped to `userId`),
+ *    then find the reimbursement anchored on that Expense.
+ *  - `{ groupId }`: find the reimbursement anchored directly on that Expense Group.
+ *
+ * Returns `undefined` — never throws — both when nothing is linked yet (a normal, common state
+ * the panel renders as its empty/CTA state) and when the anchor/reimbursement is foreign-owned
+ * (IDOR-safe by construction: every lookup is scoped to `userId`).
+ *
+ * Refund ordering (Edge RMB-08/ordering, T-73-11 convention): `reimbursement_refund.created_at
+ * ASC, transaction_id ASC` — never left to unspecified DB row order.
+ *
+ * Residual/state is NEVER re-derived here — `computeReimbursementResidual` (lib/services/
+ * reimbursement.ts, D-04) is the single source of truth for that computation; this function only
+ * assembles the read model around it.
+ */
+export async function getReimbursementPanelData(input: {
+  userId: string
+  anchor: { transactionId: string } | { groupId: number }
+}): Promise<ReimbursementPanelData | undefined> {
+  let reimbursementRows: { id: number; title: string }[]
+
+  if ('transactionId' in input.anchor) {
+    const txRows = await db
+      .select({ expenseId: transaction.expenseId })
+      .from(transaction)
+      .where(and(eq(transaction.id, input.anchor.transactionId), eq(transaction.userId, input.userId)))
+      .limit(1)
+
+    const txExpenseId = txRows[0]?.expenseId
+    if (!txExpenseId) {
+      return undefined
+    }
+
+    reimbursementRows = await db
+      .select({ id: reimbursement.id, title: reimbursement.title })
+      .from(reimbursement)
+      .where(and(eq(reimbursement.expenseId, txExpenseId), eq(reimbursement.userId, input.userId)))
+      .limit(1)
+  } else {
+    reimbursementRows = await db
+      .select({ id: reimbursement.id, title: reimbursement.title })
+      .from(reimbursement)
+      .where(
+        and(eq(reimbursement.expenseGroupId, input.anchor.groupId), eq(reimbursement.userId, input.userId)),
+      )
+      .limit(1)
+  }
+
+  const reimbursementRow = reimbursementRows[0]
+  if (!reimbursementRow) {
+    return undefined
+  }
+
+  const [refundRows, residualResult] = await Promise.all([
+    db
+      .select({
+        id: transaction.id,
+        description: transaction.description,
+        customTitle: transaction.customTitle,
+        amount: transaction.amount,
+        occurredAt: transaction.occurredAt,
+      })
+      .from(reimbursementRefund)
+      .innerJoin(transaction, eq(transaction.id, reimbursementRefund.transactionId))
+      .where(eq(reimbursementRefund.reimbursementId, reimbursementRow.id))
+      .orderBy(asc(reimbursementRefund.createdAt), asc(reimbursementRefund.transactionId)),
+    computeReimbursementResidual({ reimbursementId: reimbursementRow.id, userId: input.userId }),
+  ])
+
+  // residualResult can only be undefined here if the reimbursement vanished between the two
+  // reads above (a real race, not an ownership mismatch — reimbursementRow was already resolved
+  // scoped to userId) — treat identically to "nothing linked" rather than throwing.
+  if (!residualResult) {
+    return undefined
+  }
+
+  return {
+    reimbursementId: reimbursementRow.id,
+    title: reimbursementRow.title,
+    refunds: refundRows,
+    residual: residualResult.residual,
+    state: residualResult.state,
+  }
 }

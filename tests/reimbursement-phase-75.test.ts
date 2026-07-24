@@ -22,6 +22,8 @@ import type {
   getEligibleCounterparts as GetEligibleCounterparts,
   getGroupOccurrenceInterval as GetGroupOccurrenceInterval,
 } from '@/lib/dal/transaction-pairs'
+import type { getReimbursementPanelData as GetReimbursementPanelData } from '@/lib/dal/reimbursement'
+import type { computeReimbursementResidual as ComputeReimbursementResidual } from '@/lib/services/reimbursement'
 import type {
   createPair as CreatePair,
   deletePairByTransactionId as DeletePairByTransactionId,
@@ -41,6 +43,7 @@ import {
 
 vi.mock('@/lib/dal/auth', () => ({ verifySession: vi.fn() }))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 
 const harness = await connectReimbursementTestDb()
 
@@ -62,6 +65,8 @@ let deletePairByTransactionId: typeof DeletePairByTransactionId
 let deleteReimbursementForAnchor: typeof DeleteReimbursementForAnchor
 let getEligibleCounterparts: typeof GetEligibleCounterparts
 let getGroupOccurrenceInterval: typeof GetGroupOccurrenceInterval
+let getReimbursementPanelData: typeof GetReimbursementPanelData
+let computeReimbursementResidualForTest: typeof ComputeReimbursementResidual
 
 if (harness.ok) {
   vi.doMock('@/lib/db', () => ({ db: harness.db }))
@@ -73,6 +78,10 @@ if (harness.ok) {
   const dalModule = await import('@/lib/dal/transaction-pairs')
   getEligibleCounterparts = dalModule.getEligibleCounterparts
   getGroupOccurrenceInterval = dalModule.getGroupOccurrenceInterval
+  const reimbursementDalModule = await import('@/lib/dal/reimbursement')
+  getReimbursementPanelData = reimbursementDalModule.getReimbursementPanelData
+  const reimbursementServiceModule = await import('@/lib/services/reimbursement')
+  computeReimbursementResidualForTest = reimbursementServiceModule.computeReimbursementResidual
 }
 
 function requireHarnessDb(): ReimbursementTestDb {
@@ -1125,3 +1134,134 @@ describeIfReachable(
     })
   },
 )
+
+// ---------------------------------------------------------------------------------------------
+// Plan 04 Task 1 — getReimbursementPanelData (D-01/D-02/D-03/D-04, RMB-08)
+// ---------------------------------------------------------------------------------------------
+describeIfReachable('getReimbursementPanelData — panel data (Phase 75 Plan 04 Task 1)', () => {
+  it('Test 1 (transaction anchor, 2 refunds): returns reimbursementId/title/refunds ordered by created_at ASC, transaction_id ASC, and residual/state matching computeReimbursementResidual', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+    const { transactionId: anchorTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-90.00',
+      occurredAt,
+      title: 'Cena in tre',
+    })
+    const { transactionId: refundATransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.incomeSubCategoryId,
+      amount: '30.00',
+      occurredAt,
+      title: 'Rimborso Carlo',
+    })
+    const { transactionId: refundBTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.incomeSubCategoryId,
+      amount: '30.00',
+      occurredAt,
+      title: 'Rimborso Giulia',
+    })
+
+    // Linked in this order — refundA CREATEs, refundB APPENDs (created_at ASC tie-break proof).
+    await createPair({ userId, anchor: { transactionId: anchorTransactionId }, counterpartId: refundATransactionId })
+    await createPair({ userId, anchor: { transactionId: anchorTransactionId }, counterpartId: refundBTransactionId })
+
+    const panelData = await getReimbursementPanelData({ userId, anchor: { transactionId: anchorTransactionId } })
+    expect(panelData).toBeDefined()
+    expect(panelData!.title).toBe('Cena in tre')
+    expect(panelData!.refunds).toHaveLength(2)
+    expect(panelData!.refunds.map((r) => r.id)).toEqual([refundATransactionId, refundBTransactionId])
+
+    const residual = await computeReimbursementResidualForTest({ reimbursementId: panelData!.reimbursementId, userId })
+    expect(panelData!.residual).toBe(residual!.residual)
+    expect(panelData!.state).toBe(residual!.state)
+  })
+
+  it('Test 2 (no reimbursement): a transaction with no linked reimbursement returns undefined — the empty/CTA state, never a throw', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+    const { transactionId: unpairedTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-40.00',
+      occurredAt,
+      title: 'Spesa non collegata',
+    })
+
+    await expect(
+      getReimbursementPanelData({ userId, anchor: { transactionId: unpairedTransactionId } }),
+    ).resolves.toBeUndefined()
+  })
+
+  it('Test 3 (Group anchor): resolves the same shape for a Group-anchored reimbursement, refunds ordered identically', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+    const { expenseId: member1ExpenseId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-300.00',
+      occurredAt,
+      title: 'Alloggio montagna',
+    })
+    const { expenseId: member2ExpenseId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-100.00',
+      occurredAt,
+      title: 'Trasporto montagna',
+    })
+    const { groupId } = await seedExpenseGroup(db, {
+      userId,
+      title: 'Vacanza in montagna',
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      memberExpenseIds: [member1ExpenseId, member2ExpenseId],
+    })
+
+    const { transactionId: refundATransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.incomeSubCategoryId,
+      amount: '150.00',
+      occurredAt,
+      title: 'Rimborso vacanza (Marco)',
+    })
+    const { transactionId: refundBTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.incomeSubCategoryId,
+      amount: '250.00',
+      occurredAt,
+      title: 'Rimborso vacanza (Sara)',
+    })
+
+    await createPair({ userId, anchor: { groupId }, counterpartId: refundATransactionId })
+    await createPair({ userId, anchor: { groupId }, counterpartId: refundBTransactionId })
+
+    const panelData = await getReimbursementPanelData({ userId, anchor: { groupId } })
+    expect(panelData).toBeDefined()
+    expect(panelData!.title).toBe('Vacanza in montagna')
+    expect(panelData!.refunds.map((r) => r.id)).toEqual([refundATransactionId, refundBTransactionId])
+
+    const residual = await computeReimbursementResidualForTest({ reimbursementId: panelData!.reimbursementId, userId })
+    expect(panelData!.residual).toBe(residual!.residual)
+    expect(panelData!.state).toBe(residual!.state)
+  })
+})
