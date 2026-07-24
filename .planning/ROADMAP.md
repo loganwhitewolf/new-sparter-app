@@ -111,16 +111,34 @@ separate subcategory-allocation mechanism, implemented in Plan 74-01.
 
 ### Phase 75: linking-surfaces-and-lifecycle
 
-**Goal**: Let the user create and manage a reimbursement in place from the Expense detail page and the Expense Group — pick the anchor, attach and remove refunds, with unlink/delete restoring baseline.
+**Goal**: Let the user create and manage a reimbursement in place from the transaction detail page (D-01: the outflow transaction, not `/expenses/[id]`) and the Expense Group — pick the anchor, attach and remove refunds, with unlink/delete restoring baseline. Also closes a netting-model correctness gap (D-08): the anchor becomes transaction-granular via a frozen anchored-transaction set, so a later same-merchant import can never inherit a share of a past refund.
 **Depends on**: Phase 74
 **Requirements**: RMB-07, RMB-08
 **Success Criteria** (what must be TRUE):
 
-  1. From the Expense detail page (`/expenses/[id]`) and from an Expense Group, the user can create a reimbursement and attach eligible inflow transactions as refunds.
+  1. From `/transactions/[id]` (the outflow transaction) and from an Expense Group, the user can create a reimbursement and attach eligible inflow transactions as refunds via a multi-select picker.
   2. The user can add and remove individual refund links on an existing reimbursement.
-  3. Unlinking a refund or deleting the reimbursement restores baseline — the refund reappears as a normal inflow in its own month and the anchor's net reverts.
+  3. Unlinking a refund or deleting the reimbursement restores baseline — the refund reappears as a normal inflow in its own month (including its pre-link category), and the anchor's net reverts.
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 75-01-PLAN.md — D-08 frozen anchored-transaction set: schema, migration, backfill, effectiveAmount() CTE repoint (tracer + N=1 regression proof)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 75-02-PLAN.md — D-05/D-06 create-or-append write path (dual anchor shape: Expense or Group) + generalized eligible-counterparts window
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 75-03-PLAN.md — D-10 pre-link snapshot + unlink/delete-reimbursement baseline restore (RMB-07)
+
+**Wave 4** *(blocked on Waves 2+3 completion)*
+
+- [ ] 75-04-PLAN.md — ReimbursementPanel + multi-select RefundPickerDialog mounted on both hosts (RMB-08) + manual E2E checkpoint
+
 **UI hint**: yes
 
 ### Phase 76: reimbursements-section
@@ -399,7 +417,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 72. transactions-tag-indicator | v2.7 | direct | Complete | 2026-07-22 |
 | 73. reimbursement-schema-and-netting | v2.8 | TBD | Complete    | 2026-07-24 |
 | 74. group-anchor-and-reconciliation | v2.8 | TBD | Complete    | 2026-07-24 |
-| 75. linking-surfaces-and-lifecycle | v2.8 | TBD | Not started | - |
+| 75. linking-surfaces-and-lifecycle | v2.8 | 0/4 | Planned | - |
 | 76. reimbursements-section | v2.8 | TBD | Not started | - |
 
 **Total shipped: 72 phases · 269 plans complete**
