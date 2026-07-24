@@ -6,6 +6,8 @@ import {
   category as categoryTable,
   direction as directionTable,
   expense as expenseTable,
+  expenseGroup as expenseGroupTable,
+  expenseGroupMembership as expenseGroupMembershipTable,
   nature as natureTable,
   reimbursement as reimbursementTable,
   reimbursementRefund as reimbursementRefundTable,
@@ -219,6 +221,83 @@ export async function seedReimbursement(
   const [row] = await db
     .insert(reimbursementTable)
     .values({ userId: input.userId, title: input.title, expenseId: input.expenseId })
+    .returning({ id: reimbursementTable.id })
+
+  for (const transactionId of input.refundTransactionIds) {
+    await db.insert(reimbursementRefundTable).values({ reimbursementId: row.id, transactionId })
+  }
+
+  return { reimbursementId: row.id }
+}
+
+/**
+ * Inserts one additional 'out'-direction essential category/subcategory pair (Phase 74 Plan 01),
+ * for the cross-subcategory Group-anchor spread scenario — mirrors seedMinimalTaxonomy's
+ * essential category/subcategory insert shape, but under a distinct name/slug so it groups
+ * separately from taxonomy.essentialCategoryId in the per-category breakdown assertions.
+ */
+export async function seedSecondEssentialCategory(
+  db: ReimbursementTestDb,
+  input: { userId: string; natureId: number },
+): Promise<{ categoryId: number; subCategoryId: number }> {
+  const [category] = await db
+    .insert(categoryTable)
+    .values({ userId: input.userId, name: 'Trasporti Test', slug: 'trasporti-test' })
+    .returning({ id: categoryTable.id })
+
+  const [subCategory] = await db
+    .insert(subCategoryTable)
+    .values({
+      userId: input.userId,
+      categoryId: category.id,
+      name: 'Trasporti Test',
+      slug: 'trasporti-test',
+      natureId: input.natureId,
+    })
+    .returning({ id: subCategoryTable.id })
+
+  return { categoryId: category.id, subCategoryId: subCategory.id }
+}
+
+/**
+ * Inserts one expense_group row plus one expense_group_membership row per member expense id
+ * (Phase 74 Plan 01) — mirrors seedReimbursement's one-row-then-loop shape. Group totals are
+ * computed at read time (ADR 0017); this fixture only wires the membership.
+ */
+export async function seedExpenseGroup(
+  db: ReimbursementTestDb,
+  input: { userId: string; title: string; subCategoryId: number; memberExpenseIds: string[] },
+): Promise<{ groupId: number }> {
+  const [group] = await db
+    .insert(expenseGroupTable)
+    .values({ userId: input.userId, title: input.title, subCategoryId: input.subCategoryId })
+    .returning({ id: expenseGroupTable.id })
+
+  for (const expenseId of input.memberExpenseIds) {
+    await db.insert(expenseGroupMembershipTable).values({ groupId: group.id, expenseId })
+  }
+
+  return { groupId: group.id }
+}
+
+/**
+ * Inserts a reimbursement anchored on an Expense Group (expenseGroupId set, expenseId left null —
+ * the reimbursement_anchor_xor CHECK constraint requires exactly one) plus its N
+ * reimbursement_refund rows (Phase 74 Plan 01). Identical shape to seedReimbursement, refund rows
+ * inserted one at a time so each gets its own created_at (ordering-determinism convention).
+ */
+export async function seedReimbursementOnGroup(
+  db: ReimbursementTestDb,
+  input: {
+    userId: string
+    title: string
+    expenseGroupId: number
+    refundTransactionIds: string[]
+  },
+): Promise<{ reimbursementId: number }> {
+  const [row] = await db
+    .insert(reimbursementTable)
+    .values({ userId: input.userId, title: input.title, expenseGroupId: input.expenseGroupId })
     .returning({ id: reimbursementTable.id })
 
   for (const transactionId of input.refundTransactionIds) {

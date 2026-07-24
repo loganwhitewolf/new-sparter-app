@@ -34,9 +34,12 @@ import {
 } from './helpers/reimbursement-test-db'
 import {
   attachTagToTransaction,
+  seedExpenseGroup,
   seedExpenseWithTransaction,
   seedMinimalTaxonomy,
   seedReimbursement,
+  seedReimbursementOnGroup,
+  seedSecondEssentialCategory,
   seedTag,
   seedUser,
 } from './fixtures/reimbursement-seed'
@@ -763,6 +766,293 @@ describeIfReachable(
       ).find((point) => point.month === monthTarget)
       expect(chartPoint).toBeDefined()
       expect(toDecimal(chartPoint!.out.essential).equals(expectedCombined.abs())).toBe(true)
+    })
+  },
+)
+
+// ---------------------------------------------------------------------------------------------
+// Phase 74 Plan 01 — Group-anchor regression matrix (D-01/D-02/D-05, RMB-02). The Expense-anchor
+// spread is already proven inert/correct above (N=1 scenarios + the Q3 N=2 case); these 3
+// scenarios prove the genuinely new Group-anchor shapes: cross-subcategory attribution, exact
+// largest-remainder cent assignment, and the division-by-zero landmine (RMB-02/empty).
+// ---------------------------------------------------------------------------------------------
+
+describeIfReachable(
+  'Group anchor spanning two subcategories — proportional spread per D-05 (Phase 74 Plan 01 Scenario A)',
+  () => {
+    it('spreads the refund net proportionally into each member transaction\'s own subcategory as two separate breakdown rows, invisible on top-line totalOut', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const secondCategory = await seedSecondEssentialCategory(db, {
+        userId,
+        natureId: taxonomy.essentialNatureId,
+      })
+
+      const dateRange = dashboardPresetToDateRange('last-month')
+      const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 12, 12, 0, 0)
+
+      const { expenseId: member1ExpenseId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-300.00',
+        occurredAt,
+        title: 'Alloggio montagna',
+      })
+      const { expenseId: member2ExpenseId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: secondCategory.subCategoryId,
+        amount: '-100.00',
+        occurredAt,
+        title: 'Trasporto montagna',
+      })
+
+      const { groupId } = await seedExpenseGroup(db, {
+        userId,
+        title: 'Vacanza in montagna',
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        memberExpenseIds: [member1ExpenseId, member2ExpenseId],
+      })
+
+      const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '200.00',
+        occurredAt,
+        title: 'Rimborso vacanza',
+      })
+
+      await seedReimbursementOnGroup(db, {
+        userId,
+        title: 'Vacanza in montagna',
+        expenseGroupId: groupId,
+        refundTransactionIds: [refundTransactionId],
+      })
+
+      // Expected shares computed via Decimal.js from the same seeded inputs -- never hand-typed.
+      // Deliberately round numbers (no remainder) -- isolates the subcategory-attribution proof
+      // from the rounding proof in Scenario B.
+      const refundTotal = toDecimal('200.00')
+      const memberSum = toDecimal('-300.00').plus('-100.00')
+      const member1Share = refundTotal.times('-300.00').dividedBy(memberSum).toDecimalPlaces(2)
+      const member2Share = refundTotal.times('-100.00').dividedBy(memberSum).toDecimalPlaces(2)
+      expect(member1Share.equals('150.00')).toBe(true)
+      expect(member2Share.equals('50.00')).toBe(true)
+
+      const { tagId } = await seedTag(db, { userId, name: 'unused-scenario-A' })
+      const snapshot = await captureAggregationSnapshot({
+        harnessDb: db,
+        userId,
+        dateRange,
+        categoryId: taxonomy.essentialCategoryId,
+        tagId,
+      })
+
+      const categoriesBreakdown = snapshot.getCategoriesBreakdown as Array<{ id: number; amount: string }>
+      const member1CategoryRow = categoriesBreakdown.find((row) => row.id === taxonomy.essentialCategoryId)
+      const member2CategoryRow = categoriesBreakdown.find((row) => row.id === secondCategory.categoryId)
+      expect(member1CategoryRow).toBeDefined()
+      expect(member2CategoryRow).toBeDefined()
+      // TWO SEPARATE rows (D-05) -- Member 1's category nets to 300-150=150.00, Member 2's to
+      // 100-50=50.00 -- no separate subcategory-allocation mechanism, correct per-category
+      // automatically because the netting already lands per-transaction.
+      expect(toDecimal(member1CategoryRow!.amount).equals('150.00')).toBe(true)
+      expect(toDecimal(member2CategoryRow!.amount).equals('50.00')).toBe(true)
+
+      const categoryRanking = snapshot.getCategoryRanking as Array<{ id: number; amount: string }>
+      const member1RankingRow = categoryRanking.find((row) => row.id === taxonomy.essentialCategoryId)
+      const member2RankingRow = categoryRanking.find((row) => row.id === secondCategory.categoryId)
+      expect(member1RankingRow).toBeDefined()
+      expect(member2RankingRow).toBeDefined()
+      expect(toDecimal(member1RankingRow!.amount).equals('150.00')).toBe(true)
+      expect(toDecimal(member2RankingRow!.amount).equals('50.00')).toBe(true)
+
+      // Invisible on top-line entrate/uscite (D-05): the combined totalOut is the sum of both
+      // members' netted amounts, exactly the 200.00 refund regardless of the split between them.
+      const overviewTotals = snapshot.getOverviewAmountTotals as { totalOut: string }
+      expect(toDecimal(overviewTotals.totalOut).equals('200.00')).toBe(true)
+    })
+  },
+)
+
+describeIfReachable(
+  'Group anchor largest-remainder cent exactness (Phase 74 Plan 01 Scenario B, RMB-02/precision + RMB-02/ordering)',
+  () => {
+    it('assigns the 0.01 rounding remainder to the earliest-occurring tied-largest-magnitude member, and the 3 raw-probed per-transaction shares sum back to the exact linked-refund total at the centesimo', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const dateRange = dashboardPresetToDateRange('last-month')
+
+      const day5 = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 5, 12, 0, 0)
+      const day10 = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 10, 12, 0, 0)
+      const day15 = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 15, 12, 0, 0)
+
+      const { expenseId: day5ExpenseId, transactionId: day5TransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.essentialSubCategoryId,
+          amount: '-100.00',
+          occurredAt: day5,
+          title: 'Spesa gruppo giorno 5',
+        })
+      const { expenseId: day10ExpenseId, transactionId: day10TransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.essentialSubCategoryId,
+          amount: '-100.00',
+          occurredAt: day10,
+          title: 'Spesa gruppo giorno 10',
+        })
+      const { expenseId: day15ExpenseId, transactionId: day15TransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.essentialSubCategoryId,
+          amount: '-100.00',
+          occurredAt: day15,
+          title: 'Spesa gruppo giorno 15',
+        })
+
+      const { groupId } = await seedExpenseGroup(db, {
+        userId,
+        title: 'Gruppo tre spese uguali',
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        memberExpenseIds: [day5ExpenseId, day10ExpenseId, day15ExpenseId],
+      })
+
+      const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '100.00',
+        occurredAt: day5,
+        title: 'Rimborso gruppo',
+      })
+
+      await seedReimbursementOnGroup(db, {
+        userId,
+        title: 'Gruppo tre spese uguali',
+        expenseGroupId: groupId,
+        refundTransactionIds: [refundTransactionId],
+      })
+
+      const probe = async (transactionId: string) => {
+        const rows = await db
+          .select({ amount: sql<string>`(${effectiveAmount()})::text` })
+          .from(transactionTable)
+          .where(eq(transactionTable.id, transactionId))
+        return toDecimal(rows[0].amount)
+      }
+
+      // raw_share = ROUND(100 * -100 / -300, 2) = 33.33 for every member; 33.33*3 = 99.99, one
+      // cent short of the 100.00 refund total. All 3 members have equal ABS(amount), so the
+      // largest-remainder tie-break falls to occurredAt ASC -- the day-5 member absorbs the 0.01.
+      const day5Amount = await probe(day5TransactionId)
+      const day10Amount = await probe(day10TransactionId)
+      const day15Amount = await probe(day15TransactionId)
+
+      expect(day5Amount.equals('-66.66')).toBe(true) // -100 + (33.33 + 0.01)
+      expect(day10Amount.equals('-66.67')).toBe(true) // -100 + 33.33
+      expect(day15Amount.equals('-66.67')).toBe(true) // -100 + 33.33
+
+      // Centesimo-exact reconciliation: the 3 raw-probed shares sum to exactly -300.00 + 100.00,
+      // computed via toDecimal(...).plus(...), never a hand-typed sum.
+      const total = day5Amount.plus(day10Amount).plus(day15Amount)
+      const expectedTotal = toDecimal('-100.00').plus('-100.00').plus('-100.00').plus('100.00')
+      expect(total.equals(expectedTotal)).toBe(true)
+      expect(total.equals('-200.00')).toBe(true)
+    })
+  },
+)
+
+describeIfReachable(
+  'Group anchor division-by-zero guard — zero-sum member set (Phase 74 Plan 01 Scenario C, RMB-02/empty)',
+  () => {
+    it("never throws and falls back to each member's own raw amount when the anchor's member set sums to exactly zero", async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const dateRange = dashboardPresetToDateRange('last-month')
+      const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 12, 12, 0, 0)
+
+      // Deliberately constructed to sum to exactly zero -- constructed directly via fixtures,
+      // bypassing the app's own group-creation invariants, since this is a defensive-SQL guard
+      // test, not a scenario reachable via any current UI or service.
+      const { expenseId: negativeExpenseId, transactionId: negativeTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.essentialSubCategoryId,
+          amount: '-50.00',
+          occurredAt,
+          title: 'Membro negativo',
+        })
+      const { expenseId: positiveExpenseId, transactionId: positiveTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.essentialSubCategoryId,
+          amount: '50.00',
+          occurredAt,
+          title: 'Membro positivo',
+        })
+
+      const { groupId } = await seedExpenseGroup(db, {
+        userId,
+        title: 'Gruppo somma zero',
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        memberExpenseIds: [negativeExpenseId, positiveExpenseId],
+      })
+
+      const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '30.00',
+        occurredAt,
+        title: 'Rimborso gruppo somma zero',
+      })
+
+      await seedReimbursementOnGroup(db, {
+        userId,
+        title: 'Gruppo somma zero',
+        expenseGroupId: groupId,
+        refundTransactionIds: [refundTransactionId],
+      })
+
+      const probe = async (transactionId: string) => {
+        const rows = await db
+          .select({ amount: sql<string>`(${effectiveAmount()})::text` })
+          .from(transactionTable)
+          .where(eq(transactionTable.id, transactionId))
+        return toDecimal(rows[0].amount)
+      }
+
+      // Must not throw (a Postgres division-by-zero error would surface as a rejected promise)
+      // and each member falls back to its own raw amount, unchanged -- the NULLIF/COALESCE guard
+      // degrades safely rather than corrupting the dashboard totals.
+      const negativeAmount = await probe(negativeTransactionId)
+      const positiveAmount = await probe(positiveTransactionId)
+      expect(negativeAmount.equals('-50.00')).toBe(true)
+      expect(positiveAmount.equals('50.00')).toBe(true)
+
+      const { tagId } = await seedTag(db, { userId, name: 'unused-scenario-C' })
+      const snapshot = await captureAggregationSnapshot({
+        harnessDb: db,
+        userId,
+        dateRange,
+        categoryId: taxonomy.essentialCategoryId,
+        tagId,
+      })
+
+      const overviewTotals = snapshot.getOverviewAmountTotals as { totalOut: string }
+      const expectedTotalOut = toDecimal('-50.00').plus('50.00').abs()
+      expect(toDecimal(overviewTotals.totalOut).equals(expectedTotalOut)).toBe(true)
     })
   },
 )
