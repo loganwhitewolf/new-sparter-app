@@ -5,15 +5,15 @@ milestone_name: "Reimbursements 1:N"
 current_phase: 74
 current_phase_name: group-anchor-and-reconciliation
 status: executing
-stopped_at: Phase 74 context gathered
-last_updated: "2026-07-24T08:47:04.100Z"
+stopped_at: Completed 74-01-PLAN.md
+last_updated: "2026-07-24T10:02:40.384Z"
 last_activity: 2026-07-24
-last_activity_desc: Phase 73 complete, transitioned to Phase 74
+last_activity_desc: Phase 74 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 73 — reimbursement-schema-and-netting
+**Current focus:** Phase 74 — group-anchor-and-reconciliation
 
 ## Current Position
 
-Phase: 74 — group-anchor-and-reconciliation
-Plan: Not started
+Phase: 74 (group-anchor-and-reconciliation) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-07-24 — Phase 73 complete, transitioned to Phase 74
+Last activity: 2026-07-24 — Phase 74 execution started
 
 ## Roadmap (v2.8 — Phases 73-76)
 
@@ -277,6 +277,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 73-03: Shared role-resolution SQL helpers (pairedCounterpartIdExpr/pairedReimbursementIdExpr) reused across transactions.ts's 5 paired-* fields instead of duplicating the anchor/refund tie-break CASE per field.
 - [Phase ?]: 73-03: Amount-edit guard's role detection (refund vs anchor) resolved via one combined SELECT with two correlated subquery columns, keeping the unpaired-case round-trip count at 2, matching the old 1:1 guard's shape.
 - [Phase ?]: Phase 73 Plan 04: executed locked option-b — dropped transaction_pair (migration 0030) after repointing createPair/deletePairByTransactionId and getEligibleCounterparts; retired the before/after byte-identical regression harness (transaction_pair-dependent) in favor of native seedReimbursement fixtures; full suite green (141 files, 1756 tests).
+- [Phase ?]: 74-01: effectiveAmount() rewritten as one uniform proportional-spread CTE chain (anchor -> member_expense_ids -> member_transactions -> refund_total -> raw_shares -> member_shares) covering both Expense and Expense Group anchors (D-01/D-02); largest-remainder cent assignment tie-broken by ABS(amount) DESC, occurredAt ASC, id ASC; zero-sum member set guarded via NULLIF/COALESCE, never divides by zero
+- [Phase ?]: 74-01: split the plan's single-CTE member_shares pseudocode into raw_shares + member_shares (Postgres disallows referencing a SELECT-list alias from another expression at the same query level) -- pure SQL-structuring fix, formula/tie-break/guard semantics unchanged (Rule 1)
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -389,11 +391,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/74-group-anchor-and-reconciliation/74-CONTEXT.md
+**Resume file:** None
 
-**Stopped at:** Phase 74 context gathered
+**Stopped at:** Completed 74-01-PLAN.md
 
-Last session: 2026-07-24T07:47:45.015Z
+Last session: 2026-07-24T10:02:40.377Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
@@ -464,3 +466,4 @@ Last session: 2026-07-24T07:47:45.015Z
 | Phase 73 P02 | 55min | 2 tasks | 6 files |
 | Phase 73 P03 | 25min | 2 tasks | 4 files |
 | Phase 73 P04 | 90min | 3 tasks | 16 files |
+| Phase 74 P01 | 75min | 2 tasks | 3 files |

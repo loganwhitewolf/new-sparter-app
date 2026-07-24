@@ -88,7 +88,7 @@ Expense with multiple transactions nets only its earliest transaction (by `occur
 Plans:
 **Wave 1**
 
-- [ ] 74-01-PLAN.md — proportional-spread `effectiveAmount()` rewrite (D-01/D-02) + N=1/N=2-member regression proof, including the Group-anchor multi-subcategory/largest-remainder/division-by-zero matrix (RMB-02)
+- [x] 74-01-PLAN.md — proportional-spread `effectiveAmount()` rewrite (D-01/D-02) + N=1/N=2-member regression proof, including the Group-anchor multi-subcategory/largest-remainder/division-by-zero matrix (RMB-02)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -388,7 +388,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 71. transactions-tag-filter-control | v2.7 | 1/1 | Complete | 2026-07-22 |
 | 72. transactions-tag-indicator | v2.7 | direct | Complete | 2026-07-22 |
 | 73. reimbursement-schema-and-netting | v2.8 | TBD | Complete    | 2026-07-24 |
-| 74. group-anchor-and-reconciliation | v2.8 | TBD | Not started | - |
+| 74. group-anchor-and-reconciliation | v2.8 | TBD | In Progress|  |
 | 75. linking-surfaces-and-lifecycle | v2.8 | TBD | Not started | - |
 | 76. reimbursements-section | v2.8 | TBD | Not started | - |
 

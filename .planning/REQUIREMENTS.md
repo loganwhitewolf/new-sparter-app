@@ -10,7 +10,7 @@ Model locked in **ADR 0018** (`docs/adr/0018-reimbursement-1n-linking-supersedes
 ### Model & Netting
 
 - [x] **RMB-01**: A user can link **N inflow transactions** to a single outflow anchor (one-to-many), generalizing the current 1:1 pairing. The old `transaction_pair` becomes the N=1 case.
-- [ ] **RMB-02**: The anchor of a reimbursement is an **outflow Expense** or an **outflow Expense Group** — a group of transactions can carry a reimbursement (impossible today).
+- [x] **RMB-02**: The anchor of a reimbursement is an **outflow Expense** or an **outflow Expense Group** — a group of transactions can carry a reimbursement (impossible today).
 - [x] **RMB-03**: The model enforces the invariant that **only an outflow can be an anchor** and **only an inflow can be a refund** (a positive-anchored reimbursement is rejected).
 - [x] **RMB-04**: Linked refunds net into the anchor's cost following **Mondo Netto** — the anchor shows `outflow + Σ(linked refunds)` in the **cost's month**, and each linked refund is **excluded from its own month**, consistent across every dashboard aggregation site (`effectiveAmount` / `isNotSecondary` generalized from the single secondary to the refund set). Dashboard entrate/uscite/per-category totals stay correct.
 - [x] **RMB-05**: Existing `transaction_pair` rows are **migrated** into the new reimbursement model (anchor = the primary's Expense, refund = the secondary) with no change to dashboard numbers before/after migration.
@@ -51,7 +51,7 @@ Filled at roadmap creation (2026-07-23). 11/11 RMB requirements mapped across Ph
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | RMB-01 | Phase 73 | Complete |
-| RMB-02 | Phase 74 | Pending |
+| RMB-02 | Phase 74 | Complete |
 | RMB-03 | Phase 73 | Complete |
 | RMB-04 | Phase 73 | Complete |
 | RMB-05 | Phase 73 | Complete |
