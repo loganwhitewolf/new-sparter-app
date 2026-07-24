@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ExternalLink, Link2, Lock, Split, Tag, Trash2, Unlink, X } from 'lucide-react'
+import { ExternalLink, Lock, Split, Tag, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,21 +22,21 @@ import { DetailPageShell } from '@/components/detail-pages/detail-page-shell'
 import { TransactionAmountEdit } from '@/components/transactions/transaction-amount-edit'
 import { TransactionDateEdit } from '@/components/transactions/transaction-date-edit'
 import { TransactionTitleEdit } from '@/components/transactions/transaction-title-edit'
-import { CounterpartPickerDialog } from '@/components/transactions/counterpart-picker-dialog'
+import { ReimbursementPanel } from '@/components/transactions/reimbursement-panel'
+import { RefundPickerDialog } from '@/components/transactions/refund-picker-dialog'
 import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { deleteTransaction } from '@/lib/actions/transactions'
-import { deleteTransactionPairAction } from '@/lib/actions/transaction-pairs'
 import { addTransactionTagAction, removeTransactionTagAction } from '@/lib/actions/transaction-tags'
+import type { ReimbursementPanelData } from '@/lib/dal/reimbursement'
 import type { TransactionDetailRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import type { TagRow } from '@/lib/dal/tags'
-import { APP_ROUTES, expenseDetailHref, importFileDetailHref, transactionDetailHref } from '@/lib/routes'
+import { APP_ROUTES, expenseDetailHref, importFileDetailHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
 import { amountToneClass } from '@/lib/utils/amount-tone'
 import { toDecimal } from '@/lib/utils/decimal'
-import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 
 type CurrentTag = { tagId: number; tagName: string; archived: boolean }
 
@@ -46,13 +46,9 @@ type Props = {
   mostUsed: MostUsedSubcategory[]
   currentTags: CurrentTag[]
   allTags: TagRow[]
+  /** D-02: the reimbursement panel's read model, resolved server-side (Plan 75-04). */
+  reimbursementPanelData: ReimbursementPanelData | undefined
 }
-
-const dateFormatter = new Intl.DateTimeFormat('it-IT', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
 
 function formatSignedAmount(amount: string, currency: string): string {
   try {
@@ -65,31 +61,21 @@ function formatSignedAmount(amount: string, currency: string): string {
   }
 }
 
-function formatAbsoluteSigned(amount: string, currency: string): string {
-  const d = toDecimal(amount)
-  const sign = d.isNegative() ? '-' : '+'
-  return `${sign}${formatAbsoluteAmount(amount, currency)}`
-}
-
-function formatDate(date: Date): string {
-  return dateFormatter.format(new Date(date))
-}
-
 export function TransactionDetailClient({
   transaction,
   categories,
   mostUsed,
   currentTags,
   allTags,
+  reimbursementPanelData,
 }: Props) {
   const router = useRouter()
-  const [pairPickerOpen, setPairPickerOpen] = useState(false)
+  const [refundPickerOpen, setRefundPickerOpen] = useState(false)
   const [detachOpen, setDetachOpen] = useState(false)
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteLinkedExpenses, setDeleteLinkedExpenses] = useState(false)
   const [deletePending, setDeletePending] = useState(false)
-  const [unpairPending, setUnpairPending] = useState(false)
   const [tags, setTags] = useState<CurrentTag[]>(currentTags)
   const [addTagId, setAddTagId] = useState<string>('')
   const [tagPending, setTagPending] = useState(false)
@@ -101,20 +87,6 @@ export function TransactionDetailClient({
     transaction.description
   const isOneToOne =
     Boolean(transaction.expenseTitle) && transaction.expenseTransactionCount === 1
-
-  async function handleUnpair() {
-    setUnpairPending(true)
-    const fd = new FormData()
-    fd.set('transactionId', transaction.id)
-    const result = await deleteTransactionPairAction({ error: null }, fd)
-    setUnpairPending(false)
-    if (result.error) {
-      toast.error(result.error)
-    } else {
-      toast.success('Collegamento rimosso.')
-      router.refresh()
-    }
-  }
 
   async function handleDelete() {
     setDeletePending(true)
@@ -333,28 +305,6 @@ export function TransactionDetailClient({
             Cerca su internet
           </a>
         </Button>
-        {transaction.pairedWithId ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full justify-start"
-            disabled={unpairPending}
-            onClick={() => void handleUnpair()}
-          >
-            <Unlink className="h-4 w-4" />
-            Scollega rimborso
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => setPairPickerOpen(true)}
-          >
-            <Unlink className="h-4 w-4 rotate-45" />
-            Collega rimborso
-          </Button>
-        )}
         {transaction.expenseId ? (
           <Button
             type="button"
@@ -411,42 +361,11 @@ export function TransactionDetailClient({
           <Badge variant="outline">Manuale</Badge>
         </div>
       )}
-      {transaction.pairedWithId &&
-      transaction.pairedNetAmount &&
-      transaction.pairedAmount &&
-      transaction.pairedOccurredAt ? (
-        <div className="flex flex-col gap-2 rounded-md border p-3">
-          <div className="flex items-center gap-2">
-            <Link2 className="h-4 w-4 text-blue-700" />
-            <span className="text-sm font-medium">Rimborso collegato</span>
-          </div>
-          <p className="truncate text-sm text-muted-foreground" title={transaction.pairedDescription ?? ''}>
-            {transaction.pairedDescription}
-          </p>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Importo</span>
-            <span className="font-mono tabular-nums">
-              {formatAbsoluteSigned(transaction.pairedAmount, transaction.currency)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Data</span>
-            <span className="font-mono">{formatDate(transaction.pairedOccurredAt)}</span>
-          </div>
-          <div className="flex items-center justify-between border-t pt-1 text-sm font-medium">
-            <span>Netto</span>
-            <span className="font-mono tabular-nums">
-              {formatAbsoluteSigned(transaction.pairedNetAmount, transaction.currency)}
-            </span>
-          </div>
-          <Link
-            href={transactionDetailHref(transaction.pairedWithId)}
-            className="text-xs text-primary underline-offset-4 hover:underline"
-          >
-            Vai alla transazione collegata
-          </Link>
-        </div>
-      ) : null}
+      <ReimbursementPanel
+        anchor={{ transactionId: transaction.id }}
+        data={reimbursementPanelData}
+        onAddRefund={() => setRefundPickerOpen(true)}
+      />
     </div>
   )
 
@@ -464,16 +383,15 @@ export function TransactionDetailClient({
         azioniCard={azioniCard}
       />
 
-      <CounterpartPickerDialog
-        open={pairPickerOpen}
-        onOpenChange={setPairPickerOpen}
-        transactionId={transaction.id}
-        transactionAmount={transaction.amount}
-        transactionOccurredAt={transaction.occurredAt}
-        onPaired={() => {
-          setPairPickerOpen(false)
-          router.refresh()
+      <RefundPickerDialog
+        open={refundPickerOpen}
+        onOpenChange={setRefundPickerOpen}
+        anchor={{
+          transactionId: transaction.id,
+          amount: transaction.amount,
+          occurredAt: transaction.occurredAt,
         }}
+        onLinked={() => router.refresh()}
       />
 
       {transaction.expenseId ? (

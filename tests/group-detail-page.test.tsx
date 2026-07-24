@@ -69,6 +69,7 @@ const pageMocks = vi.hoisted(() => ({
   getExpenseGroupForDetail: vi.fn(),
   getCategories: vi.fn(),
   getMostUsedSubcategories: vi.fn(),
+  getReimbursementPanelData: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error('notFound')
   }),
@@ -93,6 +94,10 @@ vi.mock('@/lib/dal/categories', () => ({
 
 vi.mock('@/lib/dal/subcategory-usage', () => ({
   getMostUsedSubcategories: pageMocks.getMostUsedSubcategories,
+}))
+
+vi.mock('@/lib/dal/reimbursement', () => ({
+  getReimbursementPanelData: pageMocks.getReimbursementPanelData,
 }))
 
 function makeGroupDetailRow(overrides: Record<string, unknown> = {}) {
@@ -166,6 +171,7 @@ describe('/expenses/groups/[groupId] page', () => {
     pageMocks.getExpenseGroupForDetail.mockReset()
     pageMocks.getCategories.mockReset()
     pageMocks.getMostUsedSubcategories.mockReset()
+    pageMocks.getReimbursementPanelData.mockReset()
     pageMocks.notFound.mockReset()
     pageMocks.notFound.mockImplementation(() => {
       throw new Error('notFound')
@@ -175,6 +181,7 @@ describe('/expenses/groups/[groupId] page', () => {
     pageMocks.getExpenseGroupForDetail.mockResolvedValue(makeGroupDetailRow())
     pageMocks.getCategories.mockResolvedValue([])
     pageMocks.getMostUsedSubcategories.mockResolvedValue([])
+    pageMocks.getReimbursementPanelData.mockResolvedValue(undefined)
   })
 
   it('renders the group title, category, members, and transactions on the happy path', async () => {
@@ -194,6 +201,7 @@ describe('/expenses/groups/[groupId] page', () => {
     expect(pageMocks.notFound).toHaveBeenCalledTimes(1)
     expect(pageMocks.getCategories).not.toHaveBeenCalled()
     expect(pageMocks.getMostUsedSubcategories).not.toHaveBeenCalled()
+    expect(pageMocks.getReimbursementPanelData).not.toHaveBeenCalled()
   })
 
   it('calls notFound() for a malformed (non-numeric) groupId without calling getExpenseGroupForDetail', async () => {
@@ -221,6 +229,7 @@ describe('GroupDetailClient', () => {
         group: makeGroupDetailRow(overrides),
         categories: [],
         mostUsed: [],
+        reimbursementPanelData: undefined,
         ...props,
       }),
     )

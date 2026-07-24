@@ -133,3 +133,27 @@ export const getGroupOccurrenceInterval = cache(
     }
   },
 )
+
+/**
+ * Resolves every member transaction id of an Expense Group (Phase 75 Plan 04) — the D-06
+ * self-exclusion set `RefundPickerDialog`'s Group-anchor mode passes to `getEligibleCounterparts`
+ * so a group's own member transactions are never offered as candidate refunds for themselves
+ * (a group anchor never writes to `reimbursement.expenseId`, so `getEligibleCounterparts`'s
+ * already-anchor exclusion — keyed on `expense_id` — cannot catch this on its own).
+ *
+ * Ownership-scoped to `userId` via `expenseGroup.userId`, mirroring `getGroupOccurrenceInterval`'s
+ * join chain. Returns an empty array for an empty/foreign groupId (never throws).
+ */
+export const getGroupMemberTransactionIds = cache(
+  async (input: { userId: string; groupId: number }): Promise<string[]> => {
+    const rows = await db
+      .select({ id: transaction.id })
+      .from(expenseGroupMembership)
+      .innerJoin(expenseGroup, eq(expenseGroupMembership.groupId, expenseGroup.id))
+      .innerJoin(expense, eq(expenseGroupMembership.expenseId, expense.id))
+      .innerJoin(transaction, eq(transaction.expenseId, expense.id))
+      .where(and(eq(expenseGroupMembership.groupId, input.groupId), eq(expenseGroup.userId, input.userId)))
+
+    return rows.map((r) => r.id)
+  },
+)

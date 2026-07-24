@@ -24,6 +24,7 @@ import type {
 } from '@/lib/dal/transaction-pairs'
 import type { getReimbursementPanelData as GetReimbursementPanelData } from '@/lib/dal/reimbursement'
 import type { computeReimbursementResidual as ComputeReimbursementResidual } from '@/lib/services/reimbursement'
+import type { createMultiRefundAction as CreateMultiRefundAction } from '@/lib/actions/transaction-pairs'
 import type {
   createPair as CreatePair,
   deletePairByTransactionId as DeletePairByTransactionId,
@@ -67,6 +68,7 @@ let getEligibleCounterparts: typeof GetEligibleCounterparts
 let getGroupOccurrenceInterval: typeof GetGroupOccurrenceInterval
 let getReimbursementPanelData: typeof GetReimbursementPanelData
 let computeReimbursementResidualForTest: typeof ComputeReimbursementResidual
+let createMultiRefundAction: typeof CreateMultiRefundAction
 
 if (harness.ok) {
   vi.doMock('@/lib/db', () => ({ db: harness.db }))
@@ -82,6 +84,8 @@ if (harness.ok) {
   getReimbursementPanelData = reimbursementDalModule.getReimbursementPanelData
   const reimbursementServiceModule = await import('@/lib/services/reimbursement')
   computeReimbursementResidualForTest = reimbursementServiceModule.computeReimbursementResidual
+  const actionsModule = await import('@/lib/actions/transaction-pairs')
+  createMultiRefundAction = actionsModule.createMultiRefundAction
 }
 
 function requireHarnessDb(): ReimbursementTestDb {
@@ -1263,5 +1267,157 @@ describeIfReachable('getReimbursementPanelData — panel data (Phase 75 Plan 04 
     const residual = await computeReimbursementResidualForTest({ reimbursementId: panelData!.reimbursementId, userId })
     expect(panelData!.residual).toBe(residual!.residual)
     expect(panelData!.state).toBe(residual!.state)
+  })
+})
+
+// ---------------------------------------------------------------------------------------------
+// Plan 04 Task 2 — createMultiRefundAction (D-05, Edge RMB-08/empty, T-75-10)
+// ---------------------------------------------------------------------------------------------
+function buildMultiRefundFormData(input: {
+  transactionId?: string
+  groupId?: number
+  counterpartIds: string[]
+}): FormData {
+  const fd = new FormData()
+  if (input.transactionId) fd.set('transactionId', input.transactionId)
+  if (input.groupId !== undefined) fd.set('groupId', String(input.groupId))
+  for (const id of input.counterpartIds) fd.append('counterpartIds', id)
+  return fd
+}
+
+describeIfReachable('createMultiRefundAction — multi refund action (Phase 75 Plan 04 Task 2)', () => {
+  it('with 3 counterpart ids creates/appends all 3 inside one transaction', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+    const { expenseId: anchorExpenseId, transactionId: anchorTransactionId } =
+      await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-90.00',
+        occurredAt,
+        title: 'Cena in tre',
+      })
+    const { transactionId: refundATransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.incomeSubCategoryId,
+      amount: '30.00',
+      occurredAt,
+      title: 'Rimborso Carlo',
+    })
+    const { transactionId: refundBTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.incomeSubCategoryId,
+      amount: '30.00',
+      occurredAt,
+      title: 'Rimborso Giulia',
+    })
+    const { transactionId: refundCTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.incomeSubCategoryId,
+      amount: '30.00',
+      occurredAt,
+      title: 'Rimborso Marco',
+    })
+
+    const fd = buildMultiRefundFormData({
+      transactionId: anchorTransactionId,
+      counterpartIds: [refundATransactionId, refundBTransactionId, refundCTransactionId],
+    })
+    const result = await createMultiRefundAction({ error: null }, fd)
+    expect(result.error).toBeNull()
+
+    const reimbursementRows = await db
+      .select({ id: reimbursementTable.id })
+      .from(reimbursementTable)
+      .where(eq(reimbursementTable.expenseId, anchorExpenseId))
+    expect(reimbursementRows).toHaveLength(1)
+
+    const refundRows = await db
+      .select({ transactionId: reimbursementRefundTable.transactionId })
+      .from(reimbursementRefundTable)
+      .where(eq(reimbursementRefundTable.reimbursementId, reimbursementRows[0]!.id))
+    expect(refundRows.map((r) => r.transactionId).sort()).toEqual(
+      [refundATransactionId, refundBTransactionId, refundCTransactionId].sort(),
+    )
+  })
+
+  it('submitting zero ids returns the Italian validation error, no DB write', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+    const { transactionId: anchorTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-40.00',
+      occurredAt,
+      title: 'Spesa senza rimborsi',
+    })
+
+    const fd = buildMultiRefundFormData({ transactionId: anchorTransactionId, counterpartIds: [] })
+    const result = await createMultiRefundAction({ error: null }, fd)
+    expect(result.error).toBe('Seleziona almeno un rimborso da collegare.')
+
+    const reimbursementRows = await db.select({ id: reimbursementTable.id }).from(reimbursementTable)
+    expect(reimbursementRows).toHaveLength(0)
+  })
+
+  it('a mid-batch failure (a foreign-owned counterpart id) rolls back the WHOLE submission — never a partial link', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    const { userId: otherUserId } = await seedUser(db, { name: 'Other User' })
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+    const { expenseId: anchorExpenseId, transactionId: anchorTransactionId } =
+      await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-90.00',
+        occurredAt,
+        title: 'Cena in tre',
+      })
+    const { transactionId: refundATransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.incomeSubCategoryId,
+      amount: '30.00',
+      occurredAt,
+      title: 'Rimborso Carlo',
+    })
+    // Foreign-owned — createPairTx's ownership check throws for this one, mid-batch.
+    const { transactionId: foreignTransactionId } = await seedExpenseWithTransaction(db, {
+      userId: otherUserId,
+      subCategoryId: taxonomy.incomeSubCategoryId,
+      amount: '30.00',
+      occurredAt,
+      title: 'Rimborso di un altro utente',
+    })
+
+    const fd = buildMultiRefundFormData({
+      transactionId: anchorTransactionId,
+      counterpartIds: [refundATransactionId, foreignTransactionId],
+    })
+    const result = await createMultiRefundAction({ error: null }, fd)
+    expect(result.error).not.toBeNull()
+
+    // Neither the reimbursement NOR the first (valid) refund's link survived the rollback.
+    const reimbursementRows = await db
+      .select({ id: reimbursementTable.id })
+      .from(reimbursementTable)
+      .where(eq(reimbursementTable.expenseId, anchorExpenseId))
+    expect(reimbursementRows).toHaveLength(0)
   })
 })

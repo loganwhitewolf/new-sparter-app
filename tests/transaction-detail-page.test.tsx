@@ -231,6 +231,7 @@ const pageMocks = vi.hoisted(() => ({
   getMostUsedSubcategories: vi.fn(),
   getTransactionTagsForTransaction: vi.fn(),
   getTags: vi.fn(),
+  getReimbursementPanelData: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error('notFound')
   }),
@@ -263,6 +264,10 @@ vi.mock('@/lib/dal/transaction-tags', () => ({
 
 vi.mock('@/lib/dal/tags', () => ({
   getTags: pageMocks.getTags,
+}))
+
+vi.mock('@/lib/dal/reimbursement', () => ({
+  getReimbursementPanelData: pageMocks.getReimbursementPanelData,
 }))
 
 // Radix's Select portals SelectContent into document.body, which never renders under
@@ -336,6 +341,7 @@ describe('/transactions/[id] page', () => {
     pageMocks.getMostUsedSubcategories.mockReset()
     pageMocks.getTransactionTagsForTransaction.mockReset()
     pageMocks.getTags.mockReset()
+    pageMocks.getReimbursementPanelData.mockReset()
     pageMocks.notFound.mockReset()
     pageMocks.notFound.mockImplementation(() => {
       throw new Error('notFound')
@@ -347,6 +353,7 @@ describe('/transactions/[id] page', () => {
     pageMocks.getMostUsedSubcategories.mockResolvedValue([])
     pageMocks.getTransactionTagsForTransaction.mockResolvedValue([])
     pageMocks.getTags.mockResolvedValue([])
+    pageMocks.getReimbursementPanelData.mockResolvedValue(undefined)
   })
 
   it('renders 200 with amount, date, title, category, and cross-refs for an owned transaction', async () => {
@@ -438,10 +445,20 @@ describe('/transactions/[id] page', () => {
 
     expect(html).toContain('Azioni')
     expect(html).toContain('Cerca su internet')
-    expect(html).toContain('Collega rimborso')
     expect(html).toContain('Spesa a sé (non aggregare)')
     expect(html).toContain('Elimina')
     expect(html).not.toContain('Altre azioni')
+  })
+
+  // Phase 75 Plan 04 (D-02): the old 1:1 "Collega rimborso" Azioni-card action evolved in place
+  // into the ReimbursementPanel's "Aggiungi rimborso" CTA inside the Collegamenti card.
+  it('renders the reimbursement panel empty-state CTA ("Aggiungi rimborso") in the Collegamenti card, not the old Azioni-card action', async () => {
+    const html = await renderTransactionPage()
+
+    expect(html).toContain('Nessun rimborso collegato')
+    expect(html).toContain('Aggiungi rimborso')
+    expect(html).not.toContain('Collega rimborso')
+    expect(html).not.toContain('Scollega rimborso')
   })
 
   it('shows the group title ahead of the expense title in both the header and "Spesa collegata", while linking to the member expense\'s own detail page (GRP-08)', async () => {
@@ -489,6 +506,7 @@ describe('Tag section (TAG-02, D-07b)', () => {
     pageMocks.getMostUsedSubcategories.mockReset()
     pageMocks.getTransactionTagsForTransaction.mockReset()
     pageMocks.getTags.mockReset()
+    pageMocks.getReimbursementPanelData.mockReset()
     pageMocks.notFound.mockReset()
     pageMocks.notFound.mockImplementation(() => {
       throw new Error('notFound')
@@ -498,6 +516,7 @@ describe('Tag section (TAG-02, D-07b)', () => {
     pageMocks.getTransactionForDetail.mockResolvedValue(makeTransactionDetailRow())
     pageMocks.getCategories.mockResolvedValue([])
     pageMocks.getMostUsedSubcategories.mockResolvedValue([])
+    pageMocks.getReimbursementPanelData.mockResolvedValue(undefined)
   })
 
   it('renders each current tag as a chip with a "Rimuovi tag {name}" control', async () => {
