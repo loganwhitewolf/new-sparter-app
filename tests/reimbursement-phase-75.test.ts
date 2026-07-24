@@ -14,6 +14,10 @@ import {
   reimbursementAnchorTransaction as reimbursementAnchorTransactionTable,
   reimbursementRefund as reimbursementRefundTable,
 } from '@/lib/db/schema'
+import type {
+  getEligibleCounterparts as GetEligibleCounterparts,
+  getGroupOccurrenceInterval as GetGroupOccurrenceInterval,
+} from '@/lib/dal/transaction-pairs'
 import type { createPair as CreatePair } from '@/lib/services/transaction-pairs'
 import {
   connectReimbursementTestDb,
@@ -40,17 +44,22 @@ if (!harness.ok) {
 
 const describeIfReachable = harness.ok ? describe : describe.skip
 
-// createPair — the live write path under test in the Task 1 block below. Same technique as
-// tests/reimbursement-regression.test.ts: never let lib/services/transaction-pairs.ts build its
-// own connection off the ambient process.env.DATABASE_URL — feed it the harness's own
-// already-host-guarded client instead.
+// createPair/getEligibleCounterparts/getGroupOccurrenceInterval — the live write/read paths
+// under test. Same technique as tests/reimbursement-regression.test.ts: never let the modules
+// under test build their own connection off the ambient process.env.DATABASE_URL — feed them
+// the harness's own already-host-guarded client instead.
 let createPair: typeof CreatePair
+let getEligibleCounterparts: typeof GetEligibleCounterparts
+let getGroupOccurrenceInterval: typeof GetGroupOccurrenceInterval
 
 if (harness.ok) {
   vi.doMock('@/lib/db', () => ({ db: harness.db }))
   vi.resetModules()
   const servicesModule = await import('@/lib/services/transaction-pairs')
   createPair = servicesModule.createPair
+  const dalModule = await import('@/lib/dal/transaction-pairs')
+  getEligibleCounterparts = dalModule.getEligibleCounterparts
+  getGroupOccurrenceInterval = dalModule.getGroupOccurrenceInterval
 }
 
 function requireHarnessDb(): ReimbursementTestDb {
@@ -322,6 +331,123 @@ describeIfReachable(
         .from(reimbursementTable)
         .where(eq(reimbursementTable.expenseGroupId, groupId))
       expect(reimbursementRows).toHaveLength(0)
+    })
+  },
+)
+
+// ---------------------------------------------------------------------------------------------
+// Task 2 — getEligibleCounterparts multi-exclusion + getGroupOccurrenceInterval (D-06)
+// ---------------------------------------------------------------------------------------------
+describeIfReachable(
+  'eligible counterparts — multi-exclusion + Group occurrence-interval window (Phase 75 Plan 02 Task 2, D-06)',
+  () => {
+    it('excludes every id in excludeTransactionIds (2+ elements), not just one', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+      const { transactionId: member1TransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-300.00',
+        occurredAt,
+        title: 'Alloggio montagna',
+      })
+      const { transactionId: member2TransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-100.00',
+        occurredAt,
+        title: 'Trasporto montagna',
+      })
+      const { transactionId: eligibleTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.incomeSubCategoryId,
+        amount: '150.00',
+        occurredAt,
+        title: 'Rimborso montagna',
+      })
+
+      const dateFrom = new Date(2025, 10, 12, 0, 0, 0)
+      const dateTo = new Date(2026, 3, 12, 0, 0, 0)
+
+      // Excluding both group members (a negative reference amount wants positive counterparts) —
+      // neither member should ever surface as its own candidate refund.
+      const results = await getEligibleCounterparts({
+        excludeTransactionIds: [member1TransactionId, member2TransactionId],
+        referenceAmount: '-400.00',
+        dateFrom,
+        dateTo,
+      })
+
+      const resultIds = results.map((r) => r.id)
+      expect(resultIds).not.toContain(member1TransactionId)
+      expect(resultIds).not.toContain(member2TransactionId)
+      expect(resultIds).toContain(eligibleTransactionId)
+    })
+
+    it('getGroupOccurrenceInterval resolves the min/max occurredAt across every member transaction, and undefined for an empty/foreign group', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const { userId: otherUserId } = await seedUser(db)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+
+      const firstDate = new Date(2026, 0, 5, 9, 0, 0)
+      const midDate = new Date(2026, 0, 12, 9, 0, 0)
+      const lastDate = new Date(2026, 0, 20, 9, 0, 0)
+
+      const { expenseId: member1ExpenseId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-300.00',
+        occurredAt: firstDate,
+        title: 'Alloggio montagna',
+      })
+      const { expenseId: member2ExpenseId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-100.00',
+        occurredAt: midDate,
+        title: 'Trasporto montagna',
+      })
+      const { expenseId: member3ExpenseId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-50.00',
+        occurredAt: lastDate,
+        title: 'Cena montagna',
+      })
+
+      const { groupId } = await seedExpenseGroup(db, {
+        userId,
+        title: 'Vacanza in montagna',
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        memberExpenseIds: [member1ExpenseId, member2ExpenseId, member3ExpenseId],
+      })
+
+      const interval = await getGroupOccurrenceInterval({ userId, groupId })
+      expect(interval).toBeDefined()
+      expect(interval!.first.getTime()).toBe(firstDate.getTime())
+      expect(interval!.last.getTime()).toBe(lastDate.getTime())
+
+      // Empty/foreign group: undefined, same not-found convention as getReimbursementAggregates.
+      const { groupId: emptyGroupId } = await seedExpenseGroup(db, {
+        userId,
+        title: 'Gruppo vuoto',
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        memberExpenseIds: [],
+      })
+      await expect(getGroupOccurrenceInterval({ userId, groupId: emptyGroupId })).resolves.toBeUndefined()
+      await expect(
+        getGroupOccurrenceInterval({ userId: otherUserId, groupId }),
+      ).resolves.toBeUndefined()
     })
   },
 )

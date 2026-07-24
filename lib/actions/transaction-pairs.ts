@@ -87,7 +87,16 @@ export async function loadEligibleCounterpartsAction(params: {
   }
 
   try {
-    const counterparts = await getEligibleCounterparts(parsed.data)
+    // Action↔DAL seam (Phase 75 Plan 02): the DAL's getEligibleCounterparts takes a
+    // excludeTransactionIds SET (D-06 — a Group anchor excludes every member transaction), while
+    // this action's own external contract stays the D-07 quick-action's single referenceId — a
+    // one-element array wrapping it, localized to this one seam.
+    const counterparts = await getEligibleCounterparts({
+      excludeTransactionIds: [parsed.data.referenceId],
+      referenceAmount: parsed.data.referenceAmount,
+      dateFrom: parsed.data.dateFrom,
+      dateTo: parsed.data.dateTo,
+    })
     return { counterparts }
   } catch (err) {
     if (err instanceof Error) return { error: err.message }
