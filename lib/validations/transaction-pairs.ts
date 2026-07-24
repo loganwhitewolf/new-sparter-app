@@ -10,6 +10,21 @@ export const DeletePairSchema = z.object({
 })
 
 /**
+ * D-09's "remove a single refund" lifecycle action — same shape as DeletePairSchema (a bare
+ * transactionId), aliased rather than duplicated since removeRefundAction wraps the same
+ * `deletePairByTransactionId` service call.
+ */
+export const RemoveRefundSchema = DeletePairSchema
+
+/**
+ * D-09's "delete the whole reimbursement" lifecycle action — a coerced number since FormData
+ * values arrive as strings.
+ */
+export const DeleteReimbursementSchema = z.object({
+  reimbursementId: z.coerce.number({ error: 'Rimborso non valido.' }).int().positive(),
+})
+
+/**
  * Validates the parameters for loading eligible counterparts (WR-02).
  *
  * `referenceAmount` is a Drizzle DECIMAL string, so it is validated as a
@@ -35,3 +50,5 @@ export const LoadCounterpartsSchema = z
 export type CreatePairInput = z.infer<typeof CreatePairSchema>
 export type DeletePairInput = z.infer<typeof DeletePairSchema>
 export type LoadCounterpartsInput = z.infer<typeof LoadCounterpartsSchema>
+export type RemoveRefundInput = z.infer<typeof RemoveRefundSchema>
+export type DeleteReimbursementInput = z.infer<typeof DeleteReimbursementSchema>

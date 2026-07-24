@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   dbSelectChain: vi.fn(),
   dbInsertChain: vi.fn(),
   dbDeleteChain: vi.fn(),
+  dbUpdateChain: vi.fn(),
   applyDetachCleanupTx: vi.fn(),
 }))
 
@@ -126,14 +127,27 @@ function makeDeleteChain() {
   return chain
 }
 
+// Supports `await tx.update(t).set(v).where(...)` — restoreRefundBaseline's UPDATE call
+// (D-10, Phase 75 Plan 03).
+function makeUpdateChain(onSet?: (v: unknown) => void) {
+  const chain = {
+    set: vi.fn((v: unknown) => {
+      onSet?.(v)
+      return { where: vi.fn(() => Promise.resolve([])) }
+    }),
+  }
+  return chain
+}
+
 // db.transaction(cb) invokes cb with the same db object as the tx handle, so the
-// existing select/insert/delete chain mocks (and assertions on db.delete etc.) work
+// existing select/insert/delete/update chain mocks (and assertions on db.delete etc.) work
 // unchanged inside the transaction (CR-02 atomicity).
 vi.mock('@/lib/db', () => {
   const db: Record<string, unknown> = {
     select: vi.fn(() => mocks.dbSelectChain()),
     insert: vi.fn((table: unknown) => mocks.dbInsertChain(table)),
     delete: vi.fn((table: unknown) => mocks.dbDeleteChain(table)),
+    update: vi.fn((table: unknown) => mocks.dbUpdateChain(table)),
   }
   db.transaction = vi.fn(async (cb: (tx: unknown) => unknown) => cb(db))
   return { db }
@@ -783,6 +797,7 @@ describe('deletePairByTransactionId', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.dbInsertChain.mockReturnValue(makeInsertChain([{ id: 1 }]))
+    mocks.dbUpdateChain.mockReturnValue(makeUpdateChain())
   })
 
   // ── (e) Ownership validation before delete ────────────────────────────────
@@ -835,6 +850,9 @@ describe('deletePairByTransactionId', () => {
         if (callCount === 1) return makeSelectChain([tx])
         // refund-role lookup: this transaction IS a refund of reimbursement 7
         if (callCount === 2) return makeSelectChain([{ id: 99, reimbursementId: 7 }])
+        // restoreRefundBaseline's snapshot lookup: no snapshot recorded (refund-cleanup never
+        // ran on link) — restore no-ops, matching this test's pre-existing setup.
+        if (callCount === 3) return makeSelectChain([])
         // remaining-refunds check: no other refunds left
         return makeSelectChain([])
       })
@@ -867,6 +885,8 @@ describe('deletePairByTransactionId', () => {
         callCount += 1
         if (callCount === 1) return makeSelectChain([tx])
         if (callCount === 2) return makeSelectChain([{ id: 99, reimbursementId: 7 }])
+        // call 3: restoreRefundBaseline's snapshot lookup — none recorded, no-op.
+        if (callCount === 3) return makeSelectChain([])
         // No remaining refunds → reimbursement row must also be deleted.
         return makeSelectChain([])
       })
@@ -891,7 +911,9 @@ describe('deletePairByTransactionId', () => {
         callCount += 1
         if (callCount === 1) return makeSelectChain([tx])
         if (callCount === 2) return makeSelectChain([{ id: 99, reimbursementId: 7 }])
-        // A sibling refund still exists.
+        // call 3: restoreRefundBaseline's snapshot lookup — none recorded, no-op.
+        if (callCount === 3) return makeSelectChain([])
+        // call 4: remaining-refunds check — a sibling refund still exists.
         return makeSelectChain([{ id: 100 }])
       })
 
@@ -905,6 +927,61 @@ describe('deletePairByTransactionId', () => {
 
       // Only the reimbursement_refund row is deleted; the reimbursement stays.
       expect(deletedTables).toHaveLength(1)
+    })
+
+    // (D-10, Phase 75 Plan 03): restoreRefundBaseline runs BEFORE the reimbursement_refund
+    // delete, restoring the refund's expense to its pre-link snapshot values.
+    it('restores the refund expense to its pre-link snapshot BEFORE deleting the link row', async () => {
+      const tx = makeTx('tx-refund', '+50.00', new Date('2026-01-10'), 'user-1', 'exp-refund')
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([tx])
+        if (callCount === 2) return makeSelectChain([{ id: 99, reimbursementId: 7 }])
+        // call 3: restoreRefundBaseline's snapshot lookup — a snapshot WAS recorded at link
+        // time, with the refund expense still present (expenseId non-null).
+        if (callCount === 3) {
+          return makeSelectChain([
+            {
+              expenseId: 'exp-refund',
+              expenseTitle: 'Rimborso Amazon',
+              expenseDescriptionHash: 'dh-original',
+              expenseSubCategoryId: 5,
+              expenseStatus: '3',
+            },
+          ])
+        }
+        // call 4: remaining-refunds check — no other refunds left.
+        return makeSelectChain([])
+      })
+
+      const setValues: unknown[] = []
+      mocks.dbUpdateChain.mockImplementation((table: unknown) => {
+        return makeUpdateChain((v) => setValues.push({ table, v }))
+      })
+
+      const deleteCallOrder: string[] = []
+      mocks.dbDeleteChain.mockImplementation((table: unknown) => {
+        deleteCallOrder.push((table as { reimbursementId?: string }).reimbursementId ?? 'unknown')
+        return { where: vi.fn(() => Promise.resolve([])) }
+      })
+
+      await deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-refund' })
+
+      expect(setValues).toHaveLength(1)
+      expect(setValues[0]).toMatchObject({
+        v: {
+          title: 'Rimborso Amazon',
+          descriptionHash: 'dh-original',
+          subCategoryId: 5,
+          status: '3',
+        },
+      })
+      // The restore UPDATE happens before the reimbursement_refund DELETE — this test only
+      // asserts the update fired (order is enforced by the service's own await sequencing,
+      // proven end-to-end by the real-Postgres suite in reimbursement-phase-75.test.ts). The
+      // now-empty reimbursement row is also deleted (no other refunds remain, PAIR-03).
+      expect(deleteCallOrder[0]).toBe('reimbursementRefund.reimbursementId')
     })
 
     it('performs the ownership read and delete inside db.transaction (CR-02)', async () => {

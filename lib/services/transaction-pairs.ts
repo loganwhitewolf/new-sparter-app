@@ -17,7 +17,7 @@ import {
   assertOutflowAnchorAmount,
 } from '@/lib/services/reimbursement-invariant'
 import { applyDetachCleanupTx } from '@/lib/services/transaction-detach'
-import { toDecimal } from '@/lib/utils/decimal'
+import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
 
 /**
  * Extract the Postgres SQLSTATE error code from a Drizzle/pg error's `cause`.
@@ -442,13 +442,115 @@ export async function createPair(input: CreatePairInput): Promise<CreatePairResu
 }
 
 /**
+ * Restore a refund's pre-link baseline (D-10, Phase 75 Plan 03, RMB-07): reverts the
+ * recategorization `applyDetachCleanupTx` applied at link time, using the snapshot
+ * `createPairTx` recorded immediately before that mutation ran. Shared by both unlink paths
+ * (`deletePairByTransactionId`'s refund-side branch and `deleteReimbursementForAnchor`) so
+ * "remove one refund" and "delete the whole reimbursement" restore identically.
+ *
+ * No-op (nothing to restore) when no snapshot row exists — matches a refund whose link never
+ * triggered cleanup in the first place (donor uncategorized, or refund shares the anchor's own
+ * Expense). Idempotent: calling this a second time for an already-restored/already-unlinked
+ * refund finds no snapshot (it was deleted alongside its reimbursement_refund row via ON DELETE
+ * CASCADE) and no-ops again — matches deletePairByTransactionId's existing silent-no-op
+ * convention for an already-unlinked transaction (Edge RMB-07/idempotency).
+ *
+ * Security (T-75-07): the expense UPDATE's WHERE clause always includes
+ * `expense.userId = input.userId` in addition to the snapshot's expenseId — a cross-user
+ * snapshot reference (which should never exist given ownership-scoped inserts) still cannot
+ * mutate a foreign row even if it did.
+ */
+async function restoreRefundBaseline(
+  tx: DbOrTx,
+  input: { refundTransactionId: string; userId: string },
+): Promise<void> {
+  const snapshotRows = await tx
+    .select({
+      expenseId: reimbursementRefundSnapshot.expenseId,
+      expenseTitle: reimbursementRefundSnapshot.expenseTitle,
+      expenseDescriptionHash: reimbursementRefundSnapshot.expenseDescriptionHash,
+      expenseSubCategoryId: reimbursementRefundSnapshot.expenseSubCategoryId,
+      expenseStatus: reimbursementRefundSnapshot.expenseStatus,
+    })
+    .from(reimbursementRefund)
+    .innerJoin(
+      reimbursementRefundSnapshot,
+      eq(reimbursementRefundSnapshot.reimbursementRefundId, reimbursementRefund.id),
+    )
+    .where(eq(reimbursementRefund.transactionId, input.refundTransactionId))
+    .limit(1)
+
+  const snapshotRow = snapshotRows[0]
+
+  // No snapshot recorded — the refund-cleanup never ran on link (Test 2, Task 1). Nothing to
+  // restore; also covers the idempotent-no-op case (the snapshot cascaded away already).
+  if (!snapshotRow) {
+    return
+  }
+
+  if (snapshotRow.expenseId) {
+    // The original expense still exists (Pitfall 2 branch A) — restore its fields in place.
+    // Covers `applyDetachCleanupTx`'s single-transaction re-hash-in-place branch, where the
+    // refund transaction's expenseId never changed at link time.
+    await tx
+      .update(expense)
+      .set({
+        title: snapshotRow.expenseTitle ?? '',
+        descriptionHash: snapshotRow.expenseDescriptionHash,
+        subCategoryId: snapshotRow.expenseSubCategoryId,
+        status: snapshotRow.expenseStatus ?? '1',
+        updatedAt: new Date(),
+      })
+      .where(and(eq(expense.id, snapshotRow.expenseId), eq(expense.userId, input.userId)))
+    return
+  }
+
+  // snapshotRow.expenseId is null — the onDelete:'set null' FK fired: the original expense was
+  // deleted after linking (Pitfall 2 branch B). Insert a fresh replacement expense from the
+  // snapshot's stored field values (mirrors applyDetachCleanupTx's multi-transaction-branch
+  // insert shape) and repoint the refund transaction back to it.
+  const refundTxRows = await tx
+    .select({ amount: transaction.amount, occurredAt: transaction.occurredAt })
+    .from(transaction)
+    .where(and(eq(transaction.id, input.refundTransactionId), eq(transaction.userId, input.userId)))
+    .limit(1)
+
+  const refundTxRow = refundTxRows[0]
+  if (!refundTxRow) {
+    return
+  }
+
+  const newExpenseId = crypto.randomUUID()
+
+  await tx.insert(expense).values({
+    id: newExpenseId,
+    userId: input.userId,
+    title: snapshotRow.expenseTitle ?? 'Rimborso',
+    descriptionHash: snapshotRow.expenseDescriptionHash,
+    subCategoryId: snapshotRow.expenseSubCategoryId,
+    totalAmount: toDbDecimal(toDecimal(refundTxRow.amount)),
+    transactionCount: 1,
+    firstTransactionAt: refundTxRow.occurredAt,
+    lastTransactionAt: refundTxRow.occurredAt,
+    status: snapshotRow.expenseStatus ?? '1',
+  })
+
+  await tx
+    .update(transaction)
+    .set({ expenseId: newExpenseId })
+    .where(and(eq(transaction.id, input.refundTransactionId), eq(transaction.userId, input.userId)))
+}
+
+/**
  * Remove a reimbursement link by either transaction in it (anchor or refund).
  *
  * Security (D-01 / T-50-01): verifies the transaction belongs to `input.userId`
  * before deleting. Restores baseline regardless of whether the transaction is
  * the anchor or a refund side (PAIR-03 unlink-restores-baseline):
- *  - Unlinking a refund removes its reimbursement_refund row; if it was the
- *    reimbursement's only refund, also removes the now-empty reimbursement row.
+ *  - Unlinking a refund restores its pre-link baseline (D-10, RMB-07) via
+ *    `restoreRefundBaseline`, THEN removes its reimbursement_refund row; if it
+ *    was the reimbursement's only refund, also removes the now-empty
+ *    reimbursement row.
  *  - Unlinking the anchor removes the reimbursement row (cascades its
  *    reimbursement_refund rows via ON DELETE CASCADE).
  */
@@ -487,7 +589,10 @@ export async function deletePairByTransactionId(input: {
     const refundRow = refundRows[0]
 
     if (refundRow) {
-      // Refund side: remove this refund row.
+      // Refund side (D-10): restore baseline BEFORE deleting the link row — restore reads the
+      // snapshot via the still-existing reimbursement_refund row.
+      await restoreRefundBaseline(tx, { refundTransactionId: input.transactionId, userId: input.userId })
+
       await tx.delete(reimbursementRefund).where(eq(reimbursementRefund.id, refundRow.id))
 
       // If this was the reimbursement's ONLY refund, remove the now-empty
@@ -519,5 +624,50 @@ export async function deletePairByTransactionId(input: {
         await tx.delete(reimbursement).where(eq(reimbursement.id, anchorRow.id))
       }
     }
+  })
+}
+
+/**
+ * Delete a whole reimbursement (D-09's second lifecycle action): restores baseline for EVERY
+ * linked refund (not just the last one removed), THEN deletes the reimbursement row (cascades
+ * reimbursement_refund / reimbursement_anchor_transaction / reimbursement_refund_snapshot rows
+ * via ON DELETE CASCADE).
+ *
+ * Security (T-75-08, Repudiation): every refund's restore runs BEFORE the reimbursement row (and
+ * its cascading refund rows) is deleted, inside ONE db.transaction — a mid-loop failure rolls
+ * back the whole batch, never leaving some refunds restored and others not.
+ * Security (T-75-07): ownership-scoped — a foreign-owned reimbursementId resolves to "not
+ * found" (silent no-op), never a cross-user delete.
+ */
+export async function deleteReimbursementForAnchor(input: {
+  userId: string
+  reimbursementId: number
+}): Promise<void> {
+  await db.transaction(async (tx) => {
+    const reimbursementRows = await tx
+      .select({ id: reimbursement.id })
+      .from(reimbursement)
+      .where(and(eq(reimbursement.id, input.reimbursementId), eq(reimbursement.userId, input.userId)))
+      .limit(1)
+
+    const reimbursementRow = reimbursementRows[0]
+    if (!reimbursementRow) {
+      // Ownership-scoped: a foreign-owned or already-deleted reimbursementId is a silent no-op
+      // (Edge RMB-07/idempotency), never a thrown error.
+      return
+    }
+
+    const refundRows = await tx
+      .select({ transactionId: reimbursementRefund.transactionId })
+      .from(reimbursementRefund)
+      .where(eq(reimbursementRefund.reimbursementId, reimbursementRow.id))
+
+    // Restore EVERY linked refund IN ORDER before any delete (T-75-08) — never just the last one
+    // removed.
+    for (const { transactionId } of refundRows) {
+      await restoreRefundBaseline(tx, { refundTransactionId: transactionId, userId: input.userId })
+    }
+
+    await tx.delete(reimbursement).where(eq(reimbursement.id, reimbursementRow.id))
   })
 }

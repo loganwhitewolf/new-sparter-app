@@ -1,9 +1,9 @@
-// Real-Postgres regression proof for Phase 75 Plan 02 (D-05/D-06/D-08 generalization of the
+// Real-Postgres regression proof for Phase 75 Plans 02+03 (D-05/D-06/D-08 generalization of the
 // reimbursement write path — create-or-append, dual anchor shape, multi-exclusion candidate
-// loading) plus Plan 03 Task 1 (D-10 pre-link snapshot recording). Exercises the REAL
-// createPair()/createPairTx() service and the REAL
-// getEligibleCounterparts()/getGroupOccurrenceInterval() DAL functions against the same local
-// Postgres harness used by tests/reimbursement-regression.test.ts.
+// loading — plus D-10's unlink-restores-baseline lifecycle). Exercises the REAL
+// createPair()/createPairTx()/deletePairByTransactionId()/deleteReimbursementForAnchor()
+// service and the REAL getEligibleCounterparts()/getGroupOccurrenceInterval() DAL functions
+// against the same local Postgres harness used by tests/reimbursement-regression.test.ts.
 //
 // Requires local Docker Postgres (`yarn db:up`). Skips gracefully (console warning, no failure)
 // when unreachable, so `vitest run` stays green in sandboxes without Docker.
@@ -22,7 +22,11 @@ import type {
   getEligibleCounterparts as GetEligibleCounterparts,
   getGroupOccurrenceInterval as GetGroupOccurrenceInterval,
 } from '@/lib/dal/transaction-pairs'
-import type { createPair as CreatePair } from '@/lib/services/transaction-pairs'
+import type {
+  createPair as CreatePair,
+  deletePairByTransactionId as DeletePairByTransactionId,
+  deleteReimbursementForAnchor as DeleteReimbursementForAnchor,
+} from '@/lib/services/transaction-pairs'
 import {
   connectReimbursementTestDb,
   resetReimbursementFixtures,
@@ -48,11 +52,14 @@ if (!harness.ok) {
 
 const describeIfReachable = harness.ok ? describe : describe.skip
 
-// createPair/getEligibleCounterparts/getGroupOccurrenceInterval — the live write/read paths
-// under test. Same technique as tests/reimbursement-regression.test.ts: never let the modules
-// under test build their own connection off the ambient process.env.DATABASE_URL — feed them
-// the harness's own already-host-guarded client instead.
+// createPair/deletePairByTransactionId/deleteReimbursementForAnchor/getEligibleCounterparts/
+// getGroupOccurrenceInterval — the live write/read paths under test. Same technique as
+// tests/reimbursement-regression.test.ts: never let the modules under test build their own
+// connection off the ambient process.env.DATABASE_URL — feed them the harness's own
+// already-host-guarded client instead.
 let createPair: typeof CreatePair
+let deletePairByTransactionId: typeof DeletePairByTransactionId
+let deleteReimbursementForAnchor: typeof DeleteReimbursementForAnchor
 let getEligibleCounterparts: typeof GetEligibleCounterparts
 let getGroupOccurrenceInterval: typeof GetGroupOccurrenceInterval
 
@@ -61,6 +68,8 @@ if (harness.ok) {
   vi.resetModules()
   const servicesModule = await import('@/lib/services/transaction-pairs')
   createPair = servicesModule.createPair
+  deletePairByTransactionId = servicesModule.deletePairByTransactionId
+  deleteReimbursementForAnchor = servicesModule.deleteReimbursementForAnchor
   const dalModule = await import('@/lib/dal/transaction-pairs')
   getEligibleCounterparts = dalModule.getEligibleCounterparts
   getGroupOccurrenceInterval = dalModule.getGroupOccurrenceInterval
@@ -690,6 +699,429 @@ describeIfReachable(
         .select({ id: reimbursementRefundSnapshotTable.id })
         .from(reimbursementRefundSnapshotTable)
       expect(allSnapshotRows).toHaveLength(2)
+    })
+  },
+)
+
+// Reads an expense's title/descriptionHash/subCategoryId/status — the fields
+// applyDetachCleanupTx mutates and restoreRefundBaseline reverts.
+async function loadExpenseState(
+  db: ReimbursementTestDb,
+  expenseId: string,
+): Promise<
+  | {
+      title: string
+      descriptionHash: string | null
+      subCategoryId: number | null
+      status: string
+    }
+  | undefined
+> {
+  const rows = await db
+    .select({
+      title: expenseTable.title,
+      descriptionHash: expenseTable.descriptionHash,
+      subCategoryId: expenseTable.subCategoryId,
+      status: expenseTable.status,
+    })
+    .from(expenseTable)
+    .where(eq(expenseTable.id, expenseId))
+    .limit(1)
+
+  return rows[0]
+}
+
+// ---------------------------------------------------------------------------------------------
+// Plan 03 Task 2 — Unlink and delete-reimbursement restore baseline (D-09, D-10, RMB-07)
+// ---------------------------------------------------------------------------------------------
+describeIfReachable(
+  'unlink and delete-reimbursement restore baseline (Phase 75 Plan 03 Task 2, D-09/D-10, RMB-07)',
+  () => {
+    it('Test 1 (Amazon 1:1 unlink): unlinking the refund restores its expense to pre-link state; the now-empty reimbursement is deleted', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+      const { expenseId: anchorExpenseId, transactionId: anchorTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.essentialSubCategoryId,
+          amount: '-100.00',
+          occurredAt,
+          title: 'Ordine Amazon',
+        })
+      const { expenseId: refundExpenseId, transactionId: refundTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.incomeSubCategoryId,
+          amount: '50.00',
+          occurredAt,
+          title: 'Rimborso Amazon',
+        })
+
+      await createPair({
+        userId,
+        anchor: { transactionId: anchorTransactionId },
+        counterpartId: refundTransactionId,
+      })
+
+      // Sanity: refund-cleanup DID run — the refund is recategorized under the anchor's
+      // subcategory before we unlink it.
+      const afterLink = await loadExpenseState(db, refundExpenseId)
+      expect(afterLink!.subCategoryId).toBe(taxonomy.essentialSubCategoryId)
+
+      await deletePairByTransactionId({ userId, transactionId: refundTransactionId })
+
+      const restored = await loadExpenseState(db, refundExpenseId)
+      expect(restored!.title).toBe('Rimborso Amazon')
+      expect(restored!.descriptionHash).toBeNull()
+      expect(restored!.subCategoryId).toBe(taxonomy.incomeSubCategoryId)
+      expect(restored!.status).toBe('3')
+
+      const reimbursementRows = await db
+        .select({ id: reimbursementTable.id })
+        .from(reimbursementTable)
+        .where(eq(reimbursementTable.expenseId, anchorExpenseId))
+      expect(reimbursementRows).toHaveLength(0)
+    })
+
+    it('Test 2 (dinner 1:N per-refund unlink): unlinking one refund restores only its own baseline; the other two stay linked and untouched', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+      const { expenseId: anchorExpenseId, transactionId: anchorTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.essentialSubCategoryId,
+          amount: '-90.00',
+          occurredAt,
+          title: 'Cena in tre',
+        })
+      const { expenseId: refundAExpenseId, transactionId: refundATransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.incomeSubCategoryId,
+          amount: '30.00',
+          occurredAt,
+          title: 'Rimborso Carlo',
+        })
+      const { expenseId: refundBExpenseId, transactionId: refundBTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.incomeSubCategoryId,
+          amount: '30.00',
+          occurredAt,
+          title: 'Rimborso Giulia',
+        })
+      const { expenseId: refundCExpenseId, transactionId: refundCTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.incomeSubCategoryId,
+          amount: '30.00',
+          occurredAt,
+          title: 'Rimborso Marco',
+        })
+
+      await createPair({
+        userId,
+        anchor: { transactionId: anchorTransactionId },
+        counterpartId: refundATransactionId,
+      })
+      await createPair({
+        userId,
+        anchor: { transactionId: anchorTransactionId },
+        counterpartId: refundBTransactionId,
+      })
+      await createPair({
+        userId,
+        anchor: { transactionId: anchorTransactionId },
+        counterpartId: refundCTransactionId,
+      })
+
+      await deletePairByTransactionId({ userId, transactionId: refundATransactionId })
+
+      const restoredA = await loadExpenseState(db, refundAExpenseId)
+      expect(restoredA!.title).toBe('Rimborso Carlo')
+      expect(restoredA!.subCategoryId).toBe(taxonomy.incomeSubCategoryId)
+
+      // B and C remain linked — their expense states are UNTOUCHED (still recategorized).
+      const stillLinkedB = await loadExpenseState(db, refundBExpenseId)
+      expect(stillLinkedB!.subCategoryId).toBe(taxonomy.essentialSubCategoryId)
+      const stillLinkedC = await loadExpenseState(db, refundCExpenseId)
+      expect(stillLinkedC!.subCategoryId).toBe(taxonomy.essentialSubCategoryId)
+
+      const reimbursementRows = await db
+        .select({ id: reimbursementTable.id })
+        .from(reimbursementTable)
+        .where(eq(reimbursementTable.expenseId, anchorExpenseId))
+      expect(reimbursementRows).toHaveLength(1)
+
+      const remainingRefunds = await db
+        .select({ transactionId: reimbursementRefundTable.transactionId })
+        .from(reimbursementRefundTable)
+        .where(eq(reimbursementRefundTable.reimbursementId, reimbursementRows[0]!.id))
+      expect(remainingRefunds.map((r) => r.transactionId).sort()).toEqual(
+        [refundBTransactionId, refundCTransactionId].sort(),
+      )
+    })
+
+    it('Test 3 (final unlink collapses): unlinking the last remaining refund restores baseline AND deletes the now-empty reimbursement row', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+      const { expenseId: anchorExpenseId, transactionId: anchorTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.essentialSubCategoryId,
+          amount: '-60.00',
+          occurredAt,
+          title: 'Cena in due',
+        })
+      const { expenseId: refundAExpenseId, transactionId: refundATransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.incomeSubCategoryId,
+          amount: '30.00',
+          occurredAt,
+          title: 'Rimborso Carlo',
+        })
+      const { expenseId: refundBExpenseId, transactionId: refundBTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.incomeSubCategoryId,
+          amount: '30.00',
+          occurredAt,
+          title: 'Rimborso Giulia',
+        })
+
+      await createPair({
+        userId,
+        anchor: { transactionId: anchorTransactionId },
+        counterpartId: refundATransactionId,
+      })
+      await createPair({
+        userId,
+        anchor: { transactionId: anchorTransactionId },
+        counterpartId: refundBTransactionId,
+      })
+
+      await deletePairByTransactionId({ userId, transactionId: refundATransactionId })
+
+      // Reimbursement still exists — refund B remains.
+      let reimbursementRows = await db
+        .select({ id: reimbursementTable.id })
+        .from(reimbursementTable)
+        .where(eq(reimbursementTable.expenseId, anchorExpenseId))
+      expect(reimbursementRows).toHaveLength(1)
+
+      await deletePairByTransactionId({ userId, transactionId: refundBTransactionId })
+
+      const restoredA = await loadExpenseState(db, refundAExpenseId)
+      const restoredB = await loadExpenseState(db, refundBExpenseId)
+      expect(restoredA!.subCategoryId).toBe(taxonomy.incomeSubCategoryId)
+      expect(restoredB!.subCategoryId).toBe(taxonomy.incomeSubCategoryId)
+
+      reimbursementRows = await db
+        .select({ id: reimbursementTable.id })
+        .from(reimbursementTable)
+        .where(eq(reimbursementTable.expenseId, anchorExpenseId))
+      expect(reimbursementRows).toHaveLength(0)
+    })
+
+    it('Test 4 (delete-whole-reimbursement): deleteReimbursementForAnchor restores baseline for ALL refunds, not just the last one removed', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+      const { expenseId: anchorExpenseId, transactionId: anchorTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.essentialSubCategoryId,
+          amount: '-90.00',
+          occurredAt,
+          title: 'Cena in tre',
+        })
+      const { expenseId: refundAExpenseId, transactionId: refundATransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.incomeSubCategoryId,
+          amount: '30.00',
+          occurredAt,
+          title: 'Rimborso Carlo',
+        })
+      const { expenseId: refundBExpenseId, transactionId: refundBTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.incomeSubCategoryId,
+          amount: '30.00',
+          occurredAt,
+          title: 'Rimborso Giulia',
+        })
+      const { expenseId: refundCExpenseId, transactionId: refundCTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.incomeSubCategoryId,
+          amount: '30.00',
+          occurredAt,
+          title: 'Rimborso Marco',
+        })
+
+      await createPair({
+        userId,
+        anchor: { transactionId: anchorTransactionId },
+        counterpartId: refundATransactionId,
+      })
+      await createPair({
+        userId,
+        anchor: { transactionId: anchorTransactionId },
+        counterpartId: refundBTransactionId,
+      })
+      await createPair({
+        userId,
+        anchor: { transactionId: anchorTransactionId },
+        counterpartId: refundCTransactionId,
+      })
+
+      const reimbursementRows = await db
+        .select({ id: reimbursementTable.id })
+        .from(reimbursementTable)
+        .where(eq(reimbursementTable.expenseId, anchorExpenseId))
+      const reimbursementId = reimbursementRows[0]!.id
+
+      await deleteReimbursementForAnchor({ userId, reimbursementId })
+
+      // ALL THREE refunds restored — not just the last one removed.
+      const restoredA = await loadExpenseState(db, refundAExpenseId)
+      const restoredB = await loadExpenseState(db, refundBExpenseId)
+      const restoredC = await loadExpenseState(db, refundCExpenseId)
+      expect(restoredA!.subCategoryId).toBe(taxonomy.incomeSubCategoryId)
+      expect(restoredA!.title).toBe('Rimborso Carlo')
+      expect(restoredB!.subCategoryId).toBe(taxonomy.incomeSubCategoryId)
+      expect(restoredB!.title).toBe('Rimborso Giulia')
+      expect(restoredC!.subCategoryId).toBe(taxonomy.incomeSubCategoryId)
+      expect(restoredC!.title).toBe('Rimborso Marco')
+
+      const remainingReimbursementRows = await db
+        .select({ id: reimbursementTable.id })
+        .from(reimbursementTable)
+        .where(eq(reimbursementTable.id, reimbursementId))
+      expect(remainingReimbursementRows).toHaveLength(0)
+    })
+
+    it('Test 5 (Group-anchor Option B): a refund linked to a Group anchor restores its OWN pre-link subCategoryId on unlink', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+      const { expenseId: member1ExpenseId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-300.00',
+        occurredAt,
+        title: 'Alloggio montagna',
+      })
+      const { expenseId: member2ExpenseId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-100.00',
+        occurredAt,
+        title: 'Trasporto montagna',
+      })
+      const { groupId } = await seedExpenseGroup(db, {
+        userId,
+        title: 'Vacanza in montagna',
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        memberExpenseIds: [member1ExpenseId, member2ExpenseId],
+      })
+
+      const { expenseId: refundExpenseId, transactionId: refundTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.incomeSubCategoryId,
+          amount: '150.00',
+          occurredAt,
+          title: 'Rimborso vacanza (Marco)',
+        })
+
+      await createPair({ userId, anchor: { groupId }, counterpartId: refundTransactionId })
+
+      // Sanity: cleanup ran, the refund inherited the GROUP's subcategory (not its own).
+      const afterLink = await loadExpenseState(db, refundExpenseId)
+      expect(afterLink!.subCategoryId).toBe(taxonomy.essentialSubCategoryId)
+
+      await deletePairByTransactionId({ userId, transactionId: refundTransactionId })
+
+      // Restored from the refund's OWN pre-link snapshot — never left uncategorized just
+      // because the Group anchor spans multiple subcategories with no single subCategoryId.
+      const restored = await loadExpenseState(db, refundExpenseId)
+      expect(restored!.subCategoryId).toBe(taxonomy.incomeSubCategoryId)
+      expect(restored!.title).toBe('Rimborso vacanza (Marco)')
+    })
+
+    it('Test 6 (idempotent no-op): removing an already-unlinked refund a second time is a silent no-op', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+      const { transactionId: anchorTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-100.00',
+        occurredAt,
+        title: 'Ordine Amazon',
+      })
+      const { expenseId: refundExpenseId, transactionId: refundTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.incomeSubCategoryId,
+          amount: '50.00',
+          occurredAt,
+          title: 'Rimborso Amazon',
+        })
+
+      await createPair({
+        userId,
+        anchor: { transactionId: anchorTransactionId },
+        counterpartId: refundTransactionId,
+      })
+
+      await deletePairByTransactionId({ userId, transactionId: refundTransactionId })
+      const restoredOnce = await loadExpenseState(db, refundExpenseId)
+
+      // Calling it again on the SAME (already-unlinked) transaction id must be a silent no-op —
+      // never a thrown error, never a second restore mutating the already-restored expense.
+      await expect(
+        deletePairByTransactionId({ userId, transactionId: refundTransactionId }),
+      ).resolves.toBeUndefined()
+
+      const restoredTwice = await loadExpenseState(db, refundExpenseId)
+      expect(restoredTwice).toEqual(restoredOnce)
     })
   },
 )

@@ -2,8 +2,17 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifySession } from '@/lib/dal/auth'
-import { CreatePairSchema, DeletePairSchema, LoadCounterpartsSchema } from '@/lib/validations/transaction-pairs'
-import { createPair, deletePairByTransactionId } from '@/lib/services/transaction-pairs'
+import {
+  CreatePairSchema,
+  DeletePairSchema,
+  DeleteReimbursementSchema,
+  LoadCounterpartsSchema,
+} from '@/lib/validations/transaction-pairs'
+import {
+  createPair,
+  deletePairByTransactionId,
+  deleteReimbursementForAnchor,
+} from '@/lib/services/transaction-pairs'
 import { getEligibleCounterparts, type CounterpartRow } from '@/lib/dal/transaction-pairs'
 import type { ActionState } from '@/lib/validations/expense'
 
@@ -129,6 +138,54 @@ export async function deleteTransactionPairAction(
     await deletePairByTransactionId({
       userId,
       transactionId: parsed.data.transactionId,
+    })
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message }
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+
+  revalidatePath('/transactions')
+  revalidatePath('/overview')
+
+  return { error: null }
+}
+
+/**
+ * Server action: D-09's "remove a single refund" lifecycle action. `deletePairByTransactionId`'s
+ * refund-side branch already restores baseline (D-10) before removing the link, so this reuses
+ * `deleteTransactionPairAction` directly rather than duplicating an identical thin wrapper —
+ * `RemoveRefundSchema` is an alias of `DeletePairSchema` (same bare-transactionId shape).
+ */
+export const removeRefundAction = deleteTransactionPairAction
+
+/**
+ * Server action: D-09's "delete the whole reimbursement" lifecycle action — detaches every
+ * linked refund (restoring each one's baseline, D-10) and removes the reimbursement row.
+ *
+ * Security gates (T-75-07, T-75-08):
+ *  1. Zod parse validates input shape (DeleteReimbursementSchema — a coerced positive integer
+ *     id).
+ *  2. verifySession() establishes caller identity.
+ *  3. deleteReimbursementForAnchor validates reimbursement.userId === sessionUserId and restores
+ *     every refund inside one db.transaction before deleting (T-75-08).
+ */
+export async function deleteReimbursementAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = DeleteReimbursementSchema.safeParse({
+    reimbursementId: formData.get('reimbursementId'),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Dati non validi.' }
+  }
+
+  const { userId } = await verifySession()
+
+  try {
+    await deleteReimbursementForAnchor({
+      userId,
+      reimbursementId: parsed.data.reimbursementId,
     })
   } catch (err) {
     if (err instanceof Error) return { error: err.message }
