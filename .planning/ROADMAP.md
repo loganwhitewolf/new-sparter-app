@@ -93,7 +93,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 74-02-PLAN.md — `residual` computation, computed on the fly, owed/settled/surplus states (D-03, RMB-06)
-- [ ] 74-03-PLAN.md — amount-edit guard N>1 message enrichment naming the blocking reimbursement (D-04, RMB-09)
+- [x] 74-03-PLAN.md — amount-edit guard N>1 message enrichment naming the blocking reimbursement (D-04, RMB-09)
 
 **Q1 resolved during planning** (per 74-CONTEXT.md D-05): a refund's subcategory attribution when
 the anchor spans multiple subcategories falls out of the same proportional spread as D-01 — no

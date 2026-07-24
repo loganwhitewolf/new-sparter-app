@@ -4,16 +4,16 @@ milestone: v2.8
 milestone_name: "Reimbursements 1:N"
 current_phase: 74
 current_phase_name: group-anchor-and-reconciliation
-status: executing
-stopped_at: Completed 74-02-PLAN.md
-last_updated: "2026-07-24T10:14:59.706Z"
+status: verifying
+stopped_at: Completed 74-03-PLAN.md
+last_updated: "2026-07-24T10:19:17.068Z"
 last_activity: 2026-07-24
 last_activity_desc: Phase 74 execution started
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 Phase: 74 (group-anchor-and-reconciliation) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-24 — Phase 74 execution started
 
 ## Roadmap (v2.8 — Phases 73-76)
@@ -281,6 +281,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 74-01: split the plan's single-CTE member_shares pseudocode into raw_shares + member_shares (Postgres disallows referencing a SELECT-list alias from another expression at the same query level) -- pure SQL-structuring fix, formula/tie-break/guard semantics unchanged (Rule 1)
 - [Phase ?]: 74-02: getReimbursementAggregates() uses raw db.execute(sql) with an explicit r alias for the outer reimbursement row -- Drizzle's typed column proxies render as bare unqualified column names, ambiguous inside correlated subqueries joining tables (reimbursement_refund, transaction) that share an id column
 - [Phase ?]: 74-02: residual = outflowSum + refundSum (Decimal.js), state owed/settled/surplus purely by sign, no magnitude guard (D-03) -- computed on the fly via computeReimbursementResidual(), never a stored column
+- [Phase ?]: 74-03: buildPairGuardMessage() N>1 message enriched with reimbursement title, N<=1 unchanged; guard block condition itself untouched (RMB-09)
+- [Phase ?]: 74-03: refund-edit branch's refundCount counts ALL linked refunds (not excluding the edited one) -- total N determines message ambiguity
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -395,9 +397,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 74-02-PLAN.md
+**Stopped at:** Completed 74-03-PLAN.md
 
-Last session: 2026-07-24T10:14:59.699Z
+Last session: 2026-07-24T10:19:17.062Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
@@ -470,3 +472,4 @@ Last session: 2026-07-24T10:14:59.699Z
 | Phase 73 P04 | 90min | 3 tasks | 16 files |
 | Phase 74 P01 | 75min | 2 tasks | 3 files |
 | Phase 74 P02 | 40min | 2 tasks | 3 files |
+| Phase 74 P03 | 20min | 2 tasks | 3 files |

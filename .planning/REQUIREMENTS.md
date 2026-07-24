@@ -23,7 +23,7 @@ Model locked in **ADR 0018** (`docs/adr/0018-reimbursement-1n-linking-supersedes
 ### Linking Surfaces
 
 - [ ] **RMB-08**: A user can create and manage a reimbursement from the **Expense detail page** (`/expenses/[id]`) and from the **Expense Group** — pick the outflow anchor, attach eligible inflow transactions.
-- [ ] **RMB-09**: The amount-edit **pair guard** (v2.5: an edit breaking a pair's invariant is blocked) generalizes to the 1:N model — editing an anchor or refund amount that would break the reimbursement is handled coherently (block with an Italian message or reconcile), never silently corrupting the net.
+- [x] **RMB-09**: The amount-edit **pair guard** (v2.5: an edit breaking a pair's invariant is blocked) generalizes to the 1:N model — editing an anchor or refund amount that would break the reimbursement is handled coherently (block with an Italian message or reconcile), never silently corrupting the net.
 
 ### Dedicated Section
 
@@ -58,6 +58,6 @@ Filled at roadmap creation (2026-07-23). 11/11 RMB requirements mapped across Ph
 | RMB-06 | Phase 74 | Complete |
 | RMB-07 | Phase 75 | Pending |
 | RMB-08 | Phase 75 | Pending |
-| RMB-09 | Phase 74 | Pending |
+| RMB-09 | Phase 74 | Complete |
 | RMB-10 | Phase 76 | Pending |
 | RMB-11 | Phase 76 | Pending |
