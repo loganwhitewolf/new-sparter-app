@@ -1112,7 +1112,7 @@ describeIfReachable(
 
       await createPair({
         userId,
-        transactionId: anchorTransactionId,
+        anchor: { transactionId: anchorTransactionId },
         counterpartId: refundTransactionId,
       })
 
@@ -1166,7 +1166,7 @@ describeIfReachable(
 
       await createPair({
         userId,
-        transactionId: anchorTransactionId,
+        anchor: { transactionId: anchorTransactionId },
         counterpartId: refundTransactionId,
       })
 

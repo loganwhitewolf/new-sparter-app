@@ -46,7 +46,7 @@ export async function createTransactionPairAction(
   try {
     result = await createPair({
       userId,
-      transactionId: parsed.data.transactionId,
+      anchor: { transactionId: parsed.data.transactionId },
       counterpartId: parsed.data.counterpartId,
     })
   } catch (err) {

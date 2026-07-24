@@ -35,6 +35,7 @@ vi.mock('@/lib/db/schema', () => ({
     userId: 'reimbursement.userId',
     title: 'reimbursement.title',
     expenseId: 'reimbursement.expenseId',
+    expenseGroupId: 'reimbursement.expenseGroupId',
   },
   reimbursementRefund: {
     id: 'reimbursementRefund.id',
@@ -45,6 +46,17 @@ vi.mock('@/lib/db/schema', () => ({
     id: 'reimbursementAnchorTransaction.id',
     reimbursementId: 'reimbursementAnchorTransaction.reimbursementId',
     transactionId: 'reimbursementAnchorTransaction.transactionId',
+  },
+  expenseGroup: {
+    id: 'expenseGroup.id',
+    userId: 'expenseGroup.userId',
+    title: 'expenseGroup.title',
+    subCategoryId: 'expenseGroup.subCategoryId',
+  },
+  expenseGroupMembership: {
+    id: 'expenseGroupMembership.id',
+    groupId: 'expenseGroupMembership.groupId',
+    expenseId: 'expenseGroupMembership.expenseId',
   },
 }))
 
@@ -162,7 +174,7 @@ describe('createPair', () => {
       })
 
       await expect(
-        createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+        createPair({ userId: 'user-1', anchor: { transactionId: 'tx-1' }, counterpartId: 'tx-2' }),
       ).rejects.toThrow('Non sei autorizzato')
     })
 
@@ -178,7 +190,7 @@ describe('createPair', () => {
       })
 
       await expect(
-        createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+        createPair({ userId: 'user-1', anchor: { transactionId: 'tx-1' }, counterpartId: 'tx-2' }),
       ).rejects.toThrow('Non sei autorizzato')
     })
 
@@ -195,7 +207,7 @@ describe('createPair', () => {
 
       let errorMsg = ''
       try {
-        await createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' })
+        await createPair({ userId: 'user-1', anchor: { transactionId: 'tx-1' }, counterpartId: 'tx-2' })
       } catch (e) {
         if (e instanceof Error) errorMsg = e.message
       }
@@ -209,7 +221,7 @@ describe('createPair', () => {
       mocks.dbSelectChain.mockImplementation(() => makeSelectChain([]))
 
       await expect(
-        createPair({ userId: 'user-1', transactionId: 'tx-missing', counterpartId: 'tx-also-missing' }),
+        createPair({ userId: 'user-1', anchor: { transactionId: 'tx-missing' }, counterpartId: 'tx-also-missing' }),
       ).rejects.toThrow()
     })
   })
@@ -232,7 +244,11 @@ describe('createPair', () => {
         if (callCount === 1) return makeSelectChain([outflow])
         if (callCount === 2) return makeSelectChain([refund])
         // call 3: anchor-expense lookup (uncategorized — skip cleanup)
-        return makeSelectChain([{ expenseId: 'exp-spend', subCategoryId: null, title: 'Spesa Piccola' }])
+        if (callCount === 3) {
+          return makeSelectChain([{ expenseId: 'exp-spend', subCategoryId: null, title: 'Spesa Piccola' }])
+        }
+        // call 4: create-or-append lookup — no existing reimbursement (CREATE path)
+        return makeSelectChain([])
       })
 
       const reimbursementValues: unknown[] = []
@@ -246,7 +262,7 @@ describe('createPair', () => {
 
       const result = await createPair({
         userId: 'user-1',
-        transactionId: 'tx-outflow',
+        anchor: { transactionId: 'tx-outflow' },
         counterpartId: 'tx-refund',
       })
 
@@ -265,7 +281,11 @@ describe('createPair', () => {
         // transactionId=tx-refund passed first, counterpartId=tx-outflow second
         if (callCount === 1) return makeSelectChain([refund])
         if (callCount === 2) return makeSelectChain([outflow])
-        return makeSelectChain([{ expenseId: 'exp-spend', subCategoryId: null, title: 'Spesa Piccola' }])
+        if (callCount === 3) {
+          return makeSelectChain([{ expenseId: 'exp-spend', subCategoryId: null, title: 'Spesa Piccola' }])
+        }
+        // call 4: create-or-append lookup — no existing reimbursement (CREATE path)
+        return makeSelectChain([])
       })
 
       const reimbursementValues: unknown[] = []
@@ -279,7 +299,7 @@ describe('createPair', () => {
 
       const result = await createPair({
         userId: 'user-1',
-        transactionId: 'tx-refund',
+        anchor: { transactionId: 'tx-refund' },
         counterpartId: 'tx-outflow',
       })
 
@@ -302,7 +322,7 @@ describe('createPair', () => {
       })
 
       await expect(
-        createPair({ userId: 'user-1', transactionId: 'tx-outflow', counterpartId: 'tx-refund' }),
+        createPair({ userId: 'user-1', anchor: { transactionId: 'tx-outflow' }, counterpartId: 'tx-refund' }),
       ).rejects.toThrow('non è associata a nessuna spesa')
     })
   })
@@ -318,7 +338,11 @@ describe('createPair', () => {
         callCount += 1
         if (callCount === 1) return makeSelectChain([tx1])
         if (callCount === 2) return makeSelectChain([tx2])
-        return makeSelectChain([{ expenseId: 'exp-default', subCategoryId: null, title: 'Spesa X' }])
+        if (callCount === 3) {
+          return makeSelectChain([{ expenseId: 'exp-default', subCategoryId: null, title: 'Spesa X' }])
+        }
+        // call 4: create-or-append lookup — no existing reimbursement (CREATE path)
+        return makeSelectChain([])
       })
 
       // Simulate unique constraint violation from DB on the reimbursement insert
@@ -333,7 +357,7 @@ describe('createPair', () => {
       mocks.dbInsertChain.mockReturnValue(insertChain)
 
       await expect(
-        createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+        createPair({ userId: 'user-1', anchor: { transactionId: 'tx-1' }, counterpartId: 'tx-2' }),
       ).rejects.toThrow()
     })
 
@@ -346,7 +370,11 @@ describe('createPair', () => {
         callCount += 1
         if (callCount === 1) return makeSelectChain([tx1])
         if (callCount === 2) return makeSelectChain([tx2])
-        return makeSelectChain([{ expenseId: 'exp-default', subCategoryId: null, title: 'Spesa X' }])
+        if (callCount === 3) {
+          return makeSelectChain([{ expenseId: 'exp-default', subCategoryId: null, title: 'Spesa X' }])
+        }
+        // call 4: create-or-append lookup — no existing reimbursement (CREATE path)
+        return makeSelectChain([])
       })
 
       // Drizzle/pg surface the SQLSTATE on error.cause.code — now triggered by
@@ -366,7 +394,7 @@ describe('createPair', () => {
 
       let errorMsg = ''
       try {
-        await createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' })
+        await createPair({ userId: 'user-1', anchor: { transactionId: 'tx-1' }, counterpartId: 'tx-2' })
       } catch (e) {
         if (e instanceof Error) errorMsg = e.message
       }
@@ -386,7 +414,11 @@ describe('createPair', () => {
         callCount += 1
         if (callCount === 1) return makeSelectChain([tx1])
         if (callCount === 2) return makeSelectChain([tx2])
-        return makeSelectChain([{ expenseId: 'exp-default', subCategoryId: null, title: 'Spesa X' }])
+        if (callCount === 3) {
+          return makeSelectChain([{ expenseId: 'exp-default', subCategoryId: null, title: 'Spesa X' }])
+        }
+        // call 4: create-or-append lookup — no existing reimbursement (CREATE path)
+        return makeSelectChain([])
       })
 
       const insertChain = {
@@ -398,7 +430,7 @@ describe('createPair', () => {
       mocks.dbInsertChain.mockReturnValue(insertChain)
 
       await expect(
-        createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+        createPair({ userId: 'user-1', anchor: { transactionId: 'tx-1' }, counterpartId: 'tx-2' }),
       ).rejects.toThrow('connection reset')
     })
   })
@@ -410,7 +442,7 @@ describe('createPair', () => {
       mocks.dbSelectChain.mockImplementation(() => makeSelectChain([]))
 
       await expect(
-        createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-1' }),
+        createPair({ userId: 'user-1', anchor: { transactionId: 'tx-1' }, counterpartId: 'tx-1' }),
       ).rejects.toThrow('a se stessa')
 
       // Must short-circuit before touching the DB.
@@ -432,7 +464,7 @@ describe('createPair', () => {
       })
 
       await expect(
-        createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+        createPair({ userId: 'user-1', anchor: { transactionId: 'tx-1' }, counterpartId: 'tx-2' }),
       ).rejects.toThrow('segno opposto')
     })
 
@@ -446,7 +478,7 @@ describe('createPair', () => {
       })
 
       await expect(
-        createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+        createPair({ userId: 'user-1', anchor: { transactionId: 'tx-1' }, counterpartId: 'tx-2' }),
       ).rejects.toThrow('segno opposto')
     })
 
@@ -462,7 +494,7 @@ describe('createPair', () => {
       mocks.dbInsertChain.mockReturnValue(insertChain)
 
       await expect(
-        createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+        createPair({ userId: 'user-1', anchor: { transactionId: 'tx-1' }, counterpartId: 'tx-2' }),
       ).rejects.toThrow('segno opposto')
       expect(insertChain.values).not.toHaveBeenCalled()
     })
@@ -479,11 +511,15 @@ describe('createPair', () => {
         callCount += 1
         if (callCount === 1) return makeSelectChain([tx1])
         if (callCount === 2) return makeSelectChain([tx2])
-        return makeSelectChain([{ expenseId: 'exp-default', subCategoryId: null, title: 'Spesa X' }])
+        if (callCount === 3) {
+          return makeSelectChain([{ expenseId: 'exp-default', subCategoryId: null, title: 'Spesa X' }])
+        }
+        // call 4: create-or-append lookup — no existing reimbursement (CREATE path)
+        return makeSelectChain([])
       })
       mocks.dbInsertChain.mockReturnValue(makeInsertChain([{ id: 1 }]))
 
-      await createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' })
+      await createPair({ userId: 'user-1', anchor: { transactionId: 'tx-1' }, counterpartId: 'tx-2' })
 
       expect(db.transaction).toHaveBeenCalledTimes(1)
     })
@@ -506,10 +542,12 @@ function makeLeg(
 }
 
 // Drive the sequential selects createPair performs: legA, legB, the anchor-expense
-// join, then (only on the cleanup path) the refund-expense title lookup used to
+// join, the create-or-append existing-reimbursement lookup (Phase 75 Plan 02 — always
+// "not found" here, since every scenario in this describe block simulates a first-ever
+// CREATE), then (only on the cleanup path) the refund-expense title lookup used to
 // compose the refund title. Promise.all preserves array order, so legA is call 1
-// (transactionId) and legB is call 2 (counterpartId); anchor-expense is call 3 and
-// the refund-expense title is call 4.
+// (transactionId) and legB is call 2 (counterpartId); anchor-expense is call 3, the
+// create-or-append lookup is call 4, and the refund-expense title is call 5.
 function mockPairSelects(
   legA: unknown,
   legB: unknown,
@@ -522,6 +560,7 @@ function mockPairSelects(
     if (callCount === 1) return makeSelectChain([legA])
     if (callCount === 2) return makeSelectChain([legB])
     if (callCount === 3) return makeSelectChain(anchorExpenseRow ? [anchorExpenseRow] : [])
+    if (callCount === 4) return makeSelectChain([])
     return makeSelectChain(refundExpenseTitle != null ? [{ title: refundExpenseTitle }] : [])
   })
 }
@@ -550,7 +589,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
 
     const result = await createPair({
       userId: 'user-1',
-      transactionId: 'tx-spend',
+      anchor: { transactionId: 'tx-spend' },
       counterpartId: 'tx-refund',
     })
 
@@ -588,7 +627,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
 
     const result = await createPair({
       userId: 'user-1',
-      transactionId: 'tx-spend',
+      anchor: { transactionId: 'tx-spend' },
       counterpartId: 'tx-refund',
     })
 
@@ -611,7 +650,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
 
     await createPair({
       userId: 'user-1',
-      transactionId: 'tx-spend',
+      anchor: { transactionId: 'tx-spend' },
       counterpartId: 'tx-refund',
     })
 
@@ -629,7 +668,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
 
     await createPair({
       userId: 'user-1',
-      transactionId: 'tx-spend',
+      anchor: { transactionId: 'tx-spend' },
       counterpartId: 'tx-refund',
     })
 
@@ -651,7 +690,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
 
     const result = await createPair({
       userId: 'user-1',
-      transactionId: 'tx-refund',
+      anchor: { transactionId: 'tx-refund' },
       counterpartId: 'tx-spend',
     })
 
@@ -678,7 +717,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
 
     await createPair({
       userId: 'user-1',
-      transactionId: 'tx-early',
+      anchor: { transactionId: 'tx-early' },
       counterpartId: 'tx-late',
     })
 
@@ -696,7 +735,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
     mockPairSelects(spend, alsoSpend, null)
 
     await expect(
-      createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+      createPair({ userId: 'user-1', anchor: { transactionId: 'tx-1' }, counterpartId: 'tx-2' }),
     ).rejects.toThrow('segno opposto')
     expect(mocks.applyDetachCleanupTx).not.toHaveBeenCalled()
   })
@@ -707,7 +746,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
     mockPairSelects(spend, refund, null)
 
     await expect(
-      createPair({ userId: 'user-1', transactionId: 'tx-1', counterpartId: 'tx-2' }),
+      createPair({ userId: 'user-1', anchor: { transactionId: 'tx-1' }, counterpartId: 'tx-2' }),
     ).rejects.toThrow('Non sei autorizzato')
     expect(mocks.applyDetachCleanupTx).not.toHaveBeenCalled()
   })
