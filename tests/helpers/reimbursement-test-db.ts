@@ -1,8 +1,16 @@
 // Real-Postgres regression harness (Phase 73, ADR 0018 D-07 — the phase's acceptance gate).
 //
 // This is the ONLY place in the suite that connects to and TRUNCATEs a real Postgres database
-// (T-73-03). It is hard-guarded to localhost/127.0.0.1 only — never the app's ambient
-// DATABASE_URL, never staging or production, even via TEST_DATABASE_URL override.
+// (T-73-03). Four independent guards make an accidental wipe of any non-disposable database
+// impossible (see resolveConnectionString):
+//   1. It reads ONLY TEST_DATABASE_URL, never the app's ambient DATABASE_URL — so a
+//      staging/production URL configured for the app is invisible here.
+//   2. The host must be localhost / 127.0.0.1 / ::1, else it throws before connecting.
+//   3. The target database NAME must end in "_test", so the harness can never TRUNCATE the
+//      developer's own dev database (e.g. "sparter"), even if TEST_DATABASE_URL is mis-set.
+//   4. It refuses to run under NODE_ENV=production.
+// The default target is a dedicated "sparter_test" database, auto-created on first use so the
+// gate never skips silently on a fresh machine.
 import path from 'node:path'
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -11,7 +19,10 @@ import { Pool } from 'pg'
 import { vi } from 'vitest'
 import * as schema from '@/lib/db/schema'
 
-const DEFAULT_TEST_DATABASE_URL = 'postgres://postgres:sparter@localhost:5432/sparter'
+const DEFAULT_TEST_DATABASE_URL = 'postgres://postgres:sparter@localhost:5432/sparter_test'
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1'])
+// Maintenance database used only to auto-create the dedicated *_test database if it is missing.
+const MAINTENANCE_DATABASE = 'postgres'
 const CONNECT_TIMEOUT_MS = 1500
 const MIGRATIONS_FOLDER = path.join(process.cwd(), 'drizzle/migrations')
 
@@ -26,27 +37,71 @@ export type ReimbursementTestDbHandle =
   | { ok: false }
 
 /**
- * Resolves the harness's connection string and asserts it targets localhost. Throws (never
- * silently falls back) if TEST_DATABASE_URL points anywhere else — this guard is what keeps
- * "TRUNCATE a real database" scoped to a disposable local dev instance (T-73-03).
+ * Resolves the harness's connection string and asserts every safety guard (the four-guard list
+ * in the module header). Throws — never silently falls back — the moment any guard fails, which
+ * is what keeps "TRUNCATE a real database" scoped to a disposable local *_test instance (T-73-03).
  */
 function resolveConnectionString(): string {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'reimbursement-test-db: refusing to run under NODE_ENV=production — this harness TRUNCATEs its target database.',
+    )
+  }
   const url = process.env.TEST_DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL
-  let hostname: string
+  let parsed: URL
   try {
-    hostname = new URL(url).hostname
+    parsed = new URL(url)
   } catch {
     throw new Error(
       `reimbursement-test-db: TEST_DATABASE_URL is not a valid connection string: "${url}"`,
     )
   }
-  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+  if (!LOCAL_HOSTNAMES.has(parsed.hostname)) {
     throw new Error(
-      `reimbursement-test-db: refusing to connect to non-local host "${hostname}". ` +
+      `reimbursement-test-db: refusing to connect to non-local host "${parsed.hostname}". ` +
         'This harness must never target a real dev/staging/production database.',
     )
   }
+  const dbName = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
+  if (!dbName.endsWith('_test')) {
+    throw new Error(
+      `reimbursement-test-db: refusing to target database "${dbName}" — its name must end in "_test" ` +
+        'so the harness can never TRUNCATE a dev/app database (e.g. "sparter"). Use "sparter_test".',
+    )
+  }
   return url
+}
+
+/**
+ * Best-effort auto-provisioning of the dedicated *_test database. Connects to the cluster's
+ * maintenance database and issues CREATE DATABASE if the target is missing. Without this,
+ * switching the default to a separate "sparter_test" would make the entire harness skip silently
+ * on a fresh machine (connection refused), quietly disabling the regression gate. Only ever
+ * reached after resolveConnectionString()'s localhost + "_test"-suffix guards, so the name it
+ * creates is always local and disposable. Swallows errors (server down / no CREATEDB privilege):
+ * the reachability check in connectReimbursementTestDb() then skips gracefully.
+ */
+async function ensureTestDatabaseExists(connectionString: string): Promise<void> {
+  const parsed = new URL(connectionString)
+  const dbName = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
+  const maintenanceUrl = new URL(connectionString)
+  maintenanceUrl.pathname = `/${MAINTENANCE_DATABASE}`
+  const admin = new Pool({
+    connectionString: maintenanceUrl.toString(),
+    connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
+  })
+  try {
+    const existing = await admin.query('SELECT 1 FROM pg_database WHERE datname = $1', [dbName])
+    if (existing.rowCount === 0) {
+      // CREATE DATABASE cannot be parameterized; dbName is guarded to a "_test" suffix above and
+      // double-quoted defensively.
+      await admin.query(`CREATE DATABASE "${dbName.replace(/"/g, '""')}"`)
+    }
+  } catch (error) {
+    console.warn('[reimbursement-test-db] Could not auto-create the test database:', error)
+  } finally {
+    await admin.end().catch(() => undefined)
+  }
 }
 
 /**
@@ -58,6 +113,9 @@ function resolveConnectionString(): string {
  */
 export async function connectReimbursementTestDb(): Promise<ReimbursementTestDbHandle> {
   const connectionString = resolveConnectionString()
+  // Auto-create the dedicated *_test database if missing so the gate never skips silently on a
+  // fresh machine (best-effort; the reachability check below handles a down server / no privs).
+  await ensureTestDatabaseExists(connectionString)
   // idleTimeoutMillis: 0 disables pg's default 10s idle-connection reaping. Required so the
   // advisory-lock-holding connection below is never silently closed (which would release the
   // lock early) purely because it sat idle between this file's queries.
