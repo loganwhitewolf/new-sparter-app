@@ -4,6 +4,7 @@ import { and, asc, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { reimbursement, reimbursementRefund, transaction } from '@/lib/db/schema'
 import { computeReimbursementResidual, type ReimbursementResidualState } from '@/lib/services/reimbursement'
+import { expenseDetailHref, expenseGroupDetailHref } from '@/lib/routes'
 
 /**
  * Raw Decimal-safe aggregates for one reimbursement: the anchor's own outflow sum and the sum
@@ -198,5 +199,59 @@ export async function getReimbursementPanelData(input: {
     refunds: refundRows,
     residual: residualResult.residual,
     state: residualResult.state,
+  }
+}
+
+/**
+ * The read-only "this transaction IS a linked refund" state (Phase 75 Plan 04 gap-closure, fix 1).
+ * `anchorHref` links to the anchor's own detail page (the Expense, or — for the dormant Group
+ * anchor — the Expense Group) so the surface can point back at what this refund is reimbursing.
+ */
+export type RefundMembership = {
+  reimbursementId: number
+  title: string
+  anchorHref: string
+}
+
+/**
+ * Resolves whether `transactionId` is itself a linked refund (a row in `reimbursement_refund`),
+ * as opposed to an anchor. ADR 0018's invariant is that the anchor is ALWAYS the outflow — an
+ * inflow transaction can never be an anchor, so `/transactions/[id]` must render a different,
+ * read-only state for a refund rather than `getReimbursementPanelData`'s CTA/manage-panel shape
+ * (which only resolves anchor lookups and would otherwise return `undefined` for a refund,
+ * incorrectly rendering the "Aggiungi rimborso" CTA on a transaction that can never host one).
+ *
+ * IDOR-safe by construction: scoped through `reimbursement.userId = userId` in the same join (not
+ * a separate post-fetch check) — a foreign-owned or non-existent transactionId resolves to
+ * `undefined`, identical to "not a refund."
+ */
+export async function getRefundMembership(input: {
+  userId: string
+  transactionId: string
+}): Promise<RefundMembership | undefined> {
+  const rows = await db
+    .select({
+      id: reimbursement.id,
+      title: reimbursement.title,
+      expenseId: reimbursement.expenseId,
+      expenseGroupId: reimbursement.expenseGroupId,
+    })
+    .from(reimbursementRefund)
+    .innerJoin(reimbursement, eq(reimbursement.id, reimbursementRefund.reimbursementId))
+    .where(
+      and(eq(reimbursementRefund.transactionId, input.transactionId), eq(reimbursement.userId, input.userId)),
+    )
+    .limit(1)
+
+  const row = rows[0]
+  if (!row) {
+    return undefined
+  }
+
+  return {
+    reimbursementId: row.id,
+    title: row.title,
+    anchorHref:
+      row.expenseGroupId != null ? expenseGroupDetailHref(row.expenseGroupId) : expenseDetailHref(row.expenseId!),
   }
 }

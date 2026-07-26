@@ -22,7 +22,11 @@ import type {
   getEligibleCounterparts as GetEligibleCounterparts,
   getGroupOccurrenceInterval as GetGroupOccurrenceInterval,
 } from '@/lib/dal/transaction-pairs'
-import type { getReimbursementPanelData as GetReimbursementPanelData } from '@/lib/dal/reimbursement'
+import type {
+  getReimbursementPanelData as GetReimbursementPanelData,
+  getRefundMembership as GetRefundMembership,
+} from '@/lib/dal/reimbursement'
+import { expenseDetailHref } from '@/lib/routes'
 import type { computeReimbursementResidual as ComputeReimbursementResidual } from '@/lib/services/reimbursement'
 import type { createMultiRefundAction as CreateMultiRefundAction } from '@/lib/actions/transaction-pairs'
 import type {
@@ -67,6 +71,7 @@ let deleteReimbursementForAnchor: typeof DeleteReimbursementForAnchor
 let getEligibleCounterparts: typeof GetEligibleCounterparts
 let getGroupOccurrenceInterval: typeof GetGroupOccurrenceInterval
 let getReimbursementPanelData: typeof GetReimbursementPanelData
+let getRefundMembership: typeof GetRefundMembership
 let computeReimbursementResidualForTest: typeof ComputeReimbursementResidual
 let createMultiRefundAction: typeof CreateMultiRefundAction
 
@@ -82,6 +87,7 @@ if (harness.ok) {
   getGroupOccurrenceInterval = dalModule.getGroupOccurrenceInterval
   const reimbursementDalModule = await import('@/lib/dal/reimbursement')
   getReimbursementPanelData = reimbursementDalModule.getReimbursementPanelData
+  getRefundMembership = reimbursementDalModule.getRefundMembership
   const reimbursementServiceModule = await import('@/lib/services/reimbursement')
   computeReimbursementResidualForTest = reimbursementServiceModule.computeReimbursementResidual
   const actionsModule = await import('@/lib/actions/transaction-pairs')
@@ -1267,6 +1273,98 @@ describeIfReachable('getReimbursementPanelData — panel data (Phase 75 Plan 04 
     const residual = await computeReimbursementResidualForTest({ reimbursementId: panelData!.reimbursementId, userId })
     expect(panelData!.residual).toBe(residual!.residual)
     expect(panelData!.state).toBe(residual!.state)
+  })
+})
+
+// ---------------------------------------------------------------------------------------------
+// Plan 04 gap-closure fix 1 — getRefundMembership (a linked refund can never be an anchor,
+// ADR 0018) — real-Postgres proof the DAL resolves the read-only state /transactions/[id] needs.
+// ---------------------------------------------------------------------------------------------
+describeIfReachable('getRefundMembership — refund read-only state (Phase 75 Plan 04 gap-closure)', () => {
+  it('resolves reimbursementId/title/anchorHref for a transaction that IS a linked refund (transaction anchor)', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+    const { expenseId: anchorExpenseId, transactionId: anchorTransactionId } =
+      await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-90.00',
+        occurredAt,
+        title: 'Cena in tre',
+      })
+    const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.incomeSubCategoryId,
+      amount: '30.00',
+      occurredAt,
+      title: 'Rimborso Carlo',
+    })
+
+    await createPair({ userId, anchor: { transactionId: anchorTransactionId }, counterpartId: refundTransactionId })
+
+    const membership = await getRefundMembership({ userId, transactionId: refundTransactionId })
+    expect(membership).toBeDefined()
+    expect(membership!.title).toBe('Cena in tre')
+    expect(membership!.anchorHref).toBe(expenseDetailHref(anchorExpenseId))
+  })
+
+  it('returns undefined for the anchor transaction itself (the anchor is never a refund)', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+    const { transactionId: anchorTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-90.00',
+      occurredAt,
+      title: 'Cena in tre',
+    })
+    const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.incomeSubCategoryId,
+      amount: '30.00',
+      occurredAt,
+      title: 'Rimborso Carlo',
+    })
+
+    await createPair({ userId, anchor: { transactionId: anchorTransactionId }, counterpartId: refundTransactionId })
+
+    await expect(
+      getRefundMembership({ userId, transactionId: anchorTransactionId }),
+    ).resolves.toBeUndefined()
+  })
+
+  it('returns undefined for an inflow transaction with no reimbursement link at all', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+    const { transactionId: unrelatedInflowId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.incomeSubCategoryId,
+      amount: '15.00',
+      occurredAt,
+      title: 'Stipendio extra',
+    })
+
+    await expect(
+      getRefundMembership({ userId, transactionId: unrelatedInflowId }),
+    ).resolves.toBeUndefined()
   })
 })
 

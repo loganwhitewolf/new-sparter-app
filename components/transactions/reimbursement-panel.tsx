@@ -18,7 +18,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { deleteReimbursementAction, removeRefundAction } from '@/lib/actions/transaction-pairs'
-import type { ReimbursementPanelData } from '@/lib/dal/reimbursement'
+import type { ReimbursementPanelData, RefundMembership } from '@/lib/dal/reimbursement'
 import type { ReimbursementResidualState } from '@/lib/services/reimbursement'
 import { transactionDetailHref } from '@/lib/routes'
 import { toDecimal } from '@/lib/utils/decimal'
@@ -207,6 +207,64 @@ export function ReimbursementPanel({ data, onAddRefund }: Props) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </div>
+    </div>
+  )
+}
+
+type RefundMembershipCardProps = {
+  /** The refund transaction's own id — passed to `removeRefundAction` on "Scollega". */
+  transactionId: string
+  membership: RefundMembership
+}
+
+/**
+ * Read-only state (Phase 75 Plan 04 gap-closure, fix 1): rendered instead of `ReimbursementPanel`
+ * when the CURRENT transaction is itself a linked refund, never an anchor (ADR 0018 — the anchor
+ * is always the outflow). No "Aggiungi rimborso" CTA, since a refund can never host its own
+ * reimbursement — only "Scollega" (`removeRefundAction`, which reverts this refund to its pre-link
+ * baseline, D-10).
+ */
+export function RefundMembershipCard({ transactionId, membership }: RefundMembershipCardProps) {
+  const router = useRouter()
+  const [pending, setPending] = useState(false)
+
+  async function handleUnlink() {
+    setPending(true)
+    const fd = new FormData()
+    fd.set('transactionId', transactionId)
+    const result = await removeRefundAction({ error: null }, fd)
+    setPending(false)
+    if (result.error) {
+      toast.error(result.error)
+    } else {
+      toast.success('Rimborso scollegato.')
+      router.refresh()
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border p-3">
+      <span className="text-sm">
+        Rimborso di{' '}
+        <Link
+          href={membership.anchorHref}
+          className="text-primary underline-offset-4 hover:underline"
+        >
+          «{membership.title}»
+        </Link>
+      </span>
+      <div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={pending}
+          onClick={() => void handleUnlink()}
+        >
+          <Unlink className="h-4 w-4" />
+          Scollega
+        </Button>
       </div>
     </div>
   )

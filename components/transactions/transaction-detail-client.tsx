@@ -22,13 +22,13 @@ import { DetailPageShell } from '@/components/detail-pages/detail-page-shell'
 import { TransactionAmountEdit } from '@/components/transactions/transaction-amount-edit'
 import { TransactionDateEdit } from '@/components/transactions/transaction-date-edit'
 import { TransactionTitleEdit } from '@/components/transactions/transaction-title-edit'
-import { ReimbursementPanel } from '@/components/transactions/reimbursement-panel'
+import { ReimbursementPanel, RefundMembershipCard } from '@/components/transactions/reimbursement-panel'
 import { RefundPickerDialog } from '@/components/transactions/refund-picker-dialog'
 import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { deleteTransaction } from '@/lib/actions/transactions'
 import { addTransactionTagAction, removeTransactionTagAction } from '@/lib/actions/transaction-tags'
-import type { ReimbursementPanelData } from '@/lib/dal/reimbursement'
+import type { ReimbursementPanelData, RefundMembership } from '@/lib/dal/reimbursement'
 import type { TransactionDetailRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
@@ -46,8 +46,13 @@ type Props = {
   mostUsed: MostUsedSubcategory[]
   currentTags: CurrentTag[]
   allTags: TagRow[]
-  /** D-02: the reimbursement panel's read model, resolved server-side (Plan 75-04). */
+  /** D-02: the reimbursement panel's read model, resolved server-side (Plan 75-04). Only ever
+   * populated for an outflow transaction (ADR 0018 — the anchor is always the outflow). */
   reimbursementPanelData: ReimbursementPanelData | undefined
+  /** Fix 1 (Phase 75 Plan 04 gap-closure): populated when THIS transaction is an inflow that is
+   * itself a linked refund — the read-only state ReimbursementPanel's CTA/manage-panel never
+   * applies to. `undefined` for an outflow, or for an inflow that isn't a refund. */
+  refundMembership: RefundMembership | undefined
 }
 
 function formatSignedAmount(amount: string, currency: string): string {
@@ -68,6 +73,7 @@ export function TransactionDetailClient({
   currentTags,
   allTags,
   reimbursementPanelData,
+  refundMembership,
 }: Props) {
   const router = useRouter()
   const [refundPickerOpen, setRefundPickerOpen] = useState(false)
@@ -87,6 +93,9 @@ export function TransactionDetailClient({
     transaction.description
   const isOneToOne =
     Boolean(transaction.expenseTitle) && transaction.expenseTransactionCount === 1
+  // Fix 1 (Phase 75 Plan 04 gap-closure): ADR 0018 — the anchor is ALWAYS the outflow, an inflow
+  // can never be one. Gates which reimbursement UI (if any) renders in collegamentiCard below.
+  const isInflow = toDecimal(transaction.amount).isPositive()
 
   async function handleDelete() {
     setDeletePending(true)
@@ -361,11 +370,17 @@ export function TransactionDetailClient({
           <Badge variant="outline">Manuale</Badge>
         </div>
       )}
-      <ReimbursementPanel
-        anchor={{ transactionId: transaction.id }}
-        data={reimbursementPanelData}
-        onAddRefund={() => setRefundPickerOpen(true)}
-      />
+      {isInflow ? (
+        refundMembership ? (
+          <RefundMembershipCard transactionId={transaction.id} membership={refundMembership} />
+        ) : null
+      ) : (
+        <ReimbursementPanel
+          anchor={{ transactionId: transaction.id }}
+          data={reimbursementPanelData}
+          onAddRefund={() => setRefundPickerOpen(true)}
+        />
+      )}
     </div>
   )
 
@@ -383,16 +398,18 @@ export function TransactionDetailClient({
         azioniCard={azioniCard}
       />
 
-      <RefundPickerDialog
-        open={refundPickerOpen}
-        onOpenChange={setRefundPickerOpen}
-        anchor={{
-          transactionId: transaction.id,
-          amount: transaction.amount,
-          occurredAt: transaction.occurredAt,
-        }}
-        onLinked={() => router.refresh()}
-      />
+      {!isInflow ? (
+        <RefundPickerDialog
+          open={refundPickerOpen}
+          onOpenChange={setRefundPickerOpen}
+          anchor={{
+            transactionId: transaction.id,
+            amount: transaction.amount,
+            occurredAt: transaction.occurredAt,
+          }}
+          onLinked={() => router.refresh()}
+        />
+      ) : null}
 
       {transaction.expenseId ? (
         <DetachExpenseDialog

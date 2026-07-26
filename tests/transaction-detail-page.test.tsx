@@ -232,6 +232,7 @@ const pageMocks = vi.hoisted(() => ({
   getTransactionTagsForTransaction: vi.fn(),
   getTags: vi.fn(),
   getReimbursementPanelData: vi.fn(),
+  getRefundMembership: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error('notFound')
   }),
@@ -268,6 +269,7 @@ vi.mock('@/lib/dal/tags', () => ({
 
 vi.mock('@/lib/dal/reimbursement', () => ({
   getReimbursementPanelData: pageMocks.getReimbursementPanelData,
+  getRefundMembership: pageMocks.getRefundMembership,
 }))
 
 // Radix's Select portals SelectContent into document.body, which never renders under
@@ -342,6 +344,7 @@ describe('/transactions/[id] page', () => {
     pageMocks.getTransactionTagsForTransaction.mockReset()
     pageMocks.getTags.mockReset()
     pageMocks.getReimbursementPanelData.mockReset()
+    pageMocks.getRefundMembership.mockReset()
     pageMocks.notFound.mockReset()
     pageMocks.notFound.mockImplementation(() => {
       throw new Error('notFound')
@@ -354,6 +357,7 @@ describe('/transactions/[id] page', () => {
     pageMocks.getTransactionTagsForTransaction.mockResolvedValue([])
     pageMocks.getTags.mockResolvedValue([])
     pageMocks.getReimbursementPanelData.mockResolvedValue(undefined)
+    pageMocks.getRefundMembership.mockResolvedValue(undefined)
   })
 
   it('renders 200 with amount, date, title, category, and cross-refs for an owned transaction', async () => {
@@ -461,6 +465,66 @@ describe('/transactions/[id] page', () => {
     expect(html).not.toContain('Scollega rimborso')
   })
 
+  it('an outflow transaction never calls getRefundMembership (ADR 0018 — the anchor is always the outflow, never a refund)', async () => {
+    await renderTransactionPage()
+
+    expect(pageMocks.getReimbursementPanelData).toHaveBeenCalledTimes(1)
+    expect(pageMocks.getRefundMembership).not.toHaveBeenCalled()
+  })
+
+  // Phase 75 Plan 04 gap-closure (fix 1): a linked refund (an inflow) can never be an anchor —
+  // it must render the read-only "Rimborso di «…»" + Scollega state, never the
+  // "Aggiungi rimborso" CTA (which would otherwise hit the ADR-0018 invariant on submit).
+  describe('Inflow transaction — refund membership state (fix 1)', () => {
+    it('renders the read-only refund state with "Scollega" when the inflow IS a linked refund, never the anchor CTA/panel', async () => {
+      pageMocks.getTransactionForDetail.mockResolvedValue(
+        makeTransactionDetailRow({ amount: '30.00', expenseId: 'expense-refund-1' }),
+      )
+      pageMocks.getRefundMembership.mockResolvedValue({
+        reimbursementId: 1,
+        title: 'Cena in tre',
+        anchorHref: '/expenses/expense-anchor-1',
+      })
+
+      const html = await renderTransactionPage()
+
+      expect(html).toContain('Rimborso di')
+      expect(html).toContain('Cena in tre')
+      expect(html).toContain('href="/expenses/expense-anchor-1"')
+      expect(html).toContain('Scollega')
+      expect(html).not.toContain('Aggiungi rimborso')
+      expect(html).not.toContain('Nessun rimborso collegato')
+      expect(html).not.toContain('Elimina rimborso')
+    })
+
+    it('never calls getReimbursementPanelData for an inflow — only getRefundMembership', async () => {
+      pageMocks.getTransactionForDetail.mockResolvedValue(
+        makeTransactionDetailRow({ amount: '30.00', expenseId: 'expense-refund-1' }),
+      )
+      pageMocks.getRefundMembership.mockResolvedValue(undefined)
+
+      await renderTransactionPage()
+
+      expect(pageMocks.getReimbursementPanelData).not.toHaveBeenCalled()
+      expect(pageMocks.getRefundMembership).toHaveBeenCalledTimes(1)
+    })
+
+    it('renders NO reimbursement UI at all when the inflow is unrelated to any reimbursement (no CTA, no panel, no read-only state)', async () => {
+      pageMocks.getTransactionForDetail.mockResolvedValue(
+        makeTransactionDetailRow({ amount: '30.00', expenseId: 'expense-unrelated' }),
+      )
+      pageMocks.getRefundMembership.mockResolvedValue(undefined)
+
+      const html = await renderTransactionPage()
+
+      expect(html).not.toContain('Aggiungi rimborso')
+      expect(html).not.toContain('Nessun rimborso collegato')
+      expect(html).not.toContain('Rimborso di')
+      expect(html).not.toContain('Scollega')
+      expect(html).not.toContain('Elimina rimborso')
+    })
+  })
+
   it('shows the group title ahead of the expense title in both the header and "Spesa collegata", while linking to the member expense\'s own detail page (GRP-08)', async () => {
     pageMocks.getTransactionForDetail.mockResolvedValue(
       makeTransactionDetailRow({
@@ -507,6 +571,7 @@ describe('Tag section (TAG-02, D-07b)', () => {
     pageMocks.getTransactionTagsForTransaction.mockReset()
     pageMocks.getTags.mockReset()
     pageMocks.getReimbursementPanelData.mockReset()
+    pageMocks.getRefundMembership.mockReset()
     pageMocks.notFound.mockReset()
     pageMocks.notFound.mockImplementation(() => {
       throw new Error('notFound')
@@ -517,6 +582,7 @@ describe('Tag section (TAG-02, D-07b)', () => {
     pageMocks.getCategories.mockResolvedValue([])
     pageMocks.getMostUsedSubcategories.mockResolvedValue([])
     pageMocks.getReimbursementPanelData.mockResolvedValue(undefined)
+    pageMocks.getRefundMembership.mockResolvedValue(undefined)
   })
 
   it('renders each current tag as a chip with a "Rimuovi tag {name}" control', async () => {
