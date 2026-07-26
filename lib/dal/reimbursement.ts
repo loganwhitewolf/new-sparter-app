@@ -150,6 +150,11 @@ export async function getReimbursementPanelData(input: {
       .where(and(eq(reimbursement.expenseId, txExpenseId), eq(reimbursement.userId, input.userId)))
       .limit(1)
   } else {
+    // Dormant branch (Phase 75 Plan 04 gap-closure, fix 2): the Expense-Group anchor has no UI
+    // entry point anymore — a Group unifies the SAME expense across platforms, not a bundle of
+    // DIFFERENT expenses to reimburse, so it never served the "reimburse a whole trip" case. Kept
+    // alive at the DAL/service layer (never called from any page today) pending a future
+    // trip-reimbursement design, most likely tag-anchored rather than Group-anchored.
     reimbursementRows = await db
       .select({ id: reimbursement.id, title: reimbursement.title })
       .from(reimbursement)

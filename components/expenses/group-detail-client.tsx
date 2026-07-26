@@ -34,12 +34,9 @@ import { SubcategoryPicker } from '@/components/categorization/subcategory-picke
 import { DetailPageShell } from '@/components/detail-pages/detail-page-shell'
 import { GroupTitleEdit } from '@/components/expenses/group-title-edit'
 import { RemoveGroupMemberButton } from '@/components/expenses/remove-group-member-button'
-import { ReimbursementPanel } from '@/components/transactions/reimbursement-panel'
-import { RefundPickerDialog } from '@/components/transactions/refund-picker-dialog'
 import { categorizeExpenseGroup, dissolveExpenseGroupAction } from '@/lib/actions/expenses'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { ExpenseGroupDetailRow } from '@/lib/dal/expenses'
-import type { ReimbursementPanelData } from '@/lib/dal/reimbursement'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import { APP_ROUTES, expenseDetailHref, transactionDetailHref } from '@/lib/routes'
 import { amountToneClass } from '@/lib/utils/amount-tone'
@@ -50,8 +47,6 @@ type Props = {
   group: ExpenseGroupDetailRow
   categories: CategoryWithSubCategories[]
   mostUsed: MostUsedSubcategory[]
-  /** D-03: the reimbursement panel's read model, anchor = the Group (Plan 75-04). */
-  reimbursementPanelData: ReimbursementPanelData | undefined
 }
 
 const LINKED_TRANSACTIONS_PREVIEW_LIMIT = 8
@@ -94,13 +89,12 @@ function formatTransactionAmount(amount: string, currency: string): string {
   }
 }
 
-export function GroupDetailClient({ group, categories, mostUsed, reimbursementPanelData }: Props) {
+export function GroupDetailClient({ group, categories, mostUsed }: Props) {
   const router = useRouter()
   const [categorizeOpen, setCategorizeOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [dissolveDialogOpen, setDissolveDialogOpen] = useState(false)
   const [dissolvePending, setDissolvePending] = useState(false)
-  const [refundPickerOpen, setRefundPickerOpen] = useState(false)
 
   const amountClass = amountToneClass(group.totalAmount, group.categoryType)
   const previewTransactions = group.transactions.slice(0, LINKED_TRANSACTIONS_PREVIEW_LIMIT)
@@ -287,17 +281,6 @@ export function GroupDetailClient({ group, categories, mostUsed, reimbursementPa
           ))}
         </div>
       )}
-
-      <div className="flex flex-col gap-2 border-t pt-3">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Rimborso
-        </span>
-        <ReimbursementPanel
-          anchor={{ groupId: group.id }}
-          data={reimbursementPanelData}
-          onAddRefund={() => setRefundPickerOpen(true)}
-        />
-      </div>
     </div>
   )
 
@@ -408,13 +391,6 @@ export function GroupDetailClient({ group, categories, mostUsed, reimbursementPa
         riepilogoCard={riepilogoCard}
         transactionsCard={transactionsCard}
         bottomCardsSideBySide
-      />
-
-      <RefundPickerDialog
-        open={refundPickerOpen}
-        onOpenChange={setRefundPickerOpen}
-        anchor={{ groupId: group.id }}
-        onLinked={() => router.refresh()}
       />
     </>
   )

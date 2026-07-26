@@ -3,7 +3,6 @@ import { GroupDetailClient } from '@/components/expenses/group-detail-client'
 import { verifySession } from '@/lib/dal/auth'
 import { getCategories } from '@/lib/dal/categories'
 import { getExpenseGroupForDetail } from '@/lib/dal/expenses'
-import { getReimbursementPanelData } from '@/lib/dal/reimbursement'
 import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
 
 function parseGroupId(value: string): number | null {
@@ -34,18 +33,10 @@ export default async function GroupDetailPage({
     notFound()
   }
 
-  const [categories, mostUsed, reimbursementPanelData] = await Promise.all([
+  const [categories, mostUsed] = await Promise.all([
     getCategories(),
     getMostUsedSubcategories(['in', 'out', 'transfer', 'allocation']),
-    getReimbursementPanelData({ userId, anchor: { groupId } }),
   ])
 
-  return (
-    <GroupDetailClient
-      group={group}
-      categories={categories}
-      mostUsed={mostUsed}
-      reimbursementPanelData={reimbursementPanelData}
-    />
-  )
+  return <GroupDetailClient group={group} categories={categories} mostUsed={mostUsed} />
 }

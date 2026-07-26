@@ -4,19 +4,24 @@ Out-of-scope discoveries logged per the executor's scope-boundary rule (only fix
 caused by the current task's own changes are auto-applied; everything else is logged here, not
 fixed).
 
-## 1. Local dev Postgres reset as a side effect of running this plan's own test suite
+## 1. Local dev Postgres reset as a side effect of running this plan's own test suite — RESOLVED
 
-**Not a new issue** — `tests/helpers/reimbursement-test-db.ts`'s `resetReimbursementFixtures()`
-runs `TRUNCATE TABLE ... RESTART IDENTITY CASCADE` against `postgres://postgres:sparter@localhost
-:5432/sparter` (the SAME database the `yarn dev` app connects to locally), including `user`,
-`direction`, `nature`, `category`, `sub_category`, `platform`, `file`, `expense`, `transaction`,
-`expense_group`, `expense_group_membership`, `reimbursement`, `reimbursement_refund`, `tag`,
-`transaction_tag`. This has been the harness's behavior since Phase 73 (used by every
-`reimbursement-*.test.ts` run across Phases 73/74/75).
+**Status: RESOLVED (commit `80ddb30`).** The orchestrator isolated the reimbursement test harness
+to a dedicated, auto-created `sparter_test` database with hard guards so it can never target the
+developer's local dev DB again. `tests/helpers/reimbursement-test-db.ts`'s
+`resetReimbursementFixtures()` now truncates only that isolated database — `yarn vitest run
+tests/reimbursement-phase-75.test.ts` (and every other `reimbursement-*.test.ts` real-Postgres
+suite) no longer touches `postgres://postgres:sparter@localhost:5432/sparter`, so the developer's
+`user`/`session`/`account` rows and local login session are never at risk again.
 
+**Original issue (kept for history):** `resetReimbursementFixtures()` used to run `TRUNCATE TABLE
+... RESTART IDENTITY CASCADE` against the SAME database the `yarn dev` app connects to locally,
+including `user`, `direction`, `nature`, `category`, `sub_category`, `platform`, `file`, `expense`,
+`transaction`, `expense_group`, `expense_group_membership`, `reimbursement`,
+`reimbursement_refund`, `tag`, `transaction_tag` — a harness behavior in place since Phase 73.
 Running this plan's `yarn vitest run tests/reimbursement-phase-75.test.ts ...` (required by the
-plan's own `<verify>` blocks) truncated the developer's local dev DB, including their `user` row
-(cascading their `session`/`account` rows) — their local login session is now invalid.
+plan's own `<verify>` blocks) truncated the developer's local dev DB, cascading their
+`session`/`account` rows and invalidating their local login session.
 
 ## 2. `yarn db:seed` fails when leftover test-fixture rows share a seed row's `code`
 
@@ -51,3 +56,22 @@ should specify an explicit target (e.g. `.onConflictDoNothing({ target: nature.i
 `code`-only collision from an out-of-band row (test fixtures, manual inserts) cannot silently
 block the canonical explicit-id row from landing — worth a dedicated fix, unrelated to this
 plan's `lib/dal/reimbursement.ts` / `ReimbursementPanel` / `RefundPickerDialog` work.
+
+## 3. Trip/vacation reimbursement (bundle arbitrary different expenses and reimburse the set) — deferred capability
+
+**Locked decision (75-04 gap-closure):** ship only the single-Expense reimbursement anchor;
+the Expense-Group anchor's UI entry point is removed from both hosts (Group detail page no longer
+mounts `ReimbursementPanel`/`RefundPickerDialog`), while its backend (`createPairTx`'s dual-anchor
+write path, `getGroupOccurrenceInterval`, `getGroupMemberTransactionIds`, the
+`loadGroupOccurrenceIntervalAction`/`loadGroupRefundCandidatesAction` server actions, and
+`getReimbursementPanelData`'s `{ groupId }` branch) stays dormant, not deleted.
+
+**Why the Group anchor doesn't serve this case:** an Expense Group unifies the SAME expense across
+platforms (ADR 0017) — it is not a mechanism for bundling several DIFFERENT expenses together to
+reimburse as a set. "Reimburse a whole trip" (several different expenses — hotel, train, dinners —
+reimbursed together) has no natural home in the Group model.
+
+**Natural future primitive:** a tag-anchored reimbursement — a user already tags arbitrary
+transactions across different expenses/subcategories with something like "Vacanza Roma"
+(`project_tag_dedicated_view.md`), which is exactly the "bundle of different expenses" shape this
+capability needs. Needs its own discussion/planning cycle when picked up; not scoped for v2.8.
