@@ -161,7 +161,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 76-02-PLAN.md — List UI: search/status-filter/sort via the unified DataTableToolbar (RMB-10)
+- [x] 76-02-PLAN.md — List UI: search/status-filter/sort via the unified DataTableToolbar (RMB-10)
 - [ ] 76-03-PLAN.md — Row-indicator link + transactions DAL reimbursementId field + sidebar "Rimborsi" nav (RMB-10)
 - [ ] 76-04-PLAN.md — ReimbursementPanel summary variant (D-09): /transactions/[id] becomes read-only summary + "Gestisci rimborso" link once linked (RMB-11)
 
