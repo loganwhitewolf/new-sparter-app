@@ -120,30 +120,38 @@ export function ReimbursementTable({ reimbursements, route }: Props) {
           <TableBody>
             {sorted.map((row) => (
               <TableRow key={row.id}>
-                <TableCell>
-                  <Link href={reimbursementHref(row.id)} className="text-sm font-medium hover:underline">
+                {/* `max-w-0 w-full` + inner `truncate` is the shared no-horizontal-scroll pattern
+                    (transaction-table.tsx, expense-table.tsx): the flexible text columns absorb the
+                    leftover width and ellipsize instead of widening the table. */}
+                <TableCell className="max-w-0 w-full">
+                  <Link
+                    href={reimbursementHref(row.id)}
+                    className="block truncate text-sm font-medium hover:underline"
+                    title={row.displayTitle}
+                  >
                     {row.displayTitle}
                   </Link>
                 </TableCell>
-                <TableCell>
+                <TableCell className="max-w-0 w-full">
                   <Link
                     href={expenseDetailHref(row.anchorExpenseId)}
-                    className="text-sm text-muted-foreground hover:underline"
+                    className="block truncate text-sm text-muted-foreground hover:underline"
+                    title={row.anchorTitle}
                   >
                     {row.anchorTitle}
                   </Link>
                 </TableCell>
                 <TableCell
-                  className={`text-right font-mono tabular-nums text-sm ${amountToneClass(row.residual)}`}
+                  className={`whitespace-nowrap text-right font-mono tabular-nums text-sm ${amountToneClass(row.residual)}`}
                 >
                   {formatSignedAmount(row.residual)}
                 </TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <Badge variant="outline" className={residualBadgeClassName(row.state)}>
                     {formatResidualBadgeLabel(row.residual, row.state)}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
+                <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                   {row.anchorDate.toLocaleDateString('it-IT')}
                 </TableCell>
               </TableRow>
