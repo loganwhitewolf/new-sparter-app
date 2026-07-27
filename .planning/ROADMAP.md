@@ -137,7 +137,7 @@ Plans:
 
 **Wave 4** *(blocked on Waves 2+3 completion)*
 
-- [ ] 75-04-PLAN.md — ReimbursementPanel + multi-select RefundPickerDialog mounted on both hosts (RMB-08) + manual E2E checkpoint
+- [x] 75-04-PLAN.md — ReimbursementPanel + multi-select RefundPickerDialog mounted on both hosts (RMB-08) + manual E2E checkpoint
 
 **UI hint**: yes
 
