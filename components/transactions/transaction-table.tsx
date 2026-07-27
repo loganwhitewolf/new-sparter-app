@@ -11,7 +11,7 @@ import { TransactionBulkActionBar } from '@/components/transactions/transaction-
 import { TransactionTitleEdit } from '@/components/transactions/transaction-title-edit'
 import { CounterpartPickerDialog } from '@/components/transactions/counterpart-picker-dialog'
 import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
-import { TransactionPairPopover } from '@/components/transactions/transaction-pair-popover'
+import { ReimbursementRowIndicator } from '@/components/transactions/reimbursement-row-indicator'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { BulkCategorizeDialog } from '@/components/expenses/bulk-categorize-dialog'
 import { BulkAssignTagsDialog } from '@/components/tags/bulk-assign-tags-dialog'
@@ -459,9 +459,9 @@ export function TransactionTable({
                 </TableCell>
                 <TableCell className="max-w-0 w-full">
                   <div className="flex min-w-0 flex-col gap-1">
-                    {/* Title + inline tag indicator on ONE line: the title owns the flexible
-                        space and truncates ("…"), the chip is shrink-0 so it stays visible
-                        right after the ellipsis. Tag names are revealed in the chip's popover. */}
+                    {/* Title + inline indicators on ONE line: the title owns the flexible space
+                        and truncates ("…"); the tags chip and the reimbursement indicator are
+                        shrink-0 so they stay visible right after the ellipsis. */}
                     <div className="flex min-w-0 items-center gap-1.5">
                       <div className="min-w-0 flex-1">
                         <TransactionTitleEdit
@@ -473,27 +473,13 @@ export function TransactionTable({
                         />
                       </div>
                       <TransactionTagsChip tags={tagsByTx[transaction.id] ?? []} />
+                      {/* Reimbursement indicator — icon only, no detail popover (the old 1:1
+                          TransactionPairPopover was stale after the 1:N model and had a dead
+                          link). `pairedNetAmount` is non-null iff the row belongs to a
+                          reimbursement (as anchor or refund), keyed on pairedReimbursementIdExpr();
+                          the full breakdown lives on the transaction detail page. */}
+                      {transaction.pairedNetAmount != null && <ReimbursementRowIndicator />}
                     </div>
-                    {/* Inline pair badge — shown when the row is paired (D-15, PAIR-02).
-                        Rows stay in natural chronological order (no re-sort/grouping).
-                        WR-05: gate on ALL required fields being non-null. Substituting
-                        a fallback amount/date would render plausible-but-wrong financial
-                        data; if any field is missing, hide the badge instead. */}
-                    {transaction.pairedWithId &&
-                      transaction.pairedNetAmount &&
-                      transaction.pairedAmount &&
-                      transaction.pairedOccurredAt && (
-                        <TransactionPairPopover
-                          pairedWithId={transaction.pairedWithId}
-                          netAmount={transaction.pairedNetAmount}
-                          pairedDescription={transaction.pairedDescription ?? ''}
-                          pairedAmount={transaction.pairedAmount}
-                          pairedOccurredAt={transaction.pairedOccurredAt}
-                        />
-                      )}
-                    {/* Tag chips moved inline next to the title (TransactionTagsChip above) —
-                        read-only display; bulk add/remove lives in BulkAssignTagsDialog,
-                        single add/remove lives on the detail page. */}
                   </div>
                 </TableCell>
                 <TableCell
