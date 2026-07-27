@@ -381,12 +381,14 @@ export async function createPairTx(
 
     const refundExpenseSnapshot = refundExpenseRows[0]
 
-    // Compose the refund title as "{refund's own title} — rimborso {spend title}" so the refund
-    // row keeps the sender's name and reads as a refund of that specific spend.
-    const refundOwnTitle = refundExpenseSnapshot?.title?.trim() ?? ''
-    const refundTitle = refundOwnTitle
-      ? `${refundOwnTitle} — rimborso ${anchorTitle}`
-      : `Rimborso ${anchorTitle}`
+    // Keep the refund's own expense title UNCHANGED at link time (Phase 76 UAT gap #2). The
+    // reimbursement structure + the refund transaction's own tag already convey "this is a refund
+    // of {anchor}", so no synthetic "rimborso {spend}" title is added anymore. Only the title stops
+    // being rewritten — the decision-2 recategorization/isolation below (subcategory + synthetic
+    // descriptionHash via applyDetachCleanupTx) is deliberately unchanged. In practice a refund
+    // expense always carries a non-empty title from import; applyDetachCleanupTx's own
+    // "Titolo spesa obbligatorio" guard still backstops the degenerate empty-title case.
+    const refundTitle = refundExpenseSnapshot?.title ?? ''
 
     // Pre-link snapshot (D-10): records exactly one row per reimbursement_refund link, capturing
     // the refund's expense state AS IT WAS before the mutation below — the same write site covers

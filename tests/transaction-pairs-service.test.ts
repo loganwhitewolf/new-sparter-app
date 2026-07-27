@@ -627,11 +627,12 @@ describe('createPair — refund cleanup (decision 2)', () => {
     })
 
     expect(mocks.applyDetachCleanupTx).toHaveBeenCalledTimes(1)
-    // Title composed as "{refund's own title} — rimborso {spend title}".
+    // The refund's own expense title is kept UNCHANGED — no synthetic "rimborso {spend}" prefix
+    // is added anymore (Phase 76 UAT gap #2). Only the subcategory recategorization still applies.
     expect(mocks.applyDetachCleanupTx).toHaveBeenCalledWith(expect.anything(), {
       userId: 'user-1',
       transactionId: 'tx-refund',
-      title: 'Giulia Bianchi — rimborso Spesa X',
+      title: 'Giulia Bianchi',
       subCategoryId: 7,
     })
     // The service surfaces the resolved refund + inherited subcategory for the UI.
@@ -735,7 +736,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
     expect(mocks.applyDetachCleanupTx).toHaveBeenCalledWith(expect.anything(), {
       userId: 'user-1',
       transactionId: 'tx-refund',
-      title: 'Marco Rossi — rimborso Spesa Y',
+      title: 'Marco Rossi',
       subCategoryId: 9,
     })
     expect(result.secondaryTransactionId).toBe('tx-refund')
@@ -761,7 +762,7 @@ describe('createPair — refund cleanup (decision 2)', () => {
     expect(mocks.applyDetachCleanupTx).toHaveBeenCalledWith(expect.anything(), {
       userId: 'user-1',
       transactionId: 'tx-late',
-      title: 'Anna Verdi — rimborso Spesa Z',
+      title: 'Anna Verdi',
       subCategoryId: 3,
     })
   })
