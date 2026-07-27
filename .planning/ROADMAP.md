@@ -417,7 +417,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 72. transactions-tag-indicator | v2.7 | direct | Complete | 2026-07-22 |
 | 73. reimbursement-schema-and-netting | v2.8 | TBD | Complete    | 2026-07-24 |
 | 74. group-anchor-and-reconciliation | v2.8 | TBD | Complete    | 2026-07-24 |
-| 75. linking-surfaces-and-lifecycle | v2.8 | 0/4 | Complete    | 2026-07-27 |
+| 75. linking-surfaces-and-lifecycle | v2.8 | 4/4 | Complete    | 2026-07-27 |
 | 76. reimbursements-section | v2.8 | TBD | Not started | - |
 
 **Total shipped: 72 phases · 269 plans complete**
