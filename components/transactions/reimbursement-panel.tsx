@@ -20,7 +20,7 @@ import {
 import { deleteReimbursementAction, removeRefundAction } from '@/lib/actions/transaction-pairs'
 import type { ReimbursementPanelData, RefundMembership } from '@/lib/dal/reimbursement'
 import type { ReimbursementResidualState } from '@/lib/services/reimbursement'
-import { transactionDetailHref } from '@/lib/routes'
+import { reimbursementHref, transactionDetailHref } from '@/lib/routes'
 import { toDecimal } from '@/lib/utils/decimal'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 
@@ -36,6 +36,16 @@ type Props = {
   data: ReimbursementPanelData | undefined
   /** Opens the host's RefundPickerDialog (Plan 75-04 Task 2) — the host owns that dialog's state. */
   onAddRefund: () => void
+  /**
+   * `'summary'` (D-09): compact read-only rendering used on `/transactions/[id]` once a
+   * reimbursement already exists — residual label + status Badge + refund list (no "Scollega"
+   * per refund), plus a single "Gestisci rimborso" link to `/reimbursements/[id]` in place of the
+   * add/remove/delete controls. `'management'` (default): the full pre-Phase-76 body, unchanged —
+   * reused verbatim by the dedicated `/reimbursements/[id]` page (Plan 76-05). Only affects the
+   * "reimbursement already exists" branch; the empty-state "Aggiungi rimborso" CTA below is
+   * identical in both variants.
+   */
+  variant?: 'summary' | 'management'
 }
 
 const dateFormatter = new Intl.DateTimeFormat('it-IT', {
@@ -77,7 +87,7 @@ function stateBadgeLabel(state: ReimbursementResidualState): string {
  * common state, never an error), or the net/residual/status line + ordered refund list + add/
  * remove/delete actions when a reimbursement exists.
  */
-export function ReimbursementPanel({ data, onAddRefund }: Props) {
+export function ReimbursementPanel({ data, onAddRefund, variant = 'management' }: Props) {
   const router = useRouter()
   const [removePendingId, setRemovePendingId] = useState<string | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -149,65 +159,75 @@ export function ReimbursementPanel({ data, onAddRefund }: Props) {
             <span className="shrink-0 font-mono tabular-nums text-xs">
               {formatAbsoluteAmount(refund.amount)}
             </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={removePendingId === refund.id}
-              onClick={() => void handleRemoveRefund(refund.id)}
-            >
-              <Unlink className="h-4 w-4" />
-              Scollega
-            </Button>
+            {variant === 'management' ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={removePendingId === refund.id}
+                onClick={() => void handleRemoveRefund(refund.id)}
+              >
+                <Unlink className="h-4 w-4" />
+                Scollega
+              </Button>
+            ) : null}
           </li>
         ))}
       </ul>
 
-      <div className="flex items-center justify-between gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={onAddRefund}>
-          <Link2 className="h-4 w-4" />
-          Aggiungi rimborso
-        </Button>
+      {variant === 'summary' ? (
+        <Link href={reimbursementHref(data.reimbursementId)}>
+          <Button type="button" variant="outline" size="sm">
+            Gestisci rimborso
+          </Button>
+        </Link>
+      ) : (
+        <div className="flex items-center justify-between gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={onAddRefund}>
+            <Link2 className="h-4 w-4" />
+            Aggiungi rimborso
+          </Button>
 
-        <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-          <DialogTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-              Elimina rimborso
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Eliminare il rimborso?</DialogTitle>
-              <DialogDescription>
-                {data.refunds.length > 1
-                  ? `Tutti i ${data.refunds.length} rimborsi collegati verranno scollegati e torneranno alla loro categoria originale.`
-                  : 'Il rimborso collegato verrà scollegato e tornerà alla sua categoria originale.'}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="ghost">
-                  Annulla
-                </Button>
-              </DialogClose>
+          <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <DialogTrigger asChild>
               <Button
                 type="button"
-                variant="destructive"
-                onClick={() => void handleDeleteReimbursement(data.reimbursementId)}
-                disabled={deletePending}
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
               >
-                Elimina
+                <Trash2 className="h-4 w-4" />
+                Elimina rimborso
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Eliminare il rimborso?</DialogTitle>
+                <DialogDescription>
+                  {data.refunds.length > 1
+                    ? `Tutti i ${data.refunds.length} rimborsi collegati verranno scollegati e torneranno alla loro categoria originale.`
+                    : 'Il rimborso collegato verrà scollegato e tornerà alla sua categoria originale.'}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="button" variant="ghost">
+                    Annulla
+                  </Button>
+                </DialogClose>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => void handleDeleteReimbursement(data.reimbursementId)}
+                  disabled={deletePending}
+                >
+                  Elimina
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
     </div>
   )
 }
