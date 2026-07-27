@@ -77,6 +77,9 @@ export async function createTransactionPairAction(
 
   revalidatePath('/transactions')
   revalidatePath('/overview')
+  // CR-01: the reimbursement list (and the sidebar's always-prefetched /reimbursements Link) must
+  // drop its Router Cache too, so a post-delete/unlink navigation never shows a stale reimbursement.
+  revalidatePath('/reimbursements')
 
   return {
     error: null,
@@ -158,6 +161,9 @@ export async function deleteTransactionPairAction(
 
   revalidatePath('/transactions')
   revalidatePath('/overview')
+  // CR-01: the reimbursement list (and the sidebar's always-prefetched /reimbursements Link) must
+  // drop its Router Cache too, so a post-delete/unlink navigation never shows a stale reimbursement.
+  revalidatePath('/reimbursements')
 
   return { error: null }
 }
@@ -206,6 +212,9 @@ export async function deleteReimbursementAction(
 
   revalidatePath('/transactions')
   revalidatePath('/overview')
+  // CR-01: the reimbursement list (and the sidebar's always-prefetched /reimbursements Link) must
+  // drop its Router Cache too, so a post-delete/unlink navigation never shows a stale reimbursement.
+  revalidatePath('/reimbursements')
 
   return { error: null }
 }
@@ -256,6 +265,9 @@ export async function createMultiRefundAction(
 
   revalidatePath('/transactions')
   revalidatePath('/overview')
+  // CR-01: the reimbursement list (and the sidebar's always-prefetched /reimbursements Link) must
+  // drop its Router Cache too, so a post-delete/unlink navigation never shows a stale reimbursement.
+  revalidatePath('/reimbursements')
 
   return { error: null }
 }
