@@ -254,9 +254,9 @@ export function TransactionTable({
 
   /**
    * Unlink a pair by calling deleteTransactionPairAction for the given transaction.
-   * On success, clears pairedWithId/pairedNetAmount/pairedDescription/pairedOccurredAt
-   * on BOTH legs of the pair in the local list so the badge disappears immediately
-   * without waiting for a server re-render (optimistic UI, PAIR-03 D-11).
+   * On success, clears pairedWithId/pairedNetAmount/pairedDescription/pairedOccurredAt/
+   * reimbursementId on BOTH legs of the pair in the local list so the badge disappears
+   * immediately without waiting for a server re-render (optimistic UI, PAIR-03 D-11).
    */
   async function handleUnpair(transactionId: string) {
     const tx = loadedTransactions.find((t) => t.id === transactionId)
@@ -275,7 +275,14 @@ export function TransactionTable({
       setLoadedTransactions((prev) =>
         prev.map((t) =>
           idsToUnpair.has(t.id)
-            ? { ...t, pairedWithId: null, pairedNetAmount: null, pairedDescription: null, pairedOccurredAt: null }
+            ? {
+                ...t,
+                pairedWithId: null,
+                pairedNetAmount: null,
+                pairedDescription: null,
+                pairedOccurredAt: null,
+                reimbursementId: null,
+              }
             : t,
         ),
       )
@@ -473,12 +480,14 @@ export function TransactionTable({
                         />
                       </div>
                       <TransactionTagsChip tags={tagsByTx[transaction.id] ?? []} />
-                      {/* Reimbursement indicator — icon only, no detail popover (the old 1:1
-                          TransactionPairPopover was stale after the 1:N model and had a dead
-                          link). `pairedNetAmount` is non-null iff the row belongs to a
-                          reimbursement (as anchor or refund), keyed on pairedReimbursementIdExpr();
-                          the full breakdown lives on the transaction detail page. */}
-                      {transaction.pairedNetAmount != null && <ReimbursementRowIndicator />}
+                      {/* Reimbursement indicator — links to /reimbursements/[id] (D-06, Phase 76
+                          Plan 03). `reimbursementId` is non-null iff the row belongs to a
+                          reimbursement (as anchor or refund), resolved via
+                          pairedReimbursementIdExpr(); the full net/residual/refund breakdown
+                          lives on that dedicated page. */}
+                      {transaction.reimbursementId != null && (
+                        <ReimbursementRowIndicator reimbursementId={transaction.reimbursementId} />
+                      )}
                     </div>
                   </div>
                 </TableCell>
