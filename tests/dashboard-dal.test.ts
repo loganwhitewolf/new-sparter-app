@@ -973,14 +973,14 @@ describe('DASH money-correctness (Phase 49 — ADR 0012)', () => {
 
 describe('transaction pairing netting (Phase 50 — PAIR-03)', () => {
   // ── isNotSecondary() fragment contract ─────────────────────────────────────
+  // Phase 73 (D-05/D-06): generalized from transaction_pair to reimbursement_refund.
   describe('isNotSecondary() SQL fragment', () => {
-    it('returns a sql fragment referencing transaction_pair and transaction_b_id', async () => {
-      // This dynamic import is RED until Plan 02 creates lib/dal/transaction-pairs-sql.ts
+    it('returns a sql fragment referencing reimbursement_refund and rr.transaction_id', async () => {
       const { isNotSecondary } = await import('@/lib/dal/transaction-pairs-sql')
       const fragment = isNotSecondary()
       const sqlText = JSON.stringify(fragment)
       // Check for the key identifiers that must appear in the NOT EXISTS clause
-      expect(sqlText.toLowerCase()).toMatch(/transaction_pair|tp\.transaction_b_id/)
+      expect(sqlText.toLowerCase()).toMatch(/reimbursement_refund|rr\.transaction_id/)
     })
 
     it('returns a value that is truthy (Drizzle sql fragment, not null/undefined)', async () => {
@@ -990,13 +990,14 @@ describe('transaction pairing netting (Phase 50 — PAIR-03)', () => {
   })
 
   // ── effectiveAmount() fragment contract ──────────────────────────────────
+  // Phase 73 (D-05/D-06): generalized from transaction_pair to reimbursement/reimbursement_refund.
   describe('effectiveAmount() SQL fragment', () => {
-    it('returns a sql fragment with a CASE WHEN EXISTS referencing transaction_a_id and ::numeric addition', async () => {
+    it('returns a sql fragment with a CASE WHEN EXISTS referencing reimbursement and ::numeric addition', async () => {
       const { effectiveAmount } = await import('@/lib/dal/transaction-pairs-sql')
       const fragment = effectiveAmount()
       const sqlText = JSON.stringify(fragment)
-      // The CASE WHEN EXISTS must reference the pair table and ::numeric cast
-      expect(sqlText.toLowerCase()).toMatch(/case|when|exists|transaction_pair/)
+      // The CASE WHEN EXISTS must reference the reimbursement tables and ::numeric cast
+      expect(sqlText.toLowerCase()).toMatch(/case|when|exists|reimbursement/)
     })
 
     it('returns a value that is truthy (Drizzle sql fragment, not null/undefined)', async () => {

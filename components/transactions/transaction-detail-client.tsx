@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ExternalLink, Link2, Lock, Split, Tag, Trash2, Unlink, X } from 'lucide-react'
+import { ExternalLink, Lock, Split, Tag, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,21 +22,19 @@ import { DetailPageShell } from '@/components/detail-pages/detail-page-shell'
 import { TransactionAmountEdit } from '@/components/transactions/transaction-amount-edit'
 import { TransactionDateEdit } from '@/components/transactions/transaction-date-edit'
 import { TransactionTitleEdit } from '@/components/transactions/transaction-title-edit'
-import { CounterpartPickerDialog } from '@/components/transactions/counterpart-picker-dialog'
+import { ReimbursementPanel, RefundMembershipCard } from '@/components/transactions/reimbursement-panel'
+import { RefundPickerDialog } from '@/components/transactions/refund-picker-dialog'
 import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { deleteTransaction } from '@/lib/actions/transactions'
-import { deleteTransactionPairAction } from '@/lib/actions/transaction-pairs'
 import { addTransactionTagAction, removeTransactionTagAction } from '@/lib/actions/transaction-tags'
+import type { ReimbursementPanelData, RefundMembership } from '@/lib/dal/reimbursement'
 import type { TransactionDetailRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import type { TagRow } from '@/lib/dal/tags'
-import { APP_ROUTES, expenseDetailHref, importFileDetailHref, transactionDetailHref } from '@/lib/routes'
-import { cn } from '@/lib/utils'
-import { amountToneClass } from '@/lib/utils/amount-tone'
+import { APP_ROUTES, expenseDetailHref, expenseGroupDetailHref, importFileDetailHref } from '@/lib/routes'
 import { toDecimal } from '@/lib/utils/decimal'
-import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 
 type CurrentTag = { tagId: number; tagName: string; archived: boolean }
 
@@ -46,33 +44,13 @@ type Props = {
   mostUsed: MostUsedSubcategory[]
   currentTags: CurrentTag[]
   allTags: TagRow[]
-}
-
-const dateFormatter = new Intl.DateTimeFormat('it-IT', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
-
-function formatSignedAmount(amount: string, currency: string): string {
-  try {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: currency || 'EUR',
-    }).format(Number(toDecimal(amount)))
-  } catch {
-    return amount
-  }
-}
-
-function formatAbsoluteSigned(amount: string, currency: string): string {
-  const d = toDecimal(amount)
-  const sign = d.isNegative() ? '-' : '+'
-  return `${sign}${formatAbsoluteAmount(amount, currency)}`
-}
-
-function formatDate(date: Date): string {
-  return dateFormatter.format(new Date(date))
+  /** D-02: the reimbursement panel's read model, resolved server-side (Plan 75-04). Only ever
+   * populated for an outflow transaction (ADR 0018 — the anchor is always the outflow). */
+  reimbursementPanelData: ReimbursementPanelData | undefined
+  /** Fix 1 (Phase 75 Plan 04 gap-closure): populated when THIS transaction is an inflow that is
+   * itself a linked refund — the read-only state ReimbursementPanel's CTA/manage-panel never
+   * applies to. `undefined` for an outflow, or for an inflow that isn't a refund. */
+  refundMembership: RefundMembership | undefined
 }
 
 export function TransactionDetailClient({
@@ -81,15 +59,16 @@ export function TransactionDetailClient({
   mostUsed,
   currentTags,
   allTags,
+  reimbursementPanelData,
+  refundMembership,
 }: Props) {
   const router = useRouter()
-  const [pairPickerOpen, setPairPickerOpen] = useState(false)
+  const [refundPickerOpen, setRefundPickerOpen] = useState(false)
   const [detachOpen, setDetachOpen] = useState(false)
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteLinkedExpenses, setDeleteLinkedExpenses] = useState(false)
   const [deletePending, setDeletePending] = useState(false)
-  const [unpairPending, setUnpairPending] = useState(false)
   const [tags, setTags] = useState<CurrentTag[]>(currentTags)
   const [addTagId, setAddTagId] = useState<string>('')
   const [tagPending, setTagPending] = useState(false)
@@ -101,20 +80,9 @@ export function TransactionDetailClient({
     transaction.description
   const isOneToOne =
     Boolean(transaction.expenseTitle) && transaction.expenseTransactionCount === 1
-
-  async function handleUnpair() {
-    setUnpairPending(true)
-    const fd = new FormData()
-    fd.set('transactionId', transaction.id)
-    const result = await deleteTransactionPairAction({ error: null }, fd)
-    setUnpairPending(false)
-    if (result.error) {
-      toast.error(result.error)
-    } else {
-      toast.success('Collegamento rimosso.')
-      router.refresh()
-    }
-  }
+  // Fix 1 (Phase 75 Plan 04 gap-closure): ADR 0018 — the anchor is ALWAYS the outflow, an inflow
+  // can never be one. Gates which reimbursement UI (if any) renders in collegamentiCard below.
+  const isInflow = toDecimal(transaction.amount).isPositive()
 
   async function handleDelete() {
     setDeletePending(true)
@@ -227,8 +195,6 @@ export function TransactionDetailClient({
 
   const searchQuery = transaction.customTitle?.trim() || transaction.description
   const searchHref = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`
-  const headerAmount = formatSignedAmount(transaction.amount, transaction.currency)
-  const headerAmountClass = amountToneClass(transaction.amount, transaction.categoryType)
 
   const categoriaSection = transaction.expenseId ? (
     <div className="mt-2 flex flex-col gap-3 rounded-md border bg-muted/30 p-4">
@@ -277,6 +243,7 @@ export function TransactionDetailClient({
           customTitle={transaction.customTitle}
           fallbackTitle={transaction.groupTitle ?? transaction.expenseTitle}
           onSuccess={() => router.refresh()}
+          variant="detail"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -300,22 +267,29 @@ export function TransactionDetailClient({
           onSuccess={() => router.refresh()}
         />
       </div>
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Descrizione bancaria
-        </span>
-        <TooltipProvider>
-          <div className="flex items-center gap-2 rounded bg-muted p-3">
-            <span className="flex-1 text-sm text-muted-foreground">{transaction.description}</span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent>chiave di riconciliazione bancaria — non modificabile</TooltipContent>
-            </Tooltip>
-          </div>
-        </TooltipProvider>
-      </div>
+      {/* Original bank description shown whenever the displayed title differs from the raw
+          description (D-detail): a custom title, OR a group/expense title standing in for it
+          (e.g. a grouped transaction shows the group title) — in all those cases the underlying
+          transaction's own title would otherwise be invisible. Hidden only when the title already
+          IS the raw description. Labelled "Descrizione originale". */}
+      {displayTitle !== transaction.description ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Descrizione originale
+          </span>
+          <TooltipProvider>
+            <div className="flex items-center gap-2 rounded bg-muted p-3">
+              <span className="flex-1 text-sm text-muted-foreground">{transaction.description}</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>chiave di riconciliazione bancaria — non modificabile</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
+        </div>
+      ) : null}
       {categoriaSection}
       {tagSection}
     </div>
@@ -333,28 +307,6 @@ export function TransactionDetailClient({
             Cerca su internet
           </a>
         </Button>
-        {transaction.pairedWithId ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full justify-start"
-            disabled={unpairPending}
-            onClick={() => void handleUnpair()}
-          >
-            <Unlink className="h-4 w-4" />
-            Scollega rimborso
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => setPairPickerOpen(true)}
-          >
-            <Unlink className="h-4 w-4 rotate-45" />
-            Collega rimborso
-          </Button>
-        )}
         {transaction.expenseId ? (
           <Button
             type="button"
@@ -386,13 +338,29 @@ export function TransactionDetailClient({
       </span>
       {transaction.expenseId ? (
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm text-muted-foreground">Spesa collegata</span>
-          <Link
-            href={expenseDetailHref(transaction.expenseId)}
-            className="text-sm text-primary underline-offset-4 hover:underline"
-          >
-            {transaction.groupTitle ?? transaction.expenseTitle ?? 'Vedi spesa'}
-          </Link>
+          {/* When the linked expense belongs to a group, point at the group (the meaningful
+              aggregate the user manages), not the individual member expense. */}
+          {transaction.groupId ? (
+            <>
+              <span className="text-sm text-muted-foreground">Gruppo collegato</span>
+              <Link
+                href={expenseGroupDetailHref(transaction.groupId)}
+                className="text-sm text-primary underline-offset-4 hover:underline"
+              >
+                {transaction.groupTitle ?? 'Vedi gruppo'}
+              </Link>
+            </>
+          ) : (
+            <>
+              <span className="text-sm text-muted-foreground">Spesa collegata</span>
+              <Link
+                href={expenseDetailHref(transaction.expenseId)}
+                className="text-sm text-primary underline-offset-4 hover:underline"
+              >
+                {transaction.expenseTitle ?? 'Vedi spesa'}
+              </Link>
+            </>
+          )}
         </div>
       ) : null}
       {transaction.fileId ? (
@@ -411,70 +379,46 @@ export function TransactionDetailClient({
           <Badge variant="outline">Manuale</Badge>
         </div>
       )}
-      {transaction.pairedWithId &&
-      transaction.pairedNetAmount &&
-      transaction.pairedAmount &&
-      transaction.pairedOccurredAt ? (
-        <div className="flex flex-col gap-2 rounded-md border p-3">
-          <div className="flex items-center gap-2">
-            <Link2 className="h-4 w-4 text-blue-700" />
-            <span className="text-sm font-medium">Rimborso collegato</span>
-          </div>
-          <p className="truncate text-sm text-muted-foreground" title={transaction.pairedDescription ?? ''}>
-            {transaction.pairedDescription}
-          </p>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Importo</span>
-            <span className="font-mono tabular-nums">
-              {formatAbsoluteSigned(transaction.pairedAmount, transaction.currency)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Data</span>
-            <span className="font-mono">{formatDate(transaction.pairedOccurredAt)}</span>
-          </div>
-          <div className="flex items-center justify-between border-t pt-1 text-sm font-medium">
-            <span>Netto</span>
-            <span className="font-mono tabular-nums">
-              {formatAbsoluteSigned(transaction.pairedNetAmount, transaction.currency)}
-            </span>
-          </div>
-          <Link
-            href={transactionDetailHref(transaction.pairedWithId)}
-            className="text-xs text-primary underline-offset-4 hover:underline"
-          >
-            Vai alla transazione collegata
-          </Link>
-        </div>
-      ) : null}
+      {isInflow ? (
+        refundMembership ? (
+          <RefundMembershipCard transactionId={transaction.id} membership={refundMembership} />
+        ) : null
+      ) : (
+        <ReimbursementPanel
+          anchor={{ transactionId: transaction.id }}
+          data={reimbursementPanelData}
+          onAddRefund={() => setRefundPickerOpen(true)}
+          variant="summary"
+        />
+      )}
     </div>
   )
 
   return (
     <>
+      {/* No header title/amount here (D-detail): the transaction title and total already live in
+          the "Dati" card (un-truncated), so the shell shows only the back link — avoids the
+          duplicated, ellipsis-clipped heading. */}
       <DetailPageShell
         backHref={APP_ROUTES.transactions}
-        title={displayTitle}
-        amount={headerAmount}
-        amountInline
-        amountToneClassName={cn(headerAmountClass)}
         layout="two-column"
         datiCard={datiCard}
         collegamentiCard={collegamentiCard}
         azioniCard={azioniCard}
       />
 
-      <CounterpartPickerDialog
-        open={pairPickerOpen}
-        onOpenChange={setPairPickerOpen}
-        transactionId={transaction.id}
-        transactionAmount={transaction.amount}
-        transactionOccurredAt={transaction.occurredAt}
-        onPaired={() => {
-          setPairPickerOpen(false)
-          router.refresh()
-        }}
-      />
+      {!isInflow ? (
+        <RefundPickerDialog
+          open={refundPickerOpen}
+          onOpenChange={setRefundPickerOpen}
+          anchor={{
+            transactionId: transaction.id,
+            amount: transaction.amount,
+            occurredAt: transaction.occurredAt,
+          }}
+          onLinked={() => router.refresh()}
+        />
+      ) : null}
 
       {transaction.expenseId ? (
         <DetachExpenseDialog

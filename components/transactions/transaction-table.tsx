@@ -11,7 +11,7 @@ import { TransactionBulkActionBar } from '@/components/transactions/transaction-
 import { TransactionTitleEdit } from '@/components/transactions/transaction-title-edit'
 import { CounterpartPickerDialog } from '@/components/transactions/counterpart-picker-dialog'
 import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
-import { TransactionPairPopover } from '@/components/transactions/transaction-pair-popover'
+import { ReimbursementRowIndicator } from '@/components/transactions/reimbursement-row-indicator'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { BulkCategorizeDialog } from '@/components/expenses/bulk-categorize-dialog'
 import { BulkAssignTagsDialog } from '@/components/tags/bulk-assign-tags-dialog'
@@ -254,9 +254,9 @@ export function TransactionTable({
 
   /**
    * Unlink a pair by calling deleteTransactionPairAction for the given transaction.
-   * On success, clears pairedWithId/pairedNetAmount/pairedDescription/pairedOccurredAt
-   * on BOTH legs of the pair in the local list so the badge disappears immediately
-   * without waiting for a server re-render (optimistic UI, PAIR-03 D-11).
+   * On success, clears pairedWithId/pairedNetAmount/pairedDescription/pairedOccurredAt/
+   * reimbursementId on BOTH legs of the pair in the local list so the badge disappears
+   * immediately without waiting for a server re-render (optimistic UI, PAIR-03 D-11).
    */
   async function handleUnpair(transactionId: string) {
     const tx = loadedTransactions.find((t) => t.id === transactionId)
@@ -275,7 +275,14 @@ export function TransactionTable({
       setLoadedTransactions((prev) =>
         prev.map((t) =>
           idsToUnpair.has(t.id)
-            ? { ...t, pairedWithId: null, pairedNetAmount: null, pairedDescription: null, pairedOccurredAt: null }
+            ? {
+                ...t,
+                pairedWithId: null,
+                pairedNetAmount: null,
+                pairedDescription: null,
+                pairedOccurredAt: null,
+                reimbursementId: null,
+              }
             : t,
         ),
       )
@@ -459,9 +466,9 @@ export function TransactionTable({
                 </TableCell>
                 <TableCell className="max-w-0 w-full">
                   <div className="flex min-w-0 flex-col gap-1">
-                    {/* Title + inline tag indicator on ONE line: the title owns the flexible
-                        space and truncates ("…"), the chip is shrink-0 so it stays visible
-                        right after the ellipsis. Tag names are revealed in the chip's popover. */}
+                    {/* Title + inline indicators on ONE line: the title owns the flexible space
+                        and truncates ("…"); the tags chip and the reimbursement indicator are
+                        shrink-0 so they stay visible right after the ellipsis. */}
                     <div className="flex min-w-0 items-center gap-1.5">
                       <div className="min-w-0 flex-1">
                         <TransactionTitleEdit
@@ -473,27 +480,15 @@ export function TransactionTable({
                         />
                       </div>
                       <TransactionTagsChip tags={tagsByTx[transaction.id] ?? []} />
-                    </div>
-                    {/* Inline pair badge — shown when the row is paired (D-15, PAIR-02).
-                        Rows stay in natural chronological order (no re-sort/grouping).
-                        WR-05: gate on ALL required fields being non-null. Substituting
-                        a fallback amount/date would render plausible-but-wrong financial
-                        data; if any field is missing, hide the badge instead. */}
-                    {transaction.pairedWithId &&
-                      transaction.pairedNetAmount &&
-                      transaction.pairedAmount &&
-                      transaction.pairedOccurredAt && (
-                        <TransactionPairPopover
-                          pairedWithId={transaction.pairedWithId}
-                          netAmount={transaction.pairedNetAmount}
-                          pairedDescription={transaction.pairedDescription ?? ''}
-                          pairedAmount={transaction.pairedAmount}
-                          pairedOccurredAt={transaction.pairedOccurredAt}
-                        />
+                      {/* Reimbursement indicator — links to /reimbursements/[id] (D-06, Phase 76
+                          Plan 03). `reimbursementId` is non-null iff the row belongs to a
+                          reimbursement (as anchor or refund), resolved via
+                          pairedReimbursementIdExpr(); the full net/residual/refund breakdown
+                          lives on that dedicated page. */}
+                      {transaction.reimbursementId != null && (
+                        <ReimbursementRowIndicator reimbursementId={transaction.reimbursementId} />
                       )}
-                    {/* Tag chips moved inline next to the title (TransactionTagsChip above) —
-                        read-only display; bulk add/remove lives in BulkAssignTagsDialog,
-                        single add/remove lives on the detail page. */}
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell

@@ -23,14 +23,29 @@ vi.mock('@/lib/db/schema', () => ({
     occurredAt: 'transaction.occurredAt',
     description: 'transaction.description',
     customTitle: 'transaction.customTitle',
+    expenseId: 'transaction.expenseId',
   },
   expense: {
     id: 'expense.id',
     subCategoryId: 'expense.subCategoryId',
   },
-  transactionPair: {
-    transactionAId: 'transactionPair.transactionAId',
-    transactionBId: 'transactionPair.transactionBId',
+  expenseGroup: {
+    id: 'expenseGroup.id',
+    userId: 'expenseGroup.userId',
+  },
+  expenseGroupMembership: {
+    id: 'expenseGroupMembership.id',
+    groupId: 'expenseGroupMembership.groupId',
+    expenseId: 'expenseGroupMembership.expenseId',
+  },
+  reimbursement: {
+    id: 'reimbursement.id',
+    expenseId: 'reimbursement.expenseId',
+  },
+  reimbursementRefund: {
+    id: 'reimbursementRefund.id',
+    reimbursementId: 'reimbursementRefund.reimbursementId',
+    transactionId: 'reimbursementRefund.transactionId',
   },
   direction: {
     id: 'direction.id',
@@ -44,7 +59,7 @@ vi.mock('@/lib/db/schema', () => ({
 vi.mock('drizzle-orm', () => ({
   and: (...args: unknown[]) => ({ op: 'and', args }),
   eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
-  ne: (left: unknown, right: unknown) => ({ op: 'ne', left, right }),
+  notInArray: (left: unknown, right: unknown) => ({ op: 'notInArray', left, right }),
   gt: (left: unknown, right: unknown) => ({ op: 'gt', left, right }),
   lt: (left: unknown, right: unknown) => ({ op: 'lt', left, right }),
   gte: (left: unknown, right: unknown) => ({ op: 'gte', left, right }),
@@ -83,12 +98,13 @@ vi.mock('@/lib/db', () => ({
 }))
 
 // ---------------------------------------------------------------------------
-// Import module under test AFTER mocks are declared (RED until Plan 03 lands)
+// Import module under test AFTER mocks are declared
 // ---------------------------------------------------------------------------
 const { getEligibleCounterparts } = await import('@/lib/dal/transaction-pairs')
 
 // ---------------------------------------------------------------------------
-// Test suite — getEligibleCounterparts filter predicate assertions (PAIR-01, D-13, D-14)
+// Test suite — getEligibleCounterparts filter predicate assertions
+// (PAIR-01, D-13, D-14; excludeTransactionIds generalization: Phase 75 Plan 02, D-06)
 // ---------------------------------------------------------------------------
 describe('getEligibleCounterparts', () => {
   beforeEach(() => {
@@ -108,7 +124,7 @@ describe('getEligibleCounterparts', () => {
   // ── Session call ──────────────────────────────────────────────────────────
   it('calls verifySession to scope the query to the current user', async () => {
     await getEligibleCounterparts({
-      referenceId: 'tx-ref',
+      excludeTransactionIds: ['tx-ref'],
       referenceAmount: '-100.00',
       dateFrom: new Date('2026-01-01'),
       dateTo: new Date('2026-03-31'),
@@ -120,7 +136,7 @@ describe('getEligibleCounterparts', () => {
   // ── userId ownership scope (eq(transaction.userId, session.userId)) ────────
   it('includes an eq(transaction.userId) predicate scoped to the session user', async () => {
     await getEligibleCounterparts({
-      referenceId: 'tx-ref',
+      excludeTransactionIds: ['tx-ref'],
       referenceAmount: '-100.00',
       dateFrom: new Date('2026-01-01'),
       dateTo: new Date('2026-03-31'),
@@ -139,10 +155,12 @@ describe('getEligibleCounterparts', () => {
     expect(userIdPredicate!.right).toBe('user-1')
   })
 
-  // ── Self-exclusion: ne(transaction.id, referenceId) (D-13) ───────────────
-  it('excludes the initiating transaction itself via ne(transaction.id, referenceId)', async () => {
+  // ── Self-exclusion (generalized to a SET): notInArray(transaction.id, excludeTransactionIds)
+  // (Phase 75 Plan 02, D-06 — a Group anchor excludes every one of its member transactions, not
+  // just a single referenceId) ───────────────────────────────────────────────
+  it('excludes every id in excludeTransactionIds via notInArray(transaction.id, excludeTransactionIds) — single-element array (D-07 quick action)', async () => {
     await getEligibleCounterparts({
-      referenceId: 'tx-ref-self',
+      excludeTransactionIds: ['tx-ref-self'],
       referenceAmount: '-100.00',
       dateFrom: new Date('2026-01-01'),
       dateTo: new Date('2026-03-31'),
@@ -153,19 +171,40 @@ describe('getEligibleCounterparts', () => {
       (a) =>
         typeof a === 'object' &&
         a !== null &&
-        (a as { op?: string }).op === 'ne' &&
+        (a as { op?: string }).op === 'notInArray' &&
         (a as { left?: string }).left === 'transaction.id',
-    ) as { op: string; left: string; right: string } | undefined
+    ) as { op: string; left: string; right: string[] } | undefined
 
     expect(selfExclusion).toBeDefined()
-    expect(selfExclusion!.right).toBe('tx-ref-self')
+    expect(selfExclusion!.right).toEqual(['tx-ref-self'])
+  })
+
+  it('excludes every id in excludeTransactionIds via notInArray — multi-element array (a Group anchor excludes every member transaction)', async () => {
+    await getEligibleCounterparts({
+      excludeTransactionIds: ['tx-member-1', 'tx-member-2', 'tx-member-3'],
+      referenceAmount: '-100.00',
+      dateFrom: new Date('2026-01-01'),
+      dateTo: new Date('2026-03-31'),
+    })
+
+    const args = getWhereAndArgs()
+    const selfExclusion = args.find(
+      (a) =>
+        typeof a === 'object' &&
+        a !== null &&
+        (a as { op?: string }).op === 'notInArray' &&
+        (a as { left?: string }).left === 'transaction.id',
+    ) as { op: string; left: string; right: string[] } | undefined
+
+    expect(selfExclusion).toBeDefined()
+    expect(selfExclusion!.right).toEqual(['tx-member-1', 'tx-member-2', 'tx-member-3'])
   })
 
   // ── Date range: gte(dateFrom) and lte(dateTo) (D-13) ─────────────────────
   it('applies a gte(dateFrom) predicate for the date range lower bound', async () => {
     const dateFrom = new Date('2025-10-15')
     await getEligibleCounterparts({
-      referenceId: 'tx-ref',
+      excludeTransactionIds: ['tx-ref'],
       referenceAmount: '-100.00',
       dateFrom,
       dateTo: new Date('2026-01-15'),
@@ -187,7 +226,7 @@ describe('getEligibleCounterparts', () => {
   it('applies a lte(dateTo) predicate for the date range upper bound', async () => {
     const dateTo = new Date('2026-01-15')
     await getEligibleCounterparts({
-      referenceId: 'tx-ref',
+      excludeTransactionIds: ['tx-ref'],
       referenceAmount: '-100.00',
       dateFrom: new Date('2025-10-15'),
       dateTo,
@@ -210,7 +249,7 @@ describe('getEligibleCounterparts', () => {
   // For negative referenceAmount, counterpart must be positive (amount > 0)
   it('adds an opposite-sign filter: amount > 0 when referenceAmount is negative', async () => {
     await getEligibleCounterparts({
-      referenceId: 'tx-ref',
+      excludeTransactionIds: ['tx-ref'],
       referenceAmount: '-100.00', // negative reference → want positive counterparts
       dateFrom: new Date('2026-01-01'),
       dateTo: new Date('2026-03-31'),
@@ -233,7 +272,7 @@ describe('getEligibleCounterparts', () => {
   // For positive referenceAmount, counterpart must be negative (amount < 0)
   it('adds an opposite-sign filter: amount < 0 when referenceAmount is positive', async () => {
     await getEligibleCounterparts({
-      referenceId: 'tx-ref',
+      excludeTransactionIds: ['tx-ref'],
       referenceAmount: '+50.00', // positive reference → want negative counterparts
       dateFrom: new Date('2026-01-01'),
       dateTo: new Date('2026-03-31'),
@@ -251,10 +290,10 @@ describe('getEligibleCounterparts', () => {
     expect(hasNegativeFilter).toBe(true)
   })
 
-  // ── Already-paired exclusion: NOT EXISTS transaction_pair (D-14) ──────────
-  it('includes a NOT EXISTS predicate to exclude already-paired transactions (D-14)', async () => {
+  // ── Already-paired exclusion: NOT EXISTS reimbursement_refund/reimbursement (D-14) ──
+  it('includes a NOT EXISTS predicate excluding already-paired transactions via reimbursement_refund/reimbursement (D-14, Phase 73 repoint)', async () => {
     await getEligibleCounterparts({
-      referenceId: 'tx-ref',
+      excludeTransactionIds: ['tx-ref'],
       referenceAmount: '-100.00',
       dateFrom: new Date('2026-01-01'),
       dateTo: new Date('2026-03-31'),
@@ -262,21 +301,26 @@ describe('getEligibleCounterparts', () => {
 
     const args = getWhereAndArgs()
 
-    // Look for a sql fragment mentioning transaction_pair (NOT EXISTS exclusion)
-    const hasNotExistsPaired = args.some((a) => {
+    // Look for the sql fragment mentioning reimbursement_refund and reimbursement,
+    // and confirm transaction_pair is no longer referenced (T-73-14 regression).
+    const notAlreadyPairedFragment = args.find((a) => {
       if (typeof a !== 'object' || a === null) return false
       const typed = a as { op?: string; strings?: string[] }
       if (typed.op !== 'sql') return false
       const sqlText = (typed.strings ?? []).join('')
-      return sqlText.includes('transaction_pair')
-    })
+      return sqlText.includes('reimbursement_refund') || sqlText.includes('reimbursement')
+    }) as { strings?: string[] } | undefined
 
-    expect(hasNotExistsPaired).toBe(true)
+    expect(notAlreadyPairedFragment).toBeDefined()
+    const sqlText = (notAlreadyPairedFragment?.strings ?? []).join('')
+    expect(sqlText).toContain('reimbursement_refund')
+    expect(sqlText).toContain('reimbursement')
+    expect(sqlText).not.toContain('transaction_pair')
   })
 
   it('returns the counterpart rows resolved by the query (empty in mock context)', async () => {
     const result = await getEligibleCounterparts({
-      referenceId: 'tx-ref',
+      excludeTransactionIds: ['tx-ref'],
       referenceAmount: '-100.00',
       dateFrom: new Date('2026-01-01'),
       dateTo: new Date('2026-03-31'),

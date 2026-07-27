@@ -2,38 +2,41 @@
 gsd_state_version: 1.0
 milestone: v2.8
 milestone_name: "Reimbursements 1:N"
-status: planning
-last_updated: "2026-07-23T09:01:14.074Z"
-last_activity: 2026-07-23
+status: Awaiting next milestone
+stopped_at: Completed 76-05-PLAN.md
+last_updated: "2026-07-27T13:55:58.087Z"
+last_activity: 2026-07-27
+last_activity_desc: Milestone v2.8 completed and archived
 progress:
   total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 4
+  total_plans: 17
+  completed_plans: 17
+current_phase: 76
+current_phase_name: reimbursements-section
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-18)
+See: .planning/PROJECT.md (updated 2026-07-27)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** v2.8 Reimbursements 1:N — generalize 1:1 pairing into explicit outflow→N-inflows reimbursements (ADR 0018). Roadmap created; Phase 73 next.
+**Current focus:** Planning next milestone (v2.8 Reimbursements 1:N shipped 2026-07-27; git tag pending post-merge to main)
 
 ## Current Position
 
-Phase: 73 (reimbursement-schema-and-netting) — planned, not started
+Phase: Milestone v2.8 complete
 Plan: —
-Status: Roadmap created (v2.8, Phases 73–76); ready for `/gsd-plan-phase 73`
-Last activity: 2026-07-23 — v2.8 roadmap created (11/11 RMB requirements mapped)
+Status: Awaiting next milestone
+Last activity: 2026-07-27 — Milestone v2.8 completed and archived
 
 ## Roadmap (v2.8 — Phases 73-76)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 73 | reimbursement-schema-and-netting | RMB-01, RMB-03, RMB-04, RMB-05 | Not started |
+| 73 | reimbursement-schema-and-netting | RMB-01, RMB-03, RMB-04, RMB-05 | Planned (4 plans) |
 | 74 | group-anchor-and-reconciliation | RMB-02, RMB-06, RMB-09 | Not started |
 | 75 | linking-surfaces-and-lifecycle | RMB-07, RMB-08 | Not started |
 | 76 | reimbursements-section | RMB-10, RMB-11 | Not started |
@@ -57,11 +60,14 @@ Group anchor + residual + generalized edit-guard complete the model (74); the li
 
 **Left OPEN for the per-phase discuss/plan stage** (details, not architecture — do NOT resolve in
 the roadmap):
+
 1. **Refund→subcategory attribution** when the anchor spans multiple subcategories — invisible on
    top-line entrate/uscite, matters only for the per-category breakdown (surfaces with a Group
    anchor → Phase 74).
+
 2. **Multi-month anchor handling** — constrain an anchor to one netting-month or attribute
    per-transaction (holiday confirmed "single-period") → Phase 73.
+
 3. **Verifying per-transaction `effectiveAmount` attribution** when an Expense anchor has multiple
    transactions → Phase 73.
 
@@ -262,6 +268,38 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 68-07: MoverList rows built from categorySlug (never categoryId) per Pitfall 2; UI-SPEC's stale category={m.categoryId} snippet is superseded by the plan/PATTERNS.md
 - [Phase 70]: Dashboard legacy ?tag= URLs degrade silently — param not read, no redirect (Phase 70 D1)
 - [Phase 70]: Per-tag analysis lives only in /tags/[id]; no substitute affordance on the dashboard (Phase 70 D2)
+- [Phase ?]: Phase 73 Task 1 (locked): option-b — drop transaction_pair at phase end (Plan 73-04 Task 3), not kept dormant
+- [Phase ?]: Migration 0029 resolves the reimbursement anchor by transaction sign (amount < 0), not the legacy magnitude-based 'primary' label — closes a theoretical D-02 violation (Rule 2, user-approved)
+- [Phase ?]: Migration 0029 groups backfill by anchor expense_id (one reimbursement, N refunds) rather than one reimbursement per transaction_pair row — required by the reimbursement_expenseId_unique partial index (Rule 2, user-approved)
+- [Phase ?]: Phase 73 Plan 02: Q3 per-transaction attribution proven via raw effectiveAmount() probe per sibling + combined category/month total (no function exposes per-row netted amounts; 5/8 functions hard-code 'last-month' date scope)
+- [Phase ?]: Phase 73 Plan 02: getOverviewChart's out.* segments are abs()'d (unlike getMonthlyTrendByNature's raw signed sum) — corrected sign-flip assertions accordingly
+- [Phase ?]: Phase 73 Plan 02: connectReimbursementTestDb() now serializes cross-file access via a Postgres advisory lock (idleTimeoutMillis: 0) after discovering two harness test files corrupt each other's fixtures when run together under vitest's default file parallelism
+- [Phase ?]: 73-03: Shared role-resolution SQL helpers (pairedCounterpartIdExpr/pairedReimbursementIdExpr) reused across transactions.ts's 5 paired-* fields instead of duplicating the anchor/refund tie-break CASE per field.
+- [Phase ?]: 73-03: Amount-edit guard's role detection (refund vs anchor) resolved via one combined SELECT with two correlated subquery columns, keeping the unpaired-case round-trip count at 2, matching the old 1:1 guard's shape.
+- [Phase ?]: Phase 73 Plan 04: executed locked option-b — dropped transaction_pair (migration 0030) after repointing createPair/deletePairByTransactionId and getEligibleCounterparts; retired the before/after byte-identical regression harness (transaction_pair-dependent) in favor of native seedReimbursement fixtures; full suite green (141 files, 1756 tests).
+- [Phase ?]: 74-01: effectiveAmount() rewritten as one uniform proportional-spread CTE chain (anchor -> member_expense_ids -> member_transactions -> refund_total -> raw_shares -> member_shares) covering both Expense and Expense Group anchors (D-01/D-02); largest-remainder cent assignment tie-broken by ABS(amount) DESC, occurredAt ASC, id ASC; zero-sum member set guarded via NULLIF/COALESCE, never divides by zero
+- [Phase ?]: 74-01: split the plan's single-CTE member_shares pseudocode into raw_shares + member_shares (Postgres disallows referencing a SELECT-list alias from another expression at the same query level) -- pure SQL-structuring fix, formula/tie-break/guard semantics unchanged (Rule 1)
+- [Phase ?]: 74-02: getReimbursementAggregates() uses raw db.execute(sql) with an explicit r alias for the outer reimbursement row -- Drizzle's typed column proxies render as bare unqualified column names, ambiguous inside correlated subqueries joining tables (reimbursement_refund, transaction) that share an id column
+- [Phase ?]: 74-02: residual = outflowSum + refundSum (Decimal.js), state owed/settled/surplus purely by sign, no magnitude guard (D-03) -- computed on the fly via computeReimbursementResidual(), never a stored column
+- [Phase ?]: 74-03: buildPairGuardMessage() N>1 message enriched with reimbursement title, N<=1 unchanged; guard block condition itself untouched (RMB-09)
+- [Phase ?]: 74-03: refund-edit branch's refundCount counts ALL linked refunds (not excluding the edited one) -- total N determines message ambiguity
+- [Phase ?]: Phase 74-04 gap-closure: fixed CR-01 (group-anchor member edits were unguarded) and CR-02 (refund-edit anchor magnitude silently defaulted to 0 for group anchors) in updateTransaction()'s pair guard; also fixed a correlation-ambiguity bug (bare Drizzle column proxy bound to the wrong local column in a nested subquery) discovered by the new real-Postgres tests, which had silently broken the refund-edit branch for all anchor shapes
+- [Phase ?]: [Phase 75-01] Frozen anchored-transaction set stored as a new join table (reimbursement_anchor_transaction), mirroring expense_group_membership's composite-unique + both-side-index shape
+- [Phase ?]: [Phase 75-01] effectiveAmount()'s member_transactions CTE split into a UNION ALL of two branches by anchor shape (Expense frozen-set / Group expense_group_membership unchanged), not a runtime CASE, so the Group branch stays provably byte-identical
+- [Phase ?]: [Phase 75-01] seedReimbursement() fixture populates the frozen set from ALL transactions currently under the anchor expenseId (not a single passed-in id), required by the pre-existing Q3 multi-transaction-Expense sibling scenario
+- [Phase ?]: [Phase 75-01] requirements.mark-complete NOT run for RMB-08 — this plan delivers only the D-08 backend prerequisite; the user-facing linking UI (RMB-08's actual capability) ships in Plan 75-04
+- [Phase ?]: 75-02: createPair signature changed to anchor: {transactionId}|{groupId}; all existing callers updated in same wave (Rule 3)
+- [Phase ?]: 75-02: Group anchor subCategoryId resolved from expenseGroup.subCategoryId (group's own column), not per-member ambiguity
+- [Phase ?]: 75-02: requirements mark-complete NOT run for RMB-07/RMB-08 — backend-only plan, user-facing linking UI ships in Plan 75-04
+- [Phase ?]: 75-03: reimbursementRefundSnapshot.expenseId nullable+set-null lets restore branch on expense-exists vs deleted-after-linking with no manual SELECT
+- [Phase ?]: 75-03: restoreRefundBaseline re-derives its own reimbursement_refund row via join on refundTransactionId, letting deleteReimbursementForAnchor reuse it directly with no adapter
+- [Phase ?]: 75-03: removeRefundAction aliases deleteTransactionPairAction directly (its refund-side behavior is already correct post-restore); deletePairByTransactionId anchor-side branch left unchanged per plan
+- [Phase ?]: 75-03: requirements mark-complete NOT run for RMB-07 — backend unlink/delete lifecycle only, user-facing linking UI ships in Plan 75-04
+- [Phase ?]: 76-01: requirements mark-complete NOT run for RMB-10/RMB-11 -- this plan delivers only the DAL/tracer foundation (bare table, no search/filter/sort, no per-reimbursement page); RMB-10 completes in Plan 76-02, RMB-11 completes in Plan 76-05
+- [Phase ?]: RMB-10 marked complete in Plan 76-02 (search+status-filter+sort+both EmptyState variants delivered); RMB-11 remains Pending until Plan 76-05's detail page.
+- [Phase ?]: 76-03: reimbursementId row-indicator gate + unpair fix — reused pairedReimbursementIdExpr() verbatim; Rule 1 auto-fix cleared reimbursementId in handleUnpair's optimistic state to avoid a stale-link regression.
+- [Phase ?]: ReimbursementPanel variant defaults to 'management' — every existing call site keeps unchanged behavior; only the tx-detail page opts into 'summary'
+- [Phase ?]: 76-05: status Badge omits variant prop entirely (relies on residualBadgeClassName's className via twMerge) to satisfy this plan's own zero-variant= acceptance criterion in reimbursement-detail-client.tsx.
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -376,16 +414,15 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 70-01-PLAN.md
+**Stopped at:** Completed 76-05-PLAN.md
 
-Last session: 2026-07-22T15:40:09.434Z
+Last session: 2026-07-27T11:42:05.358Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
 ## Operator Next Steps
 
-- On the live DB (if not yet applied): `yarn db:migrate && yarn db:seed-extras` — migration 0025 (expense.title → text) + backfill-truncated-expense-titles step from quick task 260703-na4
-- Phases 65-66 (Expense Group) will require a new `drizzle-kit generate` migration once planned — no existing schema entity for group/membership
+- Start the next milestone with /gsd-new-milestone
 
 ## Performance Metrics
 
@@ -445,3 +482,19 @@ Last session: 2026-07-22T15:40:09.434Z
 | Phase 68 P07 | 15min | 1 tasks | 2 files |
 | Phase 69 P02 | 4min | 2 tasks | 4 files |
 | Phase 70 P01 | 8min | 3 tasks | 10 files |
+| Phase 73 P01 | 95min | 3 tasks | 8 files |
+| Phase 73 P02 | 55min | 2 tasks | 6 files |
+| Phase 73 P03 | 25min | 2 tasks | 4 files |
+| Phase 73 P04 | 90min | 3 tasks | 16 files |
+| Phase 74 P01 | 75min | 2 tasks | 3 files |
+| Phase 74 P02 | 40min | 2 tasks | 3 files |
+| Phase 74 P03 | 20min | 2 tasks | 3 files |
+| Phase 74 P04-gap-closure | 55min | 1 tasks | 2 files |
+| Phase 75 P01 | 27min | 2 tasks | 9 files |
+| Phase 75 P02 | 110min | 2 tasks | 7 files |
+| Phase 75 P03 | 24min | 2 tasks | 7 files |
+| Phase 76 P01 | 20min | 1 tasks | 6 files |
+| Phase 76 P02 | 15min | 2 tasks | 5 files |
+| Phase 76 P03 | ~15min | 3 tasks | 6 files |
+| Phase 76 P04 | 12min | 2 tasks | 2 files |
+| Phase 76 P05 | 35min | 3 tasks | 7 files |

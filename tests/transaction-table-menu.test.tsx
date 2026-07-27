@@ -101,6 +101,7 @@ function makeTransaction(overrides: Partial<TransactionListRow> = {}): Transacti
     pairedAmount: null,
     pairedDescription: null,
     pairedOccurredAt: null,
+    reimbursementId: null,
     ...overrides,
   }
 }

@@ -1,10 +1,31 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { db } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
-import { CreatePairSchema, DeletePairSchema, LoadCounterpartsSchema } from '@/lib/validations/transaction-pairs'
-import { createPair, deletePairByTransactionId } from '@/lib/services/transaction-pairs'
-import { getEligibleCounterparts, type CounterpartRow } from '@/lib/dal/transaction-pairs'
+import {
+  CreateMultiRefundSchema,
+  CreatePairSchema,
+  DeletePairSchema,
+  DeleteReimbursementSchema,
+  LoadCounterpartsSchema,
+  LoadGroupOccurrenceIntervalSchema,
+  LoadGroupRefundCandidatesSchema,
+} from '@/lib/validations/transaction-pairs'
+import {
+  createPair,
+  createPairTx,
+  deletePairByTransactionId,
+  deleteReimbursementForAnchor,
+  type CreatePairAnchor,
+} from '@/lib/services/transaction-pairs'
+import {
+  getEligibleCounterparts,
+  getGroupMemberTransactionIds,
+  getGroupOccurrenceInterval,
+  type CounterpartRow,
+  type GroupOccurrenceInterval,
+} from '@/lib/dal/transaction-pairs'
 import type { ActionState } from '@/lib/validations/expense'
 
 /**
@@ -46,7 +67,7 @@ export async function createTransactionPairAction(
   try {
     result = await createPair({
       userId,
-      transactionId: parsed.data.transactionId,
+      anchor: { transactionId: parsed.data.transactionId },
       counterpartId: parsed.data.counterpartId,
     })
   } catch (err) {
@@ -56,6 +77,9 @@ export async function createTransactionPairAction(
 
   revalidatePath('/transactions')
   revalidatePath('/overview')
+  // CR-01: the reimbursement list (and the sidebar's always-prefetched /reimbursements Link) must
+  // drop its Router Cache too, so a post-delete/unlink navigation never shows a stale reimbursement.
+  revalidatePath('/reimbursements')
 
   return {
     error: null,
@@ -87,7 +111,16 @@ export async function loadEligibleCounterpartsAction(params: {
   }
 
   try {
-    const counterparts = await getEligibleCounterparts(parsed.data)
+    // Action↔DAL seam (Phase 75 Plan 02): the DAL's getEligibleCounterparts takes a
+    // excludeTransactionIds SET (D-06 — a Group anchor excludes every member transaction), while
+    // this action's own external contract stays the D-07 quick-action's single referenceId — a
+    // one-element array wrapping it, localized to this one seam.
+    const counterparts = await getEligibleCounterparts({
+      excludeTransactionIds: [parsed.data.referenceId],
+      referenceAmount: parsed.data.referenceAmount,
+      dateFrom: parsed.data.dateFrom,
+      dateTo: parsed.data.dateTo,
+    })
     return { counterparts }
   } catch (err) {
     if (err instanceof Error) return { error: err.message }
@@ -128,6 +161,179 @@ export async function deleteTransactionPairAction(
 
   revalidatePath('/transactions')
   revalidatePath('/overview')
+  // CR-01: the reimbursement list (and the sidebar's always-prefetched /reimbursements Link) must
+  // drop its Router Cache too, so a post-delete/unlink navigation never shows a stale reimbursement.
+  revalidatePath('/reimbursements')
 
   return { error: null }
+}
+
+/**
+ * Server action: D-09's "remove a single refund" lifecycle action. `deletePairByTransactionId`'s
+ * refund-side branch already restores baseline (D-10) before removing the link, so this reuses
+ * `deleteTransactionPairAction` directly rather than duplicating an identical thin wrapper —
+ * `RemoveRefundSchema` is an alias of `DeletePairSchema` (same bare-transactionId shape).
+ */
+export const removeRefundAction = deleteTransactionPairAction
+
+/**
+ * Server action: D-09's "delete the whole reimbursement" lifecycle action — detaches every
+ * linked refund (restoring each one's baseline, D-10) and removes the reimbursement row.
+ *
+ * Security gates (T-75-07, T-75-08):
+ *  1. Zod parse validates input shape (DeleteReimbursementSchema — a coerced positive integer
+ *     id).
+ *  2. verifySession() establishes caller identity.
+ *  3. deleteReimbursementForAnchor validates reimbursement.userId === sessionUserId and restores
+ *     every refund inside one db.transaction before deleting (T-75-08).
+ */
+export async function deleteReimbursementAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = DeleteReimbursementSchema.safeParse({
+    reimbursementId: formData.get('reimbursementId'),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Dati non validi.' }
+  }
+
+  const { userId } = await verifySession()
+
+  try {
+    await deleteReimbursementForAnchor({
+      userId,
+      reimbursementId: parsed.data.reimbursementId,
+    })
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message }
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+
+  revalidatePath('/transactions')
+  revalidatePath('/overview')
+  // CR-01: the reimbursement list (and the sidebar's always-prefetched /reimbursements Link) must
+  // drop its Router Cache too, so a post-delete/unlink navigation never shows a stale reimbursement.
+  revalidatePath('/reimbursements')
+
+  return { error: null }
+}
+
+/**
+ * Server action: D-05's multi-select add-refund submission — links N selected counterpart
+ * transactions to one anchor in a SINGLE `db.transaction` (T-75-10). A failure on any one link
+ * (foreign-owned id, already-paired, wrong sign, self-pair) rolls back the WHOLE batch — never a
+ * partial success with some refunds linked and others not.
+ *
+ * Security gates (T-75-10):
+ *  1. Zod parse validates the discriminated anchor shape + non-empty counterpartIds (Edge
+ *     RMB-08/empty) before any auth or DB access.
+ *  2. verifySession() establishes caller identity.
+ *  3. Every `createPairTx` call re-validates ownership of its own transaction/group id against
+ *     `userId` — a tampered FormData carrying a foreign-owned id throws inside the shared
+ *     transaction, rolling back every link already made in this submission.
+ */
+export async function createMultiRefundAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = CreateMultiRefundSchema.safeParse({
+    transactionId: formData.get('transactionId') || undefined,
+    groupId: formData.get('groupId') || undefined,
+    counterpartIds: formData.getAll('counterpartIds'),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Dati non validi.' }
+  }
+
+  const { userId } = await verifySession()
+
+  const anchor: CreatePairAnchor = parsed.data.transactionId
+    ? { transactionId: parsed.data.transactionId }
+    : { groupId: parsed.data.groupId! }
+
+  try {
+    await db.transaction(async (tx) => {
+      for (const counterpartId of parsed.data.counterpartIds) {
+        await createPairTx(tx, { userId, anchor, counterpartId })
+      }
+    })
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message }
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+
+  revalidatePath('/transactions')
+  revalidatePath('/overview')
+  // CR-01: the reimbursement list (and the sidebar's always-prefetched /reimbursements Link) must
+  // drop its Router Cache too, so a post-delete/unlink navigation never shows a stale reimbursement.
+  revalidatePath('/reimbursements')
+
+  return { error: null }
+}
+
+/**
+ * Server action: resolves a Group anchor's occurrence interval (D-06) — the window source
+ * `RefundPickerDialog`'s Group-anchor mode uses to default its ±90-day candidate range. Bridges
+ * the `server-only` `getGroupOccurrenceInterval` DAL call to the client-side dialog.
+ */
+export async function loadGroupOccurrenceIntervalAction(params: {
+  groupId: number
+}): Promise<{ interval: GroupOccurrenceInterval | undefined } | { error: string }> {
+  const parsed = LoadGroupOccurrenceIntervalSchema.safeParse(params)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Dati non validi.' }
+  }
+
+  const { userId } = await verifySession()
+
+  try {
+    const interval = await getGroupOccurrenceInterval({ userId, groupId: parsed.data.groupId })
+    return { interval }
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message }
+    return { error: 'Si è verificato un errore nel caricamento del periodo del gruppo.' }
+  }
+}
+
+/**
+ * Server action: loads eligible refund candidates for a Group anchor (D-06) — mirrors
+ * `loadEligibleCounterpartsAction`'s bridging role for the D-07 quick action, but resolves the
+ * Group's OWN member transaction ids server-side (`getGroupMemberTransactionIds`) as the
+ * exclusion set instead of a single `referenceId`, so a group's own members are never offered as
+ * candidate refunds for themselves.
+ *
+ * A Group anchor is always an outflow (RMB-03 invariant, enforced by `assertOutflowAnchorAmount`
+ * inside `createPairTx` regardless of anchor shape) — `getEligibleCounterparts`'s sign filter only
+ * reads the SIGN of `referenceAmount`, never its magnitude, so a synthetic negative placeholder is
+ * sufficient here (there is no single anchor amount for a multi-member Group to pass instead).
+ */
+export async function loadGroupRefundCandidatesAction(params: {
+  groupId: number
+  dateFrom: Date
+  dateTo: Date
+}): Promise<{ counterparts: CounterpartRow[] } | { error: string }> {
+  const parsed = LoadGroupRefundCandidatesSchema.safeParse(params)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Dati non validi.' }
+  }
+
+  const { userId } = await verifySession()
+
+  try {
+    const excludeTransactionIds = await getGroupMemberTransactionIds({
+      userId,
+      groupId: parsed.data.groupId,
+    })
+    const counterparts = await getEligibleCounterparts({
+      excludeTransactionIds,
+      referenceAmount: '-1',
+      dateFrom: parsed.data.dateFrom,
+      dateTo: parsed.data.dateTo,
+    })
+    return { counterparts }
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message }
+    return { error: 'Si è verificato un errore nel caricamento delle transazioni disponibili.' }
+  }
 }

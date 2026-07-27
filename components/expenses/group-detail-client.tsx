@@ -377,19 +377,21 @@ export function GroupDetailClient({ group, categories, mostUsed }: Props) {
   )
 
   return (
-    <DetailPageShell
-      backHref={APP_ROUTES.expenses}
-      title={group.title}
-      amount={formatSignedAmount(group.totalAmount)}
-      amountInline
-      amountToneClassName={amountClass}
-      overflowMenu={dissolveControl}
-      layout="two-column"
-      datiCard={datiCard}
-      collegamentiCard={collegamentiCard}
-      riepilogoCard={riepilogoCard}
-      transactionsCard={transactionsCard}
-      bottomCardsSideBySide
-    />
+    <>
+      <DetailPageShell
+        backHref={APP_ROUTES.expenses}
+        title={group.title}
+        amount={formatSignedAmount(group.totalAmount)}
+        amountInline
+        amountToneClassName={amountClass}
+        overflowMenu={dissolveControl}
+        layout="two-column"
+        datiCard={datiCard}
+        collegamentiCard={collegamentiCard}
+        riepilogoCard={riepilogoCard}
+        transactionsCard={transactionsCard}
+        bottomCardsSideBySide
+      />
+    </>
   )
 }

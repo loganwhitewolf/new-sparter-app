@@ -4,6 +4,76 @@ Living retrospective — one section per milestone, newest first.
 
 ---
 
+## Milestone: v2.8 — Reimbursements 1:N
+
+**Shipped:** 2026-07-27 (audit passed 11/11; git tag pending post-merge)
+**Phases:** 4 (73–76) | **Plans:** 17 + 2 gap-closures
+
+### What Was Built
+
+Replaced the 1:1 `transaction_pair` with an explicit **one outflow → N inflows** reimbursement
+model (ADR 0018): the old pair migrated and subsumed as the N=1 case, `transaction_pair` dropped.
+Anchor is always an outflow Expense; refunds net into the cost's month (Mondo Netto) with a
+first-class residual; `effectiveAmount()`/`isNotSecondary()` rewritten as a uniform
+proportional-spread expression covering Expense (and, dormant, Group) anchors with zero dashboard
+drift across all 10 aggregation sites. Linking UI on `/transactions/[id]` with unlink/delete
+baseline restore, then a dedicated `/reimbursements` list + per-reimbursement page (edit-title /
+add-remove-refund / delete in place).
+
+### What Worked
+
+- **Risk-first phase ordering.** The schema+migration+netting core (73) shipped as an early tracer
+  with a real-Postgres regression gate on dashboard totals *before any UI* — the highest-risk piece
+  was proven byte-identical before anything was built on top of it.
+- **Real-Postgres tests caught what mocks hid.** The first real-DB test ever run against
+  `updateTransaction()` (Phase 74 gap-closure) surfaced a latent correlated-subquery
+  correlation-ambiguity bug that had silently broken the refund-edit guard for every anchor shape
+  since Phase 73. Mock-only service tests had masked it.
+- **UAT + code-review as a live gate at phase close.** Phase 76's manual UAT surfaced two real bugs
+  (404 on reimbursement removal; unwanted auto-title rewrite) and the advisory code review surfaced
+  two more blockers (missing `revalidatePath('/reimbursements')`; anchor-side unlink never restoring
+  refund baselines — a data-loss bug). All four fixed inline before sealing.
+
+### What Was Inefficient
+
+- **Worktree isolation auto-degraded to sequential** for the whole phase because the milestone
+  branch had diverged from `origin/HEAD` (#683) — Phase 76's four waves ran one-at-a-time instead of
+  in parallel. Expected on a long-lived milestone branch, but it lengthened wall-clock time.
+- **SUMMARY-frontmatter traceability drift.** Plan 75-04 never listed RMB-07/RMB-08 in its
+  `requirements-completed` frontmatter (the backend plans deferred marking them, the UI plan forgot),
+  so the milestone audit's 3-source cross-reference flagged them as "partial" even though the phase
+  VERIFICATION authoritatively marked them satisfied. Cosmetic, but it cost a manual reconciliation.
+
+### Patterns Established
+
+- **One netting mechanism, N=1 numerically inert.** Every generalization (1:1→1:N pairing,
+  single-secondary→refund-set netting, Expense→Group anchor) was built so the migrated N=1 case is
+  byte-identical, keeping the prior regression gate green as the correctness proof.
+- **Restore-before-delete contract** for reversible links: a pre-link snapshot table + a shared
+  `restoreRefundsAndDeleteReimbursement` helper used by every removal path (refund-side unlink,
+  anchor-side unlink, whole-delete) so baseline restoration can never be skipped.
+- **Descope by dormancy, not deletion.** The Expense-Group anchor host UI was removed at UAT but the
+  backend left dormant and test-covered — zero UI callers pass a `{ groupId }` anchor, and the
+  `/reimbursements` routes explicitly exclude Group-anchored rows.
+
+### Key Lessons
+
+- Regression-gate the risky core before building UI on it — the tracer-phase discipline paid off.
+- Run at least one real-database test against every guard/mutation; SQL correlation bugs are
+  invisible to mock-based chains.
+- Treat the phase-close UAT + code-review as a real gate, not a formality — 4 real defects (2 UAT,
+  2 code-review blockers) were caught and fixed there.
+
+### Cost Observations
+
+- Model mix: orchestration on Opus; executors/verifier/reviewer/fixer on Sonnet/Haiku per GSD
+  routing (executor=sonnet, verifier/integration=haiku, reviewer/fixer=sonnet).
+- Notable: sequential (non-worktree) execution on the milestone branch traded parallelism for
+  simplicity; the real-Postgres harness (isolated `sparter_test` DB) was the highest-value test
+  investment of the milestone.
+
+---
+
 ## Milestone: v2.5 — Detail Pages
 
 **Shipped:** 2026-07-07

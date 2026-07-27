@@ -1276,4 +1276,67 @@ describe("transaction pairing select-shape contract (Phase 50 — PAIR-02)", () 
     expect(keys).toContain("pairedDescription");
     expect(keys).toContain("pairedOccurredAt");
   });
+
+  // ── Phase 73 (T-73-09, ADR 0018): repointed onto reimbursement/reimbursement_refund ──────
+  it("all 5 paired-* fields read reimbursement/reimbursement_refund, never transaction_pair (Phase 73, T-73-09)", () => {
+    // The mocked sql`` tag returns { op: "sql", strings, values }. A nested sql`` fragment
+    // (e.g. pairedCounterpartIdExpr()) ends up as an object inside `values`, not spliced into
+    // the outer `strings` — so proving the real SQL text requires recursively flattening every
+    // nested fragment's own strings/values, not just the outer template's literal text.
+    const collectSqlText = (fragment: unknown): string => {
+      if (
+        fragment &&
+        typeof fragment === "object" &&
+        "strings" in (fragment as Record<string, unknown>)
+      ) {
+        const frag = fragment as { strings?: string[]; values?: unknown[] };
+        const own = (frag.strings ?? []).join("");
+        const nested = (frag.values ?? []).map(collectSqlText).join("");
+        return own + nested;
+      }
+      return "";
+    };
+
+    const fields = [
+      "pairedWithId",
+      "pairedNetAmount",
+      "pairedAmount",
+      "pairedDescription",
+      "pairedOccurredAt",
+    ] as const;
+
+    for (const field of fields) {
+      const fragment = (transactionListSelect as Record<string, unknown>)[field];
+      expect(fragment).toMatchObject({ op: "sql" });
+      const fullText = collectSqlText(fragment);
+      expect(fullText).toContain("reimbursement");
+      expect(fullText).not.toContain("transaction_pair");
+    }
+  });
+
+  // ── Phase 76 (D-06, RMB-10): reimbursementId exposed directly on the list select ──────
+  it("transactionListSelect includes reimbursementId as a sql fragment reading reimbursement, never transaction_pair (Phase 76, RMB-10)", () => {
+    expect(transactionListSelect).toHaveProperty("reimbursementId");
+    const fragment = (transactionListSelect as Record<string, unknown>)
+      .reimbursementId as { op: string; strings?: string[]; values?: unknown[] };
+    expect(fragment).toMatchObject({ op: "sql" });
+
+    const collectSqlText = (frag: unknown): string => {
+      if (
+        frag &&
+        typeof frag === "object" &&
+        "strings" in (frag as Record<string, unknown>)
+      ) {
+        const f = frag as { strings?: string[]; values?: unknown[] };
+        const own = (f.strings ?? []).join("");
+        const nested = (f.values ?? []).map(collectSqlText).join("");
+        return own + nested;
+      }
+      return "";
+    };
+
+    const fullText = collectSqlText(fragment);
+    expect(fullText).toContain("reimbursement");
+    expect(fullText).not.toContain("transaction_pair");
+  });
 });

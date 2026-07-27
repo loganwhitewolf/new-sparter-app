@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   numeric,
   jsonb,
+  check,
 } from "drizzle-orm/pg-core";
 
 export const subscriptionPlanEnum = pgEnum("subscription_plan", [
@@ -443,33 +444,11 @@ export const transaction = pgTable(
   ],
 );
 
-// Transaction pair table — 1:1 explicit pairing (Phase 50, D-01/D-02/D-03)
-// transactionAId = PRIMARY (larger |amount|), transactionBId = SECONDARY.
-// Primary/secondary invariant is enforced in the service layer, not at DB level.
-// No userId column: ownership is validated via transaction.userId in the service (D-01, T-50-01).
-export const transactionPair = pgTable(
-  "transaction_pair",
-  {
-    id: serial("id").primaryKey(),
-    // Symmetric FKs — both reference transaction.id with ON DELETE CASCADE (D-01, D-03)
-    transactionAId: text("transaction_a_id")
-      .notNull()
-      .references(() => transaction.id, { onDelete: "cascade" }),
-    transactionBId: text("transaction_b_id")
-      .notNull()
-      .references(() => transaction.id, { onDelete: "cascade" }),
-    // Audit field (Claude's Discretion, per CONTEXT.md)
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    // Prevents double-linking: each transaction may appear as A or B in at most one pair (D-02, T-50-02)
-    unique("transaction_pair_a_unique").on(table.transactionAId),
-    unique("transaction_pair_b_unique").on(table.transactionBId),
-    // Lookup indexes for JOIN in aggregation queries (both directions)
-    index("transaction_pair_a_idx").on(table.transactionAId),
-    index("transaction_pair_b_idx").on(table.transactionBId),
-  ],
-);
+// Transaction pair table — DROPPED (Phase 73, ADR 0018 §1, locked decision option-b,
+// migration 0030_drop_transaction_pair.sql). Was the Phase 50 1:1 explicit-pairing
+// table (transactionAId = PRIMARY, transactionBId = SECONDARY); fully migrated into
+// reimbursement/reimbursement_refund (migration 0029_reimbursement_backfill.sql) and
+// every consumer repointed (Plans 73-01/73-03/73-04) before this table was dropped.
 
 // Expense Group — grouping entity above intact Expenses (Phase 65, ADR 0017).
 // Members keep their descriptionHash, aggregates, and Tier 2 history unchanged;
@@ -518,6 +497,148 @@ export const expenseGroupMembership = pgTable(
     unique("expense_group_membership_expense_unique").on(table.expenseId),
     index("expense_group_membership_groupId_idx").on(table.groupId),
     index("expense_group_membership_expenseId_idx").on(table.expenseId),
+  ],
+);
+
+// Reimbursement — one outflow anchor (Expense XOR Expense Group) linking N inflow refunds
+// (Phase 73, ADR 0018). Generalizes the 1:1 `transactionPair` into 1:N; `transactionPair` is
+// migrated into this shape and stops being the live netting source (D-06). No userId-scoped
+// ownership beyond the `userId` column itself is enforced at this table — service-layer callers
+// must still validate ownership via the anchor's expense/expenseGroup and refund transactions.
+//
+// Anchor XOR (D-03): exactly one of expenseId / expenseGroupId is set, never both, never neither.
+// Enforced at the DB level by the `reimbursement_anchor_xor` CHECK constraint below (not just a
+// service-level check) — an inflow-anchored reimbursement is structurally impossible (D-02).
+// Group-anchor *behaviour* (netting over member transactions) is Phase 74; this phase only lands
+// the shape.
+export const reimbursement = pgTable(
+  "reimbursement",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    expenseId: text("expense_id").references(() => expense.id, { onDelete: "cascade" }),
+    expenseGroupId: integer("expense_group_id").references(() => expenseGroup.id, {
+      onDelete: "cascade",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    check(
+      "reimbursement_anchor_xor",
+      sql`(${table.expenseId} IS NOT NULL) <> (${table.expenseGroupId} IS NOT NULL)`,
+    ),
+    index("reimbursement_userId_idx").on(table.userId),
+    index("reimbursement_expenseId_idx").on(table.expenseId),
+    index("reimbursement_expenseGroupId_idx").on(table.expenseGroupId),
+    // At most one reimbursement per anchor (Expense or Expense Group) — mirrors transactionPair's
+    // old at-most-once-per-side uniqueness, generalized to the anchor unit.
+    uniqueIndex("reimbursement_expenseId_unique")
+      .on(table.expenseId)
+      .where(sql`${table.expenseId} IS NOT NULL`),
+    uniqueIndex("reimbursement_expenseGroupId_unique")
+      .on(table.expenseGroupId)
+      .where(sql`${table.expenseGroupId} IS NOT NULL`),
+  ],
+);
+
+// Reimbursement Refund — N inflow transactions linked to one reimbursement (Phase 73, ADR 0018).
+// A transaction refunds at most one reimbursement (unique on transactionId) — generalizes
+// transactionPair's old transaction_b_id uniqueness.
+export const reimbursementRefund = pgTable(
+  "reimbursement_refund",
+  {
+    id: serial("id").primaryKey(),
+    reimbursementId: integer("reimbursement_id")
+      .notNull()
+      .references(() => reimbursement.id, { onDelete: "cascade" }),
+    transactionId: text("transaction_id")
+      .notNull()
+      .references(() => transaction.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("reimbursement_refund_transactionId_unique").on(table.transactionId),
+    index("reimbursement_refund_reimbursementId_idx").on(table.reimbursementId),
+    index("reimbursement_refund_transactionId_idx").on(table.transactionId),
+  ],
+);
+
+// Reimbursement Anchor Transaction — the frozen anchored-transaction set (Phase 75, ADR 0018
+// D-08). Closes the anchor-contamination gap: import.ts upserts Expenses by
+// (userId, descriptionHash), so a later same-merchant purchase would otherwise silently join the
+// SAME expense_id as an already-linked anchor and inherit a share of past refunds via
+// effectiveAmount()'s member resolution. Recording the exact transaction id(s) that constituted
+// the anchor AT LINK TIME, and resolving effectiveAmount()'s Expense-anchor branch exclusively
+// from this frozen set (never from "all transactions of the anchor's expense_id"), makes the
+// import-time contamination structurally impossible: a new same-merchant transaction is never a
+// row in this table, so it can never be picked up by the netting spread.
+//
+// Expense-anchor ONLY (D-08): a Group anchor's membership (expense_group_membership) is already
+// explicit and immutable (ADR 0017 §1) and is NEVER routed through this table — Group anchors are
+// out of D-08's scope and stay byte-identical to pre-Phase-75 behavior.
+export const reimbursementAnchorTransaction = pgTable(
+  "reimbursement_anchor_transaction",
+  {
+    id: serial("id").primaryKey(),
+    reimbursementId: integer("reimbursement_id")
+      .notNull()
+      .references(() => reimbursement.id, { onDelete: "cascade" }),
+    transactionId: text("transaction_id")
+      .notNull()
+      .references(() => transaction.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("reimbursement_anchor_transaction_reimbursement_transaction_unique").on(
+      table.reimbursementId,
+      table.transactionId,
+    ),
+    index("reimbursement_anchor_transaction_reimbursementId_idx").on(table.reimbursementId),
+    index("reimbursement_anchor_transaction_transactionId_idx").on(table.transactionId),
+  ],
+);
+
+// Reimbursement Refund Snapshot — the pre-link state of a refund's expense (Phase 75 Plan 03,
+// ADR 0018 D-10). Recorded at link time, immediately BEFORE applyDetachCleanupTx mutates the
+// refund's expense (title/descriptionHash/subCategoryId/status re-hash/recategorize), so unlink
+// can restore that exact prior state (RMB-07 "reappears as a normal inflow in its own month").
+// One row per reimbursement_refund link — standalone unique on reimbursementRefundId, mirroring
+// expenseGroupMembership's standalone-unique convention. Written only when refund-cleanup
+// actually ran (createPairTx's existing anchorSubCategoryId !== null && not-self-member guard) —
+// a refund that skipped cleanup gets no snapshot row, matching "nothing to restore" on unlink.
+//
+// expenseId is deliberately NULLABLE with onDelete:'set null' (not cascade): this lets restore
+// logic distinguish "the original expense still exists" (expenseId present — UPDATE it back) from
+// "it was deleted after linking" (snapshot row present, expenseId nulled by Postgres — INSERT a
+// fresh replacement expense from the snapshot's stored field values) purely by checking the
+// column, with no manual existence SELECT needed.
+export const reimbursementRefundSnapshot = pgTable(
+  "reimbursement_refund_snapshot",
+  {
+    id: serial("id").primaryKey(),
+    reimbursementRefundId: integer("reimbursement_refund_id")
+      .notNull()
+      .references(() => reimbursementRefund.id, { onDelete: "cascade" }),
+    expenseId: text("expense_id").references(() => expense.id, { onDelete: "set null" }),
+    expenseTitle: text("expense_title"),
+    expenseDescriptionHash: varchar("expense_description_hash", { length: 64 }),
+    expenseSubCategoryId: integer("expense_sub_category_id").references(() => subCategory.id, {
+      onDelete: "set null",
+    }),
+    expenseStatus: expenseStatusEnum("expense_status"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("reimbursement_refund_snapshot_reimbursementRefundId_unique").on(
+      table.reimbursementRefundId,
+    ),
+    index("reimbursement_refund_snapshot_reimbursementRefundId_idx").on(
+      table.reimbursementRefundId,
+    ),
+    index("reimbursement_refund_snapshot_expenseId_idx").on(table.expenseId),
   ],
 );
 
@@ -784,9 +905,6 @@ export const transactionRelations = relations(transaction, ({ one, many }) => ({
     fields: [transaction.expenseId],
     references: [expense.id],
   }),
-  // Phase 50: pairing relations (a transaction can be the primary or secondary in a pair)
-  pairAsA: many(transactionPair, { relationName: "primaryTransaction" }),
-  pairAsB: many(transactionPair, { relationName: "secondaryTransaction" }),
   transactionTags: many(transactionTag),
 }));
 
@@ -806,19 +924,6 @@ export const transactionTagRelations = relations(transactionTag, ({ one }) => ({
   transaction: one(transaction, {
     fields: [transactionTag.transactionId],
     references: [transaction.id],
-  }),
-}));
-
-export const transactionPairRelations = relations(transactionPair, ({ one }) => ({
-  transactionA: one(transaction, {
-    fields: [transactionPair.transactionAId],
-    references: [transaction.id],
-    relationName: "primaryTransaction",
-  }),
-  transactionB: one(transaction, {
-    fields: [transactionPair.transactionBId],
-    references: [transaction.id],
-    relationName: "secondaryTransaction",
   }),
 }));
 
@@ -844,6 +949,66 @@ export const expenseGroupMembershipRelations = relations(expenseGroupMembership,
     references: [expense.id],
   }),
 }));
+
+export const reimbursementRelations = relations(reimbursement, ({ one, many }) => ({
+  user: one(user, {
+    fields: [reimbursement.userId],
+    references: [user.id],
+  }),
+  expense: one(expense, {
+    fields: [reimbursement.expenseId],
+    references: [expense.id],
+  }),
+  expenseGroup: one(expenseGroup, {
+    fields: [reimbursement.expenseGroupId],
+    references: [expenseGroup.id],
+  }),
+  refunds: many(reimbursementRefund),
+  anchorTransactions: many(reimbursementAnchorTransaction),
+}));
+
+export const reimbursementRefundRelations = relations(reimbursementRefund, ({ one }) => ({
+  reimbursement: one(reimbursement, {
+    fields: [reimbursementRefund.reimbursementId],
+    references: [reimbursement.id],
+  }),
+  transaction: one(transaction, {
+    fields: [reimbursementRefund.transactionId],
+    references: [transaction.id],
+  }),
+  snapshot: one(reimbursementRefundSnapshot, {
+    fields: [reimbursementRefund.id],
+    references: [reimbursementRefundSnapshot.reimbursementRefundId],
+  }),
+}))
+
+export const reimbursementRefundSnapshotRelations = relations(
+  reimbursementRefundSnapshot,
+  ({ one }) => ({
+    reimbursementRefund: one(reimbursementRefund, {
+      fields: [reimbursementRefundSnapshot.reimbursementRefundId],
+      references: [reimbursementRefund.id],
+    }),
+    expense: one(expense, {
+      fields: [reimbursementRefundSnapshot.expenseId],
+      references: [expense.id],
+    }),
+  }),
+);
+
+export const reimbursementAnchorTransactionRelations = relations(
+  reimbursementAnchorTransaction,
+  ({ one }) => ({
+    reimbursement: one(reimbursement, {
+      fields: [reimbursementAnchorTransaction.reimbursementId],
+      references: [reimbursement.id],
+    }),
+    transaction: one(transaction, {
+      fields: [reimbursementAnchorTransaction.transactionId],
+      references: [transaction.id],
+    }),
+  }),
+);
 
 export const categorizationPatternRelations = relations(categorizationPattern, ({ one, many }) => ({
   user: one(user, {

@@ -274,6 +274,18 @@ describe('GroupDetailClient', () => {
     expect(html.toLowerCase()).not.toContain('annulla lo scioglimento')
   })
 
+  // Phase 75 Plan 04 gap-closure (fix 2, locked decision): the Group anchor never served the
+  // real "reimburse a whole trip" use case (a Group unifies the SAME expense across platforms,
+  // not a bundle of different expenses) — its UI entry point is removed, backend left dormant.
+  it('renders NO reimbursement/linking UI (D-01-equivalent fence, fix 2) — no "Rimborso" section, no add/manage CTA', async () => {
+    const html = await renderGroupDetailClient()
+
+    expect(html).not.toContain('Rimborso')
+    expect(html).not.toContain('Aggiungi rimborso')
+    expect(html).not.toContain('Nessun rimborso collegato')
+    expect(html).not.toContain('Elimina rimborso')
+  })
+
   it('renders a member with zero linked transactions normally with a 0,00 € total', async () => {
     const html = await renderGroupDetailClient({
       members: [
