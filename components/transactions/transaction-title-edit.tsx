@@ -75,8 +75,11 @@ export function TransactionTitleEdit({
           </button>
         </div>
         {/* Inline "Originale:" hint only in the table (`inline`); on the detail page the dedicated
-            "Descrizione originale" field covers it, so it is suppressed to avoid duplication. */}
-        {variant === 'inline' && customTitle ? (
+            "Descrizione originale" field covers it, so it is suppressed to avoid duplication.
+            Shown whenever the displayed title differs from the raw description — a custom title OR
+            a group/expense title standing in for it (e.g. a grouped transaction shows the group
+            title, hiding its own). Hidden only when the title already IS the raw description. */}
+        {variant === 'inline' && displayTitle !== description ? (
           <span
             className="block truncate text-xs text-muted-foreground"
             title={description}
