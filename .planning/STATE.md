@@ -5,15 +5,15 @@ milestone_name: "Reimbursements 1:N"
 current_phase: 76
 current_phase_name: reimbursements-section
 status: executing
-stopped_at: Phase 76 context gathered
-last_updated: "2026-07-27T09:51:06.253Z"
+stopped_at: Completed 76-01-PLAN.md
+last_updated: "2026-07-27T11:19:04.911Z"
 last_activity: 2026-07-27
-last_activity_desc: Phase 75 complete, transitioned to Phase 76
+last_activity_desc: Phase 76 execution started
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 17
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 75 — linking-surfaces-and-lifecycle
+**Current focus:** Phase 76 — reimbursements-section
 
 ## Current Position
 
-Phase: 76 — reimbursements-section
-Plan: Not started
+Phase: 76 (reimbursements-section) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-07-27 — Phase 75 complete, transitioned to Phase 76
+Last activity: 2026-07-27 — Phase 76 execution started
 
 ## Roadmap (v2.8 — Phases 73-76)
 
@@ -295,6 +295,7 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 75-03: restoreRefundBaseline re-derives its own reimbursement_refund row via join on refundTransactionId, letting deleteReimbursementForAnchor reuse it directly with no adapter
 - [Phase ?]: 75-03: removeRefundAction aliases deleteTransactionPairAction directly (its refund-side behavior is already correct post-restore); deletePairByTransactionId anchor-side branch left unchanged per plan
 - [Phase ?]: 75-03: requirements mark-complete NOT run for RMB-07 — backend unlink/delete lifecycle only, user-facing linking UI ships in Plan 75-04
+- [Phase ?]: 76-01: requirements mark-complete NOT run for RMB-10/RMB-11 -- this plan delivers only the DAL/tracer foundation (bare table, no search/filter/sort, no per-reimbursement page); RMB-10 completes in Plan 76-02, RMB-11 completes in Plan 76-05
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -407,11 +408,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/76-reimbursements-section/76-CONTEXT.md
+**Resume file:** None
 
-**Stopped at:** Phase 76 context gathered
+**Stopped at:** Completed 76-01-PLAN.md
 
-Last session: 2026-07-27T09:09:47.476Z
+Last session: 2026-07-27T11:19:04.903Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
@@ -489,3 +490,4 @@ Last session: 2026-07-27T09:09:47.476Z
 | Phase 75 P01 | 27min | 2 tasks | 9 files |
 | Phase 75 P02 | 110min | 2 tasks | 7 files |
 | Phase 75 P03 | 24min | 2 tasks | 7 files |
+| Phase 76 P01 | 20min | 1 tasks | 6 files |

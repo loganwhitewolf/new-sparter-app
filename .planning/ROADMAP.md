@@ -157,7 +157,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 76-01-PLAN.md — DAL foundation + tracer: getReimbursementList (Expense-anchor only), shared residual-derivation helper, APP_ROUTES.reimbursements, real /reimbursements list render (RMB-10, RMB-11)
+- [x] 76-01-PLAN.md — DAL foundation + tracer: getReimbursementList (Expense-anchor only), shared residual-derivation helper, APP_ROUTES.reimbursements, real /reimbursements list render (RMB-10, RMB-11)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -438,7 +438,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 73. reimbursement-schema-and-netting | v2.8 | TBD | Complete    | 2026-07-24 |
 | 74. group-anchor-and-reconciliation | v2.8 | TBD | Complete    | 2026-07-24 |
 | 75. linking-surfaces-and-lifecycle | v2.8 | 4/4 | Complete    | 2026-07-27 |
-| 76. reimbursements-section | v2.8 | 0/6 | Planned (6 plans) | - |
+| 76. reimbursements-section | v2.8 | 0/6 | In Progress|  |
 
 **Total shipped: 72 phases · 269 plans complete**
 **Latest shipped: v2.7 Tag Dedicated View — Phases 69–72 (2026-07-22). All TAG-06…TAG-15 delivered: dedicated all-time per-tag page, dashboard `?tag=` filter removed, transactions tag filter + inline tag chip.**
