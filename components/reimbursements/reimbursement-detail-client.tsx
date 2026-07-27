@@ -13,7 +13,7 @@ import type {
   ReimbursementHeader,
   ReimbursementPanelData,
 } from '@/lib/dal/reimbursement'
-import { expenseDetailHref } from '@/lib/routes'
+import { APP_ROUTES, expenseDetailHref } from '@/lib/routes'
 import { formatResidualBadgeLabel, residualBadgeClassName } from '@/lib/utils/reimbursement-format'
 
 type Props = {
@@ -81,6 +81,9 @@ export function ReimbursementDetailClient({ reimbursement, panelData, anchorTran
         anchor={{ transactionId: anchorTransaction?.id ?? '' }}
         data={panelData}
         onAddRefund={() => setRefundPickerOpen(true)}
+        // Once the reimbursement is deleted (or its last refund unlinked) this page's row no longer
+        // exists — go back to the list instead of refreshing into a 404 (UAT gap #1).
+        onGone={() => router.push(APP_ROUTES.reimbursements)}
       />
 
       {/* Guarded on anchorTransaction being defined: it always will be for a genuine

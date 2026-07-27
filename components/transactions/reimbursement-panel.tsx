@@ -46,6 +46,14 @@ type Props = {
    * identical in both variants.
    */
   variant?: 'summary' | 'management'
+  /**
+   * Called (in place of `router.refresh()`) when the reimbursement this panel manages ceases to
+   * exist — i.e. it was deleted, or its last refund was unlinked. On `/reimbursements/[id]` the
+   * host passes a navigation to the list, since refreshing a now-deleted reimbursement's RSC page
+   * would `notFound()` → 404 (Phase 76 UAT gap #1). Omitted on surfaces that stay put after a
+   * mutation (e.g. the `/transactions/[id]` summary variant, which has no remove/delete controls).
+   */
+  onGone?: () => void
 }
 
 const dateFormatter = new Intl.DateTimeFormat('it-IT', {
@@ -87,7 +95,7 @@ function stateBadgeLabel(state: ReimbursementResidualState): string {
  * common state, never an error), or the net/residual/status line + ordered refund list + add/
  * remove/delete actions when a reimbursement exists.
  */
-export function ReimbursementPanel({ data, onAddRefund, variant = 'management' }: Props) {
+export function ReimbursementPanel({ data, onAddRefund, variant = 'management', onGone }: Props) {
   const router = useRouter()
   const [removePendingId, setRemovePendingId] = useState<string | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -103,7 +111,13 @@ export function ReimbursementPanel({ data, onAddRefund, variant = 'management' }
       toast.error(result.error)
     } else {
       toast.success('Rimborso scollegato.')
-      router.refresh()
+      // Removing the LAST refund dissolves the reimbursement — refreshing the detail RSC page
+      // would then 404 (UAT gap #1). Let the host navigate away instead.
+      if (onGone && data?.refunds.length === 1) {
+        onGone()
+      } else {
+        router.refresh()
+      }
     }
   }
 
@@ -118,7 +132,12 @@ export function ReimbursementPanel({ data, onAddRefund, variant = 'management' }
     } else {
       setDeleteOpen(false)
       toast.success('Rimborso eliminato.')
-      router.refresh()
+      // The reimbursement no longer exists — refreshing its detail page would 404 (UAT gap #1).
+      if (onGone) {
+        onGone()
+      } else {
+        router.refresh()
+      }
     }
   }
 
