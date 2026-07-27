@@ -21,8 +21,8 @@ import { deleteReimbursementAction, removeRefundAction } from '@/lib/actions/tra
 import type { ReimbursementPanelData, RefundMembership } from '@/lib/dal/reimbursement'
 import type { ReimbursementResidualState } from '@/lib/services/reimbursement'
 import { reimbursementHref, transactionDetailHref } from '@/lib/routes'
-import { toDecimal } from '@/lib/utils/decimal'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
+import { formatResidualAbsoluteAmount } from '@/lib/utils/reimbursement-format'
 
 type Props = {
   /**
@@ -71,15 +71,30 @@ function formatDate(date: Date): string {
  * `'owed'` -> "Ancora dovuti €N", `'settled'` -> "Saldato", `'surplus'` -> "Surplus di €N".
  * Extracted as a standalone pure function so it is unit-testable without jsdom (this repo has
  * none) — mirrors the `formatNet`/`formatCounterpartAmount` precedent in the existing pairing UI.
+ *
+ * Cross-reference (WR-01): the money-formatting core is shared with
+ * `lib/utils/reimbursement-format.ts`'s `formatResidualBadgeLabel` via
+ * `formatResidualAbsoluteAmount`, but this panel intentionally uses different wording ("Ancora
+ * dovuti €N" / "Surplus di €N") than that file's badge copy ("Dovuti €N" / "Surplus €N") — this
+ * component renders a summary line, not a `/reimbursements` table/detail badge. If one surface's
+ * copy changes, check whether the other should too.
  */
 export function formatResidualLabel(residual: string, state: ReimbursementResidualState): string {
   if (state === 'settled') {
     return 'Saldato'
   }
-  const abs = formatAbsoluteAmount(toDecimal(residual).abs().toFixed(2))
+  const abs = formatResidualAbsoluteAmount(residual)
   return state === 'owed' ? `Ancora dovuti ${abs}` : `Surplus di ${abs}`
 }
 
+/**
+ * Cross-reference (WR-01): a THIRD, deliberately terser wording for the same residual+state
+ * mapping — used only for this panel's compact status Badge ("Da saldare" / "Saldato" /
+ * "Surplus"), distinct from both `formatResidualLabel` above (the inline summary text on this
+ * same panel) and `lib/utils/reimbursement-format.ts`'s `formatResidualBadgeLabel` (the
+ * `/reimbursements` table/detail badge text). If the product copy for a state changes, check all
+ * three call sites.
+ */
 function stateBadgeLabel(state: ReimbursementResidualState): string {
   if (state === 'settled') return 'Saldato'
   if (state === 'owed') return 'Da saldare'
