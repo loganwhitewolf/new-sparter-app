@@ -218,6 +218,38 @@ Importo minimo di spesa nel Reference Period (€15) sotto il quale una sottocat
 Filtro temporale della dashboard selezionabile dall'utente (es. `last-month`, `last-3-months`). `last-month` indica il mese di calendario precedente a quello corrente — un periodo completato.
 _Avoid_: periodo, filtro, intervallo
 
+### Ammortamento
+
+> Vocabolario introdotto in v2.9 (ADR 0019). I nomi delle due lenti sono le _working label_ — copy definitivo da confermare in ui-phase.
+
+**Ammortamento** (Amortization):
+La ripartizione di un **costo one-off** su N mesi, per rendere leggibile una spesa grossa che altrimenti sfonda il mese in cui cade (es. un portatile da €2.400 comprato ad agosto). Opera sulla **singola Transaction in uscita**, non sulla Expense (che aggrega per esercente via `descriptionHash`) né sull'Expense Group. Attivarlo **stacca** la transazione in una Standalone Expense (ADR 0016 §2–§4) così che un acquisto successivo con la stessa descrizione non venga assorbito nel piano. Non è: accantonamento verso una spesa futura, piano di ammortamento di un debito (capitale/interessi non separabili), né deprezzamento di un asset.
+_Avoid_: rateizzazione, spalmatura (colloquiale), deprezzamento, ammortamento del mutuo
+
+**Piano** (Plan):
+Il contratto di ammortamento di una transazione: numero di mesi, mese di partenza (= mese della spesa), stato (`open`/`closed`). Genera N **Rate** materializzate. Uniforme: quote uguali, il resto di arrotondamento (Decimal.js) sulla **prima** rata.
+_Avoid_: contratto, schedule, rateazione
+
+**Rata / Quota** (Instalment):
+La singola quota mensile di un Piano. Cade sul giorno-calendario della spesa ogni mese (clamp all'ultimo giorno del mese corto: 31/1 → 28/2). È **materializzata** a DB, non calcolata in lettura. La prima rata coincide col mese della spesa — nessun mese già chiuso viene mai riscritto.
+_Avoid_: rata (nel senso di debito), tranche
+
+**Chiusura** (Closure):
+L'azione esplicita che termina un Piano prima della scadenza (es. vendita del bene). Le rate residue **collassano sul mese di chiusura**; quelle passate restano dove sono. La chiusura **non scrive mai una transazione sintetica** — la vista per cassa deve restare riconciliabile con l'estratto.
+_Avoid_: interruzione, cancellazione
+
+**Realizzo** (Realization):
+Il valore recuperato vendendo il bene ammortato. **È un rimborso** (ADR 0018), non un meccanismo nuovo: si collega una transazione reale (importata o creata al momento) e si netta **sul mese di chiusura** — eccezione esplicita al Mondo Netto (che netterebbe sul mese del costo). Scrapping del bene = chiusura senza transazione collegata (realizzo assente).
+_Avoid_: valore di vendita (come campo a sé), plusvalenza
+
+**Residuo** (Residual):
+Il valore non ancora consumato di un Piano: importo iniziale meno la somma delle rate già cadute (il "consumato"). Mostrato nella sezione `/amortizations` insieme a mesi residui e valore netto.
+_Avoid_: rimanenza, valore attuale
+
+**Vista per cassa / Vista per competenza** (Cash lens / Accrual lens):
+Le due lenti della dashboard, commutabili con un **unico switch globale** (come il selettore anno): tutti i widget seguono la lente scelta. **Cassa** = comportamento attuale, ogni transazione nel mese in cui la banca l'ha registrata (valori invariati). **Competenza** = i costi ammortati non stanno più nel giorno della spesa ma sono ripartiti sui mesi delle rate; mostra l'anno intero, mesi futuri inclusi (le rate oltre il 31/12 cadono nell'anno successivo).
+_Avoid_: vista di cassa vs accrual (mischiare le lingue), filtro competenza (non è un filtro, è una lente globale)
+
 ## Relationships
 
 - Una **Platform** definisce il formato di un **Import**
