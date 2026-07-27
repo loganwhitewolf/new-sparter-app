@@ -152,7 +152,27 @@ Plans:
   2. A per-reimbursement page shows the anchor outflow(s), the linked refunds, the net, and the residual.
   3. The per-reimbursement page supports edit-title, add/remove refund, and delete in place, reusing the `/tags/[id]` + Expense Group detail scaffolding.
 
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 76-01-PLAN.md — DAL foundation + tracer: getReimbursementList (Expense-anchor only), shared residual-derivation helper, APP_ROUTES.reimbursements, real /reimbursements list render (RMB-10, RMB-11)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 76-02-PLAN.md — List UI: search/status-filter/sort via the unified DataTableToolbar (RMB-10)
+- [ ] 76-03-PLAN.md — Row-indicator link + transactions DAL reimbursementId field + sidebar "Rimborsi" nav (RMB-10)
+- [ ] 76-04-PLAN.md — ReimbursementPanel summary variant (D-09): /transactions/[id] becomes read-only summary + "Gestisci rimborso" link once linked (RMB-11)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 76-05-PLAN.md — /reimbursements/[id] detail page: header + inline edit-title + reused management panel (RMB-11)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 76-06-PLAN.md — Manual E2E checkpoint: full journey + Group-anchor invisibility confirmation (RMB-10, RMB-11)
+
 **UI hint**: yes
 
 ---
@@ -418,7 +438,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 73. reimbursement-schema-and-netting | v2.8 | TBD | Complete    | 2026-07-24 |
 | 74. group-anchor-and-reconciliation | v2.8 | TBD | Complete    | 2026-07-24 |
 | 75. linking-surfaces-and-lifecycle | v2.8 | 4/4 | Complete    | 2026-07-27 |
-| 76. reimbursements-section | v2.8 | TBD | Not started | - |
+| 76. reimbursements-section | v2.8 | 0/6 | Planned (6 plans) | - |
 
 **Total shipped: 72 phases · 269 plans complete**
 **Latest shipped: v2.7 Tag Dedicated View — Phases 69–72 (2026-07-22). All TAG-06…TAG-15 delivered: dedicated all-time per-tag page, dashboard `?tag=` filter removed, transactions tag filter + inline tag chip.**
