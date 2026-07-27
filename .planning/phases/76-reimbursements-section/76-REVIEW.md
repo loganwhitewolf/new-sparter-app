@@ -31,12 +31,18 @@ files_reviewed_list:
   - tests/transaction-table-menu.test.tsx
   - tests/transactions-dal.test.ts
 findings:
-  critical: 2
+  critical: 0
   warning: 3
   info: 1
-  total: 6
+  total: 4
+criticals_resolved: 2
 status: issues_found
 ---
+
+> **Resolution (post-review, 2026-07-27):** Both BLOCKERs fixed and committed.
+> - **CR-01** → `b6316f3` — `revalidatePath('/reimbursements')` added to `createTransactionPair` / `deleteTransactionPair` (+ `removeRefund` alias) / `deleteReimbursement` / `createMultiRefund` in `lib/actions/transaction-pairs.ts`.
+> - **CR-02** → `05eb9ea` — extracted `restoreRefundsAndDeleteReimbursement` (restore-every-refund-then-delete, `userId`-scoped); `deletePairByTransactionId`'s anchor-side branch now restores baselines before deleting, sharing the core with `deleteReimbursementForAnchor`; added an ordering test.
+> The 3 WARNINGs (WR-01/02/03) and 1 INFO remain open as backlog. Full suite green (149 files / 1834 passed).
 
 # Phase 76: Code Review Report
 
