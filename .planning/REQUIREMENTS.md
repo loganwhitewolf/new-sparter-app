@@ -44,4 +44,22 @@ Scoped capability contract for milestone v2.9. Model locked in [ADR 0019](../doc
 
 ## Traceability
 
-_Filled by the roadmap: each requirement maps to exactly one phase._
+Filled at roadmap creation (2026-07-27). 15/15 v2.9 requirements mapped across Phases 77-80, none orphaned.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| AMORT-01 | Phase 77 | Pending |
+| AMORT-02 | Phase 77 | Pending |
+| AMORT-03 | Phase 77 | Pending |
+| AMORT-04 | Phase 78 | Pending |
+| AMORT-05 | Phase 78 | Pending |
+| AMORT-06 | Phase 78 | Pending |
+| AMORT-07 | Phase 78 | Pending |
+| REG-01 | Phase 79 | Pending |
+| REG-02 | Phase 79 | Pending |
+| REG-03 | Phase 79 | Pending |
+| LENS-01 | Phase 80 | Pending |
+| LENS-02 | Phase 80 | Pending |
+| LENS-03 | Phase 77 | Pending |
+| LENS-04 | Phase 80 | Pending |
+| LENS-05 | Phase 80 | Pending |

@@ -2,6 +2,7 @@
 
 ## Milestones
 
+- 🚧 **v2.9: Amortization** — Phases 77–80 (in progress) · model locked ADR 0019
 - ✅ **v2.8: Reimbursements 1:N** — Phases 73–76 (shipped 2026-07-27) · [archive](milestones/v2.8-ROADMAP.md)
 - ✅ **M001–M006** — Foundation → Dashboard Insight Suite (Phases 1–23, shipped ~2026-05)
 - ✅ **M007: Zero-cost Production Deploy** — Phases 24–28 (shipped 2026-05-19)
@@ -23,6 +24,84 @@
 - ✅ **v2.7: Tag Dedicated View** — Phases 69–72 (shipped 2026-07-22, tag v2.7) · [archive](milestones/v2.7-ROADMAP.md)
 
 ## Phases
+
+> 🚧 **v2.9: Amortization — IN PROGRESS (Phases 77–80).** Spread a one-off outflow transaction over
+> N uniform monthly instalments (detach into Standalone Expense, ADR 0016 reused), read through a
+> second "competenza" dashboard lens via one swappable `ledger_entry` row source per lens — not a
+> `lens` parameter threaded through the ten aggregation functions — which structurally prevents the
+> reimbursement double-netting trap. Realization (selling or scrapping an amortized asset) reuses
+> the v2.8 reimbursement mechanism. Model **locked in ADR 0019** — no discovery to redo. Risk is
+> concentrated in the schema+seam foundation (Phase 77): regression-gate the cash lens **before any
+> lifecycle or lens work**. Out of scope: configurable amortization day, amortizing
+> `in`/`allocation`/`transfer`, amortizing an Expense/Expense Group, non-uniform plans,
+> automatic/threshold activation.
+
+- [ ] **Phase 77: amortization-schema-and-activation** - Materialised plan+instalment schema, the `ledger_entry` seam (cash = transactions, accrual = instalments), and the activation entry points (transaction row, detail page, manual entry) that detach into a Standalone Expense (AMORT-01, AMORT-02, AMORT-03, LENS-03)
+- [ ] **Phase 78: plan-lifecycle-and-reconciliation** - Close a plan (collapse remaining instalments onto the closure month), realize via a linked sale or record a scrapped asset, reduce+re-spread on a linked reimbursement, and block/reconcile edits to an amortized transaction (AMORT-04, AMORT-05, AMORT-06, AMORT-07)
+- [ ] **Phase 79: amortizations-registry** - Dedicated `/amortizations` page listing every plan with its values and remaining months, close-from-registry with optional realization value, open/closed distinction (REG-01, REG-02, REG-03)
+- [ ] **Phase 80: dashboard-accrual-lens** - Global cassa/competenza switch across every dashboard widget, whole-year accrual view including future instalment months and year-end spillover, lens-aware year/month selectors (LENS-01, LENS-02, LENS-04, LENS-05)
+
+### Phase 77: amortization-schema-and-activation
+
+**Goal**: A user can spread a one-off outflow transaction into N uniform monthly instalments from any entry point, and the existing cash-basis dashboard keeps reporting exactly what it always has.
+**Depends on**: Nothing new (first v2.9 phase; builds on the shipped v2.5 Standalone Expense detach and the v2.8 reimbursement model this milestone reuses later for realization)
+**Requirements**: AMORT-01, AMORT-02, AMORT-03, LENS-03
+**Success Criteria** (what must be TRUE):
+
+  1. User can amortize an outflow transaction over a chosen number of months from the transaction row, the transaction detail page, or manual entry.
+  2. The amortized transaction is detached into a Standalone Expense, so a later purchase with the same description is not swept into the plan.
+  3. The plan's instalments materialize as N uniform monthly amounts starting on the purchase's calendar day (clamped to month end), with any rounding remainder on the first instalment.
+  4. Every dashboard figure under the cash view stays byte-identical to today's behavior once amortization plans and instalments exist in the database — the `ledger_entry` seam regression gate.
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 78: plan-lifecycle-and-reconciliation
+
+**Goal**: A plan's remaining value can be resolved — closed outright, realized by a sale, or partially recovered by a reimbursement — without ever letting the source transaction silently drift out of sync with its plan.
+**Depends on**: Phase 77
+**Requirements**: AMORT-04, AMORT-05, AMORT-06, AMORT-07
+**Success Criteria** (what must be TRUE):
+
+  1. Closing an open plan collapses every remaining instalment onto the closure month, while past instalments stay where they were.
+  2. Closing a plan by linking a sale transaction (imported or created at closure) nets the sale against the closure month; closing with no linked transaction records a scrapped asset.
+  3. Linking a reimbursement to an open plan reduces the base and re-spreads the remaining instalments proportionally.
+  4. Editing the amount or date of an amortized transaction is blocked or reconciled, so a plan can never silently desynchronize from its source transaction.
+
+**Plans**: TBD
+**Open for discuss/plan** (details, not architecture): what a reimbursement that exceeds the plan's residual does (clamp, allow negative, or block); the exact write-path invariant for editing an amortized transaction's amount/date/subcategory (model: v2.5 pair-guard, v2.8 D-02).
+
+### Phase 79: amortizations-registry
+
+**Goal**: Every amortization plan, open or closed, is visible and actionable from one dedicated place.
+**Depends on**: Phase 78
+**Requirements**: REG-01, REG-02, REG-03
+**Success Criteria** (what must be TRUE):
+
+  1. User can see every amortization plan in a dedicated `/amortizations` page listing description, transaction date, initial amount, consumed amount, net value, and remaining months.
+  2. User can close a plan directly from the registry page, optionally entering a sale/realization value.
+  3. User can visually distinguish open plans from closed plans in the registry.
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 80: dashboard-accrual-lens
+
+**Goal**: The user can read the whole dashboard through a second lens that shows spread costs instead of purchase-day spikes, without losing today's cash view.
+**Depends on**: Phase 77, Phase 78
+**Requirements**: LENS-01, LENS-02, LENS-04, LENS-05
+**Success Criteria** (what must be TRUE):
+
+  1. User can flip one global control between "cassa" and "competenza" and every dashboard widget — bar chart, KPI cards, category breakdown, movers, deviations — updates together.
+  2. Under the accrual view, an amortized cost shows up as its monthly instalment amount in every widget instead of its full purchase-day amount.
+  3. Under the accrual view, the selected year shows every month with data including future instalment months, with instalments past year-end appearing in the following year.
+  4. The year and month selectors offer a year or month that exists only because of instalments, under the accrual view.
+
+**Plans**: TBD
+**Open for discuss/plan** (details, not architecture): whether the accrual lens is a durable user preference or a URL/session view, and its behavior across the four dashboard sub-routes; whether `/dashboard/tags` and `/tags/[id]` are lens-invariant (all-time totals make the spread a no-op) or follow the switch; what deviations/movers do once a cost is spread (invisible to deviation after month 1), and whether a plan's closure spike should fire or be suppressed.
+**UI hint**: yes
+
+---
 
 <details>
 <summary>✅ v2.8: Reimbursements 1:N (Phases 73–76) — SHIPPED 2026-07-27</summary>
@@ -307,7 +386,12 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 74. group-anchor-and-reconciliation | v2.8 | 4/4 | Complete | 2026-07-24 |
 | 75. linking-surfaces-and-lifecycle | v2.8 | 4/4 | Complete | 2026-07-27 |
 | 76. reimbursements-section | v2.8 | 6/6 | Complete | 2026-07-27 |
+| 77. amortization-schema-and-activation | v2.9 | TBD | Not started | - |
+| 78. plan-lifecycle-and-reconciliation | v2.9 | TBD | Not started | - |
+| 79. amortizations-registry | v2.9 | TBD | Not started | - |
+| 80. dashboard-accrual-lens | v2.9 | TBD | Not started | - |
 
 **Total shipped: 76 phases · 286 plans complete**
 **Latest shipped: v2.8 Reimbursements 1:N — Phases 73–76 (2026-07-27). All RMB-01…RMB-11 delivered: 1:N reimbursement model (transaction_pair subsumed), Mondo Netto netting, first-class residual, linking UI on /transactions/[id], and the dedicated /reimbursements section. Audit passed 11/11.**
 
+**In planning: v2.9 Amortization — Phases 77–80 (roadmap created 2026-07-27). 15/15 requirements mapped (AMORT-01…07, REG-01…03, LENS-01…05), none orphaned. Model locked in ADR 0019. Next: `/gsd-plan-phase 77`.**

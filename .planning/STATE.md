@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Amortization
 status: planning
-last_updated: "2026-07-27T15:53:02.101Z"
+last_updated: "2026-07-27T16:10:00.000Z"
 last_activity: 2026-07-27
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,71 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-27)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Planning next milestone (v2.8 Reimbursements 1:N shipped 2026-07-27; git tag pending post-merge to main)
+**Current focus:** v2.9 Amortization — spread a one-off outflow transaction over N uniform monthly instalments, read through a second "competenza" dashboard lens via one swappable `ledger_entry` row source per lens (ADR 0019). Roadmap created; Phase 77 next.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 77 (amortization-schema-and-activation) — planned, not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-27 — Milestone v2.9 started
+Status: Roadmap created (v2.9, Phases 77–80); ready for `/gsd-plan-phase 77`
+Last activity: 2026-07-27 — v2.9 roadmap created (15/15 AMORT/REG/LENS requirements mapped)
+
+## Roadmap (v2.9 — Phases 77-80)
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 77 | amortization-schema-and-activation | AMORT-01, AMORT-02, AMORT-03, LENS-03 | Not started |
+| 78 | plan-lifecycle-and-reconciliation | AMORT-04, AMORT-05, AMORT-06, AMORT-07 | Not started |
+| 79 | amortizations-registry | REG-01, REG-02, REG-03 | Not started |
+| 80 | dashboard-accrual-lens | LENS-01, LENS-02, LENS-04, LENS-05 | Not started |
+
+**Coverage:** 15/15 v2.9 requirements mapped across Phases 77-80, none orphaned. Model
+**LOCKED in ADR 0019**: amortization spreads a one-off outflow **Transaction** (never an Expense or
+Expense Group) over N uniform monthly instalments starting from the purchase month, forcing a
+detach into a Standalone Expense (reuses ADR 0016 §2-4 / `detachTransactionToDedicatedExpense`).
+Instalments are materialised in the database. The dashboard gains a global cassa/competenza switch;
+the seam is **one swappable `ledger_entry` row source per lens** — cash = transactions with
+`effectiveAmount()`, accrual = non-amortized transactions `UNION ALL` instalment rows — not a `lens`
+parameter threaded through the ten aggregation functions. Resolving the amount inside the row source
+is what makes the reimbursement double-netting trap (an instalment's amount already carries any
+re-spread from §8; `effectiveAmount()` must never apply to it a second time) structurally
+impossible. Realization (selling or scrapping an amortized asset) reuses the v2.8 reimbursement
+mechanism, netting against the **closure month** as an explicit exception to Mondo Netto's
+cost-month netting. Navigation (`getYearsWithData`/`getMonthsWithData`) must become lens-aware,
+since instalments can create a year with no transaction in it.
+
+**Phase sequencing rationale:** the schema+seam is the highest-risk piece (the survey at
+`.scratch/amortization/assets/01-lens-seam.md` confirms the same 10 aggregation sites v2.8 proved
+byte-identical), so it ships first with the cash-lens regression gate **before any lifecycle or lens
+UI** (77); plan resolution — closure, realization, reimbursement re-spread, edit guard — completes
+the backend model next (78); the dedicated registry surfaces it (79); the dashboard accrual lens
+ships last, once the instalment source is stable (80). Incidental cleanup folded into Phase 77:
+extract the duplicated `dateScopedTransactions()`/`expenseStatusIncludedInDashboardTotals()` out of
+`dashboard.ts` and `overview.ts`.
+
+**Left OPEN for the per-phase discuss/plan stage** (details, not architecture — do NOT resolve in
+the roadmap):
+
+1. **Reimbursement exceeding residual** — what a reimbursement larger than a plan's residual does
+   (clamp, allow negative, or block) → Phase 78.
+
+2. **Amortized-transaction edit invariant** — the exact write-path rule for amount/date/subcategory
+   edits after a plan exists (model: v2.5 pair-guard, v2.8 D-02) → Phase 78.
+
+3. **Lens durability** — whether the accrual lens is a durable user preference or a URL/session
+   view, and its behavior across the four dashboard sub-routes → Phase 80.
+
+4. **Lens on tag surfaces** — whether `/dashboard/tags` and `/tags/[id]` are lens-invariant (all-time
+   totals make the spread a no-op) or follow the switch → Phase 80.
+
+5. **Deviations/movers after month 1** — what a spread cost's invisibility to deviation does to the
+   movers/deviations widgets, and whether a plan's closure spike should fire or be suppressed →
+   Phase 80.
+
+**Out of scope** (no phases): configurable amortization day in settings, amortizing `in`/
+`allocation`/`transfer`, amortizing an Expense or Expense Group, non-uniform plans (variable
+instalments/depreciation curves), automatic/threshold-based activation, a debt amortization
+schedule (principal/interest split), asset depreciation/net-worth tracking.
 
 ## Roadmap (v2.8 — Phases 73-76)
 
@@ -107,6 +164,23 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 ## Accumulated Context
 
 ### Decisions
+
+**v2.9 milestone contract (locked at roadmap creation, 2026-07-27):**
+
+- **Unit of amortization is the single Transaction** — never an Expense or Expense Group (ADR 0019
+  §1). Amortizing forces a detach into a Standalone Expense (reuses ADR 0016 §2-4).
+- **Outflows only** for v2.9 — `in`/`allocation`/`transfer` amortization deferred.
+- **Uniform plan from the purchase month** — rounding remainder on the first instalment, each
+  instalment on the purchase's calendar day clamped to month end.
+- **Instalments are materialised** in the database (not computed on read) to keep dashboard reads
+  cheap.
+- **Seam: one swappable `ledger_entry` row source per lens**, not a `lens` parameter threaded
+  through the ten aggregation functions — resolving the amount inside the row source is what
+  structurally prevents the reimbursement double-netting trap.
+- **Realization reuses the v2.8 reimbursement mechanism**, netting against the closure month (an
+  explicit exception to Mondo Netto's cost-month netting); the system never writes a synthetic
+  transaction.
+- **Activation is always manual** — no automatic or threshold-based suggestion.
 
 **v2.7 milestone contract (locked at roadmap creation, 2026-07-22):**
 
@@ -306,6 +380,30 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 
 ### Codebase facts relevant to the milestone
 
+- **Amortization plan + instalment schema (Phase 77)** — no existing schema entity; requires a new
+  plan table (transaction FK, months, start date, status open/closed) plus N materialised
+  instalment rows. Exact columns/indexes/constraint syntax and migration ordering left to
+  plan-phase (`gsd-pattern-mapper` against the live schema), per ADR 0019 Consequences.
+
+- **The `ledger_entry` seam (Phase 77)** — a Postgres view per lens (`ledger_entry_cash`,
+  `ledger_entry_accrual`), not a Drizzle CTE aliased as `transaction` (rejected — "clever, and
+  clever is the problem"). Ten aggregation functions across `lib/dal/dashboard.ts`,
+  `lib/dal/overview.ts`, `lib/dal/tags.ts` currently apply `isNotSecondary()`/`effectiveAmount()`
+  from `lib/dal/transaction-pairs-sql.ts` directly; after the seam lands they read `ledger.amount`
+  instead and stop calling those fragments at all (16 call sites collapse into one row source).
+
+- **Lens-adjacent navigation** — `getYearsWithData` (`overview.ts`) and `getMonthsWithData`
+  (`months-with-data.ts`) read `transaction` only; under the accrual lens they must also see
+  instalments (LENS-05), or the year/month selector will hide a year the dashboard could render.
+
+- **Duplicated predicates to extract (Phase 77 incidental cleanup)** — `dateScopedTransactions()`
+  and `expenseStatusIncludedInDashboardTotals()` are defined privately and identically in both
+  `dashboard.ts` and `overview.ts`.
+
+- `lib/services/transaction-detach.ts` — `detachTransactionToDedicatedExpense({ userId, transactionId, title, subCategoryId })` (shipped v2.4/ADR 0016) is the reused detach mechanism for AMORT-02.
+- The v2.8 reimbursement mechanism (`reimbursement`/`reimbursement_refund`, `effectiveAmount()`) is reused as-is for realization (AMORT-05/06) — no new netting mechanism per ADR 0019.
+- `.scratch/amortization/assets/01-lens-seam.md` is the codebase survey backing the seam decision — read before planning Phase 77.
+
 - **Expense Group (Phases 65-66)** — no existing schema entity; requires a new grouping table
   (group + membership) via `drizzle-kit generate` + `scripts/migrate.ts`. No migration touches
   existing expense/transaction rows (ADR 0017 consequence). Group totals must be computed at
@@ -316,7 +414,6 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
   the existing `scripts/seed-patterns-data.ts` full-replace model (`yarn db:seed-patterns`) — new
   or corrected patterns go there, not in `seed-data.ts`/`seed-extras.ts`.
 
-- `lib/services/transaction-detach.ts` — `detachTransactionToDedicatedExpense({ userId, transactionId, title, subCategoryId })` (shipped v2.4/ADR 0016) is the precedent for in-place re-hash mechanics; ADR 0017 §5 notes a Standalone Expense may join a group without special-casing.
 - `SubcategoryPicker` (vaul bottom sheet, single `subCategoryId` output, adopted across all 7 selection surfaces) is the intended control for any new subcategory-capture UI in the merge dialog (GRP-02) — reuse, do not build a new picker (v1.13 / ADR 0008).
 - Dashboard aggregation sites (8, per v2.0 `isNotSecondary()`/`effectiveAmount()` netting) are the surfaces GRP-09's invariant test and TAG-04's global filter must both leave structurally unchanged / correctly narrow.
 
@@ -415,7 +512,7 @@ Items acknowledged and postponed:
 
 Last session: 2026-07-27T11:42:05.358Z
 
-**Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
+**Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
 ## Operator Next Steps
 
