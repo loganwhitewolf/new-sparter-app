@@ -237,6 +237,11 @@ export const transactionListSelect = {
   pairedOccurredAt: sql<Date | null>`(
     SELECT t2.occurred_at FROM transaction t2 WHERE t2.id = ${pairedCounterpartIdExpr()}
   )`,
+  // Phase 76 (D-06, RMB-10): the reimbursement id this transaction participates in (anchor or
+  // refund role), for the row-indicator badge's deep link to /reimbursements/[id]. Same
+  // role-resolution rules as pairedReimbursementIdExpr() above, exposed directly here rather than
+  // only used internally by pairedNetAmount.
+  reimbursementId: sql<number | null>`${pairedReimbursementIdExpr()}`,
 }
 
 export const transactionPlatformSelect = {
@@ -276,6 +281,8 @@ export type TransactionListRow = {
   pairedAmount: string | null
   pairedDescription: string | null
   pairedOccurredAt: Date | null
+  // Phase 76 (D-06, RMB-10): reimbursement id this transaction participates in (anchor or refund)
+  reimbursementId: number | null
 }
 
 export type TransactionPlatformOption = {

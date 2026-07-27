@@ -1313,4 +1313,30 @@ describe("transaction pairing select-shape contract (Phase 50 — PAIR-02)", () 
       expect(fullText).not.toContain("transaction_pair");
     }
   });
+
+  // ── Phase 76 (D-06, RMB-10): reimbursementId exposed directly on the list select ──────
+  it("transactionListSelect includes reimbursementId as a sql fragment reading reimbursement, never transaction_pair (Phase 76, RMB-10)", () => {
+    expect(transactionListSelect).toHaveProperty("reimbursementId");
+    const fragment = (transactionListSelect as Record<string, unknown>)
+      .reimbursementId as { op: string; strings?: string[]; values?: unknown[] };
+    expect(fragment).toMatchObject({ op: "sql" });
+
+    const collectSqlText = (frag: unknown): string => {
+      if (
+        frag &&
+        typeof frag === "object" &&
+        "strings" in (frag as Record<string, unknown>)
+      ) {
+        const f = frag as { strings?: string[]; values?: unknown[] };
+        const own = (f.strings ?? []).join("");
+        const nested = (f.values ?? []).map(collectSqlText).join("");
+        return own + nested;
+      }
+      return "";
+    };
+
+    const fullText = collectSqlText(fragment);
+    expect(fullText).toContain("reimbursement");
+    expect(fullText).not.toContain("transaction_pair");
+  });
 });
