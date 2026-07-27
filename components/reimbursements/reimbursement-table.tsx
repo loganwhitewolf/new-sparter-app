@@ -25,9 +25,17 @@ const amountFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', curr
 // owed (the shared formatAbsoluteAmount strips the sign by design). Same local-helper pattern
 // components/tags/tag-detail-report.tsx and the Plan 76-01 tracer page already use, rather than
 // a new shared util.
+//
+// On non-finite input (WR-03): mirrors `formatAbsoluteAmount`'s convention
+// (lib/utils/format-amount.ts) — returns the raw string suffixed with the currency code instead
+// of silently coercing to €0.00, so a genuine upstream bug in residual computation surfaces as
+// visibly wrong rather than reading as a plausible "Saldato"-shaped amount.
 function formatSignedAmount(value: string): string {
   const amount = Number(value)
-  return amountFormatter.format(Number.isFinite(amount) ? amount : 0)
+  if (!Number.isFinite(amount)) {
+    return `${value} EUR`
+  }
+  return amountFormatter.format(amount)
 }
 
 /**
