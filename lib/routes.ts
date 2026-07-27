@@ -11,6 +11,7 @@ export const APP_ROUTES = {
   settings: '/settings',
   categorySettings: '/settings/categories',
   tags: '/tags',
+  reimbursements: '/reimbursements',
   patterns: '/patterns',
   dashboardTags: '/dashboard/tags',
   profile: '/profile',                  // compatibility alias (D-04)
@@ -56,6 +57,10 @@ export function dashboardCategoryDetail(id: number | string) {
 
 export function tagDetail(id: number | string) {
   return `${APP_ROUTES.tags}/${encodeURIComponent(String(id))}`
+}
+
+export function reimbursementHref(id: number | string) {
+  return `${APP_ROUTES.reimbursements}/${encodeURIComponent(String(id))}`
 }
 
 export function transactionDetailHref(id: string) {

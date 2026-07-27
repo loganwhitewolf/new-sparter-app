@@ -3,7 +3,12 @@ import 'server-only'
 import { and, asc, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { reimbursement, reimbursementRefund, transaction } from '@/lib/db/schema'
-import { computeReimbursementResidual, type ReimbursementResidualState } from '@/lib/services/reimbursement'
+import {
+  computeReimbursementResidual,
+  deriveResidualFromAggregates,
+  type ReimbursementResidualState,
+} from '@/lib/services/reimbursement'
+import { resolveReimbursementDisplayTitle } from '@/lib/utils/reimbursement-format'
 import { expenseDetailHref, expenseGroupDetailHref } from '@/lib/routes'
 
 /**
@@ -254,4 +259,92 @@ export async function getRefundMembership(input: {
     anchorHref:
       row.expenseGroupId != null ? expenseGroupDetailHref(row.expenseGroupId) : expenseDetailHref(row.expenseId!),
   }
+}
+
+/** One row of the `/reimbursements` list (Phase 76 Plan 01, RMB-10/RMB-11). */
+export type ReimbursementListRow = {
+  id: number
+  title: string
+  displayTitle: string
+  anchorExpenseId: string
+  anchorTitle: string
+  anchorDate: Date
+  outflowSum: string
+  refundSum: string
+  residual: string
+  state: ReimbursementResidualState
+}
+
+/**
+ * Lists every reimbursement for `userId`, Expense-anchored only (T-76-05 — the WHERE clause
+ * hard-filters `r.expense_id IS NOT NULL`, a Group-anchored reimbursement can never be returned
+ * even though the dormant Group branch still exists at the schema/service layer). Ordered by the
+ * anchor's own reconciliation date (`e.first_transaction_at`, the SAME earliest-transaction
+ * convention Phase 73's Q3 tie-break nets by) descending, with a deterministic `id DESC` tie-break
+ * for two reimbursements sharing the identical anchor date (RMB-10 ordering — never left to
+ * unspecified DB row order).
+ *
+ * Written as one raw SQL statement with an explicit `r` alias (same convention as
+ * getReimbursementAggregates above, to avoid the identical ambiguous-bare-column-name bug
+ * documented there — `reimbursement_refund` and `transaction` both have an `id` column).
+ *
+ * Per-row residual/state is derived via `deriveResidualFromAggregates` — the SAME pure function
+ * `computeReimbursementResidual` delegates to — so this list can never numerically diverge from
+ * the single-id lookup (RMB-11 precision). `displayTitle` is resolved via
+ * `resolveReimbursementDisplayTitle` (D-03 fallback).
+ *
+ * IDOR-safe by construction (T-76-04): the WHERE clause scopes exclusively on
+ * `r.user_id = userId`, resolved server-side from the verified session, never from a
+ * client-supplied filter.
+ */
+export async function getReimbursementList(userId: string): Promise<ReimbursementListRow[]> {
+  const result = await db.execute(sql`
+    SELECT
+      r.id,
+      r.title,
+      e.id AS anchor_expense_id,
+      e.title AS anchor_title,
+      e.total_amount::text AS outflow_sum,
+      e.first_transaction_at AS anchor_date,
+      (
+        SELECT COALESCE(SUM(rt.amount::numeric), 0)::text
+        FROM reimbursement_refund rr
+        INNER JOIN transaction rt ON rt.id = rr.transaction_id
+        WHERE rr.reimbursement_id = r.id
+      ) AS refund_sum
+    FROM reimbursement r
+    INNER JOIN expense e ON e.id = r.expense_id
+    WHERE r.user_id = ${userId} AND r.expense_id IS NOT NULL
+    ORDER BY e.first_transaction_at DESC, r.id DESC
+  `)
+
+  const rows = result.rows as {
+    id: number
+    title: string
+    anchor_expense_id: string
+    anchor_title: string
+    outflow_sum: string
+    anchor_date: string
+    refund_sum: string
+  }[]
+
+  return rows.map((row) => {
+    const { residual, state } = deriveResidualFromAggregates({
+      outflowSum: row.outflow_sum,
+      refundSum: row.refund_sum,
+    })
+
+    return {
+      id: row.id,
+      title: row.title,
+      displayTitle: resolveReimbursementDisplayTitle(row.title, row.anchor_title),
+      anchorExpenseId: row.anchor_expense_id,
+      anchorTitle: row.anchor_title,
+      anchorDate: new Date(row.anchor_date),
+      outflowSum: row.outflow_sum,
+      refundSum: row.refund_sum,
+      residual,
+      state,
+    }
+  })
 }
