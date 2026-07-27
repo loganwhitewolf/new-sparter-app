@@ -97,6 +97,10 @@ function makeSelectChain(rows: unknown[]) {
     innerJoin: vi.fn(() => chain),
     where: vi.fn(() => chain),
     limit: vi.fn(() => Promise.resolve(rows)),
+    // Thenable so a query that ends at `.where(...)` with no `.limit()` (the real Drizzle builder
+    // is awaitable at any point) also resolves to `rows` — e.g. restoreRefundsAndDeleteReimbursement's
+    // refund-list select (CR-02).
+    then: (resolve: (value: unknown[]) => void) => resolve(rows),
   }
   return chain
 }
@@ -1014,7 +1018,9 @@ describe('deletePairByTransactionId', () => {
         // refund-role lookup: NOT a refund
         if (callCount === 2) return makeSelectChain([])
         // anchor-role lookup: this expense_id has a reimbursement
-        return makeSelectChain([{ id: 7 }])
+        if (callCount === 3) return makeSelectChain([{ id: 7 }])
+        // CR-02: restoreRefundsAndDeleteReimbursement's refund-list select — no linked refunds here.
+        return makeSelectChain([])
       })
 
       const deletedTables: unknown[] = []
@@ -1033,7 +1039,79 @@ describe('deletePairByTransactionId', () => {
 
       expect(deletedTables).toHaveLength(1)
       expect((deletedTables[0] as { title?: string }).title).toBe('reimbursement.title')
-      expect(deletedWhereArgs[0]).toMatchObject({ op: 'eq', right: 7 })
+      // CR-02: the reimbursement delete is now userId-scoped (and(eq(id), eq(userId))).
+      expect(deletedWhereArgs[0]).toMatchObject({
+        op: 'and',
+        args: [
+          { op: 'eq', left: 'reimbursement.id', right: 7 },
+          { op: 'eq', left: 'reimbursement.userId', right: 'user-1' },
+        ],
+      })
+    })
+
+    it('restores every linked refund baseline BEFORE deleting on anchor-side unlink (CR-02)', async () => {
+      const tx = makeTx('tx-anchor', '-100.00', new Date('2026-01-10'), 'user-1', 'exp-spend')
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        if (callCount === 1) return makeSelectChain([tx])
+        if (callCount === 2) return makeSelectChain([]) // not a refund
+        if (callCount === 3) return makeSelectChain([{ id: 7 }]) // anchor lookup
+        // CR-02: restoreRefundsAndDeleteReimbursement's refund-list select — two linked refunds.
+        if (callCount === 4) {
+          return makeSelectChain([{ transactionId: 'ref-a' }, { transactionId: 'ref-b' }])
+        }
+        // calls 5 & 6: restoreRefundBaseline snapshot lookups (expenseId present → restore in place).
+        if (callCount === 5) {
+          return makeSelectChain([
+            {
+              expenseId: 'exp-a',
+              expenseTitle: 'A orig',
+              expenseDescriptionHash: 'dh-a',
+              expenseSubCategoryId: 3,
+              expenseStatus: '3',
+            },
+          ])
+        }
+        return makeSelectChain([
+          {
+            expenseId: 'exp-b',
+            expenseTitle: 'B orig',
+            expenseDescriptionHash: 'dh-b',
+            expenseSubCategoryId: 4,
+            expenseStatus: '3',
+          },
+        ])
+      })
+
+      const order: string[] = []
+      const restoredTitles: unknown[] = []
+      mocks.dbUpdateChain.mockImplementation(() =>
+        makeUpdateChain((v) => {
+          order.push('restore')
+          restoredTitles.push((v as { title?: string }).title)
+        }),
+      )
+      const deletedTables: unknown[] = []
+      mocks.dbDeleteChain.mockImplementation((table: unknown) => {
+        deletedTables.push(table)
+        return {
+          where: vi.fn(() => {
+            order.push('delete')
+            return Promise.resolve([])
+          }),
+        }
+      })
+
+      await deletePairByTransactionId({ userId: 'user-1', transactionId: 'tx-anchor' })
+
+      // Both refunds are restored to their pre-link titles...
+      expect(restoredTitles).toEqual(['A orig', 'B orig'])
+      // ...the reimbursement row is deleted exactly once...
+      expect(deletedTables).toHaveLength(1)
+      expect((deletedTables[0] as { title?: string }).title).toBe('reimbursement.title')
+      // ...and every restore runs BEFORE the delete (the delete cascades the snapshots away).
+      expect(order).toEqual(['restore', 'restore', 'delete'])
     })
 
     it('is a no-op when the transaction is neither a refund nor an anchor (already unpaired)', async () => {
@@ -1065,7 +1143,8 @@ describe('deletePairByTransactionId', () => {
         callCount += 1
         if (callCount === 1) return makeSelectChain([tx])
         if (callCount === 2) return makeSelectChain([])
-        return makeSelectChain([{ id: 7 }])
+        if (callCount === 3) return makeSelectChain([{ id: 7 }])
+        return makeSelectChain([]) // CR-02: no linked refunds to restore
       })
       mocks.dbDeleteChain.mockReturnValue(makeDeleteChain())
 

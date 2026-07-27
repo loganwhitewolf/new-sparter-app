@@ -544,6 +544,34 @@ async function restoreRefundBaseline(
 }
 
 /**
+ * Shared core (CR-02): restore every linked refund's pre-link baseline (D-10), THEN delete the
+ * reimbursement row (cascading reimbursement_refund / reimbursement_refund_snapshot /
+ * reimbursement_anchor_transaction rows via ON DELETE CASCADE). Both delete entry points — the
+ * anchor-side unlink in `deletePairByTransactionId` and the whole-reimbursement delete in
+ * `deleteReimbursementForAnchor` — must restore baselines first; deleting straight to CASCADE would
+ * discard the snapshots that make restore possible, permanently losing each refund's pre-link
+ * categorization. The delete is `userId`-scoped for defense-in-depth.
+ */
+async function restoreRefundsAndDeleteReimbursement(
+  tx: DbOrTx,
+  input: { reimbursementId: number; userId: string },
+): Promise<void> {
+  const refundRows = await tx
+    .select({ transactionId: reimbursementRefund.transactionId })
+    .from(reimbursementRefund)
+    .where(eq(reimbursementRefund.reimbursementId, input.reimbursementId))
+
+  // Restore EVERY linked refund IN ORDER before any delete (T-75-08) — never just the last one.
+  for (const { transactionId } of refundRows) {
+    await restoreRefundBaseline(tx, { refundTransactionId: transactionId, userId: input.userId })
+  }
+
+  await tx
+    .delete(reimbursement)
+    .where(and(eq(reimbursement.id, input.reimbursementId), eq(reimbursement.userId, input.userId)))
+}
+
+/**
  * Remove a reimbursement link by either transaction in it (anchor or refund).
  *
  * Security (D-01 / T-50-01): verifies the transaction belongs to `input.userId`
@@ -621,9 +649,13 @@ export async function deletePairByTransactionId(input: {
 
       const anchorRow = anchorRows[0]
       if (anchorRow) {
-        // Anchor side: removing the reimbursement cascades its
-        // reimbursement_refund rows via ON DELETE CASCADE (D-03 FK).
-        await tx.delete(reimbursement).where(eq(reimbursement.id, anchorRow.id))
+        // Anchor side (CR-02): restore every linked refund's baseline BEFORE deleting the
+        // reimbursement — the delete cascades the snapshots away, so restoring afterward is
+        // impossible. Same restore-then-delete contract as deleteReimbursementForAnchor.
+        await restoreRefundsAndDeleteReimbursement(tx, {
+          reimbursementId: anchorRow.id,
+          userId: input.userId,
+        })
       }
     }
   })
@@ -659,17 +691,11 @@ export async function deleteReimbursementForAnchor(input: {
       return
     }
 
-    const refundRows = await tx
-      .select({ transactionId: reimbursementRefund.transactionId })
-      .from(reimbursementRefund)
-      .where(eq(reimbursementRefund.reimbursementId, reimbursementRow.id))
-
-    // Restore EVERY linked refund IN ORDER before any delete (T-75-08) — never just the last one
-    // removed.
-    for (const { transactionId } of refundRows) {
-      await restoreRefundBaseline(tx, { refundTransactionId: transactionId, userId: input.userId })
-    }
-
-    await tx.delete(reimbursement).where(eq(reimbursement.id, reimbursementRow.id))
+    // Restore EVERY linked refund's baseline (T-75-08), then delete — shared with the anchor-side
+    // unlink path via restoreRefundsAndDeleteReimbursement (CR-02).
+    await restoreRefundsAndDeleteReimbursement(tx, {
+      reimbursementId: reimbursementRow.id,
+      userId: input.userId,
+    })
   })
 }
