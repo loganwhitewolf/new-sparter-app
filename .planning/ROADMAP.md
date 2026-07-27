@@ -171,7 +171,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 76-06-PLAN.md — Manual E2E checkpoint: full journey + Group-anchor invisibility confirmation (RMB-10, RMB-11)
+- [x] 76-06-PLAN.md — Manual E2E checkpoint: full journey + Group-anchor invisibility confirmation (RMB-10, RMB-11)
 
 **UI hint**: yes
 
