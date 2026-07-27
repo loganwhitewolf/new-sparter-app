@@ -10,7 +10,7 @@ import { HeaderSortButton } from '@/components/data-table/HeaderSortButton'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { REIMBURSEMENTS_TABLE_CONFIG } from '@/lib/utils/reimbursements-table-config'
-import { expenseDetailHref, reimbursementHref } from '@/lib/routes'
+import { reimbursementHref } from '@/lib/routes'
 import type { ReimbursementListRow } from '@/lib/dal/reimbursement'
 import { formatResidualBadgeLabel, residualBadgeClassName } from '@/lib/utils/reimbursement-format'
 
@@ -72,10 +72,11 @@ export function ReimbursementTable({ reimbursements, route }: Props) {
 
   const filtered = reimbursements.filter((row) => {
     if (status && row.state !== status) return false
-    if (q) {
-      const matchesTitle = row.displayTitle.toLowerCase().includes(q)
-      const matchesAnchor = row.anchorTitle.toLowerCase().includes(q)
-      if (!matchesTitle && !matchesAnchor) return false
+    // Search matches `displayTitle` only: it already resolves to the anchor's own title whenever
+    // the reimbursement has no custom one (resolveReimbursementDisplayTitle), so a separate
+    // anchorTitle match could only ever hit rows whose anchor text isn't rendered anywhere.
+    if (q && !row.displayTitle.toLowerCase().includes(q)) {
+      return false
     }
     return true
   })
@@ -100,7 +101,6 @@ export function ReimbursementTable({ reimbursements, route }: Props) {
                 activeDir={activeDir}
                 onSort={onSort}
               />
-              <TableHead>Ancora</TableHead>
               <HeaderSortButton
                 column={{ key: 'residual', label: 'Netto' }}
                 activeSort={activeSort}
@@ -120,30 +120,29 @@ export function ReimbursementTable({ reimbursements, route }: Props) {
           <TableBody>
             {sorted.map((row) => (
               <TableRow key={row.id}>
-                <TableCell>
-                  <Link href={reimbursementHref(row.id)} className="text-sm font-medium hover:underline">
+                {/* `max-w-0 w-full` + inner `truncate` is the shared no-horizontal-scroll pattern
+                    (transaction-table.tsx, expense-table.tsx): the title column absorbs the
+                    leftover width and ellipsizes instead of widening the table. */}
+                <TableCell className="max-w-0 w-full">
+                  <Link
+                    href={reimbursementHref(row.id)}
+                    className="block truncate text-sm font-medium hover:underline"
+                    title={row.displayTitle}
+                  >
                     {row.displayTitle}
                   </Link>
                 </TableCell>
-                <TableCell>
-                  <Link
-                    href={expenseDetailHref(row.anchorExpenseId)}
-                    className="text-sm text-muted-foreground hover:underline"
-                  >
-                    {row.anchorTitle}
-                  </Link>
-                </TableCell>
                 <TableCell
-                  className={`text-right font-mono tabular-nums text-sm ${amountToneClass(row.residual)}`}
+                  className={`whitespace-nowrap text-right font-mono tabular-nums text-sm ${amountToneClass(row.residual)}`}
                 >
                   {formatSignedAmount(row.residual)}
                 </TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <Badge variant="outline" className={residualBadgeClassName(row.state)}>
                     {formatResidualBadgeLabel(row.residual, row.state)}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
+                <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                   {row.anchorDate.toLocaleDateString('it-IT')}
                 </TableCell>
               </TableRow>

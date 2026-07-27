@@ -33,8 +33,18 @@ export type ReimbursementAggregates = {
  * "belongs to someone else" (no user enumeration).
  *
  * `outflowSum` (D-01/D-02, Phase 74, RMB-02, RMB-06):
- *  - Expense-anchored reimbursement (`expenseId IS NOT NULL`): the single Expense's own
- *    `totalAmount`.
+ *  - Expense-anchored reimbursement (`expenseId IS NOT NULL`): the SUM of the frozen anchored
+ *    transaction set (`reimbursement_anchor_transaction`, ADR 0018 D-08) — i.e. exactly the
+ *    transaction(s) that were linked at create time, NOT the whole Expense's `totalAmount`.
+ *    An Expense can hold several transactions (import.ts upserts by `(userId, descriptionHash)`),
+ *    and a reimbursement is created against ONE of them: charging the residual with the Expense's
+ *    other transactions reported money as still owed that was never part of the reimbursement.
+ *    This is the same frozen-set resolution `effectiveAmount()` (lib/dal/transaction-pairs-sql.ts,
+ *    Branch A) already uses for the Mondo Netto spread — the two could previously disagree.
+ *    `COALESCE` falls back to the Expense `totalAmount` only if the frozen set is somehow empty
+ *    (no such row can be created today — migration 0031 backfilled every pre-existing anchor and
+ *    `createPairTx` writes the set on every CREATE), so a residual can never silently read as pure
+ *    surplus.
  *  - Group-anchored reimbursement (`expenseGroupId` set): the SUM of `totalAmount` across every
  *    member Expense of the group, resolved via `expense_group_membership`.
  *
@@ -58,8 +68,14 @@ export async function getReimbursementAggregates(input: {
     SELECT
       (
         CASE
-          WHEN r.expense_id IS NOT NULL THEN (
-            SELECT e.total_amount::text FROM expense e WHERE e.id = r.expense_id
+          WHEN r.expense_id IS NOT NULL THEN COALESCE(
+            (
+              SELECT SUM(at.amount::numeric)::text
+              FROM reimbursement_anchor_transaction rat2
+              INNER JOIN transaction at ON at.id = rat2.transaction_id
+              WHERE rat2.reimbursement_id = r.id
+            ),
+            (SELECT e.total_amount::text FROM expense e WHERE e.id = r.expense_id)
           )
           ELSE (
             SELECT COALESCE(SUM(e2.total_amount::numeric), 0)::text
@@ -461,6 +477,10 @@ export type ReimbursementListRow = {
  * getReimbursementAggregates above, to avoid the identical ambiguous-bare-column-name bug
  * documented there — `reimbursement_refund` and `transaction` both have an `id` column).
  *
+ * `outflow_sum` resolves from the frozen anchored-transaction set exactly like
+ * `getReimbursementAggregates` above (same subquery, same Expense-`totalAmount` COALESCE fallback)
+ * — the list and the single-id lookup must never disagree on the residual (RMB-11 precision).
+ *
  * Per-row residual/state is derived via `deriveResidualFromAggregates` — the SAME pure function
  * `computeReimbursementResidual` delegates to — so this list can never numerically diverge from
  * the single-id lookup (RMB-11 precision). `displayTitle` is resolved via
@@ -477,7 +497,15 @@ export async function getReimbursementList(userId: string): Promise<Reimbursemen
       r.title,
       e.id AS anchor_expense_id,
       e.title AS anchor_title,
-      e.total_amount::text AS outflow_sum,
+      COALESCE(
+        (
+          SELECT SUM(at.amount::numeric)::text
+          FROM reimbursement_anchor_transaction rat2
+          INNER JOIN transaction at ON at.id = rat2.transaction_id
+          WHERE rat2.reimbursement_id = r.id
+        ),
+        e.total_amount::text
+      ) AS outflow_sum,
       e.first_transaction_at AS anchor_date,
       (
         SELECT COALESCE(SUM(rt.amount::numeric), 0)::text

@@ -13,13 +13,14 @@ const STATUS_LABELS: Record<string, string> = {
  * client-side (ReimbursementTable), never a fresh server round-trip — see D-01.
  *
  * Field inventory:
- *   - search: q (title or anchor title substring, D-03)
+ *   - search: q (displayed title substring — which already falls back to the anchor's own title,
+ *     D-03, so the removed Ancora column took no searchable text with it)
  *   - status: select (owed/settled/surplus, D-11 — the exact 3-state vocabulary)
  *   - sortable: title, anchorDate, residual (D-02 default: anchorDate desc)
  */
 export const REIMBURSEMENTS_TABLE_CONFIG: TableConfig = {
   id: 'reimbursements',
-  search: { key: 'q', placeholder: 'Cerca per titolo o ancora…' },
+  search: { key: 'q', placeholder: 'Cerca per titolo…' },
   filters: [
     {
       key: 'status',

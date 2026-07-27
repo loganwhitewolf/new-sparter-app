@@ -6,8 +6,14 @@
 // Requires local Docker Postgres (`yarn db:up`). Skips gracefully (console warning, no failure)
 // when unreachable, so `vitest run` stays green in sandboxes without Docker — same pattern as
 // tests/reimbursement-regression.test.ts.
+import { randomUUID } from 'node:crypto'
+import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
-import type { getReimbursementAggregates as GetReimbursementAggregates } from '@/lib/dal/reimbursement'
+import type {
+  getReimbursementAggregates as GetReimbursementAggregates,
+  getReimbursementList as GetReimbursementList,
+} from '@/lib/dal/reimbursement'
+import { expense as expenseTable, transaction as transactionTable } from '@/lib/db/schema'
 import type { computeReimbursementResidual as ComputeReimbursementResidual } from '@/lib/services/reimbursement'
 import { toDecimal } from '@/lib/utils/decimal'
 import {
@@ -28,6 +34,7 @@ import {
 const harness = await connectReimbursementTestDb()
 
 let getReimbursementAggregates: typeof GetReimbursementAggregates
+let getReimbursementList: typeof GetReimbursementList
 let computeReimbursementResidual: typeof ComputeReimbursementResidual
 
 if (harness.ok) {
@@ -40,6 +47,7 @@ if (harness.ok) {
   const dalModule = await import('@/lib/dal/reimbursement')
   const serviceModule = await import('@/lib/services/reimbursement')
   getReimbursementAggregates = dalModule.getReimbursementAggregates
+  getReimbursementList = dalModule.getReimbursementList
   computeReimbursementResidual = serviceModule.computeReimbursementResidual
 } else {
   console.warn(
@@ -376,3 +384,86 @@ describeIfReachable('computeReimbursementResidual — Group anchor + cross-user 
     expect(ownedResidual).toBeDefined()
   })
 })
+
+describeIfReachable(
+  'residual is scoped to the frozen anchored-transaction set, not the whole Expense (ADR 0018 D-08)',
+  () => {
+    let db: ReimbursementTestDb
+    let userId: string
+    let subCategoryId: number
+
+    beforeAll(async () => {
+      db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+      const seededUser = await seedUser(db)
+      userId = seededUser.userId
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      subCategoryId = taxonomy.essentialSubCategoryId
+    })
+
+    it('an Expense holding two outflows (-10.00 and -12.00) with a reimbursement anchored on the -10.00 one only, fully refunded (+10.00), reads residual 0.00/settled — never -12.00/owed — in BOTH the single-id lookup and the /reimbursements list', async () => {
+      // The anchor transaction: -10.00, the one the user actually linked.
+      const { expenseId, transactionId: anchorTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId,
+        amount: '-10.00',
+        occurredAt: new Date('2026-02-10T12:00:00Z'),
+        title: 'Amazon (two transactions, one anchored)',
+      })
+
+      // A SECOND, unrelated outflow landing on the SAME expense_id — exactly what import.ts's
+      // (userId, descriptionHash) upsert produces for a later same-merchant purchase. It is NOT a
+      // row in the frozen set, so it must not charge this reimbursement's residual.
+      const siblingTransactionId = randomUUID()
+      await db.insert(transactionTable).values({
+        id: siblingTransactionId,
+        userId,
+        expenseId,
+        transactionHash: `hash-${siblingTransactionId}`,
+        description: 'Amazon — seconda transazione',
+        descriptionHash: `dh-${siblingTransactionId}`,
+        amount: '-12.00',
+        occurredAt: new Date('2026-02-18T12:00:00Z'),
+        rowIndex: 1,
+      })
+      await db
+        .update(expenseTable)
+        .set({ totalAmount: '-22.00', transactionCount: 2 })
+        .where(eq(expenseTable.id, expenseId))
+
+      const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId,
+        amount: '10.00',
+        occurredAt: new Date('2026-02-20T12:00:00Z'),
+        title: 'Rimborso Amazon',
+      })
+
+      const { reimbursementId } = await seedReimbursement(db, {
+        userId,
+        title: 'Amazon (two transactions, one anchored)',
+        expenseId,
+        refundTransactionIds: [refundTransactionId],
+        // createPairTx's real shape: ONE frozen row, the linked transaction.
+        anchorTransactionIds: [anchorTransactionId],
+      })
+
+      const aggregates = await getReimbursementAggregates({ reimbursementId, userId })
+      expect(aggregates).toBeDefined()
+      expect(toDecimal(aggregates!.outflowSum).equals(toDecimal('-10.00'))).toBe(true)
+
+      const result = await computeReimbursementResidual({ reimbursementId, userId })
+      expect(result).toBeDefined()
+      expect(toDecimal(result!.residual).equals(toDecimal('0.00'))).toBe(true)
+      expect(result!.state).toBe('settled')
+
+      // RMB-11 precision: the list DAL derives the identical residual from its own aggregates.
+      const listRows = await getReimbursementList(userId)
+      const listRow = listRows.find((row) => row.id === reimbursementId)
+      expect(listRow).toBeDefined()
+      expect(toDecimal(listRow!.outflowSum).equals(toDecimal('-10.00'))).toBe(true)
+      expect(toDecimal(listRow!.residual).equals(toDecimal('0.00'))).toBe(true)
+      expect(listRow!.state).toBe('settled')
+    })
+  },
+)
