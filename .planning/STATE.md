@@ -5,12 +5,12 @@ milestone_name: "Reimbursements 1:N"
 current_phase: 76
 current_phase_name: reimbursements-section
 status: planning
-stopped_at: Completed 75-03-PLAN.md
-last_updated: "2026-07-27T08:04:43.002Z"
+stopped_at: Phase 76 context gathered
+last_updated: "2026-07-27T09:09:47.486Z"
 last_activity: 2026-07-27
 last_activity_desc: Phase 75 complete, transitioned to Phase 76
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 3
   total_plans: 11
   completed_plans: 11
@@ -407,11 +407,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** None
+**Resume file:** .planning/phases/76-reimbursements-section/76-CONTEXT.md
 
-**Stopped at:** Completed 75-03-PLAN.md
+**Stopped at:** Phase 76 context gathered
 
-Last session: 2026-07-24T17:58:40.128Z
+Last session: 2026-07-27T09:09:47.476Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
