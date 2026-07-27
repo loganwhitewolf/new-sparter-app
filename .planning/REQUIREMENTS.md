@@ -28,7 +28,7 @@ Model locked in **ADR 0018** (`docs/adr/0018-reimbursement-1n-linking-supersedes
 ### Dedicated Section
 
 - [x] **RMB-10**: A dedicated **`/reimbursements`** section lists all reimbursement groups with title, anchor, net, and residual/status, reusing the unified table + RSC scaffolding.
-- [ ] **RMB-11**: A per-reimbursement page shows the **anchor outflow(s), the linked refunds, the net, and the residual**, with edit-title / add-remove-refund / delete in place — reusing the `/tags/[id]` and Expense Group detail scaffolding.
+- [x] **RMB-11**: A per-reimbursement page shows the **anchor outflow(s), the linked refunds, the net, and the residual**, with edit-title / add-remove-refund / delete in place — reusing the `/tags/[id]` and Expense Group detail scaffolding.
 
 ## Future Requirements (deferred)
 
@@ -60,4 +60,4 @@ Filled at roadmap creation (2026-07-23). 11/11 RMB requirements mapped across Ph
 | RMB-08 | Phase 75 | Complete |
 | RMB-09 | Phase 74 | Complete |
 | RMB-10 | Phase 76 | Complete |
-| RMB-11 | Phase 76 | Pending |
+| RMB-11 | Phase 76 | Complete |
