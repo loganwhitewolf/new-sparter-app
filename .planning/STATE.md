@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v2.8
 milestone_name: "Reimbursements 1:N"
-current_phase: 75
-current_phase_name: linking-surfaces-and-lifecycle
-status: executing
+current_phase: 76
+current_phase_name: reimbursements-section
+status: planning
 stopped_at: Completed 75-03-PLAN.md
-last_updated: "2026-07-24T17:58:40.135Z"
-last_activity: 2026-07-24
-last_activity_desc: Phase 75 execution started
+last_updated: "2026-07-27T08:04:43.002Z"
+last_activity: 2026-07-27
+last_activity_desc: Phase 75 complete, transitioned to Phase 76
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 ## Current Position
 
-Phase: 75 (linking-surfaces-and-lifecycle) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-07-24 — Phase 75 execution started
+Phase: 76 — reimbursements-section
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-27 — Phase 75 complete, transitioned to Phase 76
 
 ## Roadmap (v2.8 — Phases 73-76)
 

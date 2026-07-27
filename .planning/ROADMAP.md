@@ -35,7 +35,7 @@
 
 - [x] **Phase 73: reimbursement-schema-and-netting** - New `reimbursement` + `reimbursement_refund` schema; generalize `effectiveAmount`/`isNotSecondary` to the refund set; migrate `transaction_pair` (N=1); dashboard regression gate (RMB-01, RMB-03, RMB-04, RMB-05) (completed 2026-07-24)
 - [x] **Phase 74: group-anchor-and-reconciliation** - Anchor on an outflow Expense Group; residual as a first-class value; amount-edit guard generalized to 1:N (RMB-02, RMB-06, RMB-09) (completed 2026-07-24)
-- [ ] **Phase 75: linking-surfaces-and-lifecycle** - Create/manage a reimbursement from the Expense detail page + Expense Group; add/remove refunds; unlink/delete restores baseline (RMB-07, RMB-08)
+- [x] **Phase 75: linking-surfaces-and-lifecycle** - Create/manage a reimbursement from the Expense detail page + Expense Group; add/remove refunds; unlink/delete restores baseline (RMB-07, RMB-08) (completed 2026-07-27)
 - [ ] **Phase 76: reimbursements-section** - Dedicated `/reimbursements` list + per-reimbursement page (anchor, refunds, net, residual; edit/add/remove/delete in place) (RMB-10, RMB-11)
 
 ### Phase 73: reimbursement-schema-and-netting
@@ -417,7 +417,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 72. transactions-tag-indicator | v2.7 | direct | Complete | 2026-07-22 |
 | 73. reimbursement-schema-and-netting | v2.8 | TBD | Complete    | 2026-07-24 |
 | 74. group-anchor-and-reconciliation | v2.8 | TBD | Complete    | 2026-07-24 |
-| 75. linking-surfaces-and-lifecycle | v2.8 | 0/4 | In Progress|  |
+| 75. linking-surfaces-and-lifecycle | v2.8 | 0/4 | Complete    | 2026-07-27 |
 | 76. reimbursements-section | v2.8 | TBD | Not started | - |
 
 **Total shipped: 72 phases · 269 plans complete**

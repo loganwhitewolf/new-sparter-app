@@ -18,11 +18,11 @@ Model locked in **ADR 0018** (`docs/adr/0018-reimbursement-1n-linking-supersedes
 ### Reconciliation
 
 - [x] **RMB-06**: Each reimbursement exposes a **residual** = `Σoutflow + Σ(refunds linked so far)`, surfaced while still negative ("still owed €25"), so partial reimbursement (3 of 4 friends repaid) is visible.
-- [ ] **RMB-07**: A user can **add** and **remove** individual refund links on a reimbursement; **unlinking a refund or deleting the reimbursement restores baseline** — the refund reappears as a normal inflow in its own month and the anchor's net reverts.
+- [x] **RMB-07**: A user can **add** and **remove** individual refund links on a reimbursement; **unlinking a refund or deleting the reimbursement restores baseline** — the refund reappears as a normal inflow in its own month and the anchor's net reverts.
 
 ### Linking Surfaces
 
-- [ ] **RMB-08**: A user can create and manage a reimbursement from the **Expense detail page** (`/expenses/[id]`) and from the **Expense Group** — pick the outflow anchor, attach eligible inflow transactions.
+- [x] **RMB-08**: A user can create and manage a reimbursement from the **transaction detail page** (`/transactions/[id]`, the outflow — D-01), picking the anchor and attaching eligible inflow transactions via a multi-select picker. _Descoped in Phase 75 (locked UAT decision):_ the **Expense Group** host was removed — a Group unifies the same expense across platforms, not a bundle of different expenses to reimburse together; the trip/vacation case is deferred to a future **tag-anchored** primitive, with the Group-anchor backend left dormant (no UI entry point).
 - [x] **RMB-09**: The amount-edit **pair guard** (v2.5: an edit breaking a pair's invariant is blocked) generalizes to the 1:N model — editing an anchor or refund amount that would break the reimbursement is handled coherently (block with an Italian message or reconcile), never silently corrupting the net.
 
 ### Dedicated Section
@@ -56,8 +56,8 @@ Filled at roadmap creation (2026-07-23). 11/11 RMB requirements mapped across Ph
 | RMB-04 | Phase 73 | Complete |
 | RMB-05 | Phase 73 | Complete |
 | RMB-06 | Phase 74 | Complete |
-| RMB-07 | Phase 75 | Pending |
-| RMB-08 | Phase 75 | Pending |
+| RMB-07 | Phase 75 | Complete |
+| RMB-08 | Phase 75 | Complete |
 | RMB-09 | Phase 74 | Complete |
 | RMB-10 | Phase 76 | Pending |
 | RMB-11 | Phase 76 | Pending |
