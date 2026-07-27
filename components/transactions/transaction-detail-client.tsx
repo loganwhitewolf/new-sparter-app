@@ -33,9 +33,7 @@ import type { TransactionDetailRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import type { TagRow } from '@/lib/dal/tags'
-import { APP_ROUTES, expenseDetailHref, importFileDetailHref } from '@/lib/routes'
-import { cn } from '@/lib/utils'
-import { amountToneClass } from '@/lib/utils/amount-tone'
+import { APP_ROUTES, expenseDetailHref, expenseGroupDetailHref, importFileDetailHref } from '@/lib/routes'
 import { toDecimal } from '@/lib/utils/decimal'
 
 type CurrentTag = { tagId: number; tagName: string; archived: boolean }
@@ -53,17 +51,6 @@ type Props = {
    * itself a linked refund — the read-only state ReimbursementPanel's CTA/manage-panel never
    * applies to. `undefined` for an outflow, or for an inflow that isn't a refund. */
   refundMembership: RefundMembership | undefined
-}
-
-function formatSignedAmount(amount: string, currency: string): string {
-  try {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: currency || 'EUR',
-    }).format(Number(toDecimal(amount)))
-  } catch {
-    return amount
-  }
 }
 
 export function TransactionDetailClient({
@@ -208,8 +195,6 @@ export function TransactionDetailClient({
 
   const searchQuery = transaction.customTitle?.trim() || transaction.description
   const searchHref = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`
-  const headerAmount = formatSignedAmount(transaction.amount, transaction.currency)
-  const headerAmountClass = amountToneClass(transaction.amount, transaction.categoryType)
 
   const categoriaSection = transaction.expenseId ? (
     <div className="mt-2 flex flex-col gap-3 rounded-md border bg-muted/30 p-4">
@@ -258,6 +243,7 @@ export function TransactionDetailClient({
           customTitle={transaction.customTitle}
           fallbackTitle={transaction.groupTitle ?? transaction.expenseTitle}
           onSuccess={() => router.refresh()}
+          variant="detail"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -281,22 +267,27 @@ export function TransactionDetailClient({
           onSuccess={() => router.refresh()}
         />
       </div>
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Descrizione bancaria
-        </span>
-        <TooltipProvider>
-          <div className="flex items-center gap-2 rounded bg-muted p-3">
-            <span className="flex-1 text-sm text-muted-foreground">{transaction.description}</span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent>chiave di riconciliazione bancaria — non modificabile</TooltipContent>
-            </Tooltip>
-          </div>
-        </TooltipProvider>
-      </div>
+      {/* Original bank description shown only once the title has been customized (D-detail):
+          without a custom title the displayed title IS the description, so repeating it here is
+          redundant. Labelled "Descrizione originale". */}
+      {transaction.customTitle ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Descrizione originale
+          </span>
+          <TooltipProvider>
+            <div className="flex items-center gap-2 rounded bg-muted p-3">
+              <span className="flex-1 text-sm text-muted-foreground">{transaction.description}</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>chiave di riconciliazione bancaria — non modificabile</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
+        </div>
+      ) : null}
       {categoriaSection}
       {tagSection}
     </div>
@@ -345,13 +336,29 @@ export function TransactionDetailClient({
       </span>
       {transaction.expenseId ? (
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm text-muted-foreground">Spesa collegata</span>
-          <Link
-            href={expenseDetailHref(transaction.expenseId)}
-            className="text-sm text-primary underline-offset-4 hover:underline"
-          >
-            {transaction.groupTitle ?? transaction.expenseTitle ?? 'Vedi spesa'}
-          </Link>
+          {/* When the linked expense belongs to a group, point at the group (the meaningful
+              aggregate the user manages), not the individual member expense. */}
+          {transaction.groupId ? (
+            <>
+              <span className="text-sm text-muted-foreground">Gruppo collegato</span>
+              <Link
+                href={expenseGroupDetailHref(transaction.groupId)}
+                className="text-sm text-primary underline-offset-4 hover:underline"
+              >
+                {transaction.groupTitle ?? 'Vedi gruppo'}
+              </Link>
+            </>
+          ) : (
+            <>
+              <span className="text-sm text-muted-foreground">Spesa collegata</span>
+              <Link
+                href={expenseDetailHref(transaction.expenseId)}
+                className="text-sm text-primary underline-offset-4 hover:underline"
+              >
+                {transaction.expenseTitle ?? 'Vedi spesa'}
+              </Link>
+            </>
+          )}
         </div>
       ) : null}
       {transaction.fileId ? (
@@ -386,12 +393,11 @@ export function TransactionDetailClient({
 
   return (
     <>
+      {/* No header title/amount here (D-detail): the transaction title and total already live in
+          the "Dati" card (un-truncated), so the shell shows only the back link — avoids the
+          duplicated, ellipsis-clipped heading. */}
       <DetailPageShell
         backHref={APP_ROUTES.transactions}
-        title={displayTitle}
-        amount={headerAmount}
-        amountInline
-        amountToneClassName={cn(headerAmountClass)}
         layout="two-column"
         datiCard={datiCard}
         collegamentiCard={collegamentiCard}

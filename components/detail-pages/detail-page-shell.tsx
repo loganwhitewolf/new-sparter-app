@@ -9,7 +9,8 @@ export type DetailPageLayout = 'stacked' | 'two-column' | 'file-detail'
 
 type Props = {
   backHref: string
-  title: ReactNode
+  /** Optional: when omitted (with no amount/actions), the header row collapses to just the back link. */
+  title?: ReactNode
   amount?: ReactNode
   amountInline?: boolean
   amountToneClassName?: string
@@ -139,35 +140,41 @@ export function DetailPageShell({
         Indietro
       </a>
 
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="group min-w-0 flex-1">
-          <h1
-            className={cn(
-              'truncate text-2xl font-bold tracking-tight',
-              amountInline && 'flex items-baseline gap-2'
-            )}
-          >
-            <span className="truncate">{title}</span>
-            {amount && amountInline ? (
-              <span
+      {title || amount || primaryAction || overflowMenu ? (
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          {title || amount ? (
+            <div className="group min-w-0 flex-1">
+              <h1
                 className={cn(
-                  'shrink-0 font-mono text-xl font-semibold tabular-nums',
-                  amountToneClassName
+                  'truncate text-2xl font-bold tracking-tight',
+                  amountInline && 'flex items-baseline gap-2'
                 )}
               >
-                {amount}
-              </span>
-            ) : null}
-          </h1>
-          {amount && !amountInline ? <div className="mt-1 text-lg font-semibold">{amount}</div> : null}
-        </div>
-        {primaryAction || overflowMenu ? (
-          <div className="flex shrink-0 items-center gap-2">
-            {primaryAction}
-            {overflowMenu}
-          </div>
-        ) : null}
-      </header>
+                {title ? <span className="truncate">{title}</span> : null}
+                {amount && amountInline ? (
+                  <span
+                    className={cn(
+                      'shrink-0 font-mono text-xl font-semibold tabular-nums',
+                      amountToneClassName
+                    )}
+                  >
+                    {amount}
+                  </span>
+                ) : null}
+              </h1>
+              {amount && !amountInline ? (
+                <div className="mt-1 text-lg font-semibold">{amount}</div>
+              ) : null}
+            </div>
+          ) : null}
+          {primaryAction || overflowMenu ? (
+            <div className="flex shrink-0 items-center gap-2">
+              {primaryAction}
+              {overflowMenu}
+            </div>
+          ) : null}
+        </header>
+      ) : null}
 
       <div
         className={cn(

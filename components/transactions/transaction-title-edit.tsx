@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Pencil } from 'lucide-react'
 import { updateTransactionCustomTitle } from '@/lib/actions/transactions'
 import { transactionDetailHref } from '@/lib/routes'
+import { cn } from '@/lib/utils'
 
 type Props = {
   id: string
@@ -12,6 +13,13 @@ type Props = {
   /** Title of the linked expense (transaction.expenseTitle) — display fallback between customTitle and the raw bank description. */
   fallbackTitle?: string | null
   onSuccess?: (newTitle: string) => void
+  /**
+   * `inline` (default, table rows): title truncates on one line and the raw description is shown
+   * inline as an "Originale:" hint. `detail` (detail page): title wraps across lines and the
+   * inline original hint is suppressed — the detail page shows a dedicated "Descrizione originale"
+   * field instead.
+   */
+  variant?: 'inline' | 'detail'
 }
 
 export function TransactionTitleEdit({
@@ -20,6 +28,7 @@ export function TransactionTitleEdit({
   customTitle,
   fallbackTitle,
   onSuccess,
+  variant = 'inline',
 }: Props) {
   const displayTitle = customTitle ?? fallbackTitle ?? description
   const [isEditing, setIsEditing] = useState(false)
@@ -43,7 +52,13 @@ export function TransactionTitleEdit({
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex min-w-0 items-center gap-1">
           <Link href={transactionDetailHref(id)} className="block min-w-0 flex-1">
-            <span className="block truncate font-medium tracking-tight" title={description}>
+            <span
+              className={cn(
+                'font-medium tracking-tight',
+                variant === 'detail' ? 'block break-words' : 'block truncate',
+              )}
+              title={description}
+            >
               {displayTitle}
             </span>
           </Link>
@@ -59,7 +74,9 @@ export function TransactionTitleEdit({
             <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
           </button>
         </div>
-        {customTitle ? (
+        {/* Inline "Originale:" hint only in the table (`inline`); on the detail page the dedicated
+            "Descrizione originale" field covers it, so it is suppressed to avoid duplication. */}
+        {variant === 'inline' && customTitle ? (
           <span
             className="block truncate text-xs text-muted-foreground"
             title={description}

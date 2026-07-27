@@ -436,12 +436,15 @@ describe('/transactions/[id] page', () => {
     expect(html).toContain('Manuale')
   })
 
-  it('renders transfer amounts with neutral transfer tone in the detail header', async () => {
+  it('shows the amount inside the Dati card, with no colored header on the detail page', async () => {
     pageMocks.getTransactionForDetail.mockResolvedValue(
       makeTransactionDetailRow({ categoryType: 'transfer', amount: '45.30' }),
     )
     const html = await renderTransactionPage()
-    expect(html).toContain('text-total-transfer/80')
+    // The duplicated, ellipsis-clipped header title/amount was removed — the amount lives in the
+    // "Importo" field of the Dati card instead, and the header tone class no longer renders.
+    expect(html).toContain('45,30')
+    expect(html).not.toContain('text-total-transfer/80')
   })
 
   it('renders visible action buttons in the Azioni card instead of an overflow menu', async () => {
@@ -525,7 +528,7 @@ describe('/transactions/[id] page', () => {
     })
   })
 
-  it('shows the group title ahead of the expense title in both the header and "Spesa collegata", while linking to the member expense\'s own detail page (GRP-08)', async () => {
+  it('links "Gruppo collegato" to the group (not the member expense) when the transaction belongs to a group', async () => {
     pageMocks.getTransactionForDetail.mockResolvedValue(
       makeTransactionDetailRow({
         expenseId: 'expense-1',
@@ -536,9 +539,13 @@ describe('/transactions/[id] page', () => {
     )
     const html = await renderTransactionPage()
 
+    expect(html).toContain('Gruppo collegato')
     expect(html).toContain('Cherasco')
     expect(html).not.toContain('Cherasco 57 SRL')
-    expect(html).toContain('href="/expenses/expense-1"')
+    // Reverses the GRP-08 / 65-06 rule: the "Collegamenti" link now points at the group the
+    // transaction's expense belongs to, not the individual member expense.
+    expect(html).toContain('href="/expenses/groups/1"')
+    expect(html).not.toContain('href="/expenses/expense-1"')
   })
 })
 
