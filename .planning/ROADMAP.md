@@ -167,7 +167,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 76-05-PLAN.md — /reimbursements/[id] detail page: header + inline edit-title + reused management panel (RMB-11)
+- [x] 76-05-PLAN.md — /reimbursements/[id] detail page: header + inline edit-title + reused management panel (RMB-11)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 

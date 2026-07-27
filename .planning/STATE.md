@@ -5,15 +5,15 @@ milestone_name: "Reimbursements 1:N"
 current_phase: 76
 current_phase_name: reimbursements-section
 status: executing
-stopped_at: Completed 76-04-PLAN.md
-last_updated: "2026-07-27T11:32:27.919Z"
+stopped_at: Completed 76-05-PLAN.md
+last_updated: "2026-07-27T11:42:05.366Z"
 last_activity: 2026-07-27
 last_activity_desc: Phase 76 execution started
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 17
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 76 (reimbursements-section) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-07-27 — Phase 76 execution started
 
@@ -299,6 +299,7 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: RMB-10 marked complete in Plan 76-02 (search+status-filter+sort+both EmptyState variants delivered); RMB-11 remains Pending until Plan 76-05's detail page.
 - [Phase ?]: 76-03: reimbursementId row-indicator gate + unpair fix — reused pairedReimbursementIdExpr() verbatim; Rule 1 auto-fix cleared reimbursementId in handleUnpair's optimistic state to avoid a stale-link regression.
 - [Phase ?]: ReimbursementPanel variant defaults to 'management' — every existing call site keeps unchanged behavior; only the tx-detail page opts into 'summary'
+- [Phase ?]: 76-05: status Badge omits variant prop entirely (relies on residualBadgeClassName's className via twMerge) to satisfy this plan's own zero-variant= acceptance criterion in reimbursement-detail-client.tsx.
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -413,9 +414,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 76-04-PLAN.md
+**Stopped at:** Completed 76-05-PLAN.md
 
-Last session: 2026-07-27T11:32:27.910Z
+Last session: 2026-07-27T11:42:05.358Z
 
 **Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
 
@@ -497,3 +498,4 @@ Last session: 2026-07-27T11:32:27.910Z
 | Phase 76 P02 | 15min | 2 tasks | 5 files |
 | Phase 76 P03 | ~15min | 3 tasks | 6 files |
 | Phase 76 P04 | 12min | 2 tasks | 2 files |
+| Phase 76 P05 | 35min | 3 tasks | 7 files |
