@@ -388,6 +388,7 @@ export function TransactionDetailClient({
           anchor={{ transactionId: transaction.id }}
           data={reimbursementPanelData}
           onAddRefund={() => setRefundPickerOpen(true)}
+          variant="summary"
         />
       )}
     </div>
