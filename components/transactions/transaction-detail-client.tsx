@@ -267,10 +267,12 @@ export function TransactionDetailClient({
           onSuccess={() => router.refresh()}
         />
       </div>
-      {/* Original bank description shown only once the title has been customized (D-detail):
-          without a custom title the displayed title IS the description, so repeating it here is
-          redundant. Labelled "Descrizione originale". */}
-      {transaction.customTitle ? (
+      {/* Original bank description shown whenever the displayed title differs from the raw
+          description (D-detail): a custom title, OR a group/expense title standing in for it
+          (e.g. a grouped transaction shows the group title) — in all those cases the underlying
+          transaction's own title would otherwise be invisible. Hidden only when the title already
+          IS the raw description. Labelled "Descrizione originale". */}
+      {displayTitle !== transaction.description ? (
         <div className="flex flex-col gap-1">
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Descrizione originale
