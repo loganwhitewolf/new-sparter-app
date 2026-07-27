@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v2.8
 milestone_name: "Reimbursements 1:N"
-current_phase: 76
-status: completed
+status: Awaiting next milestone
 stopped_at: Completed 76-05-PLAN.md
-last_updated: "2026-07-27T12:42:20.059Z"
+last_updated: "2026-07-27T13:55:58.087Z"
 last_activity: 2026-07-27
-last_activity_desc: Phase 76 complete
+last_activity_desc: Milestone v2.8 completed and archived
 progress:
   total_phases: 4
   completed_phases: 4
   total_plans: 17
   completed_plans: 17
+current_phase: 76
 current_phase_name: reimbursements-section
 ---
 
@@ -20,17 +20,17 @@ current_phase_name: reimbursements-section
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-18)
+See: .planning/PROJECT.md (updated 2026-07-27)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 76 — reimbursements-section
+**Current focus:** Planning next milestone (v2.8 Reimbursements 1:N shipped 2026-07-27; git tag pending post-merge to main)
 
 ## Current Position
 
-Phase: 76
-Plan: Not started
-Status: All phases complete
-Last activity: 2026-07-27 — Phase 76 complete
+Phase: Milestone v2.8 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-27 — Milestone v2.8 completed and archived
 
 ## Roadmap (v2.8 — Phases 73-76)
 
@@ -422,8 +422,7 @@ Last session: 2026-07-27T11:42:05.358Z
 
 ## Operator Next Steps
 
-- On the live DB (if not yet applied): `yarn db:migrate && yarn db:seed-extras` — migration 0025 (expense.title → text) + backfill-truncated-expense-titles step from quick task 260703-na4
-- Phases 65-66 (Expense Group) will require a new `drizzle-kit generate` migration once planned — no existing schema entity for group/membership
+- Start the next milestone with /gsd-new-milestone
 
 ## Performance Metrics
 

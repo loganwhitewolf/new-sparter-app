@@ -1,5 +1,30 @@
 # Milestones
 
+## v2.8 Reimbursements 1:N (Shipped: 2026-07-27)
+
+**Phases completed:** 4 phases, 17 plans, 35 tasks
+
+**Key accomplishments:**
+
+- Generalized 1:1 `transaction_pair` into `reimbursement`/`reimbursement_refund` (D-03 XOR anchor), backfilled via a sign-based migration, rewrote `effectiveAmount()`/`isNotSecondary()` to read only the new tables, and proved N=1 + empty-refund correctness with a real-Postgres regression harness across all 10 aggregation call sites.
+- D-02 outflow-anchor/inflow-refund invariant module plus a 5-scenario real-Postgres regression matrix (dinner N=3, both adjacency directions, refund-order determinism, Q3 tie-break) and the first numeric proof of migration 0029's backfill correctness, each scenario asserted across the full 10-function aggregation surface via 73-01's captureAggregationSnapshot harness.
+- Repointed `createPair`/`deletePairByTransactionId` and `getEligibleCounterparts` from `transaction_pair` onto `reimbursement`/`reimbursement_refund` (sign-based anchor resolution, retiring the Phase 50 magnitude tie-break), then executed Plan 73-01's locked drop decision and closed Phase 73 with a green 1756-test suite.
+- Rewrote `effectiveAmount()` from a two-branch earliest-transaction-wins CASE into one uniform proportional-spread SQL expression covering both Expense and Expense Group anchors, with largest-remainder cent exactness and a zero-sum division guard, proven against 8 regression scenarios (19 tests) on real Postgres.
+- `getReimbursementAggregates()` + `computeReimbursementResidual()` deliver residual as a Decimal-safe, on-the-fly computed value (never persisted) — owed/settled/surplus across Expense and Expense Group anchors, IDOR-safe by WHERE-clause construction, proven by 7 real-Postgres tests.
+- buildPairGuardMessage() names the blocking reimbursement by title when N>1 linked refunds exist; N<=1 stays byte-identical to the pre-Phase-74 message — the guard's hard-block condition itself is untouched.
+- Closed both CONFIRMED critical gaps from 74-REVIEW.md (CR-01/CR-02) in the RMB-09 amount-edit pair guard, plus a correlation-ambiguity bug the fix's own real-Postgres tests surfaced in the same code block — the pair guard's refund-edit branch had never been exercised against a real database until this plan.
+- Closed the reimbursement anchor-contamination gap by making the anchor transaction-granular via a new frozen `reimbursement_anchor_transaction` join table, repointed `effectiveAmount()`'s Expense-anchor branch to read it exclusively, and proved a same-merchant re-import can no longer inherit a share of a past refund.
+- Generalized the reimbursement write path from "always create, Expense-anchor only" to create-or-append with either an Expense or Expense-Group anchor, and generalized the eligible-counterparts candidate query from a single self-exclusion id to a set — the backend prerequisite the multi-select picker (Plan 75-04) and unlink lifecycle (Plan 75-03) both build on.
+- Pre-link snapshot table + shared restore helper close the reversibility gap: unlinking a refund or deleting a whole reimbursement now reverts the refund-cleanup recategorization createPairTx applies at link time, not just the link row.
+- getReimbursementList DAL (Expense-anchor-only, shared residual derivation) and the first real `/reimbursements` list page, proven end-to-end on seeded data
+- REIMBURSEMENTS_TABLE_CONFIG + client ReimbursementTable reusing the unified DataTableToolbar/HeaderSortButton system for search, a 3-state status filter, and sortable Titolo/Netto/Data columns, all operating client-side over the already-fetched row set
+- The transactions-table reimbursement badge becomes a Link to /reimbursements/[id], and a "Rimborsi" sidebar item makes the section reachable without typing the URL
+- Split ReimbursementPanel into 'summary' (read-only, links to /reimbursements/[id]) and 'management' (unchanged full add/remove/delete) variants, activated on /transactions/[id]
+- `/reimbursements/[id]` — header (editable title + D-07 status KPI + anchor link) over the reused Plan 76-04 `ReimbursementPanel` full-management variant, closing RMB-11's complete contract
+- Human-approved end-to-end confirmation of the dedicated Rimborsi section, plus two UAT-discovered fixes: a no-404 redirect when a reimbursement is removed, and removal of the synthetic "rimborso &lt;anchor&gt;" refund-title rewrite.
+
+---
+
 ## v2.7 Tag Dedicated View (Shipped: 2026-07-22)
 
 **Phases completed:** 4 phases, 6 plans, 50 commits (`v2.6..v2.7`), 185 files (+5177 / −1251)
