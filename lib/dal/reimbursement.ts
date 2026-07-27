@@ -1,8 +1,8 @@
 import 'server-only'
 
-import { and, asc, eq, sql } from 'drizzle-orm'
+import { and, asc, eq, isNotNull, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { reimbursement, reimbursementRefund, transaction } from '@/lib/db/schema'
+import { expense, reimbursement, reimbursementRefund, transaction } from '@/lib/db/schema'
 import {
   computeReimbursementResidual,
   deriveResidualFromAggregates,
@@ -175,6 +175,21 @@ export async function getReimbursementPanelData(input: {
     return undefined
   }
 
+  return assemblePanelDataForReimbursement(reimbursementRow, input.userId)
+}
+
+/**
+ * Assembles the panel read model's "tail" — refunds + residual, shared by BOTH
+ * `getReimbursementPanelData` (anchor-based lookup) and `getReimbursementPanelDataById` (Phase 76
+ * Plan 05, id-based lookup for the dedicated `/reimbursements/[id]` page) — one assembly path, two
+ * entry points (RMB-11 precision: they can never numerically diverge because they share this
+ * function). Extracted verbatim from `getReimbursementPanelData`'s previous tail —
+ * behavior-preserving, no change to either caller's shape.
+ */
+async function assemblePanelDataForReimbursement(
+  reimbursementRow: { id: number; title: string },
+  userId: string,
+): Promise<ReimbursementPanelData | undefined> {
   const [refundRows, residualResult] = await Promise.all([
     db
       .select({
@@ -188,7 +203,7 @@ export async function getReimbursementPanelData(input: {
       .innerJoin(transaction, eq(transaction.id, reimbursementRefund.transactionId))
       .where(eq(reimbursementRefund.reimbursementId, reimbursementRow.id))
       .orderBy(asc(reimbursementRefund.createdAt), asc(reimbursementRefund.transactionId)),
-    computeReimbursementResidual({ reimbursementId: reimbursementRow.id, userId: input.userId }),
+    computeReimbursementResidual({ reimbursementId: reimbursementRow.id, userId }),
   ])
 
   // residualResult can only be undefined here if the reimbursement vanished between the two
@@ -204,6 +219,164 @@ export async function getReimbursementPanelData(input: {
     refunds: refundRows,
     residual: residualResult.residual,
     state: residualResult.state,
+  }
+}
+
+/**
+ * Id-based counterpart to `getReimbursementPanelData` (Phase 76 Plan 05, RMB-11): resolves the
+ * SAME panel read model directly from a `reimbursementId` rather than an anchor lookup — the
+ * dedicated `/reimbursements/[id]` page already has the id from its route param and would
+ * otherwise have to round-trip through an anchor to reach this data.
+ *
+ * Expense-anchor-only by construction (T-76-05 defense in depth): the WHERE clause requires
+ * `expenseId IS NOT NULL` in addition to the id/userId scope, so a Group-anchored reimbursement id
+ * resolves to `undefined` here too, identically to a foreign-owned id — no distinguishing signal.
+ */
+export async function getReimbursementPanelDataById(input: {
+  userId: string
+  reimbursementId: number
+}): Promise<ReimbursementPanelData | undefined> {
+  const rows = await db
+    .select({ id: reimbursement.id, title: reimbursement.title })
+    .from(reimbursement)
+    .where(
+      and(
+        eq(reimbursement.id, input.reimbursementId),
+        eq(reimbursement.userId, input.userId),
+        isNotNull(reimbursement.expenseId),
+      ),
+    )
+    .limit(1)
+
+  const reimbursementRow = rows[0]
+  if (!reimbursementRow) {
+    return undefined
+  }
+
+  return assemblePanelDataForReimbursement(reimbursementRow, input.userId)
+}
+
+/** The `/reimbursements/[id]` page header read model (Phase 76 Plan 05, RMB-11). */
+export type ReimbursementHeader = {
+  id: number
+  title: string
+  displayTitle: string
+  anchorExpenseId: string
+  anchorTitle: string
+}
+
+/**
+ * IDOR-guard lookup for `/reimbursements/[id]` (T-76-01, T-76-05): resolves the header data the
+ * page's `notFound()` guard is built on. Scoped to `reimbursement.userId = userId AND
+ * reimbursement.expenseId IS NOT NULL` in one WHERE clause — a foreign-owned id AND a
+ * Group-anchored id (even one owned by the SAME user) resolve identically to `undefined`, so the
+ * page can never distinguish "doesn't exist" from "belongs to someone else" or "is a dormant
+ * Group anchor" (mirrors `getTag`'s null-check shape in lib/dal/tags.ts, using this file's own
+ * `undefined` convention rather than tags.ts's `| null`). NEVER throws.
+ */
+export async function getReimbursement(
+  userId: string,
+  reimbursementId: number,
+): Promise<ReimbursementHeader | undefined> {
+  const rows = await db
+    .select({
+      id: reimbursement.id,
+      title: reimbursement.title,
+      anchorExpenseId: expense.id,
+      anchorTitle: expense.title,
+    })
+    .from(reimbursement)
+    .innerJoin(expense, eq(expense.id, reimbursement.expenseId))
+    .where(
+      and(
+        eq(reimbursement.id, reimbursementId),
+        eq(reimbursement.userId, userId),
+        isNotNull(reimbursement.expenseId),
+      ),
+    )
+    .limit(1)
+
+  const row = rows[0]
+  if (!row) {
+    return undefined
+  }
+
+  return {
+    id: row.id,
+    title: row.title,
+    displayTitle: resolveReimbursementDisplayTitle(row.title, row.anchorTitle),
+    anchorExpenseId: row.anchorExpenseId,
+    anchorTitle: row.anchorTitle,
+  }
+}
+
+/** One representative anchor (outflow) transaction for the `RefundPickerDialog` (Phase 76 Plan 05). */
+export type ReimbursementAnchorTransaction = {
+  id: string
+  amount: string
+  occurredAt: Date
+}
+
+/**
+ * Resolves ONE representative member of the D-08 frozen anchor-transaction set
+ * (`reimbursement_anchor_transaction`) for `RefundPickerDialog`'s transaction-anchor prop —
+ * tie-broken `occurredAt ASC, id ASC` (the same convention `pairedCounterpartIdExpr()` in
+ * lib/dal/transactions.ts uses for "the earliest transaction of the anchor Expense"). Any one
+ * member works identically as the anchor argument: `createPairTx`'s anchor branch resolves by the
+ * transaction's OWN `expense_id`, not by which specific member transaction was passed.
+ *
+ * IDOR-safe by construction: scoped through `reimbursement.user_id = userId` in the same join.
+ */
+export async function getReimbursementAnchorTransaction(input: {
+  userId: string
+  reimbursementId: number
+}): Promise<ReimbursementAnchorTransaction | undefined> {
+  const result = await db.execute(sql`
+    SELECT rat.transaction_id, t.amount, t.occurred_at
+    FROM reimbursement_anchor_transaction rat
+    INNER JOIN reimbursement r ON r.id = rat.reimbursement_id
+    INNER JOIN transaction t ON t.id = rat.transaction_id
+    WHERE rat.reimbursement_id = ${input.reimbursementId} AND r.user_id = ${input.userId}
+    ORDER BY t.occurred_at ASC, t.id ASC
+    LIMIT 1
+  `)
+
+  const row = result.rows[0] as { transaction_id: string; amount: string; occurred_at: string } | undefined
+  if (!row) {
+    return undefined
+  }
+
+  return {
+    id: row.transaction_id,
+    amount: row.amount,
+    occurredAt: new Date(row.occurred_at),
+  }
+}
+
+/**
+ * Ownership-scoped title write for `/reimbursements/[id]`'s inline edit (T-76-02, RMB-11): the
+ * UPDATE's WHERE clause includes `reimbursement.userId = input.userId` alongside the id, so a
+ * tampered FormData `reimbursementId` pointing at another user's row updates zero rows and throws
+ * — it can never mutate a foreign reimbursement. Idempotent: calling it twice in a row with the
+ * SAME title value succeeds identically both times (no uniqueness constraint on title).
+ *
+ * Throws (rather than silently no-op'ing) on a zero-row update — mirrors the established
+ * "silent no-op vs. thrown error" split elsewhere in this codebase for a user-initiated
+ * single-row edit that should never legitimately miss once the page's own IDOR guard (getReimbursement)
+ * already passed.
+ */
+export async function updateReimbursementTitle(input: {
+  userId: string
+  reimbursementId: number
+  title: string
+}): Promise<void> {
+  const result = await db
+    .update(reimbursement)
+    .set({ title: input.title })
+    .where(and(eq(reimbursement.id, input.reimbursementId), eq(reimbursement.userId, input.userId)))
+
+  if (result.rowCount === 0) {
+    throw new Error('Rimborso non trovato.')
   }
 }
 
