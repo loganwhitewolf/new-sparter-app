@@ -219,6 +219,11 @@ export async function attachTagToTransaction(
  * test) seeds TWO transactions under one expenseId, and effectiveAmount()'s frozen-set Branch A
  * must see both — omitting either would silently exclude a real member from the spread and every
  * existing regression assertion would read an incomplete (or empty) member set post-CTE-change.
+ *
+ * `anchorTransactionIds` overrides that Expense-wide default with an explicit set — the shape
+ * `createPairTx` actually writes today (ONE transaction: the one the user linked, see
+ * lib/services/transaction-pairs.ts). Needed to reproduce the multi-transaction Expense where only
+ * one transaction is anchored; the default stays migration-0031's backfill shape.
  */
 export async function seedReimbursement(
   db: ReimbursementTestDb,
@@ -227,6 +232,7 @@ export async function seedReimbursement(
     title: string
     expenseId: string
     refundTransactionIds: string[]
+    anchorTransactionIds?: string[]
   },
 ): Promise<{ reimbursementId: number }> {
   const [row] = await db
@@ -238,12 +244,16 @@ export async function seedReimbursement(
     await db.insert(reimbursementRefundTable).values({ reimbursementId: row.id, transactionId })
   }
 
-  const anchorTransactionRows = await db
-    .select({ id: transactionTable.id })
-    .from(transactionTable)
-    .where(eq(transactionTable.expenseId, input.expenseId))
+  const anchorTransactionIds =
+    input.anchorTransactionIds ??
+    (
+      await db
+        .select({ id: transactionTable.id })
+        .from(transactionTable)
+        .where(eq(transactionTable.expenseId, input.expenseId))
+    ).map((row) => row.id)
 
-  for (const { id: transactionId } of anchorTransactionRows) {
+  for (const transactionId of anchorTransactionIds) {
     await db
       .insert(reimbursementAnchorTransactionTable)
       .values({ reimbursementId: row.id, transactionId })
