@@ -38,7 +38,6 @@ import {
   computeSavingsRate,
 } from '@/lib/utils/dashboard'
 import { toDecimal } from '@/lib/utils/decimal'
-import { effectiveAmount, isNotSecondary } from '@/lib/dal/transaction-pairs-sql'
 import {
   DASHBOARD_TOTAL_EXPENSE_STATUSES,
   dateScopedTransactions,
@@ -1437,7 +1436,7 @@ export const getCategoryDetail = cache(
 export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Promise<MonthlyNatureTrendPoint[]> => {
   const { userId } = await verifySession()
   const { from, to } = dashboardPresetToDateRange(preset)
-  const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
+  const monthSql = sql<string>`to_char(${ledgerEntryCash.occurredAt}, 'YYYY-MM')`
   // Direction-aware nature grouping: resolve effective nature via override.natureId or sub.natureId → nature.code
   const natureSql = sql<FlowNature | null>`(
     SELECT n.code FROM nature n
@@ -1452,12 +1451,12 @@ export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Pr
       .select({
         month: monthSql,
         nature: natureSql,
-        amount: sql<string>`coalesce(sum(${effectiveAmount()}), 0)::text`,
+        amount: sql<string>`coalesce(sum(${ledgerEntryCash.amount}), 0)::text`,
         totalNc: sql<number>`count(distinct case when ${expense.status} = '1' and ${expense.subCategoryId} is null then ${expense.id} end)`,
         totalIgn: sql<number>`count(distinct case when ${direction.code} = 'transfer' then ${expense.id} end)`,
       })
-      .from(transactionTable)
-      .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
+      .from(ledgerEntryCash)
+      .leftJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
       .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .leftJoin(category, eq(subCategory.categoryId, category.id))
       .leftJoin(
@@ -1477,10 +1476,11 @@ export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Pr
       .leftJoin(direction, eq(nature.directionId, direction.id))
       .where(
         and(
-          dateScopedTransactions(transactionTable, userId, from, to),
+          // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
+          // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+          dateScopedTransactions(ledgerEntryCash, userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
-          or(isNull(direction.code), ne(direction.code, 'transfer')),
-          isNotSecondary()
+          or(isNull(direction.code), ne(direction.code, 'transfer'))
         )
       )
       .groupBy(monthSql, natureSql)
