@@ -1009,7 +1009,7 @@ export const getCategoriesBreakdown = cache(
         .where(
           and(
             // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
-            // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+            // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
             dateScopedTransactions(ledgerEntryCash, userId, from, to),
             expenseStatusIncludedInDashboardTotals(),
             eq(direction.includedInTotals, true),
@@ -1070,7 +1070,7 @@ export const getCategoryRanking = cache(
         .where(
           and(
             // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
-            // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+            // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
             dateScopedTransactions(ledgerEntryCash, userId, from, to),
             expenseStatusIncludedInDashboardTotals(),
             eq(direction.includedInTotals, true),
@@ -1131,7 +1131,7 @@ export const getCategoryDeviations = cache(
           .where(
             and(
               // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
-              // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+              // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
               dateScopedTransactions(ledgerEntryCash, userId, reference.from, reference.to),
               expenseStatusIncludedInDashboardTotals(),
               eq(direction.includedInTotals, true),
@@ -1168,7 +1168,7 @@ export const getCategoryDeviations = cache(
           .where(
             and(
               // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
-              // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+              // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
               dateScopedTransactions(ledgerEntryCash, userId, baseline.from, baseline.to),
               expenseStatusIncludedInDashboardTotals(),
               eq(direction.includedInTotals, true),
@@ -1304,7 +1304,7 @@ export const getCategoryDetail = cache(
           .where(
             and(
               // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
-              // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+              // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
               dateScopedTransactions(ledgerEntryCash, userId, from, to),
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
@@ -1348,7 +1348,7 @@ export const getCategoryDetail = cache(
           .where(
             and(
               // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
-              // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+              // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
               dateScopedTransactions(ledgerEntryCash, userId, from, to),
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
@@ -1376,8 +1376,8 @@ export const getCategoryDetail = cache(
           // transaction amount below (`amount: transactionTable.amount`) — only the ranking
           // switches to the netted ledger_entry_cash.amount. ledger_entry_cash's rows map 1:1
           // onto transaction rows (no instalment row ever appears in it), so the join also
-          // structurally replaces isNotSecondary(): a refund transaction has no matching
-          // ledger_entry_cash row, so the INNER JOIN itself excludes it (Phase 77, D-11).
+          // structurally replaces the legacy refund-exclusion check: a refund transaction has
+          // no matching ledger_entry_cash row, so the INNER JOIN itself excludes it (Phase 77, D-11).
           .innerJoin(ledgerEntryCash, eq(ledgerEntryCash.id, transactionTable.id))
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
           .leftJoin(expenseGroupMembership, eq(expense.id, expenseGroupMembership.expenseId))
@@ -1477,7 +1477,7 @@ export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Pr
       .where(
         and(
           // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
-          // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+          // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
           dateScopedTransactions(ledgerEntryCash, userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
           or(isNull(direction.code), ne(direction.code, 'transfer'))
