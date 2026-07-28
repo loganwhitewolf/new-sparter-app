@@ -88,8 +88,12 @@ Plans:
   3. Linking a reimbursement to an open plan reduces the base and re-spreads the remaining instalments proportionally.
   4. Editing the amount or date of an amortized transaction is blocked or reconciled, so a plan can never silently desynchronize from its source transaction.
 
-**Plans**: TBD
-**Open for discuss/plan** (details, not architecture): what a reimbursement that exceeds the plan's residual does (clamp, allow negative, or block); the exact write-path invariant for editing an amortized transaction's amount/date/subcategory (model: v2.5 pair-guard, v2.8 D-02).
+**Plans**: 3 plans
+
+Plans:
+- [ ] 78-01-PLAN.md — Tracer: close & collapse a plan end-to-end (D-01, AMORT-04)
+- [ ] 78-02-PLAN.md — Realize via sale + reimburse-redistribute (D-02/D-03, AMORT-05/AMORT-06)
+- [ ] 78-03-PLAN.md — Amount/date edit guard (D-04, AMORT-07)
 
 ### Phase 79: amortizations-registry
 
