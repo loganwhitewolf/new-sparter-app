@@ -42,6 +42,16 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
+### 2026-07-28 — Fineco cleanup seed-extras scoped by created_at cutoff
+
+**Decided:** `merge-duplicate-fineco-platforms` and the delete/reassign half of `ensure-fineco-moneymap-global-format` only touch rows with `created_at < 2026-07-29T00:00:00Z`. Later Fineco platforms/formats created by users after this ship survive future `yarn db:seed-extras` runs. The global Moneymap upsert remains idempotent forever.
+
+**Why:** Without a cutoff, re-running seed-extras would merge/delete a legitimate post-release Fineco platform (or private format on `fineco`).
+
+**Rejected:**
+- One-shot SQL migration — more correct semantically; cutoff chosen as minimal change on this branch
+- Permanent sentinel/ledger — heavier; cutoff is enough for this release
+
 ### 2026-05-20 — Session wrap-up
 
 **Worked on:** `CLAUDE.md` governance — agent conduct, developer profile, writing style, GSD alignment, portable rules, `MEMORY.md` / `ERRORS.md` workflow.
