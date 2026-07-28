@@ -142,7 +142,7 @@ rsc: true
    - Width: Flex (absorbs remainder)
    - Truncation: `max-w-0 w-full` + inner `truncate` (standard no-horizontal-scroll pattern)
    - Link target: `transactionDetailHref(transactionId)` (D-D1)
-   - Font: `text-sm font-medium`
+   - Font: `text-sm` (regular weight, link affordance from color and hover underline)
    - Styling: Hover underline
 
 2. **Transaction Date** (sortable)
@@ -332,9 +332,8 @@ The closed-vs-open distinction must be unambiguous at a glance (REG-03). Followi
 - Table rows: `text-sm` (`14px`), default weight
 
 **Font weights:**
-- Title: `font-semibold` (600)
-- Table row descriptions (links): `font-medium` (500)
-- All other text: default (400)
+- Title and KPI number: `font-semibold` (600)
+- All other text: regular (400)
 
 **Line height:**
 - Prose: `leading-relaxed` (1.625) or default
@@ -350,6 +349,11 @@ The closed-vs-open distinction must be unambiguous at a glance (REG-03). Followi
 - Summary KPI card: `p-4` (16px)
 
 ### Color
+
+**Color ratio (60/30/10 split):**
+- **60% — Dominant neutral surfaces and text:** Zinc base (`bg-card`, `text-foreground`, `border`). Page background, table cells, paragraph text, open-status badges (primary variant).
+- **30% — Secondary/muted for closed rows and chrome:** Muted secondary tones (`text-muted-foreground`, `variant="secondary"` badges for closed plans), borders, toolbar backgrounds.
+- **10% — Accent reserved for visual emphasis:** The open-status badge (primary/default variant) and the summary KPI number (`text-2xl font-semibold`). Use sparingly for unambiguous focus.
 
 **Palette:**
 - Base: Zinc (shadcn/ui new-york preset)
@@ -666,6 +670,62 @@ All filtering and sorting happens client-side (in `AmortizationTable`):
 - Global cassa/competenza switch and accrual lens UI (LENS-01/02/04/05)
 - `/amortizations/[id]` plan detail page with full instalment schedule (D-D1 explicitly defers)
 - Lens-aware year/month selectors
+
+---
+
+## UI Considerations
+
+> Shape-rooted STATE coverage from the UI-consideration probe (`--auto`, 6 surfaces / 39 applicable considerations). `covered` = a concrete acceptance truth the planner lifts into `must_haves.truths`. `backstop` = a held-out UI-state check the planner must wire, else the honest-verifier routes it to `human_needed` at verify time (never a silent pass). `unresolved` = the planner must treat it as an explicit assumption. Empty/error COPY lives in `## Copywriting (Italian, product surface)` — referenced here, not restated (de-dup).
+
+### E1 — Summary header KPI ("Netto residuo aperto")
+- Populated: renders the formatted EUR sum of `netValue` across `status === 'open'` plans, computed with Decimal.js.
+- Empty / zero-one-many: shows `€0,00` when there are no open plans (the aggregate is a single figure regardless of plan count).
+- Error: on non-finite / failed Decimal arithmetic, shows the raw value suffixed with `EUR` (surfaces the bug; never silently coerces to `€0,00`).
+- { statement: "KPI card has a defined loading/skeleton treatment during the RSC fetch", verification: backstop }
+- { statement: "KPI figure remains correct under partial/inconsistent upstream aggregate data", verification: backstop }
+- { statement: "KPI number does not overflow or clip its card at very large magnitudes", verification: backstop }
+
+### E2 — Registry table
+- Empty: renders `EmptyState('no-data')` when the account has no plans (copy per `## Copywriting`).
+- Populated: renders all REG-01 columns (description link, date, initial, consumed, signed net w/ tone class, months `X/N` + progress bar, status badge, actions) at typical volume.
+- Partial: zero-remaining-months plan shows `0/N` (bar full) and stays open; a fully-consumed closed plan shows `N/N` with `€0,00` net.
+- Overflow: description cell uses the no-horizontal-scroll truncate pattern (`max-w-0 w-full` + inner `truncate`); numeric/date/status cells `whitespace-nowrap`.
+- Long-text: overly long descriptions truncate with a `title` tooltip; full text on the transaction detail page.
+- Error: an RSC/data failure and a failed close both surface visibly (close failure → toast, table not refreshed until success).
+- { statement: "Table has a defined loading/skeleton treatment during the RSC fetch", verification: backstop }
+- { statement: "Row/count copy reads correctly at zero, one, and many plans (no singular/plural mismatch)", verification: backstop }
+
+### E3 — Toolbar (search + status filter + sort)
+- Empty (unfilled): search input shows the placeholder `Cerca per descrizione...`; no filter applied beyond the open-only default.
+- Populated / default: open-only view sorted by `remainingMonths` ascending (D-C1/D-C2), URL-backed (`q`, `status`, `sort`, `dir`).
+- { statement: "Toolbar controls have a defined loading/disabled state while the underlying list is not ready", verification: backstop }
+- { statement: "A filter/sort combination that can produce no client-side error is confirmed (client-side filtering cannot throw on user input)", verification: backstop }
+- { statement: "Toolbar reflows/stacks without clipping when controls exceed the container width (mobile/tablet)", verification: backstop }
+- { statement: "A very long search query is handled (input scroll/truncation) without breaking the toolbar layout", verification: backstop }
+- { statement: "Partial/one-of controls (e.g. only search, only status) behave correctly in combination", verification: backstop }
+- { statement: "Reads correctly at zero/one/many available filter options", verification: backstop }
+
+### E4 — Row actions (open plans only)
+- Empty: closed plans render an empty actions cell (D-A3) — no "Chiudi" / "Realizza con vendita".
+- Populated: open plans render "Chiudi" (opens the existing `CloseAmortizationDialog`) and "Realizza con vendita" (navigates to the transaction detail page).
+- Overflow: inline buttons when space permits, falling back to a row (three-dot) dropdown when constrained.
+- Error: a failed close surfaces via the dialog's error toast; the list is not refreshed until success.
+- { statement: "Action buttons have a defined pending/disabled state while the close server action is in flight", verification: backstop }
+- { statement: "Actions behave correctly for a plan in a partial/edge lifecycle state (e.g. zero remaining months, still open)", verification: backstop }
+- { statement: "Action group reads correctly whether a row has one or both actions available", verification: backstop }
+- { statement: "Action labels/buttons do not overflow the actions cell under narrow layouts", verification: backstop }
+
+### E5 — Status badge ("Aperto" / "Chiuso")
+- ⚠ unresolved — the probe left this element `unclassified`. It is a trivial stateless display indicator (`<Badge variant={open?'default':'secondary'}>`); the planner must treat its state coverage as an explicit assumption (the only variation is the open-vs-closed variant already specified under `### Status Badge (D-C3)`).
+
+### E6 — Empty-state surface
+- Empty: two variants — `no-data` (account has zero plans) and `no-result` (search/filter yields nothing); copy per `## Copywriting`.
+- Populated: renders the correct variant's message + hint centered in the table region.
+- Zero-one-many: distinguishes zero plans (`no-data`) from zero-after-filtering (`no-result`), so the user is not told they have no plans when a filter is hiding them.
+- { statement: "Empty-state surface has a defined treatment while the list is still loading (does not flash the no-data state before data arrives)", verification: backstop }
+- { statement: "Empty-state surface degrades gracefully on a data-load error (distinct from no-data)", verification: backstop }
+- { statement: "Empty-state layout does not overflow/clip on small viewports", verification: backstop }
+- { statement: "Empty-state handles partial data (e.g. some rows filtered) without mis-rendering", verification: backstop }
 
 ---
 
