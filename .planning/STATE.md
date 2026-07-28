@@ -5,15 +5,15 @@ milestone_name: Amortization
 current_phase: 78
 current_phase_name: plan-lifecycle-and-reconciliation
 status: executing
-stopped_at: Completed 78-01-PLAN.md
-last_updated: "2026-07-28T14:34:57.716Z"
+stopped_at: Completed 78-03-PLAN.md
+last_updated: "2026-07-28T14:40:42.214Z"
 last_activity: 2026-07-28
 last_activity_desc: Phase 78 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 ## Current Position
 
 Phase: 78 (plan-lifecycle-and-reconciliation) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-28 — Phase 78 execution started
 
@@ -393,6 +393,7 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: Task 1 (diagnose collateral unit-test breakage) required no changes: full suite already green thanks to 77-05's tags-dal.test.ts mock fix
 - [Phase ?]: 77-06: reworded dashboard.ts:487 comment quoting isNotSecondary() literally to close the repo-wide zero-hit grep gate for LENS-03/D-11
 - [Phase ?]: closePlanTx (D-01/AMORT-04): collapses future instalments (occurredAt >= closure-month start, inclusive) onto ONE closure-month row, expenseId sourced from a deleted future instalment since amortization_plan has no expenseId column (Phase 77 D-13: all instalments of a plan share one Standalone Expense)
+- [Phase ?]: 78-03: amortizationPlanId correlated subquery mirrors transactionListSelect's raw-SQL-identifier style (no amortizationPlan schema import — would be unused); guard runs BEFORE the amount-only pair-guard so it also covers occurredAt-only edits; loose != null comparison keeps every pre-existing test unmodified
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -530,9 +531,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 78-01-PLAN.md
+**Stopped at:** Completed 78-03-PLAN.md
 
-Last session: 2026-07-28T14:34:57.706Z
+Last session: 2026-07-28T14:40:42.205Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
@@ -621,3 +622,4 @@ Last session: 2026-07-28T14:34:57.706Z
 | Phase 77 P05 | 35min | 2 tasks | 4 files |
 | Phase 77 P06 | 20min | 2 tasks | 1 files |
 | Phase 78 P01 | 20min | 2 tasks | 11 files |
+| Phase 78 P03 | 15min | 2 tasks | 2 files |
