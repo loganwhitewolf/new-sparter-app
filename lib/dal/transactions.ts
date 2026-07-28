@@ -602,7 +602,14 @@ export type ManualTransactionData = {
   subCategoryId?: number
 }
 
-export async function insertManualTransaction(
+/**
+ * Tx-composable core of manual transaction creation (D-10): performs the SAME expense+transaction
+ * inserts against the passed-in `tx` — no internal db.transaction call — so callers can compose it
+ * inside a larger db.transaction (e.g. the combined create+amortize path, alongside activatePlanTx),
+ * matching applyDetachCleanupTx's own tx-core-plus-thin-wrapper pattern.
+ */
+export async function insertManualTransactionTx(
+  tx: DbOrTx,
   data: ManualTransactionData,
 ): Promise<{ transactionId: string; expenseId: string }> {
   const { computeDescriptionHash, computeTransactionHash } = await import(
@@ -619,36 +626,40 @@ export async function insertManualTransaction(
     description: data.description,
   })
 
-  await db.transaction(async (tx) => {
-    await tx.insert(expense).values({
-      id: expenseId,
-      userId: data.userId,
-      title: data.description,
-      descriptionHash,
-      subCategoryId: data.subCategoryId ?? null,
-      totalAmount: data.amount,
-      transactionCount: 1,
-      firstTransactionAt: data.occurredAt,
-      lastTransactionAt: data.occurredAt,
-      status: data.subCategoryId ? '3' : '1',
-    })
+  await tx.insert(expense).values({
+    id: expenseId,
+    userId: data.userId,
+    title: data.description,
+    descriptionHash,
+    subCategoryId: data.subCategoryId ?? null,
+    totalAmount: data.amount,
+    transactionCount: 1,
+    firstTransactionAt: data.occurredAt,
+    lastTransactionAt: data.occurredAt,
+    status: data.subCategoryId ? '3' : '1',
+  })
 
-    await tx.insert(transaction).values({
-      id: transactionId,
-      userId: data.userId,
-      fileId: null,
-      expenseId,
-      transactionHash,
-      description: data.description,
-      descriptionHash,
-      amount: data.amount,
-      currency: data.currency,
-      occurredAt: data.occurredAt,
-      rowIndex: 0,
-    })
+  await tx.insert(transaction).values({
+    id: transactionId,
+    userId: data.userId,
+    fileId: null,
+    expenseId,
+    transactionHash,
+    description: data.description,
+    descriptionHash,
+    amount: data.amount,
+    currency: data.currency,
+    occurredAt: data.occurredAt,
+    rowIndex: 0,
   })
 
   return { transactionId, expenseId }
+}
+
+export async function insertManualTransaction(
+  data: ManualTransactionData,
+): Promise<{ transactionId: string; expenseId: string }> {
+  return db.transaction((tx) => insertManualTransactionTx(tx, data))
 }
 
 export async function updateTransactionCustomTitle(

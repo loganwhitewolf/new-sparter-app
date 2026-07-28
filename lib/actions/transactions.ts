@@ -12,6 +12,7 @@ import {
 } from '@/lib/validations/transactions'
 import {
   insertManualTransaction,
+  insertManualTransactionTx,
   mapParsedTransactionFiltersToDal,
   updateTransactionCustomTitle as updateTransactionCustomTitleDAL,
   getTransactions,
@@ -22,6 +23,7 @@ import {
   DetachTransactionError,
   detachTransactionToDedicatedExpense,
 } from '@/lib/services/transaction-detach'
+import { ActivatePlanError, activatePlanTx } from '@/lib/services/amortization-activation'
 import { db } from '@/lib/db'
 import { toDbDecimal } from '@/lib/utils/decimal'
 import type { ActionState } from '@/lib/validations/expense'
@@ -38,10 +40,15 @@ type LoadMoreTransactionsResult = {
   error: string | null
 }
 
+export type CreateTransactionResult = ActionState & {
+  amortized?: boolean
+  months?: number
+}
+
 export async function createTransaction(
-  _prev: ActionState,
+  _prev: CreateTransactionResult,
   formData: FormData,
-): Promise<ActionState> {
+): Promise<CreateTransactionResult> {
   const parsed = CreateTransactionSchema.safeParse({
     description: formData.get('description'),
     amount: formData.get('amount'),
@@ -50,6 +57,8 @@ export async function createTransaction(
     subCategoryId: formData.get('subCategoryId')
       ? Number(formData.get('subCategoryId'))
       : undefined,
+    amortizationEnabled: formData.get('amortizationEnabled'),
+    amortizationMonths: formData.get('amortizationMonths'),
   })
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message }
@@ -61,6 +70,27 @@ export async function createTransaction(
     if (Number.isNaN(occurredAt.getTime())) {
       return { error: 'Data non valida.' }
     }
+
+    if (parsed.data.amortizationEnabled) {
+      // D-10: create + detach + plan + instalment materialisation run in ONE atomic
+      // db.transaction, reusing activatePlanTx unmodified — a guard failure (not-outflow,
+      // too-small) or any write error rolls back the transaction insert too (T-77-10).
+      const months = parsed.data.amortizationMonths!
+      await db.transaction(async (tx) => {
+        const { transactionId } = await insertManualTransactionTx(tx, {
+          userId,
+          description: parsed.data.description,
+          amount: normalizedAmount,
+          currency: parsed.data.currency,
+          occurredAt,
+          subCategoryId: parsed.data.subCategoryId,
+        })
+        await activatePlanTx(tx, { userId, transactionId, months })
+      })
+      revalidateCategorizationSurfaces()
+      return { error: null, amortized: true, months }
+    }
+
     await insertManualTransaction({
       userId,
       description: parsed.data.description,
@@ -69,7 +99,10 @@ export async function createTransaction(
       occurredAt,
       subCategoryId: parsed.data.subCategoryId,
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof ActivatePlanError) {
+      return { error: error.message }
+    }
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
   revalidateCategorizationSurfaces()
