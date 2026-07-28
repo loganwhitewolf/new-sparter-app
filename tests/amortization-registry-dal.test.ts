@@ -12,6 +12,7 @@ import {
   amortizationPlan as amortizationPlanTable,
   transaction as transactionTable,
 } from '@/lib/db/schema'
+import { closePlanTx } from '@/lib/services/amortization-lifecycle'
 import { materializeInstalments } from '@/lib/services/amortization-math'
 import { toDecimal } from '@/lib/utils/decimal'
 import {
@@ -311,6 +312,72 @@ describeIfReachable(
 
       expect(fallbackRow).toBeDefined()
       expect(fallbackRow!.displayTitle).toBe('Fallback bank description')
+    })
+
+    it('getAmortizationPlanList reflects a plan closed via closePlanTx — the read path and Phase 78 write path never numerically diverge (Plan 79-02, REG-02)', async () => {
+      const totalAmount = '-600.00'
+      const { expenseId, transactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId,
+        amount: totalAmount,
+        occurredAt: daysFromNow(-60),
+        title: 'DAL/lifecycle consistency plan',
+      })
+      const pastCount = 2
+      const futureCount = 4
+      const instalments = buildPastFutureInstalments(totalAmount, pastCount, futureCount)
+      const { planId } = await seedAmortizationPlan(db, {
+        userId,
+        transactionId,
+        expenseId,
+        months: pastCount + futureCount,
+        instalments,
+      })
+
+      const beforeRows = await getAmortizationPlanList(userId)
+      const beforeRow = beforeRows.find((r) => r.id === planId)
+      expect(beforeRow).toBeDefined()
+      expect(beforeRow!.status).toBe('open')
+
+      // Call closePlanTx (Phase 78's already-regression-proven write path) DIRECTLY against the
+      // same harness db the mocked '@/lib/db' import resolves to — bypassing the action layer,
+      // same technique as tests/amortization-lifecycle.test.ts.
+      const closureMonth = new Date()
+      const closeResult = await closePlanTx(db, { userId, planId, closureMonth })
+
+      const afterRows = await getAmortizationPlanList(userId)
+      const afterRow = afterRows.find((r) => r.id === planId)
+      expect(afterRow).toBeDefined()
+      expect(afterRow!.status).toBe('closed')
+
+      // remainingMonths reflects the collapsed schedule: the single closure instalment is dated
+      // `closureMonth` (today, at test time). Whether it lands strictly before Postgres's
+      // CURRENT_DATE boundary or not is a real-clock edge case (not deterministic across
+      // timezones/midnight-crossing) — either 0 (closure instalment itself already counts as
+      // consumed) or 1 (it is the sole remaining future instalment) is valid; the pre-close
+      // futureCount of 4 is definitely NOT valid after collapse.
+      expect([0, 1]).toContain(afterRow!.remainingMonths)
+
+      // Independent consistency proof: the past instalments are untouched by closePlanTx (D-01),
+      // so their sum is a known-good baseline; closeResult.remainingValue (Phase 78's own return
+      // value) is the collapsed closure instalment's amount. Depending on which side of the
+      // CURRENT_DATE boundary the closure instalment falls, it is either excluded from or
+      // included in the DAL's consumedAmount — both branches are checked against the SAME two
+      // known quantities (past-instalment sum + closeResult.remainingValue), proving
+      // getAmortizationPlanList's SQL-computed consumed/net values are numerically consistent
+      // with what closePlanTx itself wrote, never diverging.
+      const pastInstalmentsSum = instalments
+        .slice(0, pastCount)
+        .reduce((sum, i) => sum.plus(toDecimal(i.amount)), toDecimal('0'))
+      const closureAmount = toDecimal(closeResult.remainingValue)
+
+      const expectedConsumed =
+        afterRow!.remainingMonths === 0 ? pastInstalmentsSum.plus(closureAmount) : pastInstalmentsSum
+      expect(toDecimal(afterRow!.consumedAmount).equals(expectedConsumed)).toBe(true)
+
+      const expectedNet = toDecimal(totalAmount).minus(expectedConsumed)
+      expect(toDecimal(afterRow!.netValue).equals(expectedNet)).toBe(true)
+      expect(toDecimal(afterRow!.initialAmount).equals(toDecimal(totalAmount))).toBe(true)
     })
   },
 )
