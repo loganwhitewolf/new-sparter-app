@@ -142,7 +142,11 @@ export async function seedExpenseWithTransaction(
   db: ReimbursementTestDb,
   input: {
     userId: string
-    subCategoryId: number
+    // CR-01 regression (Phase 77 review-fix): `null` seeds a genuinely uncategorized
+    // expense/transaction pair, exercising the same path that used to be mislabeled as
+    // "categorized" by activatePlanTx -> applyDetachCleanupTx. Every pre-existing caller
+    // passes a number, so status stays '3' for them — unchanged behavior.
+    subCategoryId: number | null
     amount: string
     occurredAt: Date
     title?: string
@@ -162,7 +166,10 @@ export async function seedExpenseWithTransaction(
     transactionCount: 1,
     firstTransactionAt: input.occurredAt,
     lastTransactionAt: input.occurredAt,
-    status: '3', // manually categorized — included in DASHBOARD_TOTAL_EXPENSE_STATUSES
+    // manually categorized ('3', included in DASHBOARD_TOTAL_EXPENSE_STATUSES) when a
+    // subCategoryId is given, uncategorized ('1') otherwise — kept consistent with the
+    // subCategoryId column so the fixture itself never produces the CR-01 invariant violation.
+    status: input.subCategoryId != null ? '3' : '1',
   })
 
   await db.insert(transactionTable).values({

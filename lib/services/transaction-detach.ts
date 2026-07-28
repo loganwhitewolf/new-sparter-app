@@ -100,7 +100,13 @@ export async function applyDetachCleanupTx(
 
   const sourceExpenseId = row.expenseId
   const descriptionHash = syntheticDescriptionHash(input.transactionId)
-  const hasSubCategoryId = input.subCategoryId !== undefined
+  // CR-01 fix: gate on "actually has a category" (non-null), not merely "key was supplied".
+  // Callers such as activatePlanTx always pass the `subCategoryId` key — including an explicit
+  // `null` when the source expense was uncategorized — so gating on `!== undefined` treated an
+  // uncategorized source as categorized. `!= null` also matches `undefined` (loose equality), so
+  // callers that omit the key entirely (detachTransactionToDedicatedExpense) keep their existing
+  // behavior unchanged.
+  const hasSubCategoryId = input.subCategoryId != null
 
   if ((row.expenseTransactionCount ?? 0) <= 1) {
     // Single-transaction source: re-hash the existing expense row in place.

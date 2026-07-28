@@ -11,6 +11,7 @@ import { and, count, eq } from 'drizzle-orm'
 import { afterAll, describe, expect, it, vi } from 'vitest'
 import type { activatePlanTx as ActivatePlanTx } from '@/lib/services/amortization-activation'
 import type { reverseDetachTx as ReverseDetachTx } from '@/lib/services/transaction-detach'
+import type { getUncategorizedCount as GetUncategorizedCount } from '@/lib/dal/dashboard'
 import {
   amortizationInstalment as amortizationInstalmentTable,
   amortizationPlan as amortizationPlanTable,
@@ -24,7 +25,11 @@ import {
   resetReimbursementFixtures,
   type ReimbursementTestDb,
 } from './helpers/reimbursement-test-db'
-import { seedExpenseWithTransaction, seedMinimalTaxonomy, seedUser } from './fixtures/reimbursement-seed'
+import {
+  seedExpenseWithTransaction,
+  seedMinimalTaxonomy,
+  seedUser,
+} from './fixtures/reimbursement-seed'
 
 const harness = await connectReimbursementTestDb()
 
@@ -33,6 +38,7 @@ const harness = await connectReimbursementTestDb()
 // process.env.DATABASE_URL — mock it before the dynamic import.
 let activatePlanTx: typeof ActivatePlanTx
 let reverseDetachTx: typeof ReverseDetachTx
+let getUncategorizedCount: typeof GetUncategorizedCount
 
 if (harness.ok) {
   vi.doMock('@/lib/db', () => ({ db: harness.db }))
@@ -41,6 +47,11 @@ if (harness.ok) {
   activatePlanTx = activationModule.activatePlanTx
   const detachModule = await import('@/lib/services/transaction-detach')
   reverseDetachTx = detachModule.reverseDetachTx
+  // CR-01 regression (Phase 77 review-fix): lib/dal/dashboard.ts's getUncategorizedCount is a
+  // plain (non-cache()-wrapped) export, so importing it against the same harness-db-backed
+  // module registry needs no additional 'react' mock beyond what's already set up above.
+  const dashboardModule = await import('@/lib/dal/dashboard')
+  getUncategorizedCount = dashboardModule.getUncategorizedCount
 } else {
   console.warn(
     '[amortization-undo] Local Postgres unreachable — run `yarn db:up` to enable this suite. Skipping.',
@@ -273,5 +284,54 @@ describeIfReachable('reverseDetachTx (Phase 77, D-09 undo)', () => {
           and(eq(amortizationPlanTable.transactionId, transactionId), eq(amortizationPlanTable.userId, userId)),
         ),
     ).toHaveLength(1)
+  })
+})
+
+describeIfReachable('activatePlanTx (Phase 77 review-fix, CR-01 regression)', () => {
+  it('keeps an uncategorized source transaction uncategorized after activation, and it stays visible in the uncategorized-count widget query', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    // Taxonomy is seeded even though this scenario never assigns a subcategory — the harness
+    // truncates direction/nature/category/sub_category per test (resetReimbursementFixtures),
+    // and other fixtures in this file rely on the same rebuild-per-test convention.
+    await seedMinimalTaxonomy(db, userId)
+    const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
+
+    // CR-01 root cause: activatePlanTx always passed `subCategoryId` through to
+    // applyDetachCleanupTx (even when `null`), which used to gate on `!== undefined` — treating
+    // an uncategorized source as "categorized". Seed a transaction whose expense genuinely has
+    // no subcategory (status '1', subCategoryId null) to prove the fix.
+    const { expenseId: originalExpenseId, transactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: null,
+      amount: '-250.00',
+      occurredAt,
+      title: 'Uncategorized outflow',
+    })
+
+    const activation = await activatePlanTx(db, { userId, transactionId, months: 5 })
+    // seedExpenseWithTransaction creates a single-transaction (transactionCount=1) expense, so
+    // applyDetachCleanupTx's 1:1 branch re-hashes it IN PLACE — same expense id.
+    expect(activation.expenseId).toBe(originalExpenseId)
+
+    const expenseRows = await db
+      .select()
+      .from(expenseTable)
+      .where(eq(expenseTable.id, activation.expenseId))
+    expect(expenseRows).toHaveLength(1)
+    // The invariant CR-01 violated: an uncategorized source must produce an uncategorized
+    // Standalone Expense — never `{ subCategoryId: null, status: '3' }`.
+    expect(expenseRows[0]?.subCategoryId).toBeNull()
+    expect(expenseRows[0]?.status).toBe('1')
+
+    // Same WHERE shape as getUncategorizedCount's own query (lib/dal/dashboard.ts) — the
+    // resulting expense must actually surface in the "Da categorizzare" dashboard widget, not
+    // just look right on direct inspection.
+    const from = new Date(2026, 0, 1)
+    const to = new Date(2026, 0, 31)
+    const uncategorizedCount = await getUncategorizedCount(userId, from, to)
+    expect(uncategorizedCount).toBe(1)
   })
 })
