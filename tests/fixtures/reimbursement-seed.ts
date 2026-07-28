@@ -4,6 +4,8 @@
 import { randomUUID } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import {
+  amortizationInstalment as amortizationInstalmentTable,
+  amortizationPlan as amortizationPlanTable,
   category as categoryTable,
   direction as directionTable,
   expense as expenseTable,
@@ -337,4 +339,57 @@ export async function seedReimbursementOnGroup(
   }
 
   return { reimbursementId: row.id }
+}
+
+/**
+ * Inserts one amortization_plan row + N amortization_instalment rows DIRECTLY (Phase 77,
+ * ADR 0019 D-12) — mirrors seedExpenseWithTransaction's direct-insert style, NOT the production
+ * activatePlanTx write path, so the regression fixture stays independent of the code under test.
+ * totalAmount defaults to the sum of the given instalments (Decimal.js, never native +) unless
+ * overridden.
+ */
+export async function seedAmortizationPlan(
+  db: ReimbursementTestDb,
+  input: {
+    userId: string
+    transactionId: string
+    expenseId: string
+    months: number
+    instalments: Array<{ date: Date; amount: string }>
+    totalAmount?: string
+  },
+): Promise<{ planId: string }> {
+  const planId = randomUUID()
+  const totalAmount = toDbDecimal(
+    toDecimal(
+      input.totalAmount ??
+        input.instalments
+          .reduce((sum, instalment) => sum.plus(toDecimal(instalment.amount)), toDecimal('0'))
+          .toString(),
+    ),
+  )
+
+  await db.insert(amortizationPlanTable).values({
+    id: planId,
+    userId: input.userId,
+    transactionId: input.transactionId,
+    months: input.months,
+    startDate: input.instalments[0]!.date,
+    status: 'open',
+    totalAmount,
+  })
+
+  for (const [index, instalment] of input.instalments.entries()) {
+    await db.insert(amortizationInstalmentTable).values({
+      id: randomUUID(),
+      userId: input.userId,
+      planId,
+      instalmentNumber: index + 1,
+      expenseId: input.expenseId,
+      amount: toDbDecimal(toDecimal(instalment.amount)),
+      occurredAt: instalment.date,
+    })
+  }
+
+  return { planId }
 }

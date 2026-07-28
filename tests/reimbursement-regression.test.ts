@@ -39,6 +39,7 @@ import {
 } from './helpers/reimbursement-test-db'
 import {
   attachTagToTransaction,
+  seedAmortizationPlan,
   seedExpenseGroup,
   seedExpenseWithTransaction,
   seedMinimalTaxonomy,
@@ -48,6 +49,7 @@ import {
   seedTag,
   seedUser,
 } from './fixtures/reimbursement-seed'
+import { materializeInstalments } from '@/lib/services/amortization-math'
 
 vi.mock('@/lib/dal/auth', () => ({ verifySession: vi.fn() }))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
@@ -1209,3 +1211,63 @@ describeIfReachable(
     })
   },
 )
+
+describeIfReachable('amortization cash-lens byte-identical (Phase 77, ADR 0019 D-12)', () => {
+  it('getOverviewAmountTotals.totalOut is unchanged before and after an amortization plan exists on the transaction', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const { tagId } = await seedTag(db, { userId, name: 'Amortization probe' })
+
+    const dateRange = dashboardPresetToDateRange('last-month')
+    const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 14, 12, 0, 0)
+
+    // A plain outflow transaction, no amortization yet.
+    const { expenseId, transactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-1000.00',
+      occurredAt,
+      title: 'Amortization probe purchase',
+    })
+
+    const before = await captureAggregationSnapshot({
+      harnessDb: db,
+      userId,
+      dateRange,
+      categoryId: taxonomy.essentialCategoryId,
+      tagId,
+    })
+    const beforeTotals = before.getOverviewAmountTotals as { totalOut: string }
+
+    // Activate a 3-month plan on the SAME transaction (fixture-inserted, not via activatePlanTx —
+    // this suite proves the READ path, independent of the write path under test elsewhere).
+    const instalments = materializeInstalments('-1000.00', occurredAt, 3)
+    await seedAmortizationPlan(db, {
+      userId,
+      transactionId,
+      expenseId,
+      months: 3,
+      instalments,
+    })
+
+    const after = await captureAggregationSnapshot({
+      harnessDb: db,
+      userId,
+      dateRange,
+      categoryId: taxonomy.essentialCategoryId,
+      tagId,
+    })
+    const afterTotals = after.getOverviewAmountTotals as { totalOut: string }
+
+    // The amortized transaction's full original amount still counts once, via ledger_entry_cash,
+    // unchanged by the existence of instalment rows (ledger_entry_cash reads FROM transaction,
+    // not FROM amortization_instalment — the accrual lens is what branches on instalments, and
+    // it is unconsumed in Phase 77).
+    expect(toDecimal(afterTotals.totalOut).equals(toDecimal(beforeTotals.totalOut))).toBe(true)
+    expect(toDecimal(afterTotals.totalOut).equals(toDecimal('1000.00'))).toBe(true)
+  })
+})

@@ -179,6 +179,8 @@ const FIXTURE_TABLES = [
   'tag',
   'reimbursement_refund',
   'reimbursement',
+  'amortization_instalment',
+  'amortization_plan',
   'transaction',
   'expense_group_membership',
   'expense_group',

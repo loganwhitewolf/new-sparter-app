@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ExternalLink, MoreHorizontal, Split, Tag, Unlink } from 'lucide-react'
+import { CalendarClock, ExternalLink, MoreHorizontal, Split, Tag, Unlink } from 'lucide-react'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 import { toDecimal } from '@/lib/utils/decimal'
 import { toast } from 'sonner'
@@ -11,6 +11,7 @@ import { TransactionBulkActionBar } from '@/components/transactions/transaction-
 import { TransactionTitleEdit } from '@/components/transactions/transaction-title-edit'
 import { CounterpartPickerDialog } from '@/components/transactions/counterpart-picker-dialog'
 import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
+import { ActivateAmortizationDialog } from '@/components/transactions/activate-amortization-dialog'
 import { ReimbursementRowIndicator } from '@/components/transactions/reimbursement-row-indicator'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { BulkCategorizeDialog } from '@/components/expenses/bulk-categorize-dialog'
@@ -158,6 +159,14 @@ export function TransactionTable({
     transactionId: string
     defaultTitle: string
   } | null>(null)
+  // Amortization row-action target (Phase 77, D-01 tracer). Eligibility (D-04..D-07 +
+  // outflow-only) is server-gated inside createAmortizationPlan; this entry point's own gate is
+  // widened in the eligibility-guards task to reflect the row's own guard fields.
+  const [amortizeTarget, setAmortizeTarget] = useState<{
+    transactionId: string
+    amount: string
+    occurredAt: Date
+  } | null>(null)
 
   const { activeSort, activeDir, onSort, isRestoring } = useToolbarSort(route)
 
@@ -300,6 +309,27 @@ export function TransactionTable({
               ...t,
               expenseId: newExpense.id,
               expenseTitle: newExpense.title,
+              expenseStatus: '1' as const,
+              expenseCategoryName: null,
+              expenseSubCategoryName: null,
+              expenseTransactionCount: 1,
+            }
+          : t,
+      ),
+    )
+  }
+
+  /**
+   * Optimistically reflects the activation's forced detach (D-03) in the local list: the
+   * transaction now points at a new Standalone Expense, same shape as markExpenseDetached.
+   */
+  function markTransactionAmortized(transactionId: string, newExpense: { id: string }) {
+    setLoadedTransactions((prev) =>
+      prev.map((t) =>
+        t.id === transactionId
+          ? {
+              ...t,
+              expenseId: newExpense.id,
               expenseStatus: '1' as const,
               expenseCategoryName: null,
               expenseSubCategoryName: null,
@@ -674,6 +704,28 @@ export function TransactionTable({
                           Spesa a sé (non aggregare)
                         </DropdownMenuItem>
                       )}
+                      {/* Amortization row action (Phase 77, D-01 tracer). Gated here on
+                          expenseId truthy + outflow-only, matching what the row already carries;
+                          the full D-04..D-07 server-checked eligibility read (reimbursement /
+                          already-amortized / expense-group / too-small) lands in the guards
+                          task next. */}
+                      {transaction.expenseId && transaction.categoryType !== 'in' && (
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault()
+                            setAmortizeTarget({
+                              transactionId: transaction.id,
+                              amount: transaction.amount,
+                              occurredAt: transaction.occurredAt,
+                            })
+                            setOpenDropdownId(null)
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <CalendarClock className="h-4 w-4" />
+                          Ammortizza
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       <DeleteTransactionMenuItem
                         transactionId={transaction.id}
@@ -882,6 +934,20 @@ export function TransactionTable({
             markExpensesCategorized([newExpenseId], String(subCategoryId))
           }
           setDetachTarget(null)
+        }}
+      />
+    )}
+
+    {amortizeTarget && (
+      <ActivateAmortizationDialog
+        open={Boolean(amortizeTarget)}
+        onOpenChange={(open) => { if (!open) setAmortizeTarget(null) }}
+        transactionId={amortizeTarget.transactionId}
+        amount={amortizeTarget.amount}
+        occurredAt={amortizeTarget.occurredAt}
+        onSuccess={({ expenseId }) => {
+          markTransactionAmortized(amortizeTarget.transactionId, { id: expenseId })
+          setAmortizeTarget(null)
         }}
       />
     )}

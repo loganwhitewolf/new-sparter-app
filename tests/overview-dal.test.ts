@@ -13,11 +13,19 @@ vi.mock('server-only', () => ({}))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
 vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
 vi.mock('drizzle-orm', () => ({
-  sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({
-    op: 'sql',
-    strings: Array.from(strings),
-    values,
-  }),
+  sql: (strings: TemplateStringsArray, ...values: unknown[]) => {
+    const node: Record<string, unknown> = {
+      op: 'sql',
+      strings: Array.from(strings),
+      values,
+    }
+    // Phase 77: lib/db/schema.ts's ledgerEntryCash/ledgerEntryAccrual pgView definitions call
+    // `.as(sql\`...\`)` at module-eval time, and drizzle-orm/pg-core's real (unmocked)
+    // ManualViewBuilder.as() calls `query.inlineParams()` on whatever `sql` returns — needs a
+    // no-op stub here so importing the real schema.ts under this mocked drizzle-orm doesn't throw.
+    node.inlineParams = () => node
+    return node
+  },
   and: (...args: unknown[]) => ({ op: 'and', args }),
   eq: (...args: unknown[]) => ({ op: 'eq', args }),
   gte: (...args: unknown[]) => ({ op: 'gte', args }),
