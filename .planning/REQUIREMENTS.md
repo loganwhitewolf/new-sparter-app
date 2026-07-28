@@ -17,7 +17,7 @@ Scoped capability contract for milestone v2.9. Model locked in [ADR 0019](../doc
 ### Amortization registry (REG)
 
 - [x] **REG-01**: User can see all amortization plans in a dedicated `/amortizations` section showing description, transaction date, initial amount, consumed amount, net value, and remaining months per plan.
-- [ ] **REG-02**: User can close a plan from the registry, optionally entering a sale/realization value.
+- [x] **REG-02**: User can close a plan from the registry, optionally entering a sale/realization value.
 - [x] **REG-03**: User can distinguish open from closed plans in the registry.
 
 ### Dashboard lens (LENS)
@@ -56,7 +56,7 @@ Filled at roadmap creation (2026-07-27). 15/15 v2.9 requirements mapped across P
 | AMORT-06 | Phase 78 | Complete |
 | AMORT-07 | Phase 78 | Complete |
 | REG-01 | Phase 79 | Complete |
-| REG-02 | Phase 79 | Pending |
+| REG-02 | Phase 79 | Complete |
 | REG-03 | Phase 79 | Complete |
 | LENS-01 | Phase 80 | Pending |
 | LENS-02 | Phase 80 | Pending |

@@ -114,7 +114,7 @@ Plans:
 - [x] 79-01-PLAN.md — DAL list query + RSC page + interactive registry table (columns, default
   sort/filter, status badge) + summary header + route/nav (REG-01, REG-03)
 
-- [ ] 79-02-PLAN.md — Wire "Chiudi" + "Realizza con vendita" row actions, reusing Phase 78's
+- [x] 79-02-PLAN.md — Wire "Chiudi" + "Realizza con vendita" row actions, reusing Phase 78's
   dialog/services (REG-02)
 
 **UI hint**: yes

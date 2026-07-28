@@ -4,16 +4,16 @@ milestone: v2.9
 milestone_name: Amortization
 current_phase: 79
 current_phase_name: amortizations-registry
-status: executing
-stopped_at: Completed 79-01-PLAN.md
-last_updated: "2026-07-28T20:04:44.214Z"
+status: verifying
+stopped_at: Completed 79-02-PLAN.md
+last_updated: "2026-07-28T20:11:02.812Z"
 last_activity: 2026-07-28
 last_activity_desc: Phase 79 execution started
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 
 Phase: 79 (amortizations-registry) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-28 — Phase 79 execution started
 
 ## Roadmap (v2.9 — Phases 77-80)
@@ -399,6 +399,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: [Phase 78] 78-02: reducePlanTx adds the SAME refund signed amount to both plan.totalAmount (whole-life base) and the future-only remaining sum (re-spread base) -- algebraically consistent since totalAmount = consumedSum + futureSum invariant holds before and after
 - [Phase ?]: 79-01: remaining_months bigint-as-string coerced via Number() in DAL row mapper (Postgres COUNT(*) returns bigint, node-postgres surfaces as string)
 - [Phase ?]: 79-01: IDOR cross-user DAL test seeds global direction/nature taxonomy once per test and reuses subCategoryId across both users, since seedMinimalTaxonomy cannot be called twice (unique(code))
+- [Phase ?]: 79-02: resolveRowActions returns realizeHref unconditionally (regardless of status) — only showActions gates rendering, matching the plan's <behavior> contract literally
+- [Phase ?]: 79-02: DAL/lifecycle consistency test asserts remainingMonths is EITHER 0 or 1 after closePlanTx (never a hardcoded value) since the closure instalment's classification against Postgres's CURRENT_DATE depends on real wall-clock timing at test run; both branches checked against the known past-instalment sum + closePlanTx's own returned remainingValue
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -536,9 +538,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 79-01-PLAN.md
+**Stopped at:** Completed 79-02-PLAN.md
 
-Last session: 2026-07-28T20:04:37.734Z
+Last session: 2026-07-28T20:11:02.803Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
@@ -630,3 +632,4 @@ Last session: 2026-07-28T20:04:37.734Z
 | Phase 78 P03 | 15min | 2 tasks | 2 files |
 | Phase 78 P02 | 20min | 2 tasks | 7 files |
 | Phase 79 P01 | 10min | 2 tasks | 10 files |
+| Phase 79 P02 | ~15min | 2 tasks | 3 files |
