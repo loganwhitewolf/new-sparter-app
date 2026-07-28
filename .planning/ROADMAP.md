@@ -72,7 +72,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 77-06-PLAN.md — Full-suite collateral-breakage fix + final LENS-03 gate closure (all 10 functions)
+- [x] 77-06-PLAN.md — Full-suite collateral-breakage fix + final LENS-03 gate closure (all 10 functions)
 
 **UI hint**: yes
 

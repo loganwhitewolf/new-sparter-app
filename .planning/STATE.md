@@ -4,16 +4,16 @@ milestone: v2.9
 milestone_name: Amortization
 current_phase: 77
 current_phase_name: amortization-schema-and-activation
-status: executing
-stopped_at: Completed 77-05-PLAN.md
-last_updated: "2026-07-28T11:17:39.869Z"
+status: verifying
+stopped_at: Completed 77-06-PLAN.md
+last_updated: "2026-07-28T11:22:07.217Z"
 last_activity: 2026-07-28
 last_activity_desc: Phase 77 execution started
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 
 Phase: 77 (amortization-schema-and-activation) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-28 — Phase 77 execution started
 
 ## Roadmap (v2.9 — Phases 77-80)
@@ -390,6 +390,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 77-05: getTagTotals inverted-LEFT-JOIN migrated by adding one id-to-id leftJoin(ledgerEntryCash) and folding its IS NOT NULL check into the existing tagTotalExclusion FILTER (uniform across count/minDate/maxDate/total)
 - [Phase ?]: 77-05: getTagDetail migrated via the dual-join pattern (raw description/occurredAt from transaction, netted amount from ledger_entry_cash) — same technique as 77-04's getCategoryDetail
 - [Phase ?]: 77-05: closing cross-feature non-interaction test isolates amortization fixture on category AND month axes to avoid polluting getCategoryDeviations' 3-month baseline window
+- [Phase ?]: Task 1 (diagnose collateral unit-test breakage) required no changes: full suite already green thanks to 77-05's tags-dal.test.ts mock fix
+- [Phase ?]: 77-06: reworded dashboard.ts:487 comment quoting isNotSecondary() literally to close the repo-wide zero-hit grep gate for LENS-03/D-11
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -527,9 +529,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 77-05-PLAN.md
+**Stopped at:** Completed 77-06-PLAN.md
 
-Last session: 2026-07-28T11:17:39.860Z
+Last session: 2026-07-28T11:22:07.210Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
@@ -616,3 +618,4 @@ Last session: 2026-07-28T11:17:39.860Z
 | Phase 77 P04 | 25min | 2 tasks | 2 files |
 | Phase 77 P03 | ~10min | 2 tasks | 6 files |
 | Phase 77 P05 | 35min | 2 tasks | 4 files |
+| Phase 77 P06 | 20min | 2 tasks | 1 files |
