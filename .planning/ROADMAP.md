@@ -53,7 +53,16 @@
   3. The plan's instalments materialize as N uniform monthly amounts starting on the purchase's calendar day (clamped to month end), with any rounding remainder on the first instalment.
   4. Every dashboard figure under the cash view stays byte-identical to today's behavior once amortization plans and instalments exist in the database — the `ledger_entry` seam regression gate.
 
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+- [ ] 77-01-PLAN.md — Schema + [BLOCKING] migration + ledger_entry_cash/accrual views (checkpoint: plain vs materialized VIEW) + instalment math + one full row-action activation, regression-proven on getOverviewAmountTotals; eligibility guards (D-04..D-07 + outflow)
+- [ ] 77-02-PLAN.md — Reverse-detach undo ("rimuovi ammortamento", D-09) + the detail-page activation/undo entry points
+- [ ] 77-03-PLAN.md — Manual-entry atomic create+amortize (D-10)
+- [ ] 77-04-PLAN.md — ledger_entry seam migration: lib/dal/dashboard.ts's remaining 5 aggregation functions
+- [ ] 77-05-PLAN.md — ledger_entry seam migration: lib/dal/overview.ts (2) + lib/dal/tags.ts (2) aggregation functions
+- [ ] 77-06-PLAN.md — Full-suite collateral-breakage fix + final LENS-03 gate closure (all 10 functions)
+
 **UI hint**: yes
 
 ### Phase 78: plan-lifecycle-and-reconciliation
@@ -386,7 +395,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 74. group-anchor-and-reconciliation | v2.8 | 4/4 | Complete | 2026-07-24 |
 | 75. linking-surfaces-and-lifecycle | v2.8 | 4/4 | Complete | 2026-07-27 |
 | 76. reimbursements-section | v2.8 | 6/6 | Complete | 2026-07-27 |
-| 77. amortization-schema-and-activation | v2.9 | TBD | Not started | - |
+| 77. amortization-schema-and-activation | v2.9 | 0/6 | Planned | - |
 | 78. plan-lifecycle-and-reconciliation | v2.9 | TBD | Not started | - |
 | 79. amortizations-registry | v2.9 | TBD | Not started | - |
 | 80. dashboard-accrual-lens | v2.9 | TBD | Not started | - |
@@ -394,4 +403,4 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 **Total shipped: 76 phases · 286 plans complete**
 **Latest shipped: v2.8 Reimbursements 1:N — Phases 73–76 (2026-07-27). All RMB-01…RMB-11 delivered: 1:N reimbursement model (transaction_pair subsumed), Mondo Netto netting, first-class residual, linking UI on /transactions/[id], and the dedicated /reimbursements section. Audit passed 11/11.**
 
-**In planning: v2.9 Amortization — Phases 77–80 (roadmap created 2026-07-27). 15/15 requirements mapped (AMORT-01…07, REG-01…03, LENS-01…05), none orphaned. Model locked in ADR 0019. Next: `/gsd-plan-phase 77`.**
+**In planning: v2.9 Amortization — Phases 77–80 (roadmap created 2026-07-27). 15/15 requirements mapped (AMORT-01…07, REG-01…03, LENS-01…05), none orphaned. Model locked in ADR 0019. Phase 77 planned 2026-07-28 (6 plans, 3 waves — 77-01 tracer/foundation, 77-02/77-03/77-04/77-05 wave-2 expansion, 77-06 LENS-03 gate closure). Next: `/gsd-execute-phase 77`.**
