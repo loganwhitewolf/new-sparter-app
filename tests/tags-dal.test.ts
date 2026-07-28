@@ -130,8 +130,7 @@ vi.mock('@/lib/db', () => ({
 // `and`/`asc`/`eq`/`isNotNull` stay simplified (existing tests assert exact
 // `{ op, ... }` shapes) — everything else (sql, inArray, ne, etc.) passes
 // through to the REAL drizzle-orm, needed by getTagTotals's FILTER predicate
-// and by transaction-pairs-sql.ts's effectiveAmount()/isNotSecondary() (both
-// real, unmocked modules imported transitively by getTagTotals).
+// (Phase 77, D-11: reads ledgerEntryCash.amount, no longer transaction-pairs-sql.ts).
 vi.mock('drizzle-orm', async (importOriginal) => {
   const actual = await importOriginal<typeof import('drizzle-orm')>()
   return {
@@ -169,6 +168,10 @@ vi.mock('@/lib/db/schema', () => ({
     expenseId: 'transaction.expenseId',
     amount: 'transaction.amount',
     occurredAt: 'transaction.occurredAt',
+  },
+  ledgerEntryCash: {
+    id: 'ledgerEntryCash.id',
+    amount: 'ledgerEntryCash.amount',
   },
   expense: {
     id: 'expense.id',

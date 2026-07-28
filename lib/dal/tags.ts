@@ -5,6 +5,7 @@ import {
   category,
   direction,
   expense,
+  ledgerEntryCash,
   nature,
   subCategory,
   tag,
@@ -13,7 +14,6 @@ import {
   userSubcategoryOverride,
 } from '@/lib/db/schema'
 import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
-import { effectiveAmount, isNotSecondary } from '@/lib/dal/transaction-pairs-sql'
 import { DASHBOARD_TOTAL_EXPENSE_STATUSES } from '@/lib/dal/dashboard'
 import { toDecimal } from '@/lib/utils/decimal'
 
@@ -163,7 +163,7 @@ export async function archiveTagRow(
  * All-time, sign-colored total — NOT period-scoped by the dashboard's month/year
  * selector (LOCKED DECISION 1). Applies the SAME exclusions as every other
  * dashboard total (LOCKED DECISION 2): expenseStatusIncludedInDashboardTotals(),
- * exclude `transfer` direction, effectiveAmount()/isNotSecondary() pair-netting.
+ * exclude `transfer` direction, ledger_entry_cash's netted amount (Phase 77, D-11).
  * The number MUST match what the user sees filtering transactions by that tag.
  */
 export type TagTotalItem = {
@@ -212,7 +212,7 @@ export async function getTagTotals(userId: string): Promise<TagTotalItem[]> {
   const tagTotalExclusion = sql`(
     ${inArray(expense.status, [...DASHBOARD_TOTAL_EXPENSE_STATUSES])}
     AND ${ne(direction.code, 'transfer')}
-    AND ${isNotSecondary()}
+    AND ${sql`${ledgerEntryCash.id} IS NOT NULL`}
   )`
 
   const rows = await db
@@ -223,13 +223,18 @@ export async function getTagTotals(userId: string): Promise<TagTotalItem[]> {
       count: sql<string>`count(distinct ${transactionTable.id}) FILTER (WHERE ${tagTotalExclusion})`,
       minDate: sql<string | null>`(MIN(${transactionTable.occurredAt}) FILTER (WHERE ${tagTotalExclusion}))::text`,
       maxDate: sql<string | null>`(MAX(${transactionTable.occurredAt}) FILTER (WHERE ${tagTotalExclusion}))::text`,
-      total: sql<string>`coalesce(sum(${effectiveAmount()}) FILTER (WHERE ${tagTotalExclusion}), 0)::text`,
+      total: sql<string>`coalesce(sum(${ledgerEntryCash.amount}) FILTER (WHERE ${tagTotalExclusion}), 0)::text`,
     })
     // FROM tag, never FROM transaction — the join direction is inverted vs every
     // other dashboard aggregate in this codebase (see 68-RESEARCH.md Anti-Pattern).
     .from(tag)
     .leftJoin(transactionTag, eq(transactionTag.tagId, tag.id))
     .leftJoin(transactionTable, eq(transactionTag.transactionId, transactionTable.id))
+    // ID-to-id LEFT JOIN (Phase 77, D-11): a refund transaction has no matching ledger_entry_cash
+    // row, so this join naturally nulls out for it — the same exclusion effect the legacy
+    // refund-exclusion check used to provide, now expressed via ledgerEntryCash.id IS NOT NULL
+    // inside tagTotalExclusion above (applied uniformly to count/minDate/maxDate/total).
+    .leftJoin(ledgerEntryCash, eq(ledgerEntryCash.id, transactionTable.id))
     .leftJoin(expense, eq(transactionTable.expenseId, expense.id))
     .leftJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
     .leftJoin(category, eq(subCategory.categoryId, category.id))
@@ -257,8 +262,9 @@ export async function getTagTotals(userId: string): Promise<TagTotalItem[]> {
  * Applies the SAME exclusion set as getTagTotals / getOverviewAmountTotals so the
  * numbers stay consistent with the dashboard and with the tag-filtered transactions
  * view: expenseStatus ∈ {1,2,3}, exclude `transfer` direction, drop secondary-of-pair
- * rows, and use effectiveAmount() (pair-netted) as the per-row amount. Direction is
- * resolved through the user's nature override, mirroring getOverviewAmountTotals.
+ * rows, and use the netted ledger_entry_cash amount (Phase 77, D-11) as the per-row
+ * amount. Direction is resolved through the user's nature override, mirroring
+ * getOverviewAmountTotals.
  *
  * `net` (valore finale) is the signed sum over ALL included rows — it therefore equals
  * this tag's `total` from getTagTotals (including any `allocation` rows, which contribute
@@ -363,10 +369,16 @@ export async function getTagDetail(userId: string, tagId: number): Promise<TagDe
       // category is ALREADY innerJoined below — this adds a COLUMN, never a row, so the netted
       // row set (and therefore `net`) is unchanged and still reconciles with getTagTotals (TAG-07).
       categoryName: category.name,
-      amount: sql<string>`(${effectiveAmount()})::text`,
+      amount: sql<string>`(${ledgerEntryCash.amount})::text`,
     })
     .from(transactionTable)
     .innerJoin(transactionTag, eq(transactionTag.transactionId, transactionTable.id))
+    // ID-to-id join (Phase 77, D-11 dual-join pattern, same as getCategoryDetail's
+    // top-transactions query): keeps .from(transactionTable) so the raw description/occurredAt
+    // stay available (ledger_entry_cash carries no description column), while `amount` reads the
+    // netted ledgerEntryCash.amount. The INNER JOIN itself structurally replaces the legacy
+    // refund-exclusion check — a refund transaction has no matching ledger_entry_cash row.
+    .innerJoin(ledgerEntryCash, eq(ledgerEntryCash.id, transactionTable.id))
     .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
     .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
     .innerJoin(category, eq(subCategory.categoryId, category.id))
@@ -388,7 +400,8 @@ export async function getTagDetail(userId: string, tagId: number): Promise<TagDe
         eq(transactionTable.userId, userId),
         inArray(expense.status, [...DASHBOARD_TOTAL_EXPENSE_STATUSES]),
         ne(direction.code, 'transfer'),
-        isNotSecondary(),
+        // The INNER JOIN on ledgerEntryCash above already excludes a refund transaction
+        // (no matching row) — the legacy refund-exclusion check is redundant here (Phase 77, D-11).
       ),
     )
     .orderBy(desc(transactionTable.occurredAt), desc(transactionTable.id))
