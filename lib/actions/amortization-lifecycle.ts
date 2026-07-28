@@ -2,8 +2,13 @@
 
 import { verifySession } from '@/lib/dal/auth'
 import { db } from '@/lib/db'
-import { ClosePlanSchema } from '@/lib/validations/amortization'
-import { AmortizationLifecycleError, closePlanTx } from '@/lib/services/amortization-lifecycle'
+import { ClosePlanSchema, RealizePlanSchema, ReimbursePlanSchema } from '@/lib/validations/amortization'
+import {
+  AmortizationLifecycleError,
+  closePlanTx,
+  realizePlanTx,
+  reducePlanTx,
+} from '@/lib/services/amortization-lifecycle'
 import { revalidateCategorizationSurfaces } from '@/lib/actions/revalidation'
 
 export type ClosePlanActionResult = {
@@ -31,6 +36,86 @@ export async function closePlanAction(input: { planId: string }): Promise<CloseP
         userId,
         planId: parsed.data.planId,
         closureMonth: new Date(),
+      }),
+    )
+    revalidateCategorizationSurfaces()
+    return { error: null }
+  } catch (error) {
+    if (error instanceof AmortizationLifecycleError) {
+      return { error: error.message }
+    }
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+}
+
+export type RealizePlanActionResult = {
+  error: string | null
+}
+
+/**
+ * D-02/AMORT-05: "chiudi per vendita" — closes an open plan by linking a real sale transaction,
+ * netting against the closure month (the sale's own occurredAt). Mirrors closePlanAction's exact
+ * try/catch/revalidate shape.
+ */
+export async function realizePlanAction(input: {
+  planId: string
+  saleTransactionId: string
+}): Promise<RealizePlanActionResult> {
+  const parsed = RealizePlanSchema.safeParse(input)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Dati non validi.' }
+  }
+
+  const { userId } = await verifySession()
+
+  try {
+    await db.transaction((tx) =>
+      realizePlanTx(tx, {
+        userId,
+        planId: parsed.data.planId,
+        saleTransactionId: parsed.data.saleTransactionId,
+      }),
+    )
+    revalidateCategorizationSurfaces()
+    return { error: null }
+  } catch (error) {
+    if (error instanceof AmortizationLifecycleError) {
+      return { error: error.message }
+    }
+    if (error instanceof Error) {
+      // createPairTx's own ownership/self-pair/sign-invariant errors (T-78-08) bubble verbatim.
+      return { error: error.message }
+    }
+    return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
+  }
+}
+
+export type ReimbursePlanActionResult = {
+  error: string | null
+}
+
+/**
+ * D-03/AMORT-06: "rimborso parziale" — reduces an open plan's base by a refund transaction's
+ * amount and re-spreads the remaining instalments; the plan stays open. Mirrors closePlanAction's
+ * exact try/catch/revalidate shape.
+ */
+export async function reimbursePlanAction(input: {
+  planId: string
+  refundTransactionId: string
+}): Promise<ReimbursePlanActionResult> {
+  const parsed = ReimbursePlanSchema.safeParse(input)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Dati non validi.' }
+  }
+
+  const { userId } = await verifySession()
+
+  try {
+    await db.transaction((tx) =>
+      reducePlanTx(tx, {
+        userId,
+        planId: parsed.data.planId,
+        refundTransactionId: parsed.data.refundTransactionId,
       }),
     )
     revalidateCategorizationSurfaces()

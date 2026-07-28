@@ -26,3 +26,21 @@ export const ClosePlanSchema = z.object({
 })
 
 export type ClosePlanInput = z.infer<typeof ClosePlanSchema>
+
+// Phase 78 (D-02, AMORT-05): planId + saleTransactionId cross the trust boundary — realizePlanTx
+// re-derives ownership of both server-side (T-78-05).
+export const RealizePlanSchema = z.object({
+  planId: z.string().uuid({ error: 'Pianificazione non valida.' }),
+  saleTransactionId: z.string().uuid({ error: 'Transazione non valida.' }),
+})
+
+export type RealizePlanInput = z.infer<typeof RealizePlanSchema>
+
+// Phase 78 (D-03, AMORT-06): planId + refundTransactionId cross the trust boundary — reducePlanTx
+// re-derives ownership of both server-side (T-78-06).
+export const ReimbursePlanSchema = z.object({
+  planId: z.string().uuid({ error: 'Pianificazione non valida.' }),
+  refundTransactionId: z.string().uuid({ error: 'Transazione non valida.' }),
+})
+
+export type ReimbursePlanInput = z.infer<typeof ReimbursePlanSchema>

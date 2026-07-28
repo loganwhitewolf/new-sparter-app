@@ -50,7 +50,7 @@ import {
   seedUser,
 } from './fixtures/reimbursement-seed'
 import { materializeInstalments } from '@/lib/services/amortization-math'
-import { closePlanTx } from '@/lib/services/amortization-lifecycle'
+import { closePlanTx, realizePlanTx, reducePlanTx } from '@/lib/services/amortization-lifecycle'
 
 vi.mock('@/lib/dal/auth', () => ({ verifySession: vi.fn() }))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
@@ -1582,5 +1582,197 @@ describeIfReachable('amortization lifecycle: close/collapse regression (Phase 78
     expect(accrualRows.rows).toHaveLength(1)
     const accrualAmount = (accrualRows.rows[0] as { amount: string }).amount
     expect(toDecimal(accrualAmount).equals(toDecimal(remainingValue))).toBe(true)
+  })
+})
+
+describeIfReachable('amortization lifecycle: realize/reduce regression (Phase 78, AMORT-05/06)', () => {
+  it('realizePlanTx: both lenses reconcile to the SAME life-total, distributed across DIFFERENT months — cash lens nets the sale at the purchase month (Mondo Netto, unmodified), accrual lens nets it at the closure month (the materialized write) — never the same sale netted twice within one lens (ADR 0019 §10)', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const startDate = new Date(2026, 0, 15, 12, 0, 0) // 2026-01-15
+
+    const { expenseId, transactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-1200.00',
+      occurredAt: startDate,
+      title: 'Realize/reduce dual-lens probe purchase',
+    })
+    const instalments = materializeInstalments('-1200.00', startDate, 12)
+    const { planId } = await seedAmortizationPlan(db, {
+      userId,
+      transactionId,
+      expenseId,
+      months: 12,
+      instalments,
+    })
+
+    // Sale lands in June (month 6): 5 past instalments (Jan-May, -500.00), 7 collapsed into the
+    // closure month (Jun-Dec, -700.00 remaining) + the sale's +1000.00 = +300.00 closure net.
+    const saleDate = new Date(2026, 5, 20, 12, 0, 0)
+    const { transactionId: saleTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: null,
+      amount: '1000.00',
+      occurredAt: saleDate,
+      title: 'Realize/reduce dual-lens probe sale',
+    })
+
+    const result = await realizePlanTx(db, { userId, planId, saleTransactionId })
+    expect(toDecimal(result.remainingValue).equals(toDecimal('300.00'))).toBe(true)
+
+    // Cash lens: the ORIGINAL transaction's own row, netted via the v2.8 Mondo Netto mechanism
+    // (unmodified, cost-time) — the sale itself is EXCLUDED from ledger_entry_cash entirely (it is
+    // now a linked refund). Exactly ONE row for this life, at the PURCHASE month.
+    const cashRows = await db.execute(sql`
+      SELECT amount, occurred_at FROM ledger_entry_cash WHERE id = ${transactionId}
+    `)
+    expect(cashRows.rows).toHaveLength(1)
+    const cashRow = cashRows.rows[0] as { amount: string; occurred_at: Date }
+    // -1200.00 (original) + 1000.00 (sale, netted at the ORIGINAL transaction's own month) = -200.00.
+    expect(toDecimal(cashRow.amount).equals(toDecimal('-200.00'))).toBe(true)
+    expect(new Date(cashRow.occurred_at).getMonth()).toBe(0) // January — the purchase month.
+
+    // The sale's OWN row never appears in ledger_entry_cash — it nets into the anchor's row above,
+    // never counted a second time.
+    const saleCashRows = await db.execute(sql`
+      SELECT 1 FROM ledger_entry_cash WHERE id = ${saleTransactionId}
+    `)
+    expect(saleCashRows.rows).toHaveLength(0)
+
+    // Accrual lens: the ORIGINAL transaction is excluded entirely (it has an amortization_plan);
+    // its life-total is the SUM of every instalment tied to its Standalone Expense — 5 consumed
+    // months (-100.00 each) + ONE closure-month instalment (+300.00, already netted with the sale
+    // via the direct Decimal write, NOT via effectiveAmount/isNotSecondary — ADR 0019 §10).
+    const accrualRows = await db.execute(sql`
+      SELECT amount, occurred_at FROM ledger_entry_accrual WHERE expense_id = ${expenseId}
+      ORDER BY occurred_at ASC
+    `)
+    expect(accrualRows.rows).toHaveLength(6) // 5 past + 1 closure
+    const accrualTotal = accrualRows.rows.reduce(
+      (sum, row) => sum.plus(toDecimal((row as { amount: string }).amount)),
+      toDecimal('0'),
+    )
+    // -500.00 (5 past months) + 300.00 (closure, sale already netted) = -200.00.
+    expect(accrualTotal.equals(toDecimal('-200.00'))).toBe(true)
+
+    // BOTH lenses reconcile to the SAME life-total (-200.00) — the cash lens concentrates it in
+    // ONE month (January, the purchase), the accrual lens spreads it across SIX distinct months
+    // (January through June) — proving the sale is netted exactly once per lens, never twice
+    // within either one, and never omitted from either.
+    expect(accrualTotal.equals(toDecimal(cashRow.amount))).toBe(true)
+    const distinctAccrualMonths = new Set(
+      accrualRows.rows.map((row) => new Date((row as { occurred_at: Date }).occurred_at).getMonth()),
+    )
+    expect(distinctAccrualMonths.size).toBe(6)
+  })
+
+  it('reducePlanTx: leaves the cash lens byte-identical (no v2.8 link is ever created) and the accrual lens reflects the re-spread instalments', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const { tagId } = await seedTag(db, { userId, name: 'Amortization reduce probe' })
+
+    // Anchored relative to TODAY (reducePlanTx's residual boundary is always the start of the
+    // CURRENT calendar month, D-03) — 3 months already consumed, 9 months remaining.
+    const now = new Date()
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const startDate = new Date(currentMonthStart.getFullYear(), currentMonthStart.getMonth() - 3, 10, 12, 0, 0)
+
+    const { expenseId, transactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-1200.00',
+      occurredAt: startDate,
+      title: 'Reduce-plan cash-lens probe',
+    })
+    await attachTagToTransaction(db, { tagId, transactionId })
+
+    const instalments = materializeInstalments('-1200.00', startDate, 12)
+    const { planId } = await seedAmortizationPlan(db, {
+      userId,
+      transactionId,
+      expenseId,
+      months: 12,
+      instalments,
+    })
+
+    // Consistent with the closePlanTx regression block above: several of captureAggregationSnapshot's
+    // 10 functions hard-code a 'last-month' window internally regardless of any dateRange passed in
+    // (see the helper's own header comment), so the meaningful window here is real "last month" —
+    // which the 3-consumed-months-before-today construction above guarantees overlaps one of this
+    // plan's PAST (untouched-by-reducePlanTx) instalments, making the byte-identical assertion
+    // non-trivial rather than a 0-vs-0 no-op.
+    const dateRange = dashboardPresetToDateRange('last-month')
+
+    const before = await captureAggregationSnapshot({
+      harnessDb: db,
+      userId,
+      dateRange,
+      categoryId: taxonomy.essentialCategoryId,
+      tagId,
+    })
+
+    const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: null,
+      amount: '300.00',
+      occurredAt: currentMonthStart,
+      title: 'Reduce-plan credit',
+    })
+
+    const result = await reducePlanTx(db, { userId, planId, refundTransactionId })
+    expect(result.reSpreadInstalments).toHaveLength(9)
+
+    const after = await captureAggregationSnapshot({
+      harnessDb: db,
+      userId,
+      dateRange,
+      categoryId: taxonomy.essentialCategoryId,
+      tagId,
+    })
+
+    // reducePlanTx writes ONLY to amortization_instalment/amortization_plan, never to transaction
+    // and never to reimbursement/reimbursement_refund (D-03's "instead" mechanic) — ledger_entry_cash
+    // (sourced from transaction) is structurally unreachable by this write, so every cash-lens
+    // aggregate stays byte-identical.
+    const beforeTotals = before.getOverviewAmountTotals as { totalOut: string }
+    const afterTotals = after.getOverviewAmountTotals as { totalOut: string }
+    expect(afterTotals.totalOut).toBe(beforeTotals.totalOut)
+
+    const beforeBreakdown = before.getCategoriesBreakdown as Array<{ id: number; amount: string }>
+    const afterBreakdown = after.getCategoriesBreakdown as Array<{ id: number; amount: string }>
+    expect(afterBreakdown.find((c) => c.id === taxonomy.essentialCategoryId)?.amount).toBe(
+      beforeBreakdown.find((c) => c.id === taxonomy.essentialCategoryId)?.amount,
+    )
+
+    const beforeTagTotal = (before.getTagTotals as Array<{ tagId: number; total: string }>).find(
+      (r) => r.tagId === tagId,
+    )
+    const afterTagTotal = (after.getTagTotals as Array<{ tagId: number; total: string }>).find(
+      (r) => r.tagId === tagId,
+    )
+    expect(afterTagTotal?.total).toBe(beforeTagTotal?.total)
+
+    // Accrual-lens probe: the re-spread instalments materialize the reduced amount with NO further
+    // netting — same zero-live-netting proof as the close/collapse block above.
+    const accrualRows = await db.execute(sql`
+      SELECT amount FROM ledger_entry_accrual WHERE expense_id = ${expenseId}
+      AND occurred_at >= ${currentMonthStart}
+    `)
+    expect(accrualRows.rows).toHaveLength(9)
+    const accrualTotal = accrualRows.rows.reduce(
+      (sum, row) => sum.plus(toDecimal((row as { amount: string }).amount)),
+      toDecimal('0'),
+    )
+    // -900.00 (9 remaining months) + 300.00 (refund) = -600.00.
+    expect(accrualTotal.equals(toDecimal('-600.00'))).toBe(true)
   })
 })
