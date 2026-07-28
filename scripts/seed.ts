@@ -57,6 +57,12 @@ const pool = new Pool(pgPoolConfigFromOperatorConfig(seedConfig))
 const db = drizzle(pool)
 
 function headerSignatureFor(formatVersionSeed: (typeof seedFormatVersions)[number]) {
+  // Explicit override (Fineco, quick task 260728-mpo): detection is against the full raw
+  // Moneymap CSV header, not the derived required-columns join every other platform uses.
+  if (formatVersionSeed.headerSignature) {
+    return formatVersionSeed.headerSignature
+  }
+
   const columns = [
     formatVersionSeed.timestampColumn,
     formatVersionSeed.descriptionColumn,

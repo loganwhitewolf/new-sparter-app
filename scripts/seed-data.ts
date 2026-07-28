@@ -901,6 +901,29 @@ export const subCategories = [
 
 export type AmountType = "single" | "separate";
 
+// headerSignature is optional: most platforms derive it at seed/seed-extras time via
+// headerSignatureFor() (join of timestamp/description/amount columns). Fineco carries an
+// explicit override (quick task 260728-mpo) because its Moneymap export contract is
+// detected against the full raw CSV header, not the derived required-columns join.
+export type ImportFormatVersionSeed = {
+  platformSlug: string;
+  version: number;
+  delimiter: string;
+  descriptionColumn: string;
+  amountType: AmountType;
+  amountColumn: string | null;
+  positiveAmountColumn: string | null;
+  negativeAmountColumn: string | null;
+  timestampColumn: string;
+  dateFormat: string | null;
+  dateReplace: boolean;
+  decimalReplace: boolean;
+  multiplyBy: number;
+  descriptionStripPattern: string | null;
+  notes: string;
+  headerSignature?: string;
+};
+
 export const platforms = [
   {
     name: "General",
@@ -953,7 +976,7 @@ export const platforms = [
 // All other values identical to the previous platform columns to preserve transactionHash parity.
 // ---------------------------------------------------------------------------
 
-export const importFormatVersions = [
+export const importFormatVersions: ImportFormatVersionSeed[] = [
   {
     platformSlug: 'general',
     version: 1,
@@ -1057,15 +1080,19 @@ export const importFormatVersions = [
     notes: "Initial Revolut CSV import contract",
   },
   {
+    // Fineco v1 — migrated from comma-delimited/`Data` to `;`-delimited/`Data_Operazione`
+    // to match Moneymap-exported Fineco CSVs (D-02, quick task 260728-mpo). Already-deployed
+    // rows are converged by the `merge-duplicate-fineco-platforms` +
+    // `ensure-fineco-moneymap-global-format` seed-extras steps.
     platformSlug: 'fineco',
     version: 1,
-    delimiter: ",",
+    delimiter: ";",
     descriptionColumn: "Descrizione_Completa",
     amountType: "separate" as AmountType,
     amountColumn: null,
     positiveAmountColumn: "Entrate",
     negativeAmountColumn: "Uscite",
-    timestampColumn: "Data",
+    timestampColumn: "Data_Operazione",
     dateFormat: "DD/MM/YYYY",
     dateReplace: true,
     decimalReplace: false,
@@ -1073,7 +1100,13 @@ export const importFormatVersions = [
     // Fineco boilerplate strip — mirrors the seed-extras step (set-fineco-description-strip-pattern)
     // applied to already-deployed rows. New installs get this value from seed.ts directly.
     descriptionStripPattern: "\\s+Carta N\\..*$",
-    notes: "Initial Fineco CSV import contract",
+    // secondaryDescriptionColumn ('Descrizione') is NOT set here — seed.ts's resolvedFormats
+    // mapping never forwards it for any platform (Satispay precedent); it is set directly by
+    // the ensure-fineco-moneymap-global-format seed-extras step instead.
+    notes: "Moneymap ;-delimited Fineco CSV import contract (secondaryDescriptionColumn set via seed-extras)",
+    // Explicit override: the full raw Moneymap export header, not the derived required-columns
+    // join headerSignatureFor() would otherwise produce. See headerSignatureFor() in seed.ts.
+    headerSignature: "Data_Operazione;Data_Valuta;Entrate;Uscite;Descrizione;Descrizione_Completa;Stato;Moneymap",
   },
   {
     // Trade Republic PDF import contract (ADR 0014, D-08).
