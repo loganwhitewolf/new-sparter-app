@@ -46,6 +46,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useToolbarSort } from '@/components/data-table/DataTableToolbar'
 import { TableRestoreSkeleton } from '@/components/data-table/table-restore-skeleton'
 import { HeaderSortButton } from '@/components/data-table/HeaderSortButton'
@@ -59,6 +60,11 @@ import type { TransactionSearchParams } from '@/lib/validations/transactions'
 import { importFileDetailHref, transactionDetailHref } from '@/lib/routes'
 import { amountToneClass } from '@/lib/utils/amount-tone'
 import { cn } from '@/lib/utils'
+import { minimumTwoMonthInstalment, validateMonthsForAmount } from '@/lib/services/amortization-math'
+import {
+  amortizationGuardMessage,
+  type AmortizationGuardFailure,
+} from '@/lib/utils/amortization-guard-messages'
 
 type Props = {
   transactions: TransactionListRow[]
@@ -111,6 +117,38 @@ function formatDate(date: Date) {
 
 function isExpenseCategorized(status: TransactionListRow['expenseStatus']) {
   return status === '2' || status === '3'
+}
+
+type AmortizationEligibility = { eligible: true } | ({ eligible: false } & AmortizationGuardFailure)
+
+/**
+ * Client-side mirror of getAmortizationEligibility (Phase 77, D-04..D-07 + outflow-only) —
+ * derived synchronously from fields transactionListSelect already exposes (reimbursementId,
+ * amortizationPlanId, groupId, amount), so there is no loading flash to guard against (D-08) for
+ * this entry point. The server action independently re-checks every guard before any write.
+ */
+function computeAmortizationEligibility(transaction: TransactionListRow): AmortizationEligibility {
+  if (transaction.reimbursementId != null) {
+    return { eligible: false, reason: 'reimbursement' }
+  }
+  if (transaction.amortizationPlanId != null) {
+    return { eligible: false, reason: 'already-amortized' }
+  }
+  if (transaction.groupId != null) {
+    return { eligible: false, reason: 'expense-group' }
+  }
+  if (!toDecimal(transaction.amount).isNegative()) {
+    return { eligible: false, reason: 'not-outflow' }
+  }
+  const validation = validateMonthsForAmount(transaction.amount, 2)
+  if (!validation.valid) {
+    return {
+      eligible: false,
+      reason: 'too-small',
+      requiredPerMonth: minimumTwoMonthInstalment(transaction.amount),
+    }
+  }
+  return { eligible: true }
 }
 
 
@@ -469,6 +507,9 @@ export function TransactionTable({
             const hasExpense = Boolean(transaction.expenseId)
             const isSelected = selectedIds.includes(transaction.id)
             const rowLabel = transactionRowLabel(transaction)
+            const amortizationEligibility = hasExpense
+              ? computeAmortizationEligibility(transaction)
+              : null
 
             // categoryType is a direction code from the nature→direction join (Plan 03)
             const isTransfer = transaction.categoryType === 'transfer'
@@ -704,28 +745,50 @@ export function TransactionTable({
                           Spesa a sé (non aggregare)
                         </DropdownMenuItem>
                       )}
-                      {/* Amortization row action (Phase 77, D-01 tracer). Gated here on
-                          expenseId truthy + outflow-only, matching what the row already carries;
-                          the full D-04..D-07 server-checked eligibility read (reimbursement /
-                          already-amortized / expense-group / too-small) lands in the guards
-                          task next. */}
-                      {transaction.expenseId && transaction.categoryType !== 'in' && (
-                        <DropdownMenuItem
-                          onSelect={(e) => {
-                            e.preventDefault()
-                            setAmortizeTarget({
-                              transactionId: transaction.id,
-                              amount: transaction.amount,
-                              occurredAt: transaction.occurredAt,
-                            })
-                            setOpenDropdownId(null)
-                          }}
-                          className="flex items-center gap-2"
-                        >
-                          <CalendarClock className="h-4 w-4" />
-                          Ammortizza
-                        </DropdownMenuItem>
-                      )}
+                      {/* Amortization row action (Phase 77, D-01/D-04..D-08). Entry shown only
+                          when an expense is linked (mirrors "Spesa a sé"'s own gate); within
+                          that, eligibility is derived synchronously from row fields already
+                          loaded (no loading flash, D-08) — ineligible renders disabled with a
+                          Tooltip carrying the one specific guard reason. The server action
+                          independently re-checks every guard before any write. */}
+                      {amortizationEligibility &&
+                        (amortizationEligibility.eligible ? (
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault()
+                              setAmortizeTarget({
+                                transactionId: transaction.id,
+                                amount: transaction.amount,
+                                occurredAt: transaction.occurredAt,
+                              })
+                              setOpenDropdownId(null)
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            <CalendarClock className="h-4 w-4" />
+                            Ammortizza
+                          </DropdownMenuItem>
+                        ) : (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="block">
+                                  <DropdownMenuItem
+                                    disabled
+                                    onSelect={(e) => e.preventDefault()}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <CalendarClock className="h-4 w-4" />
+                                    Ammortizza
+                                  </DropdownMenuItem>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {amortizationGuardMessage(amortizationEligibility)}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ))}
                       <DropdownMenuSeparator />
                       <DeleteTransactionMenuItem
                         transactionId={transaction.id}

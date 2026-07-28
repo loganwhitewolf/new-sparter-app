@@ -242,6 +242,13 @@ export const transactionListSelect = {
   // role-resolution rules as pairedReimbursementIdExpr() above, exposed directly here rather than
   // only used internally by pairedNetAmount.
   reimbursementId: sql<number | null>`${pairedReimbursementIdExpr()}`,
+  // Phase 77 (D-05, Task 3 guards): the amortization_plan id this transaction already has, if
+  // any — a correlated subquery (not a LEFT JOIN, mirroring pairedWithId's own style exactly) so
+  // buildTransactionOrderBy's grouping/sort shape is preserved. Non-null means "already-amortized"
+  // (D-05 guard) client-side, with zero extra round-trips.
+  amortizationPlanId: sql<string | null>`(
+    SELECT ap.id FROM amortization_plan ap WHERE ap.transaction_id = ${transaction.id}
+  )`,
 }
 
 export const transactionPlatformSelect = {
@@ -283,6 +290,8 @@ export type TransactionListRow = {
   pairedOccurredAt: Date | null
   // Phase 76 (D-06, RMB-10): reimbursement id this transaction participates in (anchor or refund)
   reimbursementId: number | null
+  // Phase 77 (D-05): amortization_plan id this transaction already has, if any
+  amortizationPlanId: string | null
 }
 
 export type TransactionPlatformOption = {

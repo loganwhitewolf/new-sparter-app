@@ -78,6 +78,16 @@ export function validateMonthsForAmount(amount: string, months: number): MonthsV
 }
 
 /**
+ * The per-instalment amount amortizing over the minimum 2 months would require — used to
+ * interpolate the too-small guard tooltip message (D-07, UI-SPEC "amount too small"). Same
+ * rounding rule as materializeInstalments' base instalment
+ * (Decimal.dividedBy().toDecimalPlaces(2, ROUND_DOWN)).
+ */
+export function minimumTwoMonthInstalment(amount: string): string {
+  return toDecimal(amount).abs().dividedBy(2).toDecimalPlaces(2, Decimal.ROUND_DOWN).toFixed(2)
+}
+
+/**
  * Computes the N-instalment schedule for a plan (AMORT-03): a uniform base instalment per month
  * (Decimal.dividedBy().toDecimalPlaces(2, ROUND_DOWN) — never native division), with the
  * rounding remainder folded wholly into the FIRST instalment so the sum always equals the

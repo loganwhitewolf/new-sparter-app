@@ -11,10 +11,12 @@ import {
 } from '@/lib/db/schema'
 import { applyDetachCleanupTx } from '@/lib/services/transaction-detach'
 import { materializeInstalments, validateMonthsForAmount } from '@/lib/services/amortization-math'
+import { getAmortizationEligibility } from '@/lib/services/amortization-guards'
 import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
+import { amortizationGuardMessage } from '@/lib/utils/amortization-guard-messages'
 import type { Instalment } from '@/lib/services/amortization-math'
 
-export type ActivatePlanErrorCode = 'TRANSACTION_NOT_FOUND' | 'INVALID_MONTHS'
+export type ActivatePlanErrorCode = 'TRANSACTION_NOT_FOUND' | 'INVALID_MONTHS' | 'INELIGIBLE'
 
 export class ActivatePlanError extends Error {
   readonly code: ActivatePlanErrorCode
@@ -46,14 +48,21 @@ export type ActivatePlanResult = {
  * writes run against the SAME passed-in `tx` — no nested db.transaction call, so callers can
  * compose this inside a larger db.transaction (matching applyDetachCleanupTx's own pattern).
  *
- * Eligibility (D-04..D-07 + outflow-only) is NOT checked here — that guard call is wired in by
- * the eligibility-guards task as the first step of this function; this tracer proves the
- * detach+plan+instalment write path end-to-end on an already-eligible transaction.
+ * Eligibility (D-04..D-07 + outflow-only) is checked FIRST, before any transaction/subCategory
+ * load below — an ineligible transaction must never reach the detach+plan+instalment write.
  */
 export async function activatePlanTx(
   tx: DbOrTx,
   input: ActivatePlanInput,
 ): Promise<ActivatePlanResult> {
+  const eligibility = await getAmortizationEligibility(tx, {
+    userId: input.userId,
+    transactionId: input.transactionId,
+  })
+  if (!eligibility.eligible) {
+    throw new ActivatePlanError('INELIGIBLE', amortizationGuardMessage(eligibility))
+  }
+
   const rows = await tx
     .select({
       transactionId: transactionTable.id,
