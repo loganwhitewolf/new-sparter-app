@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
+  CalendarClock,
   ChevronLeft,
   ChevronRight,
   FolderTree,
@@ -46,6 +47,7 @@ const topNavItems = [
   { href: APP_ROUTES.transactions, label: 'Transazioni', icon: List },
   { href: APP_ROUTES.expenses, label: 'Spese', icon: Receipt },
   { href: APP_ROUTES.reimbursements, label: 'Rimborsi', icon: Link2 },
+  { href: APP_ROUTES.amortizations, label: 'Ammortamenti', icon: CalendarClock },
   { href: APP_ROUTES.import, label: 'Importazioni', icon: Upload },
   { href: APP_ROUTES.categorySettings, label: 'Categorie', icon: FolderTree },
   { href: APP_ROUTES.tags, label: 'Tag', icon: Tags },

@@ -12,6 +12,7 @@ export const APP_ROUTES = {
   categorySettings: '/settings/categories',
   tags: '/tags',
   reimbursements: '/reimbursements',
+  amortizations: '/amortizations',
   patterns: '/patterns',
   dashboardTags: '/dashboard/tags',
   profile: '/profile',                  // compatibility alias (D-04)
@@ -61,6 +62,13 @@ export function tagDetail(id: number | string) {
 
 export function reimbursementHref(id: number | string) {
   return `${APP_ROUTES.reimbursements}/${encodeURIComponent(String(id))}`
+}
+
+// The `/amortizations/[id]` plan-detail page is deferred (D-D1) — row clicks in the registry
+// navigate to transactionDetailHref instead. This helper is provided for future use/consistency
+// only, mirroring reimbursementHref's shape.
+export function amortizationDetailHref(planId: string) {
+  return `${APP_ROUTES.amortizations}/${encodeURIComponent(planId)}`
 }
 
 export function transactionDetailHref(id: string) {
