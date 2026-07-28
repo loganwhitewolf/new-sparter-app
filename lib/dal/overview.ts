@@ -20,9 +20,12 @@ import {
   buildOverviewData,
   getOverviewAmountTotals,
   getUncategorizedCount,
-  DASHBOARD_TOTAL_EXPENSE_STATUSES,
 } from '@/lib/dal/dashboard'
 import type { OverviewData } from '@/lib/dal/dashboard'
+import {
+  dateScopedTransactions,
+  expenseStatusIncludedInDashboardTotals,
+} from '@/lib/dal/dashboard-filters'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -48,18 +51,8 @@ export type OverviewChartPoint = {
 }
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
-
-function dateScopedTransactions(userId: string, from: Date, to: Date) {
-  return and(
-    eq(transactionTable.userId, userId),
-    gte(transactionTable.occurredAt, from),
-    lte(transactionTable.occurredAt, to)
-  )
-}
-
-function expenseStatusIncludedInDashboardTotals() {
-  return inArray(expense.status, [...DASHBOARD_TOTAL_EXPENSE_STATUSES])
-}
+// dateScopedTransactions / expenseStatusIncludedInDashboardTotals extracted to
+// lib/dal/dashboard-filters.ts (Phase 77, D-11 seam) — imported above, shared with dashboard.ts.
 
 function emptyOutSegments(): { essential: string; discretionary: string; debt: string } {
   return {
@@ -247,7 +240,7 @@ export const getMonthOverMonthCategoryChanges = cache(
             .innerJoin(directionTable, eq(natureTable.directionId, directionTable.id))
             .where(
               and(
-                dateScopedTransactions(userId, currFrom, currTo),
+                dateScopedTransactions(transactionTable, userId, currFrom, currTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, 'allocation'),
                 isNotSecondary()
@@ -281,7 +274,7 @@ export const getMonthOverMonthCategoryChanges = cache(
             .innerJoin(directionTable, eq(natureTable.directionId, directionTable.id))
             .where(
               and(
-                dateScopedTransactions(userId, prevFrom, prevTo),
+                dateScopedTransactions(transactionTable, userId, prevFrom, prevTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, 'allocation'),
                 isNotSecondary()
@@ -327,7 +320,7 @@ export const getMonthOverMonthCategoryChanges = cache(
             .innerJoin(directionTable, eq(natureTable.directionId, directionTable.id))
             .where(
               and(
-                dateScopedTransactions(userId, currFrom, currTo),
+                dateScopedTransactions(transactionTable, userId, currFrom, currTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, directionParam),
                 isNotSecondary()
@@ -362,7 +355,7 @@ export const getMonthOverMonthCategoryChanges = cache(
             .innerJoin(directionTable, eq(natureTable.directionId, directionTable.id))
             .where(
               and(
-                dateScopedTransactions(userId, prevFrom, prevTo),
+                dateScopedTransactions(transactionTable, userId, prevFrom, prevTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, directionParam),
                 isNotSecondary()
@@ -515,7 +508,7 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
       )
       .where(
         and(
-          dateScopedTransactions(userId, from, to),
+          dateScopedTransactions(transactionTable, userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
           // Exclude transfer via correlated direction subquery (INNER JOINs above ensure subCategoryId is set)
           sql`(

@@ -21,6 +21,7 @@ import {
   expense,
   expenseGroup,
   expenseGroupMembership,
+  ledgerEntryCash,
   nature,
   subCategory,
   transaction as transactionTable,
@@ -38,6 +39,13 @@ import {
 } from '@/lib/utils/dashboard'
 import { toDecimal } from '@/lib/utils/decimal'
 import { effectiveAmount, isNotSecondary } from '@/lib/dal/transaction-pairs-sql'
+import {
+  DASHBOARD_TOTAL_EXPENSE_STATUSES,
+  dateScopedTransactions,
+  expenseStatusIncludedInDashboardTotals,
+} from '@/lib/dal/dashboard-filters'
+
+export { DASHBOARD_TOTAL_EXPENSE_STATUSES }
 
 export type OverviewData = {
   totalIn: string
@@ -273,8 +281,6 @@ type CategoryDetailTopTransactionRow = {
 
 const ZERO_AMOUNT = '0.00'
 
-export const DASHBOARD_TOTAL_EXPENSE_STATUSES = ['1', '2', '3'] as const
-
 function previousDashboardPresetDateRange(preset: DashboardPreset, now = new Date()) {
   switch (preset) {
     case 'last-3-months':
@@ -417,20 +423,8 @@ function rowMatchesCategory(
   )
 }
 
-function dateScopedTransactions(userId: string, from: Date, to: Date) {
-  return and(
-    eq(transactionTable.userId, userId),
-    gte(transactionTable.occurredAt, from),
-    lte(transactionTable.occurredAt, to)
-  )
-}
-
 function expenseStatusUncategorized() {
   return eq(expense.status, '1')
-}
-
-function expenseStatusIncludedInDashboardTotals() {
-  return inArray(expense.status, [...DASHBOARD_TOTAL_EXPENSE_STATUSES])
 }
 
 export async function getUncategorizedCount(userId: string, from: Date, to: Date): Promise<number> {
@@ -443,7 +437,7 @@ export async function getUncategorizedCount(userId: string, from: Date, to: Date
       .leftJoin(category, eq(subCategory.categoryId, category.id))
       .where(
         and(
-          dateScopedTransactions(userId, from, to),
+          dateScopedTransactions(transactionTable, userId, from, to),
           expenseStatusUncategorized(),
           isNull(expense.subCategoryId)
         )
@@ -459,18 +453,18 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
   try {
     const rows = await db
       .select({
-        totalIn: sql<string>`coalesce(sum(case when ${direction.code} = 'in' then ${effectiveAmount()} else 0 end), 0)::text`,
-        totalOut: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' then ${effectiveAmount()} else 0 end)), 0)::text`,
-        totalAllocation: sql<string>`coalesce(sum(case when ${direction.code} = 'allocation' then ${effectiveAmount()} else 0 end), 0)::text`,
+        totalIn: sql<string>`coalesce(sum(case when ${direction.code} = 'in' then ${ledgerEntryCash.amount} else 0 end), 0)::text`,
+        totalOut: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' then ${ledgerEntryCash.amount} else 0 end)), 0)::text`,
+        totalAllocation: sql<string>`coalesce(sum(case when ${direction.code} = 'allocation' then ${ledgerEntryCash.amount} else 0 end), 0)::text`,
         // Recurring income only — excludes income_extraordinary (260709-kp1).
-        totalInRecurring: sql<string>`coalesce(sum(case when ${direction.code} = 'in' and ${nature.code} = 'income' then ${effectiveAmount()} else 0 end), 0)::text`,
+        totalInRecurring: sql<string>`coalesce(sum(case when ${direction.code} = 'in' and ${nature.code} = 'income' then ${ledgerEntryCash.amount} else 0 end), 0)::text`,
         // Per-nature OUT sums — Uscite card breakdown (260709-lkw). abs mirrors totalOut.
-        totalOutEssential: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'essential' then ${effectiveAmount()} else 0 end)), 0)::text`,
-        totalOutDiscretionary: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'discretionary' then ${effectiveAmount()} else 0 end)), 0)::text`,
-        totalOutDebt: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'debt' then ${effectiveAmount()} else 0 end)), 0)::text`,
+        totalOutEssential: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'essential' then ${ledgerEntryCash.amount} else 0 end)), 0)::text`,
+        totalOutDiscretionary: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'discretionary' then ${ledgerEntryCash.amount} else 0 end)), 0)::text`,
+        totalOutDebt: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'debt' then ${ledgerEntryCash.amount} else 0 end)), 0)::text`,
       })
-      .from(transactionTable)
-      .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+      .from(ledgerEntryCash)
+      .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
       .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .innerJoin(category, eq(subCategory.categoryId, category.id))
       .leftJoin(
@@ -490,10 +484,11 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
       .innerJoin(direction, eq(nature.directionId, direction.id))
       .where(
         and(
-          dateScopedTransactions(userId, from, to),
+          // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
+          // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+          dateScopedTransactions(ledgerEntryCash, userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
           ne(direction.code, 'transfer'),
-          isNotSecondary()
         )
       )
 
@@ -1014,7 +1009,7 @@ export const getCategoriesBreakdown = cache(
         .innerJoin(direction, eq(nature.directionId, direction.id))
         .where(
           and(
-            dateScopedTransactions(userId, from, to),
+            dateScopedTransactions(transactionTable, userId, from, to),
             expenseStatusIncludedInDashboardTotals(),
             eq(direction.includedInTotals, true),
             isNotSecondary(),
@@ -1074,7 +1069,7 @@ export const getCategoryRanking = cache(
         .innerJoin(direction, eq(nature.directionId, direction.id))
         .where(
           and(
-            dateScopedTransactions(userId, from, to),
+            dateScopedTransactions(transactionTable, userId, from, to),
             expenseStatusIncludedInDashboardTotals(),
             eq(direction.includedInTotals, true),
             isNotSecondary(),
@@ -1134,7 +1129,7 @@ export const getCategoryDeviations = cache(
           .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
-              dateScopedTransactions(userId, reference.from, reference.to),
+              dateScopedTransactions(transactionTable, userId, reference.from, reference.to),
               expenseStatusIncludedInDashboardTotals(),
               eq(direction.includedInTotals, true),
               isNotSecondary(),
@@ -1170,7 +1165,7 @@ export const getCategoryDeviations = cache(
           .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
-              dateScopedTransactions(userId, baseline.from, baseline.to),
+              dateScopedTransactions(transactionTable, userId, baseline.from, baseline.to),
               expenseStatusIncludedInDashboardTotals(),
               eq(direction.includedInTotals, true),
               isNotSecondary(),
@@ -1305,7 +1300,7 @@ export const getCategoryDetail = cache(
           .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
-              dateScopedTransactions(userId, from, to),
+              dateScopedTransactions(transactionTable, userId, from, to),
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
@@ -1348,7 +1343,7 @@ export const getCategoryDetail = cache(
           .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
-              dateScopedTransactions(userId, from, to),
+              dateScopedTransactions(transactionTable, userId, from, to),
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
@@ -1394,7 +1389,7 @@ export const getCategoryDetail = cache(
           .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
-              dateScopedTransactions(userId, from, to),
+              dateScopedTransactions(transactionTable, userId, from, to),
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
@@ -1470,7 +1465,7 @@ export const getMonthlyTrendByNature = cache(async (preset: DashboardPreset): Pr
       .leftJoin(direction, eq(nature.directionId, direction.id))
       .where(
         and(
-          dateScopedTransactions(userId, from, to),
+          dateScopedTransactions(transactionTable, userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
           or(isNull(direction.code), ne(direction.code, 'transfer')),
           isNotSecondary()
