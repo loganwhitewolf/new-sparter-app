@@ -10,3 +10,11 @@ export const CreateAmortizationPlanSchema = z.object({
 })
 
 export type CreateAmortizationPlanInput = z.infer<typeof CreateAmortizationPlanSchema>
+
+// D-09 undo (Plan 77-02): only the planId crosses the trust boundary — reverseDetachTx re-derives
+// the transactionId server-side from the plan row it looks up, scoped to the caller's own userId.
+export const RemoveAmortizationPlanSchema = z.object({
+  planId: z.string().uuid({ error: 'Pianificazione non valida.' }),
+})
+
+export type RemoveAmortizationPlanInput = z.infer<typeof RemoveAmortizationPlanSchema>
