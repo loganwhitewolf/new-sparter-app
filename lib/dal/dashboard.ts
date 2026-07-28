@@ -1260,7 +1260,7 @@ export const getCategoryDetail = cache(
       return emptyData()
     }
 
-    const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
+    const monthSql = sql<string>`to_char(${ledgerEntryCash.occurredAt}, 'YYYY-MM')`
     const activeScopedCategory = and(
       eq(category.id, categoryId),
       eq(category.isActive, true),
@@ -1281,10 +1281,10 @@ export const getCategoryDetail = cache(
             categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
             month: monthSql,
             count: countDistinct(expense.id),
-            amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)::text`,
           })
-          .from(transactionTable)
-          .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+          .from(ledgerEntryCash)
+          .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
           .leftJoin(
@@ -1304,12 +1304,13 @@ export const getCategoryDetail = cache(
           .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
-              dateScopedTransactions(transactionTable, userId, from, to),
+              // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
+              // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+              dateScopedTransactions(ledgerEntryCash, userId, from, to),
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
-              eq(direction.includedInTotals, true),
-              isNotSecondary()
+              eq(direction.includedInTotals, true)
             )
           )
           .groupBy(category.id, monthSql, direction.code)
@@ -1324,10 +1325,10 @@ export const getCategoryDetail = cache(
             subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
             subCategorySlug: subCategory.slug,
             count: countDistinct(expense.id),
-            amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)::text`,
           })
-          .from(transactionTable)
-          .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+          .from(ledgerEntryCash)
+          .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
           .leftJoin(
@@ -1347,16 +1348,17 @@ export const getCategoryDetail = cache(
           .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
-              dateScopedTransactions(transactionTable, userId, from, to),
+              // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
+              // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+              dateScopedTransactions(ledgerEntryCash, userId, from, to),
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
-              eq(direction.includedInTotals, true),
-              isNotSecondary()
+              eq(direction.includedInTotals, true)
             )
           )
           .groupBy(category.id, subCategory.id, userSubcategoryOverride.customName, direction.code)
-          .orderBy(desc(sql`coalesce(abs(sum(${effectiveAmount()})), 0)`), sql`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`, subCategory.id),
+          .orderBy(desc(sql`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)`), sql`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`, subCategory.id),
         db
           .select({
             id: transactionTable.id,
@@ -1371,6 +1373,13 @@ export const getCategoryDetail = cache(
             occurredAt: transactionTable.occurredAt,
           })
           .from(transactionTable)
+          // ID-to-id join, not a from-swap: this sub-query DISPLAYS the RAW (un-netted)
+          // transaction amount below (`amount: transactionTable.amount`) — only the ranking
+          // switches to the netted ledger_entry_cash.amount. ledger_entry_cash's rows map 1:1
+          // onto transaction rows (no instalment row ever appears in it), so the join also
+          // structurally replaces isNotSecondary(): a refund transaction has no matching
+          // ledger_entry_cash row, so the INNER JOIN itself excludes it (Phase 77, D-11).
+          .innerJoin(ledgerEntryCash, eq(ledgerEntryCash.id, transactionTable.id))
           .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
           .leftJoin(expenseGroupMembership, eq(expense.id, expenseGroupMembership.expenseId))
           .leftJoin(expenseGroup, eq(expenseGroupMembership.groupId, expenseGroup.id))
@@ -1397,11 +1406,10 @@ export const getCategoryDetail = cache(
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
-              eq(direction.includedInTotals, true),
-              isNotSecondary()
+              eq(direction.includedInTotals, true)
             )
           )
-          .orderBy(desc(sql`abs(${effectiveAmount()})`), desc(transactionTable.occurredAt), transactionTable.id)
+          .orderBy(desc(sql`abs(${ledgerEntryCash.amount})`), desc(transactionTable.occurredAt), transactionTable.id)
           .limit(5),
       ])
 
