@@ -1269,5 +1269,57 @@ describeIfReachable('amortization cash-lens byte-identical (Phase 77, ADR 0019 D
     // it is unconsumed in Phase 77).
     expect(toDecimal(afterTotals.totalOut).equals(toDecimal(beforeTotals.totalOut))).toBe(true)
     expect(toDecimal(afterTotals.totalOut).equals(toDecimal('1000.00'))).toBe(true)
+
+    // Plan 77-04's five migrated aggregation functions: same before/after snapshot pair, proving
+    // the ledger_entry_cash seam migration (D-11) changed the SQL, never the observable output.
+
+    // getCategoriesBreakdown: essentialCategoryId's total amount is unchanged.
+    const beforeBreakdown = before.getCategoriesBreakdown as Array<{ id: number; amount: string }>
+    const afterBreakdown = after.getCategoriesBreakdown as Array<{ id: number; amount: string }>
+    const beforeBreakdownAmount = beforeBreakdown.find((c) => c.id === taxonomy.essentialCategoryId)?.amount
+    const afterBreakdownAmount = afterBreakdown.find((c) => c.id === taxonomy.essentialCategoryId)?.amount
+    expect(afterBreakdownAmount).toBe(beforeBreakdownAmount)
+    expect(toDecimal(afterBreakdownAmount ?? '0').equals(toDecimal('1000.00'))).toBe(true)
+
+    // getCategoryRanking: same category's ranked amount is unchanged.
+    const beforeRanking = before.getCategoryRanking as Array<{ id: number; amount: string }>
+    const afterRanking = after.getCategoryRanking as Array<{ id: number; amount: string }>
+    const beforeRankingAmount = beforeRanking.find((c) => c.id === taxonomy.essentialCategoryId)?.amount
+    const afterRankingAmount = afterRanking.find((c) => c.id === taxonomy.essentialCategoryId)?.amount
+    expect(afterRankingAmount).toBe(beforeRankingAmount)
+    expect(toDecimal(afterRankingAmount ?? '0').equals(toDecimal('1000.00'))).toBe(true)
+
+    // getCategoryDeviations: same category's deviation entry is byte-identical.
+    const beforeDeviations = before.getCategoryDeviations as Map<number, unknown>
+    const afterDeviations = after.getCategoryDeviations as Map<number, unknown>
+    expect(JSON.stringify(afterDeviations.get(taxonomy.essentialCategoryId))).toBe(
+      JSON.stringify(beforeDeviations.get(taxonomy.essentialCategoryId)),
+    )
+
+    // getCategoryDetail: the top-transaction's RAW (un-netted) amount and the summary total are
+    // unchanged — proving the dual-join special case (ranking-only netted join) never touched the
+    // displayed value.
+    const beforeDetail = before.getCategoryDetail as {
+      summary: { total: string }
+      topTransactions: Array<{ amount: string }>
+    }
+    const afterDetail = after.getCategoryDetail as typeof beforeDetail
+    expect(afterDetail.summary.total).toBe(beforeDetail.summary.total)
+    expect(afterDetail.topTransactions[0]?.amount).toBe(beforeDetail.topTransactions[0]?.amount)
+    expect(toDecimal(afterDetail.summary.total).equals(toDecimal('1000.00'))).toBe(true)
+    expect(toDecimal(afterDetail.topTransactions[0]?.amount ?? '0').equals(toDecimal('1000.00'))).toBe(true)
+
+    // getMonthlyTrendByNature: the transaction's month/nature segment is unchanged, including the
+    // LEFT JOIN chain (unaffected by amortization here, but proven byte-identical regardless).
+    const beforeTrend = before.getMonthlyTrendByNature as Array<{
+      month: string
+      segments: Record<string, string>
+    }>
+    const afterTrend = after.getMonthlyTrendByNature as typeof beforeTrend
+    const occurredMonthKey = monthKey(occurredAt)
+    const beforeSegment = beforeTrend.find((point) => point.month === occurredMonthKey)?.segments.essential
+    const afterSegment = afterTrend.find((point) => point.month === occurredMonthKey)?.segments.essential
+    expect(afterSegment).toBe(beforeSegment)
+    expect(toDecimal(afterSegment ?? '0').abs().equals(toDecimal('1000.00'))).toBe(true)
   })
 })
