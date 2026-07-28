@@ -89,6 +89,16 @@ export async function updateTransaction(
         userId: transaction.userId,
         amount: transaction.amount,
         expenseId: transaction.expenseId,
+        // Phase 78 (D-04, AMORT-07): correlated subquery mirroring
+        // transactionListSelect.amortizationPlanId (lib/dal/transactions.ts) — same
+        // no-extra-round-trip style, with the added open-status predicate this guard
+        // needs. Non-null only when an OPEN amortization plan exists for this
+        // transaction; a closed plan's totalAmount snapshot is frozen and no longer
+        // needs this guard.
+        amortizationPlanId: sql<string | null>`(
+          SELECT ap.id FROM amortization_plan ap
+          WHERE ap.transaction_id = ${transaction.id} AND ap.status = 'open'
+        )`,
       })
       .from(transaction)
       .where(and(eq(transaction.id, input.transactionId), eq(transaction.userId, input.userId)))
@@ -97,6 +107,23 @@ export async function updateTransaction(
     const row = rows[0]
     if (!row) {
       throw new Error('Transazione non trovata.')
+    }
+
+    // Phase 78 (D-04, AMORT-07): editing amount OR occurredAt (or both) on a
+    // transaction with an OPEN amortization plan is blocked before any write, the
+    // reimbursement pair-guard, or expense reconciliation runs — reconciling an
+    // amount/date edit would require rewriting the purchase-month instalment, a
+    // past/closed month, violating ADR 0019's "never rewrite a closed month"
+    // invariant. Runs BEFORE the amount-only pair-guard block below (not nested
+    // inside it) so it also covers occurredAt-only edits, which the pair-guard never
+    // checked. Subcategory/title edits are unaffected — they never set amount or
+    // occurredAt, so this predicate never fires for them. `!= null` (loose) treats a
+    // pre-existing test's undefined amortizationPlanId the same as an explicit null.
+    if (
+      (input.amount !== undefined || input.occurredAt !== undefined) &&
+      row.amortizationPlanId != null
+    ) {
+      throw new Error('Rimuovi ammortamento per modificare l\'importo o la data della transazione.')
     }
 
     if (input.amount !== undefined) {
