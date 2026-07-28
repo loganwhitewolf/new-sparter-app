@@ -1233,6 +1233,9 @@ describeIfReachable('amortization cash-lens byte-identical (Phase 77, ADR 0019 D
       occurredAt,
       title: 'Amortization probe purchase',
     })
+    // Tagged so getTagTotals/getTagDetail below exercise a real row (dual-join), not the
+    // zero-transaction-tag path — proving Plan 77-05's amount seam, not just the join's shape.
+    await attachTagToTransaction(db, { tagId, transactionId })
 
     const before = await captureAggregationSnapshot({
       harnessDb: db,
@@ -1321,5 +1324,167 @@ describeIfReachable('amortization cash-lens byte-identical (Phase 77, ADR 0019 D
     const afterSegment = afterTrend.find((point) => point.month === occurredMonthKey)?.segments.essential
     expect(afterSegment).toBe(beforeSegment)
     expect(toDecimal(afterSegment ?? '0').abs().equals(toDecimal('1000.00'))).toBe(true)
+
+    // Plan 77-05's two migrated functions — closing the full 10-function LENS-03 coverage.
+
+    // getTagTotals: the tagged transaction's total is unchanged and preserves sign (-1000.00).
+    const beforeTagTotal = (before.getTagTotals as Array<{ tagId: number; total: string }>).find(
+      (r) => r.tagId === tagId,
+    )
+    const afterTagTotal = (after.getTagTotals as Array<{ tagId: number; total: string }>).find(
+      (r) => r.tagId === tagId,
+    )
+    expect(afterTagTotal?.total).toBe(beforeTagTotal?.total)
+    expect(toDecimal(afterTagTotal?.total ?? '0').equals(toDecimal('-1000.00'))).toBe(true)
+
+    // getTagDetail: proves the dual-join special case — the raw (immutable) description stays
+    // sourced from `transaction`, while `net`/the row's `amount` come from ledger_entry_cash.
+    const beforeTagDetail = before.getTagDetail as {
+      net: string
+      transactions: Array<{ description: string; amount: string }>
+    }
+    const afterTagDetail = after.getTagDetail as typeof beforeTagDetail
+    expect(afterTagDetail.net).toBe(beforeTagDetail.net)
+    expect(toDecimal(afterTagDetail.net).equals(toDecimal('-1000.00'))).toBe(true)
+    expect(afterTagDetail.transactions[0]?.description).toBe('Amortization probe purchase')
+    expect(afterTagDetail.transactions[0]?.amount).toBe(beforeTagDetail.transactions[0]?.amount)
+    expect(toDecimal(afterTagDetail.transactions[0]?.amount ?? '0').equals(toDecimal('-1000.00'))).toBe(true)
+  })
+
+  it('reimbursement netting and amortization spread do not interact — the original N=1 scenario stays correct with amortization data present elsewhere in the same fixture set', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const essentialCategoryId = taxonomy.essentialCategoryId
+    const { tagId } = await seedTag(db, { userId, name: 'Amazon' })
+
+    const dateRange = dashboardPresetToDateRange('last-month')
+    const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 15, 12, 0, 0)
+
+    // Byte-identical replica of the Phase 73 N=1 scenario (this file's very first
+    // describeIfReachable block, above) — same category, same amounts, same tag name.
+    const { expenseId: outflowExpenseId, transactionId: outflowTransactionId } =
+      await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-100.00',
+        occurredAt,
+        title: 'Amazon order',
+      })
+    const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '50.00',
+      occurredAt,
+      title: 'Amazon refund',
+    })
+    await attachTagToTransaction(db, { tagId, transactionId: outflowTransactionId })
+    await seedReimbursement(db, {
+      userId,
+      title: 'Amazon order',
+      expenseId: outflowExpenseId,
+      refundTransactionIds: [refundTransactionId],
+    })
+
+    // Elsewhere in the SAME fixture set: an unrelated amortization plan, seeded under a SECOND
+    // category (never essentialCategoryId) and in a different month than the N=1 scenario above —
+    // the two isolation axes every one of the 10 aggregation functions groups by (category id for
+    // breakdown/ranking/deviations/MoM/detail, month for the nature-keyed trend/chart segments).
+    // Neither axis can leak into the N=1 assertions below, proving reimbursement netting and
+    // amortization coexist in one fixture set without cross-contamination.
+    const secondCategory = await seedSecondEssentialCategory(db, {
+      userId,
+      natureId: taxonomy.essentialNatureId,
+    })
+    const amortOccurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth() - 3, 10, 12, 0, 0)
+    const { expenseId: amortExpenseId, transactionId: amortTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: secondCategory.subCategoryId,
+      amount: '-600.00',
+      occurredAt: amortOccurredAt,
+      title: 'Cross-feature amortization purchase',
+    })
+    const instalments = materializeInstalments('-600.00', amortOccurredAt, 3)
+    await seedAmortizationPlan(db, {
+      userId,
+      transactionId: amortTransactionId,
+      expenseId: amortExpenseId,
+      months: 3,
+      instalments,
+    })
+
+    const snapshot = await captureAggregationSnapshot({
+      harnessDb: db,
+      userId,
+      dateRange,
+      categoryId: essentialCategoryId,
+      tagId,
+    })
+
+    // Every assertion from the file's very first N=1 regression block, replayed byte-identical
+    // against a snapshot that ALSO has amortization data present (D-12): reimbursement netting
+    // and amortization do not interact or leak into each other's totals.
+    const totals = snapshot.getOverviewAmountTotals as { totalOut: string }
+    expect(toDecimal(totals.totalOut).equals(toDecimal('50.00'))).toBe(true)
+
+    const breakdownRow = (snapshot.getCategoriesBreakdown as Array<{ id: number; amount: string }>).find(
+      (r) => r.id === essentialCategoryId,
+    )
+    expect(breakdownRow).toBeDefined()
+    expect(toDecimal(breakdownRow!.amount).equals(toDecimal('50.00'))).toBe(true)
+
+    const rankingRow = (snapshot.getCategoryRanking as Array<{ id: number; amount: string }>).find(
+      (r) => r.id === essentialCategoryId,
+    )
+    expect(rankingRow).toBeDefined()
+    expect(toDecimal(rankingRow!.amount).equals(toDecimal('50.00'))).toBe(true)
+
+    const deviationsMap = snapshot.getCategoryDeviations as Map<
+      number,
+      { deviation: number | null; isNew: boolean; belowNoiseThreshold: boolean }
+    >
+    const deviationEntry = deviationsMap.get(essentialCategoryId)
+    expect(deviationEntry).toBeDefined()
+    expect(deviationEntry!.isNew).toBe(true)
+    expect(deviationEntry!.deviation).toBeNull()
+
+    const detail = snapshot.getCategoryDetail as { summary: { total: string } }
+    expect(toDecimal(detail.summary.total).equals(toDecimal('50.00'))).toBe(true)
+
+    const targetMonth = monthKey(dateRange.from)
+    const trendPoint = (
+      snapshot.getMonthlyTrendByNature as Array<{ month: string; segments: Record<string, string> }>
+    ).find((p) => p.month === targetMonth)
+    expect(trendPoint).toBeDefined()
+    expect(toDecimal(trendPoint!.segments.essential).equals(toDecimal('-50.00'))).toBe(true)
+
+    const momRow = (
+      snapshot.getMonthOverMonthCategoryChanges as Array<{
+        categoryId: number | null
+        delta: string
+        isNew: boolean
+      }>
+    ).find((r) => r.categoryId === essentialCategoryId)
+    expect(momRow).toBeDefined()
+    expect(momRow!.isNew).toBe(true)
+    expect(toDecimal(momRow!.delta).equals(toDecimal('50.00'))).toBe(true)
+
+    const chartPoint = (
+      snapshot.getOverviewChart as Array<{ month: string; out: { essential: string } }>
+    ).find((p) => p.month === targetMonth)
+    expect(chartPoint).toBeDefined()
+    expect(toDecimal(chartPoint!.out.essential).equals(toDecimal('50.00'))).toBe(true)
+
+    const tagTotalsRow = (snapshot.getTagTotals as Array<{ tagId: number; total: string }>).find(
+      (r) => r.tagId === tagId,
+    )
+    expect(tagTotalsRow).toBeDefined()
+    expect(toDecimal(tagTotalsRow!.total).equals(toDecimal('-50.00'))).toBe(true)
+
+    const tagDetail = snapshot.getTagDetail as { net: string }
+    expect(toDecimal(tagDetail.net).equals(toDecimal('-50.00'))).toBe(true)
   })
 })
