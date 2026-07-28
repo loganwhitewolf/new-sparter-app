@@ -249,6 +249,12 @@ export const transactionListSelect = {
   amortizationPlanId: sql<string | null>`(
     SELECT ap.id FROM amortization_plan ap WHERE ap.transaction_id = ${transaction.id}
   )`,
+  // Phase 78 (D-01, AMORT-04): the amortization_plan's own status ('open'/'closed'), gating the
+  // "Chiudi ammortamento" action's visibility alongside amortizationPlanId — same
+  // correlated-subquery style, one extra column, no join.
+  amortizationPlanStatus: sql<string | null>`(
+    SELECT ap.status FROM amortization_plan ap WHERE ap.transaction_id = ${transaction.id}
+  )`,
 }
 
 export const transactionPlatformSelect = {
@@ -292,6 +298,8 @@ export type TransactionListRow = {
   reimbursementId: number | null
   // Phase 77 (D-05): amortization_plan id this transaction already has, if any
   amortizationPlanId: string | null
+  // Phase 78 (D-01): the amortization_plan's own status ('open'/'closed'), if any
+  amortizationPlanStatus: string | null
 }
 
 export type TransactionPlatformOption = {
@@ -716,6 +724,8 @@ export type TransactionDetailRow = {
   pairedNetAmount: string | null
   // Phase 77 (D-05, Plan 77-02): the amortization_plan id this transaction already has, if any.
   amortizationPlanId: string | null
+  // Phase 78 (D-01): the amortization_plan's own status ('open'/'closed'), if any.
+  amortizationPlanStatus: string | null
 }
 
 /**
@@ -765,6 +775,7 @@ export const getTransactionForDetail = cache(
         pairedOccurredAt: transactionListSelect.pairedOccurredAt,
         pairedNetAmount: transactionListSelect.pairedNetAmount,
         amortizationPlanId: transactionListSelect.amortizationPlanId,
+        amortizationPlanStatus: transactionListSelect.amortizationPlanStatus,
       })
       .from(transaction)
       .leftJoin(importFile, eq(transaction.fileId, importFile.id))

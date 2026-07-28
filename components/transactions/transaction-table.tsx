@@ -14,6 +14,7 @@ import { CounterpartPickerDialog } from '@/components/transactions/counterpart-p
 import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
 import { ActivateAmortizationDialog } from '@/components/transactions/activate-amortization-dialog'
 import { RemoveAmortizationDialog } from '@/components/transactions/remove-amortization-dialog'
+import { CloseAmortizationDialog } from '@/components/transactions/close-amortization-dialog'
 import { ReimbursementRowIndicator } from '@/components/transactions/reimbursement-row-indicator'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { BulkCategorizeDialog } from '@/components/expenses/bulk-categorize-dialog'
@@ -212,6 +213,11 @@ export function TransactionTable({
     planId: string
     transactionId: string
   } | null>(null)
+  // Close (D-01, Phase 78) row-action target: set when "Chiudi ammortamento" is selected.
+  const [closeAmortizeTarget, setCloseAmortizeTarget] = useState<{
+    planId: string
+    transactionId: string
+  } | null>(null)
 
   const router = useRouter()
   const { activeSort, activeDir, onSort, isRestoring } = useToolbarSort(route)
@@ -396,6 +402,17 @@ export function TransactionTable({
   function markAmortizationRemoved(transactionId: string) {
     setLoadedTransactions((prev) =>
       prev.map((t) => (t.id === transactionId ? { ...t, amortizationPlanId: null } : t)),
+    )
+  }
+
+  /**
+   * Optimistically flips the row's amortization plan status to 'closed' (D-01) so the "Chiudi
+   * ammortamento" entry disappears immediately without waiting for a reload; "Rimuovi
+   * ammortamento" stays available unchanged (gated only on amortizationPlanId, not status).
+   */
+  function markAmortizationClosed(transactionId: string) {
+    setLoadedTransactions((prev) =>
+      prev.map((t) => (t.id === transactionId ? { ...t, amortizationPlanStatus: 'closed' } : t)),
     )
   }
 
@@ -810,6 +827,25 @@ export function TransactionTable({
                             </Tooltip>
                           </TooltipProvider>
                         ))}
+                      {/* Close entry (D-01, Phase 78, AMORT-04): shown only while the plan is
+                          still open — a closed plan has nothing left to collapse. */}
+                      {transaction.amortizationPlanId != null &&
+                        transaction.amortizationPlanStatus === 'open' && (
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault()
+                              setCloseAmortizeTarget({
+                                planId: transaction.amortizationPlanId!,
+                                transactionId: transaction.id,
+                              })
+                              setOpenDropdownId(null)
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            <CalendarClock className="h-4 w-4" />
+                            Chiudi ammortamento
+                          </DropdownMenuItem>
+                        )}
                       {/* Undo entry (D-09, Entry Point Visibility Matrix: "Active plan exists" ->
                           Undo shown). Shown only when an active plan exists on this transaction. */}
                       {transaction.amortizationPlanId != null && (
@@ -1062,6 +1098,19 @@ export function TransactionTable({
         onSuccess={() => {
           markAmortizationRemoved(removeAmortizeTarget.transactionId)
           setRemoveAmortizeTarget(null)
+          router.refresh()
+        }}
+      />
+    )}
+
+    {closeAmortizeTarget && (
+      <CloseAmortizationDialog
+        open={Boolean(closeAmortizeTarget)}
+        onOpenChange={(open) => { if (!open) setCloseAmortizeTarget(null) }}
+        planId={closeAmortizeTarget.planId}
+        onSuccess={() => {
+          markAmortizationClosed(closeAmortizeTarget.transactionId)
+          setCloseAmortizeTarget(null)
           router.refresh()
         }}
       />

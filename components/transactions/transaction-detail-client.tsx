@@ -27,6 +27,7 @@ import { RefundPickerDialog } from '@/components/transactions/refund-picker-dial
 import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
 import { ActivateAmortizationDialog } from '@/components/transactions/activate-amortization-dialog'
 import { RemoveAmortizationDialog } from '@/components/transactions/remove-amortization-dialog'
+import { CloseAmortizationDialog } from '@/components/transactions/close-amortization-dialog'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { deleteTransaction } from '@/lib/actions/transactions'
 import { addTransactionTagAction, removeTransactionTagAction } from '@/lib/actions/transaction-tags'
@@ -121,6 +122,7 @@ export function TransactionDetailClient({
   const [tagPending, setTagPending] = useState(false)
   const [amortizeOpen, setAmortizeOpen] = useState(false)
   const [removeAmortizeOpen, setRemoveAmortizeOpen] = useState(false)
+  const [closeAmortizeOpen, setCloseAmortizeOpen] = useState(false)
 
   // D-04 mirror: reimbursementPanelData resolves only for an outflow with a linked reimbursement
   // anchor; refundMembership resolves only for an inflow that is itself a linked refund. Amortize
@@ -373,10 +375,11 @@ export function TransactionDetailClient({
             Spesa a sé (non aggregare)
           </Button>
         ) : null}
-        {/* Amortization entry points (Phase 77, D-01/D-08/D-09): "Ammortizza" reuses
-            ActivateAmortizationDialog unmodified, gated by the same five-guard eligibility as the
-            row action; "Rimuovi ammortamento" reuses RemoveAmortizationDialog, shown only when an
-            active plan exists (Entry Point Visibility Matrix). */}
+        {/* Amortization entry points (Phase 77, D-01/D-08/D-09; Phase 78, D-01): "Ammortizza"
+            reuses ActivateAmortizationDialog unmodified, gated by the same five-guard eligibility
+            as the row action; "Chiudi ammortamento" reuses CloseAmortizationDialog, shown only
+            while an open plan exists; "Rimuovi ammortamento" reuses RemoveAmortizationDialog,
+            shown only when an active plan exists (Entry Point Visibility Matrix). */}
         {amortizationEligibility.eligible ? (
           <Button
             type="button"
@@ -402,6 +405,17 @@ export function TransactionDetailClient({
             </Tooltip>
           </TooltipProvider>
         )}
+        {transaction.amortizationPlanId != null && transaction.amortizationPlanStatus === 'open' ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-start"
+            onClick={() => setCloseAmortizeOpen(true)}
+          >
+            <CalendarClock className="h-4 w-4" />
+            Chiudi ammortamento
+          </Button>
+        ) : null}
         {transaction.amortizationPlanId != null ? (
           <Button
             type="button"
@@ -549,6 +563,18 @@ export function TransactionDetailClient({
           planId={transaction.amortizationPlanId}
           onSuccess={() => {
             setRemoveAmortizeOpen(false)
+            router.refresh()
+          }}
+        />
+      ) : null}
+
+      {transaction.amortizationPlanId ? (
+        <CloseAmortizationDialog
+          open={closeAmortizeOpen}
+          onOpenChange={setCloseAmortizeOpen}
+          planId={transaction.amortizationPlanId}
+          onSuccess={() => {
+            setCloseAmortizeOpen(false)
             router.refresh()
           }}
         />

@@ -18,3 +18,11 @@ export const RemoveAmortizationPlanSchema = z.object({
 })
 
 export type RemoveAmortizationPlanInput = z.infer<typeof RemoveAmortizationPlanSchema>
+
+// Phase 78 (D-01, AMORT-04): only the planId crosses the trust boundary — closePlanTx re-derives
+// ownership server-side, scoped to the caller's own userId (T-78-02).
+export const ClosePlanSchema = z.object({
+  planId: z.string().uuid({ error: 'Pianificazione non valida.' }),
+})
+
+export type ClosePlanInput = z.infer<typeof ClosePlanSchema>

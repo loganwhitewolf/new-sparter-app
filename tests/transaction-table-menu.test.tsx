@@ -103,6 +103,7 @@ function makeTransaction(overrides: Partial<TransactionListRow> = {}): Transacti
     pairedOccurredAt: null,
     reimbursementId: null,
     amortizationPlanId: null,
+    amortizationPlanStatus: null,
     ...overrides,
   }
 }
