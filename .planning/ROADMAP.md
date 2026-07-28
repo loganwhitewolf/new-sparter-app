@@ -68,7 +68,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [x] 77-03-PLAN.md — Manual-entry atomic create+amortize (D-10)
-- [ ] 77-05-PLAN.md — ledger_entry seam migration: lib/dal/overview.ts (2) + lib/dal/tags.ts (2) aggregation functions
+- [x] 77-05-PLAN.md — ledger_entry seam migration: lib/dal/overview.ts (2) + lib/dal/tags.ts (2) aggregation functions
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
