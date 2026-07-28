@@ -6,9 +6,9 @@ Scoped capability contract for milestone v2.9. Model locked in [ADR 0019](../doc
 
 ### Plan lifecycle (AMORT)
 
-- [ ] **AMORT-01**: User can amortize an outflow transaction over a chosen number of months from the transaction row, the transaction detail page, and manual entry.
-- [ ] **AMORT-02**: When a user amortizes a transaction, the system detaches it into a Standalone Expense so a later same-description purchase is not swept into the plan.
-- [ ] **AMORT-03**: User sees the amortized cost spread into uniform monthly instalments starting from the purchase month, with the rounding remainder on the first instalment and each instalment on the purchase's calendar day (clamped to month end).
+- [x] **AMORT-01**: User can amortize an outflow transaction over a chosen number of months from the transaction row, the transaction detail page, and manual entry.
+- [x] **AMORT-02**: When a user amortizes a transaction, the system detaches it into a Standalone Expense so a later same-description purchase is not swept into the plan.
+- [x] **AMORT-03**: User sees the amortized cost spread into uniform monthly instalments starting from the purchase month, with the rounding remainder on the first instalment and each instalment on the purchase's calendar day (clamped to month end).
 - [ ] **AMORT-04**: User can close an amortization plan, collapsing every remaining instalment onto the closure month while past instalments stay in place.
 - [ ] **AMORT-05**: User can close a plan with a realization value by linking a sale transaction (imported or created at closure) that nets against the closure month; closing with no linked transaction records a scrapped asset.
 - [ ] **AMORT-06**: When a reimbursement is linked to an open plan, the system reduces the base and re-spreads the remaining instalments proportionally.
@@ -24,7 +24,7 @@ Scoped capability contract for milestone v2.9. Model locked in [ADR 0019](../doc
 
 - [ ] **LENS-01**: User can switch the whole dashboard between a "cassa" (cash) view and a "competenza" (accrual) view with one global control.
 - [ ] **LENS-02**: Under the accrual view, every dashboard widget — bar chart, KPI cards, category breakdown, movers, deviations — reflects spread instalments instead of the purchase-day amount.
-- [ ] **LENS-03**: Under the cash view, all dashboard figures remain byte-identical to today's behavior.
+- [x] **LENS-03**: Under the cash view, all dashboard figures remain byte-identical to today's behavior.
 - [ ] **LENS-04**: Under the accrual view, the dashboard shows the whole selected year including future instalment months, with instalments past year-end appearing in the following year.
 - [ ] **LENS-05**: The year and month selectors offer periods that exist only as instalments under the accrual view.
 
@@ -48,9 +48,9 @@ Filled at roadmap creation (2026-07-27). 15/15 v2.9 requirements mapped across P
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AMORT-01 | Phase 77 | Pending |
-| AMORT-02 | Phase 77 | Pending |
-| AMORT-03 | Phase 77 | Pending |
+| AMORT-01 | Phase 77 | Complete |
+| AMORT-02 | Phase 77 | Complete |
+| AMORT-03 | Phase 77 | Complete |
 | AMORT-04 | Phase 78 | Pending |
 | AMORT-05 | Phase 78 | Pending |
 | AMORT-06 | Phase 78 | Pending |
@@ -60,6 +60,6 @@ Filled at roadmap creation (2026-07-27). 15/15 v2.9 requirements mapped across P
 | REG-03 | Phase 79 | Pending |
 | LENS-01 | Phase 80 | Pending |
 | LENS-02 | Phase 80 | Pending |
-| LENS-03 | Phase 77 | Pending |
+| LENS-03 | Phase 77 | Complete |
 | LENS-04 | Phase 80 | Pending |
 | LENS-05 | Phase 80 | Pending |

@@ -58,7 +58,7 @@
 Plans:
 **Wave 1**
 
-- [ ] 77-01-PLAN.md — Schema + [BLOCKING] migration + ledger_entry_cash/accrual views (checkpoint: plain vs materialized VIEW) + instalment math + one full row-action activation, regression-proven on getOverviewAmountTotals; eligibility guards (D-04..D-07 + outflow)
+- [x] 77-01-PLAN.md — Schema + [BLOCKING] migration + ledger_entry_cash/accrual views (checkpoint: plain vs materialized VIEW) + instalment math + one full row-action activation, regression-proven on getOverviewAmountTotals; eligibility guards (D-04..D-07 + outflow)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -406,7 +406,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 74. group-anchor-and-reconciliation | v2.8 | 4/4 | Complete | 2026-07-24 |
 | 75. linking-surfaces-and-lifecycle | v2.8 | 4/4 | Complete | 2026-07-27 |
 | 76. reimbursements-section | v2.8 | 6/6 | Complete | 2026-07-27 |
-| 77. amortization-schema-and-activation | v2.9 | 0/6 | Planned | - |
+| 77. amortization-schema-and-activation | v2.9 | 0/6 | In Progress|  |
 | 78. plan-lifecycle-and-reconciliation | v2.9 | TBD | Not started | - |
 | 79. amortizations-registry | v2.9 | TBD | Not started | - |
 | 80. dashboard-accrual-lens | v2.9 | TBD | Not started | - |

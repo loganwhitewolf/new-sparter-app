@@ -231,3 +231,9 @@ None - no external service configuration required. `yarn db:migrate` was run aga
 ---
 *Phase: 77-amortization-schema-and-activation*
 *Completed: 2026-07-28*
+
+## Self-Check: PASSED
+
+All 11 files referenced above (services, utils, dal, validations, actions, dialog component,
+tests, migration) confirmed present on disk. All 7 commit hashes (e5867ea, 6295f1c, 4cedbfe,
+7557469, 78e2e1f, 9292f90, cecd89c) confirmed present in git history. No missing items.
