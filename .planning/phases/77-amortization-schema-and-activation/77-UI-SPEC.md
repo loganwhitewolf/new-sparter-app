@@ -1,7 +1,7 @@
 ---
 phase: 77
 slug: amortization-schema-and-activation
-status: draft
+status: approved
 shadcn_initialized: true
 preset: new-york / zinc
 created: 2026-07-28
@@ -227,17 +227,40 @@ or
 
 ## UI Considerations
 
-Applicable state coverage per the activation lifecycle:
+State coverage from the post-verification UI-consideration probe (32 applicable categories across
+E1 activation dialog, E2 gated entry point, E3 undo confirmation, E4 manual-entry form, E5 guard
+tooltips). Resolutions below; empty-state / error-state COPY lives in `## Copywriting Contract` and
+is referenced, not restated.
 
-| Category | Element(s) | Status | Resolution / Reason |
-|----------|------------|--------|---------------------|
-| empty-dialog | activation dialog (initial load) | ✅ covered | Dialog renders with empty months input (focused by default), preview table hidden until valid N entered |
-| invalid-input | months field | ✅ covered | Validation message appears beneath input in red (error color), confirm button disabled until N ≥ 2 and satisfies amount cap |
-| valid-preview | schedule table | ✅ covered | Table renders with computed dates + amounts (rounded amounts always sum to transaction total via remainder on first row) |
-| loading-confirmation | confirm button (pending request) | ✅ covered | Button shows spinner + disabled state while plan write is in flight; no toast until response |
-| overflow-long-transaction-description | dialog title / preview context | ✅ covered | Transaction description is the context (not shown in title); title is fixed "Ammortizza transazione"; long descriptions in the page context are already truncated per v2.5 detail-page design |
-| ineligible-guard | activation entry point (hidden/disabled/tooltip) | ✅ covered | Disabled state shown on button with Tooltip overlay; four specific guard messages document each reason (reimbursement, already-amortized, in-group, too-small). Hidden entry point never reaches user if data-driven eligibility check is enforced on the page server-side |
-| edge-case-day-clamp | preview dates (month-end) | ✅ covered | Month-end clamping example in preview (31st → month-end day) is deterministic, not user-configurable; no UI affordance needed for this phase |
+### Resolved truths (covered)
+
+| Element | Category | Truth |
+|---------|----------|-------|
+| E1 activation dialog | empty | Opens with an empty months input (auto-focused); preview hidden until a valid N is entered |
+| E1 | invalid-input | Validation copy in red beneath the input, confirm button disabled until N ≥ 2 and each instalment ≥ €0,01 (see Copywriting) |
+| E1 | populated (valid preview) | Schedule table renders computed dates + amounts; rounded amounts always sum to the transaction total via remainder on the first row |
+| E1 | loading | Confirm button shows spinner + disabled while the atomic plan write is in flight; no toast until response |
+| **E1 / E4** | **overflow (long plan)** | **Because months has no maximum, the preview can be hundreds of rows. The preview reuses the existing infinite-scroll table pattern from `/expenses` and `/transactions` (same virtualization / lazy-render), inside a bounded max-height container — the dialog never grows unbounded.** |
+| **E1 / E4** | **error (write failure)** | **Activation is a multi-write atomic op (detach + plan + instalments); on failure the dialog STAYS OPEN with the entered values preserved and an error toast appears, so the user can retry. Mirrors the undo error-toast pattern.** |
+| E1 | long-text | Transaction description is page context, not shown in the fixed title "Ammortizza transazione"; long descriptions already truncate per the v2.5 detail-page design |
+| E2 entry point | loading | While server-side eligibility resolves, the action follows the row/detail page's existing loading treatment; the action never flashes enabled before eligibility is known |
+| E2 | ineligible-guard | Disabled + Tooltip with one specific reason each (reimbursement / already-amortized / in-group / too-small); an ineligible entry is server-gated so it never reaches a confirmable dialog (Entry Point Visibility Matrix) |
+| E3 undo dialog | loading | Confirm (revert-detach) shows spinner + disabled while the atomic teardown runs |
+| E3 | error | Removal failure → error toast "Errore nel rimuovere l'ammortamento…"; the source transaction/plan is left untouched (atomic) |
+| E3 | populated | Confirmation dialog states the consequence (plan + instalments deleted, transaction re-attached to shared expense) before the destructive confirm |
+| E4 manual-entry form | empty / invalid / populated / loading | Inherits the E1 dialog resolutions; the inline preview is the compact variant of the same table |
+| E5 guard tooltips | (unclassified → reviewed) | Not a data surface — the four Italian guard messages in the Copywriting Contract are the whole content; no additional state axis applies |
+| edge-case | day-clamp | Month-end clamping (31st → last day) is deterministic and non-configurable; shown in the preview, no extra affordance this phase |
+
+### Dismissed (not applicable — reason)
+
+| Element · Category | Reason |
+|--------------------|--------|
+| E1/E4 · partial | Single-field form (months); there is no partial-data state to render |
+| E1/E4 · zero-one-many | N is always ≥ 2, so the schedule never has a zero/one-row state; no singular/plural variance |
+| E2 · empty / populated / partial / overflow / zero-one-many / long-text | A single action affordance (menu item / button), not a data surface — these axes don't apply; its only meaningful states are shown / disabled+tooltip / loading, covered above |
+| E3 · empty / partial / overflow / zero-one-many | A fixed-content confirmation dialog with no variable data list |
+| E4 · overflow / long-text | Same infinite-scroll preview truth as E1; host form's own field overflow is out of this phase's scope |
 
 ---
 
@@ -266,11 +289,11 @@ Applicable state coverage per the activation lifecycle:
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS (Dialog, Button, Tooltip, Input patterns established)
-- [ ] Dimension 3 Color: PASS (OKLch palette, accent for CTA, destructive for undo)
-- [ ] Dimension 4 Typography: PASS (14px body, 18px heading, 400–500–600 weights — locked shadcn convention)
-- [ ] Dimension 5 Spacing: PASS (8-point scale, md/lg/xl gaps)
-- [ ] Dimension 6 Registry Safety: PASS (shadcn official only, no third-party)
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS — FLAG (non-blocking): no explicit focal-point declaration; visual hierarchy implied by standard dialog structure
+- [x] Dimension 3 Color: PASS (OKLch palette, accent for CTA, destructive for undo)
+- [x] Dimension 4 Typography: PASS (14px body, 18px heading, 400–500–600 weights — locked shadcn convention)
+- [x] Dimension 5 Spacing: PASS (8-point scale, md/lg/xl gaps)
+- [x] Dimension 6 Registry Safety: PASS (shadcn official only, no third-party)
 
-**Approval:** pending
+**Approval:** APPROVED (2026-07-28) — 6/6 dimensions pass, 1 non-blocking FLAG on Visuals. UI-consideration probe resolved (infinite-scroll preview; activation write-failure keeps dialog open + error toast).
