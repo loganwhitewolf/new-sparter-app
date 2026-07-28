@@ -996,6 +996,50 @@ async function vacanzeAudit(database: Db): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Step: reorganize-leisure-subcategories
+// Reorganizes `cultura e tempo libero` (category 22) without adding categories:
+//   (a) `cinema-ed-eventi` → `spettacoli` — the old slug mixed one specific activity
+//       (cinema) with a vague container (eventi); the rename widens it to live shows
+//       (cinema, teatro, concerti, mostre, musei) and moves no expense (id preserved).
+//   (b) inserts `attivita-ricreative` — the home for occasional recreational outings
+//       (pattinaggio, bowling, minigolf, escape room, parchi a tema). Phase 67 (TAG-06,
+//       D-11/D-13) narrowed `vacanze` to intrinsically-travel spend and deactivated
+//       `attivita-e-intrattenimento`, which left this kind of spend homeless — this is
+//       its replacement, with the trip context carried by a tag instead of the category.
+// Both halves are idempotent. `renameSubcategoryGuarded` no-ops once `spettacoli` exists
+// (it deactivates the absent source, 0 rows), and the insert is guarded by a slug lookup.
+// The historical `cinema`/`eventi` → `cinema-ed-eventi` entries in OUT_MERGE_PAIRS and
+// SUB_RENAMES are deliberately left untouched: they are already-executed migration history.
+// This step runs after them, so a legacy database still holding `cinema` converges here.
+// ---------------------------------------------------------------------------
+
+async function reorganizeLeisureSubcategories(database: Db): Promise<void> {
+  await renameSubcategoryGuarded(database, 'cinema-ed-eventi', 'spettacoli', 'spettacoli')
+
+  const existing = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'attivita-ricreative'), isNull(subCategory.userId)))
+    .limit(1)
+  if (existing.length > 0) {
+    console.log('    insert attivita-ricreative: already exists, skipped')
+    return
+  }
+
+  await database.insert(subCategory).values({
+    categoryId: 22,
+    name: 'attività ricreative',
+    slug: 'attivita-ricreative',
+    // Resolve nature by code (like insertCartoleriaOggettistica) rather than hardcoding the
+    // id — robust to nature lookup-table reordering. Leisure spend is discretionary.
+    natureId: sql`(SELECT id FROM ${nature} WHERE ${nature.code} = 'discretionary')`,
+    displayOrder: 0,
+    isActive: true,
+  })
+  console.log('    insert attivita-ricreative: 1 row inserted')
+}
+
+// ---------------------------------------------------------------------------
 // Registry — append new taxonomy migration steps here (not regex patterns — see seed-patterns.ts)
 // ---------------------------------------------------------------------------
 
@@ -1018,6 +1062,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'backfill-truncated-expense-titles', run: backfillTruncatedExpenseTitles },
   { name: 'ensure-trade-republic-csv-global-format', run: ensureTradeRepublicCsvGlobalFormat },
   { name: 'vacanze-audit-deactivate-subcategories', run: vacanzeAudit },
+  { name: 'reorganize-leisure-subcategories', run: reorganizeLeisureSubcategories },
 ]
 
 export const STEP_NAMES = STEPS.map((step) => step.name)

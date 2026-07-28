@@ -61,10 +61,18 @@ describe('seed-extras STEPS registry', () => {
     )
   })
 
-  it('registers vacanze-audit-deactivate-subcategories LAST (append-only invariant)', () => {
-    expect(STEP_NAMES.indexOf('vacanze-audit-deactivate-subcategories')).toBe(STEP_NAMES.length - 1)
+  it('registers vacanze-audit-deactivate-subcategories after ensure-trade-republic-csv-global-format (append-only invariant)', () => {
+    // No longer necessarily LAST — reorganize-leisure-subcategories is appended after it.
+    // Relative order vs. the older step still holds.
     expect(STEP_NAMES.indexOf('vacanze-audit-deactivate-subcategories')).toBeGreaterThan(
       STEP_NAMES.indexOf('ensure-trade-republic-csv-global-format'),
+    )
+  })
+
+  it('registers reorganize-leisure-subcategories LAST (append-only invariant)', () => {
+    expect(STEP_NAMES.indexOf('reorganize-leisure-subcategories')).toBe(STEP_NAMES.length - 1)
+    expect(STEP_NAMES.indexOf('reorganize-leisure-subcategories')).toBeGreaterThan(
+      STEP_NAMES.indexOf('vacanze-audit-deactivate-subcategories'),
     )
   })
 
