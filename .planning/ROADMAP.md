@@ -110,8 +110,10 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 79-01-PLAN.md — DAL list query + RSC page + interactive registry table (columns, default
+
+- [x] 79-01-PLAN.md — DAL list query + RSC page + interactive registry table (columns, default
   sort/filter, status badge) + summary header + route/nav (REG-01, REG-03)
+
 - [ ] 79-02-PLAN.md — Wire "Chiudi" + "Realizza con vendita" row actions, reusing Phase 78's
   dialog/services (REG-02)
 
@@ -420,7 +422,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 76. reimbursements-section | v2.8 | 6/6 | Complete | 2026-07-27 |
 | 77. amortization-schema-and-activation | v2.9 | 0/6 | Complete    | 2026-07-28 |
 | 78. plan-lifecycle-and-reconciliation | v2.9 | 0/3 | Complete    | 2026-07-28 |
-| 79. amortizations-registry | v2.9 | 0/2 | Not started | - |
+| 79. amortizations-registry | v2.9 | 0/2 | In Progress|  |
 | 80. dashboard-accrual-lens | v2.9 | TBD | Not started | - |
 
 **Total shipped: 76 phases · 286 plans complete**

@@ -5,15 +5,15 @@ milestone_name: Amortization
 current_phase: 79
 current_phase_name: amortizations-registry
 status: executing
-stopped_at: Phase 79 UI-SPEC approved
-last_updated: "2026-07-28T19:40:03.668Z"
+stopped_at: Completed 79-01-PLAN.md
+last_updated: "2026-07-28T20:04:44.214Z"
 last_activity: 2026-07-28
-last_activity_desc: Phase 78 complete, transitioned to Phase 79
+last_activity_desc: Phase 79 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-27)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 78 — plan-lifecycle-and-reconciliation
+**Current focus:** Phase 79 — amortizations-registry
 
 ## Current Position
 
-Phase: 79 — amortizations-registry
-Plan: Not started
+Phase: 79 (amortizations-registry) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-07-28 — Phase 78 complete, transitioned to Phase 79
+Last activity: 2026-07-28 — Phase 79 execution started
 
 ## Roadmap (v2.9 — Phases 77-80)
 
@@ -397,6 +397,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: [Phase 78] 78-02: closePlanTx's collapse logic extracted into a private collapseAndCloseTx(tx, {userId, plan, closureMonth, extraAmount}) core -- closePlanTx is a thin extraAmount=0 wrapper; realizePlanTx reuses it with the sale's signed amount folded in, zero duplication of the D-01 collapse algorithm
 - [Phase ?]: [Phase 78] 78-02: grep -c 'createPairTx' floor is 2 (import + single call site), not the plan's literal 'exactly 1' -- an import line necessarily matches too; comments paraphrased to avoid inflating further, semantic guarantee (only realizePlanTx calls it) verified via 0-hit effectiveAmount()/isNotSecondary() grep plus manual inspection
 - [Phase ?]: [Phase 78] 78-02: reducePlanTx adds the SAME refund signed amount to both plan.totalAmount (whole-life base) and the future-only remaining sum (re-spread base) -- algebraically consistent since totalAmount = consumedSum + futureSum invariant holds before and after
+- [Phase ?]: 79-01: remaining_months bigint-as-string coerced via Number() in DAL row mapper (Postgres COUNT(*) returns bigint, node-postgres surfaces as string)
+- [Phase ?]: 79-01: IDOR cross-user DAL test seeds global direction/nature taxonomy once per test and reuses subCategoryId across both users, since seedMinimalTaxonomy cannot be called twice (unique(code))
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -532,11 +534,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/79-amortizations-registry/79-UI-SPEC.md
+**Resume file:** None
 
-**Stopped at:** Phase 79 UI-SPEC approved
+**Stopped at:** Completed 79-01-PLAN.md
 
-Last session: 2026-07-28T19:13:10.981Z
+Last session: 2026-07-28T20:04:37.734Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
@@ -627,3 +629,4 @@ Last session: 2026-07-28T19:13:10.981Z
 | Phase 78 P01 | 20min | 2 tasks | 11 files |
 | Phase 78 P03 | 15min | 2 tasks | 2 files |
 | Phase 78 P02 | 20min | 2 tasks | 7 files |
+| Phase 79 P01 | 10min | 2 tasks | 10 files |
