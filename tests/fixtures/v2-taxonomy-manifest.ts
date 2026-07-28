@@ -128,12 +128,13 @@ export const V2_SUBCATEGORY_MANIFEST: SubcategoryManifestEntry[] = [
   { slug: 'abbigliamento-e-accessori', natureCode: 'discretionary' },
   { slug: 'prodotti-per-la-casa', natureCode: 'discretionary' },
   { slug: 'giocattoli', natureCode: 'discretionary' },
-  // OUT — Cultura e tempo libero (5)
-  { slug: 'cinema-ed-eventi', natureCode: 'discretionary' },
+  // OUT — Cultura e tempo libero (6)
+  { slug: 'spettacoli', natureCode: 'discretionary' },
   { slug: 'libri-e-audiolibri', natureCode: 'discretionary' },
   { slug: 'streaming', natureCode: 'discretionary' },
   { slug: 'app-e-software', natureCode: 'discretionary' },
   { slug: 'videogiochi', natureCode: 'discretionary' },
+  { slug: 'attivita-ricreative', natureCode: 'discretionary' },
   // OUT — Benessere (4)
   { slug: 'sport-e-fitness', natureCode: 'discretionary' },
   { slug: 'attrezzatura-e-abbigliamento-sportivo', natureCode: 'discretionary' },

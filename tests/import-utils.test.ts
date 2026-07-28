@@ -26,9 +26,9 @@ describe('import utility fixture contracts', () => {
 
   it('keeps separate Fineco inflow/outflow columns available for amount parsing tests', () => {
     const csv = readFileSync(fixturePath('fineco.csv'), 'utf8')
-    expect(csv).toContain('Entrate,Uscite')
-    expect(csv).toContain('ACCREDITO STIPENDIO,2500.00,')
-    expect(csv).toContain('PAGAMENTO CARTA SUPERMERCATO,,12.34')
+    expect(csv).toContain('Entrate;Uscite')
+    expect(csv).toContain('ACCREDITO STIPENDIO;2500.00;')
+    expect(csv).toContain('PAGAMENTO CARTA SUPERMERCATO;;12.34')
   })
 
   it('normalizes descriptions by trimming, collapsing spaces, lowercasing, and preserving meaningful accents', () => {

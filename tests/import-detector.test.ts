@@ -17,7 +17,7 @@ const expectedFixtureHeaders = [
   ['intesa-sp.csv', 'Data,Operazione,Importo'],
   ['intesa-sp-carta-credito.csv', 'Data operazione,Descrizione,Addebiti'],
   ['revolut.csv', 'Completed Date,Description,Amount'],
-  ['fineco.csv', 'Data,Descrizione_Completa,Entrate,Uscite'],
+  ['fineco.csv', 'Data_Operazione;Descrizione_Completa;Entrate;Uscite'],
 ] as const
 
 // Build candidate fixtures from version-sourced contract (ADR 0013).
