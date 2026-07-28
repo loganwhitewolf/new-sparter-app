@@ -703,6 +703,8 @@ export type TransactionDetailRow = {
   pairedDescription: string | null
   pairedOccurredAt: Date | null
   pairedNetAmount: string | null
+  // Phase 77 (D-05, Plan 77-02): the amortization_plan id this transaction already has, if any.
+  amortizationPlanId: string | null
 }
 
 /**
@@ -751,6 +753,7 @@ export const getTransactionForDetail = cache(
         pairedDescription: transactionListSelect.pairedDescription,
         pairedOccurredAt: transactionListSelect.pairedOccurredAt,
         pairedNetAmount: transactionListSelect.pairedNetAmount,
+        amortizationPlanId: transactionListSelect.amortizationPlanId,
       })
       .from(transaction)
       .leftJoin(importFile, eq(transaction.fileId, importFile.id))

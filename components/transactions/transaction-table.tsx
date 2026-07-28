@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { CalendarClock, ExternalLink, MoreHorizontal, Split, Tag, Unlink } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { CalendarClock, ExternalLink, MoreHorizontal, Split, Tag, Trash2, Unlink } from 'lucide-react'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 import { toDecimal } from '@/lib/utils/decimal'
 import { toast } from 'sonner'
@@ -12,6 +13,7 @@ import { TransactionTitleEdit } from '@/components/transactions/transaction-titl
 import { CounterpartPickerDialog } from '@/components/transactions/counterpart-picker-dialog'
 import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
 import { ActivateAmortizationDialog } from '@/components/transactions/activate-amortization-dialog'
+import { RemoveAmortizationDialog } from '@/components/transactions/remove-amortization-dialog'
 import { ReimbursementRowIndicator } from '@/components/transactions/reimbursement-row-indicator'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { BulkCategorizeDialog } from '@/components/expenses/bulk-categorize-dialog'
@@ -205,7 +207,13 @@ export function TransactionTable({
     amount: string
     occurredAt: Date
   } | null>(null)
+  // Undo (D-09) row-action target: set when "Rimuovi ammortamento" is selected.
+  const [removeAmortizeTarget, setRemoveAmortizeTarget] = useState<{
+    planId: string
+    transactionId: string
+  } | null>(null)
 
+  const router = useRouter()
   const { activeSort, activeDir, onSort, isRestoring } = useToolbarSort(route)
 
   const selectedExpenseIds = useMemo(() => {
@@ -375,6 +383,19 @@ export function TransactionTable({
             }
           : t,
       ),
+    )
+  }
+
+  /**
+   * Optimistically clears the row's amortization gate (D-09 undo) so the menu flips back to
+   * "Ammortizza" immediately. The re-attached expense's title/category/status are refreshed via
+   * router.refresh() (called alongside this) rather than guessed locally — removeAmortizationPlan
+   * intentionally returns no expense payload, since the target may be a brand-new OR an existing
+   * shared Expense.
+   */
+  function markAmortizationRemoved(transactionId: string) {
+    setLoadedTransactions((prev) =>
+      prev.map((t) => (t.id === transactionId ? { ...t, amortizationPlanId: null } : t)),
     )
   }
 
@@ -789,6 +810,24 @@ export function TransactionTable({
                             </Tooltip>
                           </TooltipProvider>
                         ))}
+                      {/* Undo entry (D-09, Entry Point Visibility Matrix: "Active plan exists" ->
+                          Undo shown). Shown only when an active plan exists on this transaction. */}
+                      {transaction.amortizationPlanId != null && (
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault()
+                            setRemoveAmortizeTarget({
+                              planId: transaction.amortizationPlanId!,
+                              transactionId: transaction.id,
+                            })
+                            setOpenDropdownId(null)
+                          }}
+                          className="flex items-center gap-2 text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Rimuovi ammortamento
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       <DeleteTransactionMenuItem
                         transactionId={transaction.id}
@@ -1011,6 +1050,19 @@ export function TransactionTable({
         onSuccess={({ expenseId }) => {
           markTransactionAmortized(amortizeTarget.transactionId, { id: expenseId })
           setAmortizeTarget(null)
+        }}
+      />
+    )}
+
+    {removeAmortizeTarget && (
+      <RemoveAmortizationDialog
+        open={Boolean(removeAmortizeTarget)}
+        onOpenChange={(open) => { if (!open) setRemoveAmortizeTarget(null) }}
+        planId={removeAmortizeTarget.planId}
+        onSuccess={() => {
+          markAmortizationRemoved(removeAmortizeTarget.transactionId)
+          setRemoveAmortizeTarget(null)
+          router.refresh()
         }}
       />
     )}
