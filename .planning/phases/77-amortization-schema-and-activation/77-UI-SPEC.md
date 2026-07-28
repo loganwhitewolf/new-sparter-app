@@ -64,7 +64,9 @@ Declared values (multiples of 4, existing project standard):
 | Heading (dialog) | 18px | 600 (semibold) | 1.2 | Dialog title ("Ammortizza transazione") |
 | Button text | 14px | 500 (medium) | 1.5 | Button labels |
 
-**Pre-populated from:** Project's established typography (v2.5–v2.8 shipped phases use identical values).
+**Font weights:** 3 weights (400, 500, 600) — this is the locked project design-system convention established in v2.5–v2.8 shipped phases via shadcn/ui. Button component uses `font-medium` (500), DialogTitle uses `font-semibold` (600), body defaults to 400. Verified in `components/ui/button.tsx`, `components/ui/dialog.tsx`, and other shipped UI component set.
+
+**Pre-populated from:** Project's established typography (v2.5–v2.8 shipped phases use identical values; `app/globals.css`).
 
 ---
 
@@ -267,7 +269,7 @@ Applicable state coverage per the activation lifecycle:
 - [ ] Dimension 1 Copywriting: PASS
 - [ ] Dimension 2 Visuals: PASS (Dialog, Button, Tooltip, Input patterns established)
 - [ ] Dimension 3 Color: PASS (OKLch palette, accent for CTA, destructive for undo)
-- [ ] Dimension 4 Typography: PASS (14px body, 18px heading, 500–600 weights)
+- [ ] Dimension 4 Typography: PASS (14px body, 18px heading, 400–500–600 weights — locked shadcn convention)
 - [ ] Dimension 5 Spacing: PASS (8-point scale, md/lg/xl gaps)
 - [ ] Dimension 6 Registry Safety: PASS (shadcn official only, no third-party)
 
