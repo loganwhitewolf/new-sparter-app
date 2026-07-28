@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   pgTable,
+  pgView,
   varchar,
   text,
   timestamp,
@@ -642,6 +643,227 @@ export const reimbursementRefundSnapshot = pgTable(
   ],
 );
 
+// Amortization Plan — spreads ONE outflow Transaction over N uniform monthly instalments
+// (Phase 77, ADR 0019 §1/§4). Unit is the single Transaction, never an Expense/Expense Group.
+// Activating a plan forces a detach into a Standalone Expense (reuses ADR 0016 §2-4); months >= 2
+// (D-02) is enforced both here (CHECK) and by validateMonthsForAmount (D-07, application layer).
+// UNIQUE(transactionId) is the DB-level D-05 guard: at most one plan per transaction, ever.
+// totalAmount is a snapshot of transaction.amount AT ACTIVATION TIME — Phase 78's AMORT-07
+// drift-detection needs this fixed value, independent of any later transaction.amount edit.
+export const amortizationPlan = pgTable(
+  "amortization_plan",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    transactionId: text("transaction_id")
+      .notNull()
+      .references(() => transaction.id, { onDelete: "cascade" }),
+    months: integer("months").notNull(),
+    startDate: timestamp("start_date", { withTimezone: true }).notNull(),
+    status: varchar("status", { length: 16 }).notNull().default("open"),
+    totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    check("amortization_plan_months_check", sql`${table.months} >= 2`),
+    unique("amortization_plan_transactionId_unique").on(table.transactionId),
+    index("amortization_plan_userId_idx").on(table.userId),
+    index("amortization_plan_userId_status_idx").on(table.userId, table.status),
+  ],
+);
+
+// Amortization Instalment — one materialised row per month of a plan (Phase 77, ADR 0019 §10).
+// expenseId always points at the plan's Standalone Expense (shared by every instalment of that
+// plan) — category derives via that Expense; there is deliberately NO subcategory snapshot here
+// (D-13, transactions already carry no subcategory column). instalmentNumber is monotonic 1..N;
+// UNIQUE(planId, instalmentNumber) prevents duplicate/missing rows within a plan.
+export const amortizationInstalment = pgTable(
+  "amortization_instalment",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    planId: text("plan_id")
+      .notNull()
+      .references(() => amortizationPlan.id, { onDelete: "cascade" }),
+    instalmentNumber: integer("instalment_number").notNull(),
+    expenseId: text("expense_id")
+      .notNull()
+      .references(() => expense.id, { onDelete: "cascade" }),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    check("amortization_instalment_instalmentNumber_check", sql`${table.instalmentNumber} >= 1`),
+    unique("amortization_instalment_planId_instalmentNumber_unique").on(
+      table.planId,
+      table.instalmentNumber,
+    ),
+    index("amortization_instalment_userId_idx").on(table.userId),
+    index("amortization_instalment_planId_idx").on(table.planId),
+    index("amortization_instalment_expenseId_idx").on(table.expenseId),
+    index("amortization_instalment_userId_occurredAt_idx").on(table.userId, table.occurredAt),
+  ],
+);
+
+// ledger_entry seam (Phase 77, ADR 0019 §10, D-11) — ONE swappable row source per lens, not a
+// `lens` parameter threaded through the ten aggregation functions. Resolving the amount INSIDE
+// the row source is what makes the reimbursement double-netting trap (netting an instalment's
+// already-resolved amount a second time) structurally impossible.
+//
+// Plain Postgres VIEWs (not MATERIALIZED) — decision locked at plan-time (77-01 Task 1 checkpoint):
+// always-fresh reads, zero added query cost versus today's inline CTE, no refresh infrastructure
+// to build or forget. Revisit only if a measured performance problem ever justifies the
+// operational cost of an explicit refresh strategy.
+//
+// The amount-resolution SQL below is a SELF-CONTAINED, literal transcription of
+// lib/dal/transaction-pairs-sql.ts's effectiveAmount()/isNotSecondary() CTE — duplicated inline,
+// never imported, because drizzle.config.ts pins the schema to THIS file alone; importing the DAL
+// helper here would create a schema.ts -> lib/dal -> schema.ts cycle. Every reference is a
+// Drizzle table/column object already defined above in this same file (transaction, reimbursement,
+// reimbursementRefund, expenseGroupMembership, reimbursementAnchorTransaction, amortizationPlan,
+// amortizationInstalment) — keep both copies in sync if the netting formula ever changes.
+function ledgerEntryCashAmountSql() {
+  return sql`(
+    ${transaction.amount}::numeric + COALESCE((
+      WITH anchor AS (
+        SELECT r.id AS reimbursement_id, r.expense_id, r.expense_group_id
+        FROM reimbursement r
+        WHERE r.expense_id = ${transaction.expenseId}
+           OR r.expense_group_id = (
+             SELECT egm.group_id FROM expense_group_membership egm
+             WHERE egm.expense_id = ${transaction.expenseId}
+           )
+        LIMIT 1
+      ),
+      member_expense_ids AS (
+        SELECT egm2.expense_id AS expense_id
+        FROM anchor a
+        INNER JOIN expense_group_membership egm2 ON egm2.group_id = a.expense_group_id
+        WHERE a.expense_group_id IS NOT NULL
+      ),
+      member_transactions AS (
+        SELECT m.id, m.amount::numeric AS amount, m.occurred_at
+        FROM transaction m
+        INNER JOIN reimbursement_anchor_transaction rat ON rat.transaction_id = m.id
+        INNER JOIN anchor a ON a.reimbursement_id = rat.reimbursement_id
+        WHERE a.expense_id IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM reimbursement_refund rr2 WHERE rr2.transaction_id = m.id
+          )
+        UNION ALL
+        SELECT m.id, m.amount::numeric AS amount, m.occurred_at
+        FROM transaction m
+        WHERE m.expense_id IN (SELECT expense_id FROM member_expense_ids)
+          AND NOT EXISTS (
+            SELECT 1 FROM reimbursement_refund rr2 WHERE rr2.transaction_id = m.id
+          )
+      ),
+      refund_total AS (
+        SELECT COALESCE(SUM(rt.amount::numeric), 0) AS total
+        FROM reimbursement_refund rr
+        INNER JOIN transaction rt ON rt.id = rr.transaction_id, anchor a
+        WHERE rr.reimbursement_id = a.reimbursement_id
+      ),
+      raw_shares AS (
+        SELECT
+          mt.id,
+          ROUND(
+            (SELECT total FROM refund_total) * mt.amount
+              / NULLIF((SELECT SUM(amount) FROM member_transactions), 0),
+            2
+          ) AS raw_share,
+          ROW_NUMBER() OVER (
+            ORDER BY ABS(mt.amount) DESC, mt.occurred_at ASC, mt.id ASC
+          ) AS rn
+        FROM member_transactions mt
+      ),
+      member_shares AS (
+        SELECT
+          id,
+          COALESCE(raw_share, 0) + CASE
+            WHEN rn = 1 THEN (SELECT total FROM refund_total) - SUM(raw_share) OVER ()
+            ELSE 0
+          END AS final_share
+        FROM raw_shares
+      )
+      SELECT final_share FROM member_shares WHERE id = ${transaction.id}
+    ), 0)
+  )`;
+}
+
+function ledgerEntryCashIsNotSecondarySql() {
+  return sql`NOT EXISTS (
+    SELECT 1 FROM reimbursement_refund rr
+    WHERE rr.transaction_id = ${transaction.id}
+  )`;
+}
+
+// Cash lens (today's behavior, unchanged): every non-refund transaction, amount netted against
+// any linked reimbursement — byte-identical to the pre-seam effectiveAmount()/isNotSecondary()
+// pair (LENS-03/D-12).
+export const ledgerEntryCash = pgView("ledger_entry_cash", {
+  id: text("id"),
+  userId: text("user_id"),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }),
+  expenseId: text("expense_id"),
+  amount: numeric("amount", { precision: 14, scale: 2 }),
+}).as(sql`
+  SELECT
+    ${transaction.id} AS id,
+    ${transaction.userId} AS user_id,
+    ${transaction.occurredAt} AS occurred_at,
+    ${transaction.expenseId} AS expense_id,
+    ${ledgerEntryCashAmountSql()} AS amount
+  FROM ${transaction}
+  WHERE ${ledgerEntryCashIsNotSecondarySql()}
+`);
+
+// Accrual lens (unconsumed in Phase 77 — Phase 80 wires the accrual-lens reads): branch 1 is
+// ledger_entry_cash's own SELECT, additionally excluding any transaction that now has an
+// amortization plan (its cost is represented by its instalments instead); branch 2 selects
+// amortization_instalment rows directly, already-resolved amounts, NO further netting applied —
+// D-04's activation guard means an instalment can never itself be reimbursement-involved in this
+// phase. Phase 78's AMORT-06 (reimbursement reduces an open plan's remaining instalments) may
+// need to revisit branch 2's no-netting assumption.
+export const ledgerEntryAccrual = pgView("ledger_entry_accrual", {
+  id: text("id"),
+  userId: text("user_id"),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }),
+  expenseId: text("expense_id"),
+  amount: numeric("amount", { precision: 14, scale: 2 }),
+}).as(sql`
+  SELECT
+    ${transaction.id} AS id,
+    ${transaction.userId} AS user_id,
+    ${transaction.occurredAt} AS occurred_at,
+    ${transaction.expenseId} AS expense_id,
+    ${ledgerEntryCashAmountSql()} AS amount
+  FROM ${transaction}
+  WHERE ${ledgerEntryCashIsNotSecondarySql()}
+    AND NOT EXISTS (
+      SELECT 1 FROM amortization_plan ap WHERE ap.transaction_id = ${transaction.id}
+    )
+
+  UNION ALL
+
+  SELECT
+    ${amortizationInstalment.id} AS id,
+    ${amortizationInstalment.userId} AS user_id,
+    ${amortizationInstalment.occurredAt} AS occurred_at,
+    ${amortizationInstalment.expenseId} AS expense_id,
+    ${amortizationInstalment.amount}::numeric AS amount
+  FROM ${amortizationInstalment}
+`);
+
 // Tag — curated entity for Transaction Tags (Phase 67, TAG-01).
 // Name is displayed as typed; normalizedName is name.trim().toLowerCase(), computed by the
 // service layer (Plan 67-03), never derived in the DB. The standalone unique on
@@ -1009,6 +1231,33 @@ export const reimbursementAnchorTransactionRelations = relations(
     }),
   }),
 );
+
+export const amortizationPlanRelations = relations(amortizationPlan, ({ one, many }) => ({
+  user: one(user, {
+    fields: [amortizationPlan.userId],
+    references: [user.id],
+  }),
+  transaction: one(transaction, {
+    fields: [amortizationPlan.transactionId],
+    references: [transaction.id],
+  }),
+  instalments: many(amortizationInstalment),
+}))
+
+export const amortizationInstalmentRelations = relations(amortizationInstalment, ({ one }) => ({
+  user: one(user, {
+    fields: [amortizationInstalment.userId],
+    references: [user.id],
+  }),
+  plan: one(amortizationPlan, {
+    fields: [amortizationInstalment.planId],
+    references: [amortizationPlan.id],
+  }),
+  expense: one(expense, {
+    fields: [amortizationInstalment.expenseId],
+    references: [expense.id],
+  }),
+}))
 
 export const categorizationPatternRelations = relations(categorizationPattern, ({ one, many }) => ({
   user: one(user, {
