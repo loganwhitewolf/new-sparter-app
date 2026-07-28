@@ -411,7 +411,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 75. linking-surfaces-and-lifecycle | v2.8 | 4/4 | Complete | 2026-07-27 |
 | 76. reimbursements-section | v2.8 | 6/6 | Complete | 2026-07-27 |
 | 77. amortization-schema-and-activation | v2.9 | 0/6 | Complete    | 2026-07-28 |
-| 78. plan-lifecycle-and-reconciliation | v2.9 | TBD | Not started | - |
+| 78. plan-lifecycle-and-reconciliation | v2.9 | 0/3 | Planned | - |
 | 79. amortizations-registry | v2.9 | TBD | Not started | - |
 | 80. dashboard-accrual-lens | v2.9 | TBD | Not started | - |
 
