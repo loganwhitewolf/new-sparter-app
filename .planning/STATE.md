@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Amortization
-current_phase: 79
-current_phase_name: amortizations-registry
-status: verifying
+current_phase: 80
+current_phase_name: dashboard-accrual-lens
+status: planning
 stopped_at: Completed 79-02-PLAN.md
-last_updated: "2026-07-28T20:11:02.812Z"
+last_updated: "2026-07-28T20:20:47.275Z"
 last_activity: 2026-07-28
-last_activity_desc: Phase 79 execution started
+last_activity_desc: Phase 79 complete, transitioned to Phase 80
 progress:
   total_phases: 3
   completed_phases: 3
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 
 ## Current Position
 
-Phase: 79 (amortizations-registry) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
-Last activity: 2026-07-28 — Phase 79 execution started
+Phase: 80 — dashboard-accrual-lens
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-28 — Phase 79 complete, transitioned to Phase 80
 
 ## Roadmap (v2.9 — Phases 77-80)
 
