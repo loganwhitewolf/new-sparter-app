@@ -37,7 +37,7 @@
 > automatic/threshold activation.
 
 - [x] **Phase 77: amortization-schema-and-activation** - Materialised plan+instalment schema, the `ledger_entry` seam (cash = transactions, accrual = instalments), and the activation entry points (transaction row, detail page, manual entry) that detach into a Standalone Expense (AMORT-01, AMORT-02, AMORT-03, LENS-03) (completed 2026-07-28)
-- [ ] **Phase 78: plan-lifecycle-and-reconciliation** - Close a plan (collapse remaining instalments onto the closure month), realize via a linked sale or record a scrapped asset, reduce+re-spread on a linked reimbursement, and block/reconcile edits to an amortized transaction (AMORT-04, AMORT-05, AMORT-06, AMORT-07)
+- [x] **Phase 78: plan-lifecycle-and-reconciliation** - Close a plan (collapse remaining instalments onto the closure month), realize via a linked sale or record a scrapped asset, reduce+re-spread on a linked reimbursement, and block/reconcile edits to an amortized transaction (AMORT-04, AMORT-05, AMORT-06, AMORT-07) (completed 2026-07-28)
 - [ ] **Phase 79: amortizations-registry** - Dedicated `/amortizations` page listing every plan with its values and remaining months, close-from-registry with optional realization value, open/closed distinction (REG-01, REG-02, REG-03)
 - [ ] **Phase 80: dashboard-accrual-lens** - Global cassa/competenza switch across every dashboard widget, whole-year accrual view including future instalment months and year-end spillover, lens-aware year/month selectors (LENS-01, LENS-02, LENS-04, LENS-05)
 
@@ -412,7 +412,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 75. linking-surfaces-and-lifecycle | v2.8 | 4/4 | Complete | 2026-07-27 |
 | 76. reimbursements-section | v2.8 | 6/6 | Complete | 2026-07-27 |
 | 77. amortization-schema-and-activation | v2.9 | 0/6 | Complete    | 2026-07-28 |
-| 78. plan-lifecycle-and-reconciliation | v2.9 | 0/3 | In Progress|  |
+| 78. plan-lifecycle-and-reconciliation | v2.9 | 0/3 | Complete    | 2026-07-28 |
 | 79. amortizations-registry | v2.9 | TBD | Not started | - |
 | 80. dashboard-accrual-lens | v2.9 | TBD | Not started | - |
 
