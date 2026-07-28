@@ -50,6 +50,7 @@ import {
   seedUser,
 } from './fixtures/reimbursement-seed'
 import { materializeInstalments } from '@/lib/services/amortization-math'
+import { closePlanTx } from '@/lib/services/amortization-lifecycle'
 
 vi.mock('@/lib/dal/auth', () => ({ verifySession: vi.fn() }))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
@@ -1486,5 +1487,100 @@ describeIfReachable('amortization cash-lens byte-identical (Phase 77, ADR 0019 D
 
     const tagDetail = snapshot.getTagDetail as { net: string }
     expect(toDecimal(tagDetail.net).equals(toDecimal('-50.00'))).toBe(true)
+  })
+})
+
+describeIfReachable('amortization lifecycle: close/collapse regression (Phase 78, AMORT-04)', () => {
+  it('closePlanTx leaves the cash lens byte-identical and the accrual lens reflects the materialized closure instalment', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const { tagId } = await seedTag(db, { userId, name: 'Amortization close probe' })
+
+    const dateRange = dashboardPresetToDateRange('last-month')
+    const startDate = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth() - 5, 10, 12, 0, 0)
+
+    const { expenseId, transactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-1200.00',
+      occurredAt: startDate,
+      title: 'Amortization close/collapse probe purchase',
+    })
+    // Tagged so getTagTotals/getTagDetail exercise a real row (dual-join), same convention as
+    // the Phase 77 block above.
+    await attachTagToTransaction(db, { tagId, transactionId })
+
+    // -1200.00 / 12 = -100.00/mo, no remainder — deterministic 12-month schedule from startDate.
+    const instalments = materializeInstalments('-1200.00', startDate, 12)
+    const { planId } = await seedAmortizationPlan(db, {
+      userId,
+      transactionId,
+      expenseId,
+      months: 12,
+      instalments,
+    })
+
+    const before = await captureAggregationSnapshot({
+      harnessDb: db,
+      userId,
+      dateRange,
+      categoryId: taxonomy.essentialCategoryId,
+      tagId,
+    })
+
+    // Close mid-schedule (month 6 of the plan) via the SAME closePlanTx under test elsewhere —
+    // this suite proves the cash-lens invariant of the REAL write path, not a fixture stand-in.
+    const closureMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 5, startDate.getDate(), 12, 0, 0)
+    const { closureInstalmentId, remainingValue } = await closePlanTx(db, {
+      userId,
+      planId,
+      closureMonth,
+    })
+    expect(closureInstalmentId).not.toBeNull()
+
+    const after = await captureAggregationSnapshot({
+      harnessDb: db,
+      userId,
+      dateRange,
+      categoryId: taxonomy.essentialCategoryId,
+      tagId,
+    })
+
+    // Cash lens byte-identical before/after: closePlanTx writes ONLY to
+    // amortization_instalment/amortization_plan, never to transaction, so ledger_entry_cash
+    // (sourced from transaction) is structurally unreachable by this write.
+    const beforeTotals = before.getOverviewAmountTotals as { totalOut: string }
+    const afterTotals = after.getOverviewAmountTotals as { totalOut: string }
+    expect(afterTotals.totalOut).toBe(beforeTotals.totalOut)
+
+    const beforeBreakdown = before.getCategoriesBreakdown as Array<{ id: number; amount: string }>
+    const afterBreakdown = after.getCategoriesBreakdown as Array<{ id: number; amount: string }>
+    expect(
+      afterBreakdown.find((c) => c.id === taxonomy.essentialCategoryId)?.amount,
+    ).toBe(beforeBreakdown.find((c) => c.id === taxonomy.essentialCategoryId)?.amount)
+
+    const beforeTagTotal = (before.getTagTotals as Array<{ tagId: number; total: string }>).find(
+      (r) => r.tagId === tagId,
+    )
+    const afterTagTotal = (after.getTagTotals as Array<{ tagId: number; total: string }>).find(
+      (r) => r.tagId === tagId,
+    )
+    expect(afterTagTotal?.total).toBe(beforeTagTotal?.total)
+
+    // Accrual-lens probe: branch 2 (ledger_entry_accrual) selects amortization_instalment rows
+    // directly with NO further netting — the closure-month row's amount must equal exactly what
+    // closePlanTx returned as remainingValue, proving the materialized write is faithfully read
+    // with zero live netting (ADR 0019 §10).
+    const accrualRows = await db.execute(sql`
+      SELECT amount FROM ledger_entry_accrual
+      WHERE expense_id = ${expenseId} AND occurred_at = ${closureMonth}
+    `)
+    expect(accrualRows.rows).toHaveLength(1)
+    const accrualAmount = (accrualRows.rows[0] as { amount: string }).amount
+    expect(toDecimal(accrualAmount).equals(toDecimal(remainingValue))).toBe(true)
   })
 })

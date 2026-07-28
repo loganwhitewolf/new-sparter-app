@@ -276,4 +276,102 @@ describeIfReachable('closePlanTx (Phase 78, D-01/AMORT-04)', () => {
       }),
     ).rejects.toThrow('Pianificazione non trovata.')
   })
+
+  it('closing with EXACTLY ONE remaining future instalment carries its amount forward unchanged (Decimal identity, no rounding drift)', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const startDate = new Date(2026, 0, 5, 12, 0, 0) // 2026-01-05
+
+    const { expenseId, transactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-100.00',
+      occurredAt: startDate,
+      title: 'Single-remaining-instalment plan',
+    })
+    // -100.00 / 3 does NOT divide evenly: -33.34/-33.33/-33.33 (remainder folds onto the FIRST
+    // instalment, materializeInstalments contract) — the LAST instalment (the one still
+    // remaining at close) carries no rounding artefact of its own.
+    const instalments = materializeInstalments('-100.00', startDate, 3)
+    const { planId } = await seedAmortizationPlan(db, {
+      userId,
+      transactionId,
+      expenseId,
+      months: 3,
+      instalments,
+    })
+    const lastInstalmentAmount = instalments[2]!.amount
+
+    // Close in March (the 3rd/last instalment's own month) — exactly ONE instalment remains.
+    const closureMonth = new Date(2026, 2, 5, 12, 0, 0)
+    const result = await closePlanTx(db, { userId, planId, closureMonth })
+
+    expect(toDecimal(result.remainingValue).equals(toDecimal(lastInstalmentAmount))).toBe(true)
+
+    const remaining = await loadInstalments(db, planId)
+    const closureRow = remaining.find((r) => r.id === result.closureInstalmentId)
+    expect(closureRow).toBeDefined()
+    expect(toDecimal(closureRow!.amount).equals(toDecimal(lastInstalmentAmount))).toBe(true)
+  })
+
+  it("does not affect an unrelated plan for the SAME user (ownership/scoping regression, not just a single-plan happy path)", async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const startDate = new Date(2026, 0, 10, 12, 0, 0)
+
+    // Plan A — the one we close.
+    const planA = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-300.00',
+      occurredAt: startDate,
+      title: 'Plan A (closed)',
+    })
+    const instalmentsA = materializeInstalments('-300.00', startDate, 3)
+    const { planId: planIdA } = await seedAmortizationPlan(db, {
+      userId,
+      transactionId: planA.transactionId,
+      expenseId: planA.expenseId,
+      months: 3,
+      instalments: instalmentsA,
+    })
+
+    // Plan B — a second, unrelated open plan for the SAME user.
+    const planB = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-600.00',
+      occurredAt: startDate,
+      title: 'Plan B (untouched)',
+    })
+    const instalmentsB = materializeInstalments('-600.00', startDate, 6)
+    const { planId: planIdB } = await seedAmortizationPlan(db, {
+      userId,
+      transactionId: planB.transactionId,
+      expenseId: planB.expenseId,
+      months: 6,
+      instalments: instalmentsB,
+    })
+    const beforeB = await loadInstalments(db, planIdB)
+
+    await closePlanTx(db, { userId, planId: planIdA, closureMonth: new Date(2026, 1, 10) })
+
+    const statusA = await loadPlanStatus(db, planIdA)
+    expect(statusA).toBe('closed')
+
+    // Plan B's instalments and status are COMPLETELY untouched.
+    const statusB = await loadPlanStatus(db, planIdB)
+    expect(statusB).toBe('open')
+    const afterB = await loadInstalments(db, planIdB)
+    expect(afterB).toHaveLength(beforeB.length)
+    expect(afterB.map((r) => ({ id: r.id, amount: r.amount, occurredAt: r.occurredAt.getTime() }))).toEqual(
+      beforeB.map((r) => ({ id: r.id, amount: r.amount, occurredAt: r.occurredAt.getTime() })),
+    )
+  })
 })
