@@ -5,8 +5,8 @@ milestone_name: Amortization
 current_phase: 77
 current_phase_name: amortization-schema-and-activation
 status: planning
-stopped_at: Phase 77 context gathered
-last_updated: "2026-07-28T06:23:45.658Z"
+stopped_at: Phase 77 UI-SPEC approved
+last_updated: "2026-07-28T07:17:01.319Z"
 last_activity: 2026-07-27
 last_activity_desc: v2.9 roadmap created (15/15 AMORT/REG/LENS requirements mapped)
 progress:
@@ -514,11 +514,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/77-amortization-schema-and-activation/77-CONTEXT.md
+**Resume file:** .planning/phases/77-amortization-schema-and-activation/77-UI-SPEC.md
 
-**Stopped at:** Phase 77 context gathered
+**Stopped at:** Phase 77 UI-SPEC approved
 
-Last session: 2026-07-28T06:23:45.649Z
+Last session: 2026-07-28T07:17:01.312Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
