@@ -62,7 +62,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 77-02-PLAN.md — Reverse-detach undo ("rimuovi ammortamento", D-09) + the detail-page activation/undo entry points
+- [x] 77-02-PLAN.md — Reverse-detach undo ("rimuovi ammortamento", D-09) + the detail-page activation/undo entry points
 - [ ] 77-04-PLAN.md — ledger_entry seam migration: lib/dal/dashboard.ts's remaining 5 aggregation functions
 
 **Wave 3** *(blocked on Wave 2 completion)*
