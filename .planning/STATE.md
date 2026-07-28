@@ -5,15 +5,15 @@ milestone_name: Amortization
 current_phase: 77
 current_phase_name: amortization-schema-and-activation
 status: executing
-stopped_at: Completed 77-04-PLAN.md
-last_updated: "2026-07-28T10:52:42.329Z"
+stopped_at: Completed 77-03-PLAN.md
+last_updated: "2026-07-28T11:02:58.541Z"
 last_activity: 2026-07-28
 last_activity_desc: Phase 77 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 ## Current Position
 
 Phase: 77 (amortization-schema-and-activation) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-07-28 — Phase 77 execution started
 
@@ -384,6 +384,9 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: Client-side row-action amortization eligibility is a synchronous mirror of server guards (transactionListSelect fields), avoiding a loading-flash; server independently re-validates every guard before any write.
 - [Phase ?]: 77-02: reverseDetachTx recomputes the original descriptionHash via computeDescriptionHash and reuses reconcileExpensesAfterTransactionRemoval on both the target and abandoned expense ids — no bespoke undo cleanup logic
 - [Phase ?]: 77-04: Grep-verifiable migration comments must paraphrase removed effectiveAmount()/isNotSecondary() calls, never quote them, when the plan's own acceptance criteria greps for zero occurrences
+- [Phase ?]: createTransaction's CreateTransactionResult extends ActionState with optional amortized/months fields rather than a separate action, keeping useActionState's initial state valid with zero call-site changes.
+- [Phase ?]: Default (non-amortized) submit button label changed from 'Salva transazione' to 'Crea transazione' per the UI-SPEC's exact D-10 copywriting pair.
+- [Phase ?]: Manual-entry preview reuses the bounded-height + IntersectionObserver incremental-render technique from ActivateAmortizationDialog, since the UI-SPEC names E4 alongside E1 in the overflow resolution.
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -521,9 +524,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 77-04-PLAN.md
+**Stopped at:** Completed 77-03-PLAN.md
 
-Last session: 2026-07-28T10:52:42.322Z
+Last session: 2026-07-28T11:02:58.534Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
@@ -608,3 +611,4 @@ Last session: 2026-07-28T10:52:42.322Z
 | Phase 77 P01 | resumed session ~2h | 3 tasks | 23 files |
 | Phase 77 P02 | ~20min | 2 tasks | 9 files |
 | Phase 77 P04 | 25min | 2 tasks | 2 files |
+| Phase 77 P03 | ~10min | 2 tasks | 6 files |
