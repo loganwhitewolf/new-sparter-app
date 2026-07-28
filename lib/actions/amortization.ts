@@ -9,7 +9,7 @@ import {
   RemoveAmortizationPlanSchema,
 } from '@/lib/validations/amortization'
 import { ActivatePlanError, activatePlanTx } from '@/lib/services/amortization-activation'
-import { reverseDetachTx } from '@/lib/services/transaction-detach'
+import { DetachTransactionError, reverseDetachTx } from '@/lib/services/transaction-detach'
 import { revalidateCategorizationSurfaces } from '@/lib/actions/revalidation'
 
 export type CreateAmortizationPlanResult = {
@@ -68,9 +68,13 @@ export type RemoveAmortizationPlanResult = {
 }
 
 /**
- * D-09 undo: loads the plan's transactionId first (scoped to the caller's own userId — a foreign
- * planId resolves to "not found"), then wraps reverseDetachTx in the SAME db.transaction so the
- * plan/instalment delete and the re-attach happen atomically (T-77-07).
+ * D-09 undo: loads the plan's transactionId (scoped to the caller's own userId — a foreign
+ * planId resolves to "not found") and calls reverseDetachTx inside the SAME db.transaction
+ * (WR-03 review-fix) — the ownership lookup used to run as a standalone query BEFORE the write
+ * transaction, leaving a TOCTOU window (e.g. a duplicate "Rimuovi ammortamento" click from a
+ * second tab) with no atomicity guarantee of its own. Moving both queries into one tx makes the
+ * lookup's scoping authoritative rather than a redundant early-exit optimization; reverseDetachTx
+ * itself still re-validates id/userId/transactionId (defense-in-depth, unchanged).
  */
 export async function removeAmortizationPlan(input: {
   planId: string
@@ -83,27 +87,30 @@ export async function removeAmortizationPlan(input: {
   const { userId } = await verifySession()
 
   try {
-    const planRows = await db
-      .select({ transactionId: amortizationPlan.transactionId })
-      .from(amortizationPlan)
-      .where(and(eq(amortizationPlan.id, parsed.data.planId), eq(amortizationPlan.userId, userId)))
-      .limit(1)
+    await db.transaction(async (tx) => {
+      const planRows = await tx
+        .select({ transactionId: amortizationPlan.transactionId })
+        .from(amortizationPlan)
+        .where(and(eq(amortizationPlan.id, parsed.data.planId), eq(amortizationPlan.userId, userId)))
+        .limit(1)
 
-    const plan = planRows[0]
-    if (!plan) {
-      return { error: 'Pianificazione non trovata.' }
-    }
+      const plan = planRows[0]
+      if (!plan) {
+        throw new DetachTransactionError('PLAN_NOT_FOUND', 'Pianificazione non trovata.')
+      }
 
-    await db.transaction((tx) =>
-      reverseDetachTx(tx, {
+      await reverseDetachTx(tx, {
         userId,
         transactionId: plan.transactionId,
         planId: parsed.data.planId,
-      }),
-    )
+      })
+    })
     revalidateCategorizationSurfaces()
     return { error: null }
-  } catch {
+  } catch (error) {
+    if (error instanceof DetachTransactionError) {
+      return { error: error.message }
+    }
     return { error: 'Si è verificato un errore. Riprova tra qualche secondo.' }
   }
 }
