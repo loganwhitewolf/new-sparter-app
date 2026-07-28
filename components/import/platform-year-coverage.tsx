@@ -78,7 +78,7 @@ export function PlatformYearCoverageSection({
           </div>
           {latestCoverageAt ? (
             <p className="max-w-xs text-right text-base font-semibold leading-snug tracking-tight sm:text-lg">
-              Hai inserito transazioni fino al {formatDayMonthLong(latestCoverageAt)}
+              Stai tracciando le tue spese fino al {formatDayMonthLong(latestCoverageAt)}
             </p>
           ) : null}
         </div>
