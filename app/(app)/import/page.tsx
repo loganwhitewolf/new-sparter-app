@@ -1,12 +1,21 @@
 import { EmptyState } from '@/components/data-table/EmptyState'
+import { resolveYear } from '@/components/dashboard/overview/resolve-year'
 import { ImportTable } from '@/components/import/import-table'
 import { ImportUploadDialog } from '@/components/import/import-upload-dialog'
+import { PlatformYearCoverageSection } from '@/components/import/platform-year-coverage'
 import { getImports, IMPORT_LIST_LIMIT, type ImportListRow } from '@/lib/dal/imports'
 import { getMonthsWithData } from '@/lib/dal/months-with-data'
-import { getTransactionPlatforms } from '@/lib/dal/transactions'
+import { getYearsWithData } from '@/lib/dal/overview'
+import { getPlatformYearCoverage, getTransactionPlatforms } from '@/lib/dal/transactions'
 import { parseImportFilters, type ImportSearchParams } from '@/lib/validations/import'
 import { FilesToolbar } from '@/app/(app)/import/FilesToolbar'
 import { APP_ROUTES } from '@/lib/routes'
+
+function firstSearchParam(value: string | string[] | undefined): string | undefined {
+  const raw = Array.isArray(value) ? value[0] : value
+  const trimmed = raw?.trim()
+  return trimmed ? trimmed : undefined
+}
 
 /** Returns true when any filter param that narrows results is active */
 function hasActiveImportFilters(params: ImportSearchParams): boolean {
@@ -73,11 +82,17 @@ export default async function ImportPage({
   }
 
   const tableKey = buildImportTableKey(filters, imports)
+  const requestedCoverageYear = firstSearchParam(rawSearchParams.coverageYear)
 
-  const [platforms, monthsWithData] = await Promise.all([
+  const [platforms, monthsWithData, yearsWithData] = await Promise.all([
     getTransactionPlatforms(),
     getMonthsWithData('files'),
+    getYearsWithData(),
   ])
+
+  const coverageYear = resolveYear(requestedCoverageYear, yearsWithData)
+  const platformYearCoverage =
+    coverageYear === null ? [] : await getPlatformYearCoverage(coverageYear)
 
   const platformOptions = platforms.map((p) => ({ value: p.slug, label: p.name }))
 
@@ -92,6 +107,14 @@ export default async function ImportPage({
         </div>
         <ImportUploadDialog />
       </div>
+
+      {coverageYear !== null ? (
+        <PlatformYearCoverageSection
+          coverage={platformYearCoverage}
+          year={coverageYear}
+          years={yearsWithData}
+        />
+      ) : null}
 
       <section className="flex flex-col gap-3">
         <FilesToolbar

@@ -509,6 +509,70 @@ export const getTransactionPlatforms = cache(
   },
 )
 
+export type PlatformYearCoverageRow = {
+  platformId: number
+  platformName: string
+  firstTransactionAt: Date
+  lastTransactionAt: Date
+}
+
+/**
+ * Import-section coverage dashboard (GBH-01): one row per platform with ≥1
+ * transaction in `year`, with its earliest/latest occurredAt within that year.
+ * Reuses getTransactionPlatforms' exact join/ownership pattern — inner joins plus
+ * the year-bounded WHERE mean a platform with zero rows in the window is naturally
+ * excluded, no extra filtering needed. Ordered most-behind-first (oldest "last
+ * transaction" first, then platform name) so the platform needing attention surfaces
+ * immediately instead of requiring the user to scan every row.
+ */
+export const getPlatformYearCoverage = cache(
+  async (year: number): Promise<PlatformYearCoverageRow[]> => {
+    const { userId } = await verifySession()
+
+    const from = new Date(year, 0, 1)
+    const to = new Date(year, 11, 31, 23, 59, 59, 999)
+
+    const rows = await db
+      .select({
+        platformId: platform.id,
+        platformName: platform.name,
+        firstTransactionAt: sql<Date>`min(${transaction.occurredAt})`,
+        lastTransactionAt: sql<Date>`max(${transaction.occurredAt})`,
+      })
+      .from(transaction)
+      .innerJoin(importFile, eq(transaction.fileId, importFile.id))
+      .innerJoin(
+        importFormatVersion,
+        eq(importFile.importFormatVersionId, importFormatVersion.id),
+      )
+      .innerJoin(platform, eq(importFormatVersion.platformId, platform.id))
+      .where(
+        and(
+          eq(transaction.userId, userId),
+          eq(importFile.userId, userId),
+          gte(transaction.occurredAt, from),
+          lte(transaction.occurredAt, to),
+        ),
+      )
+      .groupBy(platform.id, platform.name)
+      .orderBy(asc(sql`max(${transaction.occurredAt})`), asc(platform.name))
+
+    // Some pg driver paths return timestamp aggregates as strings — guard like getFileCoveredMonths.
+    return rows.map((row) => ({
+      platformId: row.platformId,
+      platformName: row.platformName,
+      firstTransactionAt:
+        row.firstTransactionAt instanceof Date
+          ? row.firstTransactionAt
+          : new Date(row.firstTransactionAt),
+      lastTransactionAt:
+        row.lastTransactionAt instanceof Date
+          ? row.lastTransactionAt
+          : new Date(row.lastTransactionAt),
+    }))
+  },
+)
+
 export async function insertTransaction(
   database: DbOrTx,
   data: TransactionInsertData,

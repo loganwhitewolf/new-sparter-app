@@ -5,8 +5,8 @@ milestone_name: "Reimbursements 1:N"
 status: Awaiting next milestone
 stopped_at: Completed 76-05-PLAN.md
 last_updated: "2026-07-27T13:55:58.087Z"
-last_activity: 2026-07-27
-last_activity_desc: Milestone v2.8 completed and archived
+last_activity: 2026-07-28
+last_activity_desc: Completed quick task 260728-gbh — import platform year-coverage mini-dashboard
 progress:
   total_phases: 4
   completed_phases: 4
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 Phase: Milestone v2.8 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-07-27 — Milestone v2.8 completed and archived
+Last activity: 2026-07-28 — Completed quick task 260728-gbh: Import section mini-dashboard per-platform year coverage bars
 
 ## Roadmap (v2.8 — Phases 73-76)
 
@@ -381,6 +381,7 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260721-mrl | Move Categorie into primary left sidebar; remove hub card; keep /settings/categories route | 2026-07-21 | eddc893 |
 | 260722-iys | Nav IA: /tags + /patterns primary; Patterns out of Categories; theme→Profile; /settings→Profilo; mobile Altro sheet | 2026-07-22 | fcb1646 |
 | 260722-ked | Enrich tag detail panel: Entrate/Uscite/Valore finale totals + included-tx count + compact tx list (date·subcat·signed amount), lazy via getTagDetailAction; dashboard-consistent netting (getTagDetail/buildTagDetailData) | 2026-07-22 | 1cce578 |
+| 260728-gbh | Import mini-dashboard: per-platform current-year coverage range bars on /import (most-behind-first) | 2026-07-28 | 8267bcd |
 
 ## Deferred Items
 
