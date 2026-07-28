@@ -91,7 +91,8 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 78-01-PLAN.md — Tracer: close & collapse a plan end-to-end (D-01, AMORT-04)
+
+- [x] 78-01-PLAN.md — Tracer: close & collapse a plan end-to-end (D-01, AMORT-04)
 - [ ] 78-02-PLAN.md — Realize via sale + reimburse-redistribute (D-02/D-03, AMORT-05/AMORT-06)
 - [ ] 78-03-PLAN.md — Amount/date edit guard (D-04, AMORT-07)
 
@@ -411,7 +412,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 75. linking-surfaces-and-lifecycle | v2.8 | 4/4 | Complete | 2026-07-27 |
 | 76. reimbursements-section | v2.8 | 6/6 | Complete | 2026-07-27 |
 | 77. amortization-schema-and-activation | v2.9 | 0/6 | Complete    | 2026-07-28 |
-| 78. plan-lifecycle-and-reconciliation | v2.9 | 0/3 | Planned | - |
+| 78. plan-lifecycle-and-reconciliation | v2.9 | 0/3 | In Progress|  |
 | 79. amortizations-registry | v2.9 | TBD | Not started | - |
 | 80. dashboard-accrual-lens | v2.9 | TBD | Not started | - |
 
