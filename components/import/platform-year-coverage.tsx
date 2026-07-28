@@ -77,7 +77,7 @@ export function PlatformYearCoverageSection({
             <CoverageYearSelect year={year} years={years} />
           </div>
           {latestCoverageAt ? (
-            <p className="max-w-xs text-right text-base font-semibold leading-snug tracking-tight sm:text-lg">
+            <p className="text-right text-base font-semibold leading-snug tracking-tight whitespace-normal sm:shrink-0 sm:whitespace-nowrap sm:text-lg">
               Stai tracciando le tue spese fino al {formatDayMonthLong(latestCoverageAt)}
             </p>
           ) : null}
