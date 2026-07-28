@@ -1,9 +1,10 @@
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { ImportTable } from '@/components/import/import-table'
 import { ImportUploadDialog } from '@/components/import/import-upload-dialog'
+import { PlatformYearCoverageSection } from '@/components/import/platform-year-coverage'
 import { getImports, IMPORT_LIST_LIMIT, type ImportListRow } from '@/lib/dal/imports'
 import { getMonthsWithData } from '@/lib/dal/months-with-data'
-import { getTransactionPlatforms } from '@/lib/dal/transactions'
+import { getPlatformYearCoverage, getTransactionPlatforms } from '@/lib/dal/transactions'
 import { parseImportFilters, type ImportSearchParams } from '@/lib/validations/import'
 import { FilesToolbar } from '@/app/(app)/import/FilesToolbar'
 import { APP_ROUTES } from '@/lib/routes'
@@ -73,10 +74,12 @@ export default async function ImportPage({
   }
 
   const tableKey = buildImportTableKey(filters, imports)
+  const currentYear = new Date().getFullYear()
 
-  const [platforms, monthsWithData] = await Promise.all([
+  const [platforms, monthsWithData, platformYearCoverage] = await Promise.all([
     getTransactionPlatforms(),
     getMonthsWithData('files'),
+    getPlatformYearCoverage(currentYear),
   ])
 
   const platformOptions = platforms.map((p) => ({ value: p.slug, label: p.name }))
@@ -92,6 +95,8 @@ export default async function ImportPage({
         </div>
         <ImportUploadDialog />
       </div>
+
+      <PlatformYearCoverageSection coverage={platformYearCoverage} year={currentYear} />
 
       <section className="flex flex-col gap-3">
         <FilesToolbar
