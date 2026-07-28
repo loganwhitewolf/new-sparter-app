@@ -1102,16 +1102,16 @@ export const getCategoryDeviations = cache(
     let baselineRows: Array<{ id: number; month: string; amount: string }> = []
 
     try {
-      const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
+      const monthSql = sql<string>`to_char(${ledgerEntryCash.occurredAt}, 'YYYY-MM')`
 
       const [refResult, baseResult] = await Promise.all([
         db
           .select({
             id: groupColumn,
-            amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)::text`,
           })
-          .from(transactionTable)
-          .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+          .from(ledgerEntryCash)
+          .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
           .leftJoin(
@@ -1131,10 +1131,11 @@ export const getCategoryDeviations = cache(
           .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
-              dateScopedTransactions(transactionTable, userId, reference.from, reference.to),
+              // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
+              // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+              dateScopedTransactions(ledgerEntryCash, userId, reference.from, reference.to),
               expenseStatusIncludedInDashboardTotals(),
               eq(direction.includedInTotals, true),
-              isNotSecondary(),
               typeFilter,
               categoryScope
             )
@@ -1144,10 +1145,10 @@ export const getCategoryDeviations = cache(
           .select({
             id: groupColumn,
             month: monthSql,
-            amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)::text`,
           })
-          .from(transactionTable)
-          .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+          .from(ledgerEntryCash)
+          .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
           .leftJoin(
@@ -1167,10 +1168,11 @@ export const getCategoryDeviations = cache(
           .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
-              dateScopedTransactions(transactionTable, userId, baseline.from, baseline.to),
+              // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
+              // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+              dateScopedTransactions(ledgerEntryCash, userId, baseline.from, baseline.to),
               expenseStatusIncludedInDashboardTotals(),
               eq(direction.includedInTotals, true),
-              isNotSecondary(),
               typeFilter,
               categoryScope
             )
