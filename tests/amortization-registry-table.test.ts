@@ -1,6 +1,7 @@
 // Unit tests for sortAmortizationRows / resolveEffectiveStatusFilter
-// (components/amortizations/amortization-table.tsx) and a lightweight amountToneClass
-// regression proof for this feature's own zero-tone usage (Phase 79 Plan 01, REG-01/REG-03).
+// (components/amortizations/amortization-table.tsx), computeTotalOpenResidual
+// (components/amortizations/amortization-summary-header.tsx), and a lightweight amountToneClass
+// regression proof for this feature's own zero-tone usage (Phase 79 Plan 01, REG-01/REG-03/D-B1).
 // Extracted as standalone exports precisely so they are testable without jsdom (this repo has
 // none) — mirrors the sortReimbursementRows / tests/reimbursement-table-sort.test.ts precedent.
 import { describe, expect, it } from 'vitest'
@@ -8,6 +9,7 @@ import {
   resolveEffectiveStatusFilter,
   sortAmortizationRows,
 } from '@/components/amortizations/amortization-table'
+import { computeTotalOpenResidual } from '@/components/amortizations/amortization-summary-header'
 import { AMOUNT_TONE_CLASS, amountToneClass } from '@/lib/utils/amount-tone'
 import type { AmortizationPlanListRow } from '@/lib/dal/amortization'
 
@@ -102,5 +104,25 @@ describe('amountToneClass zero-boundary regression (REG-01 adjacency edge)', () 
     expect(toneClass).toBe(AMOUNT_TONE_CLASS.zero)
     expect(toneClass).not.toBe(AMOUNT_TONE_CLASS.positive)
     expect(toneClass).not.toBe(AMOUNT_TONE_CLASS.negative)
+  })
+})
+
+describe('computeTotalOpenResidual (D-B1)', () => {
+  it('sums netValue across OPEN plans only, excluding closed plans, with Decimal precision', () => {
+    const plans = [
+      makeRow({ id: 'a', status: 'open', netValue: '-33.33' }),
+      makeRow({ id: 'b', status: 'open', netValue: '-33.33' }),
+      makeRow({ id: 'c', status: 'open', netValue: '-33.34' }),
+      makeRow({ id: 'd', status: 'closed', netValue: '-500.00' }),
+    ]
+
+    expect(computeTotalOpenResidual(plans)).toBe('-100.00')
+  })
+
+  it('resolves to exactly "0.00" (never NaN or an empty string) when there are zero open plans', () => {
+    const allClosed = [makeRow({ id: 'a', status: 'closed', netValue: '-500.00' })]
+    expect(computeTotalOpenResidual(allClosed)).toBe('0.00')
+
+    expect(computeTotalOpenResidual([])).toBe('0.00')
   })
 })
