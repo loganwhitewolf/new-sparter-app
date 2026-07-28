@@ -484,7 +484,8 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
       .where(
         and(
           // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
-          // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+          // the old secondary-row exclusion fragment is redundant here and intentionally
+          // dropped (Phase 77, D-11).
           dateScopedTransactions(ledgerEntryCash, userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
           ne(direction.code, 'transfer'),
