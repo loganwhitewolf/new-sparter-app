@@ -133,6 +133,37 @@ export function formatMonthRange(first: Date, last: Date, locale = 'it-IT'): str
 }
 
 /**
+ * Where a date falls on a Jan 1 -> Dec 31 timeline for `year`, as a percentage.
+ * Jan 1 00:00:00.000 -> 0, Dec 31 23:59:59.999 -> 100. Dates outside the year are
+ * clamped (never negative, never above 100) — used to position a range-bar fill
+ * (GBH-01) without requiring the caller to pre-validate the date is in-year.
+ */
+export function yearProgressPercent(date: Date, year: number): number {
+  const start = new Date(year, 0, 1).getTime()
+  const end = new Date(year, 11, 31, 23, 59, 59, 999).getTime()
+  const clamped = Math.min(Math.max(date.getTime(), start), end)
+  return ((clamped - start) / (end - start)) * 100
+}
+
+/**
+ * Formats a day+month range for the platform year-coverage bar (GBH-01):
+ * "1 gen – 30 apr" — day number + lowercase Italian short month, en-dash separator,
+ * no year (the enclosing section already scopes to a single year). Deliberately does
+ * NOT capitalize (unlike formatMonthShort's "Mag 2026" style) and does not dedupe a
+ * same-day start/end — the caller decides whether to collapse a single-day range.
+ */
+export function formatDayMonthRange(start: Date, end: Date, locale = 'it-IT'): string {
+  const format = (date: Date) => {
+    const shortMonth = new Intl.DateTimeFormat(locale, { month: 'short' })
+      .format(date)
+      .replace(/\.$/, '')
+    return `${date.getDate()} ${shortMonth}`
+  }
+
+  return `${format(start)} – ${format(end)}`
+}
+
+/**
  * Optional-range label for entities carrying a nullable start/end pair (e.g. a tag's
  * descriptive date range). Either bound missing means "no range" — a half-open range is not
  * a meaningful label here.
