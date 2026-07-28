@@ -24,6 +24,7 @@ import { TransactionDateEdit } from '@/components/transactions/transaction-date-
 import { TransactionTitleEdit } from '@/components/transactions/transaction-title-edit'
 import { ReimbursementPanel, RefundMembershipCard } from '@/components/transactions/reimbursement-panel'
 import { RefundPickerDialog } from '@/components/transactions/refund-picker-dialog'
+import { AmortizationReimburseDialog } from '@/components/transactions/amortization-reimburse-dialog'
 import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
 import { ActivateAmortizationDialog } from '@/components/transactions/activate-amortization-dialog'
 import { RemoveAmortizationDialog } from '@/components/transactions/remove-amortization-dialog'
@@ -112,6 +113,7 @@ export function TransactionDetailClient({
 }: Props) {
   const router = useRouter()
   const [refundPickerOpen, setRefundPickerOpen] = useState(false)
+  const [amortizeReimburseOpen, setAmortizeReimburseOpen] = useState(false)
   const [detachOpen, setDetachOpen] = useState(false)
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -129,6 +131,12 @@ export function TransactionDetailClient({
   // only ever targets an outflow, but checking both keeps this correct regardless of direction.
   const reimbursementInvolved = reimbursementPanelData !== undefined || refundMembership !== undefined
   const amortizationEligibility = computeDetailAmortizationEligibility(transaction, reimbursementInvolved)
+  // D-03 (78-CONTEXT.md): linking a reimbursement/inflow to a transaction with an OPEN
+  // amortization plan routes through the intent-prompt dialog instead of the standard
+  // multi-select RefundPickerDialog — the system never guesses "chiudi per vendita" vs
+  // "rimborso parziale".
+  const hasOpenAmortizationPlan =
+    transaction.amortizationPlanId != null && transaction.amortizationPlanStatus === 'open'
 
   const displayTitle =
     transaction.customTitle ??
@@ -496,7 +504,9 @@ export function TransactionDetailClient({
         <ReimbursementPanel
           anchor={{ transactionId: transaction.id }}
           data={reimbursementPanelData}
-          onAddRefund={() => setRefundPickerOpen(true)}
+          onAddRefund={() =>
+            hasOpenAmortizationPlan ? setAmortizeReimburseOpen(true) : setRefundPickerOpen(true)
+          }
           variant="summary"
         />
       )}
@@ -526,6 +536,20 @@ export function TransactionDetailClient({
             occurredAt: transaction.occurredAt,
           }}
           onLinked={() => router.refresh()}
+        />
+      ) : null}
+
+      {!isInflow && transaction.amortizationPlanId != null ? (
+        <AmortizationReimburseDialog
+          open={amortizeReimburseOpen}
+          onOpenChange={setAmortizeReimburseOpen}
+          transaction={{
+            id: transaction.id,
+            planId: transaction.amortizationPlanId,
+            amount: transaction.amount,
+            occurredAt: transaction.occurredAt,
+          }}
+          onDone={() => router.refresh()}
         />
       ) : null}
 
