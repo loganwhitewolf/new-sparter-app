@@ -1031,7 +1031,7 @@ export const getCategoryRanking = cache(
   async (filters: DashboardFilters): Promise<CategoryRankingItem[]> => {
     const { userId } = await verifySession()
     const { from, to } = dashboardPresetToDateRange(filters.preset)
-    const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
+    const monthSql = sql<string>`to_char(${ledgerEntryCash.occurredAt}, 'YYYY-MM')`
     // Direction filter: use direction.code when a specific type is selected
     const typeFilter = filters.type === 'all' ? undefined : eq(direction.code, filters.type)
 
@@ -1047,10 +1047,10 @@ export const getCategoryRanking = cache(
           categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
           month: monthSql,
           count: countDistinct(expense.id),
-          amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
+          amount: sql<string>`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)::text`,
         })
-        .from(transactionTable)
-        .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+        .from(ledgerEntryCash)
+        .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
         .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
         .innerJoin(category, eq(subCategory.categoryId, category.id))
         .leftJoin(
@@ -1070,15 +1070,16 @@ export const getCategoryRanking = cache(
         .innerJoin(direction, eq(nature.directionId, direction.id))
         .where(
           and(
-            dateScopedTransactions(transactionTable, userId, from, to),
+            // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
+            // isNotSecondary() is redundant here and intentionally dropped (Phase 77, D-11).
+            dateScopedTransactions(ledgerEntryCash, userId, from, to),
             expenseStatusIncludedInDashboardTotals(),
             eq(direction.includedInTotals, true),
-            isNotSecondary(),
             typeFilter
           )
         )
         .groupBy(category.id, monthSql, direction.code)
-        .orderBy(desc(sql`coalesce(abs(sum(${effectiveAmount()})), 0)`), category.id, monthSql)
+        .orderBy(desc(sql`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)`), category.id, monthSql)
     } catch {
       rows = []
     }
