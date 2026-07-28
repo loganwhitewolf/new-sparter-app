@@ -2,15 +2,18 @@
 gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Amortization
+current_phase: 77
+current_phase_name: amortization-schema-and-activation
 status: planning
-last_updated: "2026-07-27T16:10:00.000Z"
+stopped_at: Phase 77 context gathered
+last_updated: "2026-07-28T06:23:45.658Z"
 last_activity: 2026-07-27
+last_activity_desc: v2.9 roadmap created (15/15 AMORT/REG/LENS requirements mapped)
 progress:
-  total_phases: 4
+  total_phases: 1
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 0
 ---
 
 # Project State
@@ -169,17 +172,22 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 
 - **Unit of amortization is the single Transaction** — never an Expense or Expense Group (ADR 0019
   §1). Amortizing forces a detach into a Standalone Expense (reuses ADR 0016 §2-4).
+
 - **Outflows only** for v2.9 — `in`/`allocation`/`transfer` amortization deferred.
 - **Uniform plan from the purchase month** — rounding remainder on the first instalment, each
   instalment on the purchase's calendar day clamped to month end.
+
 - **Instalments are materialised** in the database (not computed on read) to keep dashboard reads
   cheap.
+
 - **Seam: one swappable `ledger_entry` row source per lens**, not a `lens` parameter threaded
   through the ten aggregation functions — resolving the amount inside the row source is what
   structurally prevents the reimbursement double-netting trap.
+
 - **Realization reuses the v2.8 reimbursement mechanism**, netting against the closure month (an
   explicit exception to Mondo Netto's cost-month netting); the system never writes a synthetic
   transaction.
+
 - **Activation is always manual** — no automatic or threshold-based suggestion.
 
 **v2.7 milestone contract (locked at roadmap creation, 2026-07-22):**
@@ -506,11 +514,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** None
+**Resume file:** .planning/phases/77-amortization-schema-and-activation/77-CONTEXT.md
 
-**Stopped at:** Completed 76-05-PLAN.md
+**Stopped at:** Phase 77 context gathered
 
-Last session: 2026-07-27T11:42:05.358Z
+Last session: 2026-07-28T06:23:45.649Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
