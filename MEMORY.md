@@ -42,6 +42,17 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
+### 2026-07-28 — Park Public Branding on feat/v29; main = origin/main
+
+**Decided:** Suspend v2.9 Public Branding Site on `feat/v29-public-branding`. Reset local `main` to `origin/main` (drop the 36 unpushed branding commits from `main`). Mark milestone `status: suspended` in STATE/ROADMAP/PROJECT on the feature branch.
+
+**Why:** Branding timeline unknown; other milestones need a clean `main` aligned with remote. All branding history already lived on `feat/v29` (superset of local main tip `4f43936`). Safety tag: `backup/main-before-park-branding`.
+
+**Rejected:**
+- Finishing the conflicted merge on local main — would keep branding + reimbursements entangled on main
+- Deleting the branding branch — loses Phase 73–74 work
+- Keeping branding commits on main while “ignoring” them — leaves main permanently diverged
+
 ### 2026-07-23 — Public Branding Site renumbered to v2.9
 
 **Decided:** After merging `origin/main`, **v2.8** stays **Reimbursements 1:N** (ADR 0018 / RMB-*). Local Public Branding work (phases 73–77) becomes milestone **v2.9** on branch `feat/v29-public-branding`. Phase numbers unchanged.

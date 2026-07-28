@@ -21,11 +21,11 @@
 - ✅ **v2.6: Expenses & Transactions Refinement** — Phases 65–68 (shipped 2026-07-22, tag v2.6) · [archive](milestones/v2.6-ROADMAP.md)
 - ✅ **v2.7: Tag Dedicated View** — Phases 69–72 (shipped 2026-07-22, tag v2.7) · [archive](milestones/v2.7-ROADMAP.md)
 - 🔄 **v2.8: Reimbursements 1:N** — defined on `main` (RMB-*; ADR 0018); phases TBD · [requirements](milestones/v2.8-REQUIREMENTS.md)
-- 🔄 **v2.9: Public Branding Site** — Phases 73–77 (this branch `feat/v29-public-branding`)
+- ⏸️ **v2.9: Public Branding Site** — Phases 73–77 — **SUSPENDED** on `feat/v29-public-branding` (resume later)
 
 ## Phases
 
-### 🔄 v2.9: Public Branding Site (Phases 73–77) — IN PROGRESS (this branch)
+### ⏸️ v2.9: Public Branding Site (Phases 73–77) — SUSPENDED (this branch)
 
 Public marketing façade inside the existing Next.js monolith: throwaway proto variants pick the
 design direction first, then a dedicated `(public)` route group + `proxy.ts` allowlist + smart

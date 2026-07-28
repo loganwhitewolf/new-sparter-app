@@ -4,11 +4,11 @@ milestone: v2.9
 milestone_name: Public Branding Site
 current_phase: 75
 current_phase_name: marketing-pages
-status: planning
-stopped_at: Completed 74-03-PLAN.md — Phase 74 human-approved end-to-end
-last_updated: "2026-07-23T13:03:43.205Z"
-last_activity: 2026-07-23
-last_activity_desc: Phase 74 complete, transitioned to Phase 75
+status: suspended
+stopped_at: Suspended 2026-07-28 — Phase 74 complete; Phase 75 not started. Resume on this branch after rebasing onto current main.
+last_updated: "2026-07-28T09:36:00.000Z"
+last_activity: 2026-07-28
+last_activity_desc: Milestone parked on feat/v29-public-branding; main reset to origin/main
 progress:
   total_phases: 5
   completed_phases: 2
@@ -24,15 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-22)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 74 — public-layout-and-proxy-allowlist
-**Note:** `origin/main` owns **v2.8 Reimbursements 1:N**; branding was renumbered to v2.9 to avoid the milestone collision.
+**Current focus:** SUSPENDED — v2.9 Public Branding Site parked on `feat/v29-public-branding`
+**Note:** `origin/main` owns **v2.8 Reimbursements 1:N** (shipped); branding is v2.9 on this branch only. Local `main` was reset to `origin/main` on 2026-07-28 so other milestones can proceed.
 
 ## Current Position
 
 Phase: 75 — marketing-pages
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-07-23 — Phase 74 complete, transitioned to Phase 75
+Status: **Suspended** (resume later — rebase/merge `origin/main` first, then `/gsd-plan-phase 75`)
+Last activity: 2026-07-28 — Parked after aligning main to origin; Phase 74 complete, Phase 75 untouched
 
 ## Roadmap (v2.9 — Phases 73–77)
 

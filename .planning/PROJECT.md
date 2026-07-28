@@ -49,9 +49,10 @@ Live Vercel/Supabase/R2 deploy is operator-pending (R038, R039, R041). Code, con
 
 **Standing candidates for later** (from planning memory): subscription amortization view (ADR 0016 deferred temporal normalization), platform-scoped patterns (ADR 0015 follow-up — `platformId` on `categorizationPattern`), live operator deploy (R038 / R039 / R041 — code/config/runbook complete, deploy operator-pending).
 
-## Parallel Branch Milestone: v2.9 — Public Branding Site (this branch)
+## Parallel Branch Milestone: v2.9 — Public Branding Site (this branch) — SUSPENDED
 
 **Branch:** `feat/v29-public-branding`  
+**Status:** Suspended 2026-07-28 — Phase 74 complete; Phase 75+ pending. Local `main` was reset to `origin/main` so other work can continue without branding commits. Resume: checkout this branch → rebase/merge `origin/main` → continue Phase 75.  
 **Why v2.9:** `origin/main` claimed **v2.8** for Reimbursements 1:N; branding renumbered so both can proceed without fighting the milestone slot.
 
 **Goal:** Ship a public branding surface on the same Next.js deploy that explains what Sparter is, links into the app, and establishes a dedicated public layout — design direction locked via throwaway `app/proto/` variants before production implementation.
