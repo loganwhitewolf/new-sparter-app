@@ -69,8 +69,9 @@ describe('seed-extras STEPS registry', () => {
     )
   })
 
-  it('registers reorganize-leisure-subcategories LAST (append-only invariant)', () => {
-    expect(STEP_NAMES.indexOf('reorganize-leisure-subcategories')).toBe(STEP_NAMES.length - 1)
+  it('registers reorganize-leisure-subcategories after vacanze-audit-deactivate-subcategories (append-only invariant)', () => {
+    // No longer LAST — quick task 260728-mpo appends the two Fineco cleanup steps after it.
+    // Relative order vs. the older step still holds.
     expect(STEP_NAMES.indexOf('reorganize-leisure-subcategories')).toBeGreaterThan(
       STEP_NAMES.indexOf('vacanze-audit-deactivate-subcategories'),
     )
@@ -78,5 +79,18 @@ describe('seed-extras STEPS registry', () => {
 
   it('D-13: registers vacanze-audit-deactivate-subcategories (TAG-06 additive taxonomy step)', () => {
     expect(STEP_NAMES).toContain('vacanze-audit-deactivate-subcategories')
+  })
+
+  // Quick task 260728-mpo: Fineco platform + format cleanup (D-01/D-02/D-03)
+  it('registers both Fineco cleanup steps, merge before consolidate (D-01 before D-02)', () => {
+    expect(STEP_NAMES).toContain('merge-duplicate-fineco-platforms')
+    expect(STEP_NAMES).toContain('ensure-fineco-moneymap-global-format')
+    expect(STEP_NAMES.indexOf('merge-duplicate-fineco-platforms')).toBeLessThan(
+      STEP_NAMES.indexOf('ensure-fineco-moneymap-global-format'),
+    )
+  })
+
+  it('registers ensure-fineco-moneymap-global-format LAST (append-only invariant)', () => {
+    expect(STEP_NAMES.indexOf('ensure-fineco-moneymap-global-format')).toBe(STEP_NAMES.length - 1)
   })
 })

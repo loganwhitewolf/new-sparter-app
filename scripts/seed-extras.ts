@@ -8,7 +8,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import { and, eq, inArray, isNull, max, sql } from 'drizzle-orm'
+import { and, eq, ilike, inArray, isNull, like, max, ne, or, sql } from 'drizzle-orm'
 import {
   categorizationPattern,
   category,
@@ -1040,6 +1040,221 @@ async function reorganizeLeisureSubcategories(database: Db): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Step: merge-duplicate-fineco-platforms
+// Merges every wizard-minted duplicate Fineco platform (name ILIKE 'Fineco%' OR
+// slug LIKE 'fineco-%'), for all users, into the canonical seeded platform (slug =
+// 'fineco') — D-01, quick task 260728-mpo. Each duplicate's import_format_version rows
+// are reassigned onto the survivor platform (at a freshly-recomputed free version slot
+// per row, since several rows may move) BEFORE the duplicate platform row is deleted —
+// safe because import_format_version.platformId is the only FK referencing platform.id
+// (onDelete: cascade has nothing left to cascade once every format version has moved).
+// Idempotent: once no non-survivor Fineco-named/sloged platform remains, this is a no-op.
+// MUST run before ensure-fineco-moneymap-global-format, which assumes every Fineco format
+// version already lives on the survivor platform.
+// ---------------------------------------------------------------------------
+
+async function mergeDuplicateFinecoPlatforms(database: Db): Promise<void> {
+  const FINECO_SLUG = 'fineco'
+
+  const survivorRows = await database
+    .select({ id: platform.id })
+    .from(platform)
+    .where(eq(platform.slug, FINECO_SLUG))
+    .limit(1)
+  const survivorId = survivorRows[0]?.id
+  if (survivorId == null) {
+    console.log('    merge-duplicate-fineco-platforms: survivor platform (slug=fineco) not found — skipping')
+    return
+  }
+
+  const duplicates = await database
+    .select({ id: platform.id, name: platform.name, slug: platform.slug })
+    .from(platform)
+    .where(
+      and(
+        ne(platform.id, survivorId),
+        or(ilike(platform.name, 'Fineco%'), like(platform.slug, 'fineco-%')),
+      ),
+    )
+
+  if (duplicates.length === 0) {
+    console.log('    merge-duplicate-fineco-platforms: no duplicate Fineco platforms found — skipping')
+    return
+  }
+
+  for (const duplicate of duplicates) {
+    const formatRows = await database
+      .select({ id: importFormatVersion.id })
+      .from(importFormatVersion)
+      .where(eq(importFormatVersion.platformId, duplicate.id))
+
+    for (const formatRow of formatRows) {
+      // Re-query MAX(version) per row (not hoisted out of the loop): several rows may move
+      // from the same duplicate, and each reassignment must land on a still-free slot.
+      const maxRows = await database
+        .select({ v: max(importFormatVersion.version) })
+        .from(importFormatVersion)
+        .where(eq(importFormatVersion.platformId, survivorId))
+      const nextVersion = (maxRows[0]?.v ?? 0) + 1
+
+      await database
+        .update(importFormatVersion)
+        .set({ platformId: survivorId, version: nextVersion })
+        .where(eq(importFormatVersion.id, formatRow.id))
+    }
+    console.log(
+      `    merge-duplicate-fineco-platforms: moved ${formatRows.length} format version(s) from platform "${duplicate.name}" (slug=${duplicate.slug}, id=${duplicate.id}) to survivor id=${survivorId}`,
+    )
+  }
+
+  const duplicateIds = duplicates.map((d) => d.id)
+  const deleteResult = await database.delete(platform).where(inArray(platform.id, duplicateIds))
+  const deleteCount = (deleteResult as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(
+    `    merge-duplicate-fineco-platforms: deleted ${deleteCount} duplicate platform row(s) (ids: ${duplicateIds.join(', ')})`,
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Step: ensure-fineco-moneymap-global-format
+// Makes the Moneymap `;`-delimited Fineco CSV contract the single GLOBAL approved
+// import_format_version on the (now-consolidated, per merge-duplicate-fineco-platforms)
+// Fineco platform — D-02/D-03, quick task 260728-mpo. Any `file` row pointing at a format
+// version that will be deleted is reassigned onto the kept row BEFORE the delete, every
+// run (not gated on the insert/update branch below), so a stale/duplicate format left over
+// from a previous partial run is still cleaned up. Idempotent: guarded by an
+// existing-global-row lookup matched on the seed contract's headerSignature — same guard
+// shape as ensureTradeRepublicCsvGlobalFormat.
+// ---------------------------------------------------------------------------
+
+async function ensureFinecoMoneymapGlobalFormat(database: Db): Promise<void> {
+  const FINECO_SLUG = 'fineco'
+
+  // Reuse the Moneymap contract from seed-data (single source of truth).
+  const seed = seedFormatVersions.find((fv) => fv.platformSlug === FINECO_SLUG && fv.version === 1)
+  if (!seed) {
+    console.log('    ensure-fineco-moneymap-global-format: seed Fineco contract not found — skipping')
+    return
+  }
+
+  // headerSignature: prefer seed-data's explicit override (mirrors headerSignatureFor() in
+  // seed.ts — the full raw Moneymap header, not the derived required-columns join); fall
+  // back to the derived join for parity with the trade-republic precedent if ever removed.
+  const headerSignature =
+    seed.headerSignature ??
+    [seed.timestampColumn, seed.descriptionColumn, seed.amountColumn, seed.positiveAmountColumn, seed.negativeAmountColumn]
+      .filter((column): column is string => Boolean(column))
+      .join(seed.delimiter)
+
+  const platformRows = await database
+    .select({ id: platform.id })
+    .from(platform)
+    .where(eq(platform.slug, FINECO_SLUG))
+    .limit(1)
+  const platformId = platformRows[0]?.id
+  if (platformId === undefined) {
+    console.log('    ensure-fineco-moneymap-global-format: platform not found — skipping')
+    return
+  }
+
+  const contractColumns = {
+    delimiter: seed.delimiter,
+    descriptionColumn: seed.descriptionColumn,
+    // Combines Primary — @secondary (Fineco CSV has both Descrizione_Completa and
+    // Descrizione). Not forwarded via seed.ts's resolvedFormats for any platform (Satispay
+    // precedent) — set directly here instead.
+    secondaryDescriptionColumn: 'Descrizione',
+    amountType: seed.amountType,
+    amountColumn: seed.amountColumn,
+    positiveAmountColumn: seed.positiveAmountColumn,
+    negativeAmountColumn: seed.negativeAmountColumn,
+    timestampColumn: seed.timestampColumn,
+    dateFormat: seed.dateFormat,
+    dateReplace: seed.dateReplace,
+    decimalReplace: seed.decimalReplace,
+    multiplyBy: seed.multiplyBy,
+    descriptionStripPattern: seed.descriptionStripPattern,
+    notes: seed.notes,
+  }
+
+  const existingGlobal = await database
+    .select({ id: importFormatVersion.id })
+    .from(importFormatVersion)
+    .where(
+      and(
+        eq(importFormatVersion.platformId, platformId),
+        isNull(importFormatVersion.ownerUserId),
+        eq(importFormatVersion.headerSignature, headerSignature),
+      ),
+    )
+    .limit(1)
+
+  let keptFormatId: number
+
+  if (existingGlobal.length > 0) {
+    keptFormatId = existingGlobal[0]!.id
+    await database
+      .update(importFormatVersion)
+      .set({
+        visibility: 'global',
+        reviewStatus: 'approved',
+        ownerUserId: null,
+        isActive: true,
+        ...contractColumns,
+      })
+      .where(eq(importFormatVersion.id, keptFormatId))
+    console.log(
+      `    ensure-fineco-moneymap-global-format: updated existing global format in place (id=${keptFormatId})`,
+    )
+  } else {
+    const maxRows = await database
+      .select({ v: max(importFormatVersion.version) })
+      .from(importFormatVersion)
+      .where(eq(importFormatVersion.platformId, platformId))
+    const nextVersion = (maxRows[0]?.v ?? 0) + 1
+
+    const inserted = await database
+      .insert(importFormatVersion)
+      .values({
+        platformId,
+        ownerUserId: null,
+        visibility: 'global',
+        reviewStatus: 'approved',
+        version: nextVersion,
+        headerSignature,
+        isActive: true,
+        ...contractColumns,
+      })
+      .returning({ id: importFormatVersion.id })
+    keptFormatId = inserted[0]!.id
+    console.log(
+      `    ensure-fineco-moneymap-global-format: inserted new global format at v${nextVersion} (id=${keptFormatId})`,
+    )
+  }
+
+  // D-03: reassign file rows BEFORE deleting obsolete format versions — every run, so a
+  // stale format left dangling by a previous partial run is still cleaned up.
+  const reassignResult = await database.execute(sql`
+    UPDATE file
+    SET import_format_version_id = ${keptFormatId}
+    WHERE import_format_version_id IN (
+      SELECT id FROM import_format_version
+      WHERE platform_id = ${platformId} AND id != ${keptFormatId}
+    )
+  `)
+  console.log(
+    `    ensure-fineco-moneymap-global-format: reassigned ${(reassignResult as unknown as { rowCount?: number }).rowCount ?? 0} file row(s) to kept format id=${keptFormatId}`,
+  )
+
+  const deleteResult = await database
+    .delete(importFormatVersion)
+    .where(and(eq(importFormatVersion.platformId, platformId), ne(importFormatVersion.id, keptFormatId)))
+  console.log(
+    `    ensure-fineco-moneymap-global-format: deleted ${(deleteResult as unknown as { rowCount?: number }).rowCount ?? 0} obsolete format version row(s)`,
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Registry — append new taxonomy migration steps here (not regex patterns — see seed-patterns.ts)
 // ---------------------------------------------------------------------------
 
@@ -1063,6 +1278,8 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'ensure-trade-republic-csv-global-format', run: ensureTradeRepublicCsvGlobalFormat },
   { name: 'vacanze-audit-deactivate-subcategories', run: vacanzeAudit },
   { name: 'reorganize-leisure-subcategories', run: reorganizeLeisureSubcategories },
+  { name: 'merge-duplicate-fineco-platforms', run: mergeDuplicateFinecoPlatforms },
+  { name: 'ensure-fineco-moneymap-global-format', run: ensureFinecoMoneymapGlobalFormat },
 ]
 
 export const STEP_NAMES = STEPS.map((step) => step.name)
