@@ -10,8 +10,8 @@ Scoped capability contract for milestone v2.9. Model locked in [ADR 0019](../doc
 - [x] **AMORT-02**: When a user amortizes a transaction, the system detaches it into a Standalone Expense so a later same-description purchase is not swept into the plan.
 - [x] **AMORT-03**: User sees the amortized cost spread into uniform monthly instalments starting from the purchase month, with the rounding remainder on the first instalment and each instalment on the purchase's calendar day (clamped to month end).
 - [x] **AMORT-04**: User can close an amortization plan, collapsing every remaining instalment onto the closure month while past instalments stay in place.
-- [ ] **AMORT-05**: User can close a plan with a realization value by linking a sale transaction (imported or created at closure) that nets against the closure month; closing with no linked transaction records a scrapped asset.
-- [ ] **AMORT-06**: When a reimbursement is linked to an open plan, the system reduces the base and re-spreads the remaining instalments proportionally.
+- [x] **AMORT-05**: User can close a plan with a realization value by linking a sale transaction (imported or created at closure) that nets against the closure month; closing with no linked transaction records a scrapped asset.
+- [x] **AMORT-06**: When a reimbursement is linked to an open plan, the system reduces the base and re-spreads the remaining instalments proportionally.
 - [x] **AMORT-07**: The system blocks or reconciles edits to an amortized transaction (amount, date) so a plan cannot silently desynchronize from its source transaction.
 
 ### Amortization registry (REG)
@@ -52,8 +52,8 @@ Filled at roadmap creation (2026-07-27). 15/15 v2.9 requirements mapped across P
 | AMORT-02 | Phase 77 | Complete |
 | AMORT-03 | Phase 77 | Complete |
 | AMORT-04 | Phase 78 | Complete |
-| AMORT-05 | Phase 78 | Pending |
-| AMORT-06 | Phase 78 | Pending |
+| AMORT-05 | Phase 78 | Complete |
+| AMORT-06 | Phase 78 | Complete |
 | AMORT-07 | Phase 78 | Complete |
 | REG-01 | Phase 79 | Pending |
 | REG-02 | Phase 79 | Pending |

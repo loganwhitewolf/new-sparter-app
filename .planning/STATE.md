@@ -4,16 +4,16 @@ milestone: v2.9
 milestone_name: Amortization
 current_phase: 78
 current_phase_name: plan-lifecycle-and-reconciliation
-status: executing
-stopped_at: Completed 78-03-PLAN.md
-last_updated: "2026-07-28T14:40:42.214Z"
+status: verifying
+stopped_at: Completed 78-02-PLAN.md
+last_updated: "2026-07-28T15:00:18.995Z"
 last_activity: 2026-07-28
 last_activity_desc: Phase 78 execution started
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 
 Phase: 78 (plan-lifecycle-and-reconciliation) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-28 — Phase 78 execution started
 
 ## Roadmap (v2.9 — Phases 77-80)
@@ -394,6 +394,9 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 77-06: reworded dashboard.ts:487 comment quoting isNotSecondary() literally to close the repo-wide zero-hit grep gate for LENS-03/D-11
 - [Phase ?]: closePlanTx (D-01/AMORT-04): collapses future instalments (occurredAt >= closure-month start, inclusive) onto ONE closure-month row, expenseId sourced from a deleted future instalment since amortization_plan has no expenseId column (Phase 77 D-13: all instalments of a plan share one Standalone Expense)
 - [Phase ?]: 78-03: amortizationPlanId correlated subquery mirrors transactionListSelect's raw-SQL-identifier style (no amortizationPlan schema import — would be unused); guard runs BEFORE the amount-only pair-guard so it also covers occurredAt-only edits; loose != null comparison keeps every pre-existing test unmodified
+- [Phase ?]: [Phase 78] 78-02: closePlanTx's collapse logic extracted into a private collapseAndCloseTx(tx, {userId, plan, closureMonth, extraAmount}) core -- closePlanTx is a thin extraAmount=0 wrapper; realizePlanTx reuses it with the sale's signed amount folded in, zero duplication of the D-01 collapse algorithm
+- [Phase ?]: [Phase 78] 78-02: grep -c 'createPairTx' floor is 2 (import + single call site), not the plan's literal 'exactly 1' -- an import line necessarily matches too; comments paraphrased to avoid inflating further, semantic guarantee (only realizePlanTx calls it) verified via 0-hit effectiveAmount()/isNotSecondary() grep plus manual inspection
+- [Phase ?]: [Phase 78] 78-02: reducePlanTx adds the SAME refund signed amount to both plan.totalAmount (whole-life base) and the future-only remaining sum (re-spread base) -- algebraically consistent since totalAmount = consumedSum + futureSum invariant holds before and after
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -531,9 +534,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 78-03-PLAN.md
+**Stopped at:** Completed 78-02-PLAN.md
 
-Last session: 2026-07-28T14:40:42.205Z
+Last session: 2026-07-28T15:00:09.177Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
@@ -623,3 +626,4 @@ Last session: 2026-07-28T14:40:42.205Z
 | Phase 77 P06 | 20min | 2 tasks | 1 files |
 | Phase 78 P01 | 20min | 2 tasks | 11 files |
 | Phase 78 P03 | 15min | 2 tasks | 2 files |
+| Phase 78 P02 | 20min | 2 tasks | 7 files |

@@ -93,7 +93,7 @@ Plans:
 Plans:
 
 - [x] 78-01-PLAN.md — Tracer: close & collapse a plan end-to-end (D-01, AMORT-04)
-- [ ] 78-02-PLAN.md — Realize via sale + reimburse-redistribute (D-02/D-03, AMORT-05/AMORT-06)
+- [x] 78-02-PLAN.md — Realize via sale + reimburse-redistribute (D-02/D-03, AMORT-05/AMORT-06)
 - [x] 78-03-PLAN.md — Amount/date edit guard (D-04, AMORT-07)
 
 ### Phase 79: amortizations-registry
