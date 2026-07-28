@@ -7,15 +7,14 @@ import {
   category,
   direction as directionTable,
   expense,
+  ledgerEntryCash,
   nature as natureTable,
   subCategory,
-  transaction as transactionTable,
   userSubcategoryOverride,
 } from '@/lib/db/schema'
 import { monthLabel, monthsBetween } from '@/lib/utils/date'
 import type { FlowNature } from '@/lib/utils/nature-labels'
 import { toDecimal } from '@/lib/utils/decimal'
-import { effectiveAmount, isNotSecondary } from '@/lib/dal/transaction-pairs-sql'
 import {
   buildOverviewData,
   getOverviewAmountTotals,
@@ -218,10 +217,10 @@ export const getMonthOverMonthCategoryChanges = cache(
               id: natureTable.id,
               name: natureTable.labelIt,
               natureCode: natureTable.code,
-              amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
+              amount: sql<string>`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)::text`,
             })
-            .from(transactionTable)
-            .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+            .from(ledgerEntryCash)
+            .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
             .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
             .leftJoin(
               userSubcategoryOverride,
@@ -240,10 +239,11 @@ export const getMonthOverMonthCategoryChanges = cache(
             .innerJoin(directionTable, eq(natureTable.directionId, directionTable.id))
             .where(
               and(
-                dateScopedTransactions(transactionTable, userId, currFrom, currTo),
+                // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
+                // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
+                dateScopedTransactions(ledgerEntryCash, userId, currFrom, currTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, 'allocation'),
-                isNotSecondary()
               )
             )
             .groupBy(natureTable.id, natureTable.labelIt, natureTable.code),
@@ -252,10 +252,10 @@ export const getMonthOverMonthCategoryChanges = cache(
               id: natureTable.id,
               name: natureTable.labelIt,
               natureCode: natureTable.code,
-              amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
+              amount: sql<string>`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)::text`,
             })
-            .from(transactionTable)
-            .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+            .from(ledgerEntryCash)
+            .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
             .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
             .leftJoin(
               userSubcategoryOverride,
@@ -274,10 +274,11 @@ export const getMonthOverMonthCategoryChanges = cache(
             .innerJoin(directionTable, eq(natureTable.directionId, directionTable.id))
             .where(
               and(
-                dateScopedTransactions(transactionTable, userId, prevFrom, prevTo),
+                // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
+                // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
+                dateScopedTransactions(ledgerEntryCash, userId, prevFrom, prevTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, 'allocation'),
-                isNotSecondary()
               )
             )
             .groupBy(natureTable.id, natureTable.labelIt, natureTable.code),
@@ -297,10 +298,10 @@ export const getMonthOverMonthCategoryChanges = cache(
               id: category.id,
               name: category.name,
               categorySlug: category.slug,
-              amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
+              amount: sql<string>`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)::text`,
             })
-            .from(transactionTable)
-            .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+            .from(ledgerEntryCash)
+            .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
             .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
             .innerJoin(category, eq(subCategory.categoryId, category.id))
             .leftJoin(
@@ -320,10 +321,11 @@ export const getMonthOverMonthCategoryChanges = cache(
             .innerJoin(directionTable, eq(natureTable.directionId, directionTable.id))
             .where(
               and(
-                dateScopedTransactions(transactionTable, userId, currFrom, currTo),
+                // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
+                // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
+                dateScopedTransactions(ledgerEntryCash, userId, currFrom, currTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, directionParam),
-                isNotSecondary()
               )
             )
             .groupBy(category.id, category.name, category.slug),
@@ -332,10 +334,10 @@ export const getMonthOverMonthCategoryChanges = cache(
               id: category.id,
               name: category.name,
               categorySlug: category.slug,
-              amount: sql<string>`coalesce(abs(sum(${effectiveAmount()})), 0)::text`,
+              amount: sql<string>`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)::text`,
             })
-            .from(transactionTable)
-            .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+            .from(ledgerEntryCash)
+            .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
             .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
             .innerJoin(category, eq(subCategory.categoryId, category.id))
             .leftJoin(
@@ -355,10 +357,11 @@ export const getMonthOverMonthCategoryChanges = cache(
             .innerJoin(directionTable, eq(natureTable.directionId, directionTable.id))
             .where(
               and(
-                dateScopedTransactions(transactionTable, userId, prevFrom, prevTo),
+                // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
+                // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
+                dateScopedTransactions(ledgerEntryCash, userId, prevFrom, prevTo),
                 expenseStatusIncludedInDashboardTotals(),
                 eq(directionTable.code, directionParam),
-                isNotSecondary()
               )
             )
             .groupBy(category.id, category.name, category.slug),
@@ -469,7 +472,7 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
   const from = new Date(year, 0, 1)
   const to = new Date(year, 11, 31, 23, 59, 59, 999)
 
-  const monthSql = sql<string>`to_char(${transactionTable.occurredAt}, 'YYYY-MM')`
+  const monthSql = sql<string>`to_char(${ledgerEntryCash.occurredAt}, 'YYYY-MM')`
   // Effective nature: resolves via override.natureId or subCategory.natureId → nature.code
   const natureSql = sql<FlowNature | null>`(
     SELECT n.code FROM nature n
@@ -493,10 +496,10 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
         month: monthSql,
         nature: natureSql,
         directionCode: directionCodeSql,
-        amount: sql<string>`coalesce(sum(${effectiveAmount()}), 0)::text`,
+        amount: sql<string>`coalesce(sum(${ledgerEntryCash.amount}), 0)::text`,
       })
-      .from(transactionTable)
-      .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+      .from(ledgerEntryCash)
+      .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
       .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .innerJoin(category, eq(subCategory.categoryId, category.id))
       .leftJoin(
@@ -508,7 +511,9 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
       )
       .where(
         and(
-          dateScopedTransactions(transactionTable, userId, from, to),
+          // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
+          // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
+          dateScopedTransactions(ledgerEntryCash, userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
           // Exclude transfer via correlated direction subquery (INNER JOINs above ensure subCategoryId is set)
           sql`(
@@ -517,7 +522,6 @@ export const getOverviewChart = cache(async (year: number): Promise<OverviewChar
             WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
             LIMIT 1
           ) != 'transfer'`,
-          isNotSecondary()
         )
       )
       .groupBy(monthSql, natureSql, directionCodeSql)
