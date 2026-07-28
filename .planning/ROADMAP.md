@@ -56,11 +56,22 @@
 **Plans**: 6 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 77-01-PLAN.md — Schema + [BLOCKING] migration + ledger_entry_cash/accrual views (checkpoint: plain vs materialized VIEW) + instalment math + one full row-action activation, regression-proven on getOverviewAmountTotals; eligibility guards (D-04..D-07 + outflow)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 77-02-PLAN.md — Reverse-detach undo ("rimuovi ammortamento", D-09) + the detail-page activation/undo entry points
-- [ ] 77-03-PLAN.md — Manual-entry atomic create+amortize (D-10)
 - [ ] 77-04-PLAN.md — ledger_entry seam migration: lib/dal/dashboard.ts's remaining 5 aggregation functions
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 77-03-PLAN.md — Manual-entry atomic create+amortize (D-10)
 - [ ] 77-05-PLAN.md — ledger_entry seam migration: lib/dal/overview.ts (2) + lib/dal/tags.ts (2) aggregation functions
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 77-06-PLAN.md — Full-suite collateral-breakage fix + final LENS-03 gate closure (all 10 functions)
 
 **UI hint**: yes
