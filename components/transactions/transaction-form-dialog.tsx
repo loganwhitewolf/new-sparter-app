@@ -287,6 +287,17 @@ export function TransactionFormDialog({ categories, mostUsed }: Props) {
               </div>
             )}
 
+            {/* WR-02: the months sub-form above only renders for a valid negative amount — when
+                the checkbox is checked but the amount is empty, unparseable, or non-negative,
+                surface the SAME outflow-only guard message activatePlanTx's eligibility check
+                would eventually produce, instead of leaving the checkbox checked with no visible
+                explanation for the later generic "Minimo 2 mesi." error. */}
+            {amortizationEnabled && !isNegativeAmount && (
+              <p className="pl-6 text-xs text-destructive">
+                Puoi ammortizzare solo transazioni in uscita.
+              </p>
+            )}
+
             {monthsValidation.valid && (
               <div className="flex flex-col gap-1 pl-6">
                 <p className="text-xs font-medium text-muted-foreground">
