@@ -1,7 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toDecimal } from '@/lib/utils/decimal'
 import { amountToneClass } from '@/lib/utils/amount-tone'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
@@ -9,9 +10,11 @@ import { DataTableToolbar, useToolbarSort } from '@/components/data-table/DataTa
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { HeaderSortButton } from '@/components/data-table/HeaderSortButton'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AMORTIZATIONS_TABLE_CONFIG } from '@/lib/utils/amortizations-table-config'
 import { transactionDetailHref } from '@/lib/routes'
+import { CloseAmortizationDialog } from '@/components/transactions/close-amortization-dialog'
 import type { AmortizationPlanListRow } from '@/lib/dal/amortization'
 
 type Props = {
@@ -81,9 +84,26 @@ export function sortAmortizationRows(
   })
 }
 
+/**
+ * Row-actions gate (D-A1/D-A2/D-A3): actions are visible ONLY on open plans, but `realizeHref`
+ * itself is unconditional — resolveRowActions({status:'closed'}).realizeHref is still a valid
+ * transactionDetailHref, it just is never rendered by the caller. Reused for both the button
+ * group's visibility and the "Realizza con vendita" Link's target.
+ */
+export function resolveRowActions(
+  row: Pick<AmortizationPlanListRow, 'id' | 'transactionId' | 'status'>,
+): { showActions: boolean; realizeHref: string } {
+  return {
+    showActions: row.status === 'open',
+    realizeHref: transactionDetailHref(row.transactionId),
+  }
+}
+
 export function AmortizationTable({ plans, route }: Props) {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const { activeSort, activeDir, onSort } = useToolbarSort(route)
+  const [closeTarget, setCloseTarget] = useState<string | null>(null)
 
   const effectiveStatus = resolveEffectiveStatusFilter(searchParams.get('status'))
   const q = searchParams.get('q')?.trim().toLowerCase() ?? ''
@@ -99,6 +119,7 @@ export function AmortizationTable({ plans, route }: Props) {
   const sorted = sortAmortizationRows(filtered, sortKey, sortDir)
 
   return (
+    <>
     <div className="flex flex-col gap-4">
       <DataTableToolbar config={AMORTIZATIONS_TABLE_CONFIG} route={route} />
 
@@ -152,10 +173,13 @@ export function AmortizationTable({ plans, route }: Props) {
                 onSort={onSort}
               />
               <TableHead>Stato</TableHead>
+              <TableHead>Azioni</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sorted.map((row) => (
+            {sorted.map((row) => {
+              const { showActions, realizeHref } = resolveRowActions(row)
+              return (
               <TableRow key={row.id}>
                 {/* `max-w-0 w-full` + inner `truncate` is the shared no-horizontal-scroll
                     pattern (transaction-table.tsx, reimbursement-table.tsx): the description
@@ -204,11 +228,44 @@ export function AmortizationTable({ plans, route }: Props) {
                     {row.status === 'open' ? 'Aperto' : 'Chiuso'}
                   </Badge>
                 </TableCell>
+                <TableCell className="whitespace-nowrap text-right text-sm">
+                  {showActions ? (
+                    <div className="flex gap-1 justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCloseTarget(row.id)}
+                      >
+                        Chiudi
+                      </Button>
+                      <Link href={realizeHref}>
+                        <Button type="button" variant="outline" size="sm">
+                          Realizza con vendita
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : null}
+                </TableCell>
               </TableRow>
-            ))}
+              )
+            })}
           </TableBody>
         </Table>
       )}
     </div>
+
+    {closeTarget && (
+      <CloseAmortizationDialog
+        open={Boolean(closeTarget)}
+        onOpenChange={(open) => { if (!open) setCloseTarget(null) }}
+        planId={closeTarget}
+        onSuccess={() => {
+          setCloseTarget(null)
+          router.refresh()
+        }}
+      />
+    )}
+    </>
   )
 }
