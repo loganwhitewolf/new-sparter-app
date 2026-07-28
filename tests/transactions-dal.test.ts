@@ -22,6 +22,7 @@ function makeQueryChain(finalValue: unknown[] = []) {
       mocks.whereArgs.push(arg);
       return chain;
     }),
+    groupBy: vi.fn(() => chain),
     orderBy: vi.fn((arg: unknown) => {
       mocks.orderByArgs.push(arg);
       return chain;
@@ -34,6 +35,11 @@ function makeQueryChain(finalValue: unknown[] = []) {
       mocks.offsetArgs.push(arg);
       return Promise.resolve(finalValue);
     }),
+    // Queries with no trailing .limit()/.offset() (e.g. getTransactionPlatforms,
+    // getPlatformYearCoverage) terminate at .orderBy()/.groupBy() — make the chain
+    // itself thenable so `await` resolves to finalValue instead of the chain object,
+    // matching Drizzle's real query builder (thenable at every step).
+    then: (resolve: (value: unknown[]) => void) => resolve(finalValue),
   };
 
   return chain;
@@ -173,6 +179,7 @@ vi.mock("@/lib/db/schema", () => ({
 const {
   TRANSACTION_LIST_LIMIT,
   buildTransactionOrderBy,
+  getPlatformYearCoverage,
   getTransactionPlatforms,
   getTransactions,
   getTransactionSortColumn,
@@ -782,6 +789,77 @@ describe("transaction DAL query helpers", () => {
     expect(fileOwnershipOr.args).toEqual(
       expect.arrayContaining([{ op: "isNull", column: "transaction.fileId" }]),
     );
+  });
+});
+
+describe("getPlatformYearCoverage (GBH-01)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.selectedShapes.length = 0;
+    mocks.whereArgs.length = 0;
+    mocks.orderByArgs.length = 0;
+    mocks.verifySession.mockResolvedValue({ userId: "user-1" });
+  });
+
+  it("verifies the session and selects platformId/platformName/first/lastTransactionAt", async () => {
+    await getPlatformYearCoverage(2026);
+
+    expect(mocks.verifySession).toHaveBeenCalledTimes(1);
+    const shape = mocks.selectedShapes[0] as Record<string, unknown>;
+    expect(Object.keys(shape).sort()).toEqual([
+      "firstTransactionAt",
+      "lastTransactionAt",
+      "platformId",
+      "platformName",
+    ]);
+  });
+
+  it("joins importFile -> importFormatVersion -> platform via 3 inner joins, same chain as getTransactionPlatforms", async () => {
+    const { db } = await import("@/lib/db");
+
+    await getPlatformYearCoverage(2026);
+
+    const chain = (db.select as ReturnType<typeof vi.fn>).mock.results[0]
+      .value as { innerJoin: ReturnType<typeof vi.fn>; groupBy: ReturnType<typeof vi.fn> };
+    expect(chain.innerJoin).toHaveBeenCalledTimes(3);
+    expect(chain.innerJoin).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(), // importFile schema reference
+      expect.anything(), // join condition: eq(transaction.fileId, importFile.id)
+    );
+    expect(chain.innerJoin).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(), // importFormatVersion schema reference
+      expect.anything(), // join condition: eq(importFile.importFormatVersionId, importFormatVersion.id)
+    );
+    expect(chain.innerJoin).toHaveBeenNthCalledWith(
+      3,
+      expect.anything(), // platform schema reference
+      expect.anything(), // join condition: eq(importFormatVersion.platformId, platform.id)
+    );
+    expect(chain.groupBy).toHaveBeenCalled();
+  });
+
+  it("scopes ownership on both transaction.userId and file.userId, bounded to the given year's Jan 1 / Dec 31", async () => {
+    await getPlatformYearCoverage(2026);
+
+    expect(mocks.whereArgs[0]).toEqual({
+      op: "and",
+      args: expect.arrayContaining([
+        { op: "eq", left: "transaction.userId", right: "user-1" },
+        { op: "eq", left: "file.userId", right: "user-1" },
+        {
+          op: "gte",
+          left: "transaction.occurredAt",
+          right: new Date(2026, 0, 1),
+        },
+        {
+          op: "lte",
+          left: "transaction.occurredAt",
+          right: new Date(2026, 11, 31, 23, 59, 59, 999),
+        },
+      ]),
+    });
   });
 });
 

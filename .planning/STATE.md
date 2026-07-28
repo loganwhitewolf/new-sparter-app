@@ -381,6 +381,7 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260721-mrl | Move Categorie into primary left sidebar; remove hub card; keep /settings/categories route | 2026-07-21 | eddc893 |
 | 260722-iys | Nav IA: /tags + /patterns primary; Patterns out of Categories; theme→Profile; /settings→Profilo; mobile Altro sheet | 2026-07-22 | fcb1646 |
 | 260722-ked | Enrich tag detail panel: Entrate/Uscite/Valore finale totals + included-tx count + compact tx list (date·subcat·signed amount), lazy via getTagDetailAction; dashboard-consistent netting (getTagDetail/buildTagDetailData) | 2026-07-22 | 1cce578 |
+| 260728-gbh | Import mini-dashboard: per-platform current-year coverage range bars on /import (most-behind-first) | 2026-07-28 | 8267bcd |
 | 260728-clt | Reorganize `cultura e tempo libero`: rename cinema-ed-eventi → spettacoli, add attivita-ricreative (seed-data + seed-extras step + manifest fixture); CONTEXT.md arbitration rules (trip context travels on a Tag, not the category; recurrence separates sport-e-fitness from attivita-ricreative) and vacanze listing realigned to Phase 67 D-11 | 2026-07-28 | ce9d575 |
 | 260728-mpo | Fineco cleanup: merge duplicate Fineco platforms into slug=fineco; single global Moneymap `;`-delimited format (full 8-col header); update seed-data Fineco v1 | 2026-07-28 | e31dd9b |
 
