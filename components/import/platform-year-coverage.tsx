@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { PlatformYearCoverageRow } from '@/lib/dal/transactions'
-import { formatDayMonthRange, yearProgressPercent } from '@/lib/utils/date'
+import { formatDayMonthLong, formatDayMonthRange, yearProgressPercent } from '@/lib/utils/date'
 
 /** Floor width so a single-day-only platform still renders a visible fill, not a 0px sliver. */
 const MIN_FILL_WIDTH_PERCENT = 1.5
@@ -59,12 +59,28 @@ export function PlatformYearCoverageSection({
     return null
   }
 
+  const latestCoverageAt =
+    coverage.length === 0
+      ? null
+      : coverage.reduce(
+          (latest, row) =>
+            row.lastTransactionAt.getTime() > latest.getTime() ? row.lastTransactionAt : latest,
+          coverage[0].lastTransactionAt,
+        )
+
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <CardTitle>Copertura per piattaforma</CardTitle>
-          <CoverageYearSelect year={year} years={years} />
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <CardTitle>Copertura per piattaforma</CardTitle>
+            <CoverageYearSelect year={year} years={years} />
+          </div>
+          {latestCoverageAt ? (
+            <p className="max-w-xs text-right text-base font-semibold leading-snug tracking-tight sm:text-lg">
+              Hai inserito transazioni fino al {formatDayMonthLong(latestCoverageAt)}
+            </p>
+          ) : null}
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDayMonthRange, formatMonthRange, yearProgressPercent } from '@/lib/utils/date'
+import { formatDayMonthLong, formatDayMonthRange, formatMonthRange, yearProgressPercent } from '@/lib/utils/date'
 
 describe('formatMonthRange (R-OB-10)', () => {
   it("formats same month and year as 'Mag 2026' (R-OB-10)", () => {
@@ -62,5 +62,11 @@ describe('formatDayMonthRange (GBH-01)', () => {
   it('formats a same-day start/end range without deduping (caller decides)', () => {
     const day = new Date(2026, 3, 30)
     expect(formatDayMonthRange(day, day)).toBe('30 apr – 30 apr')
+  })
+})
+
+describe('formatDayMonthLong (GBH-01)', () => {
+  it('formats as day + lowercase long month', () => {
+    expect(formatDayMonthLong(new Date(2026, 6, 17))).toBe('17 luglio')
   })
 })

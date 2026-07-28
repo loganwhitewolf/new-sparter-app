@@ -38,6 +38,7 @@ describe('PlatformYearCoverageSection (GBH-01)', () => {
     expect(html).toContain('Trade Republic')
     expect(html).toContain('1 gen – 30 apr')
     expect(html).toContain('1 gen – 31 lug')
+    expect(html).toContain('Hai inserito transazioni fino al 31 luglio')
   })
 
   it('renders two fill bars with distinct left/width percentages reflecting the two date ranges', () => {
@@ -69,5 +70,6 @@ describe('PlatformYearCoverageSection (GBH-01)', () => {
     expect(html).toContain('Copertura per piattaforma')
     expect(html).toContain('Nessuna copertura per 2025')
     expect(html).not.toContain('Fineco')
+    expect(html).not.toContain('Hai inserito transazioni fino al')
   })
 })

@@ -164,6 +164,17 @@ export function formatDayMonthRange(start: Date, end: Date, locale = 'it-IT'): s
 }
 
 /**
+ * Day + long month for highlight copy (GBH-01): "17 luglio". Lowercase Italian month,
+ * no year — the coverage card already scopes to a selected year.
+ */
+export function formatDayMonthLong(date: Date, locale = 'it-IT'): string {
+  const longMonth = new Intl.DateTimeFormat(locale, { month: 'long' })
+    .format(date)
+    .replace(/\.$/, '')
+  return `${date.getDate()} ${longMonth}`
+}
+
+/**
  * Optional-range label for entities carrying a nullable start/end pair (e.g. a tag's
  * descriptive date range). Either bound missing means "no range" — a half-open range is not
  * a meaningful label here.
