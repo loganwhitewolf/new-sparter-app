@@ -8,7 +8,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import { and, eq, ilike, inArray, isNull, like, max, ne, or, sql } from 'drizzle-orm'
+import { and, eq, ilike, inArray, isNull, like, lt, max, ne, or, sql } from 'drizzle-orm'
 import {
   categorizationPattern,
   category,
@@ -1048,10 +1048,14 @@ async function reorganizeLeisureSubcategories(database: Db): Promise<void> {
 // per row, since several rows may move) BEFORE the duplicate platform row is deleted —
 // safe because import_format_version.platformId is the only FK referencing platform.id
 // (onDelete: cascade has nothing left to cascade once every format version has moved).
-// Idempotent: once no non-survivor Fineco-named/sloged platform remains, this is a no-op.
-// MUST run before ensure-fineco-moneymap-global-format, which assumes every Fineco format
-// version already lives on the survivor platform.
+//
+// Release-scoped (decision 2026-07-28): only platforms with created_at < 2026-07-29T00:00:00Z
+// are merged. A later `yarn db:seed-extras` must NOT delete a Fineco platform a user
+// legitimately creates after this ship.
 // ---------------------------------------------------------------------------
+
+/** One-shot cutoff for Fineco platform/format consolidation (this release only). */
+const FINECO_CLEANUP_CREATED_BEFORE = new Date('2026-07-29T00:00:00.000Z')
 
 async function mergeDuplicateFinecoPlatforms(database: Db): Promise<void> {
   const FINECO_SLUG = 'fineco'
@@ -1074,11 +1078,14 @@ async function mergeDuplicateFinecoPlatforms(database: Db): Promise<void> {
       and(
         ne(platform.id, survivorId),
         or(ilike(platform.name, 'Fineco%'), like(platform.slug, 'fineco-%')),
+        lt(platform.createdAt, FINECO_CLEANUP_CREATED_BEFORE),
       ),
     )
 
   if (duplicates.length === 0) {
-    console.log('    merge-duplicate-fineco-platforms: no duplicate Fineco platforms found — skipping')
+    console.log(
+      '    merge-duplicate-fineco-platforms: no pre-cutoff duplicate Fineco platforms found — skipping',
+    )
     return
   }
 
@@ -1119,12 +1126,11 @@ async function mergeDuplicateFinecoPlatforms(database: Db): Promise<void> {
 // Step: ensure-fineco-moneymap-global-format
 // Makes the Moneymap `;`-delimited Fineco CSV contract the single GLOBAL approved
 // import_format_version on the (now-consolidated, per merge-duplicate-fineco-platforms)
-// Fineco platform — D-02/D-03, quick task 260728-mpo. Any `file` row pointing at a format
-// version that will be deleted is reassigned onto the kept row BEFORE the delete, every
-// run (not gated on the insert/update branch below), so a stale/duplicate format left over
-// from a previous partial run is still cleaned up. Idempotent: guarded by an
-// existing-global-row lookup matched on the seed contract's headerSignature — same guard
-// shape as ensureTradeRepublicCsvGlobalFormat.
+// Fineco platform — D-02/D-03, quick task 260728-mpo. Any `file` row pointing at a
+// pre-cutoff format version that will be deleted is reassigned onto the kept row BEFORE
+// the delete. Release-scoped: only formats with created_at < FINECO_CLEANUP_CREATED_BEFORE
+// are reassigned/deleted — post-ship private formats on fineco survive later seed-extras.
+// Idempotent upsert of the global Moneymap row is guarded by headerSignature match.
 // ---------------------------------------------------------------------------
 
 async function ensureFinecoMoneymapGlobalFormat(database: Db): Promise<void> {
@@ -1232,14 +1238,18 @@ async function ensureFinecoMoneymapGlobalFormat(database: Db): Promise<void> {
     )
   }
 
-  // D-03: reassign file rows BEFORE deleting obsolete format versions — every run, so a
-  // stale format left dangling by a previous partial run is still cleaned up.
+  // D-03: reassign file rows BEFORE deleting obsolete format versions.
+  // Release-scoped: only formats created before FINECO_CLEANUP_CREATED_BEFORE are
+  // reassigned/deleted — a private Fineco format created after this ship must survive
+  // later seed-extras runs.
   const reassignResult = await database.execute(sql`
     UPDATE file
     SET import_format_version_id = ${keptFormatId}
     WHERE import_format_version_id IN (
       SELECT id FROM import_format_version
-      WHERE platform_id = ${platformId} AND id != ${keptFormatId}
+      WHERE platform_id = ${platformId}
+        AND id != ${keptFormatId}
+        AND created_at < ${FINECO_CLEANUP_CREATED_BEFORE}
     )
   `)
   console.log(
@@ -1248,9 +1258,15 @@ async function ensureFinecoMoneymapGlobalFormat(database: Db): Promise<void> {
 
   const deleteResult = await database
     .delete(importFormatVersion)
-    .where(and(eq(importFormatVersion.platformId, platformId), ne(importFormatVersion.id, keptFormatId)))
+    .where(
+      and(
+        eq(importFormatVersion.platformId, platformId),
+        ne(importFormatVersion.id, keptFormatId),
+        lt(importFormatVersion.createdAt, FINECO_CLEANUP_CREATED_BEFORE),
+      ),
+    )
   console.log(
-    `    ensure-fineco-moneymap-global-format: deleted ${(deleteResult as unknown as { rowCount?: number }).rowCount ?? 0} obsolete format version row(s)`,
+    `    ensure-fineco-moneymap-global-format: deleted ${(deleteResult as unknown as { rowCount?: number }).rowCount ?? 0} obsolete pre-cutoff format version row(s)`,
   )
 }
 
