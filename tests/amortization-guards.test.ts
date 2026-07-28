@@ -10,7 +10,11 @@ import { count, eq } from 'drizzle-orm'
 import { afterAll, describe, expect, it, vi } from 'vitest'
 import { getAmortizationEligibility } from '@/lib/services/amortization-guards'
 import type { activatePlanTx as ActivatePlanTx } from '@/lib/services/amortization-activation'
-import { amortizationPlan as amortizationPlanTable } from '@/lib/db/schema'
+import {
+  amortizationInstalment as amortizationInstalmentTable,
+  amortizationPlan as amortizationPlanTable,
+} from '@/lib/db/schema'
+import { toDecimal } from '@/lib/utils/decimal'
 import {
   connectReimbursementTestDb,
   resetReimbursementFixtures,
@@ -272,7 +276,7 @@ describeIfReachable('getAmortizationEligibility (Phase 77, D-04..D-07 + outflow-
     const taxonomy = await seedMinimalTaxonomy(db, userId)
     const occurredAt = new Date(2026, 0, 12, 12, 0, 0)
 
-    const { transactionId } = await seedExpenseWithTransaction(db, {
+    const { expenseId, transactionId } = await seedExpenseWithTransaction(db, {
       userId,
       subCategoryId: taxonomy.essentialSubCategoryId,
       amount: '-1000.00',
@@ -282,5 +286,35 @@ describeIfReachable('getAmortizationEligibility (Phase 77, D-04..D-07 + outflow-
 
     const result = await getAmortizationEligibility(db, { userId, transactionId })
     expect(result).toEqual({ eligible: true })
+
+    // Full acceptance criteria (77-01-PLAN.md tracer task): activating over 3 months on an
+    // eligible outflow transaction detaches into a NEW Standalone Expense, writes one
+    // amortization_plan row (months=3, status='open'), and 3 amortization_instalment rows
+    // summing to the original amount — end-to-end against a real Postgres database.
+    const activation = await activatePlanTx(db, { userId, transactionId, months: 3 })
+    expect(activation.expenseId).toBeTruthy()
+    // seedExpenseWithTransaction creates a single-transaction (transactionCount=1) expense, so
+    // applyDetachCleanupTx's 1:1 branch re-hashes it IN PLACE (same id, new descriptionHash) —
+    // it does not insert a second expense row (transaction-detach.ts's documented behavior).
+    expect(activation.expenseId).toBe(expenseId)
+    expect(activation.instalments).toHaveLength(3)
+
+    const planRows = await db
+      .select({ months: amortizationPlanTable.months, status: amortizationPlanTable.status })
+      .from(amortizationPlanTable)
+      .where(eq(amortizationPlanTable.transactionId, transactionId))
+    expect(planRows).toHaveLength(1)
+    expect(planRows[0]).toEqual({ months: 3, status: 'open' })
+
+    const instalmentRows = await db
+      .select({ amount: amortizationInstalmentTable.amount })
+      .from(amortizationInstalmentTable)
+      .where(eq(amortizationInstalmentTable.planId, activation.planId))
+    const instalmentSum = instalmentRows.reduce(
+      (sum, row) => sum.plus(toDecimal(row.amount)),
+      toDecimal('0'),
+    )
+    expect(instalmentRows).toHaveLength(3)
+    expect(instalmentSum.equals(toDecimal('-1000.00'))).toBe(true)
   })
 })
