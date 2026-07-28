@@ -343,7 +343,17 @@ export function TransactionFormDialog({ categories, mostUsed }: Props) {
                 Annulla
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={isPending}>
+            <Button
+              type="submit"
+              disabled={
+                isPending ||
+                // WR-01: mirror ActivateAmortizationDialog's own gate (disabled when
+                // !validation.valid) — also covers the WR-02 non-negative-amount case, since
+                // isNegativeAmount is false there and monthsValidation.valid can never be true
+                // without it.
+                (amortizationEnabled && (!isNegativeAmount || !monthsValidation.valid))
+              }
+            >
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {amortizationEnabled ? 'Crea e ammortizza' : 'Crea transazione'}
             </Button>
