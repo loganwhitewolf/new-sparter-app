@@ -5,12 +5,12 @@ milestone_name: Amortization
 current_phase: 80
 current_phase_name: dashboard-accrual-lens
 status: planning
-stopped_at: Completed 79-02-PLAN.md
-last_updated: "2026-07-28T20:20:47.275Z"
+stopped_at: Phase 80 context gathered
+last_updated: "2026-07-29T07:18:30.979Z"
 last_activity: 2026-07-28
 last_activity_desc: Phase 79 complete, transitioned to Phase 80
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 3
   total_plans: 11
   completed_plans: 11
@@ -536,11 +536,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** None
+**Resume file:** .planning/phases/80-dashboard-accrual-lens/80-CONTEXT.md
 
-**Stopped at:** Completed 79-02-PLAN.md
+**Stopped at:** Phase 80 context gathered
 
-Last session: 2026-07-28T20:11:02.803Z
+Last session: 2026-07-29T07:18:30.965Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
