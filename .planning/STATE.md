@@ -5,15 +5,15 @@ milestone_name: Amortization
 current_phase: 80
 current_phase_name: dashboard-accrual-lens
 status: executing
-stopped_at: Completed 80-01-PLAN.md
-last_updated: "2026-07-29T08:59:06.088Z"
+stopped_at: Completed 80-02-PLAN.md
+last_updated: "2026-07-29T09:15:43.865Z"
 last_activity: 2026-07-29
 last_activity_desc: Phase 80 execution started
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 18
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 ## Current Position
 
 Phase: 80 (dashboard-accrual-lens) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-07-29 — Phase 80 execution started
 
@@ -404,6 +404,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 80-01: requirements.mark-complete NOT run for LENS-01/LENS-02 — one-route tracer slice only, full capability lands across Plans 80-02..80-07 (Phase 75/76 precedent)
 - [Phase ?]: 80-01: getUncategorizedCount stays lens-invariant (no ledgerRowSource param) — an amortized transaction is always pre-categorized before a plan can attach, closing the seam survey's flagged Confirm note
 - [Phase ?]: 80-01: lens-persistence.ts re-exports safeSessionStorage from overview/overview-persistence.ts instead of duplicating it, giving lens-switch.tsx one import path
+- [Phase ?]: 80-02: topTransactionRows amount COALESCEs raw transaction.amount first, ledger row's amount second — preserves byte-identical cash display contract, only instalments (no transaction row) fall back
+- [Phase ?]: 80-02: requirements.mark-complete NOT run for LENS-02 — five of ten aggregation sites done (all six dashboard.ts functions lens-selectable), full capability needs Plans 80-03..80-07
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -541,9 +543,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 80-01-PLAN.md
+**Stopped at:** Completed 80-02-PLAN.md
 
-Last session: 2026-07-29T08:59:06.079Z
+Last session: 2026-07-29T09:15:43.856Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
@@ -637,3 +639,4 @@ Last session: 2026-07-29T08:59:06.079Z
 | Phase 79 P01 | 10min | 2 tasks | 10 files |
 | Phase 79 P02 | ~15min | 2 tasks | 3 files |
 | Phase 80 P01 | 25min | 2 tasks | 12 files |
+| Phase 80 P02 | ~20min | 3 tasks | 2 files |

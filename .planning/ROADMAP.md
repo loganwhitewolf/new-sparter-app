@@ -140,7 +140,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 80-02-PLAN.md — Remaining dashboard.ts aggregation swaps (breakdown/ranking/deviations/detail/trend), including getCategoryDetail's Top 5 movimenti redesign (LENS-02)
+- [x] 80-02-PLAN.md — Remaining dashboard.ts aggregation swaps (breakdown/ranking/deviations/detail/trend), including getCategoryDetail's Top 5 movimenti redesign (LENS-02)
 - [ ] 80-03-PLAN.md — Remaining overview.ts aggregation swaps (movers/chart) + lens-aware getYearsWithData/getMonthsWithData + resolveYear cross-lens clamp (LENS-02, LENS-04, LENS-05)
 
 **Wave 3** *(blocked on Wave 2 completion)*
