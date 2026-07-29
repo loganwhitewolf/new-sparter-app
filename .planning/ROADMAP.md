@@ -146,7 +146,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [x] 80-04-PLAN.md — Full /dashboard/overview wiring (chart/movers/year selector) + tab-nav lens preservation (LENS-01, LENS-04, LENS-05)
-- [ ] 80-05-PLAN.md — Wire /dashboard/categories + /dashboard/categories/[id] to the lens (LENS-01, LENS-02)
+- [x] 80-05-PLAN.md — Wire /dashboard/categories + /dashboard/categories/[id] to the lens (LENS-01, LENS-02)
 - [x] 80-06-PLAN.md — /dashboard/tags disabled+noted switch (D-05); verify /tags/[id] untouched (D-06) (LENS-01)
 
 **Wave 4** *(blocked on Wave 3 completion)*
