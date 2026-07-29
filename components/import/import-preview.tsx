@@ -8,6 +8,12 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -25,6 +31,7 @@ import {
 import { confirmImportAction } from '@/lib/actions/import'
 import type { ImportAnalysisResult } from '@/lib/services/import'
 import { APP_ROUTES } from '@/lib/routes'
+import { cn } from '@/lib/utils'
 import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
 import { bucketOfPreviewRow, countPreviewBuckets } from '@/lib/utils/import-preview-buckets'
 import {
@@ -73,6 +80,23 @@ export function appendImportModeFields(
   }
 }
 
+/** Append per-index exclusions for confirmImportAction (mirrors counterpartIds getAll). */
+export function appendExcludedRowIndexes(fd: FormData, indexes: readonly number[]): void {
+  for (const index of indexes) {
+    fd.append('excludedRowIndexes', String(index))
+  }
+}
+
+/** Mode-filtered rows minus excluded rowIndexes — drives importable counts (D-preview). */
+export function rowsWithoutExcluded<T extends { rowIndex: number }>(
+  rows: readonly T[],
+  excludedRowIndexes: readonly number[],
+): T[] {
+  if (excludedRowIndexes.length === 0) return [...rows]
+  const excluded = new Set(excludedRowIndexes)
+  return rows.filter((row) => !excluded.has(row.rowIndex))
+}
+
 const periodDateFormatter = new Intl.DateTimeFormat('it-IT', {
   day: '2-digit',
   month: '2-digit',
@@ -115,6 +139,7 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
   )
   const [rangeStart, setRangeStart] = useState(initialRange.start ?? '')
   const [rangeEnd, setRangeEnd] = useState(initialRange.end ?? '')
+  const [excludedRowIndexes, setExcludedRowIndexes] = useState<number[]>([])
 
   const [activeFilter, setActiveFilter] = useState<PreviewFilter>('all')
   const [expanded, setExpanded] = useState(false)
@@ -134,14 +159,22 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
     [result.sampleRows, result.lastImportedDate, importMode, rangeStart, rangeEnd],
   )
 
-  const modeDuplicateCount = useMemo(
-    () => modeFilteredRows.filter((row) => row.duplicate).length,
-    [modeFilteredRows],
-  )
-  const period = useMemo(() => periodSpan(modeFilteredRows), [modeFilteredRows])
+  const excludedSet = useMemo(() => new Set(excludedRowIndexes), [excludedRowIndexes])
 
-  // Bucket chips operate on the mode-filtered subset (D-05).
-  const buckets = useMemo(() => countPreviewBuckets(modeFilteredRows), [modeFilteredRows])
+  // Importable = mode-filtered minus excluded (counts/chips); table still lists excluded rows.
+  const importableRows = useMemo(
+    () => rowsWithoutExcluded(modeFilteredRows, excludedRowIndexes),
+    [modeFilteredRows, excludedRowIndexes],
+  )
+
+  const modeDuplicateCount = useMemo(
+    () => importableRows.filter((row) => row.duplicate).length,
+    [importableRows],
+  )
+  const period = useMemo(() => periodSpan(importableRows), [importableRows])
+
+  // Bucket chips operate on the importable subset (D-05 + D-preview).
+  const buckets = useMemo(() => countPreviewBuckets(importableRows), [importableRows])
 
   const filteredRows = useMemo(
     () =>
@@ -160,6 +193,14 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
   function selectImportMode(mode: ImportMode) {
     setImportMode(mode)
     setExpanded(false)
+  }
+
+  function excludeRow(rowIndex: number) {
+    setExcludedRowIndexes((prev) => (prev.includes(rowIndex) ? prev : [...prev, rowIndex]))
+  }
+
+  function restoreRow(rowIndex: number) {
+    setExcludedRowIndexes((prev) => prev.filter((i) => i !== rowIndex))
   }
 
   const confidencePct =
@@ -182,6 +223,7 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
       rangeStart: rangeStart || undefined,
       rangeEnd: rangeEnd || undefined,
     })
+    appendExcludedRowIndexes(fd, excludedRowIndexes)
 
     try {
       const res = await confirmImportAction(fd)
@@ -274,7 +316,7 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
 
       {/* Summary tiles */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <SummaryTile label="Righe trovate" value={String(modeFilteredRows.length)} />
+        <SummaryTile label="Righe trovate" value={String(importableRows.length)} />
         <SummaryTile label="Duplicati" value={String(modeDuplicateCount)} />
         <SummaryTile
           label="Transazioni nel periodo"
@@ -381,15 +423,36 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
                       </TableCell>
                     </TableRow>
                   ) : (
-                    visibleRows.map((row) => (
-                      <TableRow key={row.rowIndex}>
-                        <TableCell className="whitespace-nowrap text-sm">
+                    visibleRows.map((row) => {
+                      const isExcluded = excludedSet.has(row.rowIndex)
+                      return (
+                      <TableRow
+                        key={row.rowIndex}
+                        className={cn(isExcluded && 'text-muted-foreground')}
+                        data-excluded={isExcluded ? 'true' : undefined}
+                      >
+                        <TableCell
+                          className={cn(
+                            'whitespace-nowrap text-sm',
+                            isExcluded && 'line-through',
+                          )}
+                        >
                           {row.occurredAt ?? '—'}
                         </TableCell>
-                        <TableCell className="max-w-[200px] truncate text-sm">
+                        <TableCell
+                          className={cn(
+                            'max-w-[200px] truncate text-sm',
+                            isExcluded && 'line-through',
+                          )}
+                        >
                           {row.description}
                         </TableCell>
-                        <TableCell className="text-right text-sm tabular-nums">
+                        <TableCell
+                          className={cn(
+                            'text-right text-sm tabular-nums',
+                            isExcluded && 'line-through',
+                          )}
+                        >
                           {row.amount != null ? (
                             <span className={Number(row.amount) < 0 ? 'text-destructive' : 'text-green-600'}>
                               {(Number(row.amount) < 0 ? '−' : '+') + ' ' + formatAbsoluteAmount(row.amount)}
@@ -398,18 +461,46 @@ export function ImportPreview({ result, candidates = [], confirmDisabledReason, 
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap items-center gap-1">
-                            {row.duplicate ? (
-                              <Badge variant="secondary">Duplicato</Badge>
-                            ) : row.valid ? (
-                              <Badge variant="default">Valida</Badge>
-                            ) : (
-                              <Badge variant="destructive">Errore</Badge>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                {isExcluded ? (
+                                  <Badge variant="outline" className="cursor-pointer">
+                                    Esclusa
+                                  </Badge>
+                                ) : row.duplicate ? (
+                                  <Badge variant="secondary" className="cursor-pointer">
+                                    Duplicato
+                                  </Badge>
+                                ) : row.valid ? (
+                                  <Badge variant="default" className="cursor-pointer">
+                                    Valida
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="destructive" className="cursor-pointer">
+                                    Errore
+                                  </Badge>
+                                )}
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {isExcluded ? (
+                                  <DropdownMenuItem onSelect={() => restoreRow(row.rowIndex)}>
+                                    Ripristina
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem onSelect={() => excludeRow(row.rowIndex)}>
+                                    Non importare
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            {!isExcluded && row.warnings.length > 0 && (
+                              <Badge variant="outline">Avviso</Badge>
                             )}
-                            {row.warnings.length > 0 && <Badge variant="outline">Avviso</Badge>}
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
+                      )
+                    })
                   )}
                 </TableBody>
               </Table>
