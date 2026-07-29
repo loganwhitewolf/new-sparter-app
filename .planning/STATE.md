@@ -6,7 +6,7 @@ status: Awaiting next milestone
 stopped_at: Completed 76-05-PLAN.md
 last_updated: "2026-07-29T08:58:00.000Z"
 last_activity: 2026-07-29
-last_activity_desc: Completed quick task 260729-f21 — import mode filters (from-last / all / range)
+last_activity_desc: Planned quick task 260729-fma — exclude specific import preview rows (Non importare)
 progress:
   total_phases: 4
   completed_phases: 4
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 Phase: Milestone v2.8 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-07-29 — Completed quick task 260729-f21: import mode filters (from-last / all / range)
+Last activity: 2026-07-29 — Planned quick task 260729-fma: exclude specific import preview rows (Non importare)
 
 ## Roadmap (v2.8 — Phases 73-76)
 
