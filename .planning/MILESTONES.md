@@ -1,5 +1,32 @@
 # Milestones
 
+## v2.9 Amortization (Shipped: 2026-07-29)
+
+**Phases completed:** 5 phases, 19 plans, 37 tasks
+
+**Key accomplishments:**
+
+- amortization_plan/amortization_instalment schema + ledger_entry_cash/accrual Postgres views + Decimal.js instalment math + full "Ammortizza" row-action activation (dialog -> atomic detach+plan+instalment write) + D-04..D-07 eligibility guards + getOverviewAmountTotals migrated with a byte-identical LENS-03 regression proof
+- D-09 "rimuovi ammortamento" undo path (reverseDetachTx: atomic plan+instalment delete, reverse-detach re-attaching the transaction to its shared Expense by recomputed original descriptionHash) plus detail-page parity for both "Ammortizza" and "Rimuovi ammortamento"
+- Third AMORT-01 entry point: an inline "Ammortizza questa transazione" checkbox on the manual create-transaction form that atomically creates, detaches, plans, and materialises instalments in one db.transaction, reusing activatePlanTx unmodified
+- Migrated the remaining five `lib/dal/dashboard.ts` cash-lens aggregation functions (getCategoriesBreakdown, getCategoryRanking, getCategoryDeviations, getCategoryDetail, getMonthlyTrendByNature) off `effectiveAmount()`/`isNotSecondary()` onto `ledger_entry_cash`, closing D-11/LENS-03 for dashboard.ts entirely
+- Migrated the last 4 gated dashboard aggregation functions (`getMonthOverMonthCategoryChanges`, `getOverviewChart` in `overview.ts`; `getTagTotals`, `getTagDetail` in `tags.ts`) off `effectiveAmount()`/`isNotSecondary()` onto `ledger_entry_cash`, closing full 10-function LENS-03 coverage and proving reimbursement/amortization non-interaction
+- Closed the LENS-03 phase gate by proving the full 153-file/1866-test vitest suite is green post-seam-migration (not just the regression file), and structurally verifying zero production call sites still reach effectiveAmount()/isNotSecondary() directly
+- closePlanTx collapses every remaining instalment of an open amortization plan onto one Decimal-summed closure-month row, wired end-to-end from a "Chiudi ammortamento" dialog on both the transaction row and detail page, real-Postgres-proven not to disturb the cash lens.
+- realizePlanTx (close-for-sale, dual-lens netting via composed closePlanTx + reused createPairTx) and reducePlanTx (open-plan reduce+re-spread) plus the AmortizationReimburseDialog intent-prompt that routes a reimbursement link to whichever one the user chooses.
+- Extended `updateTransaction`'s pair-guard model with an amortization-plan branch: amount/date edits on a transaction with an OPEN amortization plan are hard-blocked (including date-only edits, a gap the pre-existing pair-guard never covered), while subcategory/title edits and edits on closed/unamortized transactions stay unaffected — zero action-layer changes needed.
+- `/amortizations` registry page listing every amortization plan (open+closed) with Decimal-precise consumed/net values, an open-only-by-default status filter, an X/N + progress-bar months column, and a single total-open-net-residual KPI — reusing the v2.8 `/reimbursements` RSC/DAL/table stack.
+- Wired "Chiudi" (reuses the existing `CloseAmortizationDialog` verbatim, scrap-close only) and "Realizza con vendita" (deep-link to the transaction detail page) row actions onto the `/amortizations` registry table, gated to open plans only via a single exported `resolveRowActions(row)` predicate, plus a real-Postgres proof that the registry's read path and Phase 78's `closePlanTx` write path never numerically diverge.
+- Threaded `?lens=cassa|competenza` through `getOverviewAmountTotals`/`getOverview` and rendered a global `LensSwitch` on `/dashboard/overview`, proving the ledger_entry row-source seam on one real path with a real-Postgres regression gate before fanning out to the remaining nine aggregation sites.
+- Migrated the remaining five `lib/dal/dashboard.ts` aggregation functions (getCategoriesBreakdown, getCategoryRanking, getCategoryDeviations, getCategoryDetail, getMonthlyTrendByNature) to the Plan 80-01 `ledgerRowSource` seam, redesigning getCategoryDetail's Top 5 movimenti sub-query with a display-only LEFT JOIN so an amortization instalment row surfaces under competenza.
+- Migrated the movers drill-down (`getMonthOverMonthCategoryChanges`) and 12-month bar chart (`getOverviewChart`) to the `ledgerRowSource` pattern, and separately made `getYearsWithData`/`getMonthsWithData` lens-aware via an additive UNION against `amortization_instalment` — so an accrual-only future instalment year/month is never hidden from the selector, with `resolveYear` clamping a cross-lens period mismatch to the active lens's latest year.
+- `/dashboard/overview` now fetches both lenses' years unconditionally, resolves the active year through the D-10 cross-lens clamp, and threads one shared `ledgerRowSource` into the KPI totals, 12-month chart (incl. prior-year YoY), and movers drill-down; `buildDashboardTabHref` carries `?lens=` across tab navigation exactly like `preset`/`type`/`sort`/`tag`.
+- Wired `/dashboard/categories` and `/dashboard/categories/[id]` to the global cassa/competenza lens by reusing the Plan 80-01 `LensSwitch`/`parseLensParam`/`resolveLedgerRowSource` infrastructure and Plan 80-02's already-migrated DAL functions — zero new DAL or component code, pure call-site threading.
+- `/dashboard/tags` now renders the global LensSwitch disabled with the D-05 no-op note, parsing `?lens=` only for the switch's visual state while `getTagTotals` stays exactly `getTagTotals(userId)`; `/tags/[id]` remains untouched.
+- Authored the phase-closing Playwright LENS suite across all four dashboard sub-routes exactly per spec and re-ran the full regression trio green, but could not drive the browser suite to a passing run in this sandbox — diagnosed and documented a pre-existing, unrelated `proxy.ts` staging-bypass bug (infinite redirect loop) that blocks every dashboard Playwright spec, old and new alike.
+
+---
+
 ## v2.8 Reimbursements 1:N (Shipped: 2026-07-27)
 
 **Phases completed:** 4 phases, 17 plans, 35 tasks

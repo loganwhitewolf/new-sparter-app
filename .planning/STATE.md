@@ -2,44 +2,45 @@
 gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Amortization
-current_phase: 81
-status: "Phase 81 shipped — PR #58"
-stopped_at: Completed 80-07-PLAN.md (Phase 80 closeout — all plans done, ready for verification)
-last_updated: "2026-07-29T20:05:03.629Z"
+status: Awaiting next milestone
+stopped_at: Phase 81 complete (inline net display for paired transactions) — UAT 4/4 passed, verification passed, security verified. Milestone v2.9 100% complete.
+last_updated: "2026-07-29T20:26:28.107Z"
 last_activity: 2026-07-29
+last_activity_desc: Milestone v2.9 completed and archived
 progress:
   total_phases: 5
   completed_phases: 5
   total_plans: 19
   completed_plans: 19
+current_phase: 81
 current_phase_name: inline-net-display-for-paired-transactions
-last_activity_desc: Phase 81 complete
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-27)
+See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Milestone v2.9 (Amortization) complete — all phases done, ready to close the milestone
+**Current focus:** Planning next milestone — v2.9 (Amortization) shipped & archived; run `/gsd-new-milestone`
 
 ## Current Position
 
-Phase: 81
-Plan: Not started
-Status: Phase 81 shipped — PR #58
-Last activity: 2026-07-29
+Phase: Milestone v2.9 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-29 — Milestone v2.9 completed and archived
 
-## Roadmap (v2.9 — Phases 77-80)
+## Roadmap (v2.9 — Phases 77-81) — SHIPPED 2026-07-29
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 77 | amortization-schema-and-activation | AMORT-01, AMORT-02, AMORT-03, LENS-03 | Not started |
-| 78 | plan-lifecycle-and-reconciliation | AMORT-04, AMORT-05, AMORT-06, AMORT-07 | Not started |
-| 79 | amortizations-registry | REG-01, REG-02, REG-03 | Not started |
-| 80 | dashboard-accrual-lens | LENS-01, LENS-02, LENS-04, LENS-05 | Not started |
+| 77 | amortization-schema-and-activation | AMORT-01, AMORT-02, AMORT-03, LENS-03 | Complete |
+| 78 | plan-lifecycle-and-reconciliation | AMORT-04, AMORT-05, AMORT-06, AMORT-07 | Complete |
+| 79 | amortizations-registry | REG-01, REG-02, REG-03 | Complete |
+| 80 | dashboard-accrual-lens | LENS-01, LENS-02, LENS-04, LENS-05 | Complete |
+| 81 | inline-net-display-for-paired-transactions | Phase 78 UAT closure (no new REQ-ID) | Complete |
 
 **Coverage:** 15/15 v2.9 requirements mapped across Phases 77-80, none orphaned. Model
 **LOCKED in ADR 0019**: amortization spreads a one-off outflow **Transaction** (never an Expense or
