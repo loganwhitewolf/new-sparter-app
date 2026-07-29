@@ -63,17 +63,18 @@ async function OverviewDataSection({
   years: string[]
   lens: Lens
 }) {
-  // Phase 80: lens threads through to getOverview's KPI totals only (this task's tracer
-  // scope) — getOverviewChart/getMonthOverMonthCategoryChanges migrate in Plan 80-03.
+  // Phase 80 Plan 04: the SAME resolved ledgerRowSource threads into every widget on this
+  // page (KPIs, chart, movers) — never re-derived per call site (T-80-08).
   const ledgerRowSource = resolveLedgerRowSource(lens)
 
   // Prior-year chart points feed the filtered YoY deltas on the KPI cards (260711-gfd):
   // deltas compare the SAME chip selection year-over-year. A prior year with no data
-  // yields zero sums → null deltas (existing null handling).
+  // yields zero sums → null deltas (existing null handling). Both years read the SAME
+  // lens so the delta comparison is meaningful.
   const [overview, chart, prevChart] = await Promise.all([
     getOverview(year, ledgerRowSource),
-    getOverviewChart(year),
-    getOverviewChart(year - 1),
+    getOverviewChart(year, ledgerRowSource),
+    getOverviewChart(year - 1, ledgerRowSource),
   ])
 
   if (isYearWithNoData(overview.totalIn, overview.totalOut)) {
@@ -89,9 +90,9 @@ async function OverviewDataSection({
   const defaultMonthIndex = deriveDefaultMonthIndex(chart)
   // Pre-fetch all 3 directions in parallel so the panel is fully populated on first paint.
   const [initialMoversIn, initialMoversOut, initialMoversAllocation] = await Promise.all([
-    getMonthOverMonthCategoryChanges(year, defaultMonthIndex, 'in', 10),
-    getMonthOverMonthCategoryChanges(year, defaultMonthIndex, 'out', 10),
-    getMonthOverMonthCategoryChanges(year, defaultMonthIndex, 'allocation', 10),
+    getMonthOverMonthCategoryChanges(year, defaultMonthIndex, 'in', 10, ledgerRowSource),
+    getMonthOverMonthCategoryChanges(year, defaultMonthIndex, 'out', 10, ledgerRowSource),
+    getMonthOverMonthCategoryChanges(year, defaultMonthIndex, 'allocation', 10, ledgerRowSource),
   ])
 
   return (
@@ -122,9 +123,18 @@ async function OverviewDataSection({
 export default async function DashboardOverviewPage({ searchParams }: Props) {
   await verifySession()
   const params = await searchParams
-  const years = await getYearsWithData()
-  const year = resolveYear(params.year, years)
   const lens = parseLensParam(params.lens)
+
+  // Phase 80 Plan 04: fetch BOTH lenses' years unconditionally — needed for the D-10
+  // cross-lens clamp regardless of which lens is active (a flip must be able to detect
+  // "requested year exists only in the OTHER lens").
+  const [yearsForCassa, yearsForCompetenza] = await Promise.all([
+    getYearsWithData('cassa'),
+    getYearsWithData('competenza'),
+  ])
+  const yearsForActiveLens = lens === 'competenza' ? yearsForCompetenza : yearsForCassa
+  const yearsForOtherLens = lens === 'competenza' ? yearsForCassa : yearsForCompetenza
+  const year = resolveYear(params.year, yearsForActiveLens, yearsForOtherLens)
 
   // D-06 case b: account has no years with data at all.
   if (year === null) {
@@ -136,7 +146,7 @@ export default async function DashboardOverviewPage({ searchParams }: Props) {
     // receive uncategorizedCount for the inline nudge slot. The Suspense fallback
     // (OverviewPageSkeleton) covers both the header and the data section during streaming.
     <Suspense fallback={<OverviewPageSkeleton />}>
-      <OverviewDataSection year={year} years={years} lens={lens} />
+      <OverviewDataSection year={year} years={yearsForActiveLens} lens={lens} />
     </Suspense>
   )
 }
