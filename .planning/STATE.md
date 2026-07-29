@@ -4,9 +4,9 @@ milestone: v2.8
 milestone_name: "Reimbursements 1:N"
 status: Awaiting next milestone
 stopped_at: Completed 76-05-PLAN.md
-last_updated: "2026-07-27T13:55:58.087Z"
-last_activity: 2026-07-28
-last_activity_desc: Completed quick task 260728-mpo — Fineco platform/format cleanup
+last_updated: "2026-07-29T08:58:00.000Z"
+last_activity: 2026-07-29
+last_activity_desc: Planned quick task 260729-f21 — import mode filters (from-last / all / range)
 progress:
   total_phases: 4
   completed_phases: 4
