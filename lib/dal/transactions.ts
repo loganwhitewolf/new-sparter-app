@@ -242,6 +242,19 @@ export const transactionListSelect = {
   // role-resolution rules as pairedReimbursementIdExpr() above, exposed directly here rather than
   // only used internally by pairedNetAmount.
   reimbursementId: sql<number | null>`${pairedReimbursementIdExpr()}`,
+  // Phase 77 (D-05, Task 3 guards): the amortization_plan id this transaction already has, if
+  // any — a correlated subquery (not a LEFT JOIN, mirroring pairedWithId's own style exactly) so
+  // buildTransactionOrderBy's grouping/sort shape is preserved. Non-null means "already-amortized"
+  // (D-05 guard) client-side, with zero extra round-trips.
+  amortizationPlanId: sql<string | null>`(
+    SELECT ap.id FROM amortization_plan ap WHERE ap.transaction_id = ${transaction.id}
+  )`,
+  // Phase 78 (D-01, AMORT-04): the amortization_plan's own status ('open'/'closed'), gating the
+  // "Chiudi ammortamento" action's visibility alongside amortizationPlanId — same
+  // correlated-subquery style, one extra column, no join.
+  amortizationPlanStatus: sql<string | null>`(
+    SELECT ap.status FROM amortization_plan ap WHERE ap.transaction_id = ${transaction.id}
+  )`,
 }
 
 export const transactionPlatformSelect = {
@@ -283,6 +296,10 @@ export type TransactionListRow = {
   pairedOccurredAt: Date | null
   // Phase 76 (D-06, RMB-10): reimbursement id this transaction participates in (anchor or refund)
   reimbursementId: number | null
+  // Phase 77 (D-05): amortization_plan id this transaction already has, if any
+  amortizationPlanId: string | null
+  // Phase 78 (D-01): the amortization_plan's own status ('open'/'closed'), if any
+  amortizationPlanStatus: string | null
 }
 
 export type TransactionPlatformOption = {
@@ -691,7 +708,14 @@ export type ManualTransactionData = {
   subCategoryId?: number
 }
 
-export async function insertManualTransaction(
+/**
+ * Tx-composable core of manual transaction creation (D-10): performs the SAME expense+transaction
+ * inserts against the passed-in `tx` — no internal db.transaction call — so callers can compose it
+ * inside a larger db.transaction (e.g. the combined create+amortize path, alongside activatePlanTx),
+ * matching applyDetachCleanupTx's own tx-core-plus-thin-wrapper pattern.
+ */
+export async function insertManualTransactionTx(
+  tx: DbOrTx,
   data: ManualTransactionData,
 ): Promise<{ transactionId: string; expenseId: string }> {
   const { computeDescriptionHash, computeTransactionHash } = await import(
@@ -708,36 +732,40 @@ export async function insertManualTransaction(
     description: data.description,
   })
 
-  await db.transaction(async (tx) => {
-    await tx.insert(expense).values({
-      id: expenseId,
-      userId: data.userId,
-      title: data.description,
-      descriptionHash,
-      subCategoryId: data.subCategoryId ?? null,
-      totalAmount: data.amount,
-      transactionCount: 1,
-      firstTransactionAt: data.occurredAt,
-      lastTransactionAt: data.occurredAt,
-      status: data.subCategoryId ? '3' : '1',
-    })
+  await tx.insert(expense).values({
+    id: expenseId,
+    userId: data.userId,
+    title: data.description,
+    descriptionHash,
+    subCategoryId: data.subCategoryId ?? null,
+    totalAmount: data.amount,
+    transactionCount: 1,
+    firstTransactionAt: data.occurredAt,
+    lastTransactionAt: data.occurredAt,
+    status: data.subCategoryId ? '3' : '1',
+  })
 
-    await tx.insert(transaction).values({
-      id: transactionId,
-      userId: data.userId,
-      fileId: null,
-      expenseId,
-      transactionHash,
-      description: data.description,
-      descriptionHash,
-      amount: data.amount,
-      currency: data.currency,
-      occurredAt: data.occurredAt,
-      rowIndex: 0,
-    })
+  await tx.insert(transaction).values({
+    id: transactionId,
+    userId: data.userId,
+    fileId: null,
+    expenseId,
+    transactionHash,
+    description: data.description,
+    descriptionHash,
+    amount: data.amount,
+    currency: data.currency,
+    occurredAt: data.occurredAt,
+    rowIndex: 0,
   })
 
   return { transactionId, expenseId }
+}
+
+export async function insertManualTransaction(
+  data: ManualTransactionData,
+): Promise<{ transactionId: string; expenseId: string }> {
+  return db.transaction((tx) => insertManualTransactionTx(tx, data))
 }
 
 export async function updateTransactionCustomTitle(
@@ -792,6 +820,10 @@ export type TransactionDetailRow = {
   pairedDescription: string | null
   pairedOccurredAt: Date | null
   pairedNetAmount: string | null
+  // Phase 77 (D-05, Plan 77-02): the amortization_plan id this transaction already has, if any.
+  amortizationPlanId: string | null
+  // Phase 78 (D-01): the amortization_plan's own status ('open'/'closed'), if any.
+  amortizationPlanStatus: string | null
 }
 
 /**
@@ -840,6 +872,8 @@ export const getTransactionForDetail = cache(
         pairedDescription: transactionListSelect.pairedDescription,
         pairedOccurredAt: transactionListSelect.pairedOccurredAt,
         pairedNetAmount: transactionListSelect.pairedNetAmount,
+        amortizationPlanId: transactionListSelect.amortizationPlanId,
+        amortizationPlanStatus: transactionListSelect.amortizationPlanStatus,
       })
       .from(transaction)
       .leftJoin(importFile, eq(transaction.fileId, importFile.id))

@@ -18,6 +18,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { Pool } from 'pg'
 import { vi } from 'vitest'
 import * as schema from '@/lib/db/schema'
+import type { LedgerRowSource } from '@/lib/dal/dashboard-filters'
 
 const DEFAULT_TEST_DATABASE_URL = 'postgres://postgres:sparter@localhost:5432/sparter_test'
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1'])
@@ -179,6 +180,8 @@ const FIXTURE_TABLES = [
   'tag',
   'reimbursement_refund',
   'reimbursement',
+  'amortization_instalment',
+  'amortization_plan',
   'transaction',
   'expense_group_membership',
   'expense_group',
@@ -222,6 +225,9 @@ export type CaptureAggregationSnapshotInput = {
   dateRange: { from: Date; to: Date }
   categoryId: number
   tagId: number
+  // Phase 80 (ADR 0019 §10): optional lens row source for getOverviewAmountTotals. Undefined
+  // preserves the pre-Phase-80 default (ledgerEntryCash) for every existing caller unchanged.
+  ledgerRowSource?: LedgerRowSource
 }
 
 // Loosely typed on purpose: the 10 functions live across 3 modules with return shapes that are
@@ -238,7 +244,7 @@ export type AggregationSnapshot = Record<string, unknown>
 export async function captureAggregationSnapshot(
   input: CaptureAggregationSnapshotInput,
 ): Promise<AggregationSnapshot> {
-  const { harnessDb, userId, dateRange, categoryId, tagId } = input
+  const { harnessDb, userId, dateRange, categoryId, tagId, ledgerRowSource } = input
 
   // CRITICAL: never let the 10 production functions build their own connection off the ambient
   // process.env.DATABASE_URL (lib/db/index.ts constructs a fresh pg.Pool from that env var at
@@ -268,7 +274,7 @@ export async function captureAggregationSnapshot(
     tagTotals,
     tagDetail,
   ] = await Promise.all([
-    dashboardModule.getOverviewAmountTotals(userId, dateRange.from, dateRange.to),
+    dashboardModule.getOverviewAmountTotals(userId, dateRange.from, dateRange.to, ledgerRowSource),
     dashboardModule.getCategoriesBreakdown(filters),
     dashboardModule.getCategoryRanking(filters),
     dashboardModule.getCategoryDeviations({ type: 'all' }),

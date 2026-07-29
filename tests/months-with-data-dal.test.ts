@@ -49,6 +49,28 @@ describe('getMonthsWithData', () => {
       const result = await getMonthsWithData('transactions')
       expect(result).toEqual([])
     })
+
+    // Phase 80, D-09/LENS-05: getMonthsWithData's 'transactions' branch becomes lens-aware.
+    it("defaults to the 'cassa' cash-only query when lens is omitted (unchanged behavior)", async () => {
+      mocks.executeResult.rows = [{ ym: '2026-05' }, { ym: '2026-04' }]
+      const { getMonthsWithData } = await import('@/lib/dal/months-with-data')
+      const result = await getMonthsWithData('transactions')
+      expect(result).toEqual(['2026-05', '2026-04'])
+    })
+
+    it("'cassa' lens (explicit) is byte-identical to the omitted-lens call", async () => {
+      mocks.executeResult.rows = [{ ym: '2026-05' }, { ym: '2026-04' }]
+      const { getMonthsWithData } = await import('@/lib/dal/months-with-data')
+      const result = await getMonthsWithData('transactions', 'cassa')
+      expect(result).toEqual(['2026-05', '2026-04'])
+    })
+
+    it("'competenza' lens unions transaction months with amortization_instalment months", async () => {
+      mocks.executeResult.rows = [{ ym: '2026-08' }, { ym: '2026-05' }, { ym: '2026-04' }]
+      const { getMonthsWithData } = await import('@/lib/dal/months-with-data')
+      const result = await getMonthsWithData('transactions', 'competenza')
+      expect(result).toEqual(['2026-08', '2026-05', '2026-04'])
+    })
   })
 
   describe("table = 'files'", () => {
@@ -64,6 +86,14 @@ describe('getMonthsWithData', () => {
       const { getMonthsWithData } = await import('@/lib/dal/months-with-data')
       await getMonthsWithData('files')
       expect(mocks.verifySession).toHaveBeenCalledOnce()
+    })
+
+    // Phase 80, D-09: 'files' branch ignores lens entirely — no amortization concept applies.
+    it("'competenza' lens behaves identically to omitted/'cassa' lens (no amortization concept for files)", async () => {
+      mocks.executeResult.rows = [{ ym: '2026-05' }, { ym: '2026-04' }]
+      const { getMonthsWithData } = await import('@/lib/dal/months-with-data')
+      const result = await getMonthsWithData('files', 'competenza')
+      expect(result).toEqual(['2026-05', '2026-04'])
     })
 
     it('returns [] when user has no file rows', async () => {

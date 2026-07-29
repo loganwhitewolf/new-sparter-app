@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.8
-milestone_name: "Reimbursements 1:N"
-status: Awaiting next milestone
-stopped_at: Completed 260729-hiz quick task (expense title parity + grocery harden)
-last_updated: "2026-07-29T10:46:00.000Z"
+milestone: v2.9
+milestone_name: Amortization
+current_phase: 81
+status: "Phase 81 shipped — PR #58"
+stopped_at: Completed 80-07-PLAN.md (Phase 80 closeout — all plans done, ready for verification)
+last_updated: "2026-07-29T20:05:03.629Z"
 last_activity: 2026-07-29
-last_activity_desc: Completed quick task 260729-hiz — expense title parity + grocery pattern harden
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 17
-  completed_plans: 17
-current_phase: 76
-current_phase_name: reimbursements-section
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 19
+  completed_plans: 19
+current_phase_name: inline-net-display-for-paired-transactions
+last_activity_desc: Phase 81 complete
 ---
 
 # Project State
@@ -23,14 +23,71 @@ current_phase_name: reimbursements-section
 See: .planning/PROJECT.md (updated 2026-07-27)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Planning next milestone (v2.8 Reimbursements 1:N shipped 2026-07-27; git tag pending post-merge to main)
+**Current focus:** Milestone v2.9 (Amortization) complete — all phases done, ready to close the milestone
 
 ## Current Position
 
-Phase: Milestone v2.8 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-29 — Completed quick task 260729-hiz: expense title parity + grocery pattern harden
+Phase: 81
+Plan: Not started
+Status: Phase 81 shipped — PR #58
+Last activity: 2026-07-29
+
+## Roadmap (v2.9 — Phases 77-80)
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 77 | amortization-schema-and-activation | AMORT-01, AMORT-02, AMORT-03, LENS-03 | Not started |
+| 78 | plan-lifecycle-and-reconciliation | AMORT-04, AMORT-05, AMORT-06, AMORT-07 | Not started |
+| 79 | amortizations-registry | REG-01, REG-02, REG-03 | Not started |
+| 80 | dashboard-accrual-lens | LENS-01, LENS-02, LENS-04, LENS-05 | Not started |
+
+**Coverage:** 15/15 v2.9 requirements mapped across Phases 77-80, none orphaned. Model
+**LOCKED in ADR 0019**: amortization spreads a one-off outflow **Transaction** (never an Expense or
+Expense Group) over N uniform monthly instalments starting from the purchase month, forcing a
+detach into a Standalone Expense (reuses ADR 0016 §2-4 / `detachTransactionToDedicatedExpense`).
+Instalments are materialised in the database. The dashboard gains a global cassa/competenza switch;
+the seam is **one swappable `ledger_entry` row source per lens** — cash = transactions with
+`effectiveAmount()`, accrual = non-amortized transactions `UNION ALL` instalment rows — not a `lens`
+parameter threaded through the ten aggregation functions. Resolving the amount inside the row source
+is what makes the reimbursement double-netting trap (an instalment's amount already carries any
+re-spread from §8; `effectiveAmount()` must never apply to it a second time) structurally
+impossible. Realization (selling or scrapping an amortized asset) reuses the v2.8 reimbursement
+mechanism, netting against the **closure month** as an explicit exception to Mondo Netto's
+cost-month netting. Navigation (`getYearsWithData`/`getMonthsWithData`) must become lens-aware,
+since instalments can create a year with no transaction in it.
+
+**Phase sequencing rationale:** the schema+seam is the highest-risk piece (the survey at
+`.scratch/amortization/assets/01-lens-seam.md` confirms the same 10 aggregation sites v2.8 proved
+byte-identical), so it ships first with the cash-lens regression gate **before any lifecycle or lens
+UI** (77); plan resolution — closure, realization, reimbursement re-spread, edit guard — completes
+the backend model next (78); the dedicated registry surfaces it (79); the dashboard accrual lens
+ships last, once the instalment source is stable (80). Incidental cleanup folded into Phase 77:
+extract the duplicated `dateScopedTransactions()`/`expenseStatusIncludedInDashboardTotals()` out of
+`dashboard.ts` and `overview.ts`.
+
+**Left OPEN for the per-phase discuss/plan stage** (details, not architecture — do NOT resolve in
+the roadmap):
+
+1. **Reimbursement exceeding residual** — what a reimbursement larger than a plan's residual does
+   (clamp, allow negative, or block) → Phase 78.
+
+2. **Amortized-transaction edit invariant** — the exact write-path rule for amount/date/subcategory
+   edits after a plan exists (model: v2.5 pair-guard, v2.8 D-02) → Phase 78.
+
+3. **Lens durability** — whether the accrual lens is a durable user preference or a URL/session
+   view, and its behavior across the four dashboard sub-routes → Phase 80.
+
+4. **Lens on tag surfaces** — whether `/dashboard/tags` and `/tags/[id]` are lens-invariant (all-time
+   totals make the spread a no-op) or follow the switch → Phase 80.
+
+5. **Deviations/movers after month 1** — what a spread cost's invisibility to deviation does to the
+   movers/deviations widgets, and whether a plan's closure spike should fire or be suppressed →
+   Phase 80.
+
+**Out of scope** (no phases): configurable amortization day in settings, amortizing `in`/
+`allocation`/`transfer`, amortizing an Expense or Expense Group, non-uniform plans (variable
+instalments/depreciation curves), automatic/threshold-based activation, a debt amortization
+schedule (principal/interest split), asset depreciation/net-worth tracking.
 
 ## Roadmap (v2.8 — Phases 73-76)
 
@@ -109,7 +166,36 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 81 added (2026-07-29): Inline net display for paired transactions — v2.9 UAT closure. Net
+  + struck-through gross on all paired anchors (amortization-sale + v2.8 reimbursements),
+  "riduzione di …" badge on the counterpart row. Presentational only, netting unchanged.
+  Decisions locked in memory `project_paired_tx_inline_net_display`.
+
 ### Decisions
+
+**v2.9 milestone contract (locked at roadmap creation, 2026-07-27):**
+
+- **Unit of amortization is the single Transaction** — never an Expense or Expense Group (ADR 0019
+  §1). Amortizing forces a detach into a Standalone Expense (reuses ADR 0016 §2-4).
+
+- **Outflows only** for v2.9 — `in`/`allocation`/`transfer` amortization deferred.
+- **Uniform plan from the purchase month** — rounding remainder on the first instalment, each
+  instalment on the purchase's calendar day clamped to month end.
+
+- **Instalments are materialised** in the database (not computed on read) to keep dashboard reads
+  cheap.
+
+- **Seam: one swappable `ledger_entry` row source per lens**, not a `lens` parameter threaded
+  through the ten aggregation functions — resolving the amount inside the row source is what
+  structurally prevents the reimbursement double-netting trap.
+
+- **Realization reuses the v2.8 reimbursement mechanism**, netting against the closure month (an
+  explicit exception to Mondo Netto's cost-month netting); the system never writes a synthetic
+  transaction.
+
+- **Activation is always manual** — no automatic or threshold-based suggestion.
 
 **v2.7 milestone contract (locked at roadmap creation, 2026-07-22):**
 
@@ -300,6 +386,43 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 76-03: reimbursementId row-indicator gate + unpair fix — reused pairedReimbursementIdExpr() verbatim; Rule 1 auto-fix cleared reimbursementId in handleUnpair's optimistic state to avoid a stale-link regression.
 - [Phase ?]: ReimbursementPanel variant defaults to 'management' — every existing call site keeps unchanged behavior; only the tx-detail page opts into 'summary'
 - [Phase ?]: 76-05: status Badge omits variant prop entirely (relies on residualBadgeClassName's className via twMerge) to satisfy this plan's own zero-variant= acceptance criterion in reimbursement-detail-client.tsx.
+- [Phase ?]: ledger_entry seam (ledger_entry_cash/ledger_entry_accrual) is a plain Postgres VIEW, not materialized — user-chosen at 77-01 Task 1 checkpoint (always-fresh reads, no refresh infra needed).
+- [Phase ?]: Amortization not-outflow guard reads the transaction's raw signed amount directly, never via subCategory->nature->direction join, so uncategorized transactions are never silently blocked.
+- [Phase ?]: Client-side row-action amortization eligibility is a synchronous mirror of server guards (transactionListSelect fields), avoiding a loading-flash; server independently re-validates every guard before any write.
+- [Phase ?]: 77-02: reverseDetachTx recomputes the original descriptionHash via computeDescriptionHash and reuses reconcileExpensesAfterTransactionRemoval on both the target and abandoned expense ids — no bespoke undo cleanup logic
+- [Phase ?]: 77-04: Grep-verifiable migration comments must paraphrase removed effectiveAmount()/isNotSecondary() calls, never quote them, when the plan's own acceptance criteria greps for zero occurrences
+- [Phase ?]: createTransaction's CreateTransactionResult extends ActionState with optional amortized/months fields rather than a separate action, keeping useActionState's initial state valid with zero call-site changes.
+- [Phase ?]: Default (non-amortized) submit button label changed from 'Salva transazione' to 'Crea transazione' per the UI-SPEC's exact D-10 copywriting pair.
+- [Phase ?]: Manual-entry preview reuses the bounded-height + IntersectionObserver incremental-render technique from ActivateAmortizationDialog, since the UI-SPEC names E4 alongside E1 in the overflow resolution.
+- [Phase ?]: 77-05: getTagTotals inverted-LEFT-JOIN migrated by adding one id-to-id leftJoin(ledgerEntryCash) and folding its IS NOT NULL check into the existing tagTotalExclusion FILTER (uniform across count/minDate/maxDate/total)
+- [Phase ?]: 77-05: getTagDetail migrated via the dual-join pattern (raw description/occurredAt from transaction, netted amount from ledger_entry_cash) — same technique as 77-04's getCategoryDetail
+- [Phase ?]: 77-05: closing cross-feature non-interaction test isolates amortization fixture on category AND month axes to avoid polluting getCategoryDeviations' 3-month baseline window
+- [Phase ?]: Task 1 (diagnose collateral unit-test breakage) required no changes: full suite already green thanks to 77-05's tags-dal.test.ts mock fix
+- [Phase ?]: 77-06: reworded dashboard.ts:487 comment quoting isNotSecondary() literally to close the repo-wide zero-hit grep gate for LENS-03/D-11
+- [Phase ?]: closePlanTx (D-01/AMORT-04): collapses future instalments (occurredAt >= closure-month start, inclusive) onto ONE closure-month row, expenseId sourced from a deleted future instalment since amortization_plan has no expenseId column (Phase 77 D-13: all instalments of a plan share one Standalone Expense)
+- [Phase ?]: 78-03: amortizationPlanId correlated subquery mirrors transactionListSelect's raw-SQL-identifier style (no amortizationPlan schema import — would be unused); guard runs BEFORE the amount-only pair-guard so it also covers occurredAt-only edits; loose != null comparison keeps every pre-existing test unmodified
+- [Phase ?]: [Phase 78] 78-02: closePlanTx's collapse logic extracted into a private collapseAndCloseTx(tx, {userId, plan, closureMonth, extraAmount}) core -- closePlanTx is a thin extraAmount=0 wrapper; realizePlanTx reuses it with the sale's signed amount folded in, zero duplication of the D-01 collapse algorithm
+- [Phase ?]: [Phase 78] 78-02: grep -c 'createPairTx' floor is 2 (import + single call site), not the plan's literal 'exactly 1' -- an import line necessarily matches too; comments paraphrased to avoid inflating further, semantic guarantee (only realizePlanTx calls it) verified via 0-hit effectiveAmount()/isNotSecondary() grep plus manual inspection
+- [Phase ?]: [Phase 78] 78-02: reducePlanTx adds the SAME refund signed amount to both plan.totalAmount (whole-life base) and the future-only remaining sum (re-spread base) -- algebraically consistent since totalAmount = consumedSum + futureSum invariant holds before and after
+- [Phase ?]: 79-01: remaining_months bigint-as-string coerced via Number() in DAL row mapper (Postgres COUNT(*) returns bigint, node-postgres surfaces as string)
+- [Phase ?]: 79-01: IDOR cross-user DAL test seeds global direction/nature taxonomy once per test and reuses subCategoryId across both users, since seedMinimalTaxonomy cannot be called twice (unique(code))
+- [Phase ?]: 79-02: resolveRowActions returns realizeHref unconditionally (regardless of status) — only showActions gates rendering, matching the plan's <behavior> contract literally
+- [Phase ?]: 79-02: DAL/lifecycle consistency test asserts remainingMonths is EITHER 0 or 1 after closePlanTx (never a hardcoded value) since the closure instalment's classification against Postgres's CURRENT_DATE depends on real wall-clock timing at test run; both branches checked against the known past-instalment sum + closePlanTx's own returned remainingValue
+- [Phase ?]: 80-01: requirements.mark-complete NOT run for LENS-01/LENS-02 — one-route tracer slice only, full capability lands across Plans 80-02..80-07 (Phase 75/76 precedent)
+- [Phase ?]: 80-01: getUncategorizedCount stays lens-invariant (no ledgerRowSource param) — an amortized transaction is always pre-categorized before a plan can attach, closing the seam survey's flagged Confirm note
+- [Phase ?]: 80-01: lens-persistence.ts re-exports safeSessionStorage from overview/overview-persistence.ts instead of duplicating it, giving lens-switch.tsx one import path
+- [Phase ?]: 80-02: topTransactionRows amount COALESCEs raw transaction.amount first, ledger row's amount second — preserves byte-identical cash display contract, only instalments (no transaction row) fall back
+- [Phase ?]: 80-02: requirements.mark-complete NOT run for LENS-02 — five of ten aggregation sites done (all six dashboard.ts functions lens-selectable), full capability needs Plans 80-03..80-07
+- [Phase ?]: 80-03: getYearsWithData/getMonthsWithData's competenza branches UNION transaction/amortization_instalment directly, never ledgerEntryCash/ledgerEntryAccrual — these are navigation functions ('any activity'), not netting aggregations; the ledger views' NOT EXISTS refund-exclusion would silently drop a refund year/month (T-80-06)
+- [Phase ?]: 80-03: getYearsWithData's cash branch kept as a separate unindented early-return AFTER the new competenza branch (not nested in an if-block) so git diff shows zero line changes inside the pre-existing cash path, satisfying the plan's byte-identical acceptance criterion literally
+- [Phase ?]: 80-03: requirements.mark-complete NOT run for LENS-04/LENS-05 — this plan delivers only the DAL/pure-function backend (ledgerRowSource on movers/chart, lens-aware navigation, resolveYear cross-lens clamp); the year-selector UI wiring lands in a later Wave plan
+- [Phase ?]: 80-06: getTagTotals call site left exactly as getTagTotals(userId) — parsed lens only sets LensSwitch's visual state, never passed to the DAL (D-05)
+- [Phase ?]: 80-06: requirements.mark-complete NOT run for LENS-01 — Plans 80-04/80-05 (overview full reflection, categories/categories-detail wiring) had not executed yet at this plan's runtime; D-03's all-four-routes contract completes at Plan 80-07
+- [Phase ?]: 80-04: buildDashboardTabHref preserves ?lens= mirroring the existing preset/type/sort/tag precedent (D-03)
+- [Phase ?]: 80-04: page-level lens parsing reordered to run BEFORE the year fetch (parseLensParam -> getYearsWithData for both lenses -> resolveYear) since the D-10 clamp needs the active lens to distinguish active vs other years[]
+- [Phase ?]: 80-05: DashboardFilters left untouched (shared preset/type-only toolbar); lens parsed/resolved at page level only, passed to LensSwitch + DAL calls
+- [Phase ?]: 80-07: Did not fix pre-existing proxy.ts staging-bypass redirect-loop bug (blocks all dashboard Playwright specs, unrelated to this plan's files) — logged to deferred-items.md per SCOPE BOUNDARY
+- [Phase ?]: 80-07: Marked LENS-01/LENS-02 complete — D-03's all-four-routes contract satisfied by 80-04+80-05+80-06 together; DAL/URL-wiring proven by real-Postgres+unit tests, live-browser proof blocked by unrelated environmental bug
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -308,6 +431,30 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - A "money received from a person" (counterparty) category — rejected by ADR 0016.
 
 ### Codebase facts relevant to the milestone
+
+- **Amortization plan + instalment schema (Phase 77)** — no existing schema entity; requires a new
+  plan table (transaction FK, months, start date, status open/closed) plus N materialised
+  instalment rows. Exact columns/indexes/constraint syntax and migration ordering left to
+  plan-phase (`gsd-pattern-mapper` against the live schema), per ADR 0019 Consequences.
+
+- **The `ledger_entry` seam (Phase 77)** — a Postgres view per lens (`ledger_entry_cash`,
+  `ledger_entry_accrual`), not a Drizzle CTE aliased as `transaction` (rejected — "clever, and
+  clever is the problem"). Ten aggregation functions across `lib/dal/dashboard.ts`,
+  `lib/dal/overview.ts`, `lib/dal/tags.ts` currently apply `isNotSecondary()`/`effectiveAmount()`
+  from `lib/dal/transaction-pairs-sql.ts` directly; after the seam lands they read `ledger.amount`
+  instead and stop calling those fragments at all (16 call sites collapse into one row source).
+
+- **Lens-adjacent navigation** — `getYearsWithData` (`overview.ts`) and `getMonthsWithData`
+  (`months-with-data.ts`) read `transaction` only; under the accrual lens they must also see
+  instalments (LENS-05), or the year/month selector will hide a year the dashboard could render.
+
+- **Duplicated predicates to extract (Phase 77 incidental cleanup)** — `dateScopedTransactions()`
+  and `expenseStatusIncludedInDashboardTotals()` are defined privately and identically in both
+  `dashboard.ts` and `overview.ts`.
+
+- `lib/services/transaction-detach.ts` — `detachTransactionToDedicatedExpense({ userId, transactionId, title, subCategoryId })` (shipped v2.4/ADR 0016) is the reused detach mechanism for AMORT-02.
+- The v2.8 reimbursement mechanism (`reimbursement`/`reimbursement_refund`, `effectiveAmount()`) is reused as-is for realization (AMORT-05/06) — no new netting mechanism per ADR 0019.
+- `.scratch/amortization/assets/01-lens-seam.md` is the codebase survey backing the seam decision — read before planning Phase 77.
 
 - **Expense Group (Phases 65-66)** — no existing schema entity; requires a new grouping table
   (group + membership) via `drizzle-kit generate` + `scripts/migrate.ts`. No migration touches
@@ -319,7 +466,6 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
   the existing `scripts/seed-patterns-data.ts` full-replace model (`yarn db:seed-patterns`) — new
   or corrected patterns go there, not in `seed-data.ts`/`seed-extras.ts`.
 
-- `lib/services/transaction-detach.ts` — `detachTransactionToDedicatedExpense({ userId, transactionId, title, subCategoryId })` (shipped v2.4/ADR 0016) is the precedent for in-place re-hash mechanics; ADR 0017 §5 notes a Standalone Expense may join a group without special-casing.
 - `SubcategoryPicker` (vaul bottom sheet, single `subCategoryId` output, adopted across all 7 selection surfaces) is the intended control for any new subcategory-capture UI in the merge dialog (GRP-02) — reuse, do not build a new picker (v1.13 / ADR 0008).
 - Dashboard aggregation sites (8, per v2.0 `isNotSecondary()`/`effectiveAmount()` netting) are the surfaces GRP-09's invariant test and TAG-04's global filter must both leave structurally unchanged / correctly narrow.
 
@@ -328,6 +474,7 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidian design note) are locked — no discovery to redo before planning Phase 65.
 
 - Operator: run yarn db:seed-patterns against the real target to make Phase 67-02's new travel-only 'trasporto' regex pattern live (full replace of system patterns)
+- proxy.ts staging-bypass never sets x-pathname/x-search headers -> infinite /onboarding redirect loop for zero-transaction staging users -> blocks ALL dashboard Playwright specs (tests/dashboard.spec.ts). Fix candidates + full diagnosis in .planning/phases/80-dashboard-accrual-lens/deferred-items.md.
 
 ## Quick Tasks Completed
 
@@ -381,12 +528,6 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260721-mrl | Move Categorie into primary left sidebar; remove hub card; keep /settings/categories route | 2026-07-21 | eddc893 |
 | 260722-iys | Nav IA: /tags + /patterns primary; Patterns out of Categories; theme→Profile; /settings→Profilo; mobile Altro sheet | 2026-07-22 | fcb1646 |
 | 260722-ked | Enrich tag detail panel: Entrate/Uscite/Valore finale totals + included-tx count + compact tx list (date·subcat·signed amount), lazy via getTagDetailAction; dashboard-consistent netting (getTagDetail/buildTagDetailData) | 2026-07-22 | 1cce578 |
-| 260728-gbh | Import mini-dashboard: per-platform current-year coverage range bars on /import (most-behind-first) | 2026-07-28 | 8267bcd |
-| 260728-clt | Reorganize `cultura e tempo libero`: rename cinema-ed-eventi → spettacoli, add attivita-ricreative (seed-data + seed-extras step + manifest fixture); CONTEXT.md arbitration rules (trip context travels on a Tag, not the category; recurrence separates sport-e-fitness from attivita-ricreative) and vacanze listing realigned to Phase 67 D-11 | 2026-07-28 | ce9d575 |
-| 260728-mpo | Fineco cleanup: merge duplicate Fineco platforms into slug=fineco; single global Moneymap `;`-delimited format (full 8-col header); update seed-data Fineco v1 | 2026-07-28 | e31dd9b |
-| 260729-f21 | Import mode filters on analyze: from-last (default) / all / range + live preview + Transazioni nel periodo card; hash dedup on filtered subset | 2026-07-29 | 8123715 |
-| 260729-fma | Exclude specific import preview rows (Non importare + Ripristina by rowIndex; confirm FormData → importFile skip) | 2026-07-29 | 5a3b882 |
-| 260729-hiz | Expense detail title parity + harden spesa-quotidiana + travel→pacchetto-vacanze; audit; report | 2026-07-29 | 40fa1a7 |
 
 ## Deferred Items
 
@@ -420,11 +561,11 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 76-05-PLAN.md
+**Stopped at:** Phase 81 complete (inline net display for paired transactions) — UAT 4/4 passed, verification passed, security verified. Milestone v2.9 100% complete.
 
-Last session: 2026-07-27T11:42:05.358Z
+Last session: 2026-07-29
 
-**Next:** `/gsd-plan-phase 69` to plan the tag-dedicated-page phase
+**Next:** `/gsd-complete-milestone v2.9` to archive the milestone and prepare for the next.
 
 ## Operator Next Steps
 
@@ -504,3 +645,21 @@ Last session: 2026-07-27T11:42:05.358Z
 | Phase 76 P03 | ~15min | 3 tasks | 6 files |
 | Phase 76 P04 | 12min | 2 tasks | 2 files |
 | Phase 76 P05 | 35min | 3 tasks | 7 files |
+| Phase 77 P01 | resumed session ~2h | 3 tasks | 23 files |
+| Phase 77 P02 | ~20min | 2 tasks | 9 files |
+| Phase 77 P04 | 25min | 2 tasks | 2 files |
+| Phase 77 P03 | ~10min | 2 tasks | 6 files |
+| Phase 77 P05 | 35min | 2 tasks | 4 files |
+| Phase 77 P06 | 20min | 2 tasks | 1 files |
+| Phase 78 P01 | 20min | 2 tasks | 11 files |
+| Phase 78 P03 | 15min | 2 tasks | 2 files |
+| Phase 78 P02 | 20min | 2 tasks | 7 files |
+| Phase 79 P01 | 10min | 2 tasks | 10 files |
+| Phase 79 P02 | ~15min | 2 tasks | 3 files |
+| Phase 80 P01 | 25min | 2 tasks | 12 files |
+| Phase 80 P02 | ~20min | 3 tasks | 2 files |
+| Phase 80 P03 | 11min | 2 tasks | 8 files |
+| Phase 80 P06 | 10min | 1 tasks | 1 files |
+| Phase 80 P04 | ~15min | 2 tasks | 3 files |
+| Phase 80 P05 | ~10min | 2 tasks | 2 files |
+| Phase 80 P07 | 35min | 2 tasks | 2 files |

@@ -19,6 +19,26 @@ export const CreateTransactionSchema = z.object({
   currency: z.string().length(3).default("EUR"),
   occurredAt: z.string().min(1, { error: "Data obbligatoria." }),
   subCategoryId: z.number().int().positive().optional(),
+  // D-10: inline "Ammortizza questa transazione" on the manual create-transaction form. FormData
+  // sends the checkbox as the string 'on' when checked, absent when unchecked — preprocess to a
+  // real boolean the same way DetachTransactionSchema/BulkDeleteTransactionsSchema normalize
+  // string-valued booleans elsewhere in this file.
+  amortizationEnabled: z
+    .preprocess((v) => v === "on" || v === true, z.boolean())
+    .optional()
+    .default(false),
+  amortizationMonths: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : Number(v)),
+    z.number().int().min(2, { error: "Minimo 2 mesi." }).optional(),
+  ),
+}).superRefine((data, ctx) => {
+  if (data.amortizationEnabled && data.amortizationMonths === undefined) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Minimo 2 mesi.",
+      path: ["amortizationMonths"],
+    })
+  }
 })
 
 export type CreateTransactionInput = z.infer<typeof CreateTransactionSchema>

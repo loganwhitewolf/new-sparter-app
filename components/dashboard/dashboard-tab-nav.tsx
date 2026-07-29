@@ -20,6 +20,7 @@ export function buildDashboardTabHref(
   const type = searchParams.get('type')
   const sort = searchParams.get('sort')
   const tag = searchParams.get('tag')
+  const lens = searchParams.get('lens')
 
   if (preset) {
     params.set('preset', preset)
@@ -35,6 +36,10 @@ export function buildDashboardTabHref(
 
   if (tag) {
     params.set('tag', tag)
+  }
+
+  if (lens) {
+    params.set('lens', lens)
   }
 
   const search = params.toString()

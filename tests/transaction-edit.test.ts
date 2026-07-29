@@ -445,4 +445,140 @@ describe('updateTransaction', () => {
       expect(mocks.dbUpdateChain).not.toHaveBeenCalled()
     })
   })
+
+  // ── AMORT-07 (Phase 78, D-04): amortization edit guard ─────────────────────
+  describe('AMORT-07 — amortization edit guard', () => {
+    it('blocks an amount edit when the transaction has an OPEN amortization plan', async () => {
+      const row = makeTxRow({ amortizationPlanId: 'plan-1' })
+      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([row]))
+      const updateChain = makeUpdateChain()
+      mocks.dbUpdateChain.mockReturnValue(updateChain)
+
+      await expect(
+        updateTransaction({ userId: 'user-1', transactionId: 'tx-1', amount: '-75.00' }),
+      ).rejects.toThrow('Rimuovi ammortamento per modificare l\'importo o la data della transazione.')
+
+      expect(mocks.dbUpdateChain).not.toHaveBeenCalled()
+    })
+
+    it('blocks a date-only edit (no amount) when the transaction has an OPEN amortization plan', async () => {
+      // Proves the guard is NOT nested inside the amount-only pair-guard branch —
+      // today's pair-guard only ever ran for amount edits, so this is new coverage.
+      const row = makeTxRow({ amortizationPlanId: 'plan-1' })
+      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([row]))
+      const updateChain = makeUpdateChain()
+      mocks.dbUpdateChain.mockReturnValue(updateChain)
+
+      await expect(
+        updateTransaction({
+          userId: 'user-1',
+          transactionId: 'tx-1',
+          occurredAt: new Date('2026-02-01'),
+        }),
+      ).rejects.toThrow('Rimuovi ammortamento per modificare l\'importo o la data della transazione.')
+
+      expect(mocks.dbUpdateChain).not.toHaveBeenCalled()
+    })
+
+    it('blocks a combined amount + date edit once with the same message when the plan is OPEN', async () => {
+      const row = makeTxRow({ amortizationPlanId: 'plan-1' })
+      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([row]))
+      const updateChain = makeUpdateChain()
+      mocks.dbUpdateChain.mockReturnValue(updateChain)
+
+      await expect(
+        updateTransaction({
+          userId: 'user-1',
+          transactionId: 'tx-1',
+          amount: '-75.00',
+          occurredAt: new Date('2026-02-01'),
+        }),
+      ).rejects.toThrow('Rimuovi ammortamento per modificare l\'importo o la data della transazione.')
+
+      expect(mocks.dbUpdateChain).not.toHaveBeenCalled()
+    })
+
+    it('allows a customTitle-only edit on a transaction with an OPEN amortization plan', async () => {
+      const row = makeTxRow({ amortizationPlanId: 'plan-1' })
+      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([row]))
+      const updateChain = makeUpdateChain()
+      mocks.dbUpdateChain.mockReturnValue(updateChain)
+
+      await expect(
+        updateTransaction({ userId: 'user-1', transactionId: 'tx-1', customTitle: 'Nuovo titolo' }),
+      ).resolves.toEqual({ success: true })
+
+      expect(updateChain.set).toHaveBeenCalledTimes(1)
+      const setPayload = updateChain.set.mock.calls[0][0] as Record<string, unknown>
+      expect(setPayload.customTitle).toBe('Nuovo titolo')
+      expect(setPayload).not.toHaveProperty('amount')
+      expect(setPayload).not.toHaveProperty('occurredAt')
+    })
+
+    it('allows an amount edit when the amortization plan is CLOSED (guard scoped to status=open only)', async () => {
+      // The correlated subquery filters on status='open', so a CLOSED plan's row never
+      // surfaces amortizationPlanId — same shape as "no plan at all".
+      const row = makeTxRow({ amortizationPlanId: null, expenseId: null })
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        return callCount === 1
+          ? makeSelectChain([row])
+          : makeSelectChain([{ asRefundReimbursementId: null, asAnchorReimbursementId: null }])
+      })
+      const updateChain = makeUpdateChain()
+      mocks.dbUpdateChain.mockReturnValue(updateChain)
+
+      await expect(
+        updateTransaction({ userId: 'user-1', transactionId: 'tx-1', amount: '-75.00' }),
+      ).resolves.toEqual({ success: true })
+
+      expect(updateChain.set).toHaveBeenCalledTimes(1)
+    })
+
+    it('allows an amount edit when the transaction has no amortization plan at all', async () => {
+      const row = makeTxRow({ amortizationPlanId: undefined, expenseId: null })
+      let callCount = 0
+      mocks.dbSelectChain.mockImplementation(() => {
+        callCount += 1
+        return callCount === 1
+          ? makeSelectChain([row])
+          : makeSelectChain([{ asRefundReimbursementId: null, asAnchorReimbursementId: null }])
+      })
+      const updateChain = makeUpdateChain()
+      mocks.dbUpdateChain.mockReturnValue(updateChain)
+
+      await expect(
+        updateTransaction({ userId: 'user-1', transactionId: 'tx-1', amount: '-75.00' }),
+      ).resolves.toEqual({ success: true })
+
+      expect(updateChain.set).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  // ── AMORT-07 (Phase 78, Task 2): thrown error shape reaches the caller verbatim ──
+  describe('AMORT-07 — error shape parity with the pair-guard message', () => {
+    it('throws a plain Error carrying the exact guard string, not a differently-shaped error object', async () => {
+      const row = makeTxRow({ amortizationPlanId: 'plan-1' })
+      mocks.dbSelectChain.mockImplementation(() => makeSelectChain([row]))
+      const updateChain = makeUpdateChain()
+      mocks.dbUpdateChain.mockReturnValue(updateChain)
+
+      try {
+        await updateTransaction({ userId: 'user-1', transactionId: 'tx-1', amount: '-75.00' })
+        throw new Error('updateTransaction should have thrown')
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error)
+        expect((error as Error).message).toBe(
+          'Rimuovi ammortamento per modificare l\'importo o la data della transazione.',
+        )
+        // Plain Error (same shape as the pre-existing pair-guard throw) — no custom
+        // error class, no extra fields — so lib/actions/transaction-edit.ts's
+        // `{ error: (error as Error).message }` catch block needs no change.
+        expect(Object.getPrototypeOf(error)).toBe(Error.prototype)
+      }
+
+      expect(mocks.dbUpdateChain).not.toHaveBeenCalled()
+    })
+  })
 })

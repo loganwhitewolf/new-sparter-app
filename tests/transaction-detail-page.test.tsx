@@ -322,6 +322,7 @@ function makeTransactionDetailRow(overrides: Record<string, unknown> = {}) {
     pairedDescription: null,
     pairedOccurredAt: null,
     pairedNetAmount: null,
+    amortizationPlanId: null,
     ...overrides,
   }
 }

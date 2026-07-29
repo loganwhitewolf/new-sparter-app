@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ExternalLink, Lock, Split, Tag, Trash2, X } from 'lucide-react'
+import { CalendarClock, ExternalLink, Lock, Split, Tag, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -24,10 +24,19 @@ import { TransactionDateEdit } from '@/components/transactions/transaction-date-
 import { TransactionTitleEdit } from '@/components/transactions/transaction-title-edit'
 import { ReimbursementPanel, RefundMembershipCard } from '@/components/transactions/reimbursement-panel'
 import { RefundPickerDialog } from '@/components/transactions/refund-picker-dialog'
+import { AmortizationReimburseDialog } from '@/components/transactions/amortization-reimburse-dialog'
 import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
+import { ActivateAmortizationDialog } from '@/components/transactions/activate-amortization-dialog'
+import { RemoveAmortizationDialog } from '@/components/transactions/remove-amortization-dialog'
+import { CloseAmortizationDialog } from '@/components/transactions/close-amortization-dialog'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { deleteTransaction } from '@/lib/actions/transactions'
 import { addTransactionTagAction, removeTransactionTagAction } from '@/lib/actions/transaction-tags'
+import { minimumTwoMonthInstalment, validateMonthsForAmount } from '@/lib/services/amortization-math'
+import {
+  amortizationGuardMessage,
+  type AmortizationGuardFailure,
+} from '@/lib/utils/amortization-guard-messages'
 import type { ReimbursementPanelData, RefundMembership } from '@/lib/dal/reimbursement'
 import type { TransactionDetailRow } from '@/lib/dal/transactions'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
@@ -35,6 +44,46 @@ import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import type { TagRow } from '@/lib/dal/tags'
 import { APP_ROUTES, expenseDetailHref, expenseGroupDetailHref, importFileDetailHref } from '@/lib/routes'
 import { toDecimal } from '@/lib/utils/decimal'
+
+type AmortizationEligibility = { eligible: true } | ({ eligible: false } & AmortizationGuardFailure)
+
+/**
+ * Detail-page mirror of transaction-table.tsx's computeAmortizationEligibility (Phase 77,
+ * D-04..D-07 + outflow-only) — same five-guard order, same disabled+tooltip treatment, reusing
+ * the shared client-safe message formatter so the row and the detail page never drift on copy.
+ * Reimbursement-involvement is derived from the two already-loaded panel props instead of a
+ * `reimbursementId` field (the detail row has no such field): `reimbursementPanelData` only ever
+ * resolves for an outflow with a linked reimbursement anchor; `refundMembership` only ever
+ * resolves for an inflow that is itself a linked refund — for the outflow this gate always
+ * targets, only the first can be non-undefined, but checking both keeps the predicate correct
+ * regardless of direction.
+ */
+function computeDetailAmortizationEligibility(
+  transaction: TransactionDetailRow,
+  reimbursementInvolved: boolean,
+): AmortizationEligibility {
+  if (reimbursementInvolved) {
+    return { eligible: false, reason: 'reimbursement' }
+  }
+  if (transaction.amortizationPlanId != null) {
+    return { eligible: false, reason: 'already-amortized' }
+  }
+  if (transaction.groupId != null) {
+    return { eligible: false, reason: 'expense-group' }
+  }
+  if (!toDecimal(transaction.amount).isNegative()) {
+    return { eligible: false, reason: 'not-outflow' }
+  }
+  const validation = validateMonthsForAmount(transaction.amount, 2)
+  if (!validation.valid) {
+    return {
+      eligible: false,
+      reason: 'too-small',
+      requiredPerMonth: minimumTwoMonthInstalment(transaction.amount),
+    }
+  }
+  return { eligible: true }
+}
 
 type CurrentTag = { tagId: number; tagName: string; archived: boolean }
 
@@ -64,6 +113,7 @@ export function TransactionDetailClient({
 }: Props) {
   const router = useRouter()
   const [refundPickerOpen, setRefundPickerOpen] = useState(false)
+  const [amortizeReimburseOpen, setAmortizeReimburseOpen] = useState(false)
   const [detachOpen, setDetachOpen] = useState(false)
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -72,6 +122,21 @@ export function TransactionDetailClient({
   const [tags, setTags] = useState<CurrentTag[]>(currentTags)
   const [addTagId, setAddTagId] = useState<string>('')
   const [tagPending, setTagPending] = useState(false)
+  const [amortizeOpen, setAmortizeOpen] = useState(false)
+  const [removeAmortizeOpen, setRemoveAmortizeOpen] = useState(false)
+  const [closeAmortizeOpen, setCloseAmortizeOpen] = useState(false)
+
+  // D-04 mirror: reimbursementPanelData resolves only for an outflow with a linked reimbursement
+  // anchor; refundMembership resolves only for an inflow that is itself a linked refund. Amortize
+  // only ever targets an outflow, but checking both keeps this correct regardless of direction.
+  const reimbursementInvolved = reimbursementPanelData !== undefined || refundMembership !== undefined
+  const amortizationEligibility = computeDetailAmortizationEligibility(transaction, reimbursementInvolved)
+  // D-03 (78-CONTEXT.md): linking a reimbursement/inflow to a transaction with an OPEN
+  // amortization plan routes through the intent-prompt dialog instead of the standard
+  // multi-select RefundPickerDialog — the system never guesses "chiudi per vendita" vs
+  // "rimborso parziale".
+  const hasOpenAmortizationPlan =
+    transaction.amortizationPlanId != null && transaction.amortizationPlanStatus === 'open'
 
   const displayTitle =
     transaction.customTitle ??
@@ -318,6 +383,58 @@ export function TransactionDetailClient({
             Spesa a sé (non aggregare)
           </Button>
         ) : null}
+        {/* Amortization entry points (Phase 77, D-01/D-08/D-09; Phase 78, D-01): "Ammortizza"
+            reuses ActivateAmortizationDialog unmodified, gated by the same five-guard eligibility
+            as the row action; "Chiudi ammortamento" reuses CloseAmortizationDialog, shown only
+            while an open plan exists; "Rimuovi ammortamento" reuses RemoveAmortizationDialog,
+            shown only when an active plan exists (Entry Point Visibility Matrix). */}
+        {amortizationEligibility.eligible ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-start"
+            onClick={() => setAmortizeOpen(true)}
+          >
+            <CalendarClock className="h-4 w-4" />
+            Ammortizza
+          </Button>
+        ) : (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="block">
+                  <Button type="button" variant="outline" className="w-full justify-start" disabled>
+                    <CalendarClock className="h-4 w-4" />
+                    Ammortizza
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{amortizationGuardMessage(amortizationEligibility)}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+        {transaction.amortizationPlanId != null && transaction.amortizationPlanStatus === 'open' ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-start"
+            onClick={() => setCloseAmortizeOpen(true)}
+          >
+            <CalendarClock className="h-4 w-4" />
+            Chiudi ammortamento
+          </Button>
+        ) : null}
+        {transaction.amortizationPlanId != null ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-start text-destructive hover:text-destructive"
+            onClick={() => setRemoveAmortizeOpen(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+            Rimuovi ammortamento
+          </Button>
+        ) : null}
         <Button
           type="button"
           variant="outline"
@@ -387,7 +504,9 @@ export function TransactionDetailClient({
         <ReimbursementPanel
           anchor={{ transactionId: transaction.id }}
           data={reimbursementPanelData}
-          onAddRefund={() => setRefundPickerOpen(true)}
+          onAddRefund={() =>
+            hasOpenAmortizationPlan ? setAmortizeReimburseOpen(true) : setRefundPickerOpen(true)
+          }
           variant="summary"
         />
       )}
@@ -420,6 +539,20 @@ export function TransactionDetailClient({
         />
       ) : null}
 
+      {!isInflow && transaction.amortizationPlanId != null ? (
+        <AmortizationReimburseDialog
+          open={amortizeReimburseOpen}
+          onOpenChange={setAmortizeReimburseOpen}
+          transaction={{
+            id: transaction.id,
+            planId: transaction.amortizationPlanId,
+            amount: transaction.amount,
+            occurredAt: transaction.occurredAt,
+          }}
+          onDone={() => router.refresh()}
+        />
+      ) : null}
+
       {transaction.expenseId ? (
         <DetachExpenseDialog
           open={detachOpen}
@@ -430,6 +563,42 @@ export function TransactionDetailClient({
           mostUsed={mostUsed}
           onSuccess={() => {
             setDetachOpen(false)
+            router.refresh()
+          }}
+        />
+      ) : null}
+
+      <ActivateAmortizationDialog
+        open={amortizeOpen}
+        onOpenChange={setAmortizeOpen}
+        transactionId={transaction.id}
+        amount={transaction.amount}
+        occurredAt={transaction.occurredAt}
+        onSuccess={() => {
+          setAmortizeOpen(false)
+          router.refresh()
+        }}
+      />
+
+      {transaction.amortizationPlanId ? (
+        <RemoveAmortizationDialog
+          open={removeAmortizeOpen}
+          onOpenChange={setRemoveAmortizeOpen}
+          planId={transaction.amortizationPlanId}
+          onSuccess={() => {
+            setRemoveAmortizeOpen(false)
+            router.refresh()
+          }}
+        />
+      ) : null}
+
+      {transaction.amortizationPlanId ? (
+        <CloseAmortizationDialog
+          open={closeAmortizeOpen}
+          onOpenChange={setCloseAmortizeOpen}
+          planId={transaction.amortizationPlanId}
+          onSuccess={() => {
+            setCloseAmortizeOpen(false)
             router.refresh()
           }}
         />

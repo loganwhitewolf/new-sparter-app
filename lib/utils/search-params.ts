@@ -112,3 +112,26 @@ export function parsePositiveIntParam(value: string): number | null {
   const id = Number(value)
   return Number.isSafeInteger(id) && id > 0 ? id : null
 }
+
+/**
+ * The global dashboard cash/accrual lens (Phase 80, ADR 0019 §5/§10, D-01/D-02). `cassa` is
+ * today's cash-basis behavior; `competenza` reads amortized costs as their monthly instalments.
+ */
+export type Lens = 'cassa' | 'competenza'
+
+const LENS_ALLOWED = ['cassa', 'competenza'] as const
+
+/**
+ * Parses `?lens=` — the ONLY place this raw searchParam is ever validated across the whole
+ * phase (T-80-01 mitigation). Absent or garbage input defaults to `'cassa'` (D-02) — never
+ * throws, never passes the raw string through to a query.
+ *
+ * @example
+ * parseLensParam(undefined)      // 'cassa'
+ * parseLensParam('bogus')        // 'cassa'
+ * parseLensParam('competenza')   // 'competenza'
+ * parseLensParam(['competenza','x'])  // 'competenza' (first-element semantics)
+ */
+export function parseLensParam(value: string | string[] | undefined): Lens {
+  return parseStatus(value, LENS_ALLOWED) === 'competenza' ? 'competenza' : 'cassa'
+}

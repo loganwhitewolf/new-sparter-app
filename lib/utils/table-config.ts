@@ -41,7 +41,7 @@ export type SortColumn = {
 }
 
 export type TableConfig = {
-  id: 'transactions' | 'expenses' | 'files' | 'reimbursements'
+  id: 'transactions' | 'expenses' | 'files' | 'reimbursements' | 'amortizations'
   search: { key: 'q'; placeholder: string } | null
   filters: FilterField[]
   sortable: SortColumn[]
