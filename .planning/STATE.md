@@ -166,6 +166,13 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 81 added (2026-07-29): Inline net display for paired transactions — v2.9 UAT closure. Net
+  + struck-through gross on all paired anchors (amortization-sale + v2.8 reimbursements),
+  "riduzione di …" badge on the counterpart row. Presentational only, netting unchanged.
+  Decisions locked in memory `project_paired_tx_inline_net_display`.
+
 ### Decisions
 
 **v2.9 milestone contract (locked at roadmap creation, 2026-07-27):**

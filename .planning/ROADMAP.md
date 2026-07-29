@@ -2,7 +2,7 @@
 
 ## Milestones
 
-- 🚧 **v2.9: Amortization** — Phases 77–80 (in progress) · model locked ADR 0019
+- 🚧 **v2.9: Amortization** — Phases 77–81 (in progress; 81 = UAT closure) · model locked ADR 0019
 - ✅ **v2.8: Reimbursements 1:N** — Phases 73–76 (shipped 2026-07-27) · [archive](milestones/v2.8-ROADMAP.md)
 - ✅ **M001–M006** — Foundation → Dashboard Insight Suite (Phases 1–23, shipped ~2026-05)
 - ✅ **M007: Zero-cost Production Deploy** — Phases 24–28 (shipped 2026-05-19)
@@ -175,6 +175,46 @@ any UI. Audit **passed 11/11**; full suite green (149 files, 1834 tests).
 Full details: `.planning/milestones/v2.8-ROADMAP.md`
 
 </details>
+
+### Phase 81: Inline net display for paired transactions
+
+> **v2.9 closure phase.** Closes the non-blocking UAT gap flagged in the v2.9 milestone audit
+> (`.planning/v2.9-MILESTONE-AUDIT.md`, Phase 78 item): "chiudi per vendita" (and, by the same
+> mechanism, every v2.8 reimbursement) nets correctly on the detail page and dashboard, but the
+> transactions **table row** still shows only the gross `transaction.amount`, and the
+> sale/refund counterpart reads as a plain positive inflow with nothing marking it as a
+> reduction of another transaction. Design decisions LOCKED 2026-07-29 (memory
+> `project_paired_tx_inline_net_display`).
+
+**Goal:** In the transactions table, a paired anchor (amortization-sale or v2.8 reimbursement)
+shows its **net** amount prominently with the gross initial amount struck-through/dimmed beneath
+it, and the paired counterpart row carries a "riduzione di …" badge linking to its anchor with an
+attenuated amount — so a user reading the table alone understands the real net without opening the
+detail page. Purely presentational: `effectiveAmount()`, netting, and all totals stay unchanged.
+**Requirements**: closes the Phase 78 UAT item (AMORT-05 realization readability); no new REQ-ID.
+**Depends on:** Phase 80
+
+**Success Criteria** (what must be TRUE):
+
+  1. A paired outflow anchor (amortization closed-for-sale OR v2.8 reimbursement) renders in the
+     transactions table with the net amount as the primary figure and the gross initial amount
+     struck-through/opaque beneath it — for **all** pairing types, not just amortization.
+  2. The counterpart row (the sale/refund positive) shows a "riduzione di …" badge that links to
+     its anchor transaction and renders its amount attenuated, so it no longer reads as a plain
+     asset/inflow.
+  3. No change to any total, `effectiveAmount()` result, netting math, or dashboard/lens figure —
+     the full test suite (incl. LENS-03 byte-identical regression) stays green.
+
+**Scope note:** single surface — the transactions table feed (`lib/dal/transactions.ts` must
+expose net + pair-role + anchor link inline) and the row render in `transaction-table.tsx`,
+extending/replacing `ReimbursementRowIndicator`. The table is cash-only (not lens-aware): the net
+shown is the cash net (initial − sale/refund).
+
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 81 to break down)
 
 ---
 
