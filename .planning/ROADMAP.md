@@ -131,8 +131,28 @@ Plans:
   3. Under the accrual view, the selected year shows every month with data including future instalment months, with instalments past year-end appearing in the following year.
   4. The year and month selectors offer a year or month that exists only because of instalments, under the accrual view.
 
-**Plans**: TBD
-**Open for discuss/plan** (details, not architecture): whether the accrual lens is a durable user preference or a URL/session view, and its behavior across the four dashboard sub-routes; whether `/dashboard/tags` and `/tags/[id]` are lens-invariant (all-time totals make the spread a no-op) or follow the switch; what deviations/movers do once a cost is spread (invisible to deviation after month 1), and whether a plan's closure spike should fire or be suppressed.
+**Plans**: 7 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 80-01-PLAN.md — Tracer: thread ?lens= through getOverviewAmountTotals + global LensSwitch on /dashboard/overview, real-Postgres regression proof (LENS-01, LENS-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 80-02-PLAN.md — Remaining dashboard.ts aggregation swaps (breakdown/ranking/deviations/detail/trend), including getCategoryDetail's Top 5 movimenti redesign (LENS-02)
+- [ ] 80-03-PLAN.md — Remaining overview.ts aggregation swaps (movers/chart) + lens-aware getYearsWithData/getMonthsWithData + resolveYear cross-lens clamp (LENS-02, LENS-04, LENS-05)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 80-04-PLAN.md — Full /dashboard/overview wiring (chart/movers/year selector) + tab-nav lens preservation (LENS-01, LENS-04, LENS-05)
+- [ ] 80-05-PLAN.md — Wire /dashboard/categories + /dashboard/categories/[id] to the lens (LENS-01, LENS-02)
+- [ ] 80-06-PLAN.md — /dashboard/tags disabled+noted switch (D-05); verify /tags/[id] untouched (D-06) (LENS-01)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 80-07-PLAN.md — E2E Playwright coverage across all four routes + full regression close-out (LENS-01, LENS-02, LENS-04, LENS-05)
+
 **UI hint**: yes
 
 ---
@@ -423,9 +443,9 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 77. amortization-schema-and-activation | v2.9 | 0/6 | Complete    | 2026-07-28 |
 | 78. plan-lifecycle-and-reconciliation | v2.9 | 0/3 | Complete    | 2026-07-28 |
 | 79. amortizations-registry | v2.9 | 0/2 | Complete    | 2026-07-28 |
-| 80. dashboard-accrual-lens | v2.9 | TBD | Not started | - |
+| 80. dashboard-accrual-lens | v2.9 | 0/7 | Planned | - |
 
 **Total shipped: 76 phases · 286 plans complete**
 **Latest shipped: v2.8 Reimbursements 1:N — Phases 73–76 (2026-07-27). All RMB-01…RMB-11 delivered: 1:N reimbursement model (transaction_pair subsumed), Mondo Netto netting, first-class residual, linking UI on /transactions/[id], and the dedicated /reimbursements section. Audit passed 11/11.**
 
-**In planning: v2.9 Amortization — Phases 77–80 (roadmap created 2026-07-27). 15/15 requirements mapped (AMORT-01…07, REG-01…03, LENS-01…05), none orphaned. Model locked in ADR 0019. Phase 77 planned 2026-07-28 (6 plans, 3 waves — 77-01 tracer/foundation, 77-02/77-03/77-04/77-05 wave-2 expansion, 77-06 LENS-03 gate closure). Next: `/gsd-execute-phase 77`.**
+**In planning: v2.9 Amortization — Phases 77–80 (roadmap created 2026-07-27). 15/15 requirements mapped (AMORT-01…07, REG-01…03, LENS-01…05), none orphaned. Model locked in ADR 0019. Phases 77–79 complete. Phase 80 planned 2026-07-29 (7 plans, 4 waves — 80-01 tracer on getOverviewAmountTotals + shared lens infra, 80-02/80-03 wave-2 remaining aggregation + navigation swaps, 80-04/80-05/80-06 wave-3 route wiring across all four sub-routes, 80-07 wave-4 E2E + full regression close-out). Next: `/gsd-execute-phase 80`.**
