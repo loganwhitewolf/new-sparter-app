@@ -101,6 +101,30 @@ describe('getYearsWithData', () => {
     await getYearsWithData()
     expect(mocks.verifySession).toHaveBeenCalledOnce()
   })
+
+  // Phase 80, D-09/LENS-05: getYearsWithData becomes lens-aware without touching the cash branch.
+  it("defaults to the 'cassa' cash-only query when lens is omitted (unchanged behavior)", async () => {
+    mocks.executeResult.rows = [{ yr: '2026' }, { yr: '2025' }]
+    const { getYearsWithData } = await import('@/lib/dal/overview')
+    const result = await getYearsWithData()
+    expect(result).toEqual(['2026', '2025'])
+  })
+
+  it("'cassa' lens (explicit) is byte-identical to the omitted-lens call", async () => {
+    mocks.executeResult.rows = [{ yr: '2026' }, { yr: '2025' }]
+    const { getYearsWithData } = await import('@/lib/dal/overview')
+    const result = await getYearsWithData('cassa')
+    expect(result).toEqual(['2026', '2025'])
+  })
+
+  it("'competenza' lens returns a year that exists only via amortization_instalment", async () => {
+    // A fixture with a transaction only in 2025 but a plan reaching into 2026 — the mocked
+    // db.execute stands in for the real UNION query; the DAL just maps whatever rows come back.
+    mocks.executeResult.rows = [{ yr: '2026' }, { yr: '2025' }]
+    const { getYearsWithData } = await import('@/lib/dal/overview')
+    const result = await getYearsWithData('competenza')
+    expect(result).toEqual(['2026', '2025'])
+  })
 })
 
 describe('getOverview', () => {

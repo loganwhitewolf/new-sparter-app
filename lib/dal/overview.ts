@@ -14,6 +14,7 @@ import {
 } from '@/lib/db/schema'
 import { monthLabel, monthsBetween } from '@/lib/utils/date'
 import type { FlowNature } from '@/lib/utils/nature-labels'
+import type { Lens } from '@/lib/utils/search-params'
 import { toDecimal } from '@/lib/utils/decimal'
 import {
   buildOverviewData,
@@ -75,12 +76,33 @@ function emptyAllocationSegments(): { savings: string; investment: string } {
  * Returns distinct years (YYYY) that have at least one transaction for the
  * authenticated user, ordered descending.
  *
+ * Under `lens: 'competenza'` (D-09, LENS-05), also includes any year that exists only via a
+ * materialized `amortization_instalment` row — e.g. a plan's future instalments spilling past
+ * 31/12 into a year with no `transaction` row at all. Deliberately NOT `ledgerEntryCash`/
+ * `ledgerEntryAccrual` here (T-80-06): those views' cash branch excludes refund-linked secondary
+ * rows via `NOT EXISTS`, which would silently drop a refund-transaction's year from the cash
+ * output of this function — this function counts "any activity", not "netted total".
+ *
  * T-42-05 mitigated: verifySession() scopes query to authenticated userId.
  */
-export const getYearsWithData = cache(async (): Promise<string[]> => {
+export const getYearsWithData = cache(async (lens: Lens = 'cassa'): Promise<string[]> => {
   const { userId } = await verifySession()
 
   try {
+    if (lens === 'competenza') {
+      const result = await db.execute(sql`
+        SELECT DISTINCT TO_CHAR(occurred_at, 'YYYY') AS yr
+        FROM (
+          SELECT occurred_at FROM transaction WHERE user_id = ${userId}
+          UNION ALL
+          SELECT occurred_at FROM amortization_instalment WHERE user_id = ${userId}
+        ) combined
+        ORDER BY yr DESC
+      `)
+      const rows = result.rows as { yr: string }[]
+      return rows.map((row) => row.yr)
+    }
+
     const result = await db.execute(sql`
       SELECT DISTINCT TO_CHAR(occurred_at, 'YYYY') AS yr
       FROM transaction
