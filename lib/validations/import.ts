@@ -61,15 +61,38 @@ export const ConfirmUploadSchema = z.object({
     .optional(),
 })
 
+const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/
+
+const ImportModeSchema = z.enum(['from-last', 'all', 'range'])
+
+const OptionalDateOnlySchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  z
+    .string()
+    .regex(DATE_ONLY_RE, { error: 'Date must be YYYY-MM-DD.' })
+    .optional(),
+)
+
 export const AnalyzeImportSchema = z.object({
   fileId: FileIdSchema,
   selectedFormatVersionId: z.number().int().positive().optional(),
+  importMode: ImportModeSchema.default('from-last'),
+  rangeStart: OptionalDateOnlySchema,
+  rangeEnd: OptionalDateOnlySchema,
 })
 
 export const ImportFileSchema = z.object({
   fileId: FileIdSchema,
   selectedFormatVersionId: z.number().int().positive().optional(),
   overrideWarnings: z.boolean().default(false),
+  importMode: ImportModeSchema.default('from-last'),
+  rangeStart: OptionalDateOnlySchema,
+  rangeEnd: OptionalDateOnlySchema,
+  // Confirm-only: FormData getAll('excludedRowIndexes') — never on AnalyzeImportSchema.
+  excludedRowIndexes: z.preprocess(
+    (value) => (value == null ? [] : value),
+    z.array(z.coerce.number().int().positive()).default([]),
+  ),
 })
 
 export const ImportFormatWizardDelimiterSchema = z.enum([',', ';', '\t', '|'], {
@@ -244,7 +267,6 @@ export const importSortSchema = z.enum([
 
 export const importSortDirectionSchema = z.enum(['asc', 'desc'])
 
-const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/
 const MAX_IMPORT_QUERY_LENGTH = 255
 
 function firstTrimmed(value: string | string[] | undefined): string | undefined {

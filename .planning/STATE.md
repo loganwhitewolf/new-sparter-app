@@ -4,9 +4,9 @@ milestone: v2.8
 milestone_name: "Reimbursements 1:N"
 status: Awaiting next milestone
 stopped_at: Completed 76-05-PLAN.md
-last_updated: "2026-07-27T13:55:58.087Z"
-last_activity: 2026-07-28
-last_activity_desc: Completed quick task 260728-mpo — Fineco platform/format cleanup
+last_updated: "2026-07-29T08:58:00.000Z"
+last_activity: 2026-07-29
+last_activity_desc: Completed quick task 260729-fma — Non importare exclude on import preview
 progress:
   total_phases: 4
   completed_phases: 4
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 Phase: Milestone v2.8 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-07-28 — Completed quick task 260728-mpo: Fineco merge duplicate platforms + Moneymap global format
+Last activity: 2026-07-29 — Completed quick task 260729-fma: Non importare exclude on import preview
 
 ## Roadmap (v2.8 — Phases 73-76)
 
@@ -384,6 +384,8 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260728-gbh | Import mini-dashboard: per-platform current-year coverage range bars on /import (most-behind-first) | 2026-07-28 | 8267bcd |
 | 260728-clt | Reorganize `cultura e tempo libero`: rename cinema-ed-eventi → spettacoli, add attivita-ricreative (seed-data + seed-extras step + manifest fixture); CONTEXT.md arbitration rules (trip context travels on a Tag, not the category; recurrence separates sport-e-fitness from attivita-ricreative) and vacanze listing realigned to Phase 67 D-11 | 2026-07-28 | ce9d575 |
 | 260728-mpo | Fineco cleanup: merge duplicate Fineco platforms into slug=fineco; single global Moneymap `;`-delimited format (full 8-col header); update seed-data Fineco v1 | 2026-07-28 | e31dd9b |
+| 260729-f21 | Import mode filters on analyze: from-last (default) / all / range + live preview + Transazioni nel periodo card; hash dedup on filtered subset | 2026-07-29 | 8123715 |
+| 260729-fma | Exclude specific import preview rows (Non importare + Ripristina by rowIndex; confirm FormData → importFile skip) | 2026-07-29 | 5a3b882 |
 
 ## Deferred Items
 

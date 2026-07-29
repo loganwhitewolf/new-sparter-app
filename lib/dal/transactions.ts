@@ -573,6 +573,40 @@ export const getPlatformYearCoverage = cache(
   },
 )
 
+/**
+ * Calendar YYYY-MM-DD of the latest transaction for a user+platform
+ * (ownership joins match getPlatformYearCoverage). Null when the platform has no txs.
+ */
+export async function getLastPlatformTransactionDate(
+  userId: string,
+  platformId: number,
+): Promise<string | null> {
+  const rows = await db
+    .select({
+      lastTransactionAt: sql<Date | string | null>`max(${transaction.occurredAt})`,
+    })
+    .from(transaction)
+    .innerJoin(importFile, eq(transaction.fileId, importFile.id))
+    .innerJoin(
+      importFormatVersion,
+      eq(importFile.importFormatVersionId, importFormatVersion.id),
+    )
+    .innerJoin(platform, eq(importFormatVersion.platformId, platform.id))
+    .where(
+      and(
+        eq(transaction.userId, userId),
+        eq(importFile.userId, userId),
+        eq(platform.id, platformId),
+      ),
+    )
+
+  const raw = rows[0]?.lastTransactionAt
+  if (raw == null) return null
+  const date = raw instanceof Date ? raw : new Date(raw)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toISOString().slice(0, 10)
+}
+
 export async function insertTransaction(
   database: DbOrTx,
   data: TransactionInsertData,
