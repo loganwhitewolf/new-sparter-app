@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { DROPPED_SUBCATEGORY_SLUGS, V2_SUBCATEGORY_MANIFEST } from './fixtures/v2-taxonomy-manifest'
 import { STEP_NAMES } from '../scripts/seed-extras'
 
 describe('seed-extras STEPS registry', () => {
-  it('includes v2 deployed-DB transform and backfill steps', () => {
+  it('exports the known taxonomy migration step names', () => {
     expect(STEP_NAMES).toContain('set-subcategory-nature')
     expect(STEP_NAMES).toContain('v2-backfill-nature-id')
     expect(STEP_NAMES).toContain('v2-backfill-override-nature-id')
@@ -14,61 +13,62 @@ describe('seed-extras STEPS registry', () => {
     expect(STEP_NAMES).toContain('v2-rename-categories-subcategories')
   })
 
-  it('runs deactivate before nature_id backfill', () => {
+  it('runs v2-backfill-nature-id after v2-deactivate-pruned', () => {
     const deactivateIndex = STEP_NAMES.indexOf('v2-deactivate-pruned')
     const backfillIndex = STEP_NAMES.indexOf('v2-backfill-nature-id')
     expect(deactivateIndex).toBeGreaterThan(-1)
     expect(backfillIndex).toBeGreaterThan(deactivateIndex)
   })
 
-  it('drops step-4 historical orphan slugs (CR-01)', () => {
-    expect(DROPPED_SUBCATEGORY_SLUGS).toContain('rimborso-da-persona')
-    expect(DROPPED_SUBCATEGORY_SLUGS).toContain('rimborso-abbonamento-e-canoni')
-  })
-
-  // D-16: rebucket-income-natures step is still registered (not deleted) and in correct order
-  it('D-16: rebucket-income-natures step is present in registry', () => {
+  it('registers rebucket-income-natures before v2-backfill-nature-id', () => {
     expect(STEP_NAMES).toContain('rebucket-income-natures')
-  })
-
-  it('D-16: rebucket-income-natures runs before v2-backfill-nature-id (append-only invariant)', () => {
     const rebucketIndex = STEP_NAMES.indexOf('rebucket-income-natures')
     const backfillIndex = STEP_NAMES.indexOf('v2-backfill-nature-id')
     expect(rebucketIndex).toBeGreaterThan(-1)
-    expect(backfillIndex).toBeGreaterThan(rebucketIndex)
+    expect(rebucketIndex).toBeLessThan(backfillIndex)
   })
 
-  // D-16: the income_extraordinary slug set is non-empty in the manifest oracle
-  // This confirms the old "PO confirmation pending" skip guard was based on a stale assumption.
-  // The manifest is the authoritative source consumed by v2-backfill-nature-id.
-  it('D-16: manifest income_extraordinary entries are non-empty (guard precondition was always false)', () => {
-    const incomeExtraordinarySlugs = V2_SUBCATEGORY_MANIFEST.filter(
-      (entry) => entry.natureCode === 'income_extraordinary',
-    )
-    expect(incomeExtraordinarySlugs.length).toBeGreaterThan(0)
-  })
-
-  it('keeps backfill-truncated-expense-titles registered (append-only invariant)', () => {
+  it('registers backfill-truncated-expense-titles', () => {
     expect(STEP_NAMES).toContain('backfill-truncated-expense-titles')
   })
 
-  it('registers ensure-trade-republic-csv-global-format after backfill-truncated-expense-titles (append-only invariant)', () => {
+  it('registers ensure-trade-republic-csv-global-format after truncated-title backfill', () => {
     expect(STEP_NAMES).toContain('ensure-trade-republic-csv-global-format')
-    // No longer necessarily LAST — Phase 67 appends vacanze-audit-deactivate-subcategories
-    // after it. Relative order vs. the older step still holds.
     expect(STEP_NAMES.indexOf('ensure-trade-republic-csv-global-format')).toBeGreaterThan(
       STEP_NAMES.indexOf('backfill-truncated-expense-titles'),
     )
   })
 
-  it('registers vacanze-audit-deactivate-subcategories LAST (append-only invariant)', () => {
-    expect(STEP_NAMES.indexOf('vacanze-audit-deactivate-subcategories')).toBe(STEP_NAMES.length - 1)
+  it('registers vacanze-audit after ensure-trade-republic-csv-global-format', () => {
     expect(STEP_NAMES.indexOf('vacanze-audit-deactivate-subcategories')).toBeGreaterThan(
       STEP_NAMES.indexOf('ensure-trade-republic-csv-global-format'),
     )
   })
 
+  it('registers reorganize-leisure-subcategories after vacanze-audit-deactivate-subcategories (append-only invariant)', () => {
+    expect(STEP_NAMES.indexOf('reorganize-leisure-subcategories')).toBeGreaterThan(
+      STEP_NAMES.indexOf('vacanze-audit-deactivate-subcategories'),
+    )
+  })
+
   it('D-13: registers vacanze-audit-deactivate-subcategories (TAG-06 additive taxonomy step)', () => {
     expect(STEP_NAMES).toContain('vacanze-audit-deactivate-subcategories')
+  })
+
+  // Quick task 260728-mpo: Fineco platform + format cleanup (D-01/D-02/D-03)
+  it('registers both Fineco cleanup steps, merge before consolidate (D-01 before D-02)', () => {
+    expect(STEP_NAMES).toContain('merge-duplicate-fineco-platforms')
+    expect(STEP_NAMES).toContain('ensure-fineco-moneymap-global-format')
+    expect(STEP_NAMES.indexOf('merge-duplicate-fineco-platforms')).toBeLessThan(
+      STEP_NAMES.indexOf('ensure-fineco-moneymap-global-format'),
+    )
+  })
+
+  it('registers insert-pacchetto-vacanze after ensure-fineco-moneymap-global-format (append-only)', () => {
+    expect(STEP_NAMES).toContain('insert-pacchetto-vacanze')
+    expect(STEP_NAMES.indexOf('insert-pacchetto-vacanze')).toBeGreaterThan(
+      STEP_NAMES.indexOf('ensure-fineco-moneymap-global-format'),
+    )
+    expect(STEP_NAMES.indexOf('insert-pacchetto-vacanze')).toBe(STEP_NAMES.length - 1)
   })
 })

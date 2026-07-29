@@ -110,12 +110,13 @@ export const V2_SUBCATEGORY_MANIFEST: SubcategoryManifestEntry[] = [
   { slug: 'universita', natureCode: 'essential' },
   { slug: 'spese-scolastiche', natureCode: 'essential' },
   { slug: 'corsi', natureCode: 'discretionary' },
-  // OUT — Vacanze (5)
+  // OUT — Vacanze (6 active semantics; attivita/cibo rows remain in seed but deactivated via extras)
   { slug: 'alloggio', natureCode: 'discretionary' },
   { slug: 'trasporto', natureCode: 'discretionary' },
   { slug: 'attivita-e-intrattenimento', natureCode: 'discretionary' },
   { slug: 'cibo-e-bevande', natureCode: 'discretionary' },
   { slug: 'assicurazione-viaggio', natureCode: 'discretionary' },
+  { slug: 'pacchetto-vacanze', natureCode: 'discretionary' },
   // OUT — Regali e donazioni (2)
   { slug: 'regali', natureCode: 'discretionary' },
   { slug: 'donazioni-beneficenza', natureCode: 'discretionary' },
@@ -128,12 +129,13 @@ export const V2_SUBCATEGORY_MANIFEST: SubcategoryManifestEntry[] = [
   { slug: 'abbigliamento-e-accessori', natureCode: 'discretionary' },
   { slug: 'prodotti-per-la-casa', natureCode: 'discretionary' },
   { slug: 'giocattoli', natureCode: 'discretionary' },
-  // OUT — Cultura e tempo libero (5)
-  { slug: 'cinema-ed-eventi', natureCode: 'discretionary' },
+  // OUT — Cultura e tempo libero (6)
+  { slug: 'spettacoli', natureCode: 'discretionary' },
   { slug: 'libri-e-audiolibri', natureCode: 'discretionary' },
   { slug: 'streaming', natureCode: 'discretionary' },
   { slug: 'app-e-software', natureCode: 'discretionary' },
   { slug: 'videogiochi', natureCode: 'discretionary' },
+  { slug: 'attivita-ricreative', natureCode: 'discretionary' },
   // OUT — Benessere (4)
   { slug: 'sport-e-fitness', natureCode: 'discretionary' },
   { slug: 'attrezzatura-e-abbigliamento-sportivo', natureCode: 'discretionary' },

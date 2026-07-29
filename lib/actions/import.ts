@@ -308,6 +308,9 @@ export async function analyzeImportAction(
       formData,
       "selectedFormatVersionId",
     ),
+    importMode: formString(formData, "importMode"),
+    rangeStart: formString(formData, "rangeStart"),
+    rangeEnd: formString(formData, "rangeEnd"),
   };
 
   const parsed = AnalyzeImportSchema.safeParse(raw);
@@ -369,6 +372,10 @@ export async function confirmImportAction(
       "selectedFormatVersionId",
     ),
     overrideWarnings: formData.get("overrideWarnings") === "true",
+    importMode: formString(formData, "importMode"),
+    rangeStart: formString(formData, "rangeStart"),
+    rangeEnd: formString(formData, "rangeEnd"),
+    excludedRowIndexes: formData.getAll("excludedRowIndexes"),
   };
 
   const parsed = ImportFileSchema.safeParse(raw);
@@ -385,6 +392,10 @@ export async function confirmImportAction(
       selectedFormatVersionId: parsed.data.selectedFormatVersionId,
       overrideWarnings: parsed.data.overrideWarnings,
       subscriptionPlan,
+      importMode: parsed.data.importMode,
+      rangeStart: parsed.data.rangeStart,
+      rangeEnd: parsed.data.rangeEnd,
+      excludedRowIndexes: parsed.data.excludedRowIndexes,
     });
 
     revalidatePath(APP_ROUTES.import);

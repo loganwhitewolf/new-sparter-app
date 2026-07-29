@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Pencil } from 'lucide-react'
 import { updateExpenseTitle } from '@/lib/actions/expenses'
 import { expenseDetailHref } from '@/lib/routes'
+import { cn } from '@/lib/utils'
 
 const MIN_TITLE_LENGTH = 2
 
@@ -12,9 +13,14 @@ type Props = {
   id: string
   title: string
   onSuccess?: (newTitle: string) => void
+  /**
+   * `inline` (default, table/list rows): title truncates on one line.
+   * `detail` (detail page): title wraps with break-words — no ellipsis.
+   */
+  variant?: 'inline' | 'detail'
 }
 
-export function ExpenseTitleEdit({ id, title, onSuccess }: Props) {
+export function ExpenseTitleEdit({ id, title, onSuccess, variant = 'inline' }: Props) {
   const [isEditing, setIsEditing] = useState(false)
   const [value, setValue] = useState(title)
   const [state, formAction, isPending] = useActionState(updateExpenseTitle, {
@@ -35,7 +41,15 @@ export function ExpenseTitleEdit({ id, title, onSuccess }: Props) {
     return (
       <div className="flex min-w-0 max-w-full items-center gap-1">
         <Link href={expenseDetailHref(id)} className="block min-w-0 flex-1">
-          <span className="block min-w-0 truncate font-mono text-sm tracking-tight" title={title}>
+          <span
+            className={cn(
+              'font-mono text-sm tracking-tight',
+              variant === 'detail'
+                ? 'block break-words'
+                : 'block min-w-0 truncate',
+            )}
+            title={title}
+          >
             {title}
           </span>
         </Link>

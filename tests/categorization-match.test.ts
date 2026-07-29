@@ -111,3 +111,197 @@ describe('trasporto pattern (D-14, travel-only)', () => {
     expect(result).toBeNull()
   })
 })
+
+/** Build ActivePattern[] from system seeds, ASC by priority (production load order). */
+function systemPatternsAsActive(): ActivePattern[] {
+  return [...systemCategorizationPatterns]
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => {
+      if (a.row.priority !== b.row.priority) return a.row.priority - b.row.priority
+      return a.index - b.index
+    })
+    .map(({ row }, id) => ({
+      id: id + 1,
+      userId: null,
+      pattern: row.pattern,
+      // Encode slug identity via stable hash of index in sorted list — tests assert slug via lookup
+      subCategoryId: id + 1,
+      confidence: row.confidence.toString(),
+      priority: row.priority,
+    }))
+}
+
+/** Resolve a match back to the seed row that produced it — identifies WHICH pattern won. */
+function seedForResult(
+  result: ReturnType<typeof applyTier1Regex>,
+  active: ActivePattern[],
+): (typeof systemCategorizationPatterns)[number] | null {
+  if (!result) return null
+  const hit = active.find((p) => p.id === result.patternId)
+  if (!hit) return null
+  return (
+    systemCategorizationPatterns.find(
+      (s) => s.pattern === hit.pattern && s.priority === hit.priority,
+    ) ?? null
+  )
+}
+
+function slugForResult(
+  result: ReturnType<typeof applyTier1Regex>,
+  active: ActivePattern[],
+): string | null {
+  return seedForResult(result, active)?.subCategorySlug ?? null
+}
+
+const grocerySeed = systemCategorizationPatterns.find(
+  (p) => p.subCategorySlug === 'spesa-quotidiana' && p.description.startsWith('Grocery'),
+)
+
+describe('spesa-quotidiana grocery hardening (260729-hiz)', () => {
+  const groceryOnly: ActivePattern[] = grocerySeed
+    ? [
+        {
+          id: 1,
+          userId: null,
+          pattern: grocerySeed.pattern,
+          subCategoryId: 10,
+          confidence: grocerySeed.confidence.toString(),
+          priority: grocerySeed.priority,
+        },
+      ]
+    : []
+
+  const FINECO_TRAVEL =
+    'Ben: TRAVEL SPECIALIST Ins: 24/07/2026 14:41:44 Da: INTERNET ' +
+    'Iban: IT68Y0200801109000105119318 TransID: 2607243291974987 480320046200IT ' +
+    'Cau: SALDO PRATICA VIAGGIO NUMERO 25/000164 - Viaggio thailandia — Bonifico SEPA Italia'
+
+  it('is registered as the grocery system pattern', () => {
+    expect(grocerySeed).toBeDefined()
+  })
+
+  it('does not match the Fineco travel-specialist SEPA description', () => {
+    expect(applyTier1Regex(FINECO_TRAVEL, '-1200.00', groceryOnly)).toBeNull()
+  })
+
+  it.each([
+    'COOP SOCIALE LA SPERANZA',
+    'Coop. Agricola Rossi',
+    'PAGAMENTO SUPER BOLLO AUTO',
+    'FLOWER MARKET SRL',
+    'GRAND PRIX MONZA',
+    'FARMACIA AGORA',
+    'SIGMA ALDRICH SRL',
+    'RIF MD 4471 PAGAMENTO',
+    'BIGLIETTI CONCERTO U2',
+    'Ben: PALADINI MARIO',
+    'Ben: GABRIELLI LUCA',
+    'ROSSETTO GIULIA',
+    'GULLIVER VIAGGI',
+    'MERCATO SRL Cau: SERVIZIO LOCALE',
+  ])('does not match false-positive description %s', (description) => {
+    expect(applyTier1Regex(description, '-10.00', groceryOnly)).toBeNull()
+  })
+
+  it.each([
+    'ESSELUNGA',
+    'COOP LIGURIA',
+    "IN'S MERCATO",
+    'MD DISCOUNT',
+    'LIDL ITALIA',
+    'CARREFOUR EXPRESS',
+    'SUPERMERCATO IL GIGANTE',
+    'PENNY MARKET',
+    'TIGROS',
+    'NATURASI',
+    'MACELLERIA ROSSI',
+    'PANIFICIO CENTRALE',
+    'ORTOFRUTTA DA MARIO',
+    // True positives for every RESTRINGI form
+    'U2 SUPERMERCATO',
+    'AGORA MARKET',
+    'SIGMA SUPERMERCATO',
+    'SISA DISCOUNT',
+    'SIMPLY MARKET',
+    'MAGAZZINI GABRIELLI',
+    'SUPERMERCATO ROSSETTO',
+    'SUPERMERCATO PALADINI',
+    'GULLIVER MARKET',
+    'VISOTTO SUPERMERCATO',
+    'GRUPPO SELEX',
+    'NOVA COOP',
+    'ALI SUPER',
+    'PRIX QUALITY',
+    'MERCATO LOCALI',
+  ])('still matches true-positive description %s', (description) => {
+    expect(applyTier1Regex(description, '-25.00', groceryOnly)?.subCategoryId).toBe(10)
+  })
+})
+
+describe('travel-agency → pacchetto-vacanze pattern (260729-hiz)', () => {
+  const active = systemPatternsAsActive()
+
+  const FINECO_TRAVEL =
+    'Ben: TRAVEL SPECIALIST Ins: 24/07/2026 14:41:44 Da: INTERNET ' +
+    'Iban: IT68Y0200801109000105119318 TransID: 2607243291974987 480320046200IT ' +
+    'Cau: SALDO PRATICA VIAGGIO NUMERO 25/000164 - Viaggio thailandia — Bonifico SEPA Italia'
+
+  it('resolves Fineco travel-specialist SEPA to pacchetto-vacanze, not spesa-quotidiana or alloggio', () => {
+    const result = applyTier1Regex(FINECO_TRAVEL, '-1200.00', active)
+    expect(slugForResult(result, active)).toBe('pacchetto-vacanze')
+  })
+
+  it.each([
+    'agenzia viaggi Rossi',
+    'Booking.com hotel Roma',
+    'Expedia pacchetto',
+    'Tour operator Thailandia',
+  ])('matches travel description %s to pacchetto-vacanze', (description) => {
+    expect(slugForResult(applyTier1Regex(description, '-500.00', active), active)).toBe(
+      'pacchetto-vacanze',
+    )
+  })
+
+  // The travel pattern sits just above grocery in precedence, so it must not swallow the
+  // travel-only trasporto pattern, hotels, or unrelated descriptions containing viaggi/booking.
+  it.each([
+    ['RYANAIR BOOKING REF X7K2P9', 'trasporto'],
+    ['EASYJET ONLINE BOOKING', 'trasporto'],
+    ['AUTONOLEGGIO HERTZ BOOKING', 'trasporto'],
+  ])('routes %s to %s, not swallowed by the travel-agency pattern', (description, slug) => {
+    expect(slugForResult(applyTier1Regex(description, '-500.00', active), active)).toBe(slug)
+  })
+
+  // Hotel stays on alloggio via the lodging pattern — not the agency package pattern.
+  it('lets the hotel pattern — not the travel-agency one — claim HOTEL BOOKING FEE', () => {
+    const seed = seedForResult(applyTier1Regex('HOTEL BOOKING FEE', '-500.00', active), active)
+    expect(seed?.subCategorySlug).toBe('alloggio')
+    expect(seed?.description).toBe('Hotels / lodging')
+  })
+
+  it.each([
+    'TICKETONE BOOKING FEE CONCERTO',
+    'RIMBORSO SPESE VIAGGI DIPENDENTE',
+    'ASSICURAZIONE VIAGGI EUROPE ASSISTANCE',
+  ])('leaves non-agency description %s out of pacchetto-vacanze', (description) => {
+    expect(slugForResult(applyTier1Regex(description, '-500.00', active), active)).not.toBe(
+      'pacchetto-vacanze',
+    )
+  })
+
+  it('keeps travel-agency precedence just above grocery', () => {
+    const travel = systemCategorizationPatterns.find(
+      (p) => p.subCategorySlug === 'pacchetto-vacanze' && p.pattern.includes('travel'),
+    )
+    const grocery = systemCategorizationPatterns.find(
+      (p) => p.subCategorySlug === 'spesa-quotidiana' && p.description.startsWith('Grocery'),
+    )
+
+    // Lower number wins (patterns load ASC by priority). The travel pattern only needs to
+    // outrank grocery; it must not claim a top tier, since it is checked before trasporto
+    // and hotel — separation from those relies on its brand/compound alternatives, asserted
+    // by the routing tests above.
+    expect(travel!.priority).toBeLessThan(grocery!.priority)
+    expect(grocery!.priority - travel!.priority).toBeLessThanOrEqual(2)
+  })
+})
