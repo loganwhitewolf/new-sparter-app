@@ -175,6 +175,129 @@ for (const [token, hits] of tokens) {
 
 tokenNotes.sort((a, b) => b.patterns.length - a.patterns.length)
 
+/** Bank boilerplate bait strings from grocery hardening brief §4.3. */
+const BANK_BOILERPLATE_BAIT = [
+  'Ben:',
+  'Ins:',
+  'Da:',
+  'Iban:',
+  'TransID:',
+  'Cau:',
+  'Carta N.',
+  'Bonifico SEPA',
+  'Bonifico Italia',
+  'Rif.',
+  'Op.',
+] as const
+
+type RiskyAltFinding = {
+  slug: string
+  description: string
+  alternative: string
+  reasons: string[]
+  baitHits?: string[]
+}
+
+function splitTopLevelAlternatives(pattern: string): string[] {
+  // Strip a single outer non-capturing group if present: (?:...|...)
+  let body = pattern
+  if (body.startsWith('(?:') && body.endsWith(')')) {
+    body = body.slice(3, -1)
+  }
+
+  const alts: string[] = []
+  let current = ''
+  let depth = 0
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i]!
+    if (ch === '\\') {
+      current += ch + (body[i + 1] ?? '')
+      i++
+      continue
+    }
+    if (ch === '(') {
+      depth++
+      current += ch
+      continue
+    }
+    if (ch === ')') {
+      depth = Math.max(0, depth - 1)
+      current += ch
+      continue
+    }
+    if (ch === '|' && depth === 0) {
+      if (current.trim()) alts.push(current)
+      current = ''
+      continue
+    }
+    current += ch
+  }
+  if (current.trim()) alts.push(current)
+  return alts
+}
+
+function literalLengthEstimate(alt: string): number {
+  // Approximate visible literal length by stripping common regex syntax.
+  const stripped = alt
+    .replace(/\\b/g, '')
+    .replace(/\\s\+/g, ' ')
+    .replace(/\\s\*/g, '')
+    .replace(/\\s/g, ' ')
+    .replace(/\\w\*/g, '')
+    .replace(/\\[dDwWsS]/g, 'X')
+    .replace(/\(\?:/g, '')
+    .replace(/[()[\]{}|+*?^$]/g, '')
+    .replace(/\\'/g, "'")
+    .replace(/\\\\/g, '\\')
+    .replace(/\s+/g, '')
+  return stripped.length
+}
+
+function findRiskyAlternatives(rows: Row[]): RiskyAltFinding[] {
+  const findings: RiskyAltFinding[] = []
+
+  for (const row of rows) {
+    for (const alt of splitTopLevelAlternatives(row.pattern)) {
+      const reasons: string[] = []
+      const baitHits: string[] = []
+
+      if (literalLengthEstimate(alt) > 0 && literalLengthEstimate(alt) <= 4) {
+        reasons.push('short-literal-le-4')
+      }
+      if (!alt.includes('\\b') && !alt.startsWith('^') && !alt.endsWith('$')) {
+        reasons.push('missing-word-boundary')
+      }
+      if (/\.\*/.test(alt)) {
+        reasons.push('unbounded-dot-star')
+      }
+
+      const altPattern = `(?:${alt})`
+      for (const bait of BANK_BOILERPLATE_BAIT) {
+        if (matches(altPattern, bait)) {
+          baitHits.push(bait)
+        }
+      }
+      if (baitHits.length > 0) {
+        reasons.push('bank-boilerplate-bait')
+      }
+
+      if (reasons.length === 0) continue
+
+      findings.push({
+        slug: row.subCategorySlug,
+        description: row.description,
+        alternative: alt,
+        reasons,
+        ...(baitHits.length > 0 ? { baitHits } : {}),
+      })
+    }
+  }
+
+  return findings
+}
+
+const riskyAlternatives = findRiskyAlternatives(rows)
+
 console.log(
   JSON.stringify(
     {
@@ -183,6 +306,10 @@ console.log(
       conflicts: conflicts.sort((a, b) => a.winner.slug.localeCompare(b.winner.slug)),
       tokenCrossCategoryNotes: tokenNotes.slice(0, 25),
       tokenCrossCategoryCount: tokenNotes.length,
+      riskyAlternatives: {
+        count: riskyAlternatives.length,
+        findings: riskyAlternatives,
+      },
     },
     null,
     2,
