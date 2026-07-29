@@ -111,3 +111,145 @@ describe('trasporto pattern (D-14, travel-only)', () => {
     expect(result).toBeNull()
   })
 })
+
+/** Build ActivePattern[] from system seeds, ASC by priority (production load order). */
+function systemPatternsAsActive(): ActivePattern[] {
+  return [...systemCategorizationPatterns]
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => {
+      if (a.row.priority !== b.row.priority) return a.row.priority - b.row.priority
+      return a.index - b.index
+    })
+    .map(({ row }, id) => ({
+      id: id + 1,
+      userId: null,
+      pattern: row.pattern,
+      // Encode slug identity via stable hash of index in sorted list — tests assert slug via lookup
+      subCategoryId: id + 1,
+      confidence: row.confidence.toString(),
+      priority: row.priority,
+    }))
+}
+
+function slugForResult(
+  result: ReturnType<typeof applyTier1Regex>,
+  active: ActivePattern[],
+): string | null {
+  if (!result) return null
+  const hit = active.find((p) => p.id === result.patternId)
+  if (!hit) return null
+  const seed = systemCategorizationPatterns.find(
+    (s) => s.pattern === hit.pattern && s.priority === hit.priority,
+  )
+  return seed?.subCategorySlug ?? null
+}
+
+const grocerySeed = systemCategorizationPatterns.find(
+  (p) => p.subCategorySlug === 'spesa-quotidiana' && p.description.startsWith('Grocery'),
+)
+
+describe('spesa-quotidiana grocery hardening (260729-hiz)', () => {
+  const groceryOnly: ActivePattern[] = grocerySeed
+    ? [
+        {
+          id: 1,
+          userId: null,
+          pattern: grocerySeed.pattern,
+          subCategoryId: 10,
+          confidence: grocerySeed.confidence.toString(),
+          priority: grocerySeed.priority,
+        },
+      ]
+    : []
+
+  const FINECO_TRAVEL =
+    'Ben: TRAVEL SPECIALIST Ins: 24/07/2026 14:41:44 Da: INTERNET ' +
+    'Iban: IT68Y0200801109000105119318 TransID: 2607243291974987 480320046200IT ' +
+    'Cau: SALDO PRATICA VIAGGIO NUMERO 25/000164 - Viaggio thailandia — Bonifico SEPA Italia'
+
+  it('is registered as the grocery system pattern', () => {
+    expect(grocerySeed).toBeDefined()
+  })
+
+  it('does not match the Fineco travel-specialist SEPA description', () => {
+    expect(applyTier1Regex(FINECO_TRAVEL, '-1200.00', groceryOnly)).toBeNull()
+  })
+
+  it.each([
+    'COOP SOCIALE LA SPERANZA',
+    'Coop. Agricola Rossi',
+    'PAGAMENTO SUPER BOLLO AUTO',
+    'FLOWER MARKET SRL',
+    'GRAND PRIX MONZA',
+    'FARMACIA AGORA',
+    'SIGMA ALDRICH SRL',
+    'RIF MD 4471 PAGAMENTO',
+    'BIGLIETTI CONCERTO U2',
+    'Ben: PALADINI MARIO',
+    'Ben: GABRIELLI LUCA',
+    'ROSSETTO GIULIA',
+    'GULLIVER VIAGGI',
+    'MERCATO SRL Cau: SERVIZIO LOCALE',
+  ])('does not match false-positive description %s', (description) => {
+    expect(applyTier1Regex(description, '-10.00', groceryOnly)).toBeNull()
+  })
+
+  it.each([
+    'ESSELUNGA',
+    'COOP LIGURIA',
+    "IN'S MERCATO",
+    'MD DISCOUNT',
+    'LIDL ITALIA',
+    'CARREFOUR EXPRESS',
+    'SUPERMERCATO IL GIGANTE',
+    'PENNY MARKET',
+    'TIGROS',
+    'NATURASI',
+    'MACELLERIA ROSSI',
+    'PANIFICIO CENTRALE',
+    'ORTOFRUTTA DA MARIO',
+    // True positives for every RESTRINGI form
+    'U2 SUPERMERCATO',
+    'AGORA MARKET',
+    'SIGMA SUPERMERCATO',
+    'SISA DISCOUNT',
+    'SIMPLY MARKET',
+    'MAGAZZINI GABRIELLI',
+    'SUPERMERCATO ROSSETTO',
+    'SUPERMERCATO PALADINI',
+    'GULLIVER MARKET',
+    'VISOTTO SUPERMERCATO',
+    'GRUPPO SELEX',
+    'NOVA COOP',
+    'ALI SUPER',
+    'PRIX QUALITY',
+    'MERCATO LOCALI',
+  ])('still matches true-positive description %s', (description) => {
+    expect(applyTier1Regex(description, '-25.00', groceryOnly)?.subCategoryId).toBe(10)
+  })
+})
+
+describe('travel-agency → alloggio pattern (260729-hiz)', () => {
+  const active = systemPatternsAsActive()
+
+  const FINECO_TRAVEL =
+    'Ben: TRAVEL SPECIALIST Ins: 24/07/2026 14:41:44 Da: INTERNET ' +
+    'Iban: IT68Y0200801109000105119318 TransID: 2607243291974987 480320046200IT ' +
+    'Cau: SALDO PRATICA VIAGGIO NUMERO 25/000164 - Viaggio thailandia — Bonifico SEPA Italia'
+
+  it('resolves Fineco travel-specialist SEPA to alloggio, not spesa-quotidiana', () => {
+    const result = applyTier1Regex(FINECO_TRAVEL, '-1200.00', active)
+    expect(slugForResult(result, active)).toBe('alloggio')
+  })
+
+  it.each([
+    'agenzia viaggi Rossi',
+    'Booking.com hotel Roma',
+    'Expedia pacchetto',
+    'Tour operator Thailandia',
+  ])('matches travel description %s to alloggio', (description) => {
+    expect(slugForResult(applyTier1Regex(description, '-500.00', active), active)).toBe(
+      'alloggio',
+    )
+  })
+})

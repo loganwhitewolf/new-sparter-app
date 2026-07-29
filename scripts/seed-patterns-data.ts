@@ -12,13 +12,58 @@ export type SystemCategorizationPatternSeed = {
 
 export const systemCategorizationPatterns: SystemCategorizationPatternSeed[] = [
   // --- baseline (formerly seed-data.ts) ---
+  // Consistency rule: an alternative ≤4 chars, or matching a common Italian word, or a
+  // surname, must carry disambiguating context (mercato, supermercat\w*, discount, market)
+  // and cannot stand alone. False positives cost more than an uncategorized transaction.
   {
     pattern:
-      "(?:\\bcoop\\b|\\bnova coop\\b|\\bmercato big\\b|\\bmercatò\\b|mercato.*local|\\besselunga\\b|\\bcarrefour\\b|\\bconad\\b|\\bpam\\b|\\btigre\\b|\\btigros\\b|\\biper\\b|\\bsupermercato\\b|\\bsuper\\b|\\bmarket\\b|\\bcrai\\b|\\blidl\\b|\\beurospin\\b|\\bmd\\b|\\baldi\\b|\\bdespar\\b|\\beurospar\\b|\\binterspar\\b|\\bipercoop\\b|\\bbennet\\b|\\bil gigante\\b|\\bunes\\b|\\bu2\\b|\\bu!\\b|\\bfamila\\b|\\bsisa\\b|\\bsigma\\b|\\btodis\\b|\\bpewex\\b|\\biperal\\b|\\bpenny\\b|\\bprix\\b|\\bprix quality\\b|\\bdpi[ùu]\\b|\\bd[- ]?pi[ùu]\\b|\\bins\\b|\\bin'?s\\b|\\bnaturas[iì]\\b|\\bnatura s[iì]\\b|\\becoranaturasi\\b|\\btuod[iì]\\b|\\bagor[aà]\\b|\\bselex\\b|\\bvisotto\\b|\\bmigross\\b|\\btosano\\b|\\bauchan\\b|\\bsimply\\b|\\bintermarche\\b|\\bintermarch[eé]\\b|\\bdec[oò]\\b|\\bmegamark\\b|\\bgabrielli\\b|\\bmagazzini gabrielli\\b|\\bleader price\\b|\\bcadoro\\b|\\brossetto\\b|\\baspiag\\b|\\bsidis\\b|\\bgulliver\\b|\\bcastoro\\b|\\bmaxi d\\b|\\bmaxid\\b|\\brisparmio casa\\b|\\b7[- ]?eleven\\b|\\bal[iì] super\\b|\\bsupermercati al[iì]\\b|\\ba&o\\b|\\bpaladini\\b|\\bmacelleria\\b|\\bmacellaio\\b|\\bpescheria\\b|\\bpescivendolo\\b|\\bittic[oa]\\b|\\bortofrutta\\b|\\bortofrutt[ai]\\b|\\bfrutta e verdura\\b|\\bfruttivendolo\\b|\\bpanificio\\b|\\bpanetteria\\b|\\bforno\\b|\\bfornaio\\b|\\bforneria\\b|\\bsalumeria\\b|\\bsalumiere\\b|\\bcaseificio\\b|\\blatticin[io]\\b|\\blatticini\\b|\\bformaggi\\b|\\bbilla\\b|\\bpastificio\\b|\\beataly\\b|\\bsapore di mare\\b)",
+      "(?:" +
+      "\\bnova coop\\b|\\bcoop\\s+liguria\\b|\\bipercoop\\b|" +
+      "\\bmercato big\\b|\\bmercatò\\b|\\bmercato\\s+local[ei]\\b|" +
+      "\\besselunga\\b|\\bcarrefour\\b|\\bconad\\b|\\bpam\\b|\\btigros\\b|" +
+      "\\bsupermercato\\b|\\bcrai\\b|\\blidl\\b|\\beurospin\\b|" +
+      "\\bmd\\s+discount\\b|\\baldi\\b|\\bdespar\\b|\\beurospar\\b|\\binterspar\\b|" +
+      "\\bbennet\\b|\\bil gigante\\b|\\bunes\\b|\\bu2\\s+supermercat\\w*\\b|" +
+      "\\bfamila\\b|\\bsisa\\s+(?:supermercat\\w*|discount)\\b|" +
+      "\\bsigma\\s+(?:supermercat\\w*|conad)\\b|\\btodis\\b|\\bpewex\\b|\\biperal\\b|" +
+      "\\bpenny\\s+market\\b|\\bprix\\s+quality\\b|" +
+      "\\bdpi[ùu]\\b|\\bd[- ]?pi[ùu]\\b|\\bin'?s\\s+mercato\\b|" +
+      "\\bnaturas[iì]\\b|\\bnatura s[iì]\\b|\\becoranaturasi\\b|\\btuod[iì]\\b|" +
+      "\\bagor[aà]\\s+(?:market|supermercat\\w*)\\b|" +
+      "\\bgruppo\\s+selex\\b|\\bselex\\s+gruppo\\b|" +
+      "\\bvisotto\\s+(?:supermercat\\w*|market)\\b|\\bsupermercat\\w*\\s+visotto\\b|" +
+      "\\bmigross\\b|\\btosano\\b|\\bauchan\\b|\\bsimply\\s+market\\b|" +
+      "\\bintermarche\\b|\\bintermarch[eé]\\b|\\bdec[oò]\\b|\\bmegamark\\b|" +
+      "\\bmagazzini\\s+gabrielli\\b|\\bleader price\\b|\\bcadoro\\b|" +
+      "\\bsupermercat\\w*\\s+rossetto\\b|" +
+      "\\baspiag\\b|\\bsidis\\b|" +
+      "\\bgulliver\\s+(?:market|supermercat\\w*)\\b|" +
+      "\\bmaxi d\\b|\\bmaxid\\b|\\brisparmio casa\\b|\\b7[- ]?eleven\\b|" +
+      "\\bal[iì] super\\b|\\bsupermercati al[iì]\\b|\\ba&o\\b|" +
+      "\\bsupermercat\\w*\\s+paladini\\b|\\bpaladini\\s+supermercat\\w*\\b|" +
+      "\\bmacelleria\\b|\\bmacellaio\\b|\\bpescheria\\b|\\bpescivendolo\\b|\\bittic[oa]\\b|" +
+      "\\bortofrutt[ai]\\b|\\bfrutta e verdura\\b|\\bfruttivendolo\\b|" +
+      "\\bpanificio\\b|\\bpanetteria\\b|\\bfornaio\\b|\\bforneria\\b|" +
+      "\\bsalumeria\\b|\\bsalumiere\\b|\\bcaseificio\\b|\\blatticin[io]\\b|\\bformaggi\\b|" +
+      "\\bbilla\\b|\\bpastificio\\b|\\beataly\\b|\\bsapore di mare\\b" +
+      ")",
     subCategorySlug: "spesa-quotidiana",
     confidence: 0.9,
     priority: 10,
     description: "Grocery: supermarkets, fresh food shops, and named merchants",
+  },
+  // Travel agencies / trip packages → Vacanze/alloggio (no dedicated agency slug).
+  // Priority 5 beats grocery (10) so Fineco "TRAVEL SPECIALIST … Ins: …" cannot fall through
+  // to the grocery pattern after the Ins restrict; still below hotel (100) only by insert order
+  // when priorities differ — lower number wins when patterns are loaded ASC by priority.
+  {
+    pattern:
+      "(?:\\btravel\\s+specialist\\b|\\bagenzia\\s+viaggi\\b|\\bviaggi\\b|\\bbooking\\b|\\bexpedia\\b|\\btour\\s+operator\\b)",
+    subCategorySlug: "alloggio",
+    confidence: 0.85,
+    priority: 5,
+    description:
+      "Travel agencies and trip packages (travel specialist, booking, expedia) → alloggio",
   },
   {
     pattern: "(?:\\bamazon\\b|\\bamzn\\b)",
