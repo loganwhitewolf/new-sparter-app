@@ -44,7 +44,7 @@ describe('systemCategorizationPatterns', () => {
       (p) => p.subCategorySlug === 'spesa-quotidiana' && p.description.startsWith('Grocery'),
     )
     expect(grocery?.pattern).toContain("\\bin'?s\\s+mercato\\b")
-    expect(grocery?.pattern).not.toMatch(/\\bins\\b/)
-    expect(grocery?.pattern).not.toMatch(/\\bin'\?s\\b(?!\\s\+mercato)/)
+    expect(grocery?.pattern).not.toContain('\\bins\\b')
+    expect(grocery?.pattern).not.toContain("\\bin'?s\\b")
   })
 })

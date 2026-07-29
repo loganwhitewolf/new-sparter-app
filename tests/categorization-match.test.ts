@@ -252,4 +252,41 @@ describe('travel-agency → alloggio pattern (260729-hiz)', () => {
       'alloggio',
     )
   })
+
+  // The travel pattern sits just above grocery in precedence, so it must not swallow the
+  // travel-only trasporto pattern, hotels, or unrelated descriptions containing viaggi/booking.
+  it.each([
+    ['RYANAIR BOOKING REF X7K2P9', 'trasporto'],
+    ['EASYJET ONLINE BOOKING', 'trasporto'],
+    ['AUTONOLEGGIO HERTZ BOOKING', 'trasporto'],
+    ['HOTEL BOOKING FEE', 'alloggio'],
+  ])('routes %s to %s, not swallowed by the travel-agency pattern', (description, slug) => {
+    expect(slugForResult(applyTier1Regex(description, '-500.00', active), active)).toBe(slug)
+  })
+
+  it.each([
+    'TICKETONE BOOKING FEE CONCERTO',
+    'RIMBORSO SPESE VIAGGI DIPENDENTE',
+    'ASSICURAZIONE VIAGGI EUROPE ASSISTANCE',
+  ])('leaves non-agency description %s out of alloggio', (description) => {
+    expect(slugForResult(applyTier1Regex(description, '-500.00', active), active)).not.toBe(
+      'alloggio',
+    )
+  })
+
+  it('keeps travel-agency precedence just above grocery', () => {
+    const travel = systemCategorizationPatterns.find(
+      (p) => p.subCategorySlug === 'alloggio' && p.pattern.includes('travel'),
+    )
+    const grocery = systemCategorizationPatterns.find(
+      (p) => p.subCategorySlug === 'spesa-quotidiana' && p.description.startsWith('Grocery'),
+    )
+
+    // Lower number wins (patterns load ASC by priority). The travel pattern only needs to
+    // outrank grocery; it must not claim a top tier, since it is checked before trasporto
+    // and hotel — separation from those relies on its brand/compound alternatives, asserted
+    // by the routing tests above.
+    expect(travel!.priority).toBeLessThan(grocery!.priority)
+    expect(grocery!.priority - travel!.priority).toBeLessThanOrEqual(2)
+  })
 })

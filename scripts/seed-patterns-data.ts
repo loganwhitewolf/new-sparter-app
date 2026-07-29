@@ -8,13 +8,25 @@ export type SystemCategorizationPatternSeed = {
   confidence: number;
   priority: number;
   description: string;
+  /**
+   * Set when the pattern intentionally matches substrings (no \b on its alternatives), e.g.
+   * to catch compounds like "GPadel" / "SuperFitness". Audit-only metadata — never inserted
+   * into the DB — so scripts/audit-pattern-overlaps.ts does not report the missing word
+   * boundaries as findings.
+   */
+  substringMatch?: true;
 };
 
 export const systemCategorizationPatterns: SystemCategorizationPatternSeed[] = [
   // --- baseline (formerly seed-data.ts) ---
-  // Consistency rule: an alternative ≤4 chars, or matching a common Italian word, or a
-  // surname, must carry disambiguating context (mercato, supermercat\w*, discount, market)
-  // and cannot stand alone. False positives cost more than an uncategorized transaction.
+  // Consistency rule for NEW alternatives: an alternative ≤4 chars, or matching a common
+  // Italian/English word, or a surname, must carry disambiguating context (mercato,
+  // supermercat\w*, discount, market) and cannot stand alone. False positives cost more than
+  // an uncategorized transaction.
+  //
+  // Grandfathered exceptions — bare short tokens kept because they are unambiguous chain
+  // brands on POS descriptors with no observed collision: pam, crai, lidl, aldi, unes,
+  // "dec[oò]", "dpi[ùu]", a&o. Do not use them to justify new short bare alternatives.
   {
     pattern:
       "(?:" +
@@ -53,17 +65,25 @@ export const systemCategorizationPatterns: SystemCategorizationPatternSeed[] = [
     description: "Grocery: supermarkets, fresh food shops, and named merchants",
   },
   // Travel agencies / trip packages → Vacanze/alloggio (no dedicated agency slug).
-  // Priority 5 beats grocery (10) so Fineco "TRAVEL SPECIALIST … Ins: …" cannot fall through
-  // to the grocery pattern after the Ins restrict; still below hotel (100) only by insert order
-  // when priorities differ — lower number wins when patterns are loaded ASC by priority.
+  //
+  // Precedence: patterns are loaded ASC by priority and the first regex hit wins
+  // (applyTier1Regex), so a LOWER number wins. Priority 9 is deliberately just above grocery
+  // (10) — enough for the Fineco "TRAVEL SPECIALIST … Ins: …" case — and stays well below
+  // travel-only trasporto and hotel (both 100), which must keep flights, ferries, car rental
+  // and lodging. A higher-precedence tier here would swallow all of them.
+  //
+  // Alternatives are brand/compound forms only: bare `viaggi` and `booking` are generic words
+  // that matched flight and car-rental descriptors ("RYANAIR BOOKING REF …", "AUTONOLEGGIO
+  // HERTZ BOOKING") and generic ticketing fees, so they carry disambiguating context.
   {
     pattern:
-      "(?:\\btravel\\s+specialist\\b|\\bagenzia\\s+viaggi\\b|\\bviaggi\\b|\\bbooking\\b|\\bexpedia\\b|\\btour\\s+operator\\b)",
+      "(?:\\btravel\\s+specialist\\b|\\bagenzia\\s+viaggi\\b|\\bviaggi\\s+e\\s+turismo\\b|" +
+      "\\bbooking\\.com\\b|\\bexpedia\\b|\\btour\\s+operator\\b)",
     subCategorySlug: "alloggio",
     confidence: 0.85,
-    priority: 5,
+    priority: 9,
     description:
-      "Travel agencies and trip packages (travel specialist, booking, expedia) → alloggio",
+      "Travel agencies and trip packages (travel specialist, agenzia viaggi, booking.com, expedia) → alloggio",
   },
   {
     pattern: "(?:\\bamazon\\b|\\bamzn\\b)",
@@ -176,6 +196,7 @@ export const systemCategorizationPatterns: SystemCategorizationPatternSeed[] = [
       "atletica|maratona|triathlon|ironman|running|ciclismo|bicicletta|cycling|\\bbici\\b|" +
       "equitazione|maneggio|\\bscherma\\b|hockey|badminton|danza|dance|\\bsport\\b)",
     subCategorySlug: "sport-e-fitness",
+    substringMatch: true,
     confidence: 0.9,
     priority: 35,
     description:
