@@ -157,7 +157,7 @@ describe('ImportPreview UI', () => {
     )
 
     expect(html).toContain('Transazioni nel periodo')
-    expect(html).toContain('2026-07-10 – 2026-07-20')
+    expect(html).toContain('10/07/2026 – 20/07/2026')
   })
 
   it('appendImportModeFields sends importMode and range bounds for range mode', () => {

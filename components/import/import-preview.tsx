@@ -73,10 +73,26 @@ export function appendImportModeFields(
   }
 }
 
+const periodDateFormatter = new Intl.DateTimeFormat('it-IT', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+})
+
+/** Format YYYY-MM-DD as Italian dd/mm/yyyy without UTC day-shift. */
+function formatPeriodDate(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate)
+  if (!match) return isoDate
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  return periodDateFormatter.format(new Date(year, month - 1, day))
+}
+
 function formatPeriodLabel(start: string | null, end: string | null): string {
   if (!start && !end) return '—'
-  if (start && end) return `${start} – ${end}`
-  return start ?? end ?? '—'
+  if (start && end) return `${formatPeriodDate(start)} – ${formatPeriodDate(end)}`
+  return formatPeriodDate(start ?? end!)
 }
 
 export function ImportPreview({ result, candidates = [], confirmDisabledReason, returnTo }: Props) {
