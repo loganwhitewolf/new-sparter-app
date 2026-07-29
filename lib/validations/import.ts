@@ -88,6 +88,11 @@ export const ImportFileSchema = z.object({
   importMode: ImportModeSchema.default('from-last'),
   rangeStart: OptionalDateOnlySchema,
   rangeEnd: OptionalDateOnlySchema,
+  // Confirm-only: FormData getAll('excludedRowIndexes') — never on AnalyzeImportSchema.
+  excludedRowIndexes: z.preprocess(
+    (value) => (value == null ? [] : value),
+    z.array(z.coerce.number().int().positive()).default([]),
+  ),
 })
 
 export const ImportFormatWizardDelimiterSchema = z.enum([',', ';', '\t', '|'], {

@@ -471,6 +471,8 @@ export async function importFile(input: {
   importMode?: ImportMode
   rangeStart?: string
   rangeEnd?: string
+  /** Stable 1-based parse rowIndexes to skip after mode filter, before hash dedup/insert. */
+  excludedRowIndexes?: number[]
 }): Promise<ImportFileResult> {
   const fileRow = await getFileForUser({ userId: input.userId, fileId: input.fileId })
   if (!fileRow) throw new Error('File not found or access denied.')
@@ -580,7 +582,12 @@ export async function importFile(input: {
         rangeStart: input.rangeStart,
         rangeEnd: input.rangeEnd,
       })
-      const modeStats = rebuildStatsFromRows(filteredRows)
+      const excluded = new Set(input.excludedRowIndexes ?? [])
+      const rowsAfterExclusion =
+        excluded.size === 0
+          ? filteredRows
+          : filteredRows.filter((row) => !excluded.has(row.rowIndex))
+      const modeStats = rebuildStatsFromRows(rowsAfterExclusion)
       const existingHashes = await getDuplicateHashes(tx, input.userId, modeStats.allHashes)
       const fullStats = applyExistingHashesToStats(modeStats, existingHashes)
 

@@ -375,6 +375,7 @@ export async function confirmImportAction(
     importMode: formString(formData, "importMode"),
     rangeStart: formString(formData, "rangeStart"),
     rangeEnd: formString(formData, "rangeEnd"),
+    excludedRowIndexes: formData.getAll("excludedRowIndexes"),
   };
 
   const parsed = ImportFileSchema.safeParse(raw);
@@ -394,6 +395,7 @@ export async function confirmImportAction(
       importMode: parsed.data.importMode,
       rangeStart: parsed.data.rangeStart,
       rangeEnd: parsed.data.rangeEnd,
+      excludedRowIndexes: parsed.data.excludedRowIndexes,
     });
 
     revalidatePath(APP_ROUTES.import);
