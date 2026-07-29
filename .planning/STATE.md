@@ -5,15 +5,15 @@ milestone_name: Amortization
 current_phase: 80
 current_phase_name: dashboard-accrual-lens
 status: executing
-stopped_at: Completed 80-02-PLAN.md
-last_updated: "2026-07-29T09:15:43.865Z"
+stopped_at: Completed 80-03-PLAN.md
+last_updated: "2026-07-29T09:28:14.914Z"
 last_activity: 2026-07-29
 last_activity_desc: Phase 80 execution started
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 18
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 ## Current Position
 
 Phase: 80 (dashboard-accrual-lens) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-07-29 — Phase 80 execution started
 
@@ -406,6 +406,9 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 80-01: lens-persistence.ts re-exports safeSessionStorage from overview/overview-persistence.ts instead of duplicating it, giving lens-switch.tsx one import path
 - [Phase ?]: 80-02: topTransactionRows amount COALESCEs raw transaction.amount first, ledger row's amount second — preserves byte-identical cash display contract, only instalments (no transaction row) fall back
 - [Phase ?]: 80-02: requirements.mark-complete NOT run for LENS-02 — five of ten aggregation sites done (all six dashboard.ts functions lens-selectable), full capability needs Plans 80-03..80-07
+- [Phase ?]: 80-03: getYearsWithData/getMonthsWithData's competenza branches UNION transaction/amortization_instalment directly, never ledgerEntryCash/ledgerEntryAccrual — these are navigation functions ('any activity'), not netting aggregations; the ledger views' NOT EXISTS refund-exclusion would silently drop a refund year/month (T-80-06)
+- [Phase ?]: 80-03: getYearsWithData's cash branch kept as a separate unindented early-return AFTER the new competenza branch (not nested in an if-block) so git diff shows zero line changes inside the pre-existing cash path, satisfying the plan's byte-identical acceptance criterion literally
+- [Phase ?]: 80-03: requirements.mark-complete NOT run for LENS-04/LENS-05 — this plan delivers only the DAL/pure-function backend (ledgerRowSource on movers/chart, lens-aware navigation, resolveYear cross-lens clamp); the year-selector UI wiring lands in a later Wave plan
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -543,9 +546,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 80-02-PLAN.md
+**Stopped at:** Completed 80-03-PLAN.md
 
-Last session: 2026-07-29T09:15:43.856Z
+Last session: 2026-07-29T09:28:14.906Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
@@ -640,3 +643,4 @@ Last session: 2026-07-29T09:15:43.856Z
 | Phase 79 P02 | ~15min | 2 tasks | 3 files |
 | Phase 80 P01 | 25min | 2 tasks | 12 files |
 | Phase 80 P02 | ~20min | 3 tasks | 2 files |
+| Phase 80 P03 | 11min | 2 tasks | 8 files |
