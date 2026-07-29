@@ -205,16 +205,18 @@ detail page. Purely presentational: `effectiveAmount()`, netting, and all totals
   3. No change to any total, `effectiveAmount()` result, netting math, or dashboard/lens figure —
      the full test suite (incl. LENS-03 byte-identical regression) stays green.
 
-**Scope note:** single surface — the transactions table feed (`lib/dal/transactions.ts` must
-expose net + pair-role + anchor link inline) and the row render in `transaction-table.tsx`,
-extending/replacing `ReimbursementRowIndicator`. The table is cash-only (not lens-aware): the net
-shown is the cash net (initial − sale/refund).
+**Scope note:** single surface — the row render in `transaction-table.tsx`, extending/replacing
+`ReimbursementRowIndicator`. `lib/dal/transactions.ts` is unmodified: net + anchor link are already
+exposed (`pairedNetAmount`/`pairedWithId`/`pairedDescription`), and anchor-vs-counterpart role is
+resolved client-side from the sign of `amount` (safe because `assertOutflowAnchorAmount`/
+`assertInflowRefundAmount` already enforce that invariant at write time) — zero DAL change. The
+table is cash-only (not lens-aware): the net shown is the cash net (initial − sale/refund).
 
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 81 to break down)
+- [ ] 81-01-PLAN.md — Anchor net-primary + struck-through gross, counterpart reduction badge + attenuated amount (D-N1..D-N4)
 
 ---
 
