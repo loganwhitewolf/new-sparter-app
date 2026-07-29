@@ -52,4 +52,31 @@ describe('ExpenseTitleEdit', () => {
     expect(pencilButtonMatch).not.toBeNull()
     expect(pencilButtonMatch?.[0]).not.toContain('href')
   })
+
+  it('keeps truncate on the title span for the default inline variant', () => {
+    const html = renderToStaticMarkup(
+      createElement(ExpenseTitleEdit, {
+        id: EXPENSE_ID,
+        title: 'Spesa supermercato con titolo molto lungo',
+      }),
+    )
+
+    const titleSpanMatch = html.match(/<span class="([^"]*)"[^>]*>Spesa supermercato/)
+    expect(titleSpanMatch?.[1]).toContain('truncate')
+    expect(titleSpanMatch?.[1]).not.toContain('break-words')
+  })
+
+  it('uses break-words without truncate when variant is detail', () => {
+    const html = renderToStaticMarkup(
+      createElement(ExpenseTitleEdit, {
+        id: EXPENSE_ID,
+        title: 'Spesa supermercato con titolo molto lungo',
+        variant: 'detail',
+      }),
+    )
+
+    const titleSpanMatch = html.match(/<span class="([^"]*)"[^>]*>Spesa supermercato/)
+    expect(titleSpanMatch?.[1]).toContain('break-words')
+    expect(titleSpanMatch?.[1]).not.toContain('truncate')
+  })
 })
