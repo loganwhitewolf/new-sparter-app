@@ -131,17 +131,26 @@ function systemPatternsAsActive(): ActivePattern[] {
     }))
 }
 
+/** Resolve a match back to the seed row that produced it — identifies WHICH pattern won. */
+function seedForResult(
+  result: ReturnType<typeof applyTier1Regex>,
+  active: ActivePattern[],
+): (typeof systemCategorizationPatterns)[number] | null {
+  if (!result) return null
+  const hit = active.find((p) => p.id === result.patternId)
+  if (!hit) return null
+  return (
+    systemCategorizationPatterns.find(
+      (s) => s.pattern === hit.pattern && s.priority === hit.priority,
+    ) ?? null
+  )
+}
+
 function slugForResult(
   result: ReturnType<typeof applyTier1Regex>,
   active: ActivePattern[],
 ): string | null {
-  if (!result) return null
-  const hit = active.find((p) => p.id === result.patternId)
-  if (!hit) return null
-  const seed = systemCategorizationPatterns.find(
-    (s) => s.pattern === hit.pattern && s.priority === hit.priority,
-  )
-  return seed?.subCategorySlug ?? null
+  return seedForResult(result, active)?.subCategorySlug ?? null
 }
 
 const grocerySeed = systemCategorizationPatterns.find(
@@ -259,9 +268,16 @@ describe('travel-agency → alloggio pattern (260729-hiz)', () => {
     ['RYANAIR BOOKING REF X7K2P9', 'trasporto'],
     ['EASYJET ONLINE BOOKING', 'trasporto'],
     ['AUTONOLEGGIO HERTZ BOOKING', 'trasporto'],
-    ['HOTEL BOOKING FEE', 'alloggio'],
   ])('routes %s to %s, not swallowed by the travel-agency pattern', (description, slug) => {
     expect(slugForResult(applyTier1Regex(description, '-500.00', active), active)).toBe(slug)
+  })
+
+  // The hotel pattern maps to alloggio too, so asserting the slug alone would pass even if
+  // the travel pattern swallowed this description. Assert WHICH pattern won.
+  it('lets the hotel pattern — not the travel-agency one — claim HOTEL BOOKING FEE', () => {
+    const seed = seedForResult(applyTier1Regex('HOTEL BOOKING FEE', '-500.00', active), active)
+    expect(seed?.subCategorySlug).toBe('alloggio')
+    expect(seed?.description).toBe('Hotels / lodging')
   })
 
   it.each([
