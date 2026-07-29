@@ -7,6 +7,7 @@ import {
   category,
   direction as directionTable,
   expense,
+  ledgerEntryAccrual,
   ledgerEntryCash,
   nature as natureTable,
   subCategory,
@@ -133,13 +134,28 @@ export const getOverview = cache(async (
   const { userId } = await verifySession()
 
   try {
-    // Determine YTD upper bound: last month with data in this year
-    const lastMonthResult = await db.execute(sql`
-      SELECT MAX(TO_CHAR(occurred_at, 'YYYY-MM')) AS last_ym
-      FROM transaction
-      WHERE user_id = ${userId}
-        AND TO_CHAR(occurred_at, 'YYYY') = ${String(year)}
-    `)
+    // Determine YTD upper bound: last month with data in this year. Lens-aware (CR-01):
+    // under competenza, an amortization plan's later instalments can legitimately fall in
+    // months after the year's last real `transaction` row — mirrors the pattern already
+    // used by getYearsWithData / getMonthsWithData (lib/dal/months-with-data.ts). The
+    // cassa/ledgerEntryCash branch is untouched (LENS-03: must stay byte-identical).
+    const lastMonthResult =
+      ledgerRowSource === ledgerEntryAccrual
+        ? await db.execute(sql`
+            SELECT MAX(TO_CHAR(occurred_at, 'YYYY-MM')) AS last_ym
+            FROM (
+              SELECT occurred_at FROM transaction WHERE user_id = ${userId}
+              UNION ALL
+              SELECT occurred_at FROM amortization_instalment WHERE user_id = ${userId}
+            ) combined
+            WHERE TO_CHAR(occurred_at, 'YYYY') = ${String(year)}
+          `)
+        : await db.execute(sql`
+            SELECT MAX(TO_CHAR(occurred_at, 'YYYY-MM')) AS last_ym
+            FROM transaction
+            WHERE user_id = ${userId}
+              AND TO_CHAR(occurred_at, 'YYYY') = ${String(year)}
+          `)
     const lastYm = (lastMonthResult.rows[0] as { last_ym: string | null } | undefined)?.last_ym
     // Default to full year (Dec) if no data found
     const lastMonthIdx = lastYm ? Number(lastYm.slice(5, 7)) - 1 : 11
