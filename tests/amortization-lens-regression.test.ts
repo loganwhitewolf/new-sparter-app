@@ -6,10 +6,11 @@
 // Follows tests/reimbursement-regression.test.ts's exact harness pattern (real-Postgres,
 // describeIfReachable guarded on harness.ok, graceful skip without Docker — see that file's
 // header comment for the full four-guard connection-safety rationale).
+import { eq } from 'drizzle-orm'
 import { afterAll, describe, expect, it, vi } from 'vitest'
 import { verifySession } from '@/lib/dal/auth'
-import { ledgerEntryAccrual } from '@/lib/db/schema'
-import { dashboardPresetToDateRange } from '@/lib/utils/date'
+import { amortizationInstalment, ledgerEntryAccrual } from '@/lib/db/schema'
+import { dashboardPresetToDateRange, monthKey } from '@/lib/utils/date'
 import { toDecimal } from '@/lib/utils/decimal'
 import { materializeInstalments } from '@/lib/services/amortization-math'
 import {
@@ -115,3 +116,120 @@ describeIfReachable('dashboard accrual lens — getOverviewAmountTotals seam (Ph
     expect(toDecimal(accrualTotals.totalOut).equals(expectedAccrualTotal)).toBe(true)
   })
 })
+
+describeIfReachable(
+  'dashboard accrual lens — remaining category-facing aggregations (Phase 80, Plan 80-02)',
+  () => {
+    it('cash lens stays unchanged (full purchase amount); competenza reflects only in-range instalments, including getCategoryDetail\'s Top 5 movimenti', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+
+      const dateRange = dashboardPresetToDateRange('last-month')
+      const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 14, 12, 0, 0)
+      const occurredMonthKey = monthKey(occurredAt)
+      const title = 'Lens probe purchase (80-02)'
+
+      // -30.00 over 3 EQUAL monthly instalments (-10.00 each, no rounding remainder) — chosen
+      // so the accrual reference amount (10.00) falls BELOW DEVIATION_NOISE_THRESHOLD ('15.00')
+      // while the cash reference amount (30.00) stays above it, giving getCategoryDeviations an
+      // observable cash/accrual difference despite DeviationData carrying no raw amount field.
+      const { expenseId, transactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-30.00',
+        occurredAt,
+        title,
+      })
+
+      const instalments = materializeInstalments('-30.00', occurredAt, 3)
+      const { planId } = await seedAmortizationPlan(db, {
+        userId,
+        transactionId,
+        expenseId,
+        months: 3,
+        instalments,
+      })
+
+      const [firstInstalment] = await db
+        .select({ id: amortizationInstalment.id })
+        .from(amortizationInstalment)
+        .where(eq(amortizationInstalment.planId, planId))
+      const instalmentId = firstInstalment?.id
+      expect(instalmentId).toBeDefined()
+
+      // Load the REAL, unmodified dashboard.ts module bound to the harness's own host-guarded
+      // db client (same technique captureAggregationSnapshot uses internally) so the five
+      // functions under test can be called directly with an explicit ledgerRowSource argument —
+      // captureAggregationSnapshot's own five call sites never pass one through.
+      vi.doMock('@/lib/db', () => ({ db }))
+      vi.resetModules()
+      const dashboardModule = await import('@/lib/dal/dashboard')
+
+      const filters = { preset: 'last-month' as const, type: 'all' as const, sort: 'amount' as const }
+
+      // (a) cassa (no 4th/2nd/3rd arg) — byte-identical to the full purchase amount.
+      const [breakdownCash, rankingCash, deviationsCash, detailCash, trendCash] = await Promise.all([
+        dashboardModule.getCategoriesBreakdown(filters),
+        dashboardModule.getCategoryRanking(filters),
+        dashboardModule.getCategoryDeviations({ type: 'all' }),
+        dashboardModule.getCategoryDetail(taxonomy.essentialCategoryId, filters),
+        dashboardModule.getMonthlyTrendByNature(filters.preset),
+      ])
+
+      const cashBreakdownAmount = breakdownCash.find((c) => c.id === taxonomy.essentialCategoryId)?.amount
+      expect(toDecimal(cashBreakdownAmount ?? '0').equals(toDecimal('30.00'))).toBe(true)
+
+      const cashRankingAmount = rankingCash.find((c) => c.id === taxonomy.essentialCategoryId)?.amount
+      expect(toDecimal(cashRankingAmount ?? '0').equals(toDecimal('30.00'))).toBe(true)
+
+      const cashDeviation = deviationsCash.get(taxonomy.essentialCategoryId)
+      expect(cashDeviation).toEqual({ deviation: null, isNew: true, belowNoiseThreshold: false })
+
+      expect(toDecimal(detailCash.summary.total).equals(toDecimal('30.00'))).toBe(true)
+      expect(detailCash.topTransactions[0]?.id).toBe(transactionId)
+      expect(detailCash.topTransactions[0]?.title).toBe(title)
+      expect(toDecimal(detailCash.topTransactions[0]?.amount ?? '0').equals(toDecimal('30.00'))).toBe(true)
+
+      const cashTrendSegment = trendCash.find((point) => point.month === occurredMonthKey)?.segments.essential
+      expect(toDecimal(cashTrendSegment ?? '0').abs().equals(toDecimal('30.00'))).toBe(true)
+
+      // (b) competenza — every function now sums ONLY the in-range instalment(s): 10.00.
+      const [breakdownAccrual, rankingAccrual, deviationsAccrual, detailAccrual, trendAccrual] = await Promise.all([
+        dashboardModule.getCategoriesBreakdown(filters, ledgerEntryAccrual),
+        dashboardModule.getCategoryRanking(filters, ledgerEntryAccrual),
+        dashboardModule.getCategoryDeviations({ type: 'all' }, ledgerEntryAccrual),
+        dashboardModule.getCategoryDetail(taxonomy.essentialCategoryId, filters, ledgerEntryAccrual),
+        dashboardModule.getMonthlyTrendByNature(filters.preset, ledgerEntryAccrual),
+      ])
+
+      const accrualBreakdownAmount = breakdownAccrual.find((c) => c.id === taxonomy.essentialCategoryId)?.amount
+      expect(toDecimal(accrualBreakdownAmount ?? '0').equals(toDecimal('10.00'))).toBe(true)
+
+      const accrualRankingAmount = rankingAccrual.find((c) => c.id === taxonomy.essentialCategoryId)?.amount
+      expect(toDecimal(accrualRankingAmount ?? '0').equals(toDecimal('10.00'))).toBe(true)
+
+      // D-07: no special-case logic — movers/deviations read whatever the row source supplies.
+      // The instalment's magnitude (10.00) falls below the noise threshold (15.00), unlike the
+      // full purchase (30.00) — an emergent consequence of the seam, not bespoke instalment code.
+      const accrualDeviation = deviationsAccrual.get(taxonomy.essentialCategoryId)
+      expect(accrualDeviation).toEqual({ deviation: null, isNew: false, belowNoiseThreshold: true })
+
+      expect(toDecimal(detailAccrual.summary.total).equals(toDecimal('10.00'))).toBe(true)
+      // The instalment row (no matching `transaction` row) surfaces via the LEFT JOIN, never the
+      // original transaction — proving topTransactionRows now reads FROM ledgerRowSource.
+      expect(detailAccrual.topTransactions[0]?.id).toBe(instalmentId)
+      expect(detailAccrual.topTransactions[0]?.id).not.toBe(transactionId)
+      // No bank description exists for a virtual instalment row — falls back to the shared
+      // Standalone Expense's title (coalesce(transaction.description, expense.title)).
+      expect(detailAccrual.topTransactions[0]?.title).toBe(title)
+      expect(toDecimal(detailAccrual.topTransactions[0]?.amount ?? '0').equals(toDecimal('10.00'))).toBe(true)
+
+      const accrualTrendSegment = trendAccrual.find((point) => point.month === occurredMonthKey)?.segments.essential
+      expect(toDecimal(accrualTrendSegment ?? '0').abs().equals(toDecimal('10.00'))).toBe(true)
+    })
+  },
+)

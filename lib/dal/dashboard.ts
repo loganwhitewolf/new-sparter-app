@@ -1218,7 +1218,11 @@ export const getCategoryDeviations = cache(
 )
 
 export const getCategoryDetail = cache(
-  async (categoryId: number, filters: DashboardFilters): Promise<CategoryDetailData> => {
+  async (
+    categoryId: number,
+    filters: DashboardFilters,
+    ledgerRowSource: LedgerRowSource = ledgerEntryCash,
+  ): Promise<CategoryDetailData> => {
     const { userId } = await verifySession()
     const { from, to } = dashboardPresetToDateRange(filters.preset)
     const emptyData = () => emptyCategoryDetailData(null, from, to)
@@ -1279,7 +1283,7 @@ export const getCategoryDetail = cache(
       return emptyData()
     }
 
-    const monthSql = sql<string>`to_char(${ledgerEntryCash.occurredAt}, 'YYYY-MM')`
+    const monthSql = sql<string>`to_char(${ledgerRowSource.occurredAt}, 'YYYY-MM')`
     const activeScopedCategory = and(
       eq(category.id, categoryId),
       eq(category.isActive, true),
@@ -1300,10 +1304,10 @@ export const getCategoryDetail = cache(
             categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
             month: monthSql,
             count: countDistinct(expense.id),
-            amount: sql<string>`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${ledgerRowSource.amount})), 0)::text`,
           })
-          .from(ledgerEntryCash)
-          .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
+          .from(ledgerRowSource)
+          .innerJoin(expense, eq(ledgerRowSource.expenseId, expense.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
           .leftJoin(
@@ -1325,7 +1329,7 @@ export const getCategoryDetail = cache(
             and(
               // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
               // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
-              dateScopedTransactions(ledgerEntryCash, userId, from, to),
+              dateScopedTransactions(ledgerRowSource, userId, from, to),
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
@@ -1344,10 +1348,10 @@ export const getCategoryDetail = cache(
             subCategoryName: sql<string | null>`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`,
             subCategorySlug: subCategory.slug,
             count: countDistinct(expense.id),
-            amount: sql<string>`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${ledgerRowSource.amount})), 0)::text`,
           })
-          .from(ledgerEntryCash)
-          .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
+          .from(ledgerRowSource)
+          .innerJoin(expense, eq(ledgerRowSource.expenseId, expense.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
           .leftJoin(
@@ -1369,7 +1373,7 @@ export const getCategoryDetail = cache(
             and(
               // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
               // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
-              dateScopedTransactions(ledgerEntryCash, userId, from, to),
+              dateScopedTransactions(ledgerRowSource, userId, from, to),
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
@@ -1377,29 +1381,35 @@ export const getCategoryDetail = cache(
             )
           )
           .groupBy(category.id, subCategory.id, userSubcategoryOverride.customName, direction.code)
-          .orderBy(desc(sql`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)`), sql`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`, subCategory.id),
+          .orderBy(desc(sql`coalesce(abs(sum(${ledgerRowSource.amount})), 0)`), sql`coalesce(${userSubcategoryOverride.customName}, ${subCategory.name})`, subCategory.id),
         db
           .select({
-            id: transactionTable.id,
+            id: ledgerRowSource.id,
             categoryId: category.id,
             categorySlug: category.slug,
             // Restored from direction join (Phase 49 — replaces sql`null` stub)
             categoryType: sql<'in' | 'out' | 'allocation' | 'system' | 'transfer' | null>`${direction.code}`,
-            description: transactionTable.description,
+            // An amortization_instalment row (under competenza) has no matching `transaction`
+            // row and therefore no bank description — fall back to the shared Standalone
+            // Expense's `title` (NOT NULL, guaranteed non-empty). Phase 80 Task 3.
+            description: sql<string | null>`coalesce(${transactionTable.description}, ${expense.title})`,
             customTitle: transactionTable.customTitle,
             groupTitle: expenseGroup.title,
-            amount: transactionTable.amount,
-            occurredAt: transactionTable.occurredAt,
+            // Prefer the RAW un-netted transaction amount when a real transaction row exists
+            // (preserves the cash-lens display contract verbatim, per the 77-06 regression
+            // comment); fall back to the ledger row's own already-resolved amount only when no
+            // transaction row exists — an instalment, which has no netting applied to it in the
+            // first place (ADR 0019 Consequences).
+            amount: sql<string>`coalesce(${transactionTable.amount}, ${ledgerRowSource.amount})`,
+            occurredAt: ledgerRowSource.occurredAt,
           })
-          .from(transactionTable)
-          // ID-to-id join, not a from-swap: this sub-query DISPLAYS the RAW (un-netted)
-          // transaction amount below (`amount: transactionTable.amount`) — only the ranking
-          // switches to the netted ledger_entry_cash.amount. ledger_entry_cash's rows map 1:1
-          // onto transaction rows (no instalment row ever appears in it), so the join also
-          // structurally replaces the legacy refund-exclusion check: a refund transaction has
-          // no matching ledger_entry_cash row, so the INNER JOIN itself excludes it (Phase 77, D-11).
-          .innerJoin(ledgerEntryCash, eq(ledgerEntryCash.id, transactionTable.id))
-          .innerJoin(expense, eq(transactionTable.expenseId, expense.id))
+          .from(ledgerRowSource)
+          // LEFT JOIN (not INNER): an amortization_instalment row under competenza has no
+          // matching `transaction` row, and this sub-query must still surface it (Phase 80,
+          // Task 3) — the `transaction` join is now display-only context (description/
+          // customTitle/groupTitle), never the row-filtering source.
+          .leftJoin(transactionTable, eq(transactionTable.id, ledgerRowSource.id))
+          .innerJoin(expense, eq(ledgerRowSource.expenseId, expense.id))
           .leftJoin(expenseGroupMembership, eq(expense.id, expenseGroupMembership.expenseId))
           .leftJoin(expenseGroup, eq(expenseGroupMembership.groupId, expenseGroup.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
@@ -1421,14 +1431,14 @@ export const getCategoryDetail = cache(
           .innerJoin(direction, eq(nature.directionId, direction.id))
           .where(
             and(
-              dateScopedTransactions(transactionTable, userId, from, to),
+              dateScopedTransactions(ledgerRowSource, userId, from, to),
               expenseStatusIncludedInDashboardTotals(),
               activeScopedCategory,
               activeScopedSubCategory,
               eq(direction.includedInTotals, true)
             )
           )
-          .orderBy(desc(sql`abs(${ledgerEntryCash.amount})`), desc(transactionTable.occurredAt), transactionTable.id)
+          .orderBy(desc(sql`abs(${ledgerRowSource.amount})`), desc(ledgerRowSource.occurredAt), ledgerRowSource.id)
           .limit(5),
       ])
 
