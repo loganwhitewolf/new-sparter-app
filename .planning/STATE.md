@@ -4,16 +4,16 @@ milestone: v2.9
 milestone_name: Amortization
 current_phase: 80
 current_phase_name: dashboard-accrual-lens
-status: executing
-stopped_at: Completed 80-05-PLAN.md
-last_updated: "2026-07-29T09:43:05.840Z"
+status: verifying
+stopped_at: Completed 80-07-PLAN.md (Phase 80 closeout — all plans done, ready for verification)
+last_updated: "2026-07-29T09:54:09.936Z"
 last_activity: 2026-07-29
 last_activity_desc: Phase 80 execution started
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 18
-  completed_plans: 17
+  completed_plans: 18
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 
 Phase: 80 (dashboard-accrual-lens) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-29 — Phase 80 execution started
 
 ## Roadmap (v2.9 — Phases 77-80)
@@ -414,6 +414,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 80-04: buildDashboardTabHref preserves ?lens= mirroring the existing preset/type/sort/tag precedent (D-03)
 - [Phase ?]: 80-04: page-level lens parsing reordered to run BEFORE the year fetch (parseLensParam -> getYearsWithData for both lenses -> resolveYear) since the D-10 clamp needs the active lens to distinguish active vs other years[]
 - [Phase ?]: 80-05: DashboardFilters left untouched (shared preset/type-only toolbar); lens parsed/resolved at page level only, passed to LensSwitch + DAL calls
+- [Phase ?]: 80-07: Did not fix pre-existing proxy.ts staging-bypass redirect-loop bug (blocks all dashboard Playwright specs, unrelated to this plan's files) — logged to deferred-items.md per SCOPE BOUNDARY
+- [Phase ?]: 80-07: Marked LENS-01/LENS-02 complete — D-03's all-four-routes contract satisfied by 80-04+80-05+80-06 together; DAL/URL-wiring proven by real-Postgres+unit tests, live-browser proof blocked by unrelated environmental bug
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -465,6 +467,7 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidian design note) are locked — no discovery to redo before planning Phase 65.
 
 - Operator: run yarn db:seed-patterns against the real target to make Phase 67-02's new travel-only 'trasporto' regex pattern live (full replace of system patterns)
+- proxy.ts staging-bypass never sets x-pathname/x-search headers -> infinite /onboarding redirect loop for zero-transaction staging users -> blocks ALL dashboard Playwright specs (tests/dashboard.spec.ts). Fix candidates + full diagnosis in .planning/phases/80-dashboard-accrual-lens/deferred-items.md.
 
 ## Quick Tasks Completed
 
@@ -551,9 +554,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 80-05-PLAN.md
+**Stopped at:** Completed 80-07-PLAN.md (Phase 80 closeout — all plans done, ready for verification)
 
-Last session: 2026-07-29T09:43:05.832Z
+Last session: 2026-07-29T09:54:09.927Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
@@ -652,3 +655,4 @@ Last session: 2026-07-29T09:43:05.832Z
 | Phase 80 P06 | 10min | 1 tasks | 1 files |
 | Phase 80 P04 | ~15min | 2 tasks | 3 files |
 | Phase 80 P05 | ~10min | 2 tasks | 2 files |
+| Phase 80 P07 | 35min | 2 tasks | 2 files |

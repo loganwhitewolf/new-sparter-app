@@ -151,7 +151,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 80-07-PLAN.md — E2E Playwright coverage across all four routes + full regression close-out (LENS-01, LENS-02, LENS-04, LENS-05)
+- [x] 80-07-PLAN.md — E2E Playwright coverage across all four routes + full regression close-out (LENS-01, LENS-02, LENS-04, LENS-05)
 
 **UI hint**: yes
 
