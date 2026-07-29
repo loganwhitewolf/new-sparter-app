@@ -27,7 +27,65 @@ vi.mock('@/lib/actions/import', () => ({
   confirmImportAction: mocks.confirmImport,
 }))
 
-const { ImportPreview, appendImportModeFields } = await import('../components/import/import-preview')
+vi.mock('@/components/ui/dropdown-menu', async () => {
+  const React = await import('react')
+  type ReactNode = React.ReactNode
+
+  const DropdownMenu = ({ children }: { children?: ReactNode }) =>
+    React.createElement('div', { 'data-slot': 'dropdown-menu' }, children)
+
+  const DropdownMenuTrigger = ({
+    children,
+    asChild,
+  }: {
+    children?: ReactNode
+    asChild?: boolean
+  }) => (asChild ? children : React.createElement('button', { type: 'button' }, children))
+
+  const DropdownMenuContent = ({
+    children,
+    className,
+  }: {
+    children?: ReactNode
+    className?: string
+  }) =>
+    React.createElement(
+      'div',
+      { 'data-slot': 'dropdown-menu-content', className },
+      children,
+    )
+
+  const DropdownMenuItem = ({
+    children,
+    onSelect,
+    className,
+    disabled,
+  }: {
+    children?: ReactNode
+    onSelect?: () => void
+    className?: string
+    disabled?: boolean
+  }) =>
+    React.createElement(
+      'button',
+      { type: 'button', onClick: onSelect, className, disabled },
+      children,
+    )
+
+  return {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+  }
+})
+
+const {
+  ImportPreview,
+  appendImportModeFields,
+  appendExcludedRowIndexes,
+  rowsWithoutExcluded,
+} = await import('../components/import/import-preview')
 
 const baseResult = {
   fileId: '11111111-1111-4111-8111-111111111111',
@@ -177,5 +235,62 @@ describe('ImportPreview UI', () => {
     expect(rangeFd.get('importMode')).toBe('range')
     expect(rangeFd.get('rangeStart')).toBe('2026-07-15')
     expect(rangeFd.get('rangeEnd')).toBe('2026-07-20')
+  })
+
+  it('appendExcludedRowIndexes writes one FormData entry per index', () => {
+    const fd = new FormData()
+    appendExcludedRowIndexes(fd, [1, 3, 5])
+    expect(fd.getAll('excludedRowIndexes')).toEqual(['1', '3', '5'])
+
+    const empty = new FormData()
+    appendExcludedRowIndexes(empty, [])
+    expect(empty.getAll('excludedRowIndexes')).toEqual([])
+  })
+
+  it('rowsWithoutExcluded subtracts excluded indexes from importable set', () => {
+    const rows = [
+      { rowIndex: 1, description: 'A' },
+      { rowIndex: 2, description: 'B' },
+      { rowIndex: 3, description: 'C' },
+    ]
+    expect(rowsWithoutExcluded(rows, [2]).map((r) => r.description)).toEqual(['A', 'C'])
+    expect(rowsWithoutExcluded(rows, []).map((r) => r.description)).toEqual(['A', 'B', 'C'])
+  })
+
+  it('renders Non importare on status badges and never offers Rendi valida', () => {
+    const html = renderToStaticMarkup(
+      createElement(ImportPreview, {
+        result: {
+          ...baseResult,
+          sampleRows: [
+            {
+              rowIndex: 1,
+              description: 'Valid row',
+              amount: '-10.00',
+              occurredAt: '2026-07-10T00:00:00.000Z',
+              duplicate: false,
+              valid: true,
+              errors: [],
+              warnings: [],
+            },
+            {
+              rowIndex: 2,
+              description: 'Dup row',
+              amount: '-5.00',
+              occurredAt: '2026-07-11T00:00:00.000Z',
+              duplicate: true,
+              valid: true,
+              errors: [],
+              warnings: [],
+            },
+          ],
+        },
+      }),
+    )
+
+    expect(html).toContain('Non importare')
+    expect(html).toContain('Valide (')
+    expect(html).not.toContain('Rendi valida')
+    expect(html).not.toMatch(/forza\s+import/i)
   })
 })
