@@ -3,10 +3,13 @@ import { Suspense } from 'react'
 import { CategoryRankingList } from '@/components/dashboard/category-ranking-list'
 import { CategoryRankingSkeleton } from '@/components/dashboard/category-ranking-skeleton'
 import { DashboardFilters } from '@/components/dashboard/dashboard-filters'
+import { LensSwitch } from '@/components/dashboard/lens-switch'
 import { getCategoryDeviations, getCategoryRanking } from '@/lib/dal/dashboard'
+import { resolveLedgerRowSource, type LedgerRowSource } from '@/lib/dal/dashboard-filters'
 import { verifySession } from '@/lib/dal/auth'
 import { buildDashboardCategoriesHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
+import { parseLensParam } from '@/lib/utils/search-params'
 import {
   parseDashboardFilters,
   type DashboardFilters as ParsedDashboardFilters,
@@ -42,6 +45,7 @@ type Props = {
     period?: string | string[]
     type?: string | string[]
     sort?: string | string[]
+    lens?: string | string[]
   }>
 }
 
@@ -98,12 +102,14 @@ function SortToggle({ filters }: { filters: CategoryDashboardFilters }) {
 
 async function CategoryRankingContent({
   filters,
+  ledgerRowSource,
 }: {
   filters: CategoryDashboardFilters
+  ledgerRowSource: LedgerRowSource
 }) {
   const [data, deviations] = await Promise.all([
-    getCategoryRanking(filters),
-    getCategoryDeviations({ type: filters.type }),
+    getCategoryRanking(filters, ledgerRowSource),
+    getCategoryDeviations({ type: filters.type }, ledgerRowSource),
   ])
 
   return (
@@ -122,14 +128,19 @@ export default async function DashboardCategoriesPage({ searchParams }: Props) {
   await verifySession()
   const params = await searchParams
   const filters = parseCategoryDashboardFilters(params)
+  const lens = parseLensParam(params.lens)
+  const ledgerRowSource = resolveLedgerRowSource(lens)
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold">Categorie</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Classifica delle categorie per importo e andamento mensile.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Categorie</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Classifica delle categorie per importo e andamento mensile.
+          </p>
+        </div>
+        <LensSwitch lens={lens} />
       </div>
 
       <Suspense fallback={<CategoryFiltersFallback />}>
@@ -144,7 +155,7 @@ export default async function DashboardCategoriesPage({ searchParams }: Props) {
       <SortToggle filters={filters} />
 
       <Suspense fallback={<CategoryRankingSkeleton />}>
-        <CategoryRankingContent filters={filters} />
+        <CategoryRankingContent filters={filters} ledgerRowSource={ledgerRowSource} />
       </Suspense>
     </div>
   )
