@@ -64,26 +64,28 @@ export const systemCategorizationPatterns: SystemCategorizationPatternSeed[] = [
     priority: 10,
     description: "Grocery: supermarkets, fresh food shops, and named merchants",
   },
-  // Travel agencies / trip packages → Vacanze/alloggio (no dedicated agency slug).
+  // Travel agencies / trip packages → Vacanze/pacchetto-vacanze.
   //
-  // Precedence: patterns are loaded ASC by priority and the first regex hit wins
-  // (applyTier1Regex), so a LOWER number wins. Priority 9 is deliberately just above grocery
-  // (10) — enough for the Fineco "TRAVEL SPECIALIST … Ins: …" case — and stays well below
-  // travel-only trasporto and hotel (both 100), which must keep flights, ferries, car rental
-  // and lodging. A higher-precedence tier here would swallow all of them.
+  // Object of spend is a trip package (agency/tour operator), not lodging. Mapping packages
+  // onto `alloggio` was a best-effort remap forbidden by Phase 67 D-12 (correctness over
+  // convenience). Which specific trip is a Tag axis (CONTEXT.md), not taxonomy.
   //
-  // Alternatives are brand/compound forms only: bare `viaggi` and `booking` are generic words
-  // that matched flight and car-rental descriptors ("RYANAIR BOOKING REF …", "AUTONOLEGGIO
-  // HERTZ BOOKING") and generic ticketing fees, so they carry disambiguating context.
+  // Precedence: patterns load ASC by priority; LOWER number wins. Priority 9 sits just above
+  // grocery (10) for Fineco "TRAVEL SPECIALIST … Ins: …", and stays well below travel-only
+  // trasporto and hotel (both 100) so flights/ferries/car rental/lodging keep their patterns.
+  //
+  // Alternatives are brand/compound forms only: bare `viaggi` and `booking` are generic and
+  // matched flight/car-rental descriptors ("RYANAIR BOOKING REF …", "AUTONOLEGGIO HERTZ
+  // BOOKING"), so they carry disambiguating context.
   {
     pattern:
       "(?:\\btravel\\s+specialist\\b|\\bagenzia\\s+viaggi\\b|\\bviaggi\\s+e\\s+turismo\\b|" +
       "\\bbooking\\.com\\b|\\bexpedia\\b|\\btour\\s+operator\\b)",
-    subCategorySlug: "alloggio",
+    subCategorySlug: "pacchetto-vacanze",
     confidence: 0.85,
     priority: 9,
     description:
-      "Travel agencies and trip packages (travel specialist, agenzia viaggi, booking.com, expedia) → alloggio",
+      "Travel agencies and trip packages (travel specialist, agenzia viaggi, booking.com, expedia) → pacchetto-vacanze",
   },
   {
     pattern: "(?:\\bamazon\\b|\\bamzn\\b)",

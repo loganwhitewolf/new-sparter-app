@@ -1,11 +1,25 @@
 # Grocery pattern hardening report (260729-hiz)
 
-Surgical harden of system `spesa-quotidiana` + new travel-agency → `alloggio` pattern.
+Surgical harden of system `spesa-quotidiana` + travel-agency → `pacchetto-vacanze` pattern.
 Principle: a false positive costs more than an uncategorized transaction.
 
 Language: product/merchant strings may be Italian; code, tests, comments, and this report body are English.
 
-**Operator next step (not run in this task):** `yarn db:seed-patterns` — full replace of system patterns (`userId = null`). Do not run against production without a deploy window.
+**Operator next steps (not run in this task):**
+1. `yarn db:seed-extras` — inserts `pacchetto-vacanze` on already-seeded DBs (staging/prod).
+2. `yarn db:seed-patterns` — full replace of system patterns (`userId = null`), remapping travel away from `alloggio`.
+
+Do not run against production without a deploy window. Expenses already auto-categorized to `alloggio` by the interim travel→alloggio mapping (if any on staging) are **not** auto-remapped (Phase 67 D-12) — review manually or leave until next human categorization pass.
+
+---
+
+## Travel mapping correction (post-review)
+
+| Before | After | Why |
+|---|---|---|
+| travel-agency → `alloggio` | travel-agency → `pacchetto-vacanze` | Package ≠ lodging; D-12 forbids best-effort subcategory inventing |
+
+New subcategory: Vacanze > `pacchetto-vacanze` (`seed-data.ts` + additive `seed-extras` step `insert-pacchetto-vacanze`). Trip identity remains a Tag (CONTEXT.md).
 
 ---
 
@@ -64,30 +78,30 @@ Scoped to new alternatives, with the grandfathered exceptions named in the comme
 
 ---
 
-## Travel-agency pattern (D-12)
+## Travel-agency pattern (D-12 → B correction)
 
 | Field | Value |
 |---|---|
 | Alternatives | `travel specialist`, `agenzia viaggi`, `viaggi e turismo`, `booking\.com`, `expedia`, `tour operator` |
-| `subCategorySlug` | `alloggio` (locked — no Vacanze agency slug invented; not `trasporto` / not `assicurazione-viaggio`) |
+| `subCategorySlug` | **`pacchetto-vacanze`** (new Vacanze subcategory — package/agency object of spend; not `alloggio`) |
 | Priority | **9** (ASC load order; beats grocery 10, stays far below trasporto/hotel 100) |
-| Collision check | Fineco §1 description → `alloggio` via `travel specialist`; grocery alone returns null after Ins restrict |
+| Collision check | Fineco §1 → `pacchetto-vacanze` via `travel specialist`; grocery alone returns null after Ins restrict; hotels still win via lodging pattern → `alloggio` |
 
-### Review correction (post-review)
+Taxonomy: `seed-data.ts` row + additive `seed-extras` step `insert-pacchetto-vacanze`. CONTEXT.md Vacanze list updated. Phase 67 D-12: no best-effort remap of packages onto lodging.
 
-The first version shipped bare `\bviaggi\b` / `\bbooking\b` at priority **5**. Since `applyTier1Regex` returns on the first hit over patterns loaded ASC by priority, that placed the pattern in the highest-precedence tier and made it shadow the Phase 67 travel-only `trasporto` pattern and `\bhotel\b` (both priority 100). Verified misroutes:
+### Review correction (post-review) — bare viaggi/booking + priority
 
-| description | was | now |
+The first version shipped bare `\bviaggi\b` / `\bbooking\b` at priority **5**. Since `applyTier1Regex` returns on the first hit over patterns loaded ASC by priority, that placed the pattern in the highest-precedence tier and made it shadow the Phase 67 travel-only `trasporto` pattern and `\bhotel\b` (both priority 100). Verified misroutes (then fixed by restricting alts + priority 9):
+
+| description | was (bad) | now |
 |---|---|---|
-| `RYANAIR BOOKING REF X7K2P9` | `alloggio` | `trasporto` |
-| `EASYJET ONLINE BOOKING` | `alloggio` | `trasporto` |
-| `AUTONOLEGGIO HERTZ BOOKING` | `alloggio` | `trasporto` |
-| `HOTEL BOOKING FEE` | `alloggio` (via travel) | `alloggio` (via hotel) |
-| `TICKETONE BOOKING FEE CONCERTO` | `alloggio` | _(uncategorized)_ |
-| `RIMBORSO SPESE VIAGGI DIPENDENTE` | `alloggio` | _(uncategorized)_ |
-| `ASSICURAZIONE VIAGGI EUROPE ASSISTANCE` | `alloggio` | _(uncategorized)_ |
+| `RYANAIR BOOKING REF X7K2P9` | swallowed by travel | `trasporto` |
+| `EASYJET ONLINE BOOKING` | swallowed by travel | `trasporto` |
+| `AUTONOLEGGIO HERTZ BOOKING` | swallowed by travel | `trasporto` |
+| `HOTEL BOOKING FEE` | travel → wrong | `alloggio` (hotel pattern) |
+| Fineco TRAVEL SPECIALIST SEPA | grocery / then wrongly `alloggio` | `pacchetto-vacanze` |
 
-Bare `\bviaggi\b` and `\bbooking\b` are exactly the generic-word class this task removed from grocery (`\bsuper\b`, `\bmarket\b`, `\biper\b`) — the same rule now applies to them. Priority moved to 9: the only requirement is beating grocery, and after the `Ins:` restrict grocery no longer matches the Fineco string at all. Locked by regression tests in `tests/categorization-match.test.ts`.
+Bare `\bviaggi\b` and `\bbooking\b` are exactly the generic-word class this task removed from grocery — the same rule applies. Locked by regression tests in `tests/categorization-match.test.ts`.
 
 ---
 

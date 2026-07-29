@@ -386,7 +386,7 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260728-mpo | Fineco cleanup: merge duplicate Fineco platforms into slug=fineco; single global Moneymap `;`-delimited format (full 8-col header); update seed-data Fineco v1 | 2026-07-28 | e31dd9b |
 | 260729-f21 | Import mode filters on analyze: from-last (default) / all / range + live preview + Transazioni nel periodo card; hash dedup on filtered subset | 2026-07-29 | 8123715 |
 | 260729-fma | Exclude specific import preview rows (Non importare + Ripristina by rowIndex; confirm FormData → importFile skip) | 2026-07-29 | 5a3b882 |
-| 260729-hiz | Expense detail title parity + harden spesa-quotidiana (Ins:/generics/surnames) + travel→alloggio; audit risky-alts; report | 2026-07-29 | 40fa1a7 |
+| 260729-hiz | Expense detail title parity + harden spesa-quotidiana + travel→pacchetto-vacanze; audit; report | 2026-07-29 | 40fa1a7 |
 
 ## Deferred Items
 

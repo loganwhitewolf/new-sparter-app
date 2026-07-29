@@ -28,10 +28,10 @@ describe('systemCategorizationPatterns', () => {
     expect(result).toEqual({ missingSlugs: [], duplicateKeys: [], invalidRegex: [] })
   })
 
-  it('registers a travel-agency pattern mapped to alloggio', () => {
+  it('registers a travel-agency pattern mapped to pacchetto-vacanze', () => {
     const travel = systemCategorizationPatterns.find(
       (p) =>
-        p.subCategorySlug === 'alloggio' &&
+        p.subCategorySlug === 'pacchetto-vacanze' &&
         p.pattern.includes('travel') &&
         p.pattern.includes('specialist'),
     )

@@ -238,7 +238,7 @@ describe('spesa-quotidiana grocery hardening (260729-hiz)', () => {
   })
 })
 
-describe('travel-agency → alloggio pattern (260729-hiz)', () => {
+describe('travel-agency → pacchetto-vacanze pattern (260729-hiz)', () => {
   const active = systemPatternsAsActive()
 
   const FINECO_TRAVEL =
@@ -246,9 +246,9 @@ describe('travel-agency → alloggio pattern (260729-hiz)', () => {
     'Iban: IT68Y0200801109000105119318 TransID: 2607243291974987 480320046200IT ' +
     'Cau: SALDO PRATICA VIAGGIO NUMERO 25/000164 - Viaggio thailandia — Bonifico SEPA Italia'
 
-  it('resolves Fineco travel-specialist SEPA to alloggio, not spesa-quotidiana', () => {
+  it('resolves Fineco travel-specialist SEPA to pacchetto-vacanze, not spesa-quotidiana or alloggio', () => {
     const result = applyTier1Regex(FINECO_TRAVEL, '-1200.00', active)
-    expect(slugForResult(result, active)).toBe('alloggio')
+    expect(slugForResult(result, active)).toBe('pacchetto-vacanze')
   })
 
   it.each([
@@ -256,9 +256,9 @@ describe('travel-agency → alloggio pattern (260729-hiz)', () => {
     'Booking.com hotel Roma',
     'Expedia pacchetto',
     'Tour operator Thailandia',
-  ])('matches travel description %s to alloggio', (description) => {
+  ])('matches travel description %s to pacchetto-vacanze', (description) => {
     expect(slugForResult(applyTier1Regex(description, '-500.00', active), active)).toBe(
-      'alloggio',
+      'pacchetto-vacanze',
     )
   })
 
@@ -272,8 +272,7 @@ describe('travel-agency → alloggio pattern (260729-hiz)', () => {
     expect(slugForResult(applyTier1Regex(description, '-500.00', active), active)).toBe(slug)
   })
 
-  // The hotel pattern maps to alloggio too, so asserting the slug alone would pass even if
-  // the travel pattern swallowed this description. Assert WHICH pattern won.
+  // Hotel stays on alloggio via the lodging pattern — not the agency package pattern.
   it('lets the hotel pattern — not the travel-agency one — claim HOTEL BOOKING FEE', () => {
     const seed = seedForResult(applyTier1Regex('HOTEL BOOKING FEE', '-500.00', active), active)
     expect(seed?.subCategorySlug).toBe('alloggio')
@@ -284,15 +283,15 @@ describe('travel-agency → alloggio pattern (260729-hiz)', () => {
     'TICKETONE BOOKING FEE CONCERTO',
     'RIMBORSO SPESE VIAGGI DIPENDENTE',
     'ASSICURAZIONE VIAGGI EUROPE ASSISTANCE',
-  ])('leaves non-agency description %s out of alloggio', (description) => {
+  ])('leaves non-agency description %s out of pacchetto-vacanze', (description) => {
     expect(slugForResult(applyTier1Regex(description, '-500.00', active), active)).not.toBe(
-      'alloggio',
+      'pacchetto-vacanze',
     )
   })
 
   it('keeps travel-agency precedence just above grocery', () => {
     const travel = systemCategorizationPatterns.find(
-      (p) => p.subCategorySlug === 'alloggio' && p.pattern.includes('travel'),
+      (p) => p.subCategorySlug === 'pacchetto-vacanze' && p.pattern.includes('travel'),
     )
     const grocery = systemCategorizationPatterns.find(
       (p) => p.subCategorySlug === 'spesa-quotidiana' && p.description.startsWith('Grocery'),
