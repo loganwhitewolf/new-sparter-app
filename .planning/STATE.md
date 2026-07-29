@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Amortization
 current_phase: 81
-status: completed
+status: "Phase 81 shipped — PR #58"
 stopped_at: Completed 80-07-PLAN.md (Phase 80 closeout — all plans done, ready for verification)
-last_updated: "2026-07-29T15:33:11.975Z"
+last_updated: "2026-07-29T20:05:03.629Z"
 last_activity: 2026-07-29
-last_activity_desc: Phase 81 complete
 progress:
   total_phases: 5
   completed_phases: 5
   total_plans: 19
   completed_plans: 19
 current_phase_name: inline-net-display-for-paired-transactions
+last_activity_desc: Phase 81 complete
 ---
 
 # Project State
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 
 Phase: 81
 Plan: Not started
-Status: All phases complete
-Last activity: 2026-07-29 — Phase 81 complete
+Status: Phase 81 shipped — PR #58
+Last activity: 2026-07-29
 
 ## Roadmap (v2.9 — Phases 77-80)
 
