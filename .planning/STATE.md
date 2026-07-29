@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Amortization
-current_phase: 80
-status: completed
-stopped_at: Completed 80-07-PLAN.md (Phase 80 closeout — all plans done, ready for verification)
-last_updated: "2026-07-29T10:26:17.922Z"
+current_phase: 81
+status: executed
+stopped_at: Completed 81-01-PLAN.md (inline net display for paired transactions — both tasks done, ready for verification)
+last_updated: "2026-07-29T16:30:00.000Z"
 last_activity: 2026-07-29
-last_activity_desc: Phase 80 complete
+last_activity_desc: Phase 81 executed (81-01 complete)
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
-  total_plans: 18
-  completed_plans: 18
-current_phase_name: dashboard-accrual-lens
+  total_plans: 19
+  completed_plans: 19
+current_phase_name: inline-net-display-for-paired-transactions
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 
 ## Current Position
 
-Phase: 80
-Plan: Not started
-Status: All phases complete
-Last activity: 2026-07-29 — Phase 80 complete
+Phase: 81 — inline-net-display-for-paired-transactions (v2.9 UAT closure)
+Plan: 81-01 complete (2 tasks: anchor net-primary + struck gross; counterpart reduction badge + attenuated amount)
+Status: Executed — ready for verification
+Last activity: 2026-07-29 — Phase 81 executed
 
 ## Roadmap (v2.9 — Phases 77-80)
 

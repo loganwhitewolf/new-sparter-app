@@ -199,9 +199,11 @@ detail page. Purely presentational: `effectiveAmount()`, netting, and all totals
   1. A paired outflow anchor (amortization closed-for-sale OR v2.8 reimbursement) renders in the
      transactions table with the net amount as the primary figure and the gross initial amount
      struck-through/opaque beneath it — for **all** pairing types, not just amortization.
+
   2. The counterpart row (the sale/refund positive) shows a "riduzione di …" badge that links to
      its anchor transaction and renders its amount attenuated, so it no longer reads as a plain
      asset/inflow.
+
   3. No change to any total, `effectiveAmount()` result, netting math, or dashboard/lens figure —
      the full test suite (incl. LENS-03 byte-identical regression) stays green.
 
@@ -216,7 +218,7 @@ table is cash-only (not lens-aware): the net shown is the cash net (initial − 
 
 Plans:
 
-- [ ] 81-01-PLAN.md — Anchor net-primary + struck-through gross, counterpart reduction badge + attenuated amount (D-N1..D-N4)
+- [x] 81-01-PLAN.md — Anchor net-primary + struck-through gross, counterpart reduction badge + attenuated amount (D-N1..D-N4)
 
 ---
 
