@@ -42,6 +42,7 @@ import {
   DASHBOARD_TOTAL_EXPENSE_STATUSES,
   dateScopedTransactions,
   expenseStatusIncludedInDashboardTotals,
+  type LedgerRowSource,
 } from '@/lib/dal/dashboard-filters'
 
 export { DASHBOARD_TOTAL_EXPENSE_STATUSES }
@@ -426,6 +427,10 @@ function expenseStatusUncategorized() {
   return eq(expense.status, '1')
 }
 
+// Lens-invariant (Phase 80, ADR 0019 §10 seam survey "Confirm" note, closed here): an amortized
+// transaction is always categorized before a plan can attach to it (D-04's activation guard), so
+// an instalment can never itself be "uncategorized" — this function stays reading `transaction`
+// under either lens, no ledgerRowSource parameter needed.
 export async function getUncategorizedCount(userId: string, from: Date, to: Date): Promise<number> {
   try {
     const rows = await db
@@ -448,22 +453,27 @@ export async function getUncategorizedCount(userId: string, from: Date, to: Date
   }
 }
 
-export async function getOverviewAmountTotals(userId: string, from: Date, to: Date): Promise<OverviewAggregateRow> {
+export async function getOverviewAmountTotals(
+  userId: string,
+  from: Date,
+  to: Date,
+  ledgerRowSource: LedgerRowSource = ledgerEntryCash,
+): Promise<OverviewAggregateRow> {
   try {
     const rows = await db
       .select({
-        totalIn: sql<string>`coalesce(sum(case when ${direction.code} = 'in' then ${ledgerEntryCash.amount} else 0 end), 0)::text`,
-        totalOut: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' then ${ledgerEntryCash.amount} else 0 end)), 0)::text`,
-        totalAllocation: sql<string>`coalesce(sum(case when ${direction.code} = 'allocation' then ${ledgerEntryCash.amount} else 0 end), 0)::text`,
+        totalIn: sql<string>`coalesce(sum(case when ${direction.code} = 'in' then ${ledgerRowSource.amount} else 0 end), 0)::text`,
+        totalOut: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' then ${ledgerRowSource.amount} else 0 end)), 0)::text`,
+        totalAllocation: sql<string>`coalesce(sum(case when ${direction.code} = 'allocation' then ${ledgerRowSource.amount} else 0 end), 0)::text`,
         // Recurring income only — excludes income_extraordinary (260709-kp1).
-        totalInRecurring: sql<string>`coalesce(sum(case when ${direction.code} = 'in' and ${nature.code} = 'income' then ${ledgerEntryCash.amount} else 0 end), 0)::text`,
+        totalInRecurring: sql<string>`coalesce(sum(case when ${direction.code} = 'in' and ${nature.code} = 'income' then ${ledgerRowSource.amount} else 0 end), 0)::text`,
         // Per-nature OUT sums — Uscite card breakdown (260709-lkw). abs mirrors totalOut.
-        totalOutEssential: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'essential' then ${ledgerEntryCash.amount} else 0 end)), 0)::text`,
-        totalOutDiscretionary: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'discretionary' then ${ledgerEntryCash.amount} else 0 end)), 0)::text`,
-        totalOutDebt: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'debt' then ${ledgerEntryCash.amount} else 0 end)), 0)::text`,
+        totalOutEssential: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'essential' then ${ledgerRowSource.amount} else 0 end)), 0)::text`,
+        totalOutDiscretionary: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'discretionary' then ${ledgerRowSource.amount} else 0 end)), 0)::text`,
+        totalOutDebt: sql<string>`coalesce(abs(sum(case when ${direction.code} = 'out' and ${nature.code} = 'debt' then ${ledgerRowSource.amount} else 0 end)), 0)::text`,
       })
-      .from(ledgerEntryCash)
-      .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
+      .from(ledgerRowSource)
+      .innerJoin(expense, eq(ledgerRowSource.expenseId, expense.id))
       .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
       .innerJoin(category, eq(subCategory.categoryId, category.id))
       .leftJoin(
@@ -483,10 +493,10 @@ export async function getOverviewAmountTotals(userId: string, from: Date, to: Da
       .innerJoin(direction, eq(nature.directionId, direction.id))
       .where(
         and(
-          // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
-          // the old secondary-row exclusion fragment is redundant here and intentionally
-          // dropped (Phase 77, D-11).
-          dateScopedTransactions(ledgerEntryCash, userId, from, to),
+          // ledger_entry_cash/ledger_entry_accrual's own WHERE NOT EXISTS (or UNION ALL branch)
+          // already excludes refund rows — the old secondary-row exclusion fragment is
+          // redundant here and intentionally dropped (Phase 77, D-11).
+          dateScopedTransactions(ledgerRowSource, userId, from, to),
           expenseStatusIncludedInDashboardTotals(),
           ne(direction.code, 'transfer'),
         )

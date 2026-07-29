@@ -2,7 +2,8 @@ import 'server-only'
 
 import { and, eq, gte, inArray, lte } from 'drizzle-orm'
 import type { PgColumn } from 'drizzle-orm/pg-core'
-import { expense } from '@/lib/db/schema'
+import { expense, ledgerEntryAccrual, ledgerEntryCash } from '@/lib/db/schema'
+import type { Lens } from '@/lib/utils/search-params'
 
 // Shared dashboard-aggregation predicates (Phase 77 incidental cleanup) — extracted out of the
 // identical private copies that used to live separately in lib/dal/dashboard.ts and
@@ -37,4 +38,18 @@ export function dateScopedTransactions(
  */
 export function expenseStatusIncludedInDashboardTotals() {
   return inArray(expense.status, [...DASHBOARD_TOTAL_EXPENSE_STATUSES])
+}
+
+// ledger_entry seam row-source selection (Phase 80, ADR 0019 §10) — the ONLY place a `Lens`
+// resolves to a concrete row source. Architecture is LOCKED: the lens swaps which Postgres VIEW
+// an aggregation reads FROM (ledgerEntryCash <-> ledgerEntryAccrual, both already exist from
+// Phase 77) — never a `lens` string threaded into an aggregation's WHERE/amount logic.
+export type LedgerRowSource = typeof ledgerEntryCash | typeof ledgerEntryAccrual
+
+/**
+ * Resolves a validated `Lens` to its backing row source. Reference-equal to `ledgerEntryCash`
+ * for `'cassa'` (the default), `ledgerEntryAccrual` for `'competenza'`.
+ */
+export function resolveLedgerRowSource(lens: Lens): LedgerRowSource {
+  return lens === 'competenza' ? ledgerEntryAccrual : ledgerEntryCash
 }

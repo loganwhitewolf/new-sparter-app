@@ -24,6 +24,7 @@ import type { OverviewData } from '@/lib/dal/dashboard'
 import {
   dateScopedTransactions,
   expenseStatusIncludedInDashboardTotals,
+  type LedgerRowSource,
 } from '@/lib/dal/dashboard-filters'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -103,7 +104,10 @@ export const getYearsWithData = cache(async (): Promise<string[]> => {
  *
  * T-42-05 mitigated: verifySession() scopes all sub-queries to authenticated userId.
  */
-export const getOverview = cache(async (year: number): Promise<OverviewData> => {
+export const getOverview = cache(async (
+  year: number,
+  ledgerRowSource: LedgerRowSource = ledgerEntryCash,
+): Promise<OverviewData> => {
   const { userId } = await verifySession()
 
   try {
@@ -124,8 +128,8 @@ export const getOverview = cache(async (year: number): Promise<OverviewData> => 
     const previousTo = new Date(year - 1, lastMonthIdx + 1, 0, 23, 59, 59, 999)
 
     const [currentTotals, previousTotals, currentUncat, previousUncat] = await Promise.all([
-      getOverviewAmountTotals(userId, currentFrom, currentTo),
-      getOverviewAmountTotals(userId, previousFrom, previousTo),
+      getOverviewAmountTotals(userId, currentFrom, currentTo, ledgerRowSource),
+      getOverviewAmountTotals(userId, previousFrom, previousTo, ledgerRowSource),
       getUncategorizedCount(userId, currentFrom, currentTo),
       getUncategorizedCount(userId, previousFrom, previousTo),
     ])

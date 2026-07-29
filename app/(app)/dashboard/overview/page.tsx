@@ -6,6 +6,7 @@ import {
   getMonthOverMonthCategoryChanges,
   type OverviewChartPoint,
 } from '@/lib/dal/overview'
+import { resolveLedgerRowSource } from '@/lib/dal/dashboard-filters'
 import { verifySession } from '@/lib/dal/auth'
 import { resolveYear } from '@/components/dashboard/overview/resolve-year'
 import { OverviewEmptyState } from '@/components/dashboard/overview/overview-empty-state'
@@ -14,9 +15,10 @@ import { OverviewDashboardSection } from '@/components/dashboard/overview/overvi
 import { OverviewPageSkeleton } from '@/components/dashboard/overview/overview-page-skeleton'
 import { OverviewNudge } from '@/components/dashboard/overview/overview-nudge'
 import { toDecimal } from '@/lib/utils/decimal'
+import { parseLensParam, type Lens } from '@/lib/utils/search-params'
 
 type Props = {
-  searchParams: Promise<{ year?: string }>
+  searchParams: Promise<{ year?: string; lens?: string }>
 }
 
 // Checks whether the KPIs and chart contain any meaningful data for the year.
@@ -55,15 +57,21 @@ function deriveDefaultMonthIndex(chart: OverviewChartPoint[]): number {
 async function OverviewDataSection({
   year,
   years,
+  lens,
 }: {
   year: number
   years: string[]
+  lens: Lens
 }) {
+  // Phase 80: lens threads through to getOverview's KPI totals only (this task's tracer
+  // scope) — getOverviewChart/getMonthOverMonthCategoryChanges migrate in Plan 80-03.
+  const ledgerRowSource = resolveLedgerRowSource(lens)
+
   // Prior-year chart points feed the filtered YoY deltas on the KPI cards (260711-gfd):
   // deltas compare the SAME chip selection year-over-year. A prior year with no data
   // yields zero sums → null deltas (existing null handling).
   const [overview, chart, prevChart] = await Promise.all([
-    getOverview(year),
+    getOverview(year, ledgerRowSource),
     getOverviewChart(year),
     getOverviewChart(year - 1),
   ])
@@ -71,7 +79,7 @@ async function OverviewDataSection({
   if (isYearWithNoData(overview.totalIn, overview.totalOut)) {
     return (
       <>
-        <OverviewHeader year={year} years={years} />
+        <OverviewHeader year={year} years={years} lens={lens} />
         <OverviewEmptyState variant="no-data-for-year" year={year} />
       </>
     )
@@ -93,6 +101,7 @@ async function OverviewDataSection({
       <OverviewHeader
         year={year}
         years={years}
+        lens={lens}
         nudge={<OverviewNudge uncategorizedCount={overview.uncategorizedCount} year={year} />}
       />
       {/* 260711-gfd: chips + KPI cards + chart/movers share one dashboard-wide chip
@@ -115,6 +124,7 @@ export default async function DashboardOverviewPage({ searchParams }: Props) {
   const params = await searchParams
   const years = await getYearsWithData()
   const year = resolveYear(params.year, years)
+  const lens = parseLensParam(params.lens)
 
   // D-06 case b: account has no years with data at all.
   if (year === null) {
@@ -126,7 +136,7 @@ export default async function DashboardOverviewPage({ searchParams }: Props) {
     // receive uncategorizedCount for the inline nudge slot. The Suspense fallback
     // (OverviewPageSkeleton) covers both the header and the data section during streaming.
     <Suspense fallback={<OverviewPageSkeleton />}>
-      <OverviewDataSection year={year} years={years} />
+      <OverviewDataSection year={year} years={years} lens={lens} />
     </Suspense>
   )
 }

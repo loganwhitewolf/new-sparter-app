@@ -3,16 +3,19 @@
 import { useEffect, type ReactNode } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import type { Lens } from '@/lib/utils/search-params'
+import { LensSwitch } from '../lens-switch'
 import { readSavedYear, saveYear, safeSessionStorage } from './overview-persistence'
 
 type OverviewHeaderProps = {
   year: number
   years: string[]
+  lens: Lens
   /** Optional nudge slot — rendered right-aligned on the title row (FRU-FIX-03). */
   nudge?: ReactNode
 }
 
-export function OverviewHeader({ year, years, nudge }: OverviewHeaderProps) {
+export function OverviewHeader({ year, years, lens, nudge }: OverviewHeaderProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -53,6 +56,7 @@ export function OverviewHeader({ year, years, nudge }: OverviewHeaderProps) {
             ))}
           </SelectContent>
         </Select>
+        <LensSwitch lens={lens} />
       </div>
       {/* Right side: nudge slot (FRU-FIX-03) */}
       {nudge != null && <div className="ml-auto shrink-0">{nudge}</div>}

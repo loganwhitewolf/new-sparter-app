@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   YEAR_MONTH_RE,
   parseAmount,
+  parseLensParam,
   parseMonths,
   parseSortDir,
   parseStatus,
@@ -131,6 +132,36 @@ describe('parseStatus', () => {
   it('never throws on any input', () => {
     expect(() => parseStatus('garbage', allowed)).not.toThrow()
     expect(() => parseStatus(undefined, allowed)).not.toThrow()
+  })
+})
+
+describe('parseLensParam', () => {
+  it('defaults to cassa when absent', () => {
+    expect(parseLensParam(undefined)).toBe('cassa')
+  })
+
+  it('defaults to cassa for garbage input', () => {
+    expect(parseLensParam('bogus')).toBe('cassa')
+    expect(parseLensParam('Competenza')).toBe('cassa')
+    expect(parseLensParam('')).toBe('cassa')
+  })
+
+  it('returns competenza only for the exact literal', () => {
+    expect(parseLensParam('competenza')).toBe('competenza')
+  })
+
+  it('returns cassa for the exact literal', () => {
+    expect(parseLensParam('cassa')).toBe('cassa')
+  })
+
+  it('uses first-element semantics for array input', () => {
+    expect(parseLensParam(['competenza', 'x'])).toBe('competenza')
+    expect(parseLensParam(['bogus', 'competenza'])).toBe('cassa')
+  })
+
+  it('never throws on any input', () => {
+    expect(() => parseLensParam('garbage!')).not.toThrow()
+    expect(() => parseLensParam(undefined)).not.toThrow()
   })
 })
 
