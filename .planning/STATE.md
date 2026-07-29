@@ -4,15 +4,15 @@ milestone: v2.9
 milestone_name: Amortization
 current_phase: 80
 current_phase_name: dashboard-accrual-lens
-status: planning
+status: executing
 stopped_at: Phase 80 context gathered
-last_updated: "2026-07-29T07:18:30.979Z"
+last_updated: "2026-07-29T08:35:49.208Z"
 last_activity: 2026-07-28
 last_activity_desc: Phase 79 complete, transitioned to Phase 80
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 11
+  total_plans: 18
   completed_plans: 11
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 
 Phase: 80 — dashboard-accrual-lens
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-07-28 — Phase 79 complete, transitioned to Phase 80
 
 ## Roadmap (v2.9 — Phases 77-80)

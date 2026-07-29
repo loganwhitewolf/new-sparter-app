@@ -702,7 +702,9 @@ export async function getTagTotals(userId: string) {
 | A4 | `effectiveAmount()` and `isNotSecondary()` must NEVER be called on amortization_instalment rows (seam handles both branches) | Common Pitfalls (Pitfall 1) | Double-netting reimbursements on amortized costs; refund amounts doubled in output; regression suite passes cash but fails accrual |
 | A5 | Cross-lens period clamp (resolveYear extension) is the correct fallback; no other logic (e.g. re-fetch data, show error) is needed | Architecture Patterns (Pattern 5) | User gets empty dashboard on cross-lens period selection; user confusion; planner adds unnecessary complexity |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All items below are resolved by CONTEXT.md decisions D-01…D-10 and the Recommendations inline; kept for traceability.
 
 1. **Exact switch UI component & placement** — Segmented / Button Group / RadioGroup? Placed next to year selector? Responsive layout on mobile? **Recommendation:** Defer to planning/UI phase; substance (always visible, disabled+noted on tags, preserved across tab nav) is locked. UI is discretion.
 
