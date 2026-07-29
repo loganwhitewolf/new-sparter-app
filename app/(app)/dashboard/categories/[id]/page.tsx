@@ -152,6 +152,7 @@ export default async function DashboardCategoryDetailPage({ params, searchParams
     preset: filters.preset,
     type: filters.type,
     defaultPreset: CATEGORY_DETAIL_DEFAULT_PRESET,
+    lens,
   })
 
   return (

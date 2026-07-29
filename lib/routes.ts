@@ -1,4 +1,5 @@
 import type { DashboardPreset, DashboardSort } from '@/lib/validations/dashboard'
+import type { Lens } from '@/lib/utils/search-params'
 
 export const APP_ROUTES = {
   dashboard: '/dashboard',
@@ -29,6 +30,11 @@ type DashboardCategoryFilters = {
   sort?: DashboardSort
   defaultPreset?: DashboardPreset
   defaultSort?: DashboardSort
+  // Phase 80, CR-02: the global cash/accrual lens must survive same-tab category
+  // navigation (sort toggle, back link, row click-through) the same way preset/type/sort
+  // already do — only appended when non-default ('competenza'), mirroring how
+  // DashboardTabNav forwards `?lens=` from the current searchParams.
+  lens?: Lens
 }
 
 export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters = {}) {
@@ -46,6 +52,10 @@ export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters =
 
   if (filters.sort && filters.sort !== defaultSort) {
     params.set('sort', filters.sort)
+  }
+
+  if (filters.lens === 'competenza') {
+    params.set('lens', filters.lens)
   }
 
   const search = params.toString()
@@ -112,6 +122,10 @@ export function buildDashboardCategoryDetailHref(
 
   if (filters.sort && filters.sort !== defaultSort) {
     params.set('sort', filters.sort)
+  }
+
+  if (filters.lens === 'competenza') {
+    params.set('lens', filters.lens)
   }
 
   const search = params.toString()

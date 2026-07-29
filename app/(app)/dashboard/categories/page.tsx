@@ -9,7 +9,7 @@ import { resolveLedgerRowSource, type LedgerRowSource } from '@/lib/dal/dashboar
 import { verifySession } from '@/lib/dal/auth'
 import { buildDashboardCategoriesHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
-import { parseLensParam } from '@/lib/utils/search-params'
+import { parseLensParam, type Lens } from '@/lib/utils/search-params'
 import {
   parseDashboardFilters,
   type DashboardFilters as ParsedDashboardFilters,
@@ -63,7 +63,7 @@ function parseCategoryDashboardFilters(
   }
 }
 
-function SortToggle({ filters }: { filters: CategoryDashboardFilters }) {
+function SortToggle({ filters, lens }: { filters: CategoryDashboardFilters; lens: Lens }) {
   const options: Array<{ value: DashboardSort; label: string }> = [
     { value: 'deviation', label: 'Deviazione' },
     { value: 'amount', label: 'Importo' },
@@ -79,6 +79,7 @@ function SortToggle({ filters }: { filters: CategoryDashboardFilters }) {
           sort: option.value,
           defaultPreset: CATEGORIES_DEFAULT_PRESET,
           defaultSort: CATEGORIES_DEFAULT_SORT,
+          lens,
         })
         return (
           <Link
@@ -103,9 +104,11 @@ function SortToggle({ filters }: { filters: CategoryDashboardFilters }) {
 async function CategoryRankingContent({
   filters,
   ledgerRowSource,
+  lens,
 }: {
   filters: CategoryDashboardFilters
   ledgerRowSource: LedgerRowSource
+  lens: Lens
 }) {
   const [data, deviations] = await Promise.all([
     getCategoryRanking(filters, ledgerRowSource),
@@ -120,6 +123,7 @@ async function CategoryRankingContent({
       defaultPreset={CATEGORIES_DEFAULT_PRESET}
       sort={filters.sort}
       deviations={deviations}
+      lens={lens}
     />
   )
 }
@@ -152,10 +156,10 @@ export default async function DashboardCategoriesPage({ searchParams }: Props) {
         />
       </Suspense>
 
-      <SortToggle filters={filters} />
+      <SortToggle filters={filters} lens={lens} />
 
       <Suspense fallback={<CategoryRankingSkeleton />}>
-        <CategoryRankingContent filters={filters} ledgerRowSource={ledgerRowSource} />
+        <CategoryRankingContent filters={filters} ledgerRowSource={ledgerRowSource} lens={lens} />
       </Suspense>
     </div>
   )
