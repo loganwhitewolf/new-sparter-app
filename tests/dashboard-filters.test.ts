@@ -147,6 +147,28 @@ describe('buildDashboardTabHref', () => {
       '/dashboard/tags?preset=last-3-months'
     )
   })
+
+  test('forwards ?lens= across Overview <-> Categorie <-> Tag tab switches (Phase 80)', () => {
+    const current = new URLSearchParams({ lens: 'competenza' })
+
+    expect(buildDashboardTabHref('/dashboard/overview', current)).toBe(
+      '/dashboard/overview?lens=competenza'
+    )
+    expect(buildDashboardTabHref('/dashboard/categories', current)).toBe(
+      '/dashboard/categories?lens=competenza'
+    )
+    expect(buildDashboardTabHref('/dashboard/tags', current)).toBe(
+      '/dashboard/tags?lens=competenza'
+    )
+  })
+
+  test('omits ?lens= (not forced) when absent from the current params', () => {
+    const current = new URLSearchParams({ preset: 'last-3-months' })
+
+    expect(buildDashboardTabHref('/dashboard/tags', current)).toBe(
+      '/dashboard/tags?preset=last-3-months'
+    )
+  })
 })
 
 describe('dashboard category list routes', () => {
