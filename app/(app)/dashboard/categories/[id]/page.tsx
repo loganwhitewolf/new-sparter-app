@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { parsePositiveIntParam } from '@/lib/utils/search-params'
+import { parseLensParam, parsePositiveIntParam } from '@/lib/utils/search-params'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { CategoryDetailEmptyState } from '@/components/dashboard/category-detail-empty-state'
@@ -9,7 +9,9 @@ import { CategoryDetailTrendChart } from '@/components/dashboard/category-detail
 import { CategorySubcategoryBreakdown } from '@/components/dashboard/category-subcategory-breakdown'
 import { CategoryTopTransactions } from '@/components/dashboard/category-top-transactions'
 import { DashboardFilters } from '@/components/dashboard/dashboard-filters'
+import { LensSwitch } from '@/components/dashboard/lens-switch'
 import { getCategoryDeviations, getCategoryDetail } from '@/lib/dal/dashboard'
+import { resolveLedgerRowSource, type LedgerRowSource } from '@/lib/dal/dashboard-filters'
 import { verifySession } from '@/lib/dal/auth'
 import { buildDashboardCategoriesHref } from '@/lib/routes'
 import {
@@ -34,6 +36,7 @@ type Props = {
     preset?: string | string[]
     period?: string | string[]
     type?: string | string[]
+    lens?: string | string[]
   }>
 }
 
@@ -64,18 +67,20 @@ async function CategoryDetailContent({
   categoryId,
   filters,
   categoriesHref,
+  ledgerRowSource,
 }: {
   categoryId: number | null
   filters: CategoryDetailFilters
   categoriesHref: string
+  ledgerRowSource: LedgerRowSource
 }) {
   if (categoryId === null) {
     return <CategoryDetailEmptyState />
   }
 
   const [data, deviations] = await Promise.all([
-    getCategoryDetail(categoryId, filters),
-    getCategoryDeviations({ type: filters.type, categoryId }),
+    getCategoryDetail(categoryId, filters, ledgerRowSource),
+    getCategoryDeviations({ type: filters.type, categoryId }, ledgerRowSource),
   ])
 
   if (data.category === null) {
@@ -140,6 +145,8 @@ export default async function DashboardCategoryDetailPage({ params, searchParams
   const [{ id }, query] = await Promise.all([params, searchParams])
   const categoryId = parsePositiveIntParam(id)
   const filters = parseCategoryDetailFilters(query)
+  const lens = parseLensParam(query.lens)
+  const ledgerRowSource = resolveLedgerRowSource(lens)
 
   const backHref = buildDashboardCategoriesHref({
     preset: filters.preset,
@@ -153,11 +160,14 @@ export default async function DashboardCategoryDetailPage({ params, searchParams
         <Link href={backHref} className="text-sm font-medium text-muted-foreground hover:text-foreground">
           ← Torna alle categorie
         </Link>
-        <div>
-          <h1 className="text-xl font-semibold">Dettaglio categoria</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Andamento, movimenti principali e sottocategorie per il filtro selezionato.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold">Dettaglio categoria</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Andamento, movimenti principali e sottocategorie per il filtro selezionato.
+            </p>
+          </div>
+          <LensSwitch lens={lens} />
         </div>
       </div>
 
@@ -175,6 +185,7 @@ export default async function DashboardCategoryDetailPage({ params, searchParams
           categoryId={categoryId}
           filters={filters}
           categoriesHref={backHref}
+          ledgerRowSource={ledgerRowSource}
         />
       </Suspense>
     </div>
