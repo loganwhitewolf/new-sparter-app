@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
 
   // dal/transactions
   getDuplicateHashes: vi.fn(),
+  getLastPlatformTransactionDate: vi.fn(),
   insertTransactionBatch: vi.fn(),
 
   // services/r2
@@ -202,6 +203,7 @@ vi.mock('@/lib/dal/files', () => ({
 
 vi.mock('@/lib/dal/transactions', () => ({
   getDuplicateHashes: mocks.getDuplicateHashes,
+  getLastPlatformTransactionDate: mocks.getLastPlatformTransactionDate,
   insertTransactionBatch: mocks.insertTransactionBatch,
 }))
 
@@ -854,6 +856,7 @@ describe('analyzeFile — lifecycle guards', () => {
     mocks.parseImportFile.mockResolvedValue(makeParsedImport())
     mocks.loadImportFormatsForDetection.mockResolvedValue([makeFormatCandidate()])
     mocks.getDuplicateHashes.mockResolvedValue(new Set<string>())
+    mocks.getLastPlatformTransactionDate.mockResolvedValue(null)
     mocks.updateFileAnalysisState.mockResolvedValue(undefined)
 
     await analyzeFile({ userId: USER_ID, fileId: FILE_ID })
@@ -899,6 +902,7 @@ describe('importFile — lifecycle guards', () => {
     mocks.parseImportFile.mockResolvedValue(makeParsedImport())
     mocks.loadImportFormatsForDetection.mockResolvedValue([makeFormatCandidate()])
     mocks.getDuplicateHashes.mockResolvedValue(new Set<string>())
+    mocks.getLastPlatformTransactionDate.mockResolvedValue(null)
     mocks.loadActivePatterns.mockResolvedValue([])
     mocks.categorizePipeline.mockResolvedValue(null)
     mocks.insertTransactionBatch.mockResolvedValue([])
@@ -949,6 +953,7 @@ describe('importFile', () => {
     mocks.updateFileImportState.mockResolvedValue(makeFileRow({ status: 'importing' }))
     mocks.markFileFailed.mockResolvedValue(makeFileRow({ status: 'failed' }))
     mocks.getDuplicateHashes.mockResolvedValue(new Set<string>())
+    mocks.getLastPlatformTransactionDate.mockResolvedValue(null)
     mocks.loadActivePatterns.mockResolvedValue([])
     mocks.categorizePipeline.mockResolvedValue(null)
     mocks.insertTransactionBatch.mockResolvedValue([])
@@ -1114,6 +1119,41 @@ describe('importFile', () => {
     })
   })
 
+  it('from-last mode skips same-day rows when lastImportedDate is set (D-01/D-03)', async () => {
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport([
+      { '"Data Movimento"': '2026-07-14', '"Descrizione"': 'Same day', '"Importo"': '-10.00' },
+      { '"Data Movimento"': '2026-07-15', '"Descrizione"': 'Next day', '"Importo"': '-20.00' },
+      { '"Data Movimento"': '2026-07-16', '"Descrizione"': 'Later', '"Importo"': '-30.00' },
+    ]))
+    mocks.getLastPlatformTransactionDate.mockResolvedValue('2026-07-14')
+    mocks.insertTransactionBatch.mockImplementation(async (_tx: unknown, insertedRows: Array<Record<string, unknown>>) => insertedRows)
+
+    const result = await importFile({
+      userId: USER_ID,
+      fileId: FILE_ID,
+      selectedFormatVersionId: 1,
+      importMode: 'from-last',
+    })
+
+    expect(result.importedCount).toBe(2)
+    expect(mocks.insertTransactionBatch).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.arrayContaining([
+        expect.objectContaining({ description: 'Next day' }),
+        expect.objectContaining({ description: 'Later' }),
+      ]),
+    )
+    const inserted = mocks.insertTransactionBatch.mock.calls[0]?.[1] as Array<{ description: string }>
+    expect(inserted.map((r) => r.description)).not.toContain('Same day')
+    expect(latestFileImportUpdate()).toMatchObject({
+      status: 'imported',
+      rowCount: 2,
+      importedCount: 2,
+      referenceStartedAt: new Date('2026-07-15T00:00:00.000Z'),
+      referenceEndedAt: new Date('2026-07-16T00:00:00.000Z'),
+    })
+  })
+
   it('persists zeroed stats for an empty parsed file without crashing', async () => {
     mocks.parseImportFile.mockResolvedValue(makeParsedImport([]))
 
@@ -1147,6 +1187,7 @@ describe('importFile', () => {
       userId: USER_ID,
       fileId: FILE_ID,
       selectedFormatVersionId: 1,
+      importMode: 'all',
     })
 
     expect(result).toMatchObject({
@@ -1415,6 +1456,7 @@ describe('importFile — post-commit discovery (TRIG-01)', () => {
     mocks.updateFileImportState.mockResolvedValue(makeFileRow({ status: 'importing' }))
     mocks.markFileFailed.mockResolvedValue(makeFileRow({ status: 'failed' }))
     mocks.getDuplicateHashes.mockResolvedValue(new Set<string>())
+    mocks.getLastPlatformTransactionDate.mockResolvedValue(null)
     mocks.loadActivePatterns.mockResolvedValue([])
     mocks.categorizePipeline.mockResolvedValue(null)
     mocks.insertTransactionBatch.mockResolvedValue([])
@@ -1543,6 +1585,7 @@ describe('analyzeFile', () => {
     mocks.updateFileAnalysisState.mockResolvedValue(makeFileRow({ status: 'analyzing' }))
     mocks.markFileFailed.mockResolvedValue(makeFileRow({ status: 'failed' }))
     mocks.getDuplicateHashes.mockResolvedValue(new Set<string>())
+    mocks.getLastPlatformTransactionDate.mockResolvedValue(null)
     mocks.loadImportFormatsForDetection.mockResolvedValue([makeFormatCandidate()])
   })
 

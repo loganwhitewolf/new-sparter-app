@@ -14,6 +14,7 @@ import {
 } from '@/lib/dal/files'
 import {
   getDuplicateHashes,
+  getLastPlatformTransactionDate,
   insertTransactionBatch,
   type TransactionInsertData,
 } from '@/lib/dal/transactions'
@@ -27,6 +28,11 @@ import {
 } from '@/lib/services/categorization'
 import { normalizeTransactionRow } from '@/lib/utils/import'
 import { countPreviewBuckets, type PreviewBucketCounts } from '@/lib/utils/import-preview-buckets'
+import {
+  applyImportModeFilter,
+  periodSpan,
+  type ImportMode,
+} from '@/lib/utils/import-mode-filter'
 import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
 import { getLatestClassificationSource, writeClassificationHistory } from '@/lib/dal/classification-history'
 import { loadImportFormatsForDetection } from '@/lib/dal/import-formats'
@@ -41,6 +47,11 @@ export type ImportAnalysisResult = {
   duplicateCount: number
   warnings: string[]
   errors: string[]
+  /** YYYY-MM-DD of last platform transaction, or null when platform empty (D-02). */
+  lastImportedDate: string | null
+  /** Full-file calendar span (YYYY-MM-DD) for range defaults (D-04). */
+  filePeriodStart: string | null
+  filePeriodEnd: string | null
   sampleRows: {
     rowIndex: number
     description: string
@@ -220,6 +231,72 @@ function applyExistingHashesToStats(stats: NormalizedImportStats, existingHashes
   }
 }
 
+/** Rebuild import stats from a mode-filtered subset of normalized rows (D-03). */
+function rebuildStatsFromRows(
+  normalizedRows: ReturnType<typeof normalizeTransactionRow>[],
+  existingHashes?: Set<string>,
+): NormalizedImportStats {
+  const seenHashes = new Set<string>()
+  const repeatedInFileHashes = new Set<string>()
+  const uniqueImportableHashes = new Set<string>()
+  const allHashes: string[] = []
+  let skippedOrDuplicateCount = 0
+  let importableCount = 0
+  let positiveTotal = toDecimal('0')
+  let negativeTotal = toDecimal('0')
+  let referenceStartedAt: Date | null = null
+  let referenceEndedAt: Date | null = null
+
+  for (const normalized of normalizedRows) {
+    if (normalized.amount) {
+      const amount = toDecimal(normalized.amount)
+      if (amount.gt(0)) positiveTotal = positiveTotal.plus(amount)
+      if (amount.lt(0)) negativeTotal = negativeTotal.plus(amount)
+    }
+
+    if (normalized.occurredAt) {
+      if (!referenceStartedAt || normalized.occurredAt < referenceStartedAt) referenceStartedAt = normalized.occurredAt
+      if (!referenceEndedAt || normalized.occurredAt > referenceEndedAt) referenceEndedAt = normalized.occurredAt
+    }
+
+    if (!normalized.valid || !normalized.transactionHash || !normalized.amount || !normalized.occurredAt) {
+      skippedOrDuplicateCount += 1
+      continue
+    }
+
+    allHashes.push(normalized.transactionHash)
+
+    if (seenHashes.has(normalized.transactionHash)) {
+      repeatedInFileHashes.add(normalized.transactionHash)
+      skippedOrDuplicateCount += 1
+      continue
+    }
+    seenHashes.add(normalized.transactionHash)
+
+    if (existingHashes?.has(normalized.transactionHash)) {
+      skippedOrDuplicateCount += 1
+      continue
+    }
+
+    uniqueImportableHashes.add(normalized.transactionHash)
+    importableCount += 1
+  }
+
+  return {
+    normalizedRows,
+    allHashes,
+    repeatedInFileHashes,
+    uniqueImportableHashes,
+    rowCount: normalizedRows.length,
+    importedCount: importableCount,
+    duplicateCount: skippedOrDuplicateCount,
+    positiveTotal: toDbDecimal(positiveTotal),
+    negativeTotal: toDbDecimal(negativeTotal),
+    referenceStartedAt,
+    referenceEndedAt,
+  }
+}
+
 const EMPTY_IMPORT_STATS: FullFileImportStats = {
   rowCount: 0,
   importedCount: 0,
@@ -332,6 +409,11 @@ export async function analyzeFile(input: {
 
   const safeErrorMessage = detected.errors[0] ? safeImportErrorMessage(detected.errors[0], 'Analysis failed.') : null
 
+  const lastImportedDate = best
+    ? await getLastPlatformTransactionDate(input.userId, best.platformId)
+    : null
+  const filePeriod = periodSpan(sampleRows)
+
   await updateFileAnalysisState({
     userId: input.userId,
     fileId: input.fileId,
@@ -372,6 +454,9 @@ export async function analyzeFile(input: {
     duplicateCount: fullStats.duplicateCount,
     warnings: detected.warnings,
     errors: detected.errors,
+    lastImportedDate,
+    filePeriodStart: filePeriod.start,
+    filePeriodEnd: filePeriod.end,
     sampleRows,
     previewBuckets,
   }
@@ -383,6 +468,9 @@ export async function importFile(input: {
   selectedFormatVersionId?: number
   overrideWarnings?: boolean
   subscriptionPlan?: SubscriptionPlan
+  importMode?: ImportMode
+  rangeStart?: string
+  rangeEnd?: string
 }): Promise<ImportFileResult> {
   const fileRow = await getFileForUser({ userId: input.userId, fileId: input.fileId })
   if (!fileRow) throw new Error('File not found or access denied.')
@@ -477,14 +565,24 @@ export async function importFile(input: {
 
   const best = detected.bestCandidate
   const plan = input.subscriptionPlan ?? 'free'
+  const importMode: ImportMode = input.importMode ?? 'from-last'
 
   try {
     const result = await db.transaction(async (tx) => {
       const patterns = await loadActivePatterns(tx, input.userId)
 
       const provisionalStats = deriveFullFileImportStats({ parsed, format: best, userId: input.userId })
-      const existingHashes = await getDuplicateHashes(tx, input.userId, provisionalStats.allHashes)
-      const fullStats = applyExistingHashesToStats(provisionalStats, existingHashes)
+      const lastImportedDate = await getLastPlatformTransactionDate(input.userId, best.platformId)
+      const filteredRows = applyImportModeFilter({
+        rows: provisionalStats.normalizedRows,
+        mode: importMode,
+        lastImportedDate,
+        rangeStart: input.rangeStart,
+        rangeEnd: input.rangeEnd,
+      })
+      const modeStats = rebuildStatsFromRows(filteredRows)
+      const existingHashes = await getDuplicateHashes(tx, input.userId, modeStats.allHashes)
+      const fullStats = applyExistingHashesToStats(modeStats, existingHashes)
 
       // Build transaction rows and per-descriptionHash aggregation in a single pass over normalized rows
       const transactionRows: TransactionInsertData[] = []
