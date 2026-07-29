@@ -218,12 +218,20 @@ test.describe('Dashboard - LENS: cassa/competenza switch', () => {
 
     if ((await firstCategoryLink.count()) > 0) {
       await firstCategoryLink.click()
+      // WR-02/CR-02 regression guard: the category-row click-through must land on a URL
+      // that ALREADY carries ?lens=competenza (buildDashboardCategoryDetailHref forwarding the
+      // lens) — asserted BEFORE the switch is touched again, so this can actually fail if the
+      // lens silently reverted to cassa on navigation.
+      await expect(page).toHaveURL(/\?.*lens=competenza/)
+      competenzaButton = page.getByRole('button', { name: 'Competenza' })
+      await expect(competenzaButton).toBeVisible()
+      await expect(competenzaButton).toHaveAttribute('aria-pressed', 'true')
     } else {
       await openDashboardPath(page, '/dashboard/categories/1')
+      competenzaButton = page.getByRole('button', { name: 'Competenza' })
+      await expect(competenzaButton).toBeVisible()
     }
 
-    competenzaButton = page.getByRole('button', { name: 'Competenza' })
-    await expect(competenzaButton).toBeVisible()
     await competenzaButton.click()
     await expect(page).toHaveURL(/\?lens=competenza/)
     await expect(competenzaButton).toHaveAttribute('aria-pressed', 'true')
