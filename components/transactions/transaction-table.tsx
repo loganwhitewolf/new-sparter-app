@@ -155,6 +155,22 @@ function computeAmortizationEligibility(transaction: TransactionListRow): Amorti
 }
 
 
+/**
+ * Resolves whether this row is the ANCHOR (outflow) or the COUNTERPART (inflow) of a pairing,
+ * purely from fields transactionListSelect already exposes — pairedWithId and the sign of the
+ * row's own amount. Safe with zero DAL change: assertOutflowAnchorAmount/assertInflowRefundAmount
+ * (lib/services/reimbursement-invariant.ts) already guarantee, at write time, that every
+ * reimbursement anchor is negative and every linked refund/counterpart is positive — for BOTH
+ * amortization-sale realization and v2.8 reimbursements, which flow through the same
+ * createPairTx path (D-N1). There is no separate branch to add here.
+ */
+function resolvePairRole(transaction: TransactionListRow): 'anchor' | 'counterpart' | null {
+  if (transaction.pairedWithId === null) {
+    return null
+  }
+  return toDecimal(transaction.amount).isNegative() ? 'anchor' : 'counterpart'
+}
+
 function transactionRowLabel(transaction: TransactionListRow) {
   const raw =
     transaction.customTitle?.trim() ||
@@ -554,6 +570,7 @@ export function TransactionTable({
 
             // Keep transfer rows neutral regardless of sign; all other rows follow sign.
             const amountColorClass = amountToneClass(transaction.amount, transaction.categoryType)
+            const pairRole = resolvePairRole(transaction)
 
             return (
               <TableRow
@@ -600,13 +617,21 @@ export function TransactionTable({
                     </div>
                   </div>
                 </TableCell>
-                <TableCell
-                  className={cn(
-                    'text-right font-mono tabular-nums',
-                    amountColorClass,
+                <TableCell className="text-right font-mono tabular-nums">
+                  {pairRole === 'anchor' && transaction.pairedNetAmount ? (
+                    <div className="flex flex-col items-end leading-tight">
+                      <span className={amountToneClass(transaction.pairedNetAmount, transaction.categoryType)}>
+                        {formatAmount(transaction.pairedNetAmount, transaction.currency)}
+                      </span>
+                      <span className="text-xs text-muted-foreground line-through opacity-60">
+                        {formatAmount(transaction.amount, transaction.currency)}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className={amountColorClass}>
+                      {formatAmount(transaction.amount, transaction.currency)}
+                    </span>
                   )}
-                >
-                  {formatAmount(transaction.amount, transaction.currency)}
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm tabular-nums">
                   {formatDate(transaction.occurredAt)}
