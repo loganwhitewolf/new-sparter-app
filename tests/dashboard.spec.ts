@@ -186,6 +186,83 @@ test.describe('Dashboard - DASH-02: Category breakdown', () => {
   })
 })
 
+test.describe('Dashboard - LENS: cassa/competenza switch', () => {
+  test('LENS switch renders on /dashboard/overview and flipping it updates the URL', async ({
+    page,
+  }) => {
+    await openDashboardPath(page, '/dashboard/overview')
+
+    const competenzaButton = page.getByRole('button', { name: 'Competenza' })
+    await expect(competenzaButton).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Cassa' })).toBeVisible()
+
+    await competenzaButton.click()
+    await expect(page).toHaveURL(/\?lens=competenza/)
+    await expect(competenzaButton).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('LENS switch renders and is functional on /dashboard/categories and /dashboard/categories/[id]', async ({
+    page,
+  }) => {
+    await openDashboardPath(page, '/dashboard/categories')
+
+    let competenzaButton = page.getByRole('button', { name: 'Competenza' })
+    await expect(competenzaButton).toBeVisible()
+    await competenzaButton.click()
+    await expect(page).toHaveURL(/\?lens=competenza/)
+    await expect(competenzaButton).toHaveAttribute('aria-pressed', 'true')
+
+    const firstCategoryLink = page
+      .getByRole('link', { name: /apri dettaglio categoria/i })
+      .first()
+
+    if ((await firstCategoryLink.count()) > 0) {
+      await firstCategoryLink.click()
+    } else {
+      await openDashboardPath(page, '/dashboard/categories/1')
+    }
+
+    competenzaButton = page.getByRole('button', { name: 'Competenza' })
+    await expect(competenzaButton).toBeVisible()
+    await competenzaButton.click()
+    await expect(page).toHaveURL(/\?lens=competenza/)
+    await expect(competenzaButton).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('LENS switch is disabled with the explanatory note on /dashboard/tags', async ({
+    page,
+  }) => {
+    await openDashboardPath(page, '/dashboard/tags')
+
+    await expect(page.getByRole('button', { name: 'Cassa' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Competenza' })).toBeDisabled()
+    await expect(
+      page.getByText('i tag sono all-time: la lente non cambia i totali')
+    ).toBeVisible()
+  })
+
+  test('lens survives tab navigation', async ({ page }) => {
+    await openDashboardPath(page, '/dashboard/overview?lens=competenza')
+
+    await page.getByRole('link', { name: 'Categorie' }).click()
+    await expect(page).toHaveURL(/lens=competenza/)
+  })
+
+  test('no switch exists on /tags/[id]', async ({ page }) => {
+    await openDashboardPath(page, '/dashboard/tags')
+
+    const firstTagLink = page.getByRole('link', { name: /apri il tag/i }).first()
+
+    if ((await firstTagLink.count()) > 0) {
+      await firstTagLink.click()
+      await expect(page.getByRole('button', { name: 'Cassa' })).toHaveCount(0)
+    } else {
+      await openDashboardPath(page, '/tags/1')
+      await expect(page.getByRole('button', { name: 'Cassa' })).toHaveCount(0)
+    }
+  })
+})
+
 test.describe('Dashboard - DASH-03: Monthly trend', () => {
   test('DASH-03 trend chart renders grouped series controls', async ({ page }) => {
     await openDashboard(page)
