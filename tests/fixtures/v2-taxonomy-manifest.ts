@@ -110,12 +110,13 @@ export const V2_SUBCATEGORY_MANIFEST: SubcategoryManifestEntry[] = [
   { slug: 'universita', natureCode: 'essential' },
   { slug: 'spese-scolastiche', natureCode: 'essential' },
   { slug: 'corsi', natureCode: 'discretionary' },
-  // OUT — Vacanze (5)
+  // OUT — Vacanze (6 active semantics; attivita/cibo rows remain in seed but deactivated via extras)
   { slug: 'alloggio', natureCode: 'discretionary' },
   { slug: 'trasporto', natureCode: 'discretionary' },
   { slug: 'attivita-e-intrattenimento', natureCode: 'discretionary' },
   { slug: 'cibo-e-bevande', natureCode: 'discretionary' },
   { slug: 'assicurazione-viaggio', natureCode: 'discretionary' },
+  { slug: 'pacchetto-vacanze', natureCode: 'discretionary' },
   // OUT — Regali e donazioni (2)
   { slug: 'regali', natureCode: 'discretionary' },
   { slug: 'donazioni-beneficenza', natureCode: 'discretionary' },

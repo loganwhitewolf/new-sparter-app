@@ -949,8 +949,9 @@ async function ensureTradeRepublicCsvGlobalFormat(database: Db): Promise<void> {
 // isActive, so a second run after deactivation still resolves the two ids and safely re-runs
 // both UPDATEs as 0-row no-ops (idempotent, T-67-05). The `categoryId: 4` filter is deliberate
 // belt-and-suspenders scoping to `vacanze`'s own rows even though the two slugs are already
-// unique system-wide — the three kept siblings (alloggio, trasporto, assicurazione-viaggio)
-// share the SAME parent category but are never touched by this step (T-67-04).
+// unique system-wide — the kept siblings (alloggio, trasporto, assicurazione-viaggio, and
+// later pacchetto-vacanze) share the SAME parent category but are never touched by this step
+// (T-67-04).
 async function vacanzeAudit(database: Db): Promise<void> {
   const targets = await database
     .select({ id: subCategory.id })
@@ -1271,6 +1272,35 @@ async function ensureFinecoMoneymapGlobalFormat(database: Db): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Step: insert-pacchetto-vacanze
+// Vacanze subcategory for travel-agency / tour-operator packages (intrinsically travel spend
+// whose object is a package, not lodging). Restores `alloggio` to lodging-only semantics.
+// Which trip is a Tag, not taxonomy (CONTEXT.md). Idempotent slug lookup; nature by code.
+// ---------------------------------------------------------------------------
+
+async function insertPacchettoVacanze(database: Db): Promise<void> {
+  const existing = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'pacchetto-vacanze'), isNull(subCategory.userId)))
+    .limit(1)
+  if (existing.length > 0) {
+    console.log('    insert pacchetto-vacanze: already exists, skipped')
+    return
+  }
+
+  await database.insert(subCategory).values({
+    categoryId: 4,
+    name: 'pacchetto vacanze',
+    slug: 'pacchetto-vacanze',
+    natureId: sql`(SELECT id FROM ${nature} WHERE ${nature.code} = 'discretionary')`,
+    displayOrder: 0,
+    isActive: true,
+  })
+  console.log('    insert pacchetto-vacanze: 1 row inserted')
+}
+
+// ---------------------------------------------------------------------------
 // Registry — append new taxonomy migration steps here (not regex patterns — see seed-patterns.ts)
 // ---------------------------------------------------------------------------
 
@@ -1296,6 +1326,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'reorganize-leisure-subcategories', run: reorganizeLeisureSubcategories },
   { name: 'merge-duplicate-fineco-platforms', run: mergeDuplicateFinecoPlatforms },
   { name: 'ensure-fineco-moneymap-global-format', run: ensureFinecoMoneymapGlobalFormat },
+  { name: 'insert-pacchetto-vacanze', run: insertPacchettoVacanze },
 ]
 
 export const STEP_NAMES = STEPS.map((step) => step.name)

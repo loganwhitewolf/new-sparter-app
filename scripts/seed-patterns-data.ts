@@ -8,17 +8,84 @@ export type SystemCategorizationPatternSeed = {
   confidence: number;
   priority: number;
   description: string;
+  /**
+   * Set when the pattern intentionally matches substrings (no \b on its alternatives), e.g.
+   * to catch compounds like "GPadel" / "SuperFitness". Audit-only metadata — never inserted
+   * into the DB — so scripts/audit-pattern-overlaps.ts does not report the missing word
+   * boundaries as findings.
+   */
+  substringMatch?: true;
 };
 
 export const systemCategorizationPatterns: SystemCategorizationPatternSeed[] = [
   // --- baseline (formerly seed-data.ts) ---
+  // Consistency rule for NEW alternatives: an alternative ≤4 chars, or matching a common
+  // Italian/English word, or a surname, must carry disambiguating context (mercato,
+  // supermercat\w*, discount, market) and cannot stand alone. False positives cost more than
+  // an uncategorized transaction.
+  //
+  // Grandfathered exceptions — bare short tokens kept because they are unambiguous chain
+  // brands on POS descriptors with no observed collision: pam, crai, lidl, aldi, unes,
+  // "dec[oò]", "dpi[ùu]", a&o. Do not use them to justify new short bare alternatives.
   {
     pattern:
-      "(?:\\bcoop\\b|\\bnova coop\\b|\\bmercato big\\b|\\bmercatò\\b|mercato.*local|\\besselunga\\b|\\bcarrefour\\b|\\bconad\\b|\\bpam\\b|\\btigre\\b|\\btigros\\b|\\biper\\b|\\bsupermercato\\b|\\bsuper\\b|\\bmarket\\b|\\bcrai\\b|\\blidl\\b|\\beurospin\\b|\\bmd\\b|\\baldi\\b|\\bdespar\\b|\\beurospar\\b|\\binterspar\\b|\\bipercoop\\b|\\bbennet\\b|\\bil gigante\\b|\\bunes\\b|\\bu2\\b|\\bu!\\b|\\bfamila\\b|\\bsisa\\b|\\bsigma\\b|\\btodis\\b|\\bpewex\\b|\\biperal\\b|\\bpenny\\b|\\bprix\\b|\\bprix quality\\b|\\bdpi[ùu]\\b|\\bd[- ]?pi[ùu]\\b|\\bins\\b|\\bin'?s\\b|\\bnaturas[iì]\\b|\\bnatura s[iì]\\b|\\becoranaturasi\\b|\\btuod[iì]\\b|\\bagor[aà]\\b|\\bselex\\b|\\bvisotto\\b|\\bmigross\\b|\\btosano\\b|\\bauchan\\b|\\bsimply\\b|\\bintermarche\\b|\\bintermarch[eé]\\b|\\bdec[oò]\\b|\\bmegamark\\b|\\bgabrielli\\b|\\bmagazzini gabrielli\\b|\\bleader price\\b|\\bcadoro\\b|\\brossetto\\b|\\baspiag\\b|\\bsidis\\b|\\bgulliver\\b|\\bcastoro\\b|\\bmaxi d\\b|\\bmaxid\\b|\\brisparmio casa\\b|\\b7[- ]?eleven\\b|\\bal[iì] super\\b|\\bsupermercati al[iì]\\b|\\ba&o\\b|\\bpaladini\\b|\\bmacelleria\\b|\\bmacellaio\\b|\\bpescheria\\b|\\bpescivendolo\\b|\\bittic[oa]\\b|\\bortofrutta\\b|\\bortofrutt[ai]\\b|\\bfrutta e verdura\\b|\\bfruttivendolo\\b|\\bpanificio\\b|\\bpanetteria\\b|\\bforno\\b|\\bfornaio\\b|\\bforneria\\b|\\bsalumeria\\b|\\bsalumiere\\b|\\bcaseificio\\b|\\blatticin[io]\\b|\\blatticini\\b|\\bformaggi\\b|\\bbilla\\b|\\bpastificio\\b|\\beataly\\b|\\bsapore di mare\\b)",
+      "(?:" +
+      "\\bnova coop\\b|\\bcoop\\s+liguria\\b|\\bipercoop\\b|" +
+      "\\bmercato big\\b|\\bmercatò\\b|\\bmercato\\s+local[ei]\\b|" +
+      "\\besselunga\\b|\\bcarrefour\\b|\\bconad\\b|\\bpam\\b|\\btigros\\b|" +
+      "\\bsupermercato\\b|\\bcrai\\b|\\blidl\\b|\\beurospin\\b|" +
+      "\\bmd\\s+discount\\b|\\baldi\\b|\\bdespar\\b|\\beurospar\\b|\\binterspar\\b|" +
+      "\\bbennet\\b|\\bil gigante\\b|\\bunes\\b|\\bu2\\s+supermercat\\w*\\b|" +
+      "\\bfamila\\b|\\bsisa\\s+(?:supermercat\\w*|discount)\\b|" +
+      "\\bsigma\\s+(?:supermercat\\w*|conad)\\b|\\btodis\\b|\\bpewex\\b|\\biperal\\b|" +
+      "\\bpenny\\s+market\\b|\\bprix\\s+quality\\b|" +
+      "\\bdpi[ùu]\\b|\\bd[- ]?pi[ùu]\\b|\\bin'?s\\s+mercato\\b|" +
+      "\\bnaturas[iì]\\b|\\bnatura s[iì]\\b|\\becoranaturasi\\b|\\btuod[iì]\\b|" +
+      "\\bagor[aà]\\s+(?:market|supermercat\\w*)\\b|" +
+      "\\bgruppo\\s+selex\\b|\\bselex\\s+gruppo\\b|" +
+      "\\bvisotto\\s+(?:supermercat\\w*|market)\\b|\\bsupermercat\\w*\\s+visotto\\b|" +
+      "\\bmigross\\b|\\btosano\\b|\\bauchan\\b|\\bsimply\\s+market\\b|" +
+      "\\bintermarche\\b|\\bintermarch[eé]\\b|\\bdec[oò]\\b|\\bmegamark\\b|" +
+      "\\bmagazzini\\s+gabrielli\\b|\\bleader price\\b|\\bcadoro\\b|" +
+      "\\bsupermercat\\w*\\s+rossetto\\b|" +
+      "\\baspiag\\b|\\bsidis\\b|" +
+      "\\bgulliver\\s+(?:market|supermercat\\w*)\\b|" +
+      "\\bmaxi d\\b|\\bmaxid\\b|\\brisparmio casa\\b|\\b7[- ]?eleven\\b|" +
+      "\\bal[iì] super\\b|\\bsupermercati al[iì]\\b|\\ba&o\\b|" +
+      "\\bsupermercat\\w*\\s+paladini\\b|\\bpaladini\\s+supermercat\\w*\\b|" +
+      "\\bmacelleria\\b|\\bmacellaio\\b|\\bpescheria\\b|\\bpescivendolo\\b|\\bittic[oa]\\b|" +
+      "\\bortofrutt[ai]\\b|\\bfrutta e verdura\\b|\\bfruttivendolo\\b|" +
+      "\\bpanificio\\b|\\bpanetteria\\b|\\bfornaio\\b|\\bforneria\\b|" +
+      "\\bsalumeria\\b|\\bsalumiere\\b|\\bcaseificio\\b|\\blatticin[io]\\b|\\bformaggi\\b|" +
+      "\\bbilla\\b|\\bpastificio\\b|\\beataly\\b|\\bsapore di mare\\b" +
+      ")",
     subCategorySlug: "spesa-quotidiana",
     confidence: 0.9,
     priority: 10,
     description: "Grocery: supermarkets, fresh food shops, and named merchants",
+  },
+  // Travel agencies / trip packages → Vacanze/pacchetto-vacanze.
+  //
+  // Object of spend is a trip package (agency/tour operator), not lodging. Mapping packages
+  // onto `alloggio` was a best-effort remap forbidden by Phase 67 D-12 (correctness over
+  // convenience). Which specific trip is a Tag axis (CONTEXT.md), not taxonomy.
+  //
+  // Precedence: patterns load ASC by priority; LOWER number wins. Priority 9 sits just above
+  // grocery (10) for Fineco "TRAVEL SPECIALIST … Ins: …", and stays well below travel-only
+  // trasporto and hotel (both 100) so flights/ferries/car rental/lodging keep their patterns.
+  //
+  // Alternatives are brand/compound forms only: bare `viaggi` and `booking` are generic and
+  // matched flight/car-rental descriptors ("RYANAIR BOOKING REF …", "AUTONOLEGGIO HERTZ
+  // BOOKING"), so they carry disambiguating context.
+  {
+    pattern:
+      "(?:\\btravel\\s+specialist\\b|\\bagenzia\\s+viaggi\\b|\\bviaggi\\s+e\\s+turismo\\b|" +
+      "\\bbooking\\.com\\b|\\bexpedia\\b|\\btour\\s+operator\\b)",
+    subCategorySlug: "pacchetto-vacanze",
+    confidence: 0.85,
+    priority: 9,
+    description:
+      "Travel agencies and trip packages (travel specialist, agenzia viaggi, booking.com, expedia) → pacchetto-vacanze",
   },
   {
     pattern: "(?:\\bamazon\\b|\\bamzn\\b)",
@@ -131,6 +198,7 @@ export const systemCategorizationPatterns: SystemCategorizationPatternSeed[] = [
       "atletica|maratona|triathlon|ironman|running|ciclismo|bicicletta|cycling|\\bbici\\b|" +
       "equitazione|maneggio|\\bscherma\\b|hockey|badminton|danza|dance|\\bsport\\b)",
     subCategorySlug: "sport-e-fitness",
+    substringMatch: true,
     confidence: 0.9,
     priority: 35,
     description:

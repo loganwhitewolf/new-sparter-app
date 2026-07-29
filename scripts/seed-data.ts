@@ -605,6 +605,14 @@ export const subCategories = [
     isActive: true,
   },
   {
+    categoryId: 4,
+    name: "pacchetto vacanze",
+    slug: "pacchetto-vacanze",
+    natureId: 4,
+    displayOrder: 0,
+    isActive: true,
+  },
+  {
     categoryId: 5,
     name: "regali",
     slug: "regali",
