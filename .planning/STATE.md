@@ -5,15 +5,15 @@ milestone_name: Amortization
 current_phase: 80
 current_phase_name: dashboard-accrual-lens
 status: executing
-stopped_at: Completed 80-06-PLAN.md
-last_updated: "2026-07-29T09:32:43.613Z"
+stopped_at: Completed 80-04-PLAN.md
+last_updated: "2026-07-29T09:38:05.209Z"
 last_activity: 2026-07-29
 last_activity_desc: Phase 80 execution started
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 18
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 ## Current Position
 
 Phase: 80 (dashboard-accrual-lens) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-07-29 — Phase 80 execution started
 
@@ -411,6 +411,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 80-03: requirements.mark-complete NOT run for LENS-04/LENS-05 — this plan delivers only the DAL/pure-function backend (ledgerRowSource on movers/chart, lens-aware navigation, resolveYear cross-lens clamp); the year-selector UI wiring lands in a later Wave plan
 - [Phase ?]: 80-06: getTagTotals call site left exactly as getTagTotals(userId) — parsed lens only sets LensSwitch's visual state, never passed to the DAL (D-05)
 - [Phase ?]: 80-06: requirements.mark-complete NOT run for LENS-01 — Plans 80-04/80-05 (overview full reflection, categories/categories-detail wiring) had not executed yet at this plan's runtime; D-03's all-four-routes contract completes at Plan 80-07
+- [Phase ?]: 80-04: buildDashboardTabHref preserves ?lens= mirroring the existing preset/type/sort/tag precedent (D-03)
+- [Phase ?]: 80-04: page-level lens parsing reordered to run BEFORE the year fetch (parseLensParam -> getYearsWithData for both lenses -> resolveYear) since the D-10 clamp needs the active lens to distinguish active vs other years[]
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -548,9 +550,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 80-06-PLAN.md
+**Stopped at:** Completed 80-04-PLAN.md
 
-Last session: 2026-07-29T09:32:38.038Z
+Last session: 2026-07-29T09:37:41.243Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
@@ -647,3 +649,4 @@ Last session: 2026-07-29T09:32:38.038Z
 | Phase 80 P02 | ~20min | 3 tasks | 2 files |
 | Phase 80 P03 | 11min | 2 tasks | 8 files |
 | Phase 80 P06 | 10min | 1 tasks | 1 files |
+| Phase 80 P04 | ~15min | 2 tasks | 3 files |

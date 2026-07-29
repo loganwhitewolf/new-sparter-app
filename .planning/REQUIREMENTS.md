@@ -25,8 +25,8 @@ Scoped capability contract for milestone v2.9. Model locked in [ADR 0019](../doc
 - [ ] **LENS-01**: User can switch the whole dashboard between a "cassa" (cash) view and a "competenza" (accrual) view with one global control.
 - [ ] **LENS-02**: Under the accrual view, every dashboard widget — bar chart, KPI cards, category breakdown, movers, deviations — reflects spread instalments instead of the purchase-day amount.
 - [x] **LENS-03**: Under the cash view, all dashboard figures remain byte-identical to today's behavior.
-- [ ] **LENS-04**: Under the accrual view, the dashboard shows the whole selected year including future instalment months, with instalments past year-end appearing in the following year.
-- [ ] **LENS-05**: The year and month selectors offer periods that exist only as instalments under the accrual view.
+- [x] **LENS-04**: Under the accrual view, the dashboard shows the whole selected year including future instalment months, with instalments past year-end appearing in the following year.
+- [x] **LENS-05**: The year and month selectors offer periods that exist only as instalments under the accrual view.
 
 ## Future Requirements (deferred)
 
@@ -61,5 +61,5 @@ Filled at roadmap creation (2026-07-27). 15/15 v2.9 requirements mapped across P
 | LENS-01 | Phase 80 | Pending |
 | LENS-02 | Phase 80 | Pending |
 | LENS-03 | Phase 77 | Complete |
-| LENS-04 | Phase 80 | Pending |
-| LENS-05 | Phase 80 | Pending |
+| LENS-04 | Phase 80 | Complete |
+| LENS-05 | Phase 80 | Complete |
