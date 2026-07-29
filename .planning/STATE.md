@@ -5,15 +5,15 @@ milestone_name: Amortization
 current_phase: 80
 current_phase_name: dashboard-accrual-lens
 status: executing
-stopped_at: Completed 80-03-PLAN.md
-last_updated: "2026-07-29T09:28:14.914Z"
+stopped_at: Completed 80-06-PLAN.md
+last_updated: "2026-07-29T09:32:43.613Z"
 last_activity: 2026-07-29
 last_activity_desc: Phase 80 execution started
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 18
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-27)
 ## Current Position
 
 Phase: 80 (dashboard-accrual-lens) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-07-29 — Phase 80 execution started
 
@@ -409,6 +409,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 80-03: getYearsWithData/getMonthsWithData's competenza branches UNION transaction/amortization_instalment directly, never ledgerEntryCash/ledgerEntryAccrual — these are navigation functions ('any activity'), not netting aggregations; the ledger views' NOT EXISTS refund-exclusion would silently drop a refund year/month (T-80-06)
 - [Phase ?]: 80-03: getYearsWithData's cash branch kept as a separate unindented early-return AFTER the new competenza branch (not nested in an if-block) so git diff shows zero line changes inside the pre-existing cash path, satisfying the plan's byte-identical acceptance criterion literally
 - [Phase ?]: 80-03: requirements.mark-complete NOT run for LENS-04/LENS-05 — this plan delivers only the DAL/pure-function backend (ledgerRowSource on movers/chart, lens-aware navigation, resolveYear cross-lens clamp); the year-selector UI wiring lands in a later Wave plan
+- [Phase ?]: 80-06: getTagTotals call site left exactly as getTagTotals(userId) — parsed lens only sets LensSwitch's visual state, never passed to the DAL (D-05)
+- [Phase ?]: 80-06: requirements.mark-complete NOT run for LENS-01 — Plans 80-04/80-05 (overview full reflection, categories/categories-detail wiring) had not executed yet at this plan's runtime; D-03's all-four-routes contract completes at Plan 80-07
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -546,9 +548,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 80-03-PLAN.md
+**Stopped at:** Completed 80-06-PLAN.md
 
-Last session: 2026-07-29T09:28:14.906Z
+Last session: 2026-07-29T09:32:38.038Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
@@ -644,3 +646,4 @@ Last session: 2026-07-29T09:28:14.906Z
 | Phase 80 P01 | 25min | 2 tasks | 12 files |
 | Phase 80 P02 | ~20min | 3 tasks | 2 files |
 | Phase 80 P03 | 11min | 2 tasks | 8 files |
+| Phase 80 P06 | 10min | 1 tasks | 1 files |
