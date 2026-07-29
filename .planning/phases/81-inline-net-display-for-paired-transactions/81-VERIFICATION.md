@@ -1,11 +1,12 @@
 ---
 phase: 81-inline-net-display-for-paired-transactions
 verified: 2026-07-29T14:32:47Z
-status: human_needed
+status: passed
 score: 3/3 truths verified
 behavior_unverified: 0
 overrides_applied: 0
 human_verification:
+
   - test: "On staging/local, open the transactions table with a real closed-for-sale amortization plan (D-N2) and a real v2.8 reimbursement pairing (D-N3): confirm the anchor row shows the net figure prominently with the gross amount struck-through/opaque beneath it, and the counterpart row shows the 'riduzione di …' badge with an attenuated amount and correct link target."
     expected: "Anchor row reads net-primary + struck-through gross; counterpart row reads attenuated + badge linking to the anchor's own detail page; unpaired rows look identical to before the phase."
     why_human: "Held out by the phase itself (SUMMARY 'Notes / held-out'): renderToStaticMarkup assertions prove the markup/href are correct, but the live-browser visual treatment (typography scale, opacity, truncation on real merchant labels) on real production-shaped data was explicitly deferred to a human eyeball pass before shipping v2.9."

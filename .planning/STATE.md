@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Amortization
 current_phase: 81
-status: executed
-stopped_at: Completed 81-01-PLAN.md (inline net display for paired transactions — both tasks done, ready for verification)
-last_updated: "2026-07-29T16:30:00.000Z"
+status: completed
+stopped_at: Completed 80-07-PLAN.md (Phase 80 closeout — all plans done, ready for verification)
+last_updated: "2026-07-29T15:33:11.975Z"
 last_activity: 2026-07-29
-last_activity_desc: Phase 81 executed (81-01 complete)
+last_activity_desc: Phase 81 complete
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 19
   completed_plans: 19
 current_phase_name: inline-net-display-for-paired-transactions
@@ -23,14 +23,14 @@ current_phase_name: inline-net-display-for-paired-transactions
 See: .planning/PROJECT.md (updated 2026-07-27)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 80 — dashboard-accrual-lens
+**Current focus:** Milestone v2.9 (Amortization) complete — all phases done, ready to close the milestone
 
 ## Current Position
 
-Phase: 81 — inline-net-display-for-paired-transactions (v2.9 UAT closure)
-Plan: 81-01 complete (2 tasks: anchor net-primary + struck gross; counterpart reduction badge + attenuated amount)
-Status: Executed — ready for verification
-Last activity: 2026-07-29 — Phase 81 executed
+Phase: 81
+Plan: Not started
+Status: All phases complete
+Last activity: 2026-07-29 — Phase 81 complete
 
 ## Roadmap (v2.9 — Phases 77-80)
 
@@ -561,11 +561,11 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 80-07-PLAN.md (Phase 80 closeout — all plans done, ready for verification)
+**Stopped at:** Phase 81 complete (inline net display for paired transactions) — UAT 4/4 passed, verification passed, security verified. Milestone v2.9 100% complete.
 
-Last session: 2026-07-29T09:54:09.927Z
+Last session: 2026-07-29
 
-**Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
+**Next:** `/gsd-complete-milestone v2.9` to archive the milestone and prepare for the next.
 
 ## Operator Next Steps
 

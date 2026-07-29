@@ -214,7 +214,7 @@ resolved client-side from the sign of `amount` (safe because `assertOutflowAncho
 `assertInflowRefundAmount` already enforce that invariant at write time) — zero DAL change. The
 table is cash-only (not lens-aware): the net shown is the cash net (initial − sale/refund).
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 
