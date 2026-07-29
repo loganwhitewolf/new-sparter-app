@@ -166,7 +166,12 @@ export function ExpenseDetailClient({ expense, categories, mostUsed }: Props) {
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Titolo
         </span>
-        <ExpenseTitleEdit id={expense.id} title={expense.title} onSuccess={() => router.refresh()} />
+        <ExpenseTitleEdit
+          id={expense.id}
+          title={expense.title}
+          onSuccess={() => router.refresh()}
+          variant="detail"
+        />
       </div>
       <div className="flex flex-col gap-1">
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -340,12 +345,11 @@ export function ExpenseDetailClient({ expense, categories, mostUsed }: Props) {
 
   return (
     <>
+      {/* No header title/amount here: the expense title already lives in the "Dati" card
+          (un-truncated via variant=detail) and the amount in "Riepilogo", so the shell shows
+          only the back link — avoids the duplicated, ellipsis-clipped heading. */}
       <DetailPageShell
         backHref={APP_ROUTES.expenses}
-        title={expense.title}
-        amount={formatSignedAmount(expense.totalAmount)}
-        amountInline
-        amountToneClassName={amountClass}
         layout="two-column"
         datiCard={datiCard}
         collegamentiCard={collegamentiCard}
