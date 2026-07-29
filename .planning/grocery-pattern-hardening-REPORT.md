@@ -13,7 +13,9 @@ Language: product/merchant strings may be Italian; code, tests, comments, and th
 
 Placed as an English comment above the grocery pattern in `scripts/seed-patterns-data.ts`:
 
-> An alternative ≤4 chars, or matching a common Italian word, or a surname, must carry disambiguating context (`mercato`, `supermercat\w*`, `discount`, `market`) and cannot stand alone.
+> A **new** alternative ≤4 chars, or matching a common Italian/English word, or a surname, must carry disambiguating context (`mercato`, `supermercat\w*`, `discount`, `market`) and cannot stand alone.
+
+Scoped to new alternatives, with the grandfathered exceptions named in the comment: `pam`, `crai`, `lidl`, `aldi`, `unes`, `dec[oò]`, `dpi[ùu]`, `a&o` stay bare as unambiguous chain brands on POS descriptors. Stating the rule unqualified would have made it a false claim about the pattern directly below it.
 
 ---
 
@@ -66,10 +68,26 @@ Placed as an English comment above the grocery pattern in `scripts/seed-patterns
 
 | Field | Value |
 |---|---|
-| Alternatives | `travel specialist`, `agenzia viaggi`, `\bviaggi\b`, `booking`, `expedia`, `\btour operator\b` |
+| Alternatives | `travel specialist`, `agenzia viaggi`, `viaggi e turismo`, `booking\.com`, `expedia`, `tour operator` |
 | `subCategorySlug` | `alloggio` (locked — no Vacanze agency slug invented; not `trasporto` / not `assicurazione-viaggio`) |
-| Priority | **5** (ASC load order; beats grocery priority 10) |
+| Priority | **9** (ASC load order; beats grocery 10, stays far below trasporto/hotel 100) |
 | Collision check | Fineco §1 description → `alloggio` via `travel specialist`; grocery alone returns null after Ins restrict |
+
+### Review correction (post-review)
+
+The first version shipped bare `\bviaggi\b` / `\bbooking\b` at priority **5**. Since `applyTier1Regex` returns on the first hit over patterns loaded ASC by priority, that placed the pattern in the highest-precedence tier and made it shadow the Phase 67 travel-only `trasporto` pattern and `\bhotel\b` (both priority 100). Verified misroutes:
+
+| description | was | now |
+|---|---|---|
+| `RYANAIR BOOKING REF X7K2P9` | `alloggio` | `trasporto` |
+| `EASYJET ONLINE BOOKING` | `alloggio` | `trasporto` |
+| `AUTONOLEGGIO HERTZ BOOKING` | `alloggio` | `trasporto` |
+| `HOTEL BOOKING FEE` | `alloggio` (via travel) | `alloggio` (via hotel) |
+| `TICKETONE BOOKING FEE CONCERTO` | `alloggio` | _(uncategorized)_ |
+| `RIMBORSO SPESE VIAGGI DIPENDENTE` | `alloggio` | _(uncategorized)_ |
+| `ASSICURAZIONE VIAGGI EUROPE ASSISTANCE` | `alloggio` | _(uncategorized)_ |
+
+Bare `\bviaggi\b` and `\bbooking\b` are exactly the generic-word class this task removed from grocery (`\bsuper\b`, `\bmarket\b`, `\biper\b`) — the same rule now applies to them. Priority moved to 9: the only requirement is beating grocery, and after the `Ins:` restrict grocery no longer matches the Fineco string at all. Locked by regression tests in `tests/categorization-match.test.ts`.
 
 ---
 
@@ -95,10 +113,26 @@ No `riskyAlternatives` section existed yet. Grocery still contained bare `\bins\
   "patternCount": 47,
   "regexConflicts": 6,
   "riskyAlternatives": {
-    "count": 107
+    "count": 56
   }
 }
 ```
+
+The risky-alt count went 107 → 56 after review: 58 of the original findings were `missing-word-boundary` fired at the `sport-e-fitness` pattern, which matches substrings **by design** (compounds like `GPadel`, `SuperFitness`). That pattern now carries an explicit `substringMatch: true` flag — audit-only metadata, never inserted into the DB — and the check skips it. A section that is 60% known-false is a section nobody reads.
+
+Reason codes now emitted:
+
+| reason | count | meaning |
+|---|---|---|
+| `short-literal-le-4` | 44 | literal ≤4 chars (mostly grandfathered chain brands) |
+| `missing-word-boundary` | 10 | no `\b`, on a pattern that did not opt into substring matching |
+| `unbounded-dot-star` | 9 | `.*` can bridge unrelated description fields |
+| `standalone-generic-word` | 0 | bare common word with no disambiguating context |
+| `bank-boilerplate-bait` | 0 | alternative matches a bank field label (`Ins:`, `Ben:`, …) |
+
+`standalone-generic-word` is the check added in response to the review: a word boundary alone does not make `booking` or `viaggi` safe. Verified against a throwaway probe row — it flags `\bsuper\b`, `\bmarket\b`, `\bbooking\b`, `\bviaggi\b` and correctly ignores `\bpenny\s+market\b`, `\bbooking\.com\b`, `\brisparmio casa\b`.
+
+**Known limitation:** `regexConflicts` builds witness strings from single literal alternatives, so a two-token collision like `RYANAIR` + `BOOKING` is invisible to it. That is why the priority-5 misroute above passed a green audit. Cross-pattern witness composition is not implemented.
 
 Grocery residual risky alts (short brand literals left intentionally — not in §3 mandate):
 

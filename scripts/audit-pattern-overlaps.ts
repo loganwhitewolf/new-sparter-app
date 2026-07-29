@@ -190,20 +190,78 @@ const BANK_BOILERPLATE_BAIT = [
   'Op.',
 ] as const
 
+/**
+ * Common Italian/English words that read as merchant tokens but appear in unrelated bank
+ * descriptors. A word boundary does not make these safe — they need disambiguating context
+ * (see the consistency rule above the grocery pattern in seed-patterns-data.ts).
+ */
+const GENERIC_WORDS = [
+  'super',
+  'market',
+  'mercato',
+  'booking',
+  'viaggi',
+  'viaggio',
+  'travel',
+  'forno',
+  'iper',
+  'tigre',
+  'simply',
+  'penny',
+  'prix',
+  'coop',
+  'agora',
+  'sigma',
+  'selex',
+  'castoro',
+  'centro',
+  'servizi',
+  'servizio',
+  'italia',
+  'point',
+  'store',
+  'shop',
+  'group',
+  'gruppo',
+  'casa',
+  'city',
+  'club',
+] as const
+
 type RiskyAltFinding = {
   slug: string
   description: string
   alternative: string
   reasons: string[]
   baitHits?: string[]
+  genericWords?: string[]
+}
+
+/**
+ * True when the pattern is a single non-capturing group wrapping everything, i.e. the trailing
+ * `)` actually closes the leading `(?:`. Guards against mis-stripping shapes like
+ * `(?:a|b)|(?:c)`, where naive slicing would produce the unbalanced body `a|b)|(?:c`.
+ */
+function isSingleOuterGroup(pattern: string): boolean {
+  if (!pattern.startsWith('(?:') || !pattern.endsWith(')')) return false
+  let depth = 0
+  for (let i = 0; i < pattern.length; i++) {
+    if (pattern[i] === '\\') {
+      i++
+      continue
+    }
+    if (pattern[i] === '(') depth++
+    else if (pattern[i] === ')') {
+      depth--
+      // The leading group closed before the end → there is more than one top-level term.
+      if (depth === 0) return i === pattern.length - 1
+    }
+  }
+  return false
 }
 
 function splitTopLevelAlternatives(pattern: string): string[] {
-  // Strip a single outer non-capturing group if present: (?:...|...)
-  let body = pattern
-  if (body.startsWith('(?:') && body.endsWith(')')) {
-    body = body.slice(3, -1)
-  }
+  const body = isSingleOuterGroup(pattern) ? pattern.slice(3, -1) : pattern
 
   const alts: string[] = []
   let current = ''
@@ -236,9 +294,28 @@ function splitTopLevelAlternatives(pattern: string): string[] {
   return alts
 }
 
-function literalLengthEstimate(alt: string): number {
-  // Approximate visible literal length by stripping common regex syntax.
-  const stripped = alt
+/** Approximate the literal words an alternative requires, ignoring regex syntax. */
+function literalWords(alt: string): string[] {
+  return literalTextEstimate(alt)
+    .split(/[^a-zàèéìòù&]+/i)
+    .filter((word) => word.length > 0)
+}
+
+/**
+ * A generic word is only risky when it stands alone: `\bsuper\b` matches "SUPER BOLLO AUTO",
+ * while `\bpenny\s+market\b` carries its own disambiguating context.
+ */
+function standaloneGenericWords(alt: string): string[] {
+  const words = literalWords(alt)
+  if (words.length !== 1) return []
+  const word = words[0]!.toLowerCase()
+  return GENERIC_WORDS.some((generic) => generic === word) ? [word] : []
+}
+
+function literalTextEstimate(alt: string): string {
+  // Approximate visible literal text by stripping common regex syntax. Whitespace is
+  // preserved (collapsed) so callers can still tell one literal word from several.
+  return alt
     .replace(/\\b/g, '')
     .replace(/\\s\+/g, ' ')
     .replace(/\\s\*/g, '')
@@ -249,8 +326,12 @@ function literalLengthEstimate(alt: string): number {
     .replace(/[()[\]{}|+*?^$]/g, '')
     .replace(/\\'/g, "'")
     .replace(/\\\\/g, '\\')
-    .replace(/\s+/g, '')
-  return stripped.length
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function literalLengthEstimate(alt: string): number {
+  return literalTextEstimate(alt).replace(/\s+/g, '').length
 }
 
 function findRiskyAlternatives(rows: Row[]): RiskyAltFinding[] {
@@ -261,14 +342,28 @@ function findRiskyAlternatives(rows: Row[]): RiskyAltFinding[] {
       const reasons: string[] = []
       const baitHits: string[] = []
 
-      if (literalLengthEstimate(alt) > 0 && literalLengthEstimate(alt) <= 4) {
+      const literalLength = literalLengthEstimate(alt)
+      if (literalLength > 0 && literalLength <= 4) {
         reasons.push('short-literal-le-4')
       }
-      if (!alt.includes('\\b') && !alt.startsWith('^') && !alt.endsWith('$')) {
+      // Skip on patterns that match substrings by design — the absent \b is the point there.
+      if (
+        !row.substringMatch &&
+        !alt.includes('\\b') &&
+        !alt.startsWith('^') &&
+        !alt.endsWith('$')
+      ) {
         reasons.push('missing-word-boundary')
       }
       if (/\.\*/.test(alt)) {
         reasons.push('unbounded-dot-star')
+      }
+
+      // A word boundary does not rescue a bare generic word — this is the check that would
+      // have caught \bbooking\b / \bviaggi\b in the travel-agency pattern.
+      const genericWords = standaloneGenericWords(alt)
+      if (genericWords.length > 0) {
+        reasons.push('standalone-generic-word')
       }
 
       const altPattern = `(?:${alt})`
@@ -289,6 +384,7 @@ function findRiskyAlternatives(rows: Row[]): RiskyAltFinding[] {
         alternative: alt,
         reasons,
         ...(baitHits.length > 0 ? { baitHits } : {}),
+        ...(genericWords.length > 0 ? { genericWords } : {}),
       })
     }
   }
