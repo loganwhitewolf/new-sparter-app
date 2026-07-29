@@ -1154,6 +1154,57 @@ describe('importFile', () => {
     })
   })
 
+  it('excludedRowIndexes skips the matching rowIndex after mode filter and before insert', async () => {
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport([
+      { '"Data Movimento"': '2026-07-10', '"Descrizione"': 'First', '"Importo"': '-10.00' },
+      { '"Data Movimento"': '2026-07-11', '"Descrizione"': 'Middle', '"Importo"': '-20.00' },
+      { '"Data Movimento"': '2026-07-12', '"Descrizione"': 'Last', '"Importo"': '-30.00' },
+    ]))
+    mocks.getLastPlatformTransactionDate.mockResolvedValue(null)
+    mocks.insertTransactionBatch.mockImplementation(async (_tx: unknown, insertedRows: Array<Record<string, unknown>>) => insertedRows)
+
+    const result = await importFile({
+      userId: USER_ID,
+      fileId: FILE_ID,
+      selectedFormatVersionId: 1,
+      importMode: 'all',
+      excludedRowIndexes: [2],
+    })
+
+    expect(result.importedCount).toBe(2)
+    const inserted = mocks.insertTransactionBatch.mock.calls[0]?.[1] as Array<{
+      description: string
+      rowIndex: number
+    }>
+    expect(inserted.map((r) => r.description)).toEqual(['First', 'Last'])
+    expect(inserted.map((r) => r.rowIndex)).not.toContain(2)
+    expect(latestFileImportUpdate()).toMatchObject({
+      status: 'imported',
+      rowCount: 2,
+      importedCount: 2,
+    })
+  })
+
+  it('omitted excludedRowIndexes preserves full importMode behavior', async () => {
+    mocks.parseImportFile.mockResolvedValue(makeParsedImport([
+      { '"Data Movimento"': '2026-07-10', '"Descrizione"': 'A', '"Importo"': '-10.00' },
+      { '"Data Movimento"': '2026-07-11', '"Descrizione"': 'B', '"Importo"': '-20.00' },
+      { '"Data Movimento"': '2026-07-12', '"Descrizione"': 'C', '"Importo"': '-30.00' },
+    ]))
+    mocks.insertTransactionBatch.mockImplementation(async (_tx: unknown, insertedRows: Array<Record<string, unknown>>) => insertedRows)
+
+    const result = await importFile({
+      userId: USER_ID,
+      fileId: FILE_ID,
+      selectedFormatVersionId: 1,
+      importMode: 'all',
+    })
+
+    expect(result.importedCount).toBe(3)
+    const inserted = mocks.insertTransactionBatch.mock.calls[0]?.[1] as Array<{ description: string }>
+    expect(inserted.map((r) => r.description)).toEqual(['A', 'B', 'C'])
+  })
+
   it('persists zeroed stats for an empty parsed file without crashing', async () => {
     mocks.parseImportFile.mockResolvedValue(makeParsedImport([]))
 
