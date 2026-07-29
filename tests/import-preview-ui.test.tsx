@@ -11,11 +11,23 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mocks.push }),
 }))
 
+vi.mock('next/link', () => ({
+  default: ({
+    href,
+    children,
+    ...rest
+  }: {
+    href: string
+    children?: React.ReactNode
+    [key: string]: unknown
+  }) => createElement('a', { href, ...rest }, children),
+}))
+
 vi.mock('@/lib/actions/import', () => ({
   confirmImportAction: mocks.confirmImport,
 }))
 
-const { ImportPreview } = await import('../components/import/import-preview')
+const { ImportPreview, appendImportModeFields } = await import('../components/import/import-preview')
 
 const baseResult = {
   fileId: '11111111-1111-4111-8111-111111111111',
@@ -27,6 +39,9 @@ const baseResult = {
   skippedCount: 0,
   warnings: [],
   errors: [],
+  lastImportedDate: null as string | null,
+  filePeriodStart: null as string | null,
+  filePeriodEnd: null as string | null,
   sampleRows: [],
 }
 
@@ -89,4 +104,78 @@ describe('ImportPreview UI', () => {
     expect(descMatches).toBe(10)
   })
 
+  it('renders mode controls in order from-last → all → range next to title (D-07)', () => {
+    const html = renderToStaticMarkup(
+      createElement(ImportPreview, { result: baseResult }),
+    )
+
+    expect(html).toContain('Analisi file')
+    expect(html).toMatch(/Dall(?:'|&#x27;)ultima/)
+    expect(html).toContain('Tutte')
+    expect(html).toContain('Intervallo')
+
+    const fromLast = html.indexOf('data-import-mode="from-last"')
+    const all = html.indexOf('data-import-mode="all"')
+    const range = html.indexOf('data-import-mode="range"')
+    expect(fromLast).toBeGreaterThan(-1)
+    expect(all).toBeGreaterThan(fromLast)
+    expect(range).toBeGreaterThan(all)
+  })
+
+  it('renders Transazioni nel periodo card (D-06)', () => {
+    const html = renderToStaticMarkup(
+      createElement(ImportPreview, {
+        result: {
+          ...baseResult,
+          lastImportedDate: null,
+          filePeriodStart: '2026-07-10',
+          filePeriodEnd: '2026-07-20',
+          sampleRows: [
+            {
+              rowIndex: 1,
+              description: 'A',
+              amount: '-1.00',
+              occurredAt: '2026-07-10T00:00:00.000Z',
+              duplicate: false,
+              valid: true,
+              errors: [],
+              warnings: [],
+            },
+            {
+              rowIndex: 2,
+              description: 'B',
+              amount: '-2.00',
+              occurredAt: '2026-07-20T00:00:00.000Z',
+              duplicate: false,
+              valid: true,
+              errors: [],
+              warnings: [],
+            },
+          ],
+        },
+      }),
+    )
+
+    expect(html).toContain('Transazioni nel periodo')
+    expect(html).toContain('2026-07-10 – 2026-07-20')
+  })
+
+  it('appendImportModeFields sends importMode and range bounds for range mode', () => {
+    const fd = new FormData()
+    appendImportModeFields(fd, {
+      importMode: 'from-last',
+    })
+    expect(fd.get('importMode')).toBe('from-last')
+    expect(fd.get('rangeStart')).toBeNull()
+
+    const rangeFd = new FormData()
+    appendImportModeFields(rangeFd, {
+      importMode: 'range',
+      rangeStart: '2026-07-15',
+      rangeEnd: '2026-07-20',
+    })
+    expect(rangeFd.get('importMode')).toBe('range')
+    expect(rangeFd.get('rangeStart')).toBe('2026-07-15')
+    expect(rangeFd.get('rangeEnd')).toBe('2026-07-20')
+  })
 })

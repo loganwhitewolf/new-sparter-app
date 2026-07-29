@@ -79,23 +79,9 @@ export default async function AnalyzePage({
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">Analisi file</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Verifica i dettagli prima di confermare l&apos;importazione
-          </p>
-        </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/import">Torna alle importazioni</Link>
-        </Button>
-      </div>
-
-      <ImportPreview
-        result={result.data}
-        returnTo={from === 'onboarding' ? '/onboarding?step=2' : undefined}
-      />
-    </div>
+    <ImportPreview
+      result={result.data}
+      returnTo={from === 'onboarding' ? '/onboarding?step=2' : undefined}
+    />
   )
 }
