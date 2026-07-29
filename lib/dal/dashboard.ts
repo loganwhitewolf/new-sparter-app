@@ -1105,7 +1105,10 @@ export const getCategoryRanking = cache(
 )
 
 export const getCategoryDeviations = cache(
-  async (input: CategoryDeviationsInput): Promise<Map<number, DeviationData>> => {
+  async (
+    input: CategoryDeviationsInput,
+    ledgerRowSource: LedgerRowSource = ledgerEntryCash,
+  ): Promise<Map<number, DeviationData>> => {
     const { userId } = await verifySession()
     const { reference, baseline } = getDeviationDateRanges()
     // Direction filter: use direction.code when a specific type is selected
@@ -1118,16 +1121,16 @@ export const getCategoryDeviations = cache(
     let baselineRows: Array<{ id: number; month: string; amount: string }> = []
 
     try {
-      const monthSql = sql<string>`to_char(${ledgerEntryCash.occurredAt}, 'YYYY-MM')`
+      const monthSql = sql<string>`to_char(${ledgerRowSource.occurredAt}, 'YYYY-MM')`
 
       const [refResult, baseResult] = await Promise.all([
         db
           .select({
             id: groupColumn,
-            amount: sql<string>`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${ledgerRowSource.amount})), 0)::text`,
           })
-          .from(ledgerEntryCash)
-          .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
+          .from(ledgerRowSource)
+          .innerJoin(expense, eq(ledgerRowSource.expenseId, expense.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
           .leftJoin(
@@ -1149,7 +1152,7 @@ export const getCategoryDeviations = cache(
             and(
               // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
               // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
-              dateScopedTransactions(ledgerEntryCash, userId, reference.from, reference.to),
+              dateScopedTransactions(ledgerRowSource, userId, reference.from, reference.to),
               expenseStatusIncludedInDashboardTotals(),
               eq(direction.includedInTotals, true),
               typeFilter,
@@ -1161,10 +1164,10 @@ export const getCategoryDeviations = cache(
           .select({
             id: groupColumn,
             month: monthSql,
-            amount: sql<string>`coalesce(abs(sum(${ledgerEntryCash.amount})), 0)::text`,
+            amount: sql<string>`coalesce(abs(sum(${ledgerRowSource.amount})), 0)::text`,
           })
-          .from(ledgerEntryCash)
-          .innerJoin(expense, eq(ledgerEntryCash.expenseId, expense.id))
+          .from(ledgerRowSource)
+          .innerJoin(expense, eq(ledgerRowSource.expenseId, expense.id))
           .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
           .innerJoin(category, eq(subCategory.categoryId, category.id))
           .leftJoin(
@@ -1186,7 +1189,7 @@ export const getCategoryDeviations = cache(
             and(
               // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
               // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
-              dateScopedTransactions(ledgerEntryCash, userId, baseline.from, baseline.to),
+              dateScopedTransactions(ledgerRowSource, userId, baseline.from, baseline.to),
               expenseStatusIncludedInDashboardTotals(),
               eq(direction.includedInTotals, true),
               typeFilter,
