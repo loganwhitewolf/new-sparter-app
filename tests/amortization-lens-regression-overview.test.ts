@@ -139,5 +139,72 @@ describeIfReachable(
       ).toBe(true)
       expect(toDecimal(futureBucket!.out.essential).gt(0)).toBe(true)
     })
+
+    // CR-01/WR-01 (80-REVIEW.md): getOverview's YTD-upper-bound query used to hardcode
+    // `FROM transaction`, so under competenza the KPI totals silently truncated the year at the
+    // last REAL transaction month, excluding any later instalment-only month. This test proves
+    // the fixed behavior: getOverview(year, ledgerEntryAccrual).totalOut includes every
+    // instalment in the year, not just the ones up to the last `transaction` row's month.
+    it("getOverview's YTD bound is lens-aware: competenza includes a later instalment-only month; cash stays byte-identical", async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+
+      // Clamp to October so the 3-month plan's instalments (N, N+1, N+2) never spill into the
+      // following calendar year regardless of which day this suite runs (deterministic,
+      // same-year scenario — the exact case CR-01's YTD-bound truncation affected).
+      const now = new Date()
+      const monthIndexN = Math.min(now.getMonth(), 9)
+      const occurredAt = new Date(now.getFullYear(), monthIndexN, 14, 12, 0, 0)
+      const yearN = occurredAt.getFullYear()
+
+      // Single real `transaction` row for the whole year — the last-month-with-data query's
+      // `FROM transaction` branch resolves to month N only.
+      const { expenseId, transactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-600.00',
+        occurredAt,
+        title: 'Lens probe purchase (CR-01/WR-01)',
+      })
+
+      const instalments = materializeInstalments('-600.00', occurredAt, 3)
+      await seedAmortizationPlan(db, {
+        userId,
+        transactionId,
+        expenseId,
+        months: 3,
+        instalments,
+      })
+      const totalInstalmentAmount = instalments.reduce(
+        (sum, i) => sum.plus(toDecimal(i.amount).abs()),
+        toDecimal('0'),
+      )
+
+      vi.doMock('@/lib/db', () => ({ db }))
+      vi.resetModules()
+      const overviewModule = await import('@/lib/dal/overview')
+      // Re-import the schema AFTER vi.resetModules() so `ledgerEntryAccrual` here is the exact
+      // same module instance overview.ts's own `ledgerRowSource === ledgerEntryAccrual` branch
+      // check compares against — resetModules() forces a fresh schema module instance, so the
+      // top-of-file import (evaluated before the reset) is a stale, non-reference-equal object.
+      const { ledgerEntryAccrual: freshLedgerEntryAccrual } = await import('@/lib/db/schema')
+
+      // (a) cash (no 2nd arg): byte-identical (LENS-03) — the single transaction's amount,
+      // bounded at month N since that is the only month with a `transaction` row.
+      const cashOverview = await overviewModule.getOverview(yearN)
+      expect(toDecimal(cashOverview.totalOut).equals(toDecimal('600.00'))).toBe(true)
+
+      // (b) competenza: the YTD bound must extend through month N+2 (the last instalment-only
+      // month), so totalOut sums ALL THREE instalments — not just the one(s) up to month N.
+      const accrualOverview = await overviewModule.getOverview(yearN, freshLedgerEntryAccrual)
+      expect(toDecimal(accrualOverview.totalOut).equals(totalInstalmentAmount)).toBe(true)
+      expect(
+        toDecimal(accrualOverview.totalOut).gt(toDecimal(instalments[0]!.amount).abs()),
+      ).toBe(true)
+    })
   },
 )
