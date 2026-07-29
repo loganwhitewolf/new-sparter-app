@@ -145,3 +145,38 @@ describe('TransactionTable — anchor row net-primary amount display (D-N2)', ()
     expect(html).not.toContain('line-through')
   })
 })
+
+describe('TransactionTable — counterpart row reduction badge (D-N3)', () => {
+  it('swaps ReimbursementRowIndicator for a "riduzione di …" badge linking to the anchor transaction', () => {
+    const html = render([
+      makeTransaction({
+        id: COUNTERPART_ID,
+        amount: '100.00',
+        pairedWithId: ANCHOR_ID,
+        pairedDescription: 'ACQUISTO MACBOOK',
+        reimbursementId: 42,
+      }),
+    ])
+
+    // The reduction badge is present and links to the ANCHOR transaction's detail page …
+    expect(html).toContain('riduzione di')
+    expect(html).toContain(`href="/transactions/${ANCHOR_ID}"`)
+    // … and it REPLACES the generic reimbursement indicator on this row (exclusive swap).
+    expect(html).not.toContain('Rimborso collegato')
+  })
+
+  it('leaves ReimbursementRowIndicator unchanged on an anchor row (non-counterpart branch)', () => {
+    const html = render([
+      makeTransaction({
+        id: ANCHOR_ID,
+        amount: '-133.00',
+        pairedWithId: COUNTERPART_ID,
+        pairedNetAmount: '-33.00',
+        reimbursementId: 42,
+      }),
+    ])
+
+    expect(html).toContain('Rimborso collegato')
+    expect(html).not.toContain('riduzione di')
+  })
+})

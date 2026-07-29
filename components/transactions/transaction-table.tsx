@@ -16,6 +16,7 @@ import { ActivateAmortizationDialog } from '@/components/transactions/activate-a
 import { RemoveAmortizationDialog } from '@/components/transactions/remove-amortization-dialog'
 import { CloseAmortizationDialog } from '@/components/transactions/close-amortization-dialog'
 import { ReimbursementRowIndicator } from '@/components/transactions/reimbursement-row-indicator'
+import { PairedReductionBadge } from '@/components/transactions/paired-reduction-badge'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
 import { BulkCategorizeDialog } from '@/components/expenses/bulk-categorize-dialog'
 import { BulkAssignTagsDialog } from '@/components/tags/bulk-assign-tags-dialog'
@@ -606,13 +607,22 @@ export function TransactionTable({
                         />
                       </div>
                       <TransactionTagsChip tags={tagsByTx[transaction.id] ?? []} />
-                      {/* Reimbursement indicator — links to /reimbursements/[id] (D-06, Phase 76
-                          Plan 03). `reimbursementId` is non-null iff the row belongs to a
-                          reimbursement (as anchor or refund), resolved via
-                          pairedReimbursementIdExpr(); the full net/residual/refund breakdown
-                          lives on that dedicated page. */}
-                      {transaction.reimbursementId != null && (
-                        <ReimbursementRowIndicator reimbursementId={transaction.reimbursementId} />
+                      {/* Pairing badge (D-N3): a COUNTERPART row (sale/refund inflow) shows a
+                          "riduzione di …" badge linking to its ANCHOR transaction instead of the
+                          generic reimbursement-management indicator — the swap is exclusive, never
+                          both. Every other paired/unpaired row keeps ReimbursementRowIndicator,
+                          which links to /reimbursements/[id] (D-06, Phase 76 Plan 03).
+                          `reimbursementId` is non-null iff the row belongs to a reimbursement (as
+                          anchor or refund), resolved via pairedReimbursementIdExpr(). */}
+                      {pairRole === 'counterpart' && transaction.pairedWithId ? (
+                        <PairedReductionBadge
+                          anchorTransactionId={transaction.pairedWithId}
+                          anchorLabel={transaction.pairedDescription}
+                        />
+                      ) : (
+                        transaction.reimbursementId != null && (
+                          <ReimbursementRowIndicator reimbursementId={transaction.reimbursementId} />
+                        )
                       )}
                     </div>
                   </div>
@@ -628,7 +638,13 @@ export function TransactionTable({
                       </span>
                     </div>
                   ) : (
-                    <span className={amountColorClass}>
+                    <span
+                      className={
+                        pairRole === 'counterpart'
+                          ? 'text-muted-foreground opacity-60'
+                          : amountColorClass
+                      }
+                    >
                       {formatAmount(transaction.amount, transaction.currency)}
                     </span>
                   )}
