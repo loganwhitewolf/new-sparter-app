@@ -136,7 +136,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 80-01-PLAN.md — Tracer: thread ?lens= through getOverviewAmountTotals + global LensSwitch on /dashboard/overview, real-Postgres regression proof (LENS-01, LENS-02)
+- [x] 80-01-PLAN.md — Tracer: thread ?lens= through getOverviewAmountTotals + global LensSwitch on /dashboard/overview, real-Postgres regression proof (LENS-01, LENS-02)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -443,7 +443,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 77. amortization-schema-and-activation | v2.9 | 0/6 | Complete    | 2026-07-28 |
 | 78. plan-lifecycle-and-reconciliation | v2.9 | 0/3 | Complete    | 2026-07-28 |
 | 79. amortizations-registry | v2.9 | 0/2 | Complete    | 2026-07-28 |
-| 80. dashboard-accrual-lens | v2.9 | 0/7 | Planned | - |
+| 80. dashboard-accrual-lens | v2.9 | 0/7 | In Progress|  |
 
 **Total shipped: 76 phases · 286 plans complete**
 **Latest shipped: v2.8 Reimbursements 1:N — Phases 73–76 (2026-07-27). All RMB-01…RMB-11 delivered: 1:N reimbursement model (transaction_pair subsumed), Mondo Netto netting, first-class residual, linking UI on /transactions/[id], and the dedicated /reimbursements section. Audit passed 11/11.**

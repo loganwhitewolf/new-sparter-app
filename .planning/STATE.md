@@ -5,15 +5,15 @@ milestone_name: Amortization
 current_phase: 80
 current_phase_name: dashboard-accrual-lens
 status: executing
-stopped_at: Phase 80 context gathered
-last_updated: "2026-07-29T08:35:49.208Z"
-last_activity: 2026-07-28
-last_activity_desc: Phase 79 complete, transitioned to Phase 80
+stopped_at: Completed 80-01-PLAN.md
+last_updated: "2026-07-29T08:59:06.088Z"
+last_activity: 2026-07-29
+last_activity_desc: Phase 80 execution started
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 18
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-27)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 79 — amortizations-registry
+**Current focus:** Phase 80 — dashboard-accrual-lens
 
 ## Current Position
 
-Phase: 80 — dashboard-accrual-lens
-Plan: Not started
+Phase: 80 (dashboard-accrual-lens) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-07-28 — Phase 79 complete, transitioned to Phase 80
+Last activity: 2026-07-29 — Phase 80 execution started
 
 ## Roadmap (v2.9 — Phases 77-80)
 
@@ -401,6 +401,9 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 79-01: IDOR cross-user DAL test seeds global direction/nature taxonomy once per test and reuses subCategoryId across both users, since seedMinimalTaxonomy cannot be called twice (unique(code))
 - [Phase ?]: 79-02: resolveRowActions returns realizeHref unconditionally (regardless of status) — only showActions gates rendering, matching the plan's <behavior> contract literally
 - [Phase ?]: 79-02: DAL/lifecycle consistency test asserts remainingMonths is EITHER 0 or 1 after closePlanTx (never a hardcoded value) since the closure instalment's classification against Postgres's CURRENT_DATE depends on real wall-clock timing at test run; both branches checked against the known past-instalment sum + closePlanTx's own returned remainingValue
+- [Phase ?]: 80-01: requirements.mark-complete NOT run for LENS-01/LENS-02 — one-route tracer slice only, full capability lands across Plans 80-02..80-07 (Phase 75/76 precedent)
+- [Phase ?]: 80-01: getUncategorizedCount stays lens-invariant (no ledgerRowSource param) — an amortized transaction is always pre-categorized before a plan can attach, closing the seam survey's flagged Confirm note
+- [Phase ?]: 80-01: lens-persistence.ts re-exports safeSessionStorage from overview/overview-persistence.ts instead of duplicating it, giving lens-switch.tsx one import path
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -536,11 +539,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/80-dashboard-accrual-lens/80-CONTEXT.md
+**Resume file:** None
 
-**Stopped at:** Phase 80 context gathered
+**Stopped at:** Completed 80-01-PLAN.md
 
-Last session: 2026-07-29T07:18:30.965Z
+Last session: 2026-07-29T08:59:06.079Z
 
 **Next:** `/gsd-plan-phase 77` to plan the amortization-schema-and-activation phase
 
@@ -633,3 +636,4 @@ Last session: 2026-07-29T07:18:30.965Z
 | Phase 78 P02 | 20min | 2 tasks | 7 files |
 | Phase 79 P01 | 10min | 2 tasks | 10 files |
 | Phase 79 P02 | ~15min | 2 tasks | 3 files |
+| Phase 80 P01 | 25min | 2 tasks | 12 files |
