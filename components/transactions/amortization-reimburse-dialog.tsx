@@ -33,6 +33,13 @@ type Props = {
     occurredAt: Date
   }
   onDone: () => void
+  /**
+   * Pre-selects the intent radio once a candidate is picked. Callers that enter through a
+   * sale-specific CTA (the amortization registry's "Realizza con vendita" button) pass 'realize'
+   * so the dialog opens already primed for a sale; the generic "Aggiungi/Collega rimborso"
+   * entrypoints omit it (null) and let the user choose. Never guesses the intent server-side.
+   */
+  defaultIntent?: Intent | null
 }
 
 /** Format absolute amount for display (display-only, never written back to DB). */
@@ -72,7 +79,13 @@ function offsetDateISO(base: Date, days: number): string {
  * "Chiudi per vendita" routes to realizePlanAction (D-02, AMORT-05), "Rimborso parziale
  * (ridistribuisci)" routes to reimbursePlanAction (D-03, AMORT-06). The system never guesses.
  */
-export function AmortizationReimburseDialog({ open, onOpenChange, transaction, onDone }: Props) {
+export function AmortizationReimburseDialog({
+  open,
+  onOpenChange,
+  transaction,
+  onDone,
+  defaultIntent = null,
+}: Props) {
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -85,7 +98,7 @@ export function AmortizationReimburseDialog({ open, onOpenChange, transaction, o
   const [isLoadingCounterparts, startLoadTransition] = useTransition()
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [intent, setIntent] = useState<Intent | null>(null)
+  const [intent, setIntent] = useState<Intent | null>(defaultIntent)
 
   const fetchCounterparts = useCallback(
     (from: string, to: string) => {
@@ -129,7 +142,7 @@ export function AmortizationReimburseDialog({ open, onOpenChange, transaction, o
     if (!nextOpen) {
       setSearch('')
       setSelectedId(null)
-      setIntent(null)
+      setIntent(defaultIntent)
       setCounterparts([])
       setLoadError(null)
       setError(null)
@@ -141,7 +154,7 @@ export function AmortizationReimburseDialog({ open, onOpenChange, transaction, o
 
   function selectCandidate(id: string) {
     setSelectedId((prev) => (prev === id ? null : id))
-    setIntent(null)
+    setIntent(defaultIntent)
     setError(null)
   }
 

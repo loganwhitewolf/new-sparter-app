@@ -12,7 +12,6 @@ import {
 } from '@/components/amortizations/amortization-table'
 import { computeTotalOpenResidual } from '@/components/amortizations/amortization-summary-header'
 import { AMOUNT_TONE_CLASS, amountToneClass } from '@/lib/utils/amount-tone'
-import { transactionDetailHref } from '@/lib/routes'
 import type { AmortizationPlanListRow } from '@/lib/dal/amortization'
 
 function makeRow(overrides: Partial<AmortizationPlanListRow>): AmortizationPlanListRow {
@@ -106,14 +105,6 @@ describe('resolveRowActions (D-A1/D-A2/D-A3)', () => {
 
   it('showActions is false for a closed plan', () => {
     expect(resolveRowActions(makeRow({ status: 'closed' })).showActions).toBe(false)
-  })
-
-  it('realizeHref equals transactionDetailHref(transactionId) unconditionally, regardless of status', () => {
-    const open = resolveRowActions(makeRow({ transactionId: 'tx-123', status: 'open' }))
-    const closed = resolveRowActions(makeRow({ transactionId: 'tx-123', status: 'closed' }))
-
-    expect(open.realizeHref).toBe(transactionDetailHref('tx-123'))
-    expect(closed.realizeHref).toBe(transactionDetailHref('tx-123'))
   })
 })
 

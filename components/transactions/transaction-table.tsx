@@ -11,6 +11,7 @@ import { BulkDeleteTransactionsDialog } from '@/components/transactions/bulk-del
 import { TransactionBulkActionBar } from '@/components/transactions/transaction-bulk-action-bar'
 import { TransactionTitleEdit } from '@/components/transactions/transaction-title-edit'
 import { CounterpartPickerDialog } from '@/components/transactions/counterpart-picker-dialog'
+import { AmortizationReimburseDialog } from '@/components/transactions/amortization-reimburse-dialog'
 import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
 import { ActivateAmortizationDialog } from '@/components/transactions/activate-amortization-dialog'
 import { RemoveAmortizationDialog } from '@/components/transactions/remove-amortization-dialog'
@@ -216,6 +217,17 @@ export function TransactionTable({
   const [detachTarget, setDetachTarget] = useState<{
     transactionId: string
     defaultTitle: string
+  } | null>(null)
+  // Amortization-reimburse target: set when "Collega rimborso" is selected on an outflow that
+  // has an OPEN amortization plan. Mirrors the detail page's branch
+  // (transaction-detail-client.tsx: hasOpenAmortizationPlan ? AmortizationReimburseDialog : …)
+  // so the "cosa fare con l'ammortamento" intent prompt (realize-via-sale vs redistribute) is
+  // reachable from the table too, not only from the transaction detail.
+  const [amortizeReimburseTarget, setAmortizeReimburseTarget] = useState<{
+    id: string
+    planId: string
+    amount: string
+    occurredAt: Date
   } | null>(null)
   // Amortization row-action target (Phase 77, D-01 tracer). Eligibility (D-04..D-07 +
   // outflow-only) is server-gated inside createAmortizationPlan; this entry point's own gate is
@@ -791,12 +803,29 @@ export function TransactionTable({
                         <DropdownMenuItem
                           onSelect={(e) => {
                             e.preventDefault()
-                            setPairTarget({
-                              id: transaction.id,
-                              amount: transaction.amount,
-                              description: transaction.description,
-                              occurredAt: transaction.occurredAt,
-                            })
+                            // Branch parity with the detail page: an outflow with an OPEN
+                            // amortization plan must go through the intent-prompt dialog
+                            // (realize-via-sale vs redistribute), not the plain counterpart
+                            // picker — otherwise the "cosa fare con l'ammortamento" menu is
+                            // silently skipped when linking a refund from the table.
+                            if (
+                              transaction.amortizationPlanId != null &&
+                              transaction.amortizationPlanStatus === 'open'
+                            ) {
+                              setAmortizeReimburseTarget({
+                                id: transaction.id,
+                                planId: transaction.amortizationPlanId,
+                                amount: transaction.amount,
+                                occurredAt: transaction.occurredAt,
+                              })
+                            } else {
+                              setPairTarget({
+                                id: transaction.id,
+                                amount: transaction.amount,
+                                description: transaction.description,
+                                occurredAt: transaction.occurredAt,
+                              })
+                            }
                             setOpenDropdownId(null)
                           }}
                           className="flex items-center gap-2"
@@ -1095,6 +1124,22 @@ export function TransactionTable({
         }
       }}
     />
+
+    {/* Amortization-reimburse intent dialog — opened by "Collega rimborso" when the row has an
+        OPEN amortization plan (branch parity with transaction-detail-client.tsx). key remounts
+        per transaction so the date-range window re-initialises from this row's occurredAt. */}
+    {amortizeReimburseTarget && (
+      <AmortizationReimburseDialog
+        key={amortizeReimburseTarget.id}
+        open={amortizeReimburseTarget !== null}
+        onOpenChange={(o) => { if (!o) setAmortizeReimburseTarget(null) }}
+        transaction={amortizeReimburseTarget}
+        onDone={() => {
+          setAmortizeReimburseTarget(null)
+          router.refresh()
+        }}
+      />
+    )}
 
     {detachTarget && (
       <DetachExpenseDialog

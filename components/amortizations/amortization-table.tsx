@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AMORTIZATIONS_TABLE_CONFIG } from '@/lib/utils/amortizations-table-config'
 import { transactionDetailHref } from '@/lib/routes'
 import { CloseAmortizationDialog } from '@/components/transactions/close-amortization-dialog'
+import { AmortizationReimburseDialog } from '@/components/transactions/amortization-reimburse-dialog'
 import type { AmortizationPlanListRow } from '@/lib/dal/amortization'
 
 type Props = {
@@ -85,17 +86,16 @@ export function sortAmortizationRows(
 }
 
 /**
- * Row-actions gate (D-A1/D-A2/D-A3): actions are visible ONLY on open plans, but `realizeHref`
- * itself is unconditional — resolveRowActions({status:'closed'}).realizeHref is still a valid
- * transactionDetailHref, it just is never rendered by the caller. Reused for both the button
- * group's visibility and the "Realizza con vendita" Link's target.
+ * Row-actions gate (D-A1/D-A2/D-A3): the "Chiudi" / "Realizza con vendita" actions are visible
+ * ONLY on open plans. "Realizza con vendita" opens the AmortizationReimburseDialog primed with the
+ * 'realize' intent (a real refund-linking flow), rather than navigating to the transaction detail
+ * page — the previous transactionDetailHref target was a stub that never reached the sale flow.
  */
 export function resolveRowActions(
-  row: Pick<AmortizationPlanListRow, 'id' | 'transactionId' | 'status'>,
-): { showActions: boolean; realizeHref: string } {
+  row: Pick<AmortizationPlanListRow, 'status'>,
+): { showActions: boolean } {
   return {
     showActions: row.status === 'open',
-    realizeHref: transactionDetailHref(row.transactionId),
   }
 }
 
@@ -104,6 +104,16 @@ export function AmortizationTable({ plans, route }: Props) {
   const router = useRouter()
   const { activeSort, activeDir, onSort } = useToolbarSort(route)
   const [closeTarget, setCloseTarget] = useState<string | null>(null)
+  // "Realizza con vendita" target: opens the AmortizationReimburseDialog primed with the
+  // 'realize' intent. `amount` carries the plan's SIGNED initial amount (initialAmount =
+  // transaction.total_amount, negative for an outflow); getEligibleCounterparts reads only its
+  // sign to surface inflow candidates, so the signed value is exactly what the dialog needs.
+  const [realizeTarget, setRealizeTarget] = useState<{
+    id: string
+    planId: string
+    amount: string
+    occurredAt: Date
+  } | null>(null)
 
   const effectiveStatus = resolveEffectiveStatusFilter(searchParams.get('status'))
   const q = searchParams.get('q')?.trim().toLowerCase() ?? ''
@@ -178,7 +188,7 @@ export function AmortizationTable({ plans, route }: Props) {
           </TableHeader>
           <TableBody>
             {sorted.map((row) => {
-              const { showActions, realizeHref } = resolveRowActions(row)
+              const { showActions } = resolveRowActions(row)
               return (
               <TableRow key={row.id}>
                 {/* `max-w-0 w-full` + inner `truncate` is the shared no-horizontal-scroll
@@ -239,11 +249,21 @@ export function AmortizationTable({ plans, route }: Props) {
                       >
                         Chiudi
                       </Button>
-                      <Link href={realizeHref}>
-                        <Button type="button" variant="outline" size="sm">
-                          Realizza con vendita
-                        </Button>
-                      </Link>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setRealizeTarget({
+                            id: row.transactionId,
+                            planId: row.id,
+                            amount: row.initialAmount,
+                            occurredAt: row.transactionDate,
+                          })
+                        }
+                      >
+                        Realizza con vendita
+                      </Button>
                     </div>
                   ) : null}
                 </TableCell>
@@ -262,6 +282,23 @@ export function AmortizationTable({ plans, route }: Props) {
         planId={closeTarget}
         onSuccess={() => {
           setCloseTarget(null)
+          router.refresh()
+        }}
+      />
+    )}
+
+    {/* "Realizza con vendita" intent dialog — primed with the 'realize' intent so the sale-close
+        radio is pre-selected once a counterpart is picked. key remounts per plan so the date
+        window re-initialises from this plan's own transaction date. */}
+    {realizeTarget && (
+      <AmortizationReimburseDialog
+        key={realizeTarget.planId}
+        open={realizeTarget !== null}
+        onOpenChange={(o) => { if (!o) setRealizeTarget(null) }}
+        transaction={realizeTarget}
+        defaultIntent="realize"
+        onDone={() => {
+          setRealizeTarget(null)
           router.refresh()
         }}
       />
