@@ -4,6 +4,81 @@ Living retrospective — one section per milestone, newest first.
 
 ---
 
+## Milestone: v2.9 — Amortization
+
+**Shipped:** 2026-07-29 (audit passed 15/15; git tag pending post-merge)
+**Phases:** 5 (77–81) | **Plans:** 19
+
+### What Was Built
+
+Cost amortization for a one-off outflow (ADR 0019): activating a plan detaches the transaction into
+a Standalone Expense (reusing v2.4) and materialises N uniform monthly instalments from the purchase
+month. The dual dashboard lens is implemented as **one swappable `ledger_entry` row source per lens**
+— `ledger_entry_cash` (transactions) / `ledger_entry_accrual` (instalments), both Postgres VIEWs in
+migration 0033 — instead of a `lens` parameter threaded through the ten aggregations. Plan lifecycle:
+`closePlanTx` (collapse remaining instalments onto the closure month), `realizePlanTx` (net a linked
+sale by composing `closePlanTx` + the reused v2.8 `createPairTx`, or scrap), `reducePlanTx` (reduce +
+re-spread on a linked reimbursement), and an amount/date edit guard on open plans. A dedicated
+`/amortizations` registry (reusing the v2.8 `/reimbursements` stack) and a global cassa/competenza
+`LensSwitch` across all four dashboard sub-routes with lens-aware year/month selectors. Phase 81
+(closure) added inline paired-net display in the transactions table.
+
+### What Worked
+
+- **The seam design turned a correctness risk into a structural impossibility.** Choosing one row
+  source per lens (not a `lens` param) means `effectiveAmount()` is never re-applied to instalment
+  rows — the reimbursement double-netting trap can't occur, rather than being defended against at
+  each of ten call sites. The audit could verify this by inspection.
+- **Risk-first tracer discipline, again.** LENS-03 (cash view byte-identical across all 10
+  aggregation sites, with plans/instalments present in the DB) was proven in Phase 77 before any
+  lifecycle or lens work — every later phase inherited that gate as its regression proof.
+- **Aggressive reuse of the two prior milestones.** Activation reused the v2.4 detach; realization
+  reused the v2.8 `createPairTx` pairing; the `/amortizations` registry reused the v2.8
+  `/reimbursements` RSC/DAL/table stack (Plan 79-01 shipped "zero new DAL or component code" in
+  places). Two milestones of infrastructure compounded here.
+
+### What Was Inefficient
+
+- **The milestone audit had to be re-run.** The 12:35 audit predated the Nyquist reconciliation
+  commits; a second pass at 14:00 was needed once all four VALIDATION.md files reached
+  `status: validated`. Front-loading the Nyquist close would have saved a full audit cycle.
+- **The integration-checker subagent aborted on a model weekly-limit**, so cross-phase wiring had to
+  be verified inline by the orchestrator. It worked (5/5 seams confirmed against the codebase) but
+  it wasn't the intended isolated-context check.
+- **A whole phase (81) existed only to close a UAT readability gap.** The Phase 78 realization was
+  correct end-to-end but the transactions *table row* still showed gross-only — surfaced at UAT, not
+  at plan time. Cheaper if the "does a user reading the table alone understand the net?" question had
+  been asked during Phase 78 planning.
+
+### Patterns Established
+
+- **Swap the row source, not a parameter.** When a feature adds an alternate accounting basis over
+  the same aggregations, express it as an interchangeable data source resolved once — the aggregation
+  functions stay lens-agnostic and the prior regression gate keeps proving the default basis.
+- **Materialise, don't compute-at-read.** Instalments are real rows, so the accrual VIEW is a plain
+  UNION with no runtime spread math inside the aggregations; re-spread on reimbursement re-materialises.
+- **Additive UNION for lens-only periods.** `getYearsWithData`/`getMonthsWithData` UNION against
+  `amortization_instalment` so accrual-only future periods surface in selectors without a schema change.
+
+### Key Lessons
+
+- A design that makes the failure mode structurally impossible beats one that guards against it at
+  every call site — and it audits faster.
+- Close Nyquist/VALIDATION before the first audit run, not between two of them.
+- Ask the "readable from this surface alone?" UAT question during planning of the surface that
+  writes the data, not after — it would have folded Phase 81 into Phase 78.
+
+### Cost Observations
+
+- Model profile: `budget` — orchestration on Opus; executors/verifier/reviewer on Sonnet/Haiku per
+  GSD routing.
+- Notable: two prior milestones' infrastructure (v2.4 detach, v2.8 pairing + `/reimbursements` stack)
+  was reused heavily, keeping net new code proportionally low for the feature surface delivered; the
+  real-Postgres regression harness (isolated `sparter_test` DB) again carried the correctness proof
+  where the Playwright suite was blocked by an unrelated `proxy.ts` bug.
+
+---
+
 ## Milestone: v2.8 — Reimbursements 1:N
 
 **Shipped:** 2026-07-27 (audit passed 11/11; git tag pending post-merge)
@@ -505,8 +580,13 @@ Replaced the dual-axis `category.type` + `nature` classification with a single n
 |-----------|--------|-------|------|-------------|
 | v1.8 | 1 | 4 | 1 | Deviation utils + chart focused redesign |
 | v1.9 | 3 | 9 | 2 | TDD Wave 0 + server-component config pattern |
+| v2.9 | 5 | 19 | 2 | Swap row source not param; risk-first LENS-03 tracer; reuse v2.4/v2.8 infra |
+
+*(This table was maintained through v1.9, then lapsed; v2.9 added at close. Per-milestone detail lives in each section above.)*
 
 **Recurring observations:**
 - Wave 0 TDD scaffolding pays for itself on UI-heavy phases
 - Code review catches real issues (at least 3 per phase with review)
 - Inline SVG fallbacks needed when lucide-react lacks a brand icon
+- Risk-first tracer + real-Postgres regression gate is the repeated correctness pattern (v2.8, v2.9)
+- Structural impossibility &gt; per-call-site guard when a new accounting basis overlays shared aggregations (v2.9)
