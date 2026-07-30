@@ -722,10 +722,11 @@ describeIfReachable('reducePlanTx (Phase 78, D-03/AMORT-06)', () => {
     const allInstalments = await loadInstalments(db, planId)
     expect(allInstalments).toHaveLength(12)
 
-    // D-03 "instead" mechanic: NO v2.8 reimbursement/refund link is created on this path.
+    // The refund is linked via the same v2.8 mechanism realizePlanTx uses (Bug 1 fix) — one
+    // reimbursement + one refund row, even though the plan stays open here.
     const { reimbursements, refunds } = await countReimbursementRows(db)
-    expect(reimbursements).toBe(0)
-    expect(refunds).toBe(0)
+    expect(reimbursements).toBe(1)
+    expect(refunds).toBe(1)
   })
 
   it('exact-residual boundary: refund exactly equals the residual — ALLOWED, every re-spread instalment materializes to 0.00, plan stays open', async () => {
@@ -756,7 +757,7 @@ describeIfReachable('reducePlanTx (Phase 78, D-03/AMORT-06)', () => {
     expect(status).toBe('open')
   })
 
-  it('over-residual: refund one cent over the residual is BLOCKED with a message redirecting to "chiudi per vendita" — no write happens', async () => {
+  it('over-residual: refund one cent over the residual is BLOCKED with a message redirecting to "chiudi con vendita/rimborso" — no write happens', async () => {
     const db = requireHarnessDb()
     await resetReimbursementFixtures(db)
 
@@ -776,7 +777,7 @@ describeIfReachable('reducePlanTx (Phase 78, D-03/AMORT-06)', () => {
     })
 
     await expect(reducePlanTx(db, { userId, planId, refundTransactionId })).rejects.toThrow(
-      'chiudi per vendita',
+      'chiudi con vendita/rimborso',
     )
     await expect(
       reducePlanTx(db, { userId, planId, refundTransactionId }),

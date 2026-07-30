@@ -13,8 +13,8 @@ const STATUS_LABELS: Record<string, string> = {
  *
  * Field inventory:
  *   - search: q (displayed description substring)
- *   - status: select (open/closed, D-C1 — the toolbar exposes both, the table itself defaults
- *     to open-only via resolveEffectiveStatusFilter when the URL param is absent)
+ *   - status: select (open/closed; absent/"Tutte" = all statuses via resolveEffectiveStatusFilter)
+ *   - transactionId: deep-link from transaction detail (chip: "Transazione collegata")
  *   - sortable: remainingMonths, description, transactionDate, initialAmount, consumedAmount,
  *     netValue
  *   - defaultSort: remainingMonths ASC (D-C2 — plans closest to completion on top)
@@ -32,6 +32,14 @@ export const AMORTIZATIONS_TABLE_CONFIG: TableConfig = {
         { value: 'closed', label: 'Chiuso' },
       ],
       toChip: (v) => STATUS_LABELS[v] ?? v,
+    },
+    // Deep-link from transaction detail (Visualizza ammortamento). Chip-only UX primary —
+    // the Filtri sheet text input is secondary; Cancella tutto clears it via this field.
+    {
+      key: 'transactionId',
+      label: 'Transazione',
+      type: 'text',
+      toChip: () => 'Transazione collegata',
     },
   ],
   sortable: [

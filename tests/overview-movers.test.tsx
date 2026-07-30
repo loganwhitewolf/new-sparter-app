@@ -293,7 +293,24 @@ describe('OverviewMoversPanel (NAV-01 movers-row click-through)', () => {
       />
     )
     expect(html).toContain('Risparmio')
-    expect(html).not.toContain('<a')
+    // Scoped to the Accantonamenti column itself — the panel-level "view all transactions"
+    // link (Bug 3, 260730-m2x) always renders an <a> earlier in the markup.
+    const accantonamentiColumn = html.split('Accantonamenti')[1] ?? ''
+    expect(accantonamentiColumn).not.toContain('<a')
+  })
+
+  it('renders a "view all transactions" link for the selected month, independent of the per-category links (Bug 3, 260730-m2x)', () => {
+    const html = renderToStaticMarkup(
+      <OverviewMoversPanel
+        year={2026}
+        selectedMonth={2} // March (0-indexed) -> "2026-03"
+        moversIn={[positiveItem]}
+        moversOut={[]}
+        moversAllocation={[]}
+        isPending={false}
+      />
+    )
+    expect(html).toContain('href="/transactions?months=2026-03"')
   })
 
   it('renders a defensive non-linked row when categorySlug is null/undefined in a category-keyed column', () => {
@@ -315,6 +332,9 @@ describe('OverviewMoversPanel (NAV-01 movers-row click-through)', () => {
       />
     )
     expect(html).toContain('Senza slug')
-    expect(html).not.toContain('<a')
+    // Scoped to the "Variazioni di entrate" column itself — the panel-level "view all
+    // transactions" link (Bug 3, 260730-m2x) always renders an <a> earlier in the markup.
+    const entrateColumn = html.split('Variazioni di entrate')[1]?.split('Dove hai risparmiato')[0] ?? ''
+    expect(entrateColumn).not.toContain('<a')
   })
 })
