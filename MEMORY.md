@@ -42,6 +42,16 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
+### 2026-07-30 — Amort UX: Visualizza on detail + Tutti=all (260730-n2z)
+
+**Decided:** (1) Detail amortized txs: only Visualizza → `/amortizations?transactionId=`; Chiudi/Rimuovi only on registry. (2) Status Tutti = open+closed (override former D-C1 open-default). (3) CTA copy Chiudi con vendita/rimborso.
+
+**Why:** Lifecycle belongs in Ammortamenti; toolbar Tutti was lying; sale≈refund in product language.
+
+**Rejected:**
+- Keeping Chiudi/Rimuovi on detail
+- Filtering via `q=` description (ambiguous)
+
 ### 2026-07-30 — Amortization refund linking + remove-reset client state (260730-m2x)
 
 **Decided:** (1) `reducePlanTx` ("rimborso") calls `createPairTx` like `realizePlanTx` ("vendita") — same pairing mechanism. (2) "Rimuovi ammortamento" client update must clear `reimbursementId` + pairing fields (not only `amortizationPlanId`), because `TransactionTable` does not resync `loadedTransactions` from props after `router.refresh()`. (3) Dashboard movers month link → `/transactions?months=YYYY-MM` only; nature chips / cash-accrual lens have no equivalent transaction-list filters.
