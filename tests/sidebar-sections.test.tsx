@@ -127,4 +127,22 @@ describe('Sidebar sections (quick-260730-bfa Option A)', () => {
     expect(html).toContain('href="/dashboard"')
     expect(html).toContain('href="/patterns"')
   })
+
+  it('shows brand mark + wordmark when expanded', () => {
+    const html = renderToStaticMarkup(createElement(Sidebar, { user }))
+
+    expect(html).toContain('data-sparter-mark')
+    expect(html).toContain('Sparter')
+    expect(html).toContain('Comprimi barra laterale')
+  })
+
+  it('shows brand mark with expand control when collapsed (no wordmark)', () => {
+    sidebarCollapsedMock.collapsed = true
+    const html = renderToStaticMarkup(createElement(Sidebar, { user }))
+
+    expect(html).toContain('data-sparter-mark')
+    expect(html).toContain('Espandi barra laterale')
+    expect(html).not.toContain('>Sparter<')
+    expect(html).not.toContain('Comprimi barra laterale')
+  })
 })

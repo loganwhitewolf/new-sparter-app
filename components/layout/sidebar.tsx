@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/tooltip'
 import { ClientMountIcon } from '@/components/ui/client-mount-icon'
 import { Separator } from '@/components/ui/separator'
+import { SparterMark } from '@/components/layout/sparter-mark'
 import { useSidebarCollapsed } from '@/components/layout/sidebar-provider'
 import { signOutAction } from '@/lib/actions/auth'
 import { cn } from '@/lib/utils'
@@ -110,23 +111,40 @@ export function Sidebar({ user }: { user: UserDisplay }) {
         collapsed ? 'px-2' : 'px-3'
       )}
     >
-      {/* TOP SLOT: wordmark + toggle button (D-04/D-06) */}
+      {/* TOP SLOT: brand mark + wordmark (expanded) / mark+chevron chrome (collapsed).
+          Single persistent toggle so keyboard focus is not lost on state change. */}
       <div
         className={cn(
           'mb-4 flex items-center',
-          collapsed ? 'justify-center' : 'justify-between'
+          collapsed ? 'justify-center' : 'justify-between gap-2'
         )}
       >
-        {!collapsed && (
-          <span className="text-lg font-semibold tracking-tight">Sparter</span>
-        )}
+        {!collapsed ? (
+          <div className="flex min-w-0 items-center gap-2">
+            <SparterMark />
+            <span className="truncate text-lg font-semibold tracking-tight">Sparter</span>
+          </div>
+        ) : null}
         <button
+          type="button"
           onClick={() => setCollapsed(!collapsed)}
           aria-label={collapsed ? 'Espandi barra laterale' : 'Comprimi barra laterale'}
-          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          aria-expanded={!collapsed}
+          className={cn(
+            'rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            collapsed ? 'relative p-0.5' : 'p-1.5'
+          )}
         >
           {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
+            <>
+              <SparterMark />
+              <span
+                aria-hidden
+                className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-secondary bg-background text-muted-foreground shadow-sm"
+              >
+                <ChevronRight className="h-2.5 w-2.5" />
+              </span>
+            </>
           ) : (
             <ChevronLeft className="h-4 w-4" />
           )}
