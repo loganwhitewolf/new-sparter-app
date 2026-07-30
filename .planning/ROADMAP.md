@@ -84,7 +84,7 @@ infrastructure from v2.0/v2.8/v2.9)
 Plans:
 **Wave 1**
 
-- [ ] 82-01-PLAN.md — Covered Months query + pace existence check + real-Postgres tracer, RETIRE-05 byte-identical baseline
+- [x] 82-01-PLAN.md — Covered Months query + pace existence check + real-Postgres tracer, RETIRE-05 byte-identical baseline
 - [ ] 82-02-PLAN.md — Lens confinement to Overview (D-12) + drop the dead `?tag=` tab-nav param (D-14)
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -517,7 +517,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 79. amortizations-registry | v2.9 | 2/2 | Complete    | 2026-07-28 |
 | 80. dashboard-accrual-lens | v2.9 | 7/7 | Complete    | 2026-07-29 |
 | 81. inline-net-display-for-paired-transactions | v2.9 | 1/1 | Complete    | 2026-07-29 |
-| 82. number-engine-and-regression-gate | v3.0 | 0/3 | Planned    |  |
+| 82. number-engine-and-regression-gate | v3.0 | 0/3 | In Progress|  |
 | 83. categories-list | v3.0 | 0/TBD | Not started | - |
 | 84. category-detail-and-cleanup | v3.0 | 0/TBD | Not started | - |
 

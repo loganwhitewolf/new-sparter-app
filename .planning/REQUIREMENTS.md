@@ -9,9 +9,9 @@ Design source of truth: `.planning/dashboard-categories-DECISIONS.md` (19 locked
 
 ### Number engine — pace, coverage, projection
 
-- [ ] **PACE-01**: A month with no transactions at all for the user is excluded from every average, while a Covered Month in which the category has no movement counts as €0 and pulls the average down (D11)
+- [x] **PACE-01**: A month with no transactions at all for the user is excluded from every average, while a Covered Month in which the category has no movement counts as €0 and pulls the average down (D11)
 - [ ] **PACE-02**: The current calendar month is excluded from every average as a Partial Month; a month whose data simply ended (import stopped) is not partial (D11)
-- [ ] **PACE-03**: The user sees a monthly pace and a projection only when the selected year has at least 2 Covered Months; below that threshold no estimate is produced anywhere (D4)
+- [x] **PACE-03**: The user sees a monthly pace and a projection only when the selected year has at least 2 Covered Months; below that threshold no estimate is produced anywhere (D4)
 - [ ] **PACE-04**: The current month is valued at the greater of spent-so-far and the pace, so a projection never displays less than an already-observed amount (D12)
 - [ ] **PACE-05**: The period total equals the sum of the displayed monthly series — no independently computed projection figure exists (D13)
 - [ ] **PACE-06**: Every comparison is stored as `current − previous` and rendered without a sign — magnitude plus a word ("€180 in meno") — with judgement colour resolved per direction in a single place (D13)
@@ -42,7 +42,7 @@ Design source of truth: `.planning/dashboard-categories-DECISIONS.md` (19 locked
 - [ ] **RETIRE-02**: The Preset temporal filter is removed from Categories together with its shared machinery, with no regression on any surface that used its helpers (D1, D15)
 - [ ] **RETIRE-03**: The cassa/competenza lens switch renders only on Overview; Categories always reads cassa and Tags no longer displays a disabled switch (D6)
 - [ ] **RETIRE-04**: Dashboard tab navigation carries only the parameters that are actually read, dropping the `tag` parameter dead since v2.7 (D7)
-- [ ] **RETIRE-05**: Overview and Tags produce byte-identical totals before and after the rewrite, proven by regression tests ahead of any UI work (D6, ADR 0020)
+- [x] **RETIRE-05**: Overview and Tags produce byte-identical totals before and after the rewrite, proven by regression tests ahead of any UI work (D6, ADR 0020)
 
 ## Future Requirements
 
@@ -71,9 +71,9 @@ Acknowledged, deliberately not in this milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PACE-01 | Phase 82 | Pending |
+| PACE-01 | Phase 82 | Complete |
 | PACE-02 | Phase 82 | Pending |
-| PACE-03 | Phase 82 | Pending |
+| PACE-03 | Phase 82 | Complete |
 | PACE-04 | Phase 82 | Pending |
 | PACE-05 | Phase 82 | Pending |
 | PACE-06 | Phase 82 | Pending |
@@ -95,9 +95,10 @@ Acknowledged, deliberately not in this milestone.
 | RETIRE-02 | Phase 84 | Pending |
 | RETIRE-03 | Phase 82 | Pending |
 | RETIRE-04 | Phase 82 | Pending |
-| RETIRE-05 | Phase 82 | Pending |
+| RETIRE-05 | Phase 82 | Complete |
 
 **Coverage:**
+
 - v3.0 requirements: 25 total
 - Mapped to phases: 25
 - Unmapped: 0 ✓

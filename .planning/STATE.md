@@ -5,15 +5,15 @@ milestone_name: Categories Year View
 current_phase: 82
 current_phase_name: number-engine-and-regression-gate
 status: executing
-stopped_at: Phase 82 planned (3 plans, 2 waves) — ready to execute on gsd/v3.0-categories-year-view
-last_updated: "2026-07-30T15:20:58.311Z"
+stopped_at: Completed 82-01-PLAN.md
+last_updated: "2026-07-30T15:37:24.272Z"
 last_activity: 2026-07-30
-last_activity_desc: "Phase 82 planned: 3 plans in 2 waves, plan-checker passed, 9/9 requirements + 16/16 CONTEXT decisions covered; branch synced with origin/main @ fe8273f9"
+last_activity_desc: Phase 82 execution started
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -24,15 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** v3.0 (Categories Year View) roadmap created — ready to plan Phase 82
+**Current focus:** Phase 82 — number-engine-and-regression-gate
 
 ## Current Position
 
-Phase: 82 of 84 (number-engine-and-regression-gate)
-Plan: 3 plans in 2 waves (82-01, 82-02 parallel in wave 1; 82-03 in wave 2)
+Phase: 82 (number-engine-and-regression-gate) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
 Branch: `gsd/v3.0-categories-year-view` (synced with `origin/main` @ fe8273f9 — PR #65)
-Last activity: 2026-07-30 — Phase 82 planned: 3 plans, verification passed, 9/9 requirements + 16/16 CONTEXT decisions covered
+Last activity: 2026-07-30 — Phase 82 execution started
 
 Preceding activity on `main` (merged into this branch): 2026-07-30 — completed quick task
 260730-n2z (Amort UX: Visualizza ammortamento, Tutti=all, vendita/rimborso copy) and quick task
@@ -536,6 +536,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 80-07: Marked LENS-01/LENS-02 complete — D-03's all-four-routes contract satisfied by 80-04+80-05+80-06 together; DAL/URL-wiring proven by real-Postgres+unit tests, live-browser proof blocked by unrelated environmental bug
 - [Phase ?]: 260730-e6z: transactions footer totals bucketed per currency (falsy/empty -> EUR), split by sign of pairedNetAmount ?? amount via Decimal.js, rendered only once hasMore is false and not loading
 - [Phase ?]: 260730-e6z: formatSignedAmount forces useGrouping: true explicitly — this Node/ICU build drops the thousands separator when signDisplay is non-default and useGrouping is left at 'auto'
+- [Phase ?]: 82-01: MonthlyValue amounts are magnitudes (abs), not signed transaction amounts — matches getCategoryRanking's abs(sum(...)) convention
+- [Phase ?]: 82-01: userId-scoping test reuses first taxonomy's essentialNatureId via seedSecondEssentialCategory rather than calling seedMinimalTaxonomy twice (direction/nature are global unique(code) lookup tables)
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -686,9 +688,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** v3.0 roadmap created (Phases 82-84, 25/25 requirements mapped, no orphans)
+**Stopped at:** Completed 82-01-PLAN.md
 
-Last session: 2026-07-30T15:00:00.000Z
+Last session: 2026-07-30T15:37:24.261Z
 
 **Next:** `/gsd-discuss-phase 82` or `/gsd-plan-phase 82` to begin Phase 82 (number-engine-and-regression-gate).
 
@@ -789,3 +791,4 @@ Last session: 2026-07-30T15:00:00.000Z
 | Phase 80 P05 | ~10min | 2 tasks | 2 files |
 | Phase 80 P07 | 35min | 2 tasks | 2 files |
 | Phase 260730-e6z P01 | 25min | 1 tasks | 6 files |
+| Phase 82 P01 | 35min | 2 tasks | 4 files |
