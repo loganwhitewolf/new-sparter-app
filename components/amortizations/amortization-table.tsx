@@ -39,15 +39,32 @@ function formatSignedAmount(value: string): string {
 }
 
 /**
- * resolveEffectiveStatusFilter (D-C1) — the registry defaults to showing open plans only. This
- * deliberately overrides the shared DataTableToolbar's generic "absent param = show all"
- * convention: only an EXPLICIT status=closed URL param reveals closed plans; every other input
- * (null, undefined, 'open', or any unrecognized value) resolves to 'open'. The toolbar's own
- * Select control may visually show "Tutte" selected while this function still resolves 'open' —
- * an accepted UI-SPEC tradeoff, not a bug to "fix" toward showing all plans by default.
+ * Status URL → effective filter (260730-n2z). Aligns with DataTableToolbar: absent / "all" /
+ * unrecognized → null (show every status = "Tutte"); explicit open|closed narrow the list.
+ * Previously D-C1 coerced absent→open, which made the toolbar's "Tutte" lie.
  */
-export function resolveEffectiveStatusFilter(statusParam: string | null): 'open' | 'closed' {
-  return statusParam === 'closed' ? 'closed' : 'open'
+export function resolveEffectiveStatusFilter(
+  statusParam: string | null,
+): 'open' | 'closed' | null {
+  if (statusParam === 'open' || statusParam === 'closed') return statusParam
+  return null
+}
+
+/**
+ * Pure row predicate for registry filters — unit-testable without jsdom.
+ */
+export function matchesAmortizationFilters(
+  row: Pick<AmortizationPlanListRow, 'status' | 'displayTitle' | 'transactionId'>,
+  filters: {
+    status: 'open' | 'closed' | null
+    q: string
+    transactionId: string | null
+  },
+): boolean {
+  if (filters.status !== null && row.status !== filters.status) return false
+  if (filters.transactionId && row.transactionId !== filters.transactionId) return false
+  if (filters.q && !row.displayTitle.toLowerCase().includes(filters.q)) return false
+  return true
 }
 
 /**
@@ -86,10 +103,9 @@ export function sortAmortizationRows(
 }
 
 /**
- * Row-actions gate (D-A1/D-A2/D-A3): the "Chiudi" / "Realizza con vendita" actions are visible
- * ONLY on open plans. "Realizza con vendita" opens the AmortizationReimburseDialog primed with the
- * 'realize' intent (a real refund-linking flow), rather than navigating to the transaction detail
- * page — the previous transactionDetailHref target was a stub that never reached the sale flow.
+ * Row-actions gate (D-A1/D-A2/D-A3): the "Chiudi" / "Chiudi con vendita/rimborso" actions are
+ * visible ONLY on open plans. The vendita/rimborso CTA opens AmortizationReimburseDialog primed
+ * with the 'realize' intent (sale close or partial refund), rather than navigating away.
  */
 export function resolveRowActions(
   row: Pick<AmortizationPlanListRow, 'status'>,
@@ -104,10 +120,10 @@ export function AmortizationTable({ plans, route }: Props) {
   const router = useRouter()
   const { activeSort, activeDir, onSort } = useToolbarSort(route)
   const [closeTarget, setCloseTarget] = useState<string | null>(null)
-  // "Realizza con vendita" target: opens the AmortizationReimburseDialog primed with the
-  // 'realize' intent. `amount` carries the plan's SIGNED initial amount (initialAmount =
-  // transaction.total_amount, negative for an outflow); getEligibleCounterparts reads only its
-  // sign to surface inflow candidates, so the signed value is exactly what the dialog needs.
+  // "Chiudi con vendita/rimborso" target: opens AmortizationReimburseDialog primed with 'realize'.
+  // `amount` carries the plan's SIGNED initial amount (initialAmount = transaction.total_amount,
+  // negative for an outflow); getEligibleCounterparts reads only its sign to surface inflow
+  // candidates, so the signed value is exactly what the dialog needs.
   const [realizeTarget, setRealizeTarget] = useState<{
     id: string
     planId: string
@@ -117,12 +133,15 @@ export function AmortizationTable({ plans, route }: Props) {
 
   const effectiveStatus = resolveEffectiveStatusFilter(searchParams.get('status'))
   const q = searchParams.get('q')?.trim().toLowerCase() ?? ''
+  const transactionIdFilter = searchParams.get('transactionId')?.trim() || null
 
-  const filtered = plans.filter((row) => {
-    if (row.status !== effectiveStatus) return false
-    if (q && !row.displayTitle.toLowerCase().includes(q)) return false
-    return true
-  })
+  const filtered = plans.filter((row) =>
+    matchesAmortizationFilters(row, {
+      status: effectiveStatus,
+      q,
+      transactionId: transactionIdFilter,
+    }),
+  )
 
   const sortKey = activeSort ?? AMORTIZATIONS_TABLE_CONFIG.defaultSort.key
   const sortDir = activeSort ? activeDir : AMORTIZATIONS_TABLE_CONFIG.defaultSort.dir
@@ -262,7 +281,7 @@ export function AmortizationTable({ plans, route }: Props) {
                           })
                         }
                       >
-                        Realizza con vendita
+                        Chiudi con vendita/rimborso
                       </Button>
                     </div>
                   ) : null}
@@ -287,9 +306,9 @@ export function AmortizationTable({ plans, route }: Props) {
       />
     )}
 
-    {/* "Realizza con vendita" intent dialog — primed with the 'realize' intent so the sale-close
-        radio is pre-selected once a counterpart is picked. key remounts per plan so the date
-        window re-initialises from this plan's own transaction date. */}
+    {/* Vendita/rimborso intent dialog — primed with 'realize' so the sale-close radio is
+        pre-selected once a counterpart is picked. key remounts per plan so the date window
+        re-initialises from this plan's own transaction date. */}
     {realizeTarget && (
       <AmortizationReimburseDialog
         key={realizeTarget.planId}

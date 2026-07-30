@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   resolveEffectiveStatusFilter,
+  matchesAmortizationFilters,
   resolveRowActions,
   sortAmortizationRows,
 } from '@/components/amortizations/amortization-table'
@@ -80,9 +81,13 @@ describe('sortAmortizationRows', () => {
   })
 })
 
-describe('resolveEffectiveStatusFilter (D-C1)', () => {
-  it('resolves null to "open" (default-to-open override)', () => {
-    expect(resolveEffectiveStatusFilter(null)).toBe('open')
+describe('resolveEffectiveStatusFilter (Tutti = all statuses)', () => {
+  it('resolves null to null (show all — toolbar "Tutte")', () => {
+    expect(resolveEffectiveStatusFilter(null)).toBe(null)
+  })
+
+  it('resolves "all" to null', () => {
+    expect(resolveEffectiveStatusFilter('all')).toBe(null)
   })
 
   it('resolves "open" to "open"', () => {
@@ -93,8 +98,48 @@ describe('resolveEffectiveStatusFilter (D-C1)', () => {
     expect(resolveEffectiveStatusFilter('closed')).toBe('closed')
   })
 
-  it('resolves any unrecognized value to "open"', () => {
-    expect(resolveEffectiveStatusFilter('bogus')).toBe('open')
+  it('resolves any unrecognized value to null (show all)', () => {
+    expect(resolveEffectiveStatusFilter('bogus')).toBe(null)
+  })
+})
+
+describe('matchesAmortizationFilters', () => {
+  const openRow = makeRow({ id: 'a', status: 'open', transactionId: 'tx-open' })
+  const closedRow = makeRow({ id: 'b', status: 'closed', transactionId: 'tx-closed' })
+
+  it('with status null includes both open and closed', () => {
+    expect(matchesAmortizationFilters(openRow, { status: null, q: '', transactionId: null })).toBe(
+      true,
+    )
+    expect(
+      matchesAmortizationFilters(closedRow, { status: null, q: '', transactionId: null }),
+    ).toBe(true)
+  })
+
+  it('with status open excludes closed', () => {
+    expect(matchesAmortizationFilters(openRow, { status: 'open', q: '', transactionId: null })).toBe(
+      true,
+    )
+    expect(
+      matchesAmortizationFilters(closedRow, { status: 'open', q: '', transactionId: null }),
+    ).toBe(false)
+  })
+
+  it('transactionId isolates the matching plan', () => {
+    expect(
+      matchesAmortizationFilters(openRow, {
+        status: null,
+        q: '',
+        transactionId: 'tx-open',
+      }),
+    ).toBe(true)
+    expect(
+      matchesAmortizationFilters(closedRow, {
+        status: null,
+        q: '',
+        transactionId: 'tx-open',
+      }),
+    ).toBe(false)
   })
 })
 
