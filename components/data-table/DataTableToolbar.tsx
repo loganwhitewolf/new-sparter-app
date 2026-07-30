@@ -349,13 +349,10 @@ function FilterPanel({
     updateParams(entries)
   }
 
-  // Wide controls span both columns so month pickers / multi-selects stay usable.
+  // Wide controls span both columns. Months stays half-width so it can share a row with
+  // Piattaforma (transactions config orders them adjacent).
   function fieldSpansFullWidth(field: FilterField): boolean {
-    return (
-      field.type === 'month-multi' ||
-      field.type === 'multi-select' ||
-      field.type === 'amount-range'
-    )
+    return field.type === 'multi-select' || field.type === 'amount-range'
   }
 
   return (

@@ -33,17 +33,17 @@ export const transactionsTableConfig: TableConfig = {
       toChip: (v) => `Mesi: ${v}`,
     },
     {
-      key: 'amountMin',
-      label: 'Importo (€)',
-      type: 'amount-range',
-      toChip: (v) => `Importo ≥ ${v} €`,
-    },
-    {
       key: 'platform',
       label: 'Piattaforma',
       type: 'select',
       options: [],
       toChip: (v) => `Piattaforma: ${v}`,
+    },
+    {
+      key: 'amountMin',
+      label: 'Importo (€)',
+      type: 'amount-range',
+      toChip: (v) => `Importo ≥ ${v} €`,
     },
     {
       key: 'direction',
