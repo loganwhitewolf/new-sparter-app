@@ -242,16 +242,16 @@ test.describe('Dashboard - LENS: cassa/competenza switch', () => {
     expect(lensDetailSnapshot).toBe(cassaDetailSnapshot)
   })
 
-  test('LENS switch is disabled with the explanatory note on /dashboard/tags', async ({
+  test('no lens control renders on /dashboard/tags (LSD-05; stale since d12bb7ff, not from Phase 82)', async ({
     page,
   }) => {
     await openDashboardPath(page, '/dashboard/tags')
 
-    await expect(page.getByRole('button', { name: 'Cassa' })).toBeDisabled()
-    await expect(page.getByRole('button', { name: 'Competenza' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Cassa' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Competenza' })).toHaveCount(0)
     await expect(
       page.getByText('i tag sono all-time: la lente non cambia i totali')
-    ).toBeVisible()
+    ).toHaveCount(0)
   })
 
   test('lens survives tab navigation', async ({ page }) => {
