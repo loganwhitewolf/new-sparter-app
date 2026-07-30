@@ -6,9 +6,14 @@ import { toDecimal } from '@/lib/utils/decimal'
 import type { CoveredMonth } from '@/lib/dal/covered-months'
 import {
   buildCoveredMonthSeries,
+  buildYearSeries,
+  canShowPreviousYearTotalDifference,
+  computeComparison,
   computeCurrentMonthHybrid,
   computePaceAndProjection,
   isPartialMonth,
+  PREVIOUS_YEAR_TOTAL_DIFFERENCE_MIN_COVERED_MONTHS,
+  resolveComparisonJudgement,
   type MonthlyValue,
 } from '@/lib/services/pace-and-projection'
 
@@ -144,5 +149,103 @@ describe('Current month hybrid value (PACE-04, D-06)', () => {
 
     expect(result).toBe(fromSpentBranch)
     expect(result).toBe(fromPaceBranch)
+  })
+})
+
+describe('Total equals sum of series (PACE-05, D-07)', () => {
+  it('total is the reduce-sum of the months array for a straightforward fixture', () => {
+    const months: MonthlyValue[] = [
+      { yearMonth: '2026-01', amount: '100.00' },
+      { yearMonth: '2026-02', amount: '200.00' },
+      { yearMonth: '2026-03', amount: '150.50' },
+    ]
+
+    const result = buildYearSeries(months)
+
+    expect(result.total).toBe('450.50')
+    expect(result.months).toEqual(months)
+  })
+
+  it('holds the invariant EXACTLY (not approximately) when the already-rounded monthly values do not sum to a "clean" total — the total is the literal sum of the displayed series, never independently re-derived', () => {
+    // €100.00 spread evenly over 3 months at the pace formula's own rounding boundary:
+    // 100 / 3 = 33.333... -> rounds (ROUND_HALF_UP, toDbDecimal) to '33.33' per month.
+    // The naive/independent total would be '100.00'; the D-07-correct total is '99.99' —
+    // the literal sum of the three already-rounded, already-displayed month values.
+    const roundedMonths: MonthlyValue[] = [
+      { yearMonth: '2026-01', amount: '33.33' },
+      { yearMonth: '2026-02', amount: '33.33' },
+      { yearMonth: '2026-03', amount: '33.33' },
+    ]
+
+    const result = buildYearSeries(roundedMonths)
+
+    const handComputedSumOfDisplayedSeries = roundedMonths
+      .reduce((sum, m) => sum.plus(toDecimal(m.amount)), toDecimal('0'))
+      .toFixed(2)
+
+    expect(result.total).toBe(handComputedSumOfDisplayedSeries)
+    expect(result.total).toBe('99.99')
+    expect(result.total).not.toBe('100.00')
+  })
+
+  it('changes total by exactly the delta when one month is mutated, proving the structural link (not a coincidental match)', () => {
+    const months: MonthlyValue[] = [
+      { yearMonth: '2026-01', amount: '100.00' },
+      { yearMonth: '2026-02', amount: '200.00' },
+      { yearMonth: '2026-03', amount: '150.50' },
+    ]
+    const before = buildYearSeries(months)
+
+    const mutatedMonths: MonthlyValue[] = months.map((m) =>
+      m.yearMonth === '2026-02' ? { ...m, amount: '250.00' } : m,
+    )
+    const after = buildYearSeries(mutatedMonths)
+
+    const delta = toDecimal(after.total).minus(toDecimal(before.total))
+    expect(delta.toFixed(2)).toBe('50.00')
+  })
+})
+
+describe('Comparison sign convention and judgement (PACE-06, D-08/D-09/D-10)', () => {
+  it('computeComparison follows current − previous (D-08)', () => {
+    expect(computeComparison('380.00', '200.00')).toBe('180.00')
+    expect(computeComparison('200.00', '380.00')).toBe('-180.00')
+  })
+
+  it('never throws for a zero-value previous period', () => {
+    expect(() => computeComparison('0.00', '0.00')).not.toThrow()
+    expect(computeComparison('0.00', '0.00')).toBe('0.00')
+  })
+
+  it('resolveComparisonJudgement: on "out", positive delta is worse, negative is better, zero is neutral', () => {
+    expect(resolveComparisonJudgement('180.00', 'out')).toBe('worse')
+    expect(resolveComparisonJudgement('-180.00', 'out')).toBe('better')
+    expect(resolveComparisonJudgement('0.00', 'out')).toBe('neutral')
+  })
+
+  it('resolveComparisonJudgement: on "allocation"/"in", positive delta is better, negative is worse, zero is neutral', () => {
+    expect(resolveComparisonJudgement('180.00', 'allocation')).toBe('better')
+    expect(resolveComparisonJudgement('180.00', 'in')).toBe('better')
+    expect(resolveComparisonJudgement('-180.00', 'allocation')).toBe('worse')
+    expect(resolveComparisonJudgement('-180.00', 'in')).toBe('worse')
+    expect(resolveComparisonJudgement('0.00', 'allocation')).toBe('neutral')
+    expect(resolveComparisonJudgement('0.00', 'in')).toBe('neutral')
+  })
+
+  it('is deterministic: identical inputs always yield identical, ===-equal outputs across repeated calls', () => {
+    const first = resolveComparisonJudgement('180.00', 'out')
+    const second = resolveComparisonJudgement('180.00', 'out')
+    expect(first).toBe(second)
+
+    const firstComparison = computeComparison('380.00', '200.00')
+    const secondComparison = computeComparison('380.00', '200.00')
+    expect(firstComparison).toBe(secondComparison)
+  })
+
+  it('canShowPreviousYearTotalDifference gates only at the D-10 threshold (exported as PREVIOUS_YEAR_TOTAL_DIFFERENCE_MIN_COVERED_MONTHS = 6)', () => {
+    expect(PREVIOUS_YEAR_TOTAL_DIFFERENCE_MIN_COVERED_MONTHS).toBe(6)
+    expect(canShowPreviousYearTotalDifference(5)).toBe(false)
+    expect(canShowPreviousYearTotalDifference(6)).toBe(true)
+    expect(canShowPreviousYearTotalDifference(7)).toBe(true)
   })
 })

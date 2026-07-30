@@ -94,3 +94,63 @@ export function isPartialMonth(yearMonth: string, today: Date = new Date()): boo
 export function computeCurrentMonthHybrid(spentSoFar: string, pace: string): string {
   return toDbDecimal(Decimal.max(toDecimal(spentSoFar), toDecimal(pace)))
 }
+
+/**
+ * D-07/PACE-05: the period total is the sum of the displayed monthly series — never an
+ * independently derived formula. `total` is built structurally as the reduce-sum of `months`
+ * itself, so any divergence between the two is impossible, not merely tested for. Each month's
+ * amount is assumed already rounded to cents (the caller's return boundary); this function rounds
+ * the accumulated sum once, via toDbDecimal, when it returns.
+ */
+export function buildYearSeries(months: MonthlyValue[]): { months: MonthlyValue[]; total: string } {
+  const total = months.reduce((sum, m) => sum.plus(toDecimal(m.amount)), toDecimal('0'))
+  return { months, total: toDbDecimal(total) }
+}
+
+/**
+ * D-08: every comparison is computed and stored as `current − previous` (negative = spent less),
+ * reusing the sign convention already documented in lib/dal/overview.ts's MonthOverMonthChange —
+ * this does not invent a new convention.
+ */
+export function computeComparison(current: string, previous: string): string {
+  return toDbDecimal(toDecimal(current).minus(toDecimal(previous)))
+}
+
+/** The three outcomes resolveComparisonJudgement can return — never a raw sign glyph. */
+export type ComparisonJudgement = 'better' | 'worse' | 'neutral'
+
+/**
+ * D-09: the single shared per-direction sign-to-judgement mapping — the ONLY place this resolution
+ * happens, never duplicated per widget. On `out`, more spending is worse; on `in`/`allocation`,
+ * more is better. A zero delta is always 'neutral', regardless of direction.
+ */
+export function resolveComparisonJudgement(
+  delta: string,
+  direction: 'in' | 'out' | 'allocation',
+): ComparisonJudgement {
+  const decimalDelta = toDecimal(delta)
+  if (decimalDelta.isZero()) {
+    return 'neutral'
+  }
+
+  const isPositive = decimalDelta.isPositive()
+  if (direction === 'out') {
+    return isPositive ? 'worse' : 'better'
+  }
+  return isPositive ? 'better' : 'worse'
+}
+
+/**
+ * D-10: the previous-year coverage threshold that gates ONLY the total-difference comparison — the
+ * average-vs-average comparison always renders regardless of this gate. Exported as a single named
+ * constant so Phases 83/84 both read the same value instead of each hardcoding 6.
+ */
+export const PREVIOUS_YEAR_TOTAL_DIFFERENCE_MIN_COVERED_MONTHS = 6
+
+/**
+ * D-10: whether the previous year had enough Covered Months to show the previous-year total
+ * difference. Gates only the total-difference figure — never the average comparison.
+ */
+export function canShowPreviousYearTotalDifference(previousYearCoveredMonthCount: number): boolean {
+  return previousYearCoveredMonthCount >= PREVIOUS_YEAR_TOTAL_DIFFERENCE_MIN_COVERED_MONTHS
+}
