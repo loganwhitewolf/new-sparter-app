@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 Phase: Milestone v2.9 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-07-30 - Completed quick task 260730-bfa: Riorganizzare il menu laterale in sezioni distinte per tipologia di feature
+Last activity: 2026-07-30 - Completed quick task 260730-e6z: Riepilogo totali netti (Entrate/Uscite/Differenza per valuta) nel footer della tabella transazioni
 
 ## Roadmap (v2.9 — Phases 77-81) — SHIPPED 2026-07-29
 
