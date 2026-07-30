@@ -144,10 +144,12 @@ describe('TransactionTable footer — net totals summary (D-01–D-08)', () => {
     expect(html).toContain('Entrate')
     expect(html).toContain('Uscite')
     expect(html).toContain('Differenza')
-    // Reconciling figures: Entrate 100,00 / Uscite 40,00 / Differenza +60,00
+    // Reconciling figures: Entrate 100,00 / Uscite 40,00 / Differenza +60,00.
+    // Entrate/Uscite render absolute, Differenza renders signed — assert the sign
+    // explicitly so a regression that drops it cannot pass on a bare '60,00' substring.
     expect(html).toContain('100,00')
     expect(html).toContain('40,00')
-    expect(html).toContain('60,00')
+    expect(html).toMatch(/\+60,00/)
   })
 
   it('single-currency (all-EUR) footer renders no per-bucket currency label', () => {

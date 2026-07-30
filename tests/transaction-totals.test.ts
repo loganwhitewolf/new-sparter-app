@@ -99,6 +99,21 @@ describe('computeTransactionTotals', () => {
     expect(result.buckets.map((b) => b.currency)).toEqual(['GBP', 'EUR', 'USD'])
   })
 
+  it('counts a malformed amount string without throwing and without polluting the totals', () => {
+    const result = computeTransactionTotals([
+      row({ amount: '10.00' }),
+      row({ amount: 'not-a-number' }),
+      row({ amount: '-4.00' }),
+    ])
+
+    expect(result.totalCount).toBe(3)
+    expect(result.buckets).toHaveLength(1)
+    expect(result.buckets[0].count).toBe(3)
+    expect(result.buckets[0].totalIn.toFixed(2)).toBe('10.00')
+    expect(result.buckets[0].totalOut.toFixed(2)).toBe('4.00')
+    expect(result.buckets[0].difference.toFixed(2)).toBe('6.00')
+  })
+
   it('totalCount always equals rows.length regardless of bucket count (D-08)', () => {
     const result = computeTransactionTotals([
       row({ amount: '1.00', currency: 'EUR' }),

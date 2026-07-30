@@ -30,11 +30,29 @@ export type TransactionTotals = {
 }
 
 /**
+ * Parses a DECIMAL string into a Decimal, returning null instead of throwing on malformed input.
+ *
+ * `toDecimal` throws on a non-numeric string. This helper runs inside a render-time useMemo, so an
+ * uncaught throw would take the whole transactions table down. The DB boundary should never produce
+ * a malformed amount today, but the sibling display formatters in @/lib/utils/format-amount degrade
+ * gracefully on bad input rather than throwing — this keeps the totals path consistent with them.
+ */
+function parseNet(value: string): Decimal | null {
+  try {
+    const parsed = toDecimal(value)
+    return parsed.isFinite() ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Groups rows by currency (falsy/empty normalized to 'EUR', mirroring the existing
  * `currency || 'EUR'` normalization in getAmountFormatter/formatAbsoluteAmount — D-08),
  * then within each bucket splits pairedNetAmount ?? amount by sign (D-04, D-05):
  * positive nets accumulate into totalIn, negative nets accumulate (as |value|) into totalOut,
- * a net of exactly zero counts toward the bucket's count but neither total.
+ * a net of exactly zero counts toward the bucket's count but neither total. A malformed amount
+ * string is likewise counted but contributes to neither total (see parseNet).
  *
  * Buckets are ordered deterministically: count descending, then currency code ascending as a
  * stable tiebreaker (D-08). totalCount is always rows.length, regardless of bucket count.
@@ -56,8 +74,13 @@ export function computeTransactionTotals(rows: TransactionTotalsRow[]): Transact
       bucketsByCurrency.set(currency, bucket)
     }
 
-    const net = toDecimal(row.pairedNetAmount ?? row.amount)
+    const net = parseNet(row.pairedNetAmount ?? row.amount)
     bucket.count += 1
+
+    if (net === null) {
+      // Malformed value: the row is still counted, but contributes to neither side.
+      continue
+    }
 
     if (net.isPositive()) {
       bucket.totalIn = bucket.totalIn.plus(net)
