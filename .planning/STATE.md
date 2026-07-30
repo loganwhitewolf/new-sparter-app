@@ -5,15 +5,15 @@ milestone_name: Categories Year View
 current_phase: 82
 current_phase_name: number-engine-and-regression-gate
 status: executing
-stopped_at: Completed 82-01-PLAN.md
-last_updated: "2026-07-30T15:37:24.272Z"
+stopped_at: Completed 82-02-PLAN.md
+last_updated: "2026-07-30T15:45:55.058Z"
 last_activity: 2026-07-30
 last_activity_desc: Phase 82 execution started
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 82 (number-engine-and-regression-gate) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Branch: `gsd/v3.0-categories-year-view` (synced with `origin/main` @ fe8273f9 — PR #65)
 Last activity: 2026-07-30 — Phase 82 execution started
@@ -538,6 +538,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 260730-e6z: formatSignedAmount forces useGrouping: true explicitly — this Node/ICU build drops the thousands separator when signDisplay is non-default and useGrouping is left at 'auto'
 - [Phase ?]: 82-01: MonthlyValue amounts are magnitudes (abs), not signed transaction amounts — matches getCategoryRanking's abs(sum(...)) convention
 - [Phase ?]: 82-01: userId-scoping test reuses first taxonomy's essentialNatureId via seedSecondEssentialCategory rather than calling seedMinimalTaxonomy twice (direction/nature are global unique(code) lookup tables)
+- [Phase ?]: Categories pinned to cash by construction — pages stop parsing ?lens= entirely instead of parsing and pinning the result (D-12)
+- [Phase ?]: buildDashboardTabHref drops the dead tag param, keeps lens propagation unchanged (D-13/D-14)
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -688,9 +690,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 82-01-PLAN.md
+**Stopped at:** Completed 82-02-PLAN.md
 
-Last session: 2026-07-30T15:37:24.261Z
+Last session: 2026-07-30T15:45:55.050Z
 
 **Next:** `/gsd-discuss-phase 82` or `/gsd-plan-phase 82` to begin Phase 82 (number-engine-and-regression-gate).
 
@@ -792,3 +794,4 @@ Last session: 2026-07-30T15:37:24.261Z
 | Phase 80 P07 | 35min | 2 tasks | 2 files |
 | Phase 260730-e6z P01 | 25min | 1 tasks | 6 files |
 | Phase 82 P01 | 35min | 2 tasks | 4 files |
+| Phase 82 P02 | 25min | 2 tasks | 5 files |
