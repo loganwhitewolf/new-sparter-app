@@ -24,6 +24,12 @@ export type FilterField = {
    */
   dependsOn?: string
   /**
+   * When this field's URL param is absent, cascade children and the control's own
+   * displayed selection use this set instead of "all" / empty. Used by transactions
+   * Direzione to hide transfers by default without writing chips into the URL.
+   */
+  implicitDefault?: string[]
+  /**
    * Converts the raw URL value to a display chip label.
    * The optional second argument is the resolved option label for select /
    * multi-select fields (the toolbar matches the raw value against the effective

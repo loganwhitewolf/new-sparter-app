@@ -1,24 +1,21 @@
+import {
+  DEFAULT_TRANSACTION_DIRECTIONS,
+  TRANSACTION_DIRECTION_LABELS,
+} from '@/lib/utils/transaction-directions'
 import { NATURE_LABELS } from '@/lib/utils/nature-labels'
 import type { TableConfig } from '@/lib/utils/table-config'
 
-const DIRECTION_LABELS: Record<string, string> = {
-  in: 'Entrate',
-  out: 'Uscite',
-  allocation: 'Accantonamenti',
-  transfer: 'Trasferimenti',
-  unclassified: 'Non classificato',
-}
-
 /**
- * Declarative table config for the Transactions table (Wave 4, cascade extension lcp-01).
+ * Declarative table config for the Transactions table (Wave 4, cascade extension lcp-01;
+ * direction multi-select + transfer-off default — 260730-o82).
  * Consumed by DataTableToolbar — defines search, filters, sortable columns, and defaultSort.
  *
- * Field inventory (LOCKED per D-19..D-25; extended lcp-01, D-08):
+ * Field inventory (LOCKED per D-19..D-25; extended lcp-01, D-08, o82):
  *   - search: q (description / customTitle)
  *   - months: month-multi (occurredAt)
  *   - amount: amount-range (absolute value, D-20)
  *   - platform: select (via file join)
- *   - direction: select (direction code In/Out/Accantonamenti/Trasferimenti, D-08)
+ *   - direction: multi-select (implicitDefault hides transfer; no chips until user changes)
  *   - nature: select (FlowNature via subCategory, dependsOn:'direction')
  *   - category: select (via subCategory → category join)
  *   - subCategory: select (dependsOn:'category')
@@ -51,9 +48,11 @@ export const transactionsTableConfig: TableConfig = {
     {
       key: 'direction',
       label: 'Direzione',
-      type: 'select',
+      type: 'multi-select',
       options: [],
-      toChip: (v) => `Direzione: ${DIRECTION_LABELS[v] ?? v}`,
+      implicitDefault: [...DEFAULT_TRANSACTION_DIRECTIONS],
+      toChip: (v) =>
+        `Direzione: ${TRANSACTION_DIRECTION_LABELS[v as keyof typeof TRANSACTION_DIRECTION_LABELS] ?? v}`,
     },
     {
       key: 'nature',

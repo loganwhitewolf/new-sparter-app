@@ -72,9 +72,10 @@ export type TransactionFilters = {
   amountMin?: string
   amountMax?: string
   status?: 'uncategorized' | 'categorized'
-  // Category-derived filters: nature via nature.code, direction via direction.code
+  // Category-derived filters: nature via nature.code; directions via direction.code (multi)
   nature?: string
-  direction?: string
+  /** Effective direction codes; empty array matches nothing. Omit for no direction filter. */
+  directions?: string[]
 }
 
 /**
@@ -364,10 +365,10 @@ export function getTransactionSortColumn(sort: TransactionSort) {
 export function mapParsedTransactionFiltersToDal(
   parsed: ParsedTransactionFilters,
 ): TransactionFilters {
-  const { type, ...rest } = parsed
+  const { directions, ...rest } = parsed
   return {
     ...rest,
-    ...(type ? { direction: type } : {}),
+    directions,
   }
 }
 
@@ -471,11 +472,27 @@ export const getTransactions = cache(
       conditions.push(eq(nature.code, filters.nature))
     }
 
-    // Direction filter — via nature→direction join; 'unclassified' matches null natureId rows
-    if (filters.direction === 'unclassified') {
-      conditions.push(isNull(subCategory.natureId))
-    } else if (filters.direction) {
-      conditions.push(eq(direction.code, filters.direction))
+    // Direction filter — multi-select: classified codes via direction.code; 'unclassified'
+    // matches null natureId (no subcategory nature). Empty list matches nothing.
+    if (filters.directions !== undefined) {
+      if (filters.directions.length === 0) {
+        conditions.push(sql`false`)
+      } else {
+        const classified = filters.directions.filter((d) => d !== 'unclassified')
+        const includeUnclassified = filters.directions.includes('unclassified')
+        const parts = []
+        if (classified.length > 0) {
+          parts.push(inArray(direction.code, classified))
+        }
+        if (includeUnclassified) {
+          parts.push(isNull(subCategory.natureId))
+        }
+        if (parts.length === 1) {
+          conditions.push(parts[0])
+        } else if (parts.length > 1) {
+          conditions.push(or(...parts))
+        }
+      }
     }
 
     return db

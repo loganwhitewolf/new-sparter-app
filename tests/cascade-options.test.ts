@@ -7,6 +7,7 @@ import {
   buildTypeNatureMap,
   buildCategorySubcategoryMap,
   buildDirectionNatureMap,
+  unionFilterOptions,
 } from '@/lib/utils/cascade-options'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 
@@ -416,5 +417,22 @@ describe('buildDirectionNatureMap (Phase 49 — CAT-01)', () => {
   it('returns empty object for empty input', () => {
     const result = buildDirectionNatureMap([])
     expect(result).toEqual({})
+  })
+})
+
+describe('unionFilterOptions', () => {
+  it('unions and dedupes by value across parent keys', () => {
+    const map = {
+      in: [{ value: 'income', label: 'Reddito' }],
+      out: [
+        { value: 'essential', label: 'Essenziale' },
+        { value: 'income', label: 'Reddito dup' },
+      ],
+      transfer: [{ value: 'transfer', label: 'Trasferimento' }],
+    }
+    const result = unionFilterOptions(map, ['in', 'out'])
+    expect(result.map((o) => o.value)).toEqual(['income', 'essential'])
+    expect(result.find((o) => o.value === 'income')?.label).toBe('Reddito')
+    expect(result.some((o) => o.value === 'transfer')).toBe(false)
   })
 })

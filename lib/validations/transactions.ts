@@ -1,5 +1,10 @@
 import { z } from "zod"
 import { parseAmount, parseMonths, parseStatus } from '@/lib/utils/search-params'
+import {
+  TRANSACTION_DIRECTION_ALLOWED,
+  resolveTransactionDirections,
+  type TransactionDirectionCode,
+} from '@/lib/utils/transaction-directions'
 
 export const CreateTransactionSchema = z.object({
   description: z
@@ -127,8 +132,12 @@ export type ParsedTransactionFilters = {
   status?: 'uncategorized' | 'categorized'
   /** FlowNature filter — nine enum members plus sentinel 'unclassified' */
   nature?: string
-  /** Category type filter — in/out/transfer plus sentinel 'unclassified' */
-  type?: string
+  /**
+   * Effective direction codes after parse (always set for the transactions page).
+   * Absent URL `direction` → default without `transfer`. Explicit CSV may include transfer
+   * or be empty (match nothing).
+   */
+  directions: TransactionDirectionCode[]
   sort: TransactionSort
   dir: TransactionSortDirection
 }
@@ -155,7 +164,10 @@ const NATURE_ALLOWED = [
   'unclassified',
 ] as const
 
-const TYPE_ALLOWED = ['in', 'out', 'allocation', 'transfer', 'unclassified'] as const
+function firstRaw(value: string | string[] | undefined): string | undefined {
+  if (value === undefined) return undefined
+  return Array.isArray(value) ? value[0] : value
+}
 
 function firstTrimmed(value: string | string[] | undefined): string | undefined {
   const rawValue = Array.isArray(value) ? value[0] : value
@@ -247,7 +259,14 @@ export function parseTransactionFilters(
     | 'uncategorized'
     | undefined
   const nature = parseStatus(input.nature, NATURE_ALLOWED)
-  const type = parseStatus(input.direction ?? input.type, TYPE_ALLOWED)
+  // Direction: key presence matters — absent → implicit default (no transfer); present → CSV
+  // (possibly empty). Legacy single `type` still accepted when `direction` is absent.
+  const directionRaw = firstRaw(input.direction)
+  const legacyTypeRaw = firstRaw(input.type)
+  const { directions } =
+    directionRaw !== undefined
+      ? resolveTransactionDirections(directionRaw, undefined)
+      : resolveTransactionDirections(undefined, legacyTypeRaw ?? undefined)
 
   return {
     ...(platform && PLATFORM_SLUG_RE.test(platform) ? { platform } : {}),
@@ -261,7 +280,7 @@ export function parseTransactionFilters(
     ...(amountMax ? { amountMax } : {}),
     ...(status ? { status } : {}),
     ...(nature ? { nature } : {}),
-    ...(type ? { type } : {}),
+    directions,
     sort: sort.success ? sort.data : DEFAULT_SORT,
     dir: dir.success ? dir.data : DEFAULT_DIR,
   }
