@@ -7,7 +7,10 @@
 // when unreachable — same pattern as tests/reimbursement-list.test.ts / amortization-lifecycle.test.ts.
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { getAmortizationPlanList as GetAmortizationPlanList } from '@/lib/dal/amortization'
+import type {
+  getAmortizationPlanList as GetAmortizationPlanList,
+  hasAmortizationPlans as HasAmortizationPlans,
+} from '@/lib/dal/amortization'
 import {
   amortizationPlan as amortizationPlanTable,
   transaction as transactionTable,
@@ -30,6 +33,7 @@ import {
 const harness = await connectReimbursementTestDb()
 
 let getAmortizationPlanList: typeof GetAmortizationPlanList
+let hasAmortizationPlans: typeof HasAmortizationPlans
 
 if (harness.ok) {
   // Same technique as tests/reimbursement-list.test.ts: never let lib/dal/amortization.ts build
@@ -39,6 +43,7 @@ if (harness.ok) {
   vi.resetModules()
   const dalModule = await import('@/lib/dal/amortization')
   getAmortizationPlanList = dalModule.getAmortizationPlanList
+  hasAmortizationPlans = dalModule.hasAmortizationPlans
 } else {
   console.warn(
     '[amortization-registry-dal] Local Postgres unreachable — run `yarn db:up` to enable this suite. Skipping.',
@@ -378,6 +383,96 @@ describeIfReachable(
       const expectedNet = toDecimal(totalAmount).minus(expectedConsumed)
       expect(toDecimal(afterRow!.netValue).equals(expectedNet)).toBe(true)
       expect(toDecimal(afterRow!.initialAmount).equals(toDecimal(totalAmount))).toBe(true)
+    })
+  },
+)
+
+describeIfReachable(
+  'hasAmortizationPlans — existence probe for the lens-selector redesign (LSD-04)',
+  () => {
+    let db: ReimbursementTestDb
+    let userId: string
+    let subCategoryId: number
+
+    beforeEach(async () => {
+      db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+      const seededUser = await seedUser(db)
+      userId = seededUser.userId
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      subCategoryId = taxonomy.essentialSubCategoryId
+    })
+
+    it('a brand-new user with zero plans resolves false', async () => {
+      const result = await hasAmortizationPlans(userId)
+      expect(result).toBe(false)
+    })
+
+    it('resolves true after seeding one open plan', async () => {
+      const { expenseId, transactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId,
+        amount: '-600.00',
+        occurredAt: new Date(),
+        title: 'Open plan',
+      })
+      const instalments = buildPastFutureInstalments('-600.00', 2, 4)
+      await seedAmortizationPlan(db, {
+        userId,
+        transactionId,
+        expenseId,
+        months: 6,
+        instalments,
+      })
+
+      const result = await hasAmortizationPlans(userId)
+      expect(result).toBe(true)
+    })
+
+    it('still resolves true after the plan is closed via closePlanTx — any status counts (LSD-04)', async () => {
+      const { expenseId, transactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId,
+        amount: '-300.00',
+        occurredAt: new Date(),
+        title: 'Closed plan',
+      })
+      const instalments = buildPastFutureInstalments('-300.00', 3, 0)
+      const { planId } = await seedAmortizationPlan(db, {
+        userId,
+        transactionId,
+        expenseId,
+        months: 3,
+        instalments,
+      })
+
+      await closePlanTx(db, { userId, planId, closureMonth: new Date() })
+
+      const result = await hasAmortizationPlans(userId)
+      expect(result).toBe(true)
+    })
+
+    it('IDOR: a plan seeded for a different user never flips the result for a user with none of their own', async () => {
+      const { userId: otherUserId } = await seedUser(db)
+      const { expenseId: otherExpenseId, transactionId: otherTransactionId } =
+        await seedExpenseWithTransaction(db, {
+          userId: otherUserId,
+          subCategoryId,
+          amount: '-900.00',
+          occurredAt: new Date(),
+          title: 'Other user plan',
+        })
+      const otherInstalments = buildPastFutureInstalments('-900.00', 3, 3)
+      await seedAmortizationPlan(db, {
+        userId: otherUserId,
+        transactionId: otherTransactionId,
+        expenseId: otherExpenseId,
+        months: 6,
+        instalments: otherInstalments,
+      })
+
+      const result = await hasAmortizationPlans(userId)
+      expect(result).toBe(false)
     })
   },
 )

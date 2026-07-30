@@ -118,3 +118,24 @@ export async function getAmortizationPlanList(userId: string): Promise<Amortizat
     status: row.status as 'open' | 'closed',
   }))
 }
+
+/**
+ * Cheap existence probe for the lens-selector redesign (LSD-04): does `userId` have AT LEAST
+ * ONE amortization plan, in ANY status (open or closed)? Never the full list — that stays
+ * getAmortizationPlanList's job; this is a gate for whether the dashboard's lens dropdown
+ * renders at all.
+ *
+ * IDOR-safe by construction: the WHERE clause scopes exclusively on
+ * amortization_plan.user_id = userId, resolved server-side from verifySession(), same pattern
+ * as every other DAL function in this file.
+ */
+export async function hasAmortizationPlans(userId: string): Promise<boolean> {
+  const result = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT 1 FROM amortization_plan WHERE user_id = ${userId}
+    ) AS exists
+  `)
+
+  const [row] = result.rows as { exists: boolean }[]
+  return row?.exists ?? false
+}
