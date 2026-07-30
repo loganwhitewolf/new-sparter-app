@@ -3,14 +3,10 @@ import { Suspense } from 'react'
 import { CategoryRankingList } from '@/components/dashboard/category-ranking-list'
 import { CategoryRankingSkeleton } from '@/components/dashboard/category-ranking-skeleton'
 import { DashboardFilters } from '@/components/dashboard/dashboard-filters'
-import { LensSwitch } from '@/components/dashboard/lens-switch'
 import { getCategoryDeviations, getCategoryRanking } from '@/lib/dal/dashboard'
-import { resolveLedgerRowSource, type LedgerRowSource } from '@/lib/dal/dashboard-filters'
-import { hasAmortizationPlans } from '@/lib/dal/amortization'
 import { verifySession } from '@/lib/dal/auth'
 import { buildDashboardCategoriesHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
-import { parseLensParam, type Lens } from '@/lib/utils/search-params'
 import {
   parseDashboardFilters,
   type DashboardFilters as ParsedDashboardFilters,
@@ -46,7 +42,6 @@ type Props = {
     period?: string | string[]
     type?: string | string[]
     sort?: string | string[]
-    lens?: string | string[]
   }>
 }
 
@@ -64,7 +59,7 @@ function parseCategoryDashboardFilters(
   }
 }
 
-function SortToggle({ filters, lens }: { filters: CategoryDashboardFilters; lens: Lens }) {
+function SortToggle({ filters }: { filters: CategoryDashboardFilters }) {
   const options: Array<{ value: DashboardSort; label: string }> = [
     { value: 'deviation', label: 'Deviazione' },
     { value: 'amount', label: 'Importo' },
@@ -80,7 +75,6 @@ function SortToggle({ filters, lens }: { filters: CategoryDashboardFilters; lens
           sort: option.value,
           defaultPreset: CATEGORIES_DEFAULT_PRESET,
           defaultSort: CATEGORIES_DEFAULT_SORT,
-          lens,
         })
         return (
           <Link
@@ -104,16 +98,12 @@ function SortToggle({ filters, lens }: { filters: CategoryDashboardFilters; lens
 
 async function CategoryRankingContent({
   filters,
-  ledgerRowSource,
-  lens,
 }: {
   filters: CategoryDashboardFilters
-  ledgerRowSource: LedgerRowSource
-  lens: Lens
 }) {
   const [data, deviations] = await Promise.all([
-    getCategoryRanking(filters, ledgerRowSource),
-    getCategoryDeviations({ type: filters.type }, ledgerRowSource),
+    getCategoryRanking(filters),
+    getCategoryDeviations({ type: filters.type }),
   ])
 
   return (
@@ -124,27 +114,20 @@ async function CategoryRankingContent({
       defaultPreset={CATEGORIES_DEFAULT_PRESET}
       sort={filters.sort}
       deviations={deviations}
-      lens={lens}
     />
   )
 }
 
 export default async function DashboardCategoriesPage({ searchParams }: Props) {
-  const { userId } = await verifySession()
+  await verifySession()
   const params = await searchParams
   const filters = parseCategoryDashboardFilters(params)
-  const lens = parseLensParam(params.lens)
-  const ledgerRowSource = resolveLedgerRowSource(lens)
-  const hasPlans = await hasAmortizationPlans(userId)
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-1 text-xl font-semibold">
-            Categorie
-            {hasPlans && <LensSwitch lens={lens} />}
-          </h1>
+          <h1 className="flex items-center gap-1 text-xl font-semibold">Categorie</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Classifica delle categorie per importo e andamento mensile.
           </p>
@@ -160,10 +143,10 @@ export default async function DashboardCategoriesPage({ searchParams }: Props) {
         />
       </Suspense>
 
-      <SortToggle filters={filters} lens={lens} />
+      <SortToggle filters={filters} />
 
       <Suspense fallback={<CategoryRankingSkeleton />}>
-        <CategoryRankingContent filters={filters} ledgerRowSource={ledgerRowSource} lens={lens} />
+        <CategoryRankingContent filters={filters} />
       </Suspense>
     </div>
   )

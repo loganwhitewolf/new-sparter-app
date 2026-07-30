@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { parseLensParam, parsePositiveIntParam } from '@/lib/utils/search-params'
+import { parsePositiveIntParam } from '@/lib/utils/search-params'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { CategoryDetailEmptyState } from '@/components/dashboard/category-detail-empty-state'
@@ -9,10 +9,7 @@ import { CategoryDetailTrendChart } from '@/components/dashboard/category-detail
 import { CategorySubcategoryBreakdown } from '@/components/dashboard/category-subcategory-breakdown'
 import { CategoryTopTransactions } from '@/components/dashboard/category-top-transactions'
 import { DashboardFilters } from '@/components/dashboard/dashboard-filters'
-import { LensSwitch } from '@/components/dashboard/lens-switch'
 import { getCategoryDeviations, getCategoryDetail } from '@/lib/dal/dashboard'
-import { resolveLedgerRowSource, type LedgerRowSource } from '@/lib/dal/dashboard-filters'
-import { hasAmortizationPlans } from '@/lib/dal/amortization'
 import { verifySession } from '@/lib/dal/auth'
 import { buildDashboardCategoriesHref } from '@/lib/routes'
 import {
@@ -37,7 +34,6 @@ type Props = {
     preset?: string | string[]
     period?: string | string[]
     type?: string | string[]
-    lens?: string | string[]
   }>
 }
 
@@ -68,20 +64,18 @@ async function CategoryDetailContent({
   categoryId,
   filters,
   categoriesHref,
-  ledgerRowSource,
 }: {
   categoryId: number | null
   filters: CategoryDetailFilters
   categoriesHref: string
-  ledgerRowSource: LedgerRowSource
 }) {
   if (categoryId === null) {
     return <CategoryDetailEmptyState />
   }
 
   const [data, deviations] = await Promise.all([
-    getCategoryDetail(categoryId, filters, ledgerRowSource),
-    getCategoryDeviations({ type: filters.type, categoryId }, ledgerRowSource),
+    getCategoryDetail(categoryId, filters),
+    getCategoryDeviations({ type: filters.type, categoryId }),
   ])
 
   if (data.category === null) {
@@ -142,19 +136,15 @@ async function CategoryDetailContent({
 }
 
 export default async function DashboardCategoryDetailPage({ params, searchParams }: Props) {
-  const { userId } = await verifySession()
+  await verifySession()
   const [{ id }, query] = await Promise.all([params, searchParams])
   const categoryId = parsePositiveIntParam(id)
   const filters = parseCategoryDetailFilters(query)
-  const lens = parseLensParam(query.lens)
-  const ledgerRowSource = resolveLedgerRowSource(lens)
-  const hasPlans = await hasAmortizationPlans(userId)
 
   const backHref = buildDashboardCategoriesHref({
     preset: filters.preset,
     type: filters.type,
     defaultPreset: CATEGORY_DETAIL_DEFAULT_PRESET,
-    lens,
   })
 
   return (
@@ -165,10 +155,7 @@ export default async function DashboardCategoryDetailPage({ params, searchParams
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="flex items-center gap-1 text-xl font-semibold">
-              Dettaglio categoria
-              {hasPlans && <LensSwitch lens={lens} />}
-            </h1>
+            <h1 className="flex items-center gap-1 text-xl font-semibold">Dettaglio categoria</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Andamento, movimenti principali e sottocategorie per il filtro selezionato.
             </p>
@@ -190,7 +177,6 @@ export default async function DashboardCategoryDetailPage({ params, searchParams
           categoryId={categoryId}
           filters={filters}
           categoriesHref={backHref}
-          ledgerRowSource={ledgerRowSource}
         />
       </Suspense>
     </div>
