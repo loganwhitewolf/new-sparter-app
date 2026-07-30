@@ -6,7 +6,7 @@
  * Layout:
  *   1. Inline search <Input> (when config.search is non-null), debounced 500ms
  *   2. "Filtri (n)" <Popover> trigger — count = active non-search filter params
- *   3. <PopoverContent> renders one control per config.filters entry
+ *   3. <PopoverContent> two-column FilterPanel, max-height + overflow scroll (viewport-safe)
  *   4. <ChipsRow> below, one chip per active filter param, "Cancella tutto" batch-clears
  *   5. Desktop sort exposed via useToolbarSort() + HeaderSortButton (caller wires)
  *   6. Mobile "Ordina" <Button> + <Sheet side="bottom"> listing sortable columns
@@ -162,7 +162,7 @@ function FilterField({
     return (
       <div className="grid gap-1.5">
         <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
-        <ul className="flex flex-col gap-1.5 rounded-md border p-2">
+        <ul className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-md border p-2">
           {resolvedOptions.map((opt) => {
             const checked = selectedSet.has(opt.value)
             return (
@@ -179,7 +179,7 @@ function FilterField({
                       onChange(encodeMultiSelectValue(next, field.implicitDefault))
                     }}
                   />
-                  <span>{opt.label}</span>
+                  <span className="leading-tight">{opt.label}</span>
                 </label>
               </li>
             )
@@ -349,25 +349,38 @@ function FilterPanel({
     updateParams(entries)
   }
 
+  // Wide controls span both columns so month pickers / multi-selects stay usable.
+  function fieldSpansFullWidth(field: FilterField): boolean {
+    return (
+      field.type === 'month-multi' ||
+      field.type === 'multi-select' ||
+      field.type === 'amount-range'
+    )
+  }
+
   return (
-    <div className="space-y-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {config.filters.map((field) => {
         const parentField = field.dependsOn
           ? config.filters.find((f) => f.key === field.dependsOn)
           : undefined
         return (
-          <FilterField
+          <div
             key={field.key}
-            field={field}
-            value={searchParams.get(field.key)}
-            options={filterOptions?.[field.key]}
-            monthsWithData={monthsWithData}
-            searchParams={searchParams}
-            onChange={(v) => handleFieldChange(field, v)}
-            onParamChange={updateParam}
-            dependentOptions={dependentOptions}
-            parentField={parentField}
-          />
+            className={fieldSpansFullWidth(field) ? 'sm:col-span-2' : undefined}
+          >
+            <FilterField
+              field={field}
+              value={searchParams.get(field.key)}
+              options={filterOptions?.[field.key]}
+              monthsWithData={monthsWithData}
+              searchParams={searchParams}
+              onChange={(v) => handleFieldChange(field, v)}
+              onParamChange={updateParam}
+              dependentOptions={dependentOptions}
+              parentField={parentField}
+            />
+          </div>
         )
       })}
     </div>
@@ -529,9 +542,14 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions,
                 {activeCount > 0 ? `Filtri (${activeCount})` : 'Filtri'}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-80">
-              {/* Popover header with title and explicit close button */}
-              <div className="mb-3 flex items-center justify-between">
+            <PopoverContent
+              align="end"
+              collisionPadding={16}
+              className="w-[min(40rem,calc(100vw-2rem))] max-h-[min(70vh,36rem)] overflow-y-auto"
+            >
+              {/* Popover header with title and explicit close button — sticky so it stays
+                  visible while the two-column filter grid scrolls underneath. */}
+              <div className="sticky top-0 z-10 mb-3 flex items-center justify-between bg-popover pb-1">
                 <span className="text-sm font-semibold">Filtri</span>
                 <Button
                   variant="ghost"
