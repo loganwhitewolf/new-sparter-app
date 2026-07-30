@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 Phase: Milestone v2.9 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-07-30 - Completed quick task 260730-g3b: Lens selector redesign (dropdown nel titolo + overlay cassa sul grafico in competenza + controllo nascosto senza piani)
+Last activity: 2026-07-30 - Completed quick task 260730-m2x: Fix amortizzazione (rimborso linking + ri-ammortizzabilità + link dashboard→transazioni)
 
 ## Roadmap (v2.9 — Phases 77-81) — SHIPPED 2026-07-29
 
@@ -534,6 +534,7 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260730-bfa | Sidebar sections by feature type (Option A: Panoramica / Movimenti / Ingresso dati / Configurazione) | 2026-07-30 | 5a064b8e |
 | 260730-e6z | Riepilogo totali netti (Entrate/Uscite/Differenza per valuta) nel footer della tabella transazioni | 2026-07-30 | 95f3adee |
 | 260730-g3b | Lens selector redesign (LSD-01..05, `.planning/lens-selector-DECISIONS.md`): pill segmented control → dropdown integrato nel titolo pagina con voci descritte; overlay tratteggiato "Uscite (cassa)" sul grafico overview solo con lente competenza (secondo fetch gated); controllo nascosto senza piani di ammortamento (`hasAmortizationPlans`) e rimosso da /dashboard/tags. Verifica visiva in-browser passata 2026-07-30 | 2026-07-30 | 4bbafc63 |
+| 260730-m2x | Fix amortizzazione: collegamento rimborso come vendita (`reducePlanTx`→`createPairTx`); ri-ammortizzabilità dopo "Rimuovi ammortamento" (clear stale `reimbursementId`/pairing client-side); link dashboard movers → `/transactions?months=YYYY-MM` | 2026-07-30 | 963f213b |
 
 ## Deferred Items
 
