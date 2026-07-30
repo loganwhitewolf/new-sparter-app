@@ -7,6 +7,7 @@ import { getCategoryDeviations, getCategoryRanking } from '@/lib/dal/dashboard'
 import { verifySession } from '@/lib/dal/auth'
 import { buildDashboardCategoriesHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
+import { extractLensPassthrough, type LensPassthrough } from '@/lib/utils/search-params'
 import {
   parseDashboardFilters,
   type DashboardFilters as ParsedDashboardFilters,
@@ -42,6 +43,9 @@ type Props = {
     period?: string | string[]
     type?: string | string[]
     sort?: string | string[]
+    // Phase 82 D-13 (review fix WR-03): forwarded only, never parsed into a validated Lens or
+    // resolved to a ledgerRowSource here — Categories always reads cassa (D-12).
+    lens?: string | string[]
   }>
 }
 
@@ -59,7 +63,13 @@ function parseCategoryDashboardFilters(
   }
 }
 
-function SortToggle({ filters }: { filters: CategoryDashboardFilters }) {
+function SortToggle({
+  filters,
+  lens,
+}: {
+  filters: CategoryDashboardFilters
+  lens?: LensPassthrough
+}) {
   const options: Array<{ value: DashboardSort; label: string }> = [
     { value: 'deviation', label: 'Deviazione' },
     { value: 'amount', label: 'Importo' },
@@ -75,6 +85,7 @@ function SortToggle({ filters }: { filters: CategoryDashboardFilters }) {
           sort: option.value,
           defaultPreset: CATEGORIES_DEFAULT_PRESET,
           defaultSort: CATEGORIES_DEFAULT_SORT,
+          lens,
         })
         return (
           <Link
@@ -98,8 +109,10 @@ function SortToggle({ filters }: { filters: CategoryDashboardFilters }) {
 
 async function CategoryRankingContent({
   filters,
+  lens,
 }: {
   filters: CategoryDashboardFilters
+  lens?: LensPassthrough
 }) {
   const [data, deviations] = await Promise.all([
     getCategoryRanking(filters),
@@ -114,6 +127,7 @@ async function CategoryRankingContent({
       defaultPreset={CATEGORIES_DEFAULT_PRESET}
       sort={filters.sort}
       deviations={deviations}
+      lens={lens}
     />
   )
 }
@@ -122,6 +136,12 @@ export default async function DashboardCategoriesPage({ searchParams }: Props) {
   await verifySession()
   const params = await searchParams
   const filters = parseCategoryDashboardFilters(params)
+  // Phase 82 D-12+D-13 (review fix WR-03): raw, unvalidated passthrough — forwarded through this
+  // page's own hrefs so the tab nav's ?lens= survives a Categories round trip, WITHOUT being
+  // consumed for aggregation. getCategoryRanking above receives only `filters` (no lens/
+  // ledgerRowSource argument), so it always falls through to cassa (D-12); `lens`'s
+  // LensPassthrough type makes handing it to resolveLedgerRowSource a type error.
+  const lens = extractLensPassthrough(params.lens)
 
   return (
     <div className="flex flex-col gap-6">
@@ -143,10 +163,10 @@ export default async function DashboardCategoriesPage({ searchParams }: Props) {
         />
       </Suspense>
 
-      <SortToggle filters={filters} />
+      <SortToggle filters={filters} lens={lens} />
 
       <Suspense fallback={<CategoryRankingSkeleton />}>
-        <CategoryRankingContent filters={filters} />
+        <CategoryRankingContent filters={filters} lens={lens} />
       </Suspense>
     </div>
   )

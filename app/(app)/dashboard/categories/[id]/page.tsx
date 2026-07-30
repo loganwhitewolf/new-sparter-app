@@ -12,6 +12,7 @@ import { DashboardFilters } from '@/components/dashboard/dashboard-filters'
 import { getCategoryDeviations, getCategoryDetail } from '@/lib/dal/dashboard'
 import { verifySession } from '@/lib/dal/auth'
 import { buildDashboardCategoriesHref } from '@/lib/routes'
+import { extractLensPassthrough } from '@/lib/utils/search-params'
 import {
   parseDashboardFilters,
   type DashboardFilters as ParsedDashboardFilters,
@@ -34,6 +35,9 @@ type Props = {
     preset?: string | string[]
     period?: string | string[]
     type?: string | string[]
+    // Phase 82 D-13 (review fix WR-03): forwarded into the back link only, never parsed into a
+    // validated Lens or resolved to a ledgerRowSource here — Categories always reads cassa (D-12).
+    lens?: string | string[]
   }>
 }
 
@@ -140,11 +144,17 @@ export default async function DashboardCategoryDetailPage({ params, searchParams
   const [{ id }, query] = await Promise.all([params, searchParams])
   const categoryId = parsePositiveIntParam(id)
   const filters = parseCategoryDetailFilters(query)
+  // Phase 82 D-12+D-13 (review fix WR-03): raw, unvalidated passthrough — forwarded into the
+  // back link only, WITHOUT being consumed for aggregation. getCategoryDetail below receives
+  // only `filters` (no lens/ledgerRowSource argument), so it always falls through to cassa
+  // (D-12); `lens`'s LensPassthrough type makes handing it to resolveLedgerRowSource a type error.
+  const lens = extractLensPassthrough(query.lens)
 
   const backHref = buildDashboardCategoriesHref({
     preset: filters.preset,
     type: filters.type,
     defaultPreset: CATEGORY_DETAIL_DEFAULT_PRESET,
+    lens,
   })
 
   return (

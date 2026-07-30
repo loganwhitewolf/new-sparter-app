@@ -5,6 +5,7 @@ import {
   buildDashboardCategoryDetailHref,
   dashboardCategoryDetail,
 } from '@/lib/routes'
+import { extractLensPassthrough } from '@/lib/utils/search-params'
 import { parseDashboardFilters } from '@/lib/validations/dashboard'
 
 describe('parseDashboardFilters', () => {
@@ -259,4 +260,50 @@ describe('dashboard category detail routes', () => {
       })
     ).toBe('/dashboard/categories/42?preset=last-3-months&type=in')
   })
+})
+
+describe('Categories forwards ?lens= without consuming it (Phase 82 D-12+D-13, review fix WR-03)', () => {
+  test('extractLensPassthrough threads a raw ?lens= value through the sort toggle href (buildDashboardCategoriesHref)', () => {
+    const lens = extractLensPassthrough('competenza')
+
+    expect(
+      buildDashboardCategoriesHref({
+        preset: 'last-3-months',
+        type: 'in',
+        sort: 'deviation',
+        defaultSort: 'amount',
+        lens,
+      })
+    ).toBe('/dashboard/categories?preset=last-3-months&type=in&sort=deviation&lens=competenza')
+  })
+
+  test('extractLensPassthrough threads a raw ?lens= value through the row click-through href (buildDashboardCategoryDetailHref)', () => {
+    const lens = extractLensPassthrough('competenza')
+
+    expect(
+      buildDashboardCategoryDetailHref(42, { preset: 'last-3-months', type: 'in', lens })
+    ).toBe('/dashboard/categories/42?preset=last-3-months&type=in&lens=competenza')
+  })
+
+  test('extractLensPassthrough threads a raw ?lens= value through the detail back link href (buildDashboardCategoriesHref)', () => {
+    const lens = extractLensPassthrough('competenza')
+
+    expect(
+      buildDashboardCategoriesHref({ preset: 'last-3-months', type: 'in', lens })
+    ).toBe('/dashboard/categories?preset=last-3-months&type=in&lens=competenza')
+  })
+
+  test('omits ?lens= from every Categories href when absent from the URL', () => {
+    const lens = extractLensPassthrough(undefined)
+
+    expect(lens).toBeUndefined()
+    expect(buildDashboardCategoriesHref({ lens })).toBe('/dashboard/categories')
+    expect(buildDashboardCategoryDetailHref(42, { lens })).toBe('/dashboard/categories/42')
+  })
+
+  // The aggregation-side half of this invariant — that ?lens= is forwarded but never resolved
+  // to a row source on Categories — is proven by tests/lens-switch-placement.test.tsx's
+  // source-grep assertion that neither Categories page ever calls resolveLedgerRowSource(.
+  // Combined with the four cases above, ?lens=competenza is proven to survive the sort toggle,
+  // the row click-through and the detail back link while never reaching aggregation.
 })

@@ -1,5 +1,5 @@
 import type { DashboardPreset, DashboardSort } from '@/lib/validations/dashboard'
-import type { Lens } from '@/lib/utils/search-params'
+import type { LensPassthrough } from '@/lib/utils/search-params'
 
 export const APP_ROUTES = {
   dashboard: '/dashboard',
@@ -30,11 +30,15 @@ type DashboardCategoryFilters = {
   sort?: DashboardSort
   defaultPreset?: DashboardPreset
   defaultSort?: DashboardSort
-  // Phase 80, CR-02: the global cash/accrual lens must survive same-tab category
-  // navigation (sort toggle, back link, row click-through) the same way preset/type/sort
-  // already do — only appended when non-default ('competenza'), mirroring how
-  // DashboardTabNav forwards `?lens=` from the current searchParams.
-  lens?: Lens
+  // Phase 82, D-12+D-13 (review fix WR-03): `lens` here is a raw, UNVALIDATED passthrough
+  // value threaded through Categories' own hrefs (sort toggle, row click-through, detail back
+  // link) purely so the tab nav's `?lens=` survives a round trip through Categories instead of
+  // silently resetting to cassa on the way back to Overview (D-13). It is typed
+  // `LensPassthrough`, NOT `Lens`, specifically so it can never be handed to
+  // `resolveLedgerRowSource` (which only accepts a validated `Lens`) — Categories' own
+  // aggregation always falls through to its `ledgerEntryCash` default and never reads this
+  // value (D-12). Making that misuse a type error, not a review convention.
+  lens?: LensPassthrough
 }
 
 export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters = {}) {
@@ -54,7 +58,7 @@ export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters =
     params.set('sort', filters.sort)
   }
 
-  if (filters.lens === 'competenza') {
+  if (filters.lens) {
     params.set('lens', filters.lens)
   }
 
@@ -129,7 +133,7 @@ export function buildDashboardCategoryDetailHref(
     params.set('sort', filters.sort)
   }
 
-  if (filters.lens === 'competenza') {
+  if (filters.lens) {
     params.set('lens', filters.lens)
   }
 

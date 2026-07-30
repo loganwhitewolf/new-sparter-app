@@ -9,6 +9,7 @@ import { toDecimal } from '@/lib/utils/decimal'
 import type { CategoryRankingItem, DeviationData } from '@/lib/dal/dashboard'
 import type { DashboardPreset, DashboardSort } from '@/lib/validations/dashboard'
 import type { DeviationResult } from '@/lib/utils/dashboard'
+import type { LensPassthrough } from '@/lib/utils/search-params'
 
 type Props = {
   data: CategoryRankingItem[]
@@ -17,6 +18,9 @@ type Props = {
   defaultPreset?: DashboardPreset
   sort?: DashboardSort
   deviations?: Map<number, DeviationData>
+  // Phase 82 D-12+D-13 (review fix WR-03): forwarded into the row click-through href only —
+  // never read for aggregation. See lib/routes.ts's DashboardCategoryFilters.lens comment.
+  lens?: LensPassthrough
 }
 
 function deviationSortKey(item: CategoryRankingItem, deviations?: Map<number, DeviationData>): number {
@@ -73,6 +77,7 @@ export function CategoryRankingList({
   defaultPreset = 'this-year',
   sort = 'amount',
   deviations,
+  lens,
 }: Props) {
   const sortedData = sort === 'deviation' && deviations
     ? [...data].sort((a, b) => compareItems(a, b, sort, deviations))
@@ -98,6 +103,7 @@ export function CategoryRankingList({
           preset,
           type,
           defaultPreset,
+          lens,
         })
         const percentage = Math.max(0, Math.min(category.percentage, 100))
         const barColor = type === 'in' ? 'bg-[var(--total-in)]' : 'bg-[var(--total-out)]'
