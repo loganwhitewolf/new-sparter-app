@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ComponentType } from 'react'
 import {
   CalendarClock,
   ChevronLeft,
@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/tooltip'
 import { ClientMountIcon } from '@/components/ui/client-mount-icon'
 import { Separator } from '@/components/ui/separator'
+import { SparterMark } from '@/components/layout/sparter-mark'
 import { useSidebarCollapsed } from '@/components/layout/sidebar-provider'
 import { signOutAction } from '@/lib/actions/auth'
 import { cn } from '@/lib/utils'
@@ -42,16 +43,51 @@ import { APP_ROUTES } from '@/lib/routes'
 
 type UserDisplay = { name: string; email: string; image: string | null }
 
-const topNavItems = [
-  { href: APP_ROUTES.dashboard, label: 'Dashboard', icon: LayoutDashboard },
-  { href: APP_ROUTES.transactions, label: 'Transazioni', icon: List },
-  { href: APP_ROUTES.expenses, label: 'Spese', icon: Receipt },
-  { href: APP_ROUTES.reimbursements, label: 'Rimborsi', icon: Link2 },
-  { href: APP_ROUTES.amortizations, label: 'Ammortamenti', icon: CalendarClock },
-  { href: APP_ROUTES.import, label: 'Importazioni', icon: Upload },
-  { href: APP_ROUTES.categorySettings, label: 'Categorie', icon: FolderTree },
-  { href: APP_ROUTES.tags, label: 'Tag', icon: Tags },
-  { href: APP_ROUTES.patterns, label: 'Pattern', icon: Regex },
+type NavIcon = ComponentType<{ className?: string }>
+
+type NavItem = {
+  href: string
+  label: string
+  icon: NavIcon
+}
+
+type NavSection = {
+  id: string
+  label: string
+  items: NavItem[]
+}
+
+/** Option A — operational flow sections (quick-260730-bfa). */
+const navSections: NavSection[] = [
+  {
+    id: 'overview',
+    label: 'Panoramica',
+    items: [{ href: APP_ROUTES.dashboard, label: 'Dashboard', icon: LayoutDashboard }],
+  },
+  {
+    id: 'movements',
+    label: 'Movimenti',
+    items: [
+      { href: APP_ROUTES.transactions, label: 'Transazioni', icon: List },
+      { href: APP_ROUTES.expenses, label: 'Spese', icon: Receipt },
+      { href: APP_ROUTES.reimbursements, label: 'Rimborsi', icon: Link2 },
+      { href: APP_ROUTES.amortizations, label: 'Ammortamenti', icon: CalendarClock },
+    ],
+  },
+  {
+    id: 'ingress',
+    label: 'Ingresso dati',
+    items: [{ href: APP_ROUTES.import, label: 'Importazioni', icon: Upload }],
+  },
+  {
+    id: 'config',
+    label: 'Configurazione',
+    items: [
+      { href: APP_ROUTES.categorySettings, label: 'Categorie', icon: FolderTree },
+      { href: APP_ROUTES.tags, label: 'Tag', icon: Tags },
+      { href: APP_ROUTES.patterns, label: 'Pattern', icon: Regex },
+    ],
+  },
 ]
 
 export function Sidebar({ user }: { user: UserDisplay }) {
@@ -75,23 +111,40 @@ export function Sidebar({ user }: { user: UserDisplay }) {
         collapsed ? 'px-2' : 'px-3'
       )}
     >
-      {/* TOP SLOT: wordmark + toggle button (D-04/D-06) */}
+      {/* TOP SLOT: brand mark + wordmark (expanded) / mark+chevron chrome (collapsed).
+          Single persistent toggle so keyboard focus is not lost on state change. */}
       <div
         className={cn(
           'mb-4 flex items-center',
-          collapsed ? 'justify-center' : 'justify-between'
+          collapsed ? 'justify-center' : 'justify-between gap-2'
         )}
       >
-        {!collapsed && (
-          <span className="text-lg font-semibold tracking-tight">Sparter</span>
-        )}
+        {!collapsed ? (
+          <div className="flex min-w-0 items-center gap-2">
+            <SparterMark />
+            <span className="truncate text-lg font-semibold tracking-tight">Sparter</span>
+          </div>
+        ) : null}
         <button
+          type="button"
           onClick={() => setCollapsed(!collapsed)}
           aria-label={collapsed ? 'Espandi barra laterale' : 'Comprimi barra laterale'}
-          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          aria-expanded={!collapsed}
+          className={cn(
+            'rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            collapsed ? 'relative p-0.5' : 'p-1.5'
+          )}
         >
           {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
+            <>
+              <SparterMark />
+              <span
+                aria-hidden
+                className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-secondary bg-background text-muted-foreground shadow-sm"
+              >
+                <ChevronRight className="h-2.5 w-2.5" />
+              </span>
+            </>
           ) : (
             <ChevronLeft className="h-4 w-4" />
           )}
@@ -101,38 +154,58 @@ export function Sidebar({ user }: { user: UserDisplay }) {
       {/* NAV LIST: wrapped in a TooltipProvider so collapsed tooltips work */}
       <TooltipProvider>
         <ul className="flex flex-1 flex-col gap-1">
-          {topNavItems.map(({ href, label, icon: Icon }) => {
-            const isActive = pathname === href || pathname.startsWith(`${href}/`)
-
-            const linkNode = (
-              <Link
-                href={href}
-                className={cn(
-                  'flex items-center rounded-md py-2 text-sm font-medium transition-colors',
-                  collapsed ? 'justify-center px-2' : 'gap-3 px-3',
-                  isActive
-                    ? 'border-l-2 border-primary bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                )}
+          {navSections.map((section, sectionIndex) => (
+            <li key={section.id} className={cn(sectionIndex > 0 && (collapsed ? 'mt-2' : 'mt-3'))}>
+              {collapsed && sectionIndex > 0 ? (
+                <Separator className="mb-2 opacity-60" />
+              ) : null}
+              {!collapsed ? (
+                <p
+                  id={`sidebar-section-${section.id}`}
+                  className="mb-1 px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+                >
+                  {section.label}
+                </p>
+              ) : null}
+              <ul
+                className="flex flex-col gap-1"
+                aria-labelledby={!collapsed ? `sidebar-section-${section.id}` : undefined}
               >
-                <ClientMountIcon icon={Icon} className="h-4 w-4 shrink-0" />
-                {!collapsed && <span className="flex-1">{label}</span>}
-              </Link>
-            )
+                {section.items.map(({ href, label, icon: Icon }) => {
+                  const isActive = pathname === href || pathname.startsWith(`${href}/`)
 
-            return (
-              <li key={href}>
-                {collapsed && mounted ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>{linkNode}</TooltipTrigger>
-                    <TooltipContent side="right">{label}</TooltipContent>
-                  </Tooltip>
-                ) : (
-                  linkNode
-                )}
-              </li>
-            )
-          })}
+                  const linkNode = (
+                    <Link
+                      href={href}
+                      className={cn(
+                        'flex items-center rounded-md py-2 text-sm font-medium transition-colors',
+                        collapsed ? 'justify-center px-2' : 'gap-3 px-3',
+                        isActive
+                          ? 'border-l-2 border-primary bg-primary/10 text-primary'
+                          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                      )}
+                    >
+                      <ClientMountIcon icon={Icon} className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span className="flex-1">{label}</span>}
+                    </Link>
+                  )
+
+                  return (
+                    <li key={href}>
+                      {collapsed && mounted ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>{linkNode}</TooltipTrigger>
+                          <TooltipContent side="right">{label}</TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        linkNode
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </li>
+          ))}
         </ul>
       </TooltipProvider>
 
