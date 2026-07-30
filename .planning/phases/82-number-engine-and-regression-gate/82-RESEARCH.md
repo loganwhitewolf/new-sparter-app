@@ -540,15 +540,21 @@ export function buildDashboardTabHref(
 
 **All other claims in this research were verified against the codebase or confirmed via v2.9/v2.8 precedent. No unconfirmed decisions remain.**
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Threshold for previous-year coverage (D-10):** DECISIONS doc proposes ≥6 Covered Months to gate the total difference. Is this value configurable as an engine parameter or baked into the code? Recommend: engine parameter, exported from `lib/services/pace-and-projection.ts` for phases 83/84 to consume.
+All four were closed during planning (2026-07-30). Resolutions are binding — the plans implement them; this section is kept as the record of what was open and why the answer was chosen.
 
-2. **Lens parameter propagation on Categories detail:** D-13 recommends keeping `?lens=` invisible for state preservation. The plan must confirm whether Categories detail pages read `?lens=` from the URL and enforce it as cassa anyway (ignore it), or whether the removal of the lens switch is enough and `?lens=` is a no-op on that route.
+1. **Threshold for previous-year coverage (D-10):** DECISIONS doc proposes ≥6 Covered Months to gate the total difference. Is this value configurable as an engine parameter or baked into the code?
+   **RESOLVED —** engine parameter. `82-03` exports `PREVIOUS_YEAR_TOTAL_DIFFERENCE_MIN_COVERED_MONTHS = 6` from `lib/services/pace-and-projection.ts` so Phases 83/84 consume one constant instead of re-declaring the threshold.
 
-3. **Insufficient-coverage discriminated union vs sentinel type:** The three approaches (union, sentinel class, thrown error) are all valid per CONTEXT.md. Plan phase should choose one based on downstream consumption (phase 83/84 UI copy/rendering logic). Recommendation: discriminated union for testability.
+2. **Lens parameter propagation on Categories detail:** does Categories read `?lens=` and enforce cassa anyway, or is removing the switch enough?
+   **RESOLVED — removing the switch is NOT enough.** Closed before planning and recorded in `82-CONTEXT.md` D-12 with the verified site inventory. `82-02` removes the `parseLensParam()` / `resolveLedgerRowSource()` bindings from both Categories pages, so the aggregation calls fall through to the `ledgerEntryCash` default and Categories is cassa by construction — a `?lens=competenza` URL cannot change what it computes, which matters because D-13 keeps `?lens=` flowing through the tab nav. Also verified: `app/(app)/dashboard/tags/page.tsx` already renders no lens control (explicit `LSD-05` comment) — verify-only, no change planned.
 
-4. **Decimal.js rounding mode:** Drizzle columns are `DECIMAL(10,2)`. When pace divides (e.g., €1230 / 3 = €410.00), what rounding mode should Decimal.js use? Recommend: `Decimal.set({ rounding: Decimal.ROUND_HALF_UP })` to match banker's rounding behavior expected for money.
+3. **Insufficient-coverage discriminated union vs sentinel type:** all three approaches (union, sentinel class, thrown error) were valid per CONTEXT.md.
+   **RESOLVED —** discriminated union on `status: 'complete' | 'insufficient'`, with **no numeric field on the `'insufficient'` branch**. The absent field is the point: it makes D-05's "cannot be silently read as €0" a type error rather than a convention.
+
+4. **Decimal.js rounding mode:** columns are `DECIMAL(10,2)`; what rounding applies when the pace divides?
+   **RESOLVED —** decimal.js's own default `ROUND_HALF_UP`, applied via `toDbDecimal` **once at the return boundary**. No global `Decimal.set()` call. Critically, `total` is built structurally as the sum of the already-rounded month values (`buildYearSeries`) and is never independently re-derived — that ordering is what makes PACE-05 / D-07 hold *exactly* rather than approximately. Rounding after summing, or summing unrounded months and rounding the total separately, would both break the invariant.
 
 ## Environment Availability
 

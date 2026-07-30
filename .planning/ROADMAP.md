@@ -82,9 +82,13 @@ infrastructure from v2.0/v2.8/v2.9)
 **Plans**: 3 plans
 
 Plans:
+**Wave 1**
 
 - [ ] 82-01-PLAN.md — Covered Months query + pace existence check + real-Postgres tracer, RETIRE-05 byte-identical baseline
 - [ ] 82-02-PLAN.md — Lens confinement to Overview (D-12) + drop the dead `?tag=` tab-nav param (D-14)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 82-03-PLAN.md — Partial Month + hybrid current month + total-sum invariant + comparison/judgement + previous-year threshold
 
 **UI hint**: yes

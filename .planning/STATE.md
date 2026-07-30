@@ -2,13 +2,17 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Categories Year View
-status: planning
-last_updated: "2026-07-30T15:00:00.000Z"
+current_phase: 82
+current_phase_name: number-engine-and-regression-gate
+status: executing
+stopped_at: v3.0 roadmap created (Phases 82-84, 25/25 requirements mapped, no orphans)
+last_updated: "2026-07-30T15:20:58.311Z"
 last_activity: 2026-07-30
+last_activity_desc: "Roadmap created: 3 phases (82-84), 25/25 v3.0 requirements mapped, no orphans"
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 0
-  total_plans: 0
+  total_plans: 3
   completed_plans: 0
   percent: 0
 ---
@@ -26,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 Phase: 82 of 84 (number-engine-and-regression-gate)
 Plan: — (not yet planned)
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-07-30 — Roadmap created: 3 phases (82-84), 25/25 v3.0 requirements mapped, no orphans
 
 ## Roadmap (v3.0 — Phases 82-84)
@@ -73,14 +77,18 @@ the roadmap, per `.planning/dashboard-categories-DECISIONS.md` "Deliberately lef
 
 1. **Previous-year coverage threshold** for gating the total difference (proposed: ≥6 Covered
    Months) → Phase 84.
+
 2. **Copy set and colour mapping per direction**, `allocation` included → Phase 83/84.
 3. **Name of the "annual estimate vs closed year" comparison** — not *delta* (reserved for KPI
    period-over-period), not *deviation* (retired) → Phase 84.
+
 4. **Visual treatment of the three month states** (fact / current hybrid / estimate) and of
    uncovered months → Phase 84.
+
 5. **URL shape of the detail window** (start month + length) → Phase 84.
 6. **Whether the tab nav preserves `?lens=` invisibly** across Categories navigation (recommended:
    yes) → Phase 82/83.
+
 7. **Fate of the detail page's current `topTransactions` block** → Phase 84.
 8. **Whether the list also offers an acceleration ordering** (projection ÷ total) → Phase 83.
 
@@ -245,19 +253,26 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 
 - **Categories is lens-invariant** — always cassa; the cassa/competenza switch is confined to
   Overview (ADR 0020, amends LENS-01 of ADR 0019).
+
 - **Pace = average of Covered Months of the selected year**, never the window — a window can
   legitimately contain zero Covered Months.
+
 - **Coverage is two-level**: a month with zero transactions is excluded from every denominator; a
   Covered Month with zero category movement counts as €0.
+
 - **Current month = `max(spent so far, pace)`** — never below an observed fact, never a per-day
   pro-rate.
+
 - **Period total = sum of the displayed series** — no independent projection formula.
 - **Signs live in the data (`current − previous`), words live in the UI** — never a sign glyph;
   colour judgement resolved per direction, centrally.
+
 - **Direction coverage widens to three** — `direction.hidden = false` replaces
   `direction.includedInTotals` as the Categories predicate, surfacing Accantonamenti.
+
 - **Detail page is a 12-month table (prototype variant A)** — locked over a chart, which cannot
   render "€180 in meno" inside a bar.
+
 - **Deviation/Baseline/Noise Threshold/Preset are retired, not re-anchored** — replaced by
   month-over-month delta + homologous-window year comparison + per-subcategory contribution.
 
