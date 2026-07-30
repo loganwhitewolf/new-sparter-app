@@ -62,11 +62,14 @@ coverage:
         status: pass
     human_judgment: false
   - id: D3
-    description: "getCategoryMonthlyAmounts returns a 12-entry zero-filled series; buildCoveredMonthSeries drops an uncovered month entirely (D-01) and keeps a covered-but-zero-movement month (D-02); pace on the seasonal-category fixture matches CONTEXT.md's worked example (31.67, not 190.00)"
+    description: "buildCoveredMonthSeries drops an uncovered month entirely (D-01) and keeps a covered-but-zero-movement month (D-02); pace on the seasonal-category fixture matches CONTEXT.md's worked example (31.67, not 190.00). CORRECTED (review fix pass, WR-01): this entry originally also claimed getCategoryMonthlyAmounts's 12-entry zero-filled series was verified by the same unit test — that was false. The unit test below is a pure composition test fed hand-built MonthlyValue[] fixtures; it never imports or calls getCategoryMonthlyAmounts. The DAL function (lib/dal/covered-months.ts) had ZERO test coverage from this plan's original commit until the WR-01 review fix, which added a real-Postgres test covering the zero-fill and user-scoping behavior: tests/pace-engine-lens-regression.test.ts#getCategoryMonthlyAmounts — real Postgres (WR-01 review fix, PACE-01 D-02, T-82-01)."
     requirement: "PACE-01"
     verification:
       - kind: unit
         ref: "tests/pace-and-projection.test.ts#buildCoveredMonthSeries — seasonal category (PACE-01, D-01/D-02)"
+        status: pass
+      - kind: integration
+        ref: "tests/pace-engine-lens-regression.test.ts#getCategoryMonthlyAmounts — real Postgres (WR-01 review fix, PACE-01 D-02, T-82-01) > zero-fills a Covered Month with no movement for this category (D-02) and never returns another user's amounts under a mismatched categoryId (T-82-01)"
         status: pass
     human_judgment: false
   - id: D4

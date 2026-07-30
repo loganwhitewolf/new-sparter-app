@@ -171,6 +171,95 @@ describeIfReachable('Covered Months engine — real Postgres (PACE-01, D-01/D-04
   })
 })
 
+// getCategoryMonthlyAmounts had zero test coverage before this fix pass: 82-01-SUMMARY.md's D3
+// entry claimed it was verified by tests/pace-and-projection.test.ts#buildCoveredMonthSeries,
+// which is a pure unit test fed hand-built MonthlyValue[] fixtures and never imports or invokes
+// the DAL function at all — the real SQL join chain (ledgerRowSource -> expense -> subCategory,
+// dateScopedTransactions, coalesce(abs(sum(...)), 0), monthsBetween zero-fill) was never proven
+// against a real database (WR-01 review fix).
+describeIfReachable('getCategoryMonthlyAmounts — real Postgres (WR-01 review fix, PACE-01 D-02, T-82-01)', () => {
+  it('zero-fills a Covered Month with no movement for this category (D-02) and never returns another user\'s amounts under a mismatched categoryId (T-82-01)', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+
+    // January and March have movement in the target category; February is a Covered Month for
+    // this user's account (the January transaction proves the account has data in 2024) but has
+    // NO movement in THIS category — D-02 requires it to count as '0.00', never vanish.
+    await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-120.00',
+      occurredAt: new Date(2024, 0, 10),
+      title: 'January essential spend',
+    })
+    await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+      amount: '-80.00',
+      occurredAt: new Date(2024, 2, 5),
+      title: 'March essential spend',
+    })
+
+    // A second user's category/spend, reusing the first taxonomy's essentialNatureId (direction/
+    // nature are global lookups — see the userId-scoping test above for why seedMinimalTaxonomy
+    // cannot be called twice).
+    const { userId: otherUserId } = await seedUser(db, {
+      email: 'category-monthly-other@example.test',
+    })
+    const { subCategoryId: otherSubCategoryId, categoryId: otherCategoryId } =
+      await seedSecondEssentialCategory(db, {
+        userId: otherUserId,
+        natureId: taxonomy.essentialNatureId,
+      })
+    await seedExpenseWithTransaction(db, {
+      userId: otherUserId,
+      subCategoryId: otherSubCategoryId,
+      amount: '-999.00',
+      occurredAt: new Date(2024, 1, 15),
+      title: 'Other user February spend',
+    })
+
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+    vi.doMock('@/lib/db', () => ({ db }))
+    vi.resetModules()
+    const coveredMonthsModule = await import('@/lib/dal/covered-months')
+
+    const result = await coveredMonthsModule.getCategoryMonthlyAmounts(
+      taxonomy.essentialCategoryId,
+      2024,
+    )
+
+    expect(result).toHaveLength(12)
+    expect(result.map((m) => m.yearMonth)).toEqual([
+      '2024-01', '2024-02', '2024-03', '2024-04', '2024-05', '2024-06',
+      '2024-07', '2024-08', '2024-09', '2024-10', '2024-11', '2024-12',
+    ])
+
+    const byMonth = new Map(result.map((m) => [m.yearMonth, m.amount]))
+    expect(toDecimal(byMonth.get('2024-01') ?? '0').equals(toDecimal('120.00'))).toBe(true)
+    // D-02: covered-but-no-movement-for-this-category counts as '0.00', it does not vanish from
+    // the 12-entry series — and the other user's February spend must not leak in either.
+    expect(byMonth.get('2024-02')).toBe('0.00')
+    expect(toDecimal(byMonth.get('2024-03') ?? '0').equals(toDecimal('80.00'))).toBe(true)
+    // Every remaining month with zero real movement is zero-filled too.
+    expect(byMonth.get('2024-04')).toBe('0.00')
+    expect(byMonth.get('2024-12')).toBe('0.00')
+
+    // T-82-01: querying the OTHER user's categoryId under THIS user's session must return an
+    // all-zero series, never the other user's real -999.00 amount — the userId filter inside
+    // dateScopedTransactions gates every row, not merely the categoryId join.
+    const crossUserResult = await coveredMonthsModule.getCategoryMonthlyAmounts(
+      otherCategoryId,
+      2024,
+    )
+    expect(crossUserResult).toHaveLength(12)
+    expect(crossUserResult.every((m) => m.amount === '0.00')).toBe(true)
+  })
+})
+
 // This test is re-run unchanged by every later Phase 82 wave (Sampling Rate policy) and by
 // Phase 83 after its direction.hidden predicate flip (D-16) — do not edit its expected values
 // without a genuine intentional change to Overview/Tags totals.
