@@ -152,6 +152,34 @@ describe('Current month hybrid value (PACE-04, D-06)', () => {
   })
 })
 
+describe('Pace availability boundary (PACE-03, D-05: MIN_COVERED_MONTHS_FOR_PACE = 2)', () => {
+  // The only cases exercised elsewhere in this repo are 0 (real-Postgres, insufficient) and
+  // 3/12 (complete) — this closes the actual off-by-one boundary the constant exists to enforce
+  // (review fix WR-02).
+  it('is insufficient at exactly 1 Covered Month', () => {
+    const oneMonth: MonthlyValue[] = [{ yearMonth: '2026-01', amount: '100.00' }]
+
+    expect(computePaceAndProjection(oneMonth)).toEqual({
+      status: 'insufficient',
+      coveredMonthCount: 1,
+    })
+  })
+
+  it('is complete at exactly 2 Covered Months', () => {
+    const twoMonths: MonthlyValue[] = [
+      { yearMonth: '2026-01', amount: '100.00' },
+      { yearMonth: '2026-02', amount: '200.00' },
+    ]
+
+    const result = computePaceAndProjection(twoMonths)
+    expect(result.status).toBe('complete')
+    if (result.status === 'complete') {
+      expect(result.coveredMonthCount).toBe(2)
+      expect(toDecimal(result.pace).equals(toDecimal('150.00'))).toBe(true)
+    }
+  })
+})
+
 describe('Total equals sum of series (PACE-05, D-07)', () => {
   it('total is the reduce-sum of the months array for a straightforward fixture', () => {
     const months: MonthlyValue[] = [
