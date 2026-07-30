@@ -13,9 +13,18 @@ The user can safely import real bank transactions, see where their money goes ca
 - **Complexity:** complex
 - **Why:** The app spans Next.js server runtime, Better Auth (email/password + OAuth), Drizzle/Postgres, Cloudflare R2, production environment variables, migrations, categorization tiers, dashboard deviation analytics, and external free-tier platform limits.
 
-## Current Milestone: none — v2.9 shipped, next TBD
+## Current Milestone: v3.0 Categories Year View
 
-v2.9 Amortization shipped 2026-07-29 (see **Last Shipped Milestone** below). No next milestone is scoped yet — open the next cycle with `/gsd-new-milestone` (questioning → research → requirements → roadmap). Standing candidates for later are listed under **Capability Contract → Active** and in the v2.8 section's "standing candidates" note.
+**Goal:** Rewrite the Categories dashboard section on a coherent yearly axis — monthly pace and year-end projection replacing the rolling-preset model — and retire the Deviation and Preset vocabulary along with it.
+
+**Target features:**
+- Categories list on year + direction (Uscite / Entrate / **Accantonamenti**, the last currently invisible), each row carrying total + year-end projection, a three-state sparkline, total/projection ordering, and an explicit first-import state
+- Category detail as a **12-month table** (prototype variant A): month-over-month delta inside each cell, a previous-year row, a full-year/9/6/3-month window, and a sticky summary column (averages + difference vs the homologous window)
+- Subcategories ordered by weight, each carrying a contribution to the difference that sums exactly to its parent category
+- Number engine in the DAL: **Mese Coperto**, **Mese Parziale**, **Ritmo**, **Proiezione**, and `direction.hidden = false` replacing the `includedInTotals` predicate that hid allocation
+- Retirement of Deviation, Baseline, Noise Threshold and Preset (code + glossary), with the cassa/competenza lens switch confined to Overview
+
+**Key context:** 19 decisions locked in `.planning/dashboard-categories-DECISIONS.md`, formalised in **[ADR 0020](../docs/adr/0020-categories-year-view-retires-deviation.md)**, which **amends LENS-01 of ADR 0019** — the lens is no longer dashboard-global. Prototypes in `.scratch/dashboard-categories/` (variant A chosen over the chart because a chart cannot render month-over-month deltas as words, only as signs). The retirement touches shared aggregation sites, so it is regression-gated **before** any UI work, as in v2.8 and v2.9. Deploy to Coolify (R038/R039/R041) remains the next candidate milestone, not this one.
 
 ## Current State
 
@@ -372,4 +381,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-29 after v2.9 (Amortization) milestone — SHIPPED (audit 15/15, Phases 77–81, git tag pending post-merge). Delivered: per-transaction amortization (detach into Standalone Expense, materialised uniform instalments), `/amortizations` registry, global cassa/competenza dashboard lens via one swappable `ledger_entry` row source per lens (ADR 0019), and inline paired-net display in the transactions table (Phase 81). Requirements/ROADMAP/audit archived to `milestones/v2.9-*`. No next milestone scoped yet — open the next cycle with `/gsd-new-milestone`. Previous: v2.8 (Reimbursements 1:N) shipped 2026-07-27, audit 11/11, archived to `milestones/v2.8-*`.*
+*Last updated: 2026-07-30 — milestone **v3.0 (Categories Year View)** opened: Categories rewritten on a yearly axis (pace + year-end projection), allocation direction surfaced, Deviation/Baseline/Noise Threshold/Preset retired, lens confined to Overview. Decisions locked in `.planning/dashboard-categories-DECISIONS.md` + ADR 0020 (amends LENS-01 of ADR 0019); prototype variant A chosen. Previously: 2026-07-29 after v2.9 (Amortization) milestone — SHIPPED (audit 15/15, Phases 77–81, git tag pending post-merge). Delivered: per-transaction amortization (detach into Standalone Expense, materialised uniform instalments), `/amortizations` registry, global cassa/competenza dashboard lens via one swappable `ledger_entry` row source per lens (ADR 0019), and inline paired-net display in the transactions table (Phase 81). Requirements/ROADMAP/audit archived to `milestones/v2.9-*`. No next milestone scoped yet — open the next cycle with `/gsd-new-milestone`. Previous: v2.8 (Reimbursements 1:N) shipped 2026-07-27, audit 11/11, archived to `milestones/v2.8-*`.*

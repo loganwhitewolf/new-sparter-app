@@ -1,19 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.9
-milestone_name: Amortization
-status: Awaiting next milestone
-stopped_at: Completed 260730-e6z-01-PLAN.md (transactions footer net totals)
-last_updated: "2026-07-30T08:29:05.934Z"
+milestone: v3.0
+milestone_name: Categories Year View
+status: planning
+last_updated: "2026-07-30T13:54:57.255Z"
 last_activity: 2026-07-30
-last_activity_desc: "Completed quick task 260730-bfa: Riorganizzare il menu laterale in sezioni distinte per tipologia di feature"
 progress:
   total_phases: 0
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
-current_phase: 81
-current_phase_name: inline-net-display-for-paired-transactions
+  percent: 0
 ---
 
 # Project State
@@ -27,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 ## Current Position
 
-Phase: Milestone v2.9 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-30 - Completed quick task 260730-g3b: Lens selector redesign (dropdown nel titolo + overlay cassa sul grafico in competenza + controllo nascosto senza piani)
+Status: Defining requirements
+Last activity: 2026-07-30 — Milestone v3.0 started
 
 ## Roadmap (v2.9 — Phases 77-81) — SHIPPED 2026-07-29
 
