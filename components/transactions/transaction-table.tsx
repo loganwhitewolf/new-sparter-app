@@ -188,6 +188,48 @@ function transactionRowLabel(transaction: TransactionListRow) {
   return raw.length > 80 ? `${raw.slice(0, 77)}…` : raw
 }
 
+/**
+ * Pure helper backing `markAmortizationRemoved`'s optimistic update (D-09 undo, Bug 2 fix):
+ * clears amortizationPlanId AND the reimbursement/pairing fields on the target row —
+ * reverseDetachTx deletes the plan's standalone expense, which cascades away any reimbursement
+ * anchored to it (Task 1's fix makes this reachable via "rimborso", not just "vendita"). The
+ * refund/sale counterpart row (found via pairedWithId, same lookup-then-map pattern
+ * handleUnpair already uses) has its own pairing fields cleared too, but keeps its OWN
+ * amortizationPlanId untouched — it is a separate transaction, not the amortized one.
+ */
+export function applyAmortizationRemovedUpdate(
+  transactions: TransactionListRow[],
+  transactionId: string,
+): TransactionListRow[] {
+  const target = transactions.find((t) => t.id === transactionId)
+  const partnerId = target?.pairedWithId ?? null
+
+  return transactions.map((t) => {
+    if (t.id === transactionId) {
+      return {
+        ...t,
+        amortizationPlanId: null,
+        reimbursementId: null,
+        pairedWithId: null,
+        pairedNetAmount: null,
+        pairedDescription: null,
+        pairedOccurredAt: null,
+      }
+    }
+    if (partnerId !== null && t.id === partnerId) {
+      return {
+        ...t,
+        reimbursementId: null,
+        pairedWithId: null,
+        pairedNetAmount: null,
+        pairedDescription: null,
+        pairedOccurredAt: null,
+      }
+    }
+    return t
+  })
+}
+
 export function TransactionTable({
   transactions,
   route,
@@ -440,9 +482,7 @@ export function TransactionTable({
    * shared Expense.
    */
   function markAmortizationRemoved(transactionId: string) {
-    setLoadedTransactions((prev) =>
-      prev.map((t) => (t.id === transactionId ? { ...t, amortizationPlanId: null } : t)),
-    )
+    setLoadedTransactions((prev) => applyAmortizationRemovedUpdate(prev, transactionId))
   }
 
   /**
