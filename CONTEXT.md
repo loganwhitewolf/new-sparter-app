@@ -199,27 +199,39 @@ _Avoid_: periodo del file, mese assegnato
 ### Dashboard e analisi
 
 **Reference Period** (Periodo di riferimento):
-L'ultimo mese per cui esistono transazioni importate per l'utente. Viene determinato dalla query, non dal calendario — corrisponde al `MAX(TO_CHAR(occurred_at, 'YYYY-MM'))` sulle transazioni dell'utente per l'anno selezionato. _Nota_: il motore Deviation (`getDeviationDateRanges`) usa ancora "ultimo mese di calendario completo" — deriva documentale in attesa di migrazione (deferred, D-12).
+L'ultimo **Mese Coperto** dell'utente. Determinato dalla query, non dal calendario — `MAX(TO_CHAR(occurred_at, 'YYYY-MM'))` sulle transazioni dell'utente per l'anno selezionato. Usato per scegliere il mese di default nei widget che ne mostrano uno.
 _Avoid_: mese corrente, periodo attuale
 
-**Baseline**:
-La media mensile di spesa per una categoria o sottocategoria calcolata sui 3 mesi di calendario precedenti il Reference Period. Usata per calcolare la Deviation.
-_Avoid_: media storica, riferimento
+**Mese Coperto** (Covered Month):
+Mese in cui esiste **almeno una Transaction dell'utente**, in qualunque categoria. È il denominatore di ogni media della dashboard. La copertura è una proprietà del mese **sul conto**, non della categoria: dentro un Mese Coperto una categoria senza movimenti vale **€0 e pesa** (è un fatto: quel mese non hai speso in Salute). Un mese senza nessuna transazione **non esiste** — è escluso dal denominatore, non vale zero, perché non sappiamo se non hai speso o non hai importato. Nessuna presunzione in nessuna delle due direzioni: sta all'utente fornire dati validi. Senza questa distinzione ogni categoria stagionale o occasionale produrrebbe medie e proiezioni gonfiate di un fattore 3–6.
+_Avoid_: mese con dati (ambiguo: dati della categoria o del conto?), mese valido
 
-**Deviation** (Deviazione):
-La differenza percentuale tra la spesa del Reference Period e la Baseline per una data categoria o sottocategoria. Positiva = speso di più della media, negativa = speso di meno.
-_Avoid_: scostamento, variazione, delta (riservato ai confronti KPI periodo-su-periodo)
+**Mese Parziale** (Partial Month):
+Il mese di calendario **corrente**, escluso da ogni media perché ancora in corso. Definizione operativa: se oggi è il 30 luglio e i dati arrivano al 28, luglio è parziale; se i dati si fermano a maggio e oggi è luglio, maggio **non** è parziale — è coperto e concluso, l'utente ha solo smesso di importare. Il mese corrente e i mesi futuri sono l'**unica** assunzione che il prodotto si permette: sono incompleti per definizione.
+_Avoid_: mese incompleto (confonde parziale con non coperto), ultimo mese
+
+**Ritmo** (Pace):
+La media mensile di una categoria o sottocategoria calcolata sui **Mesi Coperti dell'anno selezionato**, esclusi i Mesi Parziali. È il valore attribuito ai mesi futuri. Si calcola sull'anno, **non sulla finestra** selezionata: una finestra può non contenere nessun Mese Coperto (a luglio, finestra ott–dic) e non avrebbe nulla da cui stimare. Sotto **2 Mesi Coperti** il Ritmo non esiste e non viene mostrato nulla — meglio nessun numero che un numero fragile. Il **mese corrente** vale il maggiore fra speso-finora e Ritmo: una stima non deve mai mostrare meno di un fatto già accaduto.
+_Avoid_: media storica, baseline (ritirato), velocità di spesa
+
+**Proiezione** (Projection):
+Il valore del periodo ottenuto attribuendo il Ritmo ai mesi futuri: **è la somma della serie mostrata**, non una formula separata. Il numero grande è la somma dei numeri sopra, quindi una divergenza è un bug visibile. Si enuncia sempre come ritmo proiettato ("di questo passo: €4.080"), **mai come previsione** ("chiuderai a €4.080"): la prima è un'affermazione sul passato proiettato ed è difendibile, la seconda è una promessa che i dati non reggono.
+_Avoid_: previsione, forecast, stima finale
+
+**Contributo alla differenza** (Contribution to the difference):
+Quanto una sottocategoria spiega dello scostamento della sua categoria rispetto alla finestra omologa dell'anno precedente ("Alimentari è €180 in più: €150 da `spesa-quotidiana`, €30 da `caffè-bar`"). I contributi **sommano esattamente** alla differenza della categoria padre — proprietà verificabile dall'utente, che è la ragione per cui questa misura esiste. Conseguenza vincolante: le sottocategorie presenti **solo nel periodo precedente** restano in elenco col loro contributo negativo, altrimenti la somma non torna.
+_Avoid_: peso (è la quota sul totale, un'altra cosa), impatto
+
+**Finestra** (Window):
+Il periodo della vista dettaglio di una categoria: anno intero oppure 9/6/3 mesi con mese di partenza scelto. **Ogni numero della pagina si riferisce alla Finestra**, compreso il confronto annuale, che usa la **finestra omologa dell'anno precedente** (con Finestra = anno intero degenera nell'anno precedente intero: una regola sola, nessun caso speciale). La Finestra decide cosa si vede e cosa si somma, **non** su cosa si calcola il Ritmo.
+_Avoid_: preset (ritirato), intervallo, range
 
 **MonthOverMonthChange** (Variazione mese su mese):
 Variazione della spesa di una categoria rispetto al mese di calendario precedente. Distinto dalla Deviation (che confronta vs la Baseline su 3 mesi). Query: `getMonthOverMonthCategoryChanges`. Copy UI: "Rispetto al mese scorso" / "Dove hai speso di più" / "Dove hai risparmiato". Campi: `{ categoryId, name, delta, isNew }` — `isNew = true` quando la spesa precedente era zero e quella attuale è positiva.
-_Avoid_: "variazione" (riservato-deprecato per evitare confusione con Deviation)
+_Avoid_: "variazione" come termine generico (è il nome di *questa* misura)
 
-**Noise Threshold** (Soglia di rumore):
-Importo minimo di spesa nel Reference Period (€15) sotto il quale una sottocategoria è esclusa dalla vista Deviation. Evita che micro-spese occasionali generino deviazioni percentuali fuorvianti.
-
-**Preset**:
-Filtro temporale della dashboard selezionabile dall'utente (es. `last-month`, `last-3-months`). `last-month` indica il mese di calendario precedente a quello corrente — un periodo completato.
-_Avoid_: periodo, filtro, intervallo
+**Segno e verso dei confronti** (regola trasversale):
+Nel **dato** ogni confronto è `corrente − precedente` (negativo = speso meno) — convenzione unica dell'app. Nella **UI** non si mostra mai il segno: modulo più parola ("€180 **in meno** dell'anno scorso"). Motivo: con la direzione `allocation` in gioco nessuna convenzione di segno può essere corretta sulla stessa schermata — su `out` "più" è peggio, su `allocation` "più" è meglio — mentre le parole restano giuste in entrambi i casi. Il giudizio lo porta il **colore**, mappato per direzione in un punto solo.
 
 ### Ammortamento
 
@@ -260,18 +272,24 @@ _Avoid_: vista di cassa vs accrual (mischiare le lingue), filtro competenza (non
 - Una **Transaction** è o **non categorizzata** (nessuna Subcategory) o ha **esattamente una Subcategory**; la **Category** è sempre derivata dalla Subcategory, mai assegnata da sola
 - Una **Category** contiene zero o più **Subcategory**
 - Una **Subcategory** ha zero o una **FlowNature** (null = non classificata)
-- La **Deviation** di una **Subcategory** è calcolata rispetto alla sua **Baseline**
-- La **Baseline** si calcola solo se esistono dati nei 3 mesi precedenti il **Reference Period**
+- Un **Mese Coperto** è definito dalle **Transaction** dell'utente, non da quelle di una **Category**
+- Il **Ritmo** di una **Category** si calcola sui **Mesi Coperti** dell'anno, esclusi i **Mesi Parziali**
+- La **Proiezione** di una **Finestra** è la somma della sua serie mensile
+- I **Contributi alla differenza** delle **Subcategory** sommano alla differenza della loro **Category**
 
 ## Example dialogue
 
-> **Dev:** "Nella pagina Categorie mostro le categorie ordinate per Deviation — ma se l'utente non ha dati del mese scorso?"
-> **Domain expert:** "Se il Reference Period non ha transazioni, non c'è nulla da mostrare. La Deviation non è calcolabile senza il Reference Period. Mostra uno stato vuoto."
+> **Dev:** "In Salute l'utente ha speso €200 a marzo e €180 a settembre, zero negli altri mesi. Il Ritmo è €190?"
+> **Domain expert:** "No, €190 è la media dei mesi in cui è andato dal dentista. Se gli altri mesi sono coperti, in quei mesi ha speso €0 e quegli zeri contano: il Ritmo è €380 diviso i Mesi Coperti. Altrimenti proietteresti €2.280 di spese mediche all'anno per due visite."
 
-> **Dev:** "La Baseline usa 3 mesi — ma cosa succede se l'utente ha dati solo da 1 mese?"
-> **Domain expert:** "Calcoli la Baseline sui mesi disponibili. Se c'è solo 1 mese, la Baseline è quel mese. La Deviation è comunque significativa."
+> **Dev:** "E se marzo non è stato importato affatto?"
+> **Domain expert:** "Allora marzo non entra nel denominatore. Non sai se non ha speso o non ha importato, e non devi indovinare. Ma il totale del periodo resterà incompleto: quel mese va segnalato nella serie, non lasciato come un buco che sembra spesa zero."
+
+> **Dev:** "Siamo al 20 luglio, il Ritmo di Alimentari è €300 ma ha già speso €480. Cosa mostro su luglio?"
+> **Domain expert:** "€480. Una stima non può stare sotto un fatto già accaduto — il mese corrente vale il maggiore fra speso-finora e Ritmo."
 
 ## Flagged ambiguities
 
-- `last-month` nel codice restituiva dati del mese corrente (bug): risolto — `last-month` deve restituire il mese di calendario precedente, non quello in corso.
-- "delta" era usato sia per variazioni KPI periodo-su-periodo sia per scostamento dalla media: risolto — **delta** = variazione KPI, **deviation** = scostamento dalla Baseline.
+- "delta" era usato sia per variazioni KPI periodo-su-periodo sia per scostamento dalla media: risolto — **delta** = variazione KPI; lo scostamento dalla media (Deviation/Baseline) è stato **ritirato** dal prodotto (ADR 0020).
+- **Deviation**, **Baseline**, **Noise Threshold** e **Preset** erano termini di dominio fino alla riscrittura della sezione Categorie: **ritirati** con ADR 0020, sostituiti da MonthOverMonthChange (dentro la serie), confronto con la **Finestra** omologa dell'anno precedente e **Contributo alla differenza**. Il debito D-12 (Reference Period query-derived vs ultimo mese di calendario) si estingue con il motore che lo aveva. Non reintrodurre i quattro termini: erano non verificabili a occhio o ancorati a periodi che la pagina non nominava.
+- Il confronto "stima annuale vs anno precedente chiuso" **non ha ancora un nome**: non può chiamarsi *delta* (riservato) né *deviation* (ritirato). Da fissare in fase UI.
