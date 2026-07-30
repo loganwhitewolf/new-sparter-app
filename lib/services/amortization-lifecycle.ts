@@ -265,11 +265,10 @@ export async function realizePlanTx(
     extraAmount: toDecimal(sale.amount),
   })
 
-  // Link the sale for cash-lens/bookkeeping purposes (the single call site in this file) —
-  // reuses v2.8's anchor resolution (sign-based: the plan's original transaction is the
-  // negative-amount anchor, the sale resolves as the positive-amount refund) and self-pair guard
-  // UNMODIFIED (T-78-08). closePlanTx never calls this; reducePlanTx must not either (D-03's
-  // "instead" mechanic — no v2.8 reimbursement link on the open-plan partial-refund path).
+  // Link the sale for cash-lens/bookkeeping purposes (reuses v2.8's anchor resolution — sign-based:
+  // the plan's original transaction is the negative-amount anchor, the sale resolves as the
+  // positive-amount refund — and self-pair guard UNMODIFIED, T-78-08). reducePlanTx also links its
+  // refund the same way (see below) — closePlanTx is the only lifecycle path that never links.
   await createPairTx(tx, {
     userId: input.userId,
     anchor: { transactionId: plan.transactionId },
@@ -292,9 +291,10 @@ export type ReducePlanResult = {
 
 /**
  * D-03/AMORT-06: reduces an open plan's base by a partial-refund transaction's amount and
- * re-spreads the remaining (not-yet-occurred) instalments proportionally — the plan STAYS open
- * (D-03's "instead" mechanic: no v2.8 reimbursement/refund link is ever created here, unlike
- * realizePlanTx). Residual is the Decimal-absolute sum of instalments with occurredAt on/after
+ * re-spreads the remaining (not-yet-occurred) instalments proportionally — the plan STAYS open.
+ * The refund is linked via the same v2.8 mechanism realizePlanTx uses (createPairTx, anchored on
+ * the plan's original transaction) — the plan simply stays open instead of closing. Residual is
+ * the Decimal-absolute sum of instalments with occurredAt on/after
  * the start of the CURRENT calendar month (today, never a date derived from the plan itself) —
  * an amount exceeding it is a realization, not a partial reduction, and is rejected with a
  * message redirecting to "chiudi per vendita" BEFORE any delete/insert/update. An amount exactly
@@ -348,6 +348,14 @@ export async function reducePlanTx(tx: DbOrTx, input: ReducePlanInput): Promise<
   }
 
   const newTotalAmount = toDecimal(plan.totalAmount).plus(refundAmount)
+
+  // Link the refund exactly like realizePlanTx links its sale — same anchor shape, same v2.8
+  // mechanism — the only difference is the plan stays open here instead of closing.
+  await createPairTx(tx, {
+    userId: input.userId,
+    anchor: { transactionId: plan.transactionId },
+    counterpartId: input.refundTransactionId,
+  })
 
   if (futureInstalments.length === 0) {
     // Residual is 0 here (an empty future set sums to 0), so the guard above already forced

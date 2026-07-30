@@ -722,10 +722,11 @@ describeIfReachable('reducePlanTx (Phase 78, D-03/AMORT-06)', () => {
     const allInstalments = await loadInstalments(db, planId)
     expect(allInstalments).toHaveLength(12)
 
-    // D-03 "instead" mechanic: NO v2.8 reimbursement/refund link is created on this path.
+    // The refund is linked via the same v2.8 mechanism realizePlanTx uses (Bug 1 fix) — one
+    // reimbursement + one refund row, even though the plan stays open here.
     const { reimbursements, refunds } = await countReimbursementRows(db)
-    expect(reimbursements).toBe(0)
-    expect(refunds).toBe(0)
+    expect(reimbursements).toBe(1)
+    expect(refunds).toBe(1)
   })
 
   it('exact-residual boundary: refund exactly equals the residual — ALLOWED, every re-spread instalment materializes to 0.00, plan stays open', async () => {
