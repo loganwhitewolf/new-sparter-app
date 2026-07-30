@@ -89,7 +89,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 82-03-PLAN.md — Partial Month + hybrid current month + total-sum invariant + comparison/judgement + previous-year threshold
+- [x] 82-03-PLAN.md — Partial Month + hybrid current month + total-sum invariant + comparison/judgement + previous-year threshold
 
 **UI hint**: yes
 

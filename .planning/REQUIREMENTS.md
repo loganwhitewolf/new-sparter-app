@@ -10,11 +10,11 @@ Design source of truth: `.planning/dashboard-categories-DECISIONS.md` (19 locked
 ### Number engine — pace, coverage, projection
 
 - [x] **PACE-01**: A month with no transactions at all for the user is excluded from every average, while a Covered Month in which the category has no movement counts as €0 and pulls the average down (D11)
-- [ ] **PACE-02**: The current calendar month is excluded from every average as a Partial Month; a month whose data simply ended (import stopped) is not partial (D11)
+- [x] **PACE-02**: The current calendar month is excluded from every average as a Partial Month; a month whose data simply ended (import stopped) is not partial (D11)
 - [x] **PACE-03**: The user sees a monthly pace and a projection only when the selected year has at least 2 Covered Months; below that threshold no estimate is produced anywhere (D4)
-- [ ] **PACE-04**: The current month is valued at the greater of spent-so-far and the pace, so a projection never displays less than an already-observed amount (D12)
-- [ ] **PACE-05**: The period total equals the sum of the displayed monthly series — no independently computed projection figure exists (D13)
-- [ ] **PACE-06**: Every comparison is stored as `current − previous` and rendered without a sign — magnitude plus a word ("€180 in meno") — with judgement colour resolved per direction in a single place (D13)
+- [x] **PACE-04**: The current month is valued at the greater of spent-so-far and the pace, so a projection never displays less than an already-observed amount (D12)
+- [x] **PACE-05**: The period total equals the sum of the displayed monthly series — no independently computed projection figure exists (D13)
+- [x] **PACE-06**: Every comparison is stored as `current − previous` and rendered without a sign — magnitude plus a word ("€180 in meno") — with judgement colour resolved per direction in a single place (D13)
 
 ### Categories list
 
@@ -72,11 +72,11 @@ Acknowledged, deliberately not in this milestone.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PACE-01 | Phase 82 | Complete |
-| PACE-02 | Phase 82 | Pending |
+| PACE-02 | Phase 82 | Complete |
 | PACE-03 | Phase 82 | Complete |
-| PACE-04 | Phase 82 | Pending |
-| PACE-05 | Phase 82 | Pending |
-| PACE-06 | Phase 82 | Pending |
+| PACE-04 | Phase 82 | Complete |
+| PACE-05 | Phase 82 | Complete |
+| PACE-06 | Phase 82 | Complete |
 | CLIST-01 | Phase 83 | Pending |
 | CLIST-02 | Phase 83 | Pending |
 | CLIST-03 | Phase 83 | Pending |
