@@ -1,3 +1,4 @@
+import Decimal from 'decimal.js'
 import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
 import type { CoveredMonth } from '@/lib/dal/covered-months'
 
@@ -67,4 +68,29 @@ export function buildCoveredMonthSeries(
 ): MonthlyValue[] {
   const coveredSet = new Set(coveredMonths.map((m) => m.yearMonth))
   return categoryMonths.filter((m) => coveredSet.has(m.yearMonth))
+}
+
+/**
+ * D-03: `Mese Parziale` is the current calendar month, always excluded from every average — no
+ * exceptions based on how much of the month has elapsed. A month whose data merely stopped
+ * earlier (e.g. no import since May, today is July) is a concluded Covered Month, never partial;
+ * this function makes no presumption in either direction (CONTEXT.md's two worked examples).
+ *
+ * Pure function of (yearMonth, today) — no day-of-month comparison at all, so it never throws and
+ * evaluates identically regardless of array order upstream (stateless per-month predicate, not a
+ * stateful reducer).
+ */
+export function isPartialMonth(yearMonth: string, today: Date = new Date()): boolean {
+  const [year, month] = yearMonth.split('-').map(Number)
+  return year === today.getFullYear() && month === today.getMonth() + 1
+}
+
+/**
+ * D-06: the current month is valued at `max(spent so far, pace)` — a hybrid, never a value below
+ * an already-observed fact. `Decimal.max` compares the two UNROUNDED Decimal instances; the single
+ * winner is rounded to cents via toDbDecimal exactly once, at this return boundary (D-11) — never
+ * per-operand, never twice.
+ */
+export function computeCurrentMonthHybrid(spentSoFar: string, pace: string): string {
+  return toDbDecimal(Decimal.max(toDecimal(spentSoFar), toDecimal(pace)))
 }

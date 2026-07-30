@@ -4,7 +4,13 @@
 import { describe, expect, it } from 'vitest'
 import { toDecimal } from '@/lib/utils/decimal'
 import type { CoveredMonth } from '@/lib/dal/covered-months'
-import { buildCoveredMonthSeries, computePaceAndProjection, type MonthlyValue } from '@/lib/services/pace-and-projection'
+import {
+  buildCoveredMonthSeries,
+  computeCurrentMonthHybrid,
+  computePaceAndProjection,
+  isPartialMonth,
+  type MonthlyValue,
+} from '@/lib/services/pace-and-projection'
 
 function coveredMonth(yearMonth: string): CoveredMonth {
   const [year, month] = yearMonth.split('-').map(Number)
@@ -76,5 +82,67 @@ describe('buildCoveredMonthSeries — seasonal category (PACE-01, D-01/D-02)', (
       expect(toDecimal(result.pace).equals(toDecimal('31.67'))).toBe(true)
       expect(result.coveredMonthCount).toBe(12)
     }
+  })
+})
+
+describe('Partial Month classification (PACE-02, D-03)', () => {
+  it('classifies the current calendar month as partial regardless of how late in the month `today` falls', () => {
+    expect(isPartialMonth('2026-07', new Date(2026, 6, 30))).toBe(true)
+  })
+
+  it('does NOT classify a month whose data merely stopped earlier as partial (data stops in May, today is July)', () => {
+    expect(isPartialMonth('2026-05', new Date(2026, 6, 20))).toBe(false)
+  })
+
+  it('does NOT classify the month immediately before today\'s month as partial, even on day 1 of the next month', () => {
+    expect(isPartialMonth('2026-06', new Date(2026, 6, 1))).toBe(false)
+  })
+
+  it('never throws for a year with zero Covered Months at all', () => {
+    expect(() => isPartialMonth('2020-01', new Date(2026, 6, 30))).not.toThrow()
+    expect(isPartialMonth('2020-01', new Date(2026, 6, 30))).toBe(false)
+  })
+
+  it('is a stateless per-month predicate: filtering ascending or descending yearMonths excludes the same months', () => {
+    const today = new Date(2026, 6, 15)
+    const ascending = ['2026-05', '2026-06', '2026-07']
+    const descending = ['2026-07', '2026-06', '2026-05']
+
+    const excludedFromAscending = ascending.filter((m) => !isPartialMonth(m, today))
+    const excludedFromDescending = descending.filter((m) => !isPartialMonth(m, today)).sort()
+
+    expect(excludedFromAscending.sort()).toEqual(excludedFromDescending)
+    expect(excludedFromAscending.sort()).toEqual(['2026-05', '2026-06'])
+  })
+})
+
+describe('Current month hybrid value (PACE-04, D-06)', () => {
+  it('returns exactly spentSoFar when it exceeds pace', () => {
+    expect(computeCurrentMonthHybrid('480.00', '300.00')).toBe('480.00')
+  })
+
+  it('returns exactly pace when pace exceeds spentSoFar', () => {
+    expect(computeCurrentMonthHybrid('200.00', '300.00')).toBe('300.00')
+  })
+
+  it('returns the shared value at the exact tie — not a distinguishable branch', () => {
+    expect(computeCurrentMonthHybrid('300.00', '300.00')).toBe('300.00')
+  })
+
+  it('never displays a value below the pace-1/pace/pace+1 boundary probe (D-06, PACE-04 boundary)', () => {
+    expect(computeCurrentMonthHybrid('299.99', '300.00')).toBe('300.00')
+    expect(computeCurrentMonthHybrid('300.00', '300.00')).toBe('300.00')
+    expect(computeCurrentMonthHybrid('300.01', '300.00')).toBe('300.01')
+  })
+
+  it('the tie case returns the identical string both branches would independently produce, proving no silent divergent branch', () => {
+    const spentSoFar = '300.00'
+    const pace = '300.00'
+    const fromSpentBranch = spentSoFar
+    const fromPaceBranch = pace
+    const result = computeCurrentMonthHybrid(spentSoFar, pace)
+
+    expect(result).toBe(fromSpentBranch)
+    expect(result).toBe(fromPaceBranch)
   })
 })
