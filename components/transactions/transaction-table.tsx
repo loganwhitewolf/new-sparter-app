@@ -4,8 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CalendarClock, ExternalLink, MoreHorizontal, Split, Tag, Trash2, Unlink } from 'lucide-react'
-import { formatAbsoluteAmount } from '@/lib/utils/format-amount'
+import { formatAbsoluteAmount, formatSignedAmount } from '@/lib/utils/format-amount'
 import { toDecimal } from '@/lib/utils/decimal'
+import { computeTransactionTotals } from '@/lib/utils/transaction-totals'
 import { toast } from 'sonner'
 import { BulkDeleteTransactionsDialog } from '@/components/transactions/bulk-delete-transactions-dialog'
 import { TransactionBulkActionBar } from '@/components/transactions/transaction-bulk-action-bar'
@@ -173,6 +174,11 @@ function resolvePairRole(transaction: TransactionListRow): 'anchor' | 'counterpa
   return toDecimal(transaction.amount).isNegative() ? 'anchor' : 'counterpart'
 }
 
+/** Mirrors the movementLabel pattern in components/dashboard/category-detail-summary.tsx. */
+function transactionCountLabel(count: number): string {
+  return count === 1 ? '1 transazione' : `${count} transazioni`
+}
+
 function transactionRowLabel(transaction: TransactionListRow) {
   const raw =
     transaction.customTitle?.trim() ||
@@ -250,6 +256,11 @@ export function TransactionTable({
 
   const router = useRouter()
   const { activeSort, activeDir, onSort, isRestoring } = useToolbarSort(route)
+
+  const totals = useMemo(
+    () => computeTransactionTotals(loadedTransactions),
+    [loadedTransactions],
+  )
 
   const selectedExpenseIds = useMemo(() => {
     const idSet = new Set<string>()
@@ -965,9 +976,41 @@ export function TransactionTable({
             Carica altre 50 transazioni
           </Button>
         ) : loadedTransactions.length > 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Tutte le transazioni disponibili sono caricate.
-          </p>
+          <div className="flex flex-col items-center gap-1 text-sm">
+            <span className="text-muted-foreground">
+              {transactionCountLabel(totals.totalCount)}
+            </span>
+            {totals.buckets.map((bucket) => (
+              <div
+                key={bucket.currency}
+                className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 font-mono tabular-nums"
+              >
+                {totals.buckets.length > 1 && (
+                  <span className="text-xs font-sans uppercase text-muted-foreground">
+                    {bucket.currency}
+                  </span>
+                )}
+                <span>
+                  Entrate{' '}
+                  <span className="text-total-in">
+                    {formatAbsoluteAmount(bucket.totalIn.toFixed(2), bucket.currency)}
+                  </span>
+                </span>
+                <span>
+                  Uscite{' '}
+                  <span className="text-total-out">
+                    {formatAbsoluteAmount(bucket.totalOut.toFixed(2), bucket.currency)}
+                  </span>
+                </span>
+                <span>
+                  Differenza{' '}
+                  <span className={amountToneClass(bucket.difference.toFixed(2))}>
+                    {formatSignedAmount(bucket.difference.toFixed(2), bucket.currency)}
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
         ) : null}
       </div>
       {loadError ? (
