@@ -1,4 +1,5 @@
 import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
+import type { CoveredMonth } from '@/lib/dal/covered-months'
 
 /**
  * D-05: below this many Covered Months in the selected year, no pace and no projection is
@@ -48,4 +49,22 @@ export function computePaceAndProjection(monthlyValues: MonthlyValue[]): PaceRes
     projection: toDbDecimal(projection),
     coveredMonthCount,
   }
+}
+
+/**
+ * Composes a category's monthly series with the account's Covered Months (D-01/D-02). Pure,
+ * synchronous — no DB/network/await inside its body.
+ *
+ * A `categoryMonths` entry whose `yearMonth` is NOT in `coveredMonths` is dropped entirely
+ * (D-01: excluded, not zeroed — the month never existed on the account, so it cannot exist for
+ * this category either). Every entry whose `yearMonth` IS covered survives with whatever amount
+ * it already carries, including '0.00' (D-02: a Covered Month with no movement for this category
+ * still counts, pulling its average down).
+ */
+export function buildCoveredMonthSeries(
+  coveredMonths: CoveredMonth[],
+  categoryMonths: MonthlyValue[],
+): MonthlyValue[] {
+  const coveredSet = new Set(coveredMonths.map((m) => m.yearMonth))
+  return categoryMonths.filter((m) => coveredSet.has(m.yearMonth))
 }
