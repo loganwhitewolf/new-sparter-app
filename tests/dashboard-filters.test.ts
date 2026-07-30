@@ -128,16 +128,26 @@ describe('buildDashboardTabHref', () => {
     )
   })
 
-  test('forwards ?tag= across Overview <-> Categorie <-> Tag tab switches (68-05)', () => {
+  test('drops the dead ?tag= parameter across Overview <-> Categorie <-> Tag tab switches (RETIRE-04, D-14)', () => {
     const current = new URLSearchParams({ tag: '5' })
 
+    expect(buildDashboardTabHref('/dashboard/overview', current)).toBe('/dashboard/overview')
+    expect(buildDashboardTabHref('/dashboard/categories', current)).toBe('/dashboard/categories')
+    expect(buildDashboardTabHref('/dashboard/tags', current)).toBe('/dashboard/tags')
+  })
+
+  test('drops ?tag= while preserving ?lens= when both are present (RETIRE-04, D-13, D-14)', () => {
+    const current = new URLSearchParams({ tag: '5', lens: 'competenza' })
+
     expect(buildDashboardTabHref('/dashboard/overview', current)).toBe(
-      '/dashboard/overview?tag=5'
+      '/dashboard/overview?lens=competenza'
     )
     expect(buildDashboardTabHref('/dashboard/categories', current)).toBe(
-      '/dashboard/categories?tag=5'
+      '/dashboard/categories?lens=competenza'
     )
-    expect(buildDashboardTabHref('/dashboard/tags', current)).toBe('/dashboard/tags?tag=5')
+    expect(buildDashboardTabHref('/dashboard/tags', current)).toBe(
+      '/dashboard/tags?lens=competenza'
+    )
   })
 
   test('omits ?tag= (not empty-string) when absent from the current params', () => {
