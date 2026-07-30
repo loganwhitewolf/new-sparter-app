@@ -42,6 +42,17 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
+### 2026-07-30 — Transactions direction multi-select, transfer off by default (260730-o82)
+
+**Decided:** Direzione is multi-select. Absent URL `direction` ⇒ effective `in,out,allocation,unclassified` (hide transfers) with **no chips**. Chips only after user changes the filter; selecting the default set again clears the param. Cascade nature/category = union of selected directions (no transfer until opted in). Transactions only.
+
+**Why:** Transfers are low-signal noise in the default ledger view; chips should reflect user intent, not system defaults.
+
+**Rejected:**
+- Writing default into URL on first render (chip noise)
+- Changing Expenses the same way (out of scope)
+- Using `q=` / status “Da categorizzare” instead of direction `unclassified`
+
 ### 2026-07-30 — Amort UX: Visualizza on detail + Tutti=all (260730-n2z)
 
 **Decided:** (1) Detail amortized txs: only Visualizza → `/amortizations?transactionId=`; Chiudi/Rimuovi only on registry. (2) Status Tutti = open+closed (override former D-C1 open-default). (3) CTA copy Chiudi con vendita/rimborso.
