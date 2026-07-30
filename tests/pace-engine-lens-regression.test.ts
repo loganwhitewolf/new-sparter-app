@@ -15,6 +15,7 @@ import { afterAll, describe, expect, it, vi } from 'vitest'
 import { verifySession } from '@/lib/dal/auth'
 import { toDecimal } from '@/lib/utils/decimal'
 import {
+  assertHarnessReachableInCi,
   captureAggregationSnapshot,
   connectReimbursementTestDb,
   resetReimbursementFixtures,
@@ -33,6 +34,12 @@ vi.mock('@/lib/dal/auth', () => ({ verifySession: vi.fn() }))
 vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T) => fn }))
 
 const harness = await connectReimbursementTestDb()
+
+// WR-04: skipping is fine locally, fatal in CI. This file carries the RETIRE-05 byte-identical
+// baseline (D-15) that Phase 83 re-runs unchanged to prove its `direction.hidden` predicate flip
+// moved nothing (D-16). A vacuous green here would let that flip land unguarded — the exact
+// silent failure this phase was sequenced before any Categories UI to prevent.
+assertHarnessReachableInCi(harness, '[pace-engine-regression]')
 
 if (!harness.ok) {
   console.warn(

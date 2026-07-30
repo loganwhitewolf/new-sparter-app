@@ -217,6 +217,43 @@ during planning, before implementation).
 
 ---
 
+## WR-04 Fix (second pass, 2026-07-30)
+
+**Finding:** the RETIRE-05 baseline could `describe.skip` with only a `console.warn` when Postgres
+was unreachable, so in CI without Docker the gate reported a vacuous green — zero assertions
+executed. Phase 83 re-runs this exact suite to prove its `direction.hidden` predicate flip moved
+nothing (D-16), so a silent skip would let that flip land unguarded.
+
+**Fix:** `assertHarnessReachableInCi(harness, suiteName)` added to
+`tests/helpers/reimbursement-test-db.ts` and called from `tests/pace-engine-lens-regression.test.ts`.
+Unreachable + `process.env.CI` set → throw at module evaluation. Unreachable without `CI` → the
+existing graceful skip is preserved, so a developer without Docker is not blocked.
+
+**Verified in all three directions** (`node_modules/.bin/vitest run`, RTK bypassed):
+
+| Scenario | Result |
+|---|---|
+| Postgres reachable | 5 passed |
+| `CI=1` + `TEST_DATABASE_URL` on a dead port | **1 file failed, "no tests"** — loud failure |
+| no `CI` + dead port | 1 file skipped, 5 tests skipped |
+
+The middle row is the regression this closes: before the fix it reported green.
+
+**Scope note — remaining debt.** 13 other suites use the same unguarded skip pattern
+(`tests/amortization-lens-regression.test.ts`, `-overview.test.ts`, `tests/reimbursement-*.test.ts`,
+`tests/amortization-*.test.ts`). Their behaviour is deliberately **unchanged** here: the shared
+helper now exports the guard, but only the Phase 82 suite opts in. Adopting it in
+`amortization-lens-regression*.test.ts` is the obvious next candidate — those are v2.9's equivalent
+byte-identical gates and carry the same vacuous-green risk. Tracked, not fixed.
+
+**Note on the original WR-03 remedy.** The review proposed deleting the unused `lens?: Lens` field
+from `DashboardCategoryFilters`. That was declined: the field was dead only because plan 82-02
+removed `parseLensParam` from the Categories pages, and deleting it would have cemented a real
+defect — `?lens=` dropping out of the URL on any intra-Categories navigation (sort toggle, row
+click-through, back link), after which the tab nav's back-link to Overview lands in cassa,
+defeating D-13. The implemented fix forwards the value without consuming it, with a branded type
+making misuse a compile error. See the F3 entry below.
+
 ## Review Fix Pass
 
 **Fixed:** 2026-07-30 (follow-up executor pass, no PLAN.md — findings list is the contract)

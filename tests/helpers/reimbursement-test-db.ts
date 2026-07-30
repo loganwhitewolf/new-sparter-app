@@ -106,11 +106,43 @@ async function ensureTestDatabaseExists(connectionString: string): Promise<void>
 }
 
 /**
+ * Fails loudly when a real-Postgres harness is unreachable **in CI**, where a graceful skip is
+ * indistinguishable from a pass.
+ *
+ * The `{ ok: false }` + `describe.skip` pattern below is right on a developer machine without
+ * Docker: the suite steps aside instead of blocking unrelated work. In CI it is a trap — the
+ * file reports green with zero assertions executed, so a regression baseline that exists
+ * precisely to prove nothing moved would prove nothing at all, silently.
+ *
+ * Call this from any suite whose whole purpose is the assertions it makes against real Postgres
+ * (byte-identical regression gates above all). Suites that merely benefit from a real database
+ * can keep skipping unguarded.
+ *
+ * @param suiteName - Prefix for the thrown message, so CI logs name the suite that halted.
+ * @throws When the harness is unreachable and `process.env.CI` is set.
+ */
+export function assertHarnessReachableInCi(
+  harness: ReimbursementTestDbHandle,
+  suiteName: string,
+): void {
+  if (harness.ok || !process.env.CI) return
+
+  throw new Error(
+    `${suiteName}: Postgres is unreachable and CI is set. This suite's assertions are its ` +
+      'entire value, so skipping them in CI would report a vacuous green. Provision the test ' +
+      'database (yarn db:up) before running.',
+  )
+}
+
+/**
  * Connects to the local Postgres container, running the real migration set against it
  * (idempotent — safe against an already-migrated or a completely fresh container). Returns
  * `{ ok: false }` instead of throwing when the container is unreachable, so the calling test
  * file can skip gracefully (with a console warning) rather than fail the whole suite when
  * Docker is not running.
+ *
+ * A skip is silent by design. Suites whose assertions are load-bearing should pair this with
+ * {@link assertHarnessReachableInCi} so the skip cannot masquerade as a pass in CI.
  */
 export async function connectReimbursementTestDb(): Promise<ReimbursementTestDbHandle> {
   const connectionString = resolveConnectionString()
