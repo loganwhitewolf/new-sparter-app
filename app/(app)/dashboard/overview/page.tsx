@@ -76,11 +76,18 @@ async function OverviewDataSection({
   // deltas compare the SAME chip selection year-over-year. A prior year with no data
   // yields zero sums → null deltas (existing null handling). Both years read the SAME
   // lens so the delta comparison is meaningful.
-  const [overview, chart, prevChart, hasPlans] = await Promise.all([
+  //
+  // LSD-03: the cash-lens overlay chart is fetched ONLY when the active lens is
+  // `competenza` — a ternary inside this SAME Promise.all array (not a separate `if`
+  // branch), so selecting `cassa` triggers no extra query at all.
+  const [overview, chart, prevChart, hasPlans, cashOverlayData] = await Promise.all([
     getOverview(year, ledgerRowSource),
     getOverviewChart(year, ledgerRowSource),
     getOverviewChart(year - 1, ledgerRowSource),
     hasAmortizationPlans(userId),
+    lens === 'competenza'
+      ? getOverviewChart(year, resolveLedgerRowSource('cassa'))
+      : Promise.resolve(undefined),
   ])
 
   if (isYearWithNoData(overview.totalIn, overview.totalOut)) {
@@ -122,6 +129,7 @@ async function OverviewDataSection({
         initialMoversIn={initialMoversIn}
         initialMoversOut={initialMoversOut}
         initialMoversAllocation={initialMoversAllocation}
+        cashOverlayData={cashOverlayData}
       />
     </div>
   )

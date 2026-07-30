@@ -1,6 +1,6 @@
 'use client'
 
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from 'recharts'
+import { Bar, CartesianGrid, Cell, ComposedChart, LabelList, Line, XAxis, YAxis } from 'recharts'
 import {
   ChartContainer,
   ChartTooltip,
@@ -9,6 +9,7 @@ import {
 import type { OverviewChartPoint } from '@/lib/dal/overview'
 import { formatEur, formatEurCompact } from './format'
 import {
+  deriveCashOverlayValues,
   deriveFilteredBarRow,
   deriveNatureBreakdown,
   type IncomeKey,
@@ -116,6 +117,12 @@ type OverviewChartProps = {
   includedIncome: Set<IncomeKey>
   includedOut: Set<OutKey>
   includedAllocation: Set<AllocationKey>
+  /**
+   * LSD-03: cash-lens Uscite chart points, present only when the active lens is
+   * `competenza`. When supplied, a dashed cash-lens overlay line is drawn on top of the
+   * accrual Uscite bar. `cassa` never supplies this prop — no overlay, chart unchanged.
+   */
+  cashOverlayData?: OverviewChartPoint[]
 }
 
 export function OverviewChart({
@@ -125,12 +132,18 @@ export function OverviewChart({
   includedIncome,
   includedOut,
   includedAllocation,
+  cashOverlayData,
 }: OverviewChartProps) {
   // Derive bar rows using filter-aware reduction (FILT-01, FILT-02).
   // Number() conversion happens only inside deriveFilteredBarRow (Recharts boundary).
-  const rows = data.map((p) =>
-    deriveFilteredBarRow(p, [...includedIncome], [...includedOut], [...includedAllocation])
-  )
+  const overlayValues = cashOverlayData
+    ? deriveCashOverlayValues(cashOverlayData, [...includedOut])
+    : null
+
+  const rows = data.map((p, i) => {
+    const row = deriveFilteredBarRow(p, [...includedIncome], [...includedOut], [...includedAllocation])
+    return overlayValues ? { ...row, usciteCassa: overlayValues[i] } : row
+  })
 
   return (
     <div className="flex flex-col gap-3">
@@ -145,7 +158,7 @@ export function OverviewChart({
         config={chartConfig}
         className="aspect-auto h-[260px] w-full [&_*:focus]:outline-none [&_*:focus-visible]:outline-none"
       >
-        <BarChart data={rows} barGap={4} barCategoryGap="24%">
+        <ComposedChart data={rows} barGap={4} barCategoryGap="24%">
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis dataKey="label" tickLine={false} axisLine={false} />
           <YAxis
@@ -258,8 +271,36 @@ export function OverviewChart({
               />
             ))}
           </Bar>
-        </BarChart>
+
+          {/* LSD-03: cash-lens Uscite overlay — dashed reference line, painted on top of the
+              bars (render-order-is-z-index in Recharts). Only present when the active lens is
+              `competenza`; `cassa` never renders this Line at all. Not interactive (no
+              activeDot) — this is a reference comparison, not its own data series. */}
+          {overlayValues && (
+            <Line
+              dataKey="usciteCassa"
+              stroke="var(--total-out)"
+              strokeDasharray="5 4"
+              strokeWidth={2}
+              dot={{ r: 3 }}
+              activeDot={false}
+              isAnimationActive={false}
+            />
+          )}
+        </ComposedChart>
       </ChartContainer>
+      {/* LSD-03: small dedicated legend fragment for the overlay line — this chart renders no
+          Recharts <Legend> for its three bars either (already explained by the filter chips
+          above the chart), so a full <Legend> here would be inconsistent; a short swatch +
+          label suffices for the one new line. */}
+      {overlayValues && (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <svg width="16" height="8" aria-hidden="true">
+            <line x1="0" y1="4" x2="16" y2="4" stroke="var(--total-out)" strokeWidth={2} strokeDasharray="5 4" />
+          </svg>
+          <span>Uscite (cassa)</span>
+        </div>
+      )}
     </div>
   )
 }

@@ -17,6 +17,8 @@ type Props = {
   includedIncome: Set<IncomeKey>
   includedOut: Set<OutKey>
   includedAllocation: Set<AllocationKey>
+  /** LSD-03: cash-lens overlay chart points, threaded straight through to OverviewChart. */
+  cashOverlayData?: OverviewChartPoint[]
 }
 
 /**
@@ -38,6 +40,7 @@ export function OverviewMoversSection({
   includedIncome,
   includedOut,
   includedAllocation,
+  cashOverlayData,
 }: Props) {
   const [selectedMonth, setSelectedMonth] = useState(defaultMonthIndex)
   const [moversIn, setMoversIn] = useState<MonthOverMonthChange[]>(initialMoversIn)
@@ -75,6 +78,7 @@ export function OverviewMoversSection({
         includedIncome={includedIncome}
         includedOut={includedOut}
         includedAllocation={includedAllocation}
+        cashOverlayData={cashOverlayData}
       />
       <OverviewMoversPanel
         year={year}

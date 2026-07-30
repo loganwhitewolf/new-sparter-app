@@ -30,6 +30,8 @@ type Props = {
   initialMoversIn: MonthOverMonthChange[]
   initialMoversOut: MonthOverMonthChange[]
   initialMoversAllocation: MonthOverMonthChange[]
+  /** LSD-03: cash-lens overlay chart points, threaded straight through to OverviewMoversSection. */
+  cashOverlayData?: OverviewChartPoint[]
 }
 
 function toIncludedSets(excluded: ExcludedChips) {
@@ -60,6 +62,7 @@ export function OverviewDashboardSection({
   initialMoversIn,
   initialMoversOut,
   initialMoversAllocation,
+  cashOverlayData,
 }: Props) {
   const defaults = toIncludedSets(DEFAULT_EXCLUDED_CHIPS)
   const [includedIncome, setIncludedIncome] = useState<Set<IncomeKey>>(defaults.income)
@@ -155,6 +158,7 @@ export function OverviewDashboardSection({
         includedIncome={includedIncome}
         includedOut={includedOut}
         includedAllocation={includedAllocation}
+        cashOverlayData={cashOverlayData}
       />
     </div>
   )
