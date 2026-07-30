@@ -180,3 +180,28 @@ export function deriveFilteredBarRow(
     accantonato: Number(accantonato),
   }
 }
+
+/**
+ * Derives the cash-lens overlay line values for the overview monthly chart (LSD-03).
+ *
+ * Only the `out` (Uscite) bucket is ever overlaid: amortization only ever spreads an
+ * OUT-direction transaction (ADR 0019, outflows only), so Uscite is the sole bucket that can
+ * differ between the cash and accrual lenses — entrate and accantonato are identical between
+ * cassa and competenza and are deliberately never overlaid.
+ *
+ * Respects the SAME `includedOut` chip filter as the accrual bars (sumSelected, same contract
+ * as deriveFilteredBarRow's uscite sum), so toggling a nature chip narrows both series
+ * consistently. Number() conversion happens only at the return boundary (Recharts requires
+ * numbers) — the summation itself stays Decimal-precise via sumSelected/toDecimal.
+ *
+ * Returns exactly one number per input point, in the same order — index-aligned with the
+ * accrual chart's own rows.
+ */
+export function deriveCashOverlayValues(
+  cashData: OverviewChartPoint[],
+  includedOut: readonly OutKey[]
+): number[] {
+  return cashData.map((point) =>
+    Number(sumSelected(point.out as unknown as Record<string, string>, includedOut))
+  )
+}

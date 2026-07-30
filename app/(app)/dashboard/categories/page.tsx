@@ -6,6 +6,7 @@ import { DashboardFilters } from '@/components/dashboard/dashboard-filters'
 import { LensSwitch } from '@/components/dashboard/lens-switch'
 import { getCategoryDeviations, getCategoryRanking } from '@/lib/dal/dashboard'
 import { resolveLedgerRowSource, type LedgerRowSource } from '@/lib/dal/dashboard-filters'
+import { hasAmortizationPlans } from '@/lib/dal/amortization'
 import { verifySession } from '@/lib/dal/auth'
 import { buildDashboardCategoriesHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
@@ -129,22 +130,25 @@ async function CategoryRankingContent({
 }
 
 export default async function DashboardCategoriesPage({ searchParams }: Props) {
-  await verifySession()
+  const { userId } = await verifySession()
   const params = await searchParams
   const filters = parseCategoryDashboardFilters(params)
   const lens = parseLensParam(params.lens)
   const ledgerRowSource = resolveLedgerRowSource(lens)
+  const hasPlans = await hasAmortizationPlans(userId)
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Categorie</h1>
+          <h1 className="flex items-center gap-1 text-xl font-semibold">
+            Categorie
+            {hasPlans && <LensSwitch lens={lens} />}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Classifica delle categorie per importo e andamento mensile.
           </p>
         </div>
-        <LensSwitch lens={lens} />
       </div>
 
       <Suspense fallback={<CategoryFiltersFallback />}>

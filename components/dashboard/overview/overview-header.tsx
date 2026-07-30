@@ -11,11 +11,13 @@ type OverviewHeaderProps = {
   year: number
   years: string[]
   lens: Lens
+  /** LSD-04: gates the title-integrated lens dropdown — hidden for plan-less users. */
+  hasAmortizationPlans: boolean
   /** Optional nudge slot — rendered right-aligned on the title row (FRU-FIX-03). */
   nudge?: ReactNode
 }
 
-export function OverviewHeader({ year, years, lens, nudge }: OverviewHeaderProps) {
+export function OverviewHeader({ year, years, lens, hasAmortizationPlans, nudge }: OverviewHeaderProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -45,7 +47,10 @@ export function OverviewHeader({ year, years, lens, nudge }: OverviewHeaderProps
     <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
       {/* Left side: title + year selector */}
       <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
-        <h1 className="text-lg font-semibold">Panoramica delle tue finanze</h1>
+        <h1 className="flex items-center gap-1 text-lg font-semibold">
+          Panoramica delle tue finanze
+          {hasAmortizationPlans && <LensSwitch lens={lens} />}
+        </h1>
         <Select value={String(year)} onValueChange={update}>
           <SelectTrigger aria-label="Anno" className="h-auto w-auto gap-1 rounded-full border px-3 py-1 text-sm font-medium">
             <SelectValue />
@@ -56,7 +61,6 @@ export function OverviewHeader({ year, years, lens, nudge }: OverviewHeaderProps
             ))}
           </SelectContent>
         </Select>
-        <LensSwitch lens={lens} />
       </div>
       {/* Right side: nudge slot (FRU-FIX-03) */}
       {nudge != null && <div className="ml-auto shrink-0">{nudge}</div>}

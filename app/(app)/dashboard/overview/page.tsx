@@ -7,6 +7,7 @@ import {
   type OverviewChartPoint,
 } from '@/lib/dal/overview'
 import { resolveLedgerRowSource } from '@/lib/dal/dashboard-filters'
+import { hasAmortizationPlans } from '@/lib/dal/amortization'
 import { verifySession } from '@/lib/dal/auth'
 import { resolveYear } from '@/components/dashboard/overview/resolve-year'
 import { OverviewEmptyState } from '@/components/dashboard/overview/overview-empty-state'
@@ -67,20 +68,32 @@ async function OverviewDataSection({
   // page (KPIs, chart, movers) — never re-derived per call site (T-80-08).
   const ledgerRowSource = resolveLedgerRowSource(lens)
 
+  // React's cache() memoizes verifySession() within the same request — this is a free
+  // re-call, not a second auth round-trip (the page-level verifySession() call stays).
+  const { userId } = await verifySession()
+
   // Prior-year chart points feed the filtered YoY deltas on the KPI cards (260711-gfd):
   // deltas compare the SAME chip selection year-over-year. A prior year with no data
   // yields zero sums → null deltas (existing null handling). Both years read the SAME
   // lens so the delta comparison is meaningful.
-  const [overview, chart, prevChart] = await Promise.all([
+  //
+  // LSD-03: the cash-lens overlay chart is fetched ONLY when the active lens is
+  // `competenza` — a ternary inside this SAME Promise.all array (not a separate `if`
+  // branch), so selecting `cassa` triggers no extra query at all.
+  const [overview, chart, prevChart, hasPlans, cashOverlayData] = await Promise.all([
     getOverview(year, ledgerRowSource),
     getOverviewChart(year, ledgerRowSource),
     getOverviewChart(year - 1, ledgerRowSource),
+    hasAmortizationPlans(userId),
+    lens === 'competenza'
+      ? getOverviewChart(year, resolveLedgerRowSource('cassa'))
+      : Promise.resolve(undefined),
   ])
 
   if (isYearWithNoData(overview.totalIn, overview.totalOut)) {
     return (
       <>
-        <OverviewHeader year={year} years={years} lens={lens} />
+        <OverviewHeader year={year} years={years} lens={lens} hasAmortizationPlans={hasPlans} />
         <OverviewEmptyState variant="no-data-for-year" year={year} />
       </>
     )
@@ -103,6 +116,7 @@ async function OverviewDataSection({
         year={year}
         years={years}
         lens={lens}
+        hasAmortizationPlans={hasPlans}
         nudge={<OverviewNudge uncategorizedCount={overview.uncategorizedCount} year={year} />}
       />
       {/* 260711-gfd: chips + KPI cards + chart/movers share one dashboard-wide chip
@@ -115,6 +129,7 @@ async function OverviewDataSection({
         initialMoversIn={initialMoversIn}
         initialMoversOut={initialMoversOut}
         initialMoversAllocation={initialMoversAllocation}
+        cashOverlayData={cashOverlayData}
       />
     </div>
   )

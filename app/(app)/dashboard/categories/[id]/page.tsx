@@ -12,6 +12,7 @@ import { DashboardFilters } from '@/components/dashboard/dashboard-filters'
 import { LensSwitch } from '@/components/dashboard/lens-switch'
 import { getCategoryDeviations, getCategoryDetail } from '@/lib/dal/dashboard'
 import { resolveLedgerRowSource, type LedgerRowSource } from '@/lib/dal/dashboard-filters'
+import { hasAmortizationPlans } from '@/lib/dal/amortization'
 import { verifySession } from '@/lib/dal/auth'
 import { buildDashboardCategoriesHref } from '@/lib/routes'
 import {
@@ -141,12 +142,13 @@ async function CategoryDetailContent({
 }
 
 export default async function DashboardCategoryDetailPage({ params, searchParams }: Props) {
-  await verifySession()
+  const { userId } = await verifySession()
   const [{ id }, query] = await Promise.all([params, searchParams])
   const categoryId = parsePositiveIntParam(id)
   const filters = parseCategoryDetailFilters(query)
   const lens = parseLensParam(query.lens)
   const ledgerRowSource = resolveLedgerRowSource(lens)
+  const hasPlans = await hasAmortizationPlans(userId)
 
   const backHref = buildDashboardCategoriesHref({
     preset: filters.preset,
@@ -163,12 +165,14 @@ export default async function DashboardCategoryDetailPage({ params, searchParams
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold">Dettaglio categoria</h1>
+            <h1 className="flex items-center gap-1 text-xl font-semibold">
+              Dettaglio categoria
+              {hasPlans && <LensSwitch lens={lens} />}
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Andamento, movimenti principali e sottocategorie per il filtro selezionato.
             </p>
           </div>
-          <LensSwitch lens={lens} />
         </div>
       </div>
 
