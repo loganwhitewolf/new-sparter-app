@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Amortization
 status: Awaiting next milestone
-stopped_at: Phase 81 complete (inline net display for paired transactions) — UAT 4/4 passed, verification passed, security verified. Milestone v2.9 100% complete.
-last_updated: "2026-07-29T20:26:28.107Z"
-last_activity: 2026-07-29
-last_activity_desc: Milestone v2.9 completed and archived
+stopped_at: Completed 260730-e6z-01-PLAN.md (transactions footer net totals)
+last_updated: "2026-07-30T08:29:05.934Z"
+last_activity: 2026-07-30
+last_activity_desc: "Completed quick task 260730-bfa: Riorganizzare il menu laterale in sezioni distinte per tipologia di feature"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 19
-  completed_plans: 19
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 current_phase: 81
 current_phase_name: inline-net-display-for-paired-transactions
 ---
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 Phase: Milestone v2.9 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-07-30 - Completed quick task 260730-bfa: Riorganizzare il menu laterale in sezioni distinte per tipologia di feature
+Last activity: 2026-07-30 - Completed quick task 260730-e6z: Riepilogo totali netti (Entrate/Uscite/Differenza per valuta) nel footer della tabella transazioni
 
 ## Roadmap (v2.9 — Phases 77-81) — SHIPPED 2026-07-29
 
@@ -424,6 +424,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 80-05: DashboardFilters left untouched (shared preset/type-only toolbar); lens parsed/resolved at page level only, passed to LensSwitch + DAL calls
 - [Phase ?]: 80-07: Did not fix pre-existing proxy.ts staging-bypass redirect-loop bug (blocks all dashboard Playwright specs, unrelated to this plan's files) — logged to deferred-items.md per SCOPE BOUNDARY
 - [Phase ?]: 80-07: Marked LENS-01/LENS-02 complete — D-03's all-four-routes contract satisfied by 80-04+80-05+80-06 together; DAL/URL-wiring proven by real-Postgres+unit tests, live-browser proof blocked by unrelated environmental bug
+- [Phase ?]: 260730-e6z: transactions footer totals bucketed per currency (falsy/empty -> EUR), split by sign of pairedNetAmount ?? amount via Decimal.js, rendered only once hasMore is false and not loading
+- [Phase ?]: 260730-e6z: formatSignedAmount forces useGrouping: true explicitly — this Node/ICU build drops the thousands separator when signDisplay is non-default and useGrouping is left at 'auto'
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -530,6 +532,7 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260722-iys | Nav IA: /tags + /patterns primary; Patterns out of Categories; theme→Profile; /settings→Profilo; mobile Altro sheet | 2026-07-22 | fcb1646 |
 | 260722-ked | Enrich tag detail panel: Entrate/Uscite/Valore finale totals + included-tx count + compact tx list (date·subcat·signed amount), lazy via getTagDetailAction; dashboard-consistent netting (getTagDetail/buildTagDetailData) | 2026-07-22 | 1cce578 |
 | 260730-bfa | Sidebar sections by feature type (Option A: Panoramica / Movimenti / Ingresso dati / Configurazione) | 2026-07-30 | 5a064b8e |
+| 260730-e6z | Riepilogo totali netti (Entrate/Uscite/Differenza per valuta) nel footer della tabella transazioni | 2026-07-30 | 95f3adee |
 
 ## Deferred Items
 
@@ -563,9 +566,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Phase 81 complete (inline net display for paired transactions) — UAT 4/4 passed, verification passed, security verified. Milestone v2.9 100% complete.
+**Stopped at:** Completed 260730-e6z-01-PLAN.md (transactions footer net totals)
 
-Last session: 2026-07-29
+Last session: 2026-07-30T08:28:52.442Z
 
 **Next:** `/gsd-complete-milestone v2.9` to archive the milestone and prepare for the next.
 
@@ -665,3 +668,4 @@ Last session: 2026-07-29
 | Phase 80 P04 | ~15min | 2 tasks | 3 files |
 | Phase 80 P05 | ~10min | 2 tasks | 2 files |
 | Phase 80 P07 | 35min | 2 tasks | 2 files |
+| Phase 260730-e6z P01 | 25min | 1 tasks | 6 files |
