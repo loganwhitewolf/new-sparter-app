@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState, type ComponentType } from 'react'
+import { useEffect, useState } from 'react'
 import {
   CalendarClock,
   ChevronLeft,
@@ -17,6 +17,7 @@ import {
   Tags,
   Upload,
   User,
+  type LucideIcon,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -43,12 +44,10 @@ import { APP_ROUTES } from '@/lib/routes'
 
 type UserDisplay = { name: string; email: string; image: string | null }
 
-type NavIcon = ComponentType<{ className?: string }>
-
 type NavItem = {
   href: string
   label: string
-  icon: NavIcon
+  icon: LucideIcon
 }
 
 type NavSection = {
