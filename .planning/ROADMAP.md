@@ -58,23 +58,35 @@ infrastructure from v2.0/v2.8/v2.9)
 **Requirements**: PACE-01, PACE-02, PACE-03, PACE-04, PACE-05, PACE-06, RETIRE-03, RETIRE-04, RETIRE-05
 
 **Success Criteria** (what must be TRUE):
+
   1. A month with zero transactions is excluded from every average (not counted as a zero), while
      a Covered Month in which a category has no movement counts as €0 and pulls its average down;
      the current calendar month is excluded from every average as a Partial Month (PACE-01, PACE-02).
+
   2. No pace or projection is produced anywhere for a year with fewer than 2 Covered Months; once
      produced, the current month is valued at `max(spent so far, pace)` so a projection never
      reads below an already-observed amount (PACE-03, PACE-04).
+
   3. The displayed period total is always exactly the sum of the underlying monthly series — no
      independently computed projection figure exists anywhere in the engine (PACE-05).
+
   4. Every comparison is computed and stored as `current − previous`, with the sign-to-colour
      judgement resolved by one shared, per-direction function rather than duplicated per widget
      (PACE-06).
+
   5. A regression test suite proves Overview's and Tags' totals are byte-identical before and
      after the engine change; the cassa/competenza lens switch renders only on Overview (removed
      from Categories and Tags), and dashboard tab navigation no longer carries the dead `tag`
      parameter (RETIRE-05, RETIRE-03, RETIRE-04).
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+
+- [ ] 82-01-PLAN.md — Covered Months query + pace existence check + real-Postgres tracer, RETIRE-05 byte-identical baseline
+- [ ] 82-02-PLAN.md — Lens confinement to Overview (D-12) + drop the dead `?tag=` tab-nav param (D-14)
+- [ ] 82-03-PLAN.md — Partial Month + hybrid current month + total-sum invariant + comparison/judgement + previous-year threshold
+
 **UI hint**: yes
 
 #### Phase 83: categories-list
@@ -88,15 +100,20 @@ directions including the previously-unreachable Accantonamenti.
 **Requirements**: CLIST-01, CLIST-02, CLIST-03, CLIST-04, CLIST-05, CLIST-06, CLIST-07
 
 **Success Criteria** (what must be TRUE):
+
   1. For a selected year and direction, every category appears ranked by total, each row showing
      its % share of the total and a 12-month sparkline (CLIST-01).
+
   2. Each row also shows the year-end projection, visually subordinate to and explicitly labelled
      apart from the total (CLIST-02); the user can re-order the list by projection instead of
      total via the existing sort control (CLIST-03).
+
   3. The direction switch offers Uscite, Entrate and Accantonamenti — the last reachable here for
      the first time (CLIST-04).
+
   4. Moving between Overview and Categories preserves the selected year via the shared `?year=`
      parameter (CLIST-05).
+
   5. With a single Covered Month, the list shows the certain figures (total, share, one-point
      series) plus an explicit statement of what's missing and how to get it; clicking a category
      opens its detail on the same year, so the row's total and the detail page's total agree
@@ -118,18 +135,23 @@ entry point, though the detail computation itself only requires Phase 82
 **Requirements**: CDET-01, CDET-02, CDET-03, CDET-04, CDET-05, CDET-06, CDET-07, RETIRE-01, RETIRE-02
 
 **Success Criteria** (what must be TRUE):
+
   1. The category detail page renders a 12-month table with the month-over-month delta inside
      each cell, plus a previous-year row for direct month-by-month comparison (CDET-01, CDET-02).
+
   2. The user can narrow the table to a 9/6/3-month window from a chosen start month; every figure
      on the page, including the summary column's total/average/comparison, refers only to that
      window (CDET-03, CDET-04).
+
   3. Subcategories are listed by weight, each carrying a contribution to the difference that sums
      exactly to the parent category's total difference, including subcategories present in only
      one of the two compared periods (CDET-05).
+
   4. Covered, current (hybrid) and estimated months are each visually distinct from one another
      and from explicitly-marked uncovered months; when the previous year lacks sufficient
      coverage, the total difference is replaced by a stated reason while the average comparison
      still renders (CDET-06, CDET-07).
+
   5. No trace of Deviation, Baseline, Noise Threshold or the Preset filter remains in the
      interface or the codebase — a repository grep and the full regression suite confirm zero
      dead references and no regression on any surface that used their shared helpers (RETIRE-01,
@@ -491,7 +513,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 79. amortizations-registry | v2.9 | 2/2 | Complete    | 2026-07-28 |
 | 80. dashboard-accrual-lens | v2.9 | 7/7 | Complete    | 2026-07-29 |
 | 81. inline-net-display-for-paired-transactions | v2.9 | 1/1 | Complete    | 2026-07-29 |
-| 82. number-engine-and-regression-gate | v3.0 | 0/TBD | Not started | - |
+| 82. number-engine-and-regression-gate | v3.0 | 0/3 | Planned    |  |
 | 83. categories-list | v3.0 | 0/TBD | Not started | - |
 | 84. category-detail-and-cleanup | v3.0 | 0/TBD | Not started | - |
 
