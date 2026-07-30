@@ -42,6 +42,16 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
+### 2026-07-30 — Desktop sidebar IA Option A (operational sections)
+
+**Decided:** Left nav grouped as Panoramica → Movimenti → Ingresso dati → Configurazione. Mobile bottom-nav / More sheet unchanged in this pass.
+
+**Why:** Matches daily user flow (see → manage → import → configure) without forcing ledger vocabulary on the IA.
+
+**Rejected:**
+- Option B (domain contabile: Spese vs Banca) — clearer for power users, weaker for daily UX
+- Option C (frequency-first unlabeled top) — demotes Rimborsi without strong evidence
+
 ### 2026-07-28 — Fineco cleanup seed-extras scoped by created_at cutoff
 
 **Decided:** `merge-duplicate-fineco-platforms` and the delete/reassign half of `ensure-fineco-moneymap-global-format` only touch rows with `created_at < 2026-07-29T00:00:00Z`. Later Fineco platforms/formats created by users after this ship survive future `yarn db:seed-extras` runs. The global Moneymap upsert remains idempotent forever.
