@@ -42,6 +42,16 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
+### 2026-07-30 — Amortization refund linking + remove-reset client state (260730-m2x)
+
+**Decided:** (1) `reducePlanTx` ("rimborso") calls `createPairTx` like `realizePlanTx` ("vendita") — same pairing mechanism. (2) "Rimuovi ammortamento" client update must clear `reimbursementId` + pairing fields (not only `amortizationPlanId`), because `TransactionTable` does not resync `loadedTransactions` from props after `router.refresh()`. (3) Dashboard movers month link → `/transactions?months=YYYY-MM` only; nature chips / cash-accrual lens have no equivalent transaction-list filters.
+
+**Why:** Bug 2 looked like server eligibility but was stale optimistic list state; server `getAmortizationEligibility` already resets after undo.
+
+**Rejected:**
+- Threading nature/lens into the transactions link — no matching query params on `/transactions`
+- Server-side eligibility changes for Bug 2 — not the root cause
+
 ### 2026-07-30 — Desktop sidebar IA Option A (operational sections)
 
 **Decided:** Left nav grouped as Panoramica → Movimenti → Ingresso dati → Configurazione. Mobile bottom-nav / More sheet unchanged in this pass.
