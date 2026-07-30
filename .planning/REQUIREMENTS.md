@@ -69,41 +69,39 @@ Acknowledged, deliberately not in this milestone.
 
 ## Traceability
 
-Populated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PACE-01 | — | Pending |
-| PACE-02 | — | Pending |
-| PACE-03 | — | Pending |
-| PACE-04 | — | Pending |
-| PACE-05 | — | Pending |
-| PACE-06 | — | Pending |
-| CLIST-01 | — | Pending |
-| CLIST-02 | — | Pending |
-| CLIST-03 | — | Pending |
-| CLIST-04 | — | Pending |
-| CLIST-05 | — | Pending |
-| CLIST-06 | — | Pending |
-| CLIST-07 | — | Pending |
-| CDET-01 | — | Pending |
-| CDET-02 | — | Pending |
-| CDET-03 | — | Pending |
-| CDET-04 | — | Pending |
-| CDET-05 | — | Pending |
-| CDET-06 | — | Pending |
-| CDET-07 | — | Pending |
-| RETIRE-01 | — | Pending |
-| RETIRE-02 | — | Pending |
-| RETIRE-03 | — | Pending |
-| RETIRE-04 | — | Pending |
-| RETIRE-05 | — | Pending |
+| PACE-01 | Phase 82 | Pending |
+| PACE-02 | Phase 82 | Pending |
+| PACE-03 | Phase 82 | Pending |
+| PACE-04 | Phase 82 | Pending |
+| PACE-05 | Phase 82 | Pending |
+| PACE-06 | Phase 82 | Pending |
+| CLIST-01 | Phase 83 | Pending |
+| CLIST-02 | Phase 83 | Pending |
+| CLIST-03 | Phase 83 | Pending |
+| CLIST-04 | Phase 83 | Pending |
+| CLIST-05 | Phase 83 | Pending |
+| CLIST-06 | Phase 83 | Pending |
+| CLIST-07 | Phase 83 | Pending |
+| CDET-01 | Phase 84 | Pending |
+| CDET-02 | Phase 84 | Pending |
+| CDET-03 | Phase 84 | Pending |
+| CDET-04 | Phase 84 | Pending |
+| CDET-05 | Phase 84 | Pending |
+| CDET-06 | Phase 84 | Pending |
+| CDET-07 | Phase 84 | Pending |
+| RETIRE-01 | Phase 84 | Pending |
+| RETIRE-02 | Phase 84 | Pending |
+| RETIRE-03 | Phase 82 | Pending |
+| RETIRE-04 | Phase 82 | Pending |
+| RETIRE-05 | Phase 82 | Pending |
 
 **Coverage:**
 - v3.0 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-30*
-*Last updated: 2026-07-30 at milestone v3.0 start*
+*Last updated: 2026-07-30 — roadmap created: 25/25 requirements mapped across Phases 82-84 (number-engine-and-regression-gate, categories-list, category-detail-and-cleanup), no orphans.*

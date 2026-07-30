@@ -2,6 +2,7 @@
 
 ## Milestones
 
+- 🚧 **v3.0: Categories Year View** — Phases 82–84 (roadmap created 2026-07-30) · design locked [ADR 0020](../docs/adr/0020-categories-year-view-retires-deviation.md)
 - ✅ **v2.9: Amortization** — Phases 77–81 (shipped 2026-07-29) · model locked ADR 0019 · [archive](milestones/v2.9-ROADMAP.md)
 - ✅ **v2.8: Reimbursements 1:N** — Phases 73–76 (shipped 2026-07-27) · [archive](milestones/v2.8-ROADMAP.md)
 - ✅ **M001–M006** — Foundation → Dashboard Insight Suite (Phases 1–23, shipped ~2026-05)
@@ -24,6 +25,118 @@
 - ✅ **v2.7: Tag Dedicated View** — Phases 69–72 (shipped 2026-07-22, tag v2.7) · [archive](milestones/v2.7-ROADMAP.md)
 
 ## Phases
+
+### 🚧 v3.0: Categories Year View (In Progress)
+
+**Milestone Goal:** Rewrite the Categories dashboard section on a coherent yearly axis — monthly
+pace and year-end projection replacing the rolling-preset model — and retire the Deviation,
+Baseline, Noise Threshold and Preset vocabulary (code + glossary) along with it. Locked in
+**[ADR 0020](../docs/adr/0020-categories-year-view-retires-deviation.md)** (amends LENS-01 of ADR
+0019 — the cassa/competenza lens is no longer dashboard-global, confined to Overview) and
+`.planning/dashboard-categories-DECISIONS.md` (19 decisions, D1–D19). Prototypes in
+`.scratch/dashboard-categories/` — the 12-month table (variant A) is locked over a chart, which
+cannot render a month-over-month delta as a word inside a 60px bar.
+
+Sequencing mirrors the v2.8 netting gate / v2.9 LENS-03 pattern: the number engine and the
+`direction.hidden` predicate change touch the same shared dashboard aggregation sites Overview and
+Tags read, so Phase 82 builds the engine and proves Overview/Tags totals byte-identical
+(RETIRE-05) **before** any Categories list or detail UI ships.
+
+- [ ] **Phase 82: number-engine-and-regression-gate** (PACE-01…06, RETIRE-03, RETIRE-04, RETIRE-05) — Mese Coperto/Parziale, Ritmo, Proiezione and the current−previous sign convention built and proven; lens confined to Overview, dead `tag` param dropped; Overview/Tags totals byte-identical before any Categories UI changes
+- [ ] **Phase 83: categories-list** (CLIST-01…07) — Categories list rewritten on year + direction (Uscite/Entrate/Accantonamenti) with total, share, sparkline, projection, sort toggle and first-import state
+- [ ] **Phase 84: category-detail-and-cleanup** (CDET-01…07, RETIRE-01, RETIRE-02) — Category detail rewritten as a 12-month table (deltas, previous-year row, window, subcategory contributions, coverage states); Deviation/Preset machinery fully retired, no dead references
+
+#### Phase 82: number-engine-and-regression-gate
+
+**Goal**: The shared number engine — month coverage, pace, year-end projection, and the
+current-minus-previous sign convention — exists and is proven not to disturb Overview or Tags,
+before any Categories list or detail UI is touched.
+
+**Depends on**: Nothing new (first phase of v3.0; builds on the existing dashboard aggregation
+infrastructure from v2.0/v2.8/v2.9)
+
+**Requirements**: PACE-01, PACE-02, PACE-03, PACE-04, PACE-05, PACE-06, RETIRE-03, RETIRE-04, RETIRE-05
+
+**Success Criteria** (what must be TRUE):
+  1. A month with zero transactions is excluded from every average (not counted as a zero), while
+     a Covered Month in which a category has no movement counts as €0 and pulls its average down;
+     the current calendar month is excluded from every average as a Partial Month (PACE-01, PACE-02).
+  2. No pace or projection is produced anywhere for a year with fewer than 2 Covered Months; once
+     produced, the current month is valued at `max(spent so far, pace)` so a projection never
+     reads below an already-observed amount (PACE-03, PACE-04).
+  3. The displayed period total is always exactly the sum of the underlying monthly series — no
+     independently computed projection figure exists anywhere in the engine (PACE-05).
+  4. Every comparison is computed and stored as `current − previous`, with the sign-to-colour
+     judgement resolved by one shared, per-direction function rather than duplicated per widget
+     (PACE-06).
+  5. A regression test suite proves Overview's and Tags' totals are byte-identical before and
+     after the engine change; the cassa/competenza lens switch renders only on Overview (removed
+     from Categories and Tags), and dashboard tab navigation no longer carries the dead `tag`
+     parameter (RETIRE-05, RETIRE-03, RETIRE-04).
+
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 83: categories-list
+
+**Goal**: The user reads the selected year's categories ranked by spend, each carrying its share
+of the total, a 12-month sparkline and a year-end projection, filterable across all three
+directions including the previously-unreachable Accantonamenti.
+
+**Depends on**: Phase 82
+
+**Requirements**: CLIST-01, CLIST-02, CLIST-03, CLIST-04, CLIST-05, CLIST-06, CLIST-07
+
+**Success Criteria** (what must be TRUE):
+  1. For a selected year and direction, every category appears ranked by total, each row showing
+     its % share of the total and a 12-month sparkline (CLIST-01).
+  2. Each row also shows the year-end projection, visually subordinate to and explicitly labelled
+     apart from the total (CLIST-02); the user can re-order the list by projection instead of
+     total via the existing sort control (CLIST-03).
+  3. The direction switch offers Uscite, Entrate and Accantonamenti — the last reachable here for
+     the first time (CLIST-04).
+  4. Moving between Overview and Categories preserves the selected year via the shared `?year=`
+     parameter (CLIST-05).
+  5. With a single Covered Month, the list shows the certain figures (total, share, one-point
+     series) plus an explicit statement of what's missing and how to get it; clicking a category
+     opens its detail on the same year, so the row's total and the detail page's total agree
+     (CLIST-06, CLIST-07).
+
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 84: category-detail-and-cleanup
+
+**Goal**: The user reads a category's story as a 12-month table with month-over-month deltas, a
+previous-year comparison and a narrowable window, with subcategory contributions that provably sum
+to the parent's difference — and the retired Deviation/Baseline/Noise-Threshold/Preset vocabulary
+leaves no trace in the codebase, having lost its last caller.
+
+**Depends on**: Phase 82 (engine); sequenced after Phase 83 since CLIST-07 is the detail page's
+entry point, though the detail computation itself only requires Phase 82
+
+**Requirements**: CDET-01, CDET-02, CDET-03, CDET-04, CDET-05, CDET-06, CDET-07, RETIRE-01, RETIRE-02
+
+**Success Criteria** (what must be TRUE):
+  1. The category detail page renders a 12-month table with the month-over-month delta inside
+     each cell, plus a previous-year row for direct month-by-month comparison (CDET-01, CDET-02).
+  2. The user can narrow the table to a 9/6/3-month window from a chosen start month; every figure
+     on the page, including the summary column's total/average/comparison, refers only to that
+     window (CDET-03, CDET-04).
+  3. Subcategories are listed by weight, each carrying a contribution to the difference that sums
+     exactly to the parent category's total difference, including subcategories present in only
+     one of the two compared periods (CDET-05).
+  4. Covered, current (hybrid) and estimated months are each visually distinct from one another
+     and from explicitly-marked uncovered months; when the previous year lacks sufficient
+     coverage, the total difference is replaced by a stated reason while the average comparison
+     still renders (CDET-06, CDET-07).
+  5. No trace of Deviation, Baseline, Noise Threshold or the Preset filter remains in the
+     interface or the codebase — a repository grep and the full regression suite confirm zero
+     dead references and no regression on any surface that used their shared helpers (RETIRE-01,
+     RETIRE-02).
+
+**Plans**: TBD
+**UI hint**: yes
 
 <details>
 <summary>✅ v2.9: Amortization (Phases 77–81) — SHIPPED 2026-07-29 (model locked ADR 0019)</summary>
@@ -378,8 +491,11 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 79. amortizations-registry | v2.9 | 2/2 | Complete    | 2026-07-28 |
 | 80. dashboard-accrual-lens | v2.9 | 7/7 | Complete    | 2026-07-29 |
 | 81. inline-net-display-for-paired-transactions | v2.9 | 1/1 | Complete    | 2026-07-29 |
+| 82. number-engine-and-regression-gate | v3.0 | 0/TBD | Not started | - |
+| 83. categories-list | v3.0 | 0/TBD | Not started | - |
+| 84. category-detail-and-cleanup | v3.0 | 0/TBD | Not started | - |
 
 **Total shipped: 81 phases · 305 plans complete**
 **Latest shipped: v2.9 Amortization — Phases 77–81 (2026-07-29, model locked ADR 0019). All AMORT-01…07, REG-01…03, LENS-01…05 delivered: materialised amortization_plan/amortization_instalment schema + dual ledger_entry (cash/accrual) VIEW seam, three activation entry points detaching into a Standalone Expense, plan lifecycle (close/collapse, realize-via-sale reusing v2.8 pairing, reduce+re-spread on reimbursement, edit guard), /amortizations registry, and the global cassa/competenza dashboard lens. Phase 81 closed the Phase 78 UAT gap with inline net display in the transactions table. Audit passed 15/15; full suite 1953 passed + 1 todo.**
 
-**Next: `/gsd-new-milestone` to open the next cycle. Carried tech debt: operator deploy (v2.8 R038/R039/R041 + live migrations 0028-0032, plus v2.9 migration 0033 + seed run order); P78 browser UAT + P80 Playwright LENS suite (blocked by pre-existing proxy.ts redirect loop) — see .planning/milestones/v2.9-MILESTONE-AUDIT.md.**
+**Next: v3.0 (Categories Year View) roadmap created 2026-07-30 — 3 phases (82-84), 25/25 requirements mapped, no discovery needed (design locked in ADR 0020 + dashboard-categories-DECISIONS.md). Start with `/gsd-discuss-phase 82` or `/gsd-plan-phase 82`. Carried tech debt: operator deploy (v2.8 R038/R039/R041 + live migrations 0028-0032, plus v2.9 migration 0033 + seed run order); P78 browser UAT + P80 Playwright LENS suite (blocked by pre-existing proxy.ts redirect loop) — see .planning/milestones/v2.9-MILESTONE-AUDIT.md.**
