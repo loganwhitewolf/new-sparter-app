@@ -68,10 +68,17 @@ export function LensSwitch({ lens }: LensSwitchProps) {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-0.5 text-lg font-semibold decoration-dotted decoration-1 underline-offset-4 hover:underline"
+          className="inline-flex items-center gap-0.5 rounded-md px-1 -mx-1 text-lg font-semibold hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
         >
+          {/* The separator dot sits outside the underlined label so the affordance marks only the
+              lens value itself. It lives inside the trigger (not the caller's heading) so LSD-04's
+              plan-less case drops the dot along with the control, at every call site. */}
           <span className="text-muted-foreground">·&nbsp;</span>
-          {active.label}
+          {/* Resting dotted underline — not hover-only: it is the only signal that the lens value
+              in the heading is interactive at all (LSD-01). */}
+          <span className="underline decoration-dotted decoration-muted-foreground decoration-1 underline-offset-4">
+            {active.label}
+          </span>
           <ChevronDownIcon className="size-4 text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
