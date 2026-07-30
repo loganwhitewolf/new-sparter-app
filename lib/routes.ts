@@ -81,6 +81,11 @@ export function amortizationDetailHref(planId: string) {
   return `${APP_ROUTES.amortizations}/${encodeURIComponent(planId)}`
 }
 
+/** Registry narrowed to the UNIQUE plan for one anchor transaction (260730-n2z). */
+export function amortizationsByTransactionHref(transactionId: string) {
+  return `${APP_ROUTES.amortizations}?transactionId=${encodeURIComponent(transactionId)}`
+}
+
 export function transactionDetailHref(id: string) {
   return `${APP_ROUTES.transactions}/${encodeURIComponent(id)}`
 }

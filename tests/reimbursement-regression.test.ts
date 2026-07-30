@@ -1671,7 +1671,7 @@ describeIfReachable('amortization lifecycle: realize/reduce regression (Phase 78
     expect(distinctAccrualMonths.size).toBe(6)
   })
 
-  it('reducePlanTx: leaves the cash lens byte-identical (no v2.8 link is ever created) and the accrual lens reflects the re-spread instalments', async () => {
+  it('reducePlanTx: month-scoped cash-lens aggregates stay byte-identical (refund lands outside the probed window); the accrual lens reflects the re-spread instalments; the all-time tag total nets the linked refund (Bug 1 fix, 260730-m2x)', async () => {
     const db = requireHarnessDb()
     await resetReimbursementFixtures(db)
 
@@ -1739,10 +1739,13 @@ describeIfReachable('amortization lifecycle: realize/reduce regression (Phase 78
       tagId,
     })
 
-    // reducePlanTx writes ONLY to amortization_instalment/amortization_plan, never to transaction
-    // and never to reimbursement/reimbursement_refund (D-03's "instead" mechanic) — ledger_entry_cash
-    // (sourced from transaction) is structurally unreachable by this write, so every cash-lens
-    // aggregate stays byte-identical.
+    // reducePlanTx writes to amortization_instalment/amortization_plan AND now links the refund
+    // via createPairTx (Bug 1 fix, 260730-m2x) — the SAME v2.8 mechanism realizePlanTx already
+    // used, anchored on the plan's ORIGINAL transaction (3 months before "now" in this fixture).
+    // The "last month" window used by getOverviewAmountTotals/getCategoriesBreakdown overlaps
+    // neither the anchor's own cost-month (3 months back) nor the refund's month (the current
+    // month) — so those two month-scoped aggregates stay byte-identical here. This is a property
+    // of THIS fixture's date construction, not a structural guarantee for every window.
     const beforeTotals = before.getOverviewAmountTotals as { totalOut: string }
     const afterTotals = after.getOverviewAmountTotals as { totalOut: string }
     expect(afterTotals.totalOut).toBe(beforeTotals.totalOut)
@@ -1753,13 +1756,18 @@ describeIfReachable('amortization lifecycle: realize/reduce regression (Phase 78
       beforeBreakdown.find((c) => c.id === taxonomy.essentialCategoryId)?.amount,
     )
 
+    // getTagTotals is all-time (CONTEXT.md: tags are event-shaped, never calendar-scoped), so it
+    // DOES reflect the new reimbursement link: the tagged anchor transaction's effectiveAmount()
+    // nets against the linked refund exactly like the realizePlanTx/sale case already does —
+    // -1200.00 (anchor) + 300.00 (refund) = -900.00.
     const beforeTagTotal = (before.getTagTotals as Array<{ tagId: number; total: string }>).find(
       (r) => r.tagId === tagId,
     )
     const afterTagTotal = (after.getTagTotals as Array<{ tagId: number; total: string }>).find(
       (r) => r.tagId === tagId,
     )
-    expect(afterTagTotal?.total).toBe(beforeTagTotal?.total)
+    expect(beforeTagTotal?.total).toBe('-1200.00')
+    expect(afterTagTotal?.total).toBe('-900.00')
 
     // Accrual-lens probe: the re-spread instalments materialize the reduced amount with NO further
     // netting — same zero-live-netting proof as the close/collapse block above.

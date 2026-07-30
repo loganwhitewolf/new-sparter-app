@@ -127,6 +127,14 @@ export function OverviewMoversPanel({
 
   return (
     <section aria-label="Variazioni del mese selezionato" className="space-y-2">
+      <div className="flex justify-end">
+        <Link
+          href={`/transactions?months=${year}-${String(selectedMonth + 1).padStart(2, '0')}`}
+          className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+        >
+          Vedi tutte le transazioni di {currentMonthName}
+        </Link>
+      </div>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4 md:divide-x md:divide-border">
 
         {/* Column 1: Variazioni di entrate */}

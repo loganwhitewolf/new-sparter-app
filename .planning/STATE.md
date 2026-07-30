@@ -5,10 +5,10 @@ milestone_name: Categories Year View
 current_phase: 82
 current_phase_name: number-engine-and-regression-gate
 status: executing
-stopped_at: v3.0 roadmap created (Phases 82-84, 25/25 requirements mapped, no orphans)
+stopped_at: Phase 82 planned (3 plans, 2 waves) — ready to execute on gsd/v3.0-categories-year-view
 last_updated: "2026-07-30T15:20:58.311Z"
 last_activity: 2026-07-30
-last_activity_desc: "Roadmap created: 3 phases (82-84), 25/25 v3.0 requirements mapped, no orphans"
+last_activity_desc: "Phase 82 planned: 3 plans in 2 waves, plan-checker passed, 9/9 requirements + 16/16 CONTEXT decisions covered; branch synced with origin/main @ fe8273f9"
 progress:
   total_phases: 4
   completed_phases: 0
@@ -29,9 +29,14 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 82 of 84 (number-engine-and-regression-gate)
-Plan: — (not yet planned)
+Plan: 3 plans in 2 waves (82-01, 82-02 parallel in wave 1; 82-03 in wave 2)
 Status: Ready to execute
-Last activity: 2026-07-30 — Roadmap created: 3 phases (82-84), 25/25 v3.0 requirements mapped, no orphans
+Branch: `gsd/v3.0-categories-year-view` (synced with `origin/main` @ fe8273f9 — PR #65)
+Last activity: 2026-07-30 — Phase 82 planned: 3 plans, verification passed, 9/9 requirements + 16/16 CONTEXT decisions covered
+
+Preceding activity on `main` (merged into this branch): 2026-07-30 — completed quick task
+260730-n2z (Amort UX: Visualizza ammortamento, Tutti=all, vendita/rimborso copy) and quick task
+260730-m2x (amortization reimbursement linking / re-amortizability), shipped as PR #65.
 
 ## Roadmap (v3.0 — Phases 82-84)
 
@@ -97,6 +102,11 @@ Categories, a `source` discriminator on the lens views, predictive forecasting, 
 of the current month, re-anchoring the Deviation instead of retiring it, slow-drift detection
 (CDET-F01, accepted loss of D15), acceleration ordering as a shipped feature (CLIST-F01, deferred)
 — see REQUIREMENTS.md Future Requirements / Out of Scope.
+
+**Resolved during planning (2026-07-30), no longer open:** item 1 above (previous-year coverage
+threshold) landed in Phase 82 rather than 84 — the engine owns it, exported as
+`PREVIOUS_YEAR_TOTAL_DIFFERENCE_MIN_COVERED_MONTHS = 6` for Phases 83/84 to consume. Item 6
+(tab nav preserving `?lens=` invisibly) resolved **yes** as Phase 82 decision D-13.
 
 ## Roadmap (v2.9 — Phases 77-81) — SHIPPED 2026-07-29
 
@@ -641,6 +651,8 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260730-bfa | Sidebar sections by feature type (Option A: Panoramica / Movimenti / Ingresso dati / Configurazione) | 2026-07-30 | 5a064b8e |
 | 260730-e6z | Riepilogo totali netti (Entrate/Uscite/Differenza per valuta) nel footer della tabella transazioni | 2026-07-30 | 95f3adee |
 | 260730-g3b | Lens selector redesign (LSD-01..05, `.planning/lens-selector-DECISIONS.md`): pill segmented control → dropdown integrato nel titolo pagina con voci descritte; overlay tratteggiato "Uscite (cassa)" sul grafico overview solo con lente competenza (secondo fetch gated); controllo nascosto senza piani di ammortamento (`hasAmortizationPlans`) e rimosso da /dashboard/tags. Verifica visiva in-browser passata 2026-07-30 | 2026-07-30 | 4bbafc63 |
+| 260730-m2x | Fix amortizzazione: collegamento rimborso come vendita (`reducePlanTx`→`createPairTx`); ri-ammortizzabilità dopo "Rimuovi ammortamento" (clear stale `reimbursementId`/pairing client-side); link dashboard movers → `/transactions?months=YYYY-MM` | 2026-07-30 | 963f213b |
+| 260730-n2z | Amort UX: detail→Visualizza ammortamento (`?transactionId=`); Tutti mostra aperti+chiusi; copy Chiudi con vendita/rimborso | 2026-07-30 | 71351519 |
 
 ## Deferred Items
 
