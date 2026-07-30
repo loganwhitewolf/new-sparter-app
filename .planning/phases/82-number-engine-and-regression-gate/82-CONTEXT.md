@@ -107,6 +107,25 @@ RETIRE-04, RETIRE-05.
   dissolves the instalment/pace double-counting problem instead of engineering around it, so no
   `source` discriminator column is added to the lens views. (DECISIONS D6 · ADR 0020 §7 ·
   RETIRE-03)
+  **Verified site inventory (2026-07-30) — DECISIONS D6 predates the v2.9 LSD-05 work, so its
+  "removed from Tags" clause is already satisfied:**
+  - `app/(app)/dashboard/tags/page.tsx` — **already compliant.** It renders no lens control and
+    reads no `?lens=` searchParam (explicit `LSD-05` comment in the file). Verify only; there is
+    no disabled switch left to remove. Do not plan a change here.
+  - `app/(app)/dashboard/categories/page.tsx:146` — `{hasPlans && <LensSwitch lens={lens} />}`
+    must go, **and** the page's `parseLensParam(params.lens)` /
+    `resolveLedgerRowSource(lens)` binding (lines 136–137) must be fixed to cassa. Removing the
+    control alone would leave Categories still reading whichever lens the URL carried — which is
+    exactly what D-12 forbids, since `?lens=` keeps flowing through the tab nav under D-13.
+  - `app/(app)/dashboard/categories/[id]/page.tsx:170` — same removal, same cassa-fixing of the
+    `parseLensParam` / `resolveLedgerRowSource` binding (lines 149–150).
+  - `components/dashboard/category-ranking-list.tsx` — carries an optional `lens?: Lens` prop
+    threaded from the Categories page; it loses its caller and must be cleaned up with it.
+  - `components/dashboard/lens-switch.tsx` and `components/dashboard/lens-persistence.ts` —
+    **kept**, still used by Overview. Not deleted.
+  This closes RESEARCH.md open question 3: on Categories, removing the control is *not*
+  sufficient — the aggregation binding must be pinned to cassa so a `?lens=competenza` URL
+  cannot change what Categories computes.
 - **D-13:** The dashboard tab navigation **keeps propagating `?lens=` invisibly**, so
   Overview-in-competenza → Categories → back lands in competenza rather than silently resetting
   to cassa. This closes the item DECISIONS D7 left open, adopting its own recommendation.
