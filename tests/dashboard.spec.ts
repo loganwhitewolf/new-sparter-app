@@ -201,40 +201,45 @@ test.describe('Dashboard - LENS: cassa/competenza switch', () => {
     await expect(competenzaButton).toHaveAttribute('aria-pressed', 'true')
   })
 
-  test('LENS switch renders and is functional on /dashboard/categories and /dashboard/categories/[id]', async ({
+  test('LENS switch is absent on /dashboard/categories and /dashboard/categories/[id], and Categories always reads cassa regardless of ?lens= (D-12, review fix CR-01)', async ({
     page,
   }) => {
     await openDashboardPath(page, '/dashboard/categories')
+    await expect(page.getByRole('button', { name: 'Competenza' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Cassa' })).toHaveCount(0)
 
-    let competenzaButton = page.getByRole('button', { name: 'Competenza' })
-    await expect(competenzaButton).toBeVisible()
-    await competenzaButton.click()
-    await expect(page).toHaveURL(/\?lens=competenza/)
-    await expect(competenzaButton).toHaveAttribute('aria-pressed', 'true')
+    const ranking = page.getByRole('list', { name: 'Classifica categorie' })
+    const cassaListSnapshot = (await ranking.count()) > 0 ? await ranking.innerText() : null
+
+    await openDashboardPath(page, '/dashboard/categories?lens=competenza')
+    await expect(page.getByRole('button', { name: 'Competenza' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Cassa' })).toHaveCount(0)
+    // D-12: Categories always reads cassa — the list must be byte-identical regardless of
+    // whatever ?lens= the URL carries (the value is forwarded, per D-13, but never consumed).
+    const lensListSnapshot = (await ranking.count()) > 0 ? await ranking.innerText() : null
+    expect(lensListSnapshot).toBe(cassaListSnapshot)
 
     const firstCategoryLink = page
       .getByRole('link', { name: /apri dettaglio categoria/i })
       .first()
+    const detailPath =
+      (await firstCategoryLink.count()) > 0
+        ? new URL((await firstCategoryLink.getAttribute('href')) as string, page.url()).pathname
+        : '/dashboard/categories/1'
 
-    if ((await firstCategoryLink.count()) > 0) {
-      await firstCategoryLink.click()
-      // WR-02/CR-02 regression guard: the category-row click-through must land on a URL
-      // that ALREADY carries ?lens=competenza (buildDashboardCategoryDetailHref forwarding the
-      // lens) — asserted BEFORE the switch is touched again, so this can actually fail if the
-      // lens silently reverted to cassa on navigation.
-      await expect(page).toHaveURL(/\?.*lens=competenza/)
-      competenzaButton = page.getByRole('button', { name: 'Competenza' })
-      await expect(competenzaButton).toBeVisible()
-      await expect(competenzaButton).toHaveAttribute('aria-pressed', 'true')
-    } else {
-      await openDashboardPath(page, '/dashboard/categories/1')
-      competenzaButton = page.getByRole('button', { name: 'Competenza' })
-      await expect(competenzaButton).toBeVisible()
-    }
+    await openDashboardPath(page, detailPath)
+    await expect(page.getByRole('button', { name: 'Competenza' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Cassa' })).toHaveCount(0)
+    await expectCategoryDetailContentOrEmptyState(page)
+    const summary = page.getByRole('region', { name: 'Riepilogo categoria' })
+    const cassaDetailSnapshot = (await summary.count()) > 0 ? await summary.innerText() : null
 
-    await competenzaButton.click()
-    await expect(page).toHaveURL(/\?lens=competenza/)
-    await expect(competenzaButton).toHaveAttribute('aria-pressed', 'true')
+    await openDashboardPath(page, `${detailPath}?lens=competenza`)
+    await expect(page.getByRole('button', { name: 'Competenza' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Cassa' })).toHaveCount(0)
+    await expectCategoryDetailContentOrEmptyState(page)
+    const lensDetailSnapshot = (await summary.count()) > 0 ? await summary.innerText() : null
+    expect(lensDetailSnapshot).toBe(cassaDetailSnapshot)
   })
 
   test('LENS switch is disabled with the explanatory note on /dashboard/tags', async ({
