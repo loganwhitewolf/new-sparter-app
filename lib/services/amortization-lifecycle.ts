@@ -297,7 +297,7 @@ export type ReducePlanResult = {
  * the Decimal-absolute sum of instalments with occurredAt on/after
  * the start of the CURRENT calendar month (today, never a date derived from the plan itself) —
  * an amount exceeding it is a realization, not a partial reduction, and is rejected with a
- * message redirecting to "chiudi per vendita" BEFORE any delete/insert/update. An amount exactly
+ * message redirecting to "chiudi con vendita/rimborso" BEFORE any delete/insert/update. An amount exactly
  * equal to the residual is the ALLOWED boundary (every re-spread instalment materializes to
  * 0.00). Re-spread reuses `materializeInstalments` unchanged, anchored at the earliest cancelled
  * future instalment's own date — the remainder lands there (the "month of reduction").
@@ -343,7 +343,7 @@ export async function reducePlanTx(tx: DbOrTx, input: ReducePlanInput): Promise<
   if (refundMagnitude.gt(residual)) {
     throw new AmortizationLifecycleError(
       'OVER_RESIDUAL',
-      `Il rimborso di €${refundMagnitude.toFixed(2)} supera il residuo di €${residual.toFixed(2)} del piano — usa "chiudi per vendita".`,
+      `Il rimborso di €${refundMagnitude.toFixed(2)} supera il residuo di €${residual.toFixed(2)} del piano — usa "chiudi con vendita/rimborso".`,
     )
   }
 

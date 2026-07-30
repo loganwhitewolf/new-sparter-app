@@ -35,7 +35,7 @@ type Props = {
   onDone: () => void
   /**
    * Pre-selects the intent radio once a candidate is picked. Callers that enter through a
-   * sale-specific CTA (the amortization registry's "Realizza con vendita" button) pass 'realize'
+   * sale-specific CTA (the amortization registry's "Chiudi con vendita/rimborso" button) pass 'realize'
    * so the dialog opens already primed for a sale; the generic "Aggiungi/Collega rimborso"
    * entrypoints omit it (null) and let the user choose. Never guesses the intent server-side.
    */
@@ -76,7 +76,7 @@ function offsetDateISO(base: Date, days: number): string {
  * date range defaulted from the transaction's own occurredAt, fetched via
  * loadEligibleCounterpartsAction on open) but selection is single-choice (radio, not checkboxes)
  * and there is no multi-total footer. Once a candidate is picked, two intent radios appear —
- * "Chiudi per vendita" routes to realizePlanAction (D-02, AMORT-05), "Rimborso parziale
+ * "Chiudi con vendita/rimborso" routes to realizePlanAction (D-02, AMORT-05), "Rimborso parziale
  * (ridistribuisci)" routes to reimbursePlanAction (D-03, AMORT-06). The system never guesses.
  */
 export function AmortizationReimburseDialog({
@@ -307,7 +307,7 @@ export function AmortizationReimburseDialog({
                   className="mt-1 shrink-0"
                 />
                 <span>
-                  <span className="block font-medium">Chiudi per vendita</span>
+                  <span className="block font-medium">Chiudi con vendita/rimborso</span>
                   <span className="block text-xs text-muted-foreground">
                     Il piano si chiude: le rate future vengono raggruppate e nettate con questa
                     transazione nel mese di chiusura.

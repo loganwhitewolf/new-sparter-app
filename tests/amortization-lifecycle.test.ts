@@ -757,7 +757,7 @@ describeIfReachable('reducePlanTx (Phase 78, D-03/AMORT-06)', () => {
     expect(status).toBe('open')
   })
 
-  it('over-residual: refund one cent over the residual is BLOCKED with a message redirecting to "chiudi per vendita" — no write happens', async () => {
+  it('over-residual: refund one cent over the residual is BLOCKED with a message redirecting to "chiudi con vendita/rimborso" — no write happens', async () => {
     const db = requireHarnessDb()
     await resetReimbursementFixtures(db)
 
@@ -777,7 +777,7 @@ describeIfReachable('reducePlanTx (Phase 78, D-03/AMORT-06)', () => {
     })
 
     await expect(reducePlanTx(db, { userId, planId, refundTransactionId })).rejects.toThrow(
-      'chiudi per vendita',
+      'chiudi con vendita/rimborso',
     )
     await expect(
       reducePlanTx(db, { userId, planId, refundTransactionId }),
