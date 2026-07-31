@@ -122,12 +122,36 @@ Inherited from project baseline (8-point grid):
 
 ### Sort Toggle Options
 
-| Option | Label |
-|--------|-------|
-| Primary (default) | "Totale" |
-| Secondary | "Proiezione" |
+| Option | Label | State |
+|--------|-------|-------|
+| Primary (default) | "Totale" | Always enabled |
+| Secondary | "Proiezione" | Enabled at ≥2 Covered Months; **disabled with a stated reason** below that |
+
+**Disabled-state copy (<2 Covered Months):** the "Proiezione" option stays visible but is not
+selectable, and carries the reason — `title` / `aria-describedby`:
+"Serve un secondo mese importato per calcolare la proiezione."
+
+The option is **never hidden** and **never silently degrades to sorting by total**: hiding it means
+the user never discovers the projection exists, and a silent degrade makes the control lie about
+what it is doing. Both are rejected under D-14 (a figure or control that changes without
+explanation reads as a bug).
 
 **Note:** Replaces retired "Deviazione" option. Reuses existing `SortToggle` component shape.
+
+### Year With No Imported Data (zero Covered Months)
+
+Distinct from the per-direction empty state below — this is "the whole year is empty", where
+advising the user to try another direction would be misleading.
+
+| Element | Copy |
+|---------|------|
+| Heading (20px 600) | "Nessun dato per il {year}" |
+| Body (14px 400) | "Non hai ancora importato movimenti per questo anno. Importa un estratto conto per vedere le tue categorie." |
+| Action | Link to the import surface — the way out is importing, not changing filter |
+
+**Precedence:** when a year has zero Covered Months this state replaces the list entirely, whatever
+direction is selected. The per-direction empty state (`## Empty State`) applies only when the year
+*does* have data but the selected direction has none.
 
 ### Single-Covered-Month State
 
@@ -135,7 +159,7 @@ Inherited from project baseline (8-point grid):
 
 **Nudge body:** "vedrai il ritmo mensile e la proiezione di fine anno. Serve almeno un mese concluso oltre a quello in corso."
 
-**Styling:** Dashed border, muted background, 13px body text. Reuses `OverviewNudge` component pattern.
+**Styling:** Dashed border, muted background, 14px body text (see `## Nudge (Single-Covered-Month State)` below for the full spec — this row must not diverge from it). Reuses `OverviewNudge` component pattern.
 
 ### Direction Filter Button Labels
 
@@ -283,16 +307,109 @@ On `allocation` direction rows:
 
 ## UI Considerations
 
-| Category | Element(s) | Status | Resolution |
-|----------|------------|--------|------------|
-| empty-state | Direction filter + year selector result in no categories | ✅ covered | Empty state render per copywriting contract; nudge for single-Covered-Month case distinct |
-| loading | Ranking query in progress | ✅ covered | Skeleton rows render via `category-ranking-skeleton.tsx` |
-| zero-one-many | Sparkline with 1 data point (single-Covered-Month state) | ✅ covered | Single bar rendered at appropriate month position; projection label+value pair absent; nudge explains what is missing |
-| zero-one-many | Sparkline with all 12 months covered | ✅ covered | All 12 bars rendered; mix of fact/current/estimated visual states |
-| zero-one-many | Row list length (3–50 categories) | ✅ covered | Grid scrolls vertically; no special handling needed |
-| long-text | Category name truncation | 🧪 backstop | Row layout uses `minmax(0, 1fr)` in grid; name truncates with ellipsis on overflow. Verification: CSS `text-overflow: ellipsis; white-space: nowrap; overflow: hidden;` applied to `.name` |
-| overflow | Monetary value overflow (e.g., €999,999.99) | ✅ covered | Monospace font + tabular-nums ensures alignment; column width (150px) adequate for 99,999.99 format |
-| partial-data | Below 2 Covered Months (no projection) | ✅ covered | Projection label + value pair absent from row; sparkline contains only covered months' data; nudge below list explains threshold and next step (D-15 + D-14) |
+> Produced by the ui-consideration-probe over 8 described surfaces (E1 row · E2 sparkline ·
+> E3 direction filter · E4 year selector · E5 sort toggle · E6 skeleton · E7 empty state ·
+> E8 nudge), 51 applicable considerations. Resolved against this spec's own prose, with three
+> genuinely open questions answered by the developer on 2026-07-31 (marked ⟵ *developer decision*).
+> Empty-state and error COPY lives in `## Copywriting Contract`; this section covers STATE
+> coverage and references those rows rather than restating them.
+
+**How the planner must read this section:** `covered` rows are plain truths to lift into
+`must_haves.truths`. `backstop` rows lift as `{ statement, verification: backstop }` — at verify
+time a backstop the verifier cannot confirm with explicit evidence abstains to `human_needed`
+rather than silently passing. `unresolved` rows are explicit assumptions the planner must surface,
+never drop.
+
+### E1 — Category ranking list row
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| empty | ✅ covered | No categories for the selected year+direction → the `## Empty State` surface renders in place of the list. Distinct from the zero-Covered-Months state below. |
+| loading | ✅ covered | `category-ranking-skeleton.tsx` renders 5–7 placeholder rows matching the locked row shape. |
+| error | ✅ covered | ⟵ *developer decision*: the ranking query keeps `getCategoryRanking`'s existing `try/catch → rows = []`, so a failed load degrades to the empty state. **Accepted cost, recorded deliberately:** a query failure is visually indistinguishable from "you have no data in this direction". No error surface, no retry affordance ships in this phase. A future reader must not treat the absence of an error state as an oversight. |
+| populated | ✅ covered | 5-column desktop grid / 3-column mobile per `## Row Structure and Layout`; rank + name is the declared focal point. |
+| partial | ✅ covered | Below 2 Covered Months the projection label+value pair is entirely absent from the row (D-15); column 5 stays reserved and empty for grid stability; the nudge is the sole explanation (D-14). |
+| overflow | ✅ covered | Monetary values use monospace + tabular-nums in fixed 150px columns; the row list scrolls vertically. |
+| zero-one-many | ✅ covered | Reads correctly at 0 rows (empty state), 1 row, and 3–50 rows; no singular/plural copy varies per row count. |
+
+### E2 — 12-month sparkline
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| empty | ✅ covered | A category with no movements in any Covered Month renders €0-and-counts months (D-02), not an absent sparkline — the bar series is always 12 slots wide. |
+| loading | ✅ covered | Skeleton renders 12 placeholder bars at 32px with 2px gaps. |
+| error | ✅ covered | Inherits E1's degrade-to-empty behaviour; no per-sparkline error state. |
+| populated | ✅ covered | Four visual states per `## Sparkline Visual States`: covered/fact, current month (hybrid), estimated, uncovered/gap. |
+| partial | ✅ covered | An uncovered month inside the year renders the explicit diagonal gap marker at full height — it must never read as a month of zero spending (CONTEXT.md Risk Summary). |
+| overflow | ✅ covered | Twelve equal-width bars are laid out to the fixed 150px column; the count is constant so the series cannot overflow. |
+| zero-one-many | ✅ covered | A single Covered Month renders one bar (CLIST-06); the existing component's single-point circle branch is the precedent. |
+| negative domain | 🧪 backstop | `{ statement: "On the allocation direction a net-divestment month renders visually distinct from a zero month — the existing parseAmount Math.max(parsed, 0) clamp must not survive", verification: backstop }` — the exact negative rendering is left to the executor, but a clamped-to-zero divestment month is a failure, not a styling choice. |
+
+### E3 — Direction filter (Uscite / Entrate / Accantonamenti)
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| populated | ✅ covered | Three options, labels per `## Copywriting Contract`; selection swaps the copy set AND the colour mapping together (D-11). |
+| empty / partial | ✅ covered | A direction with no data still renders its own option; selecting it yields E7's per-direction empty state, never a disabled option. |
+| loading | ✅ covered | The filter renders immediately; only the list below it is skeletonised. |
+| error | ✅ covered | Inherits E1's degrade-to-empty behaviour. |
+| overflow / long-text | ✅ covered | Three fixed Italian labels, longest is "Accantonamenti"; no dynamic text. |
+| zero-one-many | ✅ covered | Option count is fixed at three — not data-driven. |
+
+### E4 — Year selector
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| loading | ✅ covered | Renders immediately alongside the direction filter. |
+| error | ✅ covered | Inherits E1's degrade-to-empty behaviour. |
+| overflow / long-text | ✅ covered | Fixed 4-digit labels. |
+| zero Covered Months | ✅ covered | ⟵ *developer decision*: a year with **no imported data at all** gets its own dedicated state, separate from E7's per-direction empty state. Its copy must point at importing, **not** at "try another direction" — that advice is misleading when the whole year is empty. Copy strings for this state are specified in `## Copywriting Contract`. |
+
+### E5 — Sort toggle (Totale / Proiezione)
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| populated | ✅ covered | Two options; Totale is the default (open on a fact, D-08). |
+| partial | ✅ covered | ⟵ *developer decision*: below 2 Covered Months the **Proiezione option stays visible but is disabled, carrying a stated reason** (a second imported month is needed). Rejected: hiding it (the user never discovers the projection exists) and silently degrading it to sort-by-total (the control would lie about what it is doing). Consistent with D-14 — never a control that changes shape without explanation. |
+| empty | ✅ covered | With zero rows the toggle still renders; ordering nothing is not an error state. |
+| loading | ✅ covered | Renders immediately; the list below is skeletonised. |
+| error | ✅ covered | Inherits E1's degrade-to-empty behaviour. |
+| overflow / long-text | ✅ covered | Two fixed Italian labels. Neither may be called *delta* (reserved for KPI period-over-period) nor *deviazione* (retired vocabulary). |
+| zero-one-many | ✅ covered | Option count is fixed at two. |
+
+### E6 — Loading skeleton
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| populated | ✅ covered | 5–7 rows matching the locked row shape, per `## Loading and Skeleton States`. |
+| partial | 🧪 backstop | `{ statement: "The skeleton reserves the projection column so the layout does not shift when real rows resolve with the projection absent (<2 Covered Months)", verification: backstop }` — an anti-blink property that is easy to lose and invisible in a static screenshot. |
+| zero-one-many / overflow / empty / loading / error | ✅ covered | The skeleton is a fixed-count placeholder; it does not vary with data and is replaced wholesale on resolve. |
+
+### E7 — Empty state
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| overflow / long-text | ✅ covered | Fixed per-direction heading and body strings; the interpolated `{year}` is 4 digits. |
+| relationship to E4 | ✅ covered | E7 means "this direction has nothing in a year that does have data". The whole-year-empty case is E4's dedicated state. The two must not collapse into one surface. |
+
+### E8 — Single-Covered-Month nudge
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| populated | ✅ covered | Dashed-border panel below the list; heading + body copy per `## Copywriting Contract`; reuses the `OverviewNudge` pattern. |
+| partial | ✅ covered | It IS the partial-data explanation — the sole account of the projection's absence from every row (D-14 + D-15). |
+| empty | ✅ covered | Not rendered when the year has 0 Covered Months (that is E4's state) or ≥2. |
+| loading | ✅ covered | Appears with the resolved list, never during skeleton. |
+| error | ✅ covered | Inherits E1's degrade-to-empty behaviour. |
+| overflow / long-text / zero-one-many | ✅ covered | Fixed copy, single instance, no data interpolation. |
+
+### Coverage summary
+
+| Status | Count | Note |
+|--------|-------|------|
+| ✅ covered | 48 | Lift into `must_haves.truths` as plain strings |
+| 🧪 backstop | 3 | Lift as `{ statement, verification: backstop }` — sparkline negative domain, skeleton column reservation, row name truncation (see `long-text` in `## Row Structure and Layout`) |
+| ⚠ unresolved | 0 | — |
 
 ---
 
