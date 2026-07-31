@@ -20,11 +20,11 @@ Design source of truth: `.planning/dashboard-categories-DECISIONS.md` (19 locked
 
 - [x] **CLIST-01**: The user sees the selected year's categories ranked by total, each with its share of the total and a 12-month sparkline (D1, D8)
 - [x] **CLIST-02**: Each row shows the year-end projection alongside the total, visually subordinate to it and explicitly labelled (D8)
-- [ ] **CLIST-03**: The user can re-order the list by projection instead of total (D17)
+- [x] **CLIST-03**: The user can re-order the list by projection instead of total (D17)
 - [x] **CLIST-04**: The user can switch the list between Uscite, Entrate and **Accantonamenti**, the last of which is currently unreachable on this page (D9)
-- [ ] **CLIST-05**: The selected year is shared with Overview through the URL, so moving between the two tabs preserves it (D7)
+- [x] **CLIST-05**: The selected year is shared with Overview through the URL, so moving between the two tabs preserves it (D7)
 - [x] **CLIST-06**: With a single Covered Month the user sees the certain figures plus an explicit statement of what is missing and how to obtain it (D18)
-- [ ] **CLIST-07**: Clicking a category opens its detail on the same period, so the total read in the row is the total read on the page (D17)
+- [x] **CLIST-07**: Clicking a category opens its detail on the same period, so the total read in the row is the total read on the page (D17)
 
 ### Category detail
 
@@ -79,11 +79,11 @@ Acknowledged, deliberately not in this milestone.
 | PACE-06 | Phase 82 | Complete |
 | CLIST-01 | Phase 83 | Complete |
 | CLIST-02 | Phase 83 | Complete |
-| CLIST-03 | Phase 83 | Pending |
+| CLIST-03 | Phase 83 | Complete |
 | CLIST-04 | Phase 83 | Complete |
-| CLIST-05 | Phase 83 | Pending |
+| CLIST-05 | Phase 83 | Complete |
 | CLIST-06 | Phase 83 | Complete |
-| CLIST-07 | Phase 83 | Pending |
+| CLIST-07 | Phase 83 | Complete |
 | CDET-01 | Phase 84 | Pending |
 | CDET-02 | Phase 84 | Pending |
 | CDET-03 | Phase 84 | Pending |
