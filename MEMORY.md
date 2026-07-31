@@ -42,6 +42,17 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
+### 2026-07-31 — UX contratto quick on existing branch (260731-hhv)
+
+**Decided:** Execute quick `260731-hhv` (UX contratto feedback waves 01–03) on the already-open branch `gsd/quick-260730-o82-tx-direction-multi`. No new quick branch and no git worktree isolation for this run.
+
+**Why:** Branch already carries related product work; user does not want additional branches for this bugfix set.
+
+**Rejected:**
+- Fresh `gsd/quick-260731-hhv-*` from `origin/main` — cleaner history, but splits WIP
+- Worktree-isolated execute — would fork off remote HEAD and fight the local branch choice
+
+
 ### 2026-07-30 — Transactions direction multi-select, transfer off by default (260730-o82)
 
 **Decided:** Direzione is multi-select. Absent URL `direction` ⇒ effective `in,out,allocation,unclassified` (hide transfers) with **no chips**. Chips only after user changes the filter; selecting the default set again clears the param. Cascade nature/category = union of selected directions (no transfer until opted in). Transactions only.

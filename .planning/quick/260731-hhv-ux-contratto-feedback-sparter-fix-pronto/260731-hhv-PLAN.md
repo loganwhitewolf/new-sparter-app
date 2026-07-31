@@ -45,6 +45,10 @@ Also locked (CONTEXT, no D-id): contrasto secondario unificato (1.2/1.4/2.1); ch
 - Locked discuss: `260731-hhv-CONTEXT.md`
 - Project rules: `CLAUDE.md` (seeds additive, layers, language)
 
+## Branch
+
+Execute on **`gsd/quick-260730-o82-tx-direction-multi`** (user locked). No new branch, no worktree isolation.
+
 ## Resume
 
-`/gsd-quick resume` → start from this file; execute unfinished wave PLAN files in order.
+`/gsd-quick resume 260731-hhv` → start from this file; execute unfinished wave PLAN files in order on the current branch.
