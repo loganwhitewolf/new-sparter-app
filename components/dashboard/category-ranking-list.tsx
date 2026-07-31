@@ -2,58 +2,33 @@
 
 import Link from 'next/link'
 import { CategorySparkline } from '@/components/dashboard/category-sparkline'
-import { DeviationBadge } from '@/components/dashboard/deviation-badge'
 import { buildDashboardCategoryDetailHref } from '@/lib/routes'
+import type { CategoryDirectionCopy } from '@/lib/services/category-direction-copy'
 import { cn } from '@/lib/utils'
 import { toDecimal } from '@/lib/utils/decimal'
-import type { CategoryRankingItem, DeviationData } from '@/lib/dal/dashboard'
-import type { DashboardPreset, DashboardSort } from '@/lib/validations/dashboard'
-import type { DeviationResult } from '@/lib/utils/dashboard'
+import type { CategoryYearRankingItem } from '@/lib/dal/dashboard'
+import type { CategoryYearSort } from '@/lib/validations/dashboard'
 import type { LensPassthrough } from '@/lib/utils/search-params'
 
 type Props = {
-  data: CategoryRankingItem[]
-  preset: DashboardPreset
-  type: 'in' | 'out'
-  defaultPreset?: DashboardPreset
-  sort?: DashboardSort
-  deviations?: Map<number, DeviationData>
+  data: CategoryYearRankingItem[]
+  year: number
+  direction: 'in' | 'out' | 'allocation'
+  sort: CategoryYearSort
   // Phase 82 D-12+D-13 (review fix WR-03): forwarded into the row click-through href only —
   // never read for aggregation. See lib/routes.ts's DashboardCategoryFilters.lens comment.
   lens?: LensPassthrough
+  copy: CategoryDirectionCopy
 }
 
-function deviationSortKey(item: CategoryRankingItem, deviations?: Map<number, DeviationData>): number {
-  if (!deviations) return 3
-  const entry = deviations.get(item.id)
-  if (entry === undefined || entry.deviation === null) return entry?.isNew ? 1 : 2
-  return 0
-}
-
-function compareItems(
-  a: CategoryRankingItem,
-  b: CategoryRankingItem,
-  sort: DashboardSort,
-  deviations?: Map<number, DeviationData>
-): number {
-  if (sort !== 'deviation' || !deviations) return 0
-  const ka = deviationSortKey(a, deviations)
-  const kb = deviationSortKey(b, deviations)
-  if (ka !== kb) return ka - kb
-  if (ka === 0) {
-    const da = Math.abs(deviations.get(a.id)!.deviation as number)
-    const db = Math.abs(deviations.get(b.id)!.deviation as number)
-    if (da !== db) return db - da
-  }
-  return toDecimal(b.amount).comparedTo(toDecimal(a.amount))
-}
-
-function getDeviationValue(id: number, deviations?: Map<number, DeviationData>): DeviationResult {
-  if (!deviations) return null
-  const entry = deviations.get(id)
-  if (!entry) return null
-  if (entry.isNew) return 'new'
-  return entry.deviation
+/**
+ * D-08/CLIST-03: falls back to the row's own amount when its projection is null — never crashes,
+ * never drops the row out of the list, never reverts the WHOLE list to amount-only order.
+ */
+export function compareByProjection(a: CategoryYearRankingItem, b: CategoryYearRankingItem): number {
+  const aValue = toDecimal(a.projection ?? a.amount)
+  const bValue = toDecimal(b.projection ?? b.amount)
+  return bValue.comparedTo(aValue)
 }
 
 const amountFormatter = new Intl.NumberFormat('it-IT', {
@@ -70,74 +45,73 @@ function movementLabel(count: number): string {
   return count === 1 ? '1 movimento' : `${count} movimenti`
 }
 
-export function CategoryRankingList({
-  data,
-  preset,
-  type,
-  defaultPreset = 'this-year',
-  sort = 'amount',
-  deviations,
-  lens,
-}: Props) {
-  const sortedData = sort === 'deviation' && deviations
-    ? [...data].sort((a, b) => compareItems(a, b, sort, deviations))
-    : data
+export function CategoryRankingList({ data, year, direction, sort, lens, copy }: Props) {
+  // D-08: 'amount' trusts the DAL's own descending order; 'projection' reorders via
+  // compareByProjection, which never crashes on a null projection (CLIST-03).
+  const sortedData = sort === 'projection' ? [...data].sort(compareByProjection) : data
 
   if (sortedData.length === 0) {
     return (
       <div className="flex min-h-[260px] items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 text-center">
         <div className="max-w-sm space-y-2">
-          <p className="text-sm font-medium">Nessuna categoria nel periodo selezionato</p>
+          <p className="text-sm font-medium">{copy.emptyStateHeading}</p>
           <p className="text-sm text-muted-foreground">
-            Cambia periodo o tipo movimento per visualizzare la classifica.
+            {copy.emptyStateBody.replace('{year}', String(year))}
           </p>
         </div>
       </div>
     )
   }
 
+  const barColor =
+    direction === 'in'
+      ? 'bg-[var(--total-in)]'
+      : direction === 'allocation'
+        ? 'bg-[var(--total-allocation)]'
+        : 'bg-[var(--total-out)]'
+
   return (
-    <ol className="grid gap-3" aria-label="Classifica categorie">
+    <ol
+      className="grid gap-3"
+      aria-label="Classifica categorie"
+    >
       {sortedData.map((category, index) => {
-        const href = buildDashboardCategoryDetailHref(category.id, {
-          preset,
-          type,
-          defaultPreset,
-          lens,
-        })
+        // D-13/CLIST-07: the row's link carries the SAME year the row's own total was computed
+        // from — the coherence test "clicking a row must not change the numbers" holds by
+        // construction.
+        const href = buildDashboardCategoryDetailHref(category.id, { year, type: direction, lens })
         const percentage = Math.max(0, Math.min(category.percentage, 100))
-        const barColor = type === 'in' ? 'bg-[var(--total-in)]' : 'bg-[var(--total-out)]'
+        const shareLabel = copy.shareLabel.replace('{P}', String(category.percentage))
+        const shareAriaLabel = shareLabel.replace(/^[·•]\s*/, '')
 
         return (
           <li
             key={category.id}
             className="group rounded-xl border bg-card p-4 shadow-sm transition-colors hover:border-primary/50"
           >
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-              <div className="min-w-0 space-y-3">
-                <div className="flex min-w-0 items-start gap-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold tabular-nums text-muted-foreground">
-                    {index + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={href}
-                      className="block truncate text-sm font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
-                      aria-label={`${category.name}: apri dettaglio categoria`}
-                      title={category.name}
-                    >
-                      {category.name}
-                    </Link>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {movementLabel(category.count)} · {category.percentage}% del totale
-                    </p>
-                  </div>
-                </div>
+            <div className="grid items-center gap-4 sm:grid-cols-[30px_minmax(0,1fr)_150px_150px_150px]">
+              {/* Column 1 — rank badge */}
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold tabular-nums text-muted-foreground">
+                {index + 1}
+              </span>
 
+              {/* Column 2 — name, metadata, % bar */}
+              <div className="min-w-0 space-y-2">
+                <Link
+                  href={href}
+                  className="block truncate text-base font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`${category.name}: apri dettaglio categoria`}
+                  title={category.name}
+                >
+                  {category.name}
+                </Link>
+                <p className="text-xs text-muted-foreground">
+                  {movementLabel(category.count)} {shareLabel}
+                </p>
                 <div
-                  className="h-2 overflow-hidden rounded-full bg-muted"
+                  className="h-1.5 overflow-hidden rounded-full bg-muted"
                   role="img"
-                  aria-label={`${category.percentage}% del totale`}
+                  aria-label={shareAriaLabel}
                 >
                   <div
                     className={cn('h-full rounded-full', barColor)}
@@ -146,25 +120,42 @@ export function CategoryRankingList({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-4 sm:justify-end">
-                <div className="text-right">
-                  <p className="font-mono text-sm font-semibold tabular-nums">
-                    {formatAmount(category.amount)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Totale</p>
-                </div>
-                {deviations ? (
-                  <DeviationBadge
-                    deviation={getDeviationValue(category.id, deviations)}
-                    categoryType={type}
-                  />
-                ) : null}
+              {/* Column 3 — 12-month sparkline, hidden on mobile per UI-SPEC */}
+              <div className="hidden sm:block">
                 <CategorySparkline
-                  points={category.sparkline}
-                  type={type}
+                  points={category.sparkline.map((point) => ({
+                    month: point.month,
+                    label: point.label,
+                    amount: point.amount,
+                  }))}
+                  type={direction}
+                  pointStates={category.sparkline.map((point) => point.state)}
+                  estimatedHeightHint={category.pace}
                   label={`Andamento mensile ${category.name}`}
                 />
               </div>
+
+              {/* Column 4 — Totale (D-04, always present) */}
+              <div className="text-right">
+                <p className="text-xs font-medium text-muted-foreground">Totale</p>
+                <p className="font-mono text-base font-semibold tabular-nums text-foreground">
+                  {formatAmount(category.amount)}
+                </p>
+              </div>
+
+              {/* Column 5 — Proiezione (D-04/D-05/D-06/D-15): entirely absent when null — no
+                  em-dash, no placeholder. The grid's 5th column stays reserved (empty) by its own
+                  column definition; no extra div is rendered to hold that reservation. */}
+              {category.projection !== null ? (
+                <div className="text-right">
+                  <p className="text-xs font-medium text-muted-foreground">A questo passo</p>
+                  <p className="font-mono text-base font-medium tabular-nums text-muted-foreground">
+                    <strong className="font-semibold text-foreground">
+                      {formatAmount(category.projection)}
+                    </strong>
+                  </p>
+                </div>
+              ) : null}
             </div>
           </li>
         )
