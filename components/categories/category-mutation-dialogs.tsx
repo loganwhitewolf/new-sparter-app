@@ -86,9 +86,11 @@ function ActionError({ error }: { error: string | null }) {
 }
 
 export function CreateCategoryDialog() {
+  const [nature, setNature] = useState<string>('discretionary')
   const { open, setOpen, state, submit, isPending } = useDialogAction(
     createCategoryAction,
     'Categoria creata.',
+    () => setNature('discretionary'),
   )
 
   return (
@@ -103,13 +105,30 @@ export function CreateCategoryDialog() {
         <DialogHeader>
           <DialogTitle>Nuova categoria personale</DialogTitle>
           <DialogDescription>
-            Crea una categoria personale per organizzare entrate o uscite. Le categorie di sistema restano condivise.
+            Crea una categoria personale e la prima sottocategoria (stesso nome). La natura
+            decide se compare sotto Entrate, Uscite, Accantonamenti o Trasferimenti.
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="flex flex-col gap-4">
+          <input type="hidden" name="nature" value={nature} />
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" htmlFor="category-name-new">Nome categoria</label>
             <Input id="category-name-new" name="name" required placeholder="es. Casa vacanze" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" htmlFor="category-nature-new">Natura</label>
+            <Select value={nature} onValueChange={setNature}>
+              <SelectTrigger id="category-nature-new" className="w-full" aria-label="Natura categoria">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {NATURE_ORDER.filter(Boolean).map((key) => (
+                  <SelectItem key={key!} value={key!}>
+                    {NATURE_LABELS[key!]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <ActionError error={state.error} />
           <DialogFooter>

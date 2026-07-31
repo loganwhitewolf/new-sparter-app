@@ -84,10 +84,10 @@ describe('category Server Actions', () => {
     mocks.upsertSystemSubcategoryOverride.mockResolvedValue({ id: 20 })
   })
 
-  it('creates a user-owned category using the session user and normalized slug', async () => {
+  it('creates a user-owned category plus initial subcategory from nature', async () => {
     const result = await createCategoryAction(
       { error: null },
-      makeFormData({ name: '  Entrate  Extra ', type: 'in', userId: 'attacker' }),
+      makeFormData({ name: '  Entrate  Extra ', nature: 'income', userId: 'attacker' }),
     )
 
     expect(result).toEqual({ error: null })
@@ -96,7 +96,26 @@ describe('category Server Actions', () => {
       name: 'Entrate Extra',
       slug: 'entrate-extra',
     })
+    // income → natureId 1; first subcategory reuses category name/slug
+    expect(mocks.createUserSubcategory).toHaveBeenCalledWith({
+      userId: 'user-1',
+      categoryId: 1,
+      name: 'Entrate Extra',
+      slug: 'entrate-extra',
+      natureId: 1,
+    })
     expectExactCategoryRevalidationRoutes()
+  })
+
+  it('rejects category create without nature (direction comes from initial subcategory)', async () => {
+    const result = await createCategoryAction(
+      { error: null },
+      makeFormData({ name: 'Casa vacanze' }),
+    )
+
+    expect(result.error).not.toBeNull()
+    expect(mocks.createUserCategory).not.toHaveBeenCalled()
+    expect(mocks.createUserSubcategory).not.toHaveBeenCalled()
   })
 
   it('renames a user-owned category and ignores attacker userId fields', async () => {
@@ -187,14 +206,16 @@ describe('category Server Actions', () => {
   it('prevents mutation when auth lookup fails', async () => {
     mocks.verifySession.mockRejectedValueOnce(new Error('NEXT_REDIRECT'))
 
-    await expect(createCategoryAction({ error: null }, makeFormData({ name: 'Casa', type: 'out' }))).rejects.toThrow('NEXT_REDIRECT')
+    await expect(
+      createCategoryAction({ error: null }, makeFormData({ name: 'Casa', nature: 'discretionary' })),
+    ).rejects.toThrow('NEXT_REDIRECT')
     expect(mocks.createUserCategory).not.toHaveBeenCalled()
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
   })
 
   it('returns validation errors without writing for malformed names and ids', async () => {
     await expect(
-      createCategoryAction({ error: null }, makeFormData({ name: '   ', type: 'out' })),
+      createCategoryAction({ error: null }, makeFormData({ name: '   ', nature: 'discretionary' })),
     ).resolves.toEqual({ error: 'Inserisci un nome.' })
     await expect(
       renameSubcategoryAction({ error: null }, makeFormData({ id: '0', name: 'Casa' })),
@@ -211,7 +232,7 @@ describe('category Server Actions', () => {
 
     const result = await createCategoryAction(
       { error: null },
-      makeFormData({ name: 'Casa', type: 'out' }),
+      makeFormData({ name: 'Casa', nature: 'discretionary' }),
     )
 
     expect(result.error).toBe('Esiste già una categoria o sottocategoria con questo nome.')
@@ -231,7 +252,7 @@ describe('category Server Actions', () => {
 
     const result = await createCategoryAction(
       { error: null },
-      makeFormData({ name: 'Casa vacanze' }),
+      makeFormData({ name: 'Casa vacanze', nature: 'discretionary' }),
     )
 
     expect(result.error).toBe('Si è verificato un errore. Riprova tra qualche secondo.')

@@ -31,8 +31,11 @@ async function createCategory(page: Page, seed: CategorySettingsSeed) {
   const dialog = page.getByRole('dialog', { name: 'Nuova categoria personale' })
   await expect(dialog).toBeVisible()
   await dialog.getByLabel('Nome categoria').fill(seed.createdCategoryName)
+  // Default nature is Discrezionale (out); create also seeds the initial subcategory.
   await submitDialog(dialog, 'Crea categoria')
   await expect(categoryRow(page, seed.createdCategoryName)).toBeVisible()
+  // Initial subcategory reuses the category name
+  await expect(subcategoryRow(page, seed.createdCategoryName)).toBeVisible()
 }
 
 async function createSubcategory(page: Page, seed: CategorySettingsSeed) {
@@ -88,7 +91,9 @@ async function assertLinkedDeleteBlocked(page: Page, seed: CategorySettingsSeed)
   const dialog = page.getByRole('dialog', { name: 'Elimina sottocategoria personale' })
   await expect(dialog).toBeVisible()
   await dialog.getByRole('button', { name: 'Elimina' }).click()
-  await expect(dialog.getByText('Non puoi eliminare questa sottocategoria: è collegata a 1 spesa.')).toBeVisible()
+  await expect(
+    dialog.getByText("Non puoi eliminare: c'è 1 spesa collegata a questa categoria o sottocategoria."),
+  ).toBeVisible()
   await expect(row).toBeVisible()
   await dialog.getByRole('button', { name: 'Annulla' }).click()
   await expect(dialog).toBeHidden()

@@ -122,6 +122,7 @@ describe('/settings/categories UI', () => {
 
   it('CreateSubcategoryDialog includes a Natura label for the required nature field', async () => {
     const html = await renderCategoriesPage()
+    // Visible on subcategory rows (select); create-category dialog content is closed in SSR.
     expect(html).toContain('Natura')
   })
 })

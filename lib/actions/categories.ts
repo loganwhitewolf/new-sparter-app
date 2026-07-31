@@ -69,12 +69,33 @@ export async function createCategoryAction(
   const { userId } = await verifySession()
   const parsed = CreateCategorySchema.safeParse({
     name: formData.get('name'),
+    nature: formData.get('nature'),
   })
 
   if (!parsed.success) return { error: firstValidationError(parsed.error) }
 
+  const natureId = NATURE_ID_BY_CODE[parsed.data.nature]
+  if (natureId === undefined) {
+    return { error: 'Seleziona una natura valida.' }
+  }
+
   try {
-    await createUserCategory({ ...parsed.data, userId })
+    // Category has no direction column — create an initial subcategory with the chosen
+    // nature so the sidebar groups under Entrate/Uscite/Accantonamenti/Trasferimenti.
+    const created = await createUserCategory({
+      userId,
+      name: parsed.data.name,
+      slug: parsed.data.slug,
+    })
+    if (!created) return { error: GENERIC_ERROR }
+
+    await createUserSubcategory({
+      userId,
+      categoryId: created.id,
+      name: parsed.data.name,
+      slug: parsed.data.slug,
+      natureId,
+    })
   } catch (error) {
     return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
   }

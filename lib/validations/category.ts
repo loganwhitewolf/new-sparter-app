@@ -34,8 +34,22 @@ const IdSchema = z.preprocess(
   z.number({ message: ID_REQUIRED_MESSAGE }).int('ID non valido.').positive('ID non valido.'),
 )
 
+// Phase 46: FlowNature v2.0 — 8 codes (operational→dissolved, financial→investment, extraordinary→savings)
+export const NatureSchema = z.enum([
+  'essential',
+  'discretionary',
+  'income',
+  'income_extraordinary',
+  'debt',
+  'transfer',
+  'savings',
+  'investment',
+])
+
 export const CreateCategorySchema = z.object({
   name: NameSchema,
+  // Direction is not stored on category — first subcategory nature implies sidebar grouping.
+  nature: NatureSchema,
 }).transform((input) => ({
   ...input,
   slug: deriveCategorySlug(input.name),
@@ -52,18 +66,6 @@ export const RenameCategorySchema = z.object({
 export const DeleteCategorySchema = z.object({
   id: IdSchema,
 })
-
-// Phase 46: FlowNature v2.0 — 8 codes (operational→dissolved, financial→investment, extraordinary→savings)
-export const NatureSchema = z.enum([
-  'essential',
-  'discretionary',
-  'income',
-  'income_extraordinary',
-  'debt',
-  'transfer',
-  'savings',
-  'investment',
-])
 
 export const SetSubcategoryNatureSchema = z.object({
   subCategoryId: z.coerce.number().int().positive(),
