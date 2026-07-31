@@ -5,8 +5,8 @@ milestone_name: Amortization
 status: Awaiting next milestone
 stopped_at: Completed 260730-e6z-01-PLAN.md (transactions footer net totals)
 last_updated: "2026-07-30T08:29:05.934Z"
-last_activity: 2026-07-30
-last_activity_desc: "Completed quick task 260730-bfa: Riorganizzare il menu laterale in sezioni distinte per tipologia di feature"
+last_activity: 2026-07-31
+last_activity_desc: "Planned quick task 260731-hhv: UX contratto feedback (3-wave plans ready)"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 Phase: Milestone v2.9 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-07-30 - Completed quick task 260730-o82: Transactions direzione multi-select (default senza trasferimenti, no chips)
+Last activity: 2026-07-31 - Planned quick task 260731-hhv: UX contratto feedback Sparter (3-wave plans; deferred 2.4/3.8/3.9)
 
 ## Roadmap (v2.9 — Phases 77-81) — SHIPPED 2026-07-29
 
