@@ -35,7 +35,7 @@ export async function Step3Education({ userId }: Step3EducationProps) {
       {/* Large uncategorized count numeral */}
       <div className="text-7xl font-black mb-2">{uncategorizedCount}</div>
       <p className="text-muted-foreground text-xl mb-2">transazioni da categorizzare</p>
-      <p className="text-foreground/40 text-sm max-w-xs mb-12">
+      <p className="text-secondary-readable text-sm max-w-xs mb-12">
         Le altre {autoCategorizedCount} erano già note. Ci vogliono solo pochi tocchi.
       </p>
 

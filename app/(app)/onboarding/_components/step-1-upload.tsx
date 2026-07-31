@@ -284,7 +284,7 @@ export function Step1Upload() {
         )}
       </div>
 
-      <p className="text-xs text-foreground/30">CSV, XLS, XLSX · max 10 MB</p>
+      <p className="text-xs text-secondary-readable">CSV, XLS, XLSX · max 10 MB</p>
 
       {/* Hidden file input */}
       <input

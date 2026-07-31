@@ -383,7 +383,7 @@ function Chip({
         'shrink-0 rounded-full border px-3 py-1 text-xs',
         active
           ? 'border-primary bg-primary text-primary-foreground'
-          : 'bg-background hover:bg-muted',
+          : 'border-border bg-background text-secondary-readable hover:bg-muted',
       )}
     >
       {children}
