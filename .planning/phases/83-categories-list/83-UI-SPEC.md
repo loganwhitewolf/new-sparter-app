@@ -51,13 +51,16 @@ Inherited from project baseline (8-point grid):
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
+| Label (all control labels, uppercase) | 12px | 500 | 1.3 |
 | Body | 14px | 400 | 1.5 |
-| Label | 13px | 400 | 1.4 |
-| Label (uppercase) | 11px | 500 | 1.3 |
-| Heading (page) | 20px | 600 | 1.2 |
-| Heading (section) | 15px | 600 | 1.2 |
-| Rank badge | 12px | 600 | 1 |
-| Numeric (tabular) | 15px | 600 | 1 |
+| Heading (section, row name) | 16px | 600 | 1.2 |
+| Display (page heading) | 20px | 600 | 1.2 |
+
+**Special applications:**
+- **Rank badge:** 12px weight 600, line-height 1
+- **Numeric (monetary):** 16px weight 600 (or 500 for subordinate projection), tabular-nums, `ui-monospace, Menlo, monospace`
+
+**Projection hierarchy:** Projection subordination (D-06) is achieved via **weight and colour**, not size — both total and projection render at 16px, but projection uses weight 500 + muted-fg colour while total uses weight 600 + foreground colour. The inner figure `<strong>` uses weight 600 + foreground to emphasize the amount within the subordinate context.
 
 **Monospace (numeric):** `ui-monospace, Menlo, monospace` for monetary values to maintain digit alignment.
 
@@ -76,11 +79,16 @@ Inherited from project baseline (8-point grid):
 | Primary (interactive) | #18181b / #fafafa | Focus, links |
 | Outflows (`--total-out`) | #f97316 (orange) | Uscite rows, sparklines, bars |
 | Inflows (`--total-in`) | #34d399 (green) | Entrate rows, sparklines, bars |
-| Allocations (`--total-allocation`) | #a78bfa (purple) | Accantonamenti rows, sparklines, bars |
+| Allocations (`var(--total-allocation)`) | #a78bfa (purple, already in `app/globals.css`) | Accantonamenti rows, sparklines, bars |
 | Destructive | #dc2626 | Not in scope for Phase 83 |
 | Good (positive movement) | #16a34a | Not in scope for Phase 83 |
 
-**Accent reserved for:** Interactive states (hover borders on rows, button pressed states in control groups).
+**Surface allocation (60/30/10):**
+- **60% Dominant:** Neutral surfaces (white/dark background)
+- **30% Secondary:** Row cards, header backgrounds
+- **10% Accent:** Interactive states only (hover borders on rows, pressed button states in direction/sort toggles)
+
+**Implementation note:** `--total-allocation` (#a78bfa) is already defined in `app/globals.css` for both light and dark modes. Phase 83 does not need to add this token; it is ready to use.
 
 ---
 
@@ -104,11 +112,13 @@ Inherited from project baseline (8-point grid):
 
 | Element | Copy | Font | Weight | Color |
 |---------|------|------|--------|-------|
-| Total label | "Totale" | 11px | 500 | muted-fg |
-| Total value | "{formatted amount}" | 15px | 600 | foreground |
-| Projection label | "A questo passo" | 11px | 500 | muted-fg |
-| Projection value (with data) | "{formatted amount}" with inner `<strong>` | 15px | 500 (label) / 600 (inner) | muted-fg (label) / foreground (strong) |
-| Projection value (no data) | "—" | 12px | 400 | muted-fg |
+| Total label | "Totale" | 12px | 500 | muted-fg |
+| Total value | "{formatted amount}" | 16px | 600 | foreground |
+| Projection label (≥2 Covered Months) | "A questo passo" | 12px | 500 | muted-fg |
+| Projection value (≥2 Covered Months) | "{formatted amount}" with inner `<strong>` | 16px | 500 (label) / 600 (inner) | muted-fg (label) / foreground (strong) |
+| Projection label + value (<2 Covered Months) | *entire pair absent; not even em-dash* | — | — | — |
+
+**Rationale for absent projection:** D-15 requires that no numeric field renders when coverage is insufficient — the engine deliberately returns no projection value. An em-dash would re-introduce a "value-shaped slot" the type system was designed to hold back. The explanation lives in the Single-Covered-Month nudge below the list, which explicitly states what is missing and how to get it.
 
 ### Sort Toggle Options
 
@@ -150,13 +160,15 @@ The 12-month sparkline bar chart carries four distinct visual states, each repre
 
 **Implementation notes:**
 - All bars rendered at same x-axis scale (12 equal-width columns per row)
-- Sparkline height: 30px total; bars gap: 2px between each
-- Bar radius: 1px for crisp edges
+- Sparkline height: 32px total; bars gap: 2px between each
+- Bar radius: 1px for crisp edges (visual detail, exempt from 4-multiple grid)
 - Uncovered months show full 100% height to provide visual contrast from zero-data months within covered range
 
 ---
 
 ## Row Structure and Layout
+
+**Primary focal point per row:** Rank badge + category name (leftmost), read first in left-to-right order.
 
 ### Desktop (780px+)
 
@@ -165,12 +177,13 @@ The 12-month sparkline bar chart carries four distinct visual states, each repre
 | Column | Content | Notes |
 |--------|---------|-------|
 | 1 | Rank badge (28px circle, bg muted, center-aligned) | Rank number, 12px font weight 600 |
-| 2 | Category name, metadata, % bar | Name (14px 600), metadata line (12px muted), horizontal bar showing share |
-| 3 | 12-month sparkline (150px width for ~12 equal bars + gaps) | Bars render at 30px height |
-| 4 | Total monetary value | Label "Totale" (11px uppercase muted), value (15px 600 monospace) |
-| 5 | Projection monetary value | Label "A questo passo" (11px uppercase muted), value (15px 500 monospace, amount in `<strong>` 600) |
+| 2 | Category name, metadata, % bar | Name (16px 600), metadata line (12px muted), horizontal bar showing share |
+| 3 | 12-month sparkline (150px width for ~12 equal bars + gaps) | Bars render at 32px height |
+| 4 | Total monetary value | Label "Totale" (12px uppercase muted), value (16px 600 monospace) |
+| 5 | Projection monetary value (≥2 Covered Months only) | Label "A questo passo" (12px uppercase muted), value (16px weight 500 monospace, amount in `<strong>` 600) |
+| 5 | Empty cell (<2 Covered Months) | Reserved; stays empty to maintain grid stability when projection pair is absent |
 
-**Row padding:** 14px (top/bottom) × 16px (left/right)
+**Row padding:** 16px (top/bottom) × 16px (left/right)
 
 **Row border:** 1px solid `var(--border)`, 12px radius
 
@@ -190,7 +203,9 @@ The 12-month sparkline bar chart carries four distinct visual states, each repre
 
 **Hidden:** Sparkline, Projection (moved below on own line)
 
-**Projection (below row):** Full width, 2 columns (label + value), left-aligned, 8px baseline alignment
+**Projection (below row, ≥2 Covered Months):** Full width, 2 columns (label + value), left-aligned, 8px baseline alignment
+
+**Projection (<2 Covered Months):** Not rendered; the nudge below the list provides the explanation.
 
 ---
 
@@ -212,19 +227,19 @@ On `allocation` direction rows:
 
 **Component:** `category-ranking-skeleton.tsx` (new — does not exist; must be created)
 
-**Structure:** Render N skeleton rows matching the locked row shape.
+**Structure:** Render N skeleton rows matching the locked row shape (5 columns on desktop, 3 on mobile).
 
 | Element | Placeholder |
 |---------|---|
 | Rank badge | Rounded square, muted, 28px |
-| Category name | Line, 14px height, 60% width, muted |
+| Category name | Line, 16px height, 60% width, muted |
 | Metadata line | Line, 12px height, 50% width, muted |
 | % bar | Thin line, 6px height, 40% width, muted |
-| Sparkline (12 bars) | 12× thin vertical line, 30px height, 2px gap, muted |
+| Sparkline (12 bars) | 12× thin vertical line, 32px height, 2px gap, muted |
 | Total label | Invisible or very short line (label is small) |
-| Total value | Line, 15px height, 40% width (enough for a number), muted |
+| Total value | Line, 16px height, 40% width (enough for a number), muted |
 | Projection label | Invisible or very short line |
-| Projection value | Line, 15px height, 40% width, muted |
+| Projection value | Line, 16px height, 40% width, muted (note: may be absent on mobile <2 Covered Months) |
 
 **Animation:** Use Tailwind's pulse animation (fade-in/out at 2s interval) or the project's existing skeleton animation.
 
@@ -238,9 +253,9 @@ On `allocation` direction rows:
 
 **Content:**
 - Heading (20px 600): "Nessuna spesa" [for Uscite], "Nessuna entrata" [for Entrate], "Nessun accantonamento" [for Accantonamenti]
-- Body (14px): "Non ci sono transazioni importate per questa direzione in {year}. Prova un altro anno o un'altra direzione." (or user's chosen direction label)
+- Body (14px 400): "Non ci sono transazioni importate per questa direzione in {year}. Prova un altro anno o un'altra direzione." (or user's chosen direction label)
 
-**Styling:** Center-aligned, `var(--muted-fg)` text, ~60px top padding, large icon (Lucide, 32px, muted).
+**Styling:** Center-aligned, `var(--muted-fg)` text, 32px (xs·2×) top margin, large icon (Lucide, 32px, muted).
 
 ---
 
@@ -252,14 +267,14 @@ On `allocation` direction rows:
 
 **Structure:**
 - Dashed 1px border, `var(--border)`
-- 12px radius
-- 14px padding (top/bottom) × 16px (left/right)
+- 8px radius (smaller than row radius, visual distinction)
+- 16px padding (top/bottom) × 16px (left/right)
 - Background: `var(--muted)`
 - Text color: `var(--muted-fg)`
-- Font: 13px, line-height 1.5
+- Font: 14px body, line-height 1.5
 
 **Content:** Bold prefix + body
-- **Bold prefix** (color: `var(--fg)`): "Con un secondo mese importato"
+- **Bold prefix** (color: `var(--fg)`, weight 600): "Con un secondo mese importato"
 - **Body:** "vedrai il ritmo mensile e la proiezione di fine anno. Serve almeno un mese concluso oltre a quello in corso."
 
 **Implementation:** Reuse `components/dashboard/overview/overview-nudge.tsx` pattern (component exists; adapt for this content).
@@ -272,12 +287,12 @@ On `allocation` direction rows:
 |----------|------------|--------|------------|
 | empty-state | Direction filter + year selector result in no categories | ✅ covered | Empty state render per copywriting contract; nudge for single-Covered-Month case distinct |
 | loading | Ranking query in progress | ✅ covered | Skeleton rows render via `category-ranking-skeleton.tsx` |
-| zero-one-many | Sparkline with 1 data point (single-Covered-Month state) | ✅ covered | Single bar rendered at appropriate month position; projection shows as em-dash |
+| zero-one-many | Sparkline with 1 data point (single-Covered-Month state) | ✅ covered | Single bar rendered at appropriate month position; projection label+value pair absent; nudge explains what is missing |
 | zero-one-many | Sparkline with all 12 months covered | ✅ covered | All 12 bars rendered; mix of fact/current/estimated visual states |
 | zero-one-many | Row list length (3–50 categories) | ✅ covered | Grid scrolls vertically; no special handling needed |
 | long-text | Category name truncation | 🧪 backstop | Row layout uses `minmax(0, 1fr)` in grid; name truncates with ellipsis on overflow. Verification: CSS `text-overflow: ellipsis; white-space: nowrap; overflow: hidden;` applied to `.name` |
 | overflow | Monetary value overflow (e.g., €999,999.99) | ✅ covered | Monospace font + tabular-nums ensures alignment; column width (150px) adequate for 99,999.99 format |
-| partial-data | Below 2 Covered Months (no projection) | ✅ covered | Projection value renders as "—" (em-dash) at 12px; sparkline contains only covered months' data |
+| partial-data | Below 2 Covered Months (no projection) | ✅ covered | Projection label + value pair absent from row; sparkline contains only covered months' data; nudge below list explains threshold and next step (D-15 + D-14) |
 
 ---
 
@@ -290,7 +305,7 @@ On `allocation` direction rows:
 | D-09 | Direction filter: Uscite / Entrate / Accantonamenti (predicate: `direction.hidden = false`) | 83-CONTEXT.md |
 | D-11 | One copy set per direction (heading, share label, projection label), resolved centrally | 83-CONTEXT.md |
 | D-14 | Single-Covered-Month state: show certain figures + explicit nudge (follow OverviewNudge pattern) | 83-CONTEXT.md |
-| D-15 | Below 2 Covered Months: no projection value rendered (not even zero, not even placeholder) | 83-CONTEXT.md |
+| D-15 | Below 2 Covered Months: entire projection label+value pair absent from row (not even em-dash, not even placeholder). Engine returns no numeric field; UI cannot render a fragile value. Explanation lives in nudge only. | 83-CONTEXT.md |
 | D-19 | Row prototype validated and locked (`.scratch/dashboard-categories/list-row.html`, 2026-07-30) | Prototype sign-off |
 
 ---
@@ -308,11 +323,11 @@ On `allocation` direction rows:
 
 ## Checker Sign-Off
 
-- [ ] **Dimension 1 Copywriting:** All Italian copy defined; per-direction strings explicit; retired vocabulary (Deviation, Baseline, Preset) absent.
-- [ ] **Dimension 2 Visuals:** Row layout locked (prototype); sparkline 4-state system defined; projection subordination explicit (label hierarchy, weight, colour).
-- [ ] **Dimension 3 Colour:** Direction-scoped tokens defined (`--total-out`, `--total-in`, `--total-allocation`); allocation colour (#a78bfa) declared; dark mode compatibility verified.
-- [ ] **Dimension 4 Typography:** Type scale declared (4 roles); monospace for numbers; label weight hierarchy (500 regular, 600 strong).
-- [ ] **Dimension 5 Spacing:** 8-point grid; row padding 14×16; sparkline gap 2px; no exceptions.
+- [ ] **Dimension 1 Copywriting:** All Italian copy defined; per-direction strings explicit; retired vocabulary (Deviation, Baseline, Preset) absent; D-15 projection absence resolved (nudge provides explanation, no em-dash).
+- [ ] **Dimension 2 Visuals:** Row layout locked (prototype); sparkline 4-state system defined; projection subordination explicit (weight + colour hierarchy, no size step); focal point declared; grid column stability when projection pair absent confirmed (reserved empty cell).
+- [ ] **Dimension 3 Colour:** Direction-scoped tokens defined (`--total-out`, `--total-in`, `--total-allocation`); all three tokens verified present in `app/globals.css` (light + dark); 60/30/10 surface allocation declared; dark mode compatibility verified.
+- [ ] **Dimension 4 Typography:** Type scale consolidated to 4 unique sizes (12, 14, 16, 20px); projection weight+colour hierarchy survives size consolidation; monospace for numbers; all font-size references updated throughout spec.
+- [ ] **Dimension 5 Spacing:** 8-point grid; row padding 16×16; sparkline 32px height + 2px gap; nudge 16×16 padding; all values confirmed multiples of 4 (or documented exemptions: bar-radius 1px, gap 2px as visual details).
 - [ ] **Dimension 6 Registry Safety:** shadcn components listed; no third-party registries; safety gate N/A.
 
 **Approval:** pending
