@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { MonthOverMonthChange, OverviewChartPoint } from '@/lib/dal/overview'
+import type { Lens } from '@/lib/utils/search-params'
 import { KpiRow } from './kpi-row'
 import { OverviewChartFilters } from './overview-chart-filters'
 import {
@@ -32,6 +33,8 @@ type Props = {
   initialMoversAllocation: MonthOverMonthChange[]
   /** LSD-03: cash-lens overlay chart points, threaded straight through to OverviewMoversSection. */
   cashOverlayData?: OverviewChartPoint[]
+  /** Forwarded to Entrate/Uscite KPI deep-links (3.6). */
+  lens?: Lens
 }
 
 function toIncludedSets(excluded: ExcludedChips) {
@@ -63,6 +66,7 @@ export function OverviewDashboardSection({
   initialMoversOut,
   initialMoversAllocation,
   cashOverlayData,
+  lens = 'cassa',
 }: Props) {
   const defaults = toIncludedSets(DEFAULT_EXCLUDED_CHIPS)
   const [includedIncome, setIncludedIncome] = useState<Set<IncomeKey>>(defaults.income)
@@ -147,6 +151,7 @@ export function OverviewDashboardSection({
         includedOut={includedOut}
         includedAllocation={includedAllocation}
         year={year}
+        lens={lens}
       />
       <OverviewMoversSection
         data={data}

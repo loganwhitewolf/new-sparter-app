@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
+import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
@@ -264,6 +265,7 @@ export function ReadingKpiCard({
   goodWhenPositive = true,
   prevYear,
   className,
+  href,
 }: {
   label: string
   hero: { value: string; tone: ValueTone }
@@ -275,9 +277,17 @@ export function ReadingKpiCard({
   goodWhenPositive?: boolean
   prevYear: number
   className?: string
+  /** When set, the whole card is one navigational surface (contract 3.6). */
+  href?: string
 }) {
-  return (
-    <Card className={cn('min-h-32 rounded-lg py-0', className)}>
+  const card = (
+    <Card
+      className={cn(
+        'min-h-32 rounded-lg py-0',
+        href ? 'cursor-pointer transition-colors hover:bg-accent/30' : null,
+        className,
+      )}
+    >
       <CardContent className="flex h-full flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-2">
           <p className="min-w-0 truncate text-xs text-muted-foreground">{label}</p>
@@ -312,5 +322,17 @@ export function ReadingKpiCard({
         </div>
       </CardContent>
     </Card>
+  )
+
+  if (!href) return card
+
+  return (
+    <Link
+      href={href}
+      className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      aria-label={`${label}: apri il dettaglio`}
+    >
+      {card}
+    </Link>
   )
 }

@@ -491,6 +491,26 @@ describe('KpiRow dashboard-wide filter wiring (260711-gfd)', () => {
     // Uscite total without debt: 2400
     expect(html).toMatch(/2\.400|2400/)
   })
+
+  it('3.6: Entrate and Uscite cards link to categories detail; Bilancio stays non-link', () => {
+    const html = renderToStaticMarkup(
+      <KpiRow
+        data={kpiPoints}
+        prevData={[]}
+        includedIncome={allIncome}
+        includedOut={allOut}
+        includedAllocation={allAllocation}
+        year={2026}
+        lens="competenza"
+      />
+    )
+    expect(html).toContain('aria-label="Entrate: apri il dettaglio"')
+    expect(html).toContain('aria-label="Uscite: apri il dettaglio"')
+    expect(html).toContain('href="/dashboard/categories?preset=this-year&amp;type=in&amp;lens=competenza"')
+    expect(html).toContain('href="/dashboard/categories?preset=this-year&amp;lens=competenza"')
+    expect(html).not.toContain('aria-label="Bilancio: apri il dettaglio"')
+    expect(html).toContain('Tasso 48%')
+  })
 })
 
 describe('deriveNatureBreakdown (FRU-FIX-02)', () => {

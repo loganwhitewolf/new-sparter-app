@@ -1,6 +1,8 @@
 import type { OverviewChartPoint } from '@/lib/dal/overview'
+import { buildDashboardCategoriesHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
 import { toDecimal } from '@/lib/utils/decimal'
+import type { Lens } from '@/lib/utils/search-params'
 import { NATURE_LABELS } from '@/lib/utils/nature-labels'
 import { formatEur } from './format'
 import { ReadingKpiCard, type BarSegment, type CardBar, type Reading, type ValueTone } from './kpi-card-reading'
@@ -64,6 +66,16 @@ function signTone(value: number): ValueTone {
   return value < 0 ? 'out' : 'in'
 }
 
+/** Categories list defaults — keep KPI deep-links aligned with /dashboard/categories. */
+const CATEGORIES_DEFAULT_PRESET = 'last-3-months' as const
+const CATEGORIES_DEFAULT_SORT = 'deviation' as const
+
+function overviewYearToPreset(year: number): 'this-year' | 'last-year' {
+  const currentYear = new Date().getFullYear()
+  if (year === currentYear - 1) return 'last-year'
+  return 'this-year'
+}
+
 type KpiRowProps = {
   /** Monthly chart points for the selected year — the single KPI data source (260711-gfd). */
   data: OverviewChartPoint[]
@@ -73,6 +85,8 @@ type KpiRowProps = {
   includedOut: ReadonlySet<OutKey>
   includedAllocation: ReadonlySet<AllocationKey>
   year: number
+  /** Cash/accrual lens from overview URL — forwarded into category detail hrefs (3.6). */
+  lens?: Lens
 }
 
 /**
@@ -85,10 +99,26 @@ type KpiRowProps = {
  * lives in the reading. Under the sustainability default (extraordinary excluded) Bilancio's
  * hero IS the structural balance.
  */
-export function KpiRow({ data, prevData, includedIncome, includedOut, includedAllocation, year }: KpiRowProps) {
+export function KpiRow({
+  data,
+  prevData,
+  includedIncome,
+  includedOut,
+  includedAllocation,
+  year,
+  lens = 'cassa',
+}: KpiRowProps) {
   const prevYear = year - 1
   const kpis = deriveFilteredKpis(data, prevData, includedIncome, includedOut, includedAllocation)
   const balanceNumeric = Number(kpis.balance)
+  const categoriesHrefBase = {
+    preset: overviewYearToPreset(year),
+    defaultPreset: CATEGORIES_DEFAULT_PRESET,
+    defaultSort: CATEGORIES_DEFAULT_SORT,
+    lens,
+  } as const
+  const entrateHref = buildDashboardCategoriesHref({ ...categoriesHrefBase, type: 'in' })
+  const usciteHref = buildDashboardCategoriesHref({ ...categoriesHrefBase, type: 'out' })
 
   // ── Entrate: composition of the INCLUDED income keys (single key → honest 100% bar).
   // Shade is key-fixed (recurring solid, extraordinary lighter) — see Uscite note below.
@@ -161,6 +191,7 @@ export function KpiRow({ data, prevData, includedIncome, includedOut, includedAl
         goodWhenPositive
         prevYear={prevYear}
         className="min-h-0"
+        href={entrateHref}
       />
       <ReadingKpiCard
         label="Uscite"
@@ -170,6 +201,7 @@ export function KpiRow({ data, prevData, includedIncome, includedOut, includedAl
         goodWhenPositive={false}
         prevYear={prevYear}
         className="min-h-0"
+        href={usciteHref}
       />
       <ReadingKpiCard
         label="Bilancio"
