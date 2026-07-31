@@ -123,7 +123,7 @@ directions including the previously-unreachable Accantonamenti.
      opens its detail on the same year, so the row's total and the detail page's total agree
      (CLIST-06, CLIST-07).
 
-**Plans**: 4 plans
+**Plans**: 5 plans
 
 Plans:
 **Wave 1**
@@ -135,6 +135,10 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 83-04-PLAN.md — Categories list page + row assembly (direction filter, sort toggle, five-field row, sort-by-projection, single-Covered-Month state), full phase regression
+
+**Wave 3** *(gap closure, blocked on Wave 2 completion)*
+
+- [ ] 83-05-PLAN.md — Gap closure: allocation direction sign-preservation end-to-end (CR-01), estimated-bar zero-height fallback (WR-02), preset-mode allocation type fix (WR-01)
 
 **UI hint**: yes
 
