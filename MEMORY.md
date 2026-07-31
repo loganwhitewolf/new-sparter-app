@@ -42,6 +42,16 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
+### 2026-07-31 — Personal category create requires nature + initial subcategory
+
+**Decided:** Create categoria personale = nome + Natura (8 FlowNature). Action creates category then an initial subcategory with the same name/slug and resolved `natureId`. No `direction` column on `category` (Phase 49); sidebar Entrate/Uscite/… derives from first subcategory nature→direction.
+
+**Why:** User expected a direction picker; storing direction on category would fight mixed-nature categories and need a migration. Nature is the real write model.
+
+**Rejected:**
+- Restore `category.direction` / preferredDirection — schema churn, conflict with multi-nature cats
+- Direction-only select (4 values) mapping to a default nature — hidden magic vs explicit Natura
+
 ### 2026-07-31 — UX contratto quick on existing branch (260731-hhv)
 
 **Decided:** Execute quick `260731-hhv` (UX contratto feedback waves 01–03) on the already-open branch `gsd/quick-260730-o82-tx-direction-multi`. No new quick branch and no git worktree isolation for this run.
