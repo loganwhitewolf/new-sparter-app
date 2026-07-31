@@ -456,7 +456,7 @@ describe('updateTransaction', () => {
 
       await expect(
         updateTransaction({ userId: 'user-1', transactionId: 'tx-1', amount: '-75.00' }),
-      ).rejects.toThrow('Rimuovi ammortamento per modificare l\'importo o la data della transazione.')
+      ).rejects.toThrow('Rimuovi spesa dilazionata per modificare l\'importo o la data della transazione.')
 
       expect(mocks.dbUpdateChain).not.toHaveBeenCalled()
     })
@@ -475,7 +475,7 @@ describe('updateTransaction', () => {
           transactionId: 'tx-1',
           occurredAt: new Date('2026-02-01'),
         }),
-      ).rejects.toThrow('Rimuovi ammortamento per modificare l\'importo o la data della transazione.')
+      ).rejects.toThrow('Rimuovi spesa dilazionata per modificare l\'importo o la data della transazione.')
 
       expect(mocks.dbUpdateChain).not.toHaveBeenCalled()
     })
@@ -493,7 +493,7 @@ describe('updateTransaction', () => {
           amount: '-75.00',
           occurredAt: new Date('2026-02-01'),
         }),
-      ).rejects.toThrow('Rimuovi ammortamento per modificare l\'importo o la data della transazione.')
+      ).rejects.toThrow('Rimuovi spesa dilazionata per modificare l\'importo o la data della transazione.')
 
       expect(mocks.dbUpdateChain).not.toHaveBeenCalled()
     })
@@ -570,7 +570,7 @@ describe('updateTransaction', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(Error)
         expect((error as Error).message).toBe(
-          'Rimuovi ammortamento per modificare l\'importo o la data della transazione.',
+          'Rimuovi spesa dilazionata per modificare l\'importo o la data della transazione.',
         )
         // Plain Error (same shape as the pre-existing pair-guard throw) — no custom
         // error class, no extra fields — so lib/actions/transaction-edit.ts's

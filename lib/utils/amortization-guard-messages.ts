@@ -16,15 +16,15 @@ export type AmortizationGuardFailure =
 export function amortizationGuardMessage(failure: AmortizationGuardFailure): string {
   switch (failure.reason) {
     case 'reimbursement':
-      return 'Non puoi ammortizzare una transazione coinvolta in un rimborso. Scollega il rimborso prima.'
+      return 'Non puoi dilazionare una transazione coinvolta in un rimborso. Scollega il rimborso prima.'
     case 'already-amortized':
       return 'Questa transazione ha già una pianificazione attiva. Rimuovila prima di crearne una nuova.'
     case 'expense-group':
-      return 'Non puoi ammortizzare una transazione che fa parte di un gruppo di spese. Rimuovila dal gruppo prima.'
+      return 'Non puoi dilazionare una transazione che fa parte di un gruppo di spese. Rimuovila dal gruppo prima.'
     case 'not-outflow':
-      return 'Puoi ammortizzare solo transazioni in uscita.'
+      return 'Puoi dilazionare solo transazioni in uscita.'
     case 'too-small':
-      return `Importo troppo piccolo. Ammortizzare su 2 mesi richiederebbe rate di €${failure.requiredPerMonth}, impossibili.`
+      return `Importo troppo piccolo. Dilazionare su 2 mesi richiederebbe rate di €${failure.requiredPerMonth}, impossibili.`
     default: {
       const exhaustive: never = failure
       return exhaustive

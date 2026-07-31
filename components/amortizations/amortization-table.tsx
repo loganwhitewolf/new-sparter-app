@@ -155,7 +155,7 @@ export function AmortizationTable({ plans, route }: Props) {
       {sorted.length === 0 ? (
         <EmptyState
           variant="no-result"
-          message="Nessun ammortamento trovato"
+          message="Nessuna spesa dilazionata trovata"
           hint="Prova a modificare i filtri o la ricerca."
         />
       ) : (

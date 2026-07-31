@@ -70,7 +70,7 @@ const navSections: NavSection[] = [
       { href: APP_ROUTES.transactions, label: 'Transazioni', icon: List },
       { href: APP_ROUTES.expenses, label: 'Spese', icon: Receipt },
       { href: APP_ROUTES.reimbursements, label: 'Rimborsi', icon: Link2 },
-      { href: APP_ROUTES.amortizations, label: 'Ammortamenti', icon: CalendarClock },
+      { href: APP_ROUTES.amortizations, label: 'Spese dilazionate', icon: CalendarClock },
     ],
   },
   {

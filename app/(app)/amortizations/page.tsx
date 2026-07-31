@@ -5,7 +5,7 @@ import { AmortizationTable } from '@/components/amortizations/amortization-table
 import { AmortizationSummaryHeader } from '@/components/amortizations/amortization-summary-header'
 import { APP_ROUTES } from '@/lib/routes'
 
-export const metadata = { title: 'Ammortamenti' }
+export const metadata = { title: 'Spese dilazionate' }
 
 /**
  * RSC list page (Phase 79): DB -> DAL -> real page. Zero-plan accounts render the account-level
@@ -22,17 +22,17 @@ export default async function AmortizationsPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Ammortamenti</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Spese dilazionate</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Tutte le rate dei tuoi ammortamenti.
+          Tutte le rate delle tue spese dilazionate.
         </p>
       </div>
 
       {plans.length === 0 ? (
         <EmptyState
           variant="no-data"
-          message="Nessun ammortamento"
-          hint="Non hai ancora nessun ammortamento attivo. Quando ammortizzerai una spesa, vedrai qui tutte le tue rate."
+          message="Nessuna spesa dilazionata"
+          hint="Non hai ancora nessuna spesa dilazionata attiva. Quando dilazionerai una spesa, vedrai qui tutte le tue rate."
         />
       ) : (
         <>

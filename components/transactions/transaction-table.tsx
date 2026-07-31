@@ -285,12 +285,12 @@ export function TransactionTable({
     amount: string
     occurredAt: Date
   } | null>(null)
-  // Undo (D-09) row-action target: set when "Rimuovi ammortamento" is selected.
+  // Undo (D-09) row-action target: set when "Rimuovi spesa dilazionata" is selected.
   const [removeAmortizeTarget, setRemoveAmortizeTarget] = useState<{
     planId: string
     transactionId: string
   } | null>(null)
-  // Close (D-01, Phase 78) row-action target: set when "Chiudi ammortamento" is selected.
+  // Close (D-01, Phase 78) row-action target: set when "Chiudi spesa dilazionata" is selected.
   const [closeAmortizeTarget, setCloseAmortizeTarget] = useState<{
     planId: string
     transactionId: string
@@ -476,7 +476,7 @@ export function TransactionTable({
 
   /**
    * Optimistically clears the row's amortization gate (D-09 undo) so the menu flips back to
-   * "Ammortizza" immediately. The re-attached expense's title/category/status are refreshed via
+   * "Dilaziona" immediately. The re-attached expense's title/category/status are refreshed via
    * router.refresh() (called alongside this) rather than guessed locally — removeAmortizationPlan
    * intentionally returns no expense payload, since the target may be a brand-new OR an existing
    * shared Expense.
@@ -925,7 +925,7 @@ export function TransactionTable({
                             className="flex items-center gap-2"
                           >
                             <CalendarClock className="h-4 w-4" />
-                            Ammortizza
+                            Dilaziona
                           </DropdownMenuItem>
                         ) : (
                           <TooltipProvider>
@@ -938,7 +938,7 @@ export function TransactionTable({
                                     className="flex items-center gap-2"
                                   >
                                     <CalendarClock className="h-4 w-4" />
-                                    Ammortizza
+                                    Dilaziona
                                   </DropdownMenuItem>
                                 </span>
                               </TooltipTrigger>
@@ -964,7 +964,7 @@ export function TransactionTable({
                             className="flex items-center gap-2"
                           >
                             <CalendarClock className="h-4 w-4" />
-                            Chiudi ammortamento
+                            Chiudi spesa dilazionata
                           </DropdownMenuItem>
                         )}
                       {/* Undo entry (D-09, Entry Point Visibility Matrix: "Active plan exists" ->
@@ -982,7 +982,7 @@ export function TransactionTable({
                           className="flex items-center gap-2 text-destructive focus:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
-                          Rimuovi ammortamento
+                          Rimuovi spesa dilazionata
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />
