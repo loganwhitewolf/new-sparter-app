@@ -41,7 +41,7 @@ export function ProgressDots({ current }: ProgressDotsProps) {
           )
         })}
       </div>
-      <span className="text-xs font-medium text-muted-foreground">
+      <span className="text-base font-medium text-muted-foreground">
         {STEP_NAMES[current]}
       </span>
     </div>

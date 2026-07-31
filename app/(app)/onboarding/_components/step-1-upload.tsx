@@ -252,17 +252,15 @@ export function Step1Upload() {
         Carica il file della tua banca e vedremo insieme dove vanno i tuoi soldi.
       </p>
 
-      {/* Drop zone — token-based border only (D-09) */}
+      {/* Drop zone — white fill + dashed #717171 for prominence on dark onboarding (1.3) */}
       <div
         ref={dropRef}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onClick={() => !isPending && inputRef.current?.click()}
-        className={`w-full max-w-sm border-2 border-dashed rounded-2xl p-10 cursor-pointer transition-colors flex flex-col items-center gap-3 mb-4 ${
-          isDragOver
-            ? 'border-foreground/40 bg-foreground/5'
-            : 'border-foreground/20 hover:border-foreground/40 hover:bg-foreground/5'
+        className={`w-full max-w-sm border-2 border-dashed rounded-2xl p-10 cursor-pointer transition-colors flex flex-col items-center gap-3 mb-4 bg-white border-[#717171] text-neutral-900 ${
+          isDragOver ? 'bg-neutral-50 border-neutral-600' : 'hover:bg-neutral-50'
         } ${isPending ? 'pointer-events-none opacity-60' : ''}`}
         aria-label="Area di caricamento file"
         role="button"
@@ -272,14 +270,14 @@ export function Step1Upload() {
         }}
       >
         {isPending ? (
-          <div className="flex items-center gap-2 text-foreground/70">
+          <div className="flex items-center gap-2 text-neutral-700">
             <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
             <span className="text-sm">{stageLabel(stage)}</span>
           </div>
         ) : (
           <>
-            <p className="text-sm font-medium text-foreground/80">Trascina qui il tuo file</p>
-            <p className="text-xs text-foreground/40">oppure clicca per sfogliare</p>
+            <p className="text-sm font-medium text-neutral-900">Trascina qui il tuo file</p>
+            <p className="text-xs text-neutral-600">oppure clicca per sfogliare</p>
           </>
         )}
       </div>
