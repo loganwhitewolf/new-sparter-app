@@ -1,5 +1,7 @@
 import { verifySession } from '@/lib/dal/auth'
 import { getAmortizationPlanList } from '@/lib/dal/amortization'
+import { db } from '@/lib/db'
+import { healOrphanedOpenPlanReduceDriftsForUser } from '@/lib/services/amortization-plan-amount'
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { AmortizationTable } from '@/components/amortizations/amortization-table'
 import { AmortizationSummaryHeader } from '@/components/amortizations/amortization-summary-header'
@@ -17,6 +19,7 @@ export const metadata = { title: 'Spese dilazionate' }
  */
 export default async function AmortizationsPage() {
   const { userId } = await verifySession()
+  await healOrphanedOpenPlanReduceDriftsForUser(db, userId)
   const plans = await getAmortizationPlanList(userId)
 
   return (

@@ -283,7 +283,8 @@ export function ReadingKpiCard({
   const card = (
     <Card
       className={cn(
-        'min-h-32 rounded-lg py-0',
+        // h-full: grid row height must match for linked (Entrate/Uscite) and bare cards.
+        'flex h-full min-h-32 flex-col rounded-lg py-0',
         href ? 'cursor-pointer transition-colors hover:bg-accent/30' : null,
         className,
       )}
@@ -329,7 +330,7 @@ export function ReadingKpiCard({
   return (
     <Link
       href={href}
-      className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="block h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       aria-label={`${label}: apri il dettaglio`}
     >
       {card}

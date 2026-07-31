@@ -42,6 +42,36 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
+### 2026-07-31 — Amortization lifecycle owned by /amortizations registry
+
+**Decided:** Transactions menu keeps only activation (`Dilaziona`) + deep-link `Visualizza spesa dilazionata`. Close / close-with-sale-or-refund / remove live exclusively on `/amortizations` open-plan row actions. `Collega rimborso` on an open amortized outflow may still open the intent dialog from the tx table (pragmatic exception).
+
+**Why:** Detail page already redirected lifecycle to the registry; tx table still exposed Chiudi/Rimuovi. User wants one owner surface for managing dilazioni.
+
+**Rejected:**
+- B — also block Collega rimborso → registry only (extra click; deferred)
+- C — duplicate lifecycle on both surfaces
+
+### 2026-07-31 — Hard-delete expense/tx/import cascades amort + reimbursement
+
+**Decided:** Before deleting transactions/expenses/imports, `cleanupFinanceLinksForTransactions` / `cleanupFinanceLinksForExpenses` tear down open amortization plans and reimbursements (restore refund baselines). FK alone is insufficient: reimbursement is expense-keyed (anchor tx delete left orphans); expense delete without linked txs wiped instalments via expenseId but left `amortization_plan`.
+
+**Why:** User saw plans/rimborsi survive after deleting spese/tx/file.
+
+**Rejected:**
+- Relying only on ON DELETE CASCADE — wrong anchor table for reimbursement
+- Deleting refund transactions when the anchor is removed — keep inflows, drop the link
+
+### 2026-07-31 — Unlink rimborso must reverse open-plan reduce (AMORT-06)
+
+**Decided:** `deletePairByTransactionId` / delete-reimbursement call `reverseOpenPlanReduceForRefundUnlinkTx` before dropping the refund link, restoring `amortization_plan.totalAmount` + future instalments. Accrual overview reads instalment amounts with no SQL netting — unlink without reverse left competenza “still reimbursed”. Also heal orphaned drift (open plan, no live reimbursement, totalAmount ≠ original tx) on overview + amortizations page load.
+
+**Why:** `reducePlanTx` dual-writes pair + re-spread; v2.8 unlink only restored expense baseline.
+
+**Rejected:**
+- Re-netting in `ledger_entry_accrual` — would double-net while a refund is linked
+- Silent reverse on closed (realize) plans — needs dedicated undo
+
 ### 2026-07-31 — Personal category create = direction only (no auto subcategory)
 
 **Decided:** Create categoria = nome + **Direzione**. Persist `category.direction_id` (migration 0034). Do **not** auto-create a subcategory. Nature only on sottocategoria; nature pickers filtered by parent direction. Sidebar type = stored direction ?? derived from first subcategory nature.

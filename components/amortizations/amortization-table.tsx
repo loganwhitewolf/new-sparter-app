@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AMORTIZATIONS_TABLE_CONFIG } from '@/lib/utils/amortizations-table-config'
 import { transactionDetailHref } from '@/lib/routes'
 import { CloseAmortizationDialog } from '@/components/transactions/close-amortization-dialog'
+import { RemoveAmortizationDialog } from '@/components/transactions/remove-amortization-dialog'
 import { AmortizationReimburseDialog } from '@/components/transactions/amortization-reimburse-dialog'
 import type { AmortizationPlanListRow } from '@/lib/dal/amortization'
 
@@ -103,9 +104,9 @@ export function sortAmortizationRows(
 }
 
 /**
- * Row-actions gate (D-A1/D-A2/D-A3): the "Chiudi" / "Chiudi con vendita/rimborso" actions are
- * visible ONLY on open plans. The vendita/rimborso CTA opens AmortizationReimburseDialog primed
- * with the 'realize' intent (sale close or partial refund), rather than navigating away.
+ * Row-actions gate (D-A1/D-A2/D-A3): Chiudi / Chiudi con vendita-rimborso / Rimuovi are visible
+ * ONLY on open plans. Lifecycle for amortized spend is owned by this registry — the transactions
+ * menu only activates ("Dilaziona") and deep-links here ("Visualizza").
  */
 export function resolveRowActions(
   row: Pick<AmortizationPlanListRow, 'status'>,
@@ -120,6 +121,7 @@ export function AmortizationTable({ plans, route }: Props) {
   const router = useRouter()
   const { activeSort, activeDir, onSort } = useToolbarSort(route)
   const [closeTarget, setCloseTarget] = useState<string | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<string | null>(null)
   // "Chiudi con vendita/rimborso" target: opens AmortizationReimburseDialog primed with 'realize'.
   // `amount` carries the plan's SIGNED initial amount (initialAmount = transaction.total_amount,
   // negative for an outflow); getEligibleCounterparts reads only its sign to surface inflow
@@ -283,6 +285,15 @@ export function AmortizationTable({ plans, route }: Props) {
                       >
                         Chiudi con vendita/rimborso
                       </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setRemoveTarget(row.id)}
+                      >
+                        Rimuovi
+                      </Button>
                     </div>
                   ) : null}
                 </TableCell>
@@ -301,6 +312,18 @@ export function AmortizationTable({ plans, route }: Props) {
         planId={closeTarget}
         onSuccess={() => {
           setCloseTarget(null)
+          router.refresh()
+        }}
+      />
+    )}
+
+    {removeTarget && (
+      <RemoveAmortizationDialog
+        open={Boolean(removeTarget)}
+        onOpenChange={(open) => { if (!open) setRemoveTarget(null) }}
+        planId={removeTarget}
+        onSuccess={() => {
+          setRemoveTarget(null)
           router.refresh()
         }}
       />
