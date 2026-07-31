@@ -56,6 +56,10 @@ function makeQueryChain() {
       mocks.leftJoinArgs.push({ table, condition })
       return chain
     }),
+    innerJoin: vi.fn((table: unknown, condition: unknown) => {
+      mocks.leftJoinArgs.push({ table, condition })
+      return chain
+    }),
     where: vi.fn((arg: unknown) => {
       mocks.whereArgs.push(arg)
       return chain
@@ -221,6 +225,7 @@ const {
   countLinkedExpensesForSubcategory,
   createUserCategory,
   createUserSubcategory,
+  countLinkedExpensesForCategory,
   deleteUserCategory,
   deleteUserSubcategory,
   getCategories,
@@ -487,13 +492,53 @@ describe('categories DAL mutations', () => {
   })
 
   it('cannot delete system categories through the user delete helper', async () => {
+    mocks.selectResults.push([{ count: 0 }])
     mocks.returningResult = []
 
     await expect(deleteUserCategory(7, 'user-1')).resolves.toBe(false)
 
-    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.id', right: 7 })
-    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.userId', right: 'user-1' })
-    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'category.isActive', right: true })
+    // whereArgs[0] = linked-expense count; whereArgs[1] = category soft-delete
+    expectContainsPredicate(mocks.whereArgs[1], { op: 'eq', left: 'category.id', right: 7 })
+    expectContainsPredicate(mocks.whereArgs[1], { op: 'eq', left: 'category.userId', right: 'user-1' })
+    expectContainsPredicate(mocks.whereArgs[1], { op: 'eq', left: 'category.isActive', right: true })
+    // Ownership miss → no subcategory cascade update
+    expect(mocks.updateArgs).toHaveLength(1)
+  })
+
+  it('blocks category deletes when any child subcategory has linked expenses', async () => {
+    mocks.selectResults.push([{ count: 2 }])
+
+    await expect(deleteUserCategory(7, 'user-1')).rejects.toMatchObject({
+      code: 'linked_expenses',
+      count: 2,
+    })
+
+    expect(mocks.updateArgs).toEqual([])
+  })
+
+  it('soft-deletes personal child subcategories when deleting a personal category', async () => {
+    mocks.selectResults.push([{ count: 0 }])
+    mocks.returningResult = [{ id: 7 }]
+
+    await expect(deleteUserCategory(7, 'user-1')).resolves.toBe(true)
+
+    expect(mocks.updateArgs).toHaveLength(2)
+    expect(mocks.updateSets[0]).toEqual({ isActive: false })
+    expect(mocks.updateSets[1]).toEqual({ isActive: false })
+    // Second update = cascade soft-delete of owned children
+    expectContainsPredicate(mocks.whereArgs[2], { op: 'eq', left: 'subCategory.categoryId', right: 7 })
+    expectContainsPredicate(mocks.whereArgs[2], { op: 'eq', left: 'subCategory.userId', right: 'user-1' })
+    expectContainsPredicate(mocks.whereArgs[2], { op: 'eq', left: 'subCategory.isActive', right: true })
+  })
+
+  it('counts linked expenses for a category across all child subcategories', async () => {
+    mocks.selectResults.push([{ count: 4 }])
+
+    await expect(countLinkedExpensesForCategory('user-1', 7)).resolves.toBe(4)
+
+    expect(mocks.fromArgs[0]).toMatchObject({ id: 'expense.id' })
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'expense.userId', right: 'user-1' })
+    expectContainsPredicate(mocks.whereArgs[0], { op: 'eq', left: 'subCategory.categoryId', right: 7 })
   })
 
   it('creates subcategories only under categories visible to the user', async () => {

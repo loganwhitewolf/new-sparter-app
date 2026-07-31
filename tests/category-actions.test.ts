@@ -255,7 +255,22 @@ describe('category Server Actions', () => {
 
     const result = await deleteSubcategoryAction({ error: null }, makeFormData({ id: '10' }))
 
-    expect(result.error).toBe('Non puoi eliminare questa sottocategoria: è collegata a 3 spese.')
+    expect(result.error).toBe(
+      'Non puoi eliminare: ci sono 3 spese collegate a questa categoria o sottocategoria.',
+    )
+    expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('blocks linked-expense category deletion with the shared Italian message', async () => {
+    mocks.deleteUserCategory.mockRejectedValueOnce(
+      new CategoryMutationError('linked_expenses', 'linked expenses', 1),
+    )
+
+    const result = await deleteCategoryAction({ error: null }, makeFormData({ id: '9' }))
+
+    expect(result.error).toBe(
+      "Non puoi eliminare: c'è 1 spesa collegata a questa categoria o sottocategoria.",
+    )
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
   })
 

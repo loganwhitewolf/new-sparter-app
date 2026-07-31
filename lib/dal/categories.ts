@@ -239,11 +239,40 @@ export async function renameUserCategory(
   return rows[0] ?? null
 }
 
+export async function countLinkedExpensesForCategory(
+  userId: string,
+  categoryId: number,
+  database: DbOrTx = db,
+): Promise<number> {
+  const rows = await database
+    .select({ count: sql<number>`count(*)::int` })
+    .from(expense)
+    .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+    .where(
+      and(
+        eq(expense.userId, userId),
+        eq(subCategory.categoryId, categoryId),
+      ),
+    )
+
+  return Number(rows[0]?.count ?? 0)
+}
+
 export async function deleteUserCategory(
   id: number,
   userId: string,
   database: DbOrTx = db,
 ): Promise<boolean> {
+  // Same guard as subcategory delete — any expense on any child blocks the category.
+  const linkedExpenses = await countLinkedExpensesForCategory(userId, id, database)
+  if (linkedExpenses > 0) {
+    throw new CategoryMutationError(
+      'linked_expenses',
+      `Category has ${linkedExpenses} linked expenses`,
+      linkedExpenses,
+    )
+  }
+
   const rows = await database
     .update(category)
     .set({ isActive: false })
@@ -256,7 +285,23 @@ export async function deleteUserCategory(
     )
     .returning({ id: category.id })
 
-  return rows.length > 0
+  if (rows.length === 0) return false
+
+  // Soft-delete personal children so they do not linger as active orphans.
+  // Category row first: if ownership check fails we never touch subcategories.
+  await database
+    .update(subCategory)
+    .set({ isActive: false })
+    .where(
+      and(
+        eq(subCategory.categoryId, id),
+        eq(subCategory.userId, userId),
+        eq(subCategory.isActive, true),
+      ),
+    )
+    .returning({ id: subCategory.id })
+
+  return true
 }
 
 export async function createUserSubcategory(

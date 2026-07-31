@@ -41,8 +41,17 @@ function mapKnownCategoryError(error: unknown): ActionState | null {
   if (error.code === 'duplicate') return { error: DUPLICATE_ERROR }
   if (error.code === 'linked_expenses') {
     const count = error.count ?? 0
-    const noun = count === 1 ? 'spesa' : 'spese'
-    return { error: `Non puoi eliminare questa sottocategoria: è collegata a ${count} ${noun}.` }
+    // Shared by category + subcategory delete — taxonomy is linked via expense.subCategoryId.
+    // Domain: Transaction categorization lives on Expense (not the bank tx row).
+    if (count === 1) {
+      return {
+        error:
+          "Non puoi eliminare: c'è 1 spesa collegata a questa categoria o sottocategoria.",
+      }
+    }
+    return {
+      error: `Non puoi eliminare: ci sono ${count} spese collegate a questa categoria o sottocategoria.`,
+    }
   }
   if (error.code === 'system_row') return { error: SYSTEM_DELETE_ERROR }
   return { error: NOT_FOUND_ERROR }
