@@ -9,17 +9,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { NATURE_LABELS, NATURE_ORDER, type FlowNature } from '@/lib/utils/nature-labels'
+import {
+  NATURE_LABELS,
+  NATURE_ORDER,
+  NATURES_BY_DIRECTION,
+  isDirectionCode,
+  type DirectionCode,
+  type FlowNature,
+} from '@/lib/utils/nature-labels'
 import { setSubcategoryNatureAction } from '@/lib/actions/categories'
+
+function natureOptionsForDirection(direction: DirectionCode | null | undefined): Array<FlowNature | null> {
+  if (isDirectionCode(direction)) {
+    return [...NATURES_BY_DIRECTION[direction], null]
+  }
+  return [...NATURE_ORDER]
+}
 
 export function SubcategoryNatureSelect({
   subCategoryId,
   effectiveNature,
+  direction,
 }: {
   subCategoryId: number
   effectiveNature: FlowNature | null
+  /** When set, only natures for this category direction are offered (+ Non classificato). */
+  direction?: DirectionCode | null
 }) {
   const [isPending, startTransition] = useTransition()
+  const options = natureOptionsForDirection(direction)
 
   function handleChange(value: string) {
     const nature: FlowNature | null = value === 'unclassified' ? null : (value as FlowNature)
@@ -41,7 +59,7 @@ export function SubcategoryNatureSelect({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {NATURE_ORDER.map((key) => {
+        {options.map((key) => {
           const value = key ?? 'unclassified'
           return (
             <SelectItem key={value} value={value} className="text-xs">

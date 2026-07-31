@@ -33,7 +33,16 @@ import {
   renameSubcategoryAction,
 } from '@/lib/actions/categories'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
-import { NATURE_LABELS, NATURE_ORDER } from '@/lib/utils/nature-labels'
+import {
+  DEFAULT_NATURE_BY_DIRECTION,
+  DIRECTION_LABELS,
+  DIRECTION_ORDER,
+  NATURE_LABELS,
+  NATURES_BY_DIRECTION,
+  isDirectionCode,
+  type DirectionCode,
+  type FlowNature,
+} from '@/lib/utils/nature-labels'
 import type { ActionState } from '@/lib/validations/category'
 
 function useDialogAction(
@@ -85,12 +94,24 @@ function ActionError({ error }: { error: string | null }) {
   )
 }
 
+function naturesForCategoryDirection(type: CategoryWithSubCategories['type']): FlowNature[] {
+  if (isDirectionCode(type)) {
+    return [...NATURES_BY_DIRECTION[type]]
+  }
+  return Object.values(NATURES_BY_DIRECTION).flat()
+}
+
+function defaultNatureForCategory(type: CategoryWithSubCategories['type']): FlowNature {
+  if (isDirectionCode(type)) return DEFAULT_NATURE_BY_DIRECTION[type]
+  return 'discretionary'
+}
+
 export function CreateCategoryDialog() {
-  const [nature, setNature] = useState<string>('discretionary')
+  const [direction, setDirection] = useState<DirectionCode>('out')
   const { open, setOpen, state, submit, isPending } = useDialogAction(
     createCategoryAction,
     'Categoria creata.',
-    () => setNature('discretionary'),
+    () => setDirection('out'),
   )
 
   return (
@@ -105,26 +126,27 @@ export function CreateCategoryDialog() {
         <DialogHeader>
           <DialogTitle>Nuova categoria personale</DialogTitle>
           <DialogDescription>
-            Crea una categoria personale e la prima sottocategoria (stesso nome). La natura
-            decide se compare sotto Entrate, Uscite, Accantonamenti o Trasferimenti.
+            Scegli la direzione (Entrate, Uscite, Accantonamenti o Trasferimenti). Viene creata
+            anche una prima sottocategoria con lo stesso nome; la natura la imposti dopo sulle
+            sottocategorie.
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="flex flex-col gap-4">
-          <input type="hidden" name="nature" value={nature} />
+          <input type="hidden" name="direction" value={direction} />
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" htmlFor="category-name-new">Nome categoria</label>
             <Input id="category-name-new" name="name" required placeholder="es. Casa vacanze" />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" htmlFor="category-nature-new">Natura</label>
-            <Select value={nature} onValueChange={setNature}>
-              <SelectTrigger id="category-nature-new" className="w-full" aria-label="Natura categoria">
+            <label className="text-sm font-medium" htmlFor="category-direction-new">Direzione</label>
+            <Select value={direction} onValueChange={(v) => setDirection(v as DirectionCode)}>
+              <SelectTrigger id="category-direction-new" className="w-full" aria-label="Direzione categoria">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {NATURE_ORDER.filter(Boolean).map((key) => (
-                  <SelectItem key={key!} value={key!}>
-                    {NATURE_LABELS[key!]}
+                {DIRECTION_ORDER.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {DIRECTION_LABELS[key]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -142,11 +164,12 @@ export function CreateCategoryDialog() {
 }
 
 export function CreateSubcategoryDialog({ category }: { category: CategoryWithSubCategories }) {
-  const [nature, setNature] = useState<string>('discretionary')
+  const natureOptions = naturesForCategoryDirection(category.type)
+  const [nature, setNature] = useState<string>(() => defaultNatureForCategory(category.type))
   const { open, setOpen, state, submit, isPending } = useDialogAction(
     createSubcategoryAction,
     'Sottocategoria creata.',
-    () => setNature('discretionary'),
+    () => setNature(defaultNatureForCategory(category.type)),
   )
 
   return (
@@ -161,7 +184,8 @@ export function CreateSubcategoryDialog({ category }: { category: CategoryWithSu
         <DialogHeader>
           <DialogTitle>Nuova sottocategoria</DialogTitle>
           <DialogDescription>
-            Aggiungi una sottocategoria personale sotto "{category.name}".
+            Aggiungi una sottocategoria personale sotto "{category.name}". Qui scegli la natura
+            (es. Essenziale, Entrate ricorrenti).
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="flex flex-col gap-4">
@@ -178,9 +202,9 @@ export function CreateSubcategoryDialog({ category }: { category: CategoryWithSu
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {NATURE_ORDER.filter(Boolean).map((key) => (
-                  <SelectItem key={key!} value={key!}>
-                    {NATURE_LABELS[key!]}
+                {natureOptions.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {NATURE_LABELS[key]}
                   </SelectItem>
                 ))}
               </SelectContent>

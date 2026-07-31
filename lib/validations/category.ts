@@ -46,10 +46,13 @@ export const NatureSchema = z.enum([
   'investment',
 ])
 
+export const DirectionSchema = z.enum(['in', 'out', 'allocation', 'transfer'])
+
 export const CreateCategorySchema = z.object({
   name: NameSchema,
-  // Direction is not stored on category — first subcategory nature implies sidebar grouping.
-  nature: NatureSchema,
+  // User picks direction; action maps to a default nature on the initial subcategory
+  // (category table has no direction column — see DEFAULT_NATURE_BY_DIRECTION).
+  direction: DirectionSchema,
 }).transform((input) => ({
   ...input,
   slug: deriveCategorySlug(input.name),

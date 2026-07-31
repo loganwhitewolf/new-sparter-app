@@ -84,10 +84,10 @@ describe('category Server Actions', () => {
     mocks.upsertSystemSubcategoryOverride.mockResolvedValue({ id: 20 })
   })
 
-  it('creates a user-owned category plus initial subcategory from nature', async () => {
+  it('creates a user-owned category plus initial subcategory from direction default nature', async () => {
     const result = await createCategoryAction(
       { error: null },
-      makeFormData({ name: '  Entrate  Extra ', nature: 'income', userId: 'attacker' }),
+      makeFormData({ name: '  Entrate  Extra ', direction: 'in', userId: 'attacker' }),
     )
 
     expect(result).toEqual({ error: null })
@@ -96,7 +96,7 @@ describe('category Server Actions', () => {
       name: 'Entrate Extra',
       slug: 'entrate-extra',
     })
-    // income → natureId 1; first subcategory reuses category name/slug
+    // direction in → DEFAULT_NATURE_BY_DIRECTION.income → natureId 1
     expect(mocks.createUserSubcategory).toHaveBeenCalledWith({
       userId: 'user-1',
       categoryId: 1,
@@ -107,7 +107,7 @@ describe('category Server Actions', () => {
     expectExactCategoryRevalidationRoutes()
   })
 
-  it('rejects category create without nature (direction comes from initial subcategory)', async () => {
+  it('rejects category create without direction', async () => {
     const result = await createCategoryAction(
       { error: null },
       makeFormData({ name: 'Casa vacanze' }),
@@ -207,7 +207,7 @@ describe('category Server Actions', () => {
     mocks.verifySession.mockRejectedValueOnce(new Error('NEXT_REDIRECT'))
 
     await expect(
-      createCategoryAction({ error: null }, makeFormData({ name: 'Casa', nature: 'discretionary' })),
+      createCategoryAction({ error: null }, makeFormData({ name: 'Casa', direction: 'out' })),
     ).rejects.toThrow('NEXT_REDIRECT')
     expect(mocks.createUserCategory).not.toHaveBeenCalled()
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
@@ -215,7 +215,7 @@ describe('category Server Actions', () => {
 
   it('returns validation errors without writing for malformed names and ids', async () => {
     await expect(
-      createCategoryAction({ error: null }, makeFormData({ name: '   ', nature: 'discretionary' })),
+      createCategoryAction({ error: null }, makeFormData({ name: '   ', direction: 'out' })),
     ).resolves.toEqual({ error: 'Inserisci un nome.' })
     await expect(
       renameSubcategoryAction({ error: null }, makeFormData({ id: '0', name: 'Casa' })),
@@ -232,7 +232,7 @@ describe('category Server Actions', () => {
 
     const result = await createCategoryAction(
       { error: null },
-      makeFormData({ name: 'Casa', nature: 'discretionary' }),
+      makeFormData({ name: 'Casa', direction: 'out' }),
     )
 
     expect(result.error).toBe('Esiste già una categoria o sottocategoria con questo nome.')
@@ -252,7 +252,7 @@ describe('category Server Actions', () => {
 
     const result = await createCategoryAction(
       { error: null },
-      makeFormData({ name: 'Casa vacanze', nature: 'discretionary' }),
+      makeFormData({ name: 'Casa vacanze', direction: 'out' }),
     )
 
     expect(result.error).toBe('Si è verificato un errore. Riprova tra qualche secondo.')

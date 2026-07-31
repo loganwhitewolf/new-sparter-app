@@ -31,7 +31,7 @@ async function createCategory(page: Page, seed: CategorySettingsSeed) {
   const dialog = page.getByRole('dialog', { name: 'Nuova categoria personale' })
   await expect(dialog).toBeVisible()
   await dialog.getByLabel('Nome categoria').fill(seed.createdCategoryName)
-  // Default nature is Discrezionale (out); create also seeds the initial subcategory.
+  // Default direction is Uscite (out); create also seeds the initial subcategory.
   await submitDialog(dialog, 'Crea categoria')
   await expect(categoryRow(page, seed.createdCategoryName)).toBeVisible()
   // Initial subcategory reuses the category name

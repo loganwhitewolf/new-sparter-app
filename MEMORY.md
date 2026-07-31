@@ -42,15 +42,15 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
-### 2026-07-31 — Personal category create requires nature + initial subcategory
+### 2026-07-31 — Personal category create = direction; nature only on subcategory
 
-**Decided:** Create categoria personale = nome + Natura (8 FlowNature). Action creates category then an initial subcategory with the same name/slug and resolved `natureId`. No `direction` column on `category` (Phase 49); sidebar Entrate/Uscite/… derives from first subcategory nature→direction.
+**Decided:** Create categoria = nome + **Direzione** (`in|out|allocation|transfer`). Nature is chosen only on sottocategoria. Create still seeds an initial subcategory (same name) with `DEFAULT_NATURE_BY_DIRECTION` so the sidebar can group (category has no direction column). Subcategory create/edit nature options are filtered to natures of the parent category direction.
 
-**Why:** User expected a direction picker; storing direction on category would fight mixed-nature categories and need a migration. Nature is the real write model.
+**Why:** Product mental model: category = Entrate/Uscite/…; subcategory = Essenziale/Discrezionale/…. Corrects the earlier “nature on category create” choice.
 
 **Rejected:**
-- Restore `category.direction` / preferredDirection — schema churn, conflict with multi-nature cats
-- Direction-only select (4 values) mapping to a default nature — hidden magic vs explicit Natura
+- Nature select on category create — wrong layer
+- Persisting `category.direction` column — deferred; default-nature seed is enough for grouping
 
 ### 2026-07-31 — UX contratto quick on existing branch (260731-hhv)
 

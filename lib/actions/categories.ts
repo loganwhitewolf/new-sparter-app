@@ -24,7 +24,11 @@ import {
   SetSubcategoryNatureSchema,
   type ActionState,
 } from '@/lib/validations/category'
-import { NATURE_ID_BY_CODE, type FlowNature } from '@/lib/utils/nature-labels'
+import {
+  DEFAULT_NATURE_BY_DIRECTION,
+  NATURE_ID_BY_CODE,
+  type FlowNature,
+} from '@/lib/utils/nature-labels'
 
 const GENERIC_ERROR = 'Si è verificato un errore. Riprova tra qualche secondo.'
 const NOT_FOUND_ERROR = 'Elemento non trovato o accesso negato.'
@@ -69,19 +73,17 @@ export async function createCategoryAction(
   const { userId } = await verifySession()
   const parsed = CreateCategorySchema.safeParse({
     name: formData.get('name'),
-    nature: formData.get('nature'),
+    direction: formData.get('direction'),
   })
 
   if (!parsed.success) return { error: firstValidationError(parsed.error) }
 
-  const natureId = NATURE_ID_BY_CODE[parsed.data.nature]
-  if (natureId === undefined) {
-    return { error: 'Seleziona una natura valida.' }
-  }
+  // Nature is chosen only on subcategories; category create picks direction and seeds
+  // an initial subcategory with the canonical default nature for that direction.
+  const defaultNature = DEFAULT_NATURE_BY_DIRECTION[parsed.data.direction]
+  const natureId = NATURE_ID_BY_CODE[defaultNature]
 
   try {
-    // Category has no direction column — create an initial subcategory with the chosen
-    // nature so the sidebar groups under Entrate/Uscite/Accantonamenti/Trasferimenti.
     const created = await createUserCategory({
       userId,
       name: parsed.data.name,

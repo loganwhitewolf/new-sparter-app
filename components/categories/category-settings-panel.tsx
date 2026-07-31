@@ -167,6 +167,7 @@ function SubcategoryList({
                 <SubcategoryNatureSelect
                   subCategoryId={subCategory.id}
                   effectiveNature={subCategory.effectiveNature}
+                  direction={category.type}
                 />
                 <RenameSubcategoryDialog subCategory={subCategory} />
                 {subCategory.isOwned && (
