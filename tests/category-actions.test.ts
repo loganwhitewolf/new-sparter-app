@@ -120,16 +120,27 @@ describe('category Server Actions', () => {
     )
 
     expect(result).toEqual({ error: null })
-    // Phase 46: natureId deferred to Phase 49 — not passed to DAL
-    expect(mocks.createUserSubcategory).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: 'user-1',
-        categoryId: 2,
-        name: 'Affitto',
-        slug: 'affitto',
-      })
-    )
+    // Form posts nature code; action resolves via NATURE_ID_BY_CODE (essential → 3)
+    expect(mocks.createUserSubcategory).toHaveBeenCalledWith({
+      userId: 'user-1',
+      categoryId: 2,
+      name: 'Affitto',
+      slug: 'affitto',
+      natureId: 3,
+    })
     expectExactCategoryRevalidationRoutes()
+  })
+
+  it('resolves income nature so new subcategories can sit under Entrate', async () => {
+    const result = await createSubcategoryAction(
+      { error: null },
+      makeFormData({ categoryId: '2', name: 'Stipendio extra', nature: 'income' }),
+    )
+
+    expect(result).toEqual({ error: null })
+    expect(mocks.createUserSubcategory).toHaveBeenCalledWith(
+      expect.objectContaining({ natureId: 1, slug: 'stipendio-extra' }),
+    )
   })
 
   it('renames a user-owned subcategory without creating an override', async () => {
@@ -323,15 +334,15 @@ describe('createSubcategoryAction nature requirement (R-FN-09 action layer)', ()
     }
   })
 
-  it('createSubcategoryAction succeeds without nature (Phase 46: natureId deferred to Phase 49)', async () => {
+  it('createSubcategoryAction requires nature code from the form', async () => {
     const fd = new FormData()
     fd.append('name', 'Test Sub')
     fd.append('categoryId', '1')
-    // intentionally omit nature field — Phase 46 defers nature requirement to Phase 49
+    // omit nature — UI always posts it; missing value must not silently create unclassified rows
 
     const { createSubcategoryAction } = await import('../lib/actions/categories')
     const result = await createSubcategoryAction({ error: null }, fd)
-    // Phase 46: nature is no longer required at action layer; natureId defaults to null
-    expect(result.error).toBeNull()
+    expect(result.error).not.toBeNull()
+    expect(mocks.createUserSubcategory).not.toHaveBeenCalled()
   })
 })

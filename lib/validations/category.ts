@@ -73,10 +73,8 @@ export const SetSubcategoryNatureSchema = z.object({
 export const CreateSubcategorySchema = z.object({
   categoryId: IdSchema,
   name: NameSchema,
-  natureId: z.preprocess(
-    (v) => (v === null || v === undefined || v === '' ? null : Number(v)),
-    z.number().int().positive().nullable().optional(),
-  ).default(null),
+  // Form posts nature *code* (hidden input name="nature"); action resolves to natureId.
+  nature: NatureSchema,
 }).transform((input) => ({
   ...input,
   slug: deriveCategorySlug(input.name),

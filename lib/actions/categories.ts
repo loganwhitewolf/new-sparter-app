@@ -125,13 +125,25 @@ export async function createSubcategoryAction(
   const parsed = CreateSubcategorySchema.safeParse({
     categoryId: formData.get('categoryId'),
     name: formData.get('name'),
-    natureId: formData.get('natureId'),
+    nature: formData.get('nature'),
   })
 
   if (!parsed.success) return { error: firstValidationError(parsed.error) }
 
+  // Same resolution as setSubcategoryNatureAction — form sends FlowNature code, DAL stores FK id.
+  const natureId = NATURE_ID_BY_CODE[parsed.data.nature]
+  if (natureId === undefined) {
+    return { error: 'Seleziona una natura valida.' }
+  }
+
   try {
-    await createUserSubcategory({ ...parsed.data, userId })
+    await createUserSubcategory({
+      userId,
+      categoryId: parsed.data.categoryId,
+      name: parsed.data.name,
+      slug: parsed.data.slug,
+      natureId,
+    })
   } catch (error) {
     return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
   }
