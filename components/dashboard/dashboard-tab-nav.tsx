@@ -16,13 +16,15 @@ export function buildDashboardTabHref(
   searchParams: Pick<URLSearchParams, 'get'>
 ) {
   const params = new URLSearchParams()
-  const preset = searchParams.get('preset')
+  // D-12: preset is retired from the tab nav — never read, never propagated. `year` is the
+  // shared cross-tab parameter now (CLIST-05), read first to match its semantic priority.
+  const year = searchParams.get('year')
   const type = searchParams.get('type')
   const sort = searchParams.get('sort')
   const lens = searchParams.get('lens')
 
-  if (preset) {
-    params.set('preset', preset)
+  if (year) {
+    params.set('year', year)
   }
 
   if (type) {

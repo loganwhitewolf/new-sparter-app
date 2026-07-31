@@ -38,6 +38,10 @@ type Props = {
     // Phase 82 D-13 (review fix WR-03): forwarded into the back link only, never parsed into a
     // validated Lens or resolved to a ledgerRowSource here — Categories always reads cassa (D-12).
     lens?: string | string[]
+    // Phase 83 D-12/D-13/CLIST-07: forwarded into the back link only, so a user arriving via a
+    // year-carrying row link returns to the list on the SAME year. Never consumed by this page's
+    // own preset-based DAL calls (getCategoryDetail/getCategoryDeviations, Phase 84 scope).
+    year?: string | string[]
   }>
 }
 
@@ -149,13 +153,14 @@ export default async function DashboardCategoryDetailPage({ params, searchParams
   // only `filters` (no lens/ledgerRowSource argument), so it always falls through to cassa
   // (D-12); `lens`'s LensPassthrough type makes handing it to resolveLedgerRowSource a type error.
   const lens = extractLensPassthrough(query.lens)
+  // Phase 83 D-13/CLIST-07: total, never-throwing year receipt — forwarded into the back link
+  // only. Garbage input (e.g. `?year=abc`) degrades to `undefined`, falling through to the
+  // year-mode-skipped, preset-based backHref branch below (T-83-03).
+  const rawYear = Array.isArray(query.year) ? query.year[0] : query.year
+  const requestedYear = rawYear ? Number(rawYear) : undefined
+  const year = Number.isFinite(requestedYear) ? requestedYear : undefined
 
-  const backHref = buildDashboardCategoriesHref({
-    preset: filters.preset,
-    type: filters.type,
-    defaultPreset: CATEGORY_DETAIL_DEFAULT_PRESET,
-    lens,
-  })
+  const backHref = buildDashboardCategoriesHref({ year, type: filters.type, lens })
 
   return (
     <div className="flex flex-col gap-6">

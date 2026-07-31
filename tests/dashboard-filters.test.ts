@@ -103,16 +103,16 @@ describe('parseDashboardFilters', () => {
 describe('buildDashboardTabHref', () => {
   test('preserves only dashboard filter params across tabs', () => {
     const currentParams = new URLSearchParams({
-      preset: 'last-3-months',
+      year: '2026',
       type: 'in',
       page: '2',
     })
 
     expect(buildDashboardTabHref('/dashboard/categories', currentParams)).toBe(
-      '/dashboard/categories?preset=last-3-months&type=in'
+      '/dashboard/categories?year=2026&type=in'
     )
     expect(buildDashboardTabHref('/dashboard/overview', currentParams)).toBe(
-      '/dashboard/overview?preset=last-3-months&type=in'
+      '/dashboard/overview?year=2026&type=in'
     )
   })
 
@@ -123,9 +123,16 @@ describe('buildDashboardTabHref', () => {
   })
 
   test('preserves sort across the tab nav builder', () => {
-    const current = new URLSearchParams({ preset: 'last-3-months', sort: 'amount' })
+    const current = new URLSearchParams({ year: '2026', sort: 'amount' })
     expect(buildDashboardTabHref('/dashboard/categories', current)).toBe(
-      '/dashboard/categories?preset=last-3-months&sort=amount'
+      '/dashboard/categories?year=2026&sort=amount'
+    )
+  })
+
+  test('never propagates the retired ?preset= parameter (D-12)', () => {
+    const current = new URLSearchParams({ preset: 'last-3-months', type: 'in' })
+    expect(buildDashboardTabHref('/dashboard/categories', current)).toBe(
+      '/dashboard/categories?type=in'
     )
   })
 
@@ -152,11 +159,9 @@ describe('buildDashboardTabHref', () => {
   })
 
   test('omits ?tag= (not empty-string) when absent from the current params', () => {
-    const current = new URLSearchParams({ preset: 'last-3-months' })
+    const current = new URLSearchParams({ year: '2026' })
 
-    expect(buildDashboardTabHref('/dashboard/tags', current)).toBe(
-      '/dashboard/tags?preset=last-3-months'
-    )
+    expect(buildDashboardTabHref('/dashboard/tags', current)).toBe('/dashboard/tags?year=2026')
   })
 
   test('forwards ?lens= across Overview <-> Categorie <-> Tag tab switches (Phase 80)', () => {
@@ -174,11 +179,9 @@ describe('buildDashboardTabHref', () => {
   })
 
   test('omits ?lens= (not forced) when absent from the current params', () => {
-    const current = new URLSearchParams({ preset: 'last-3-months' })
+    const current = new URLSearchParams({ year: '2026' })
 
-    expect(buildDashboardTabHref('/dashboard/tags', current)).toBe(
-      '/dashboard/tags?preset=last-3-months'
-    )
+    expect(buildDashboardTabHref('/dashboard/tags', current)).toBe('/dashboard/tags?year=2026')
   })
 })
 
