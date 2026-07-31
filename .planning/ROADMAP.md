@@ -128,7 +128,7 @@ directions including the previously-unreachable Accantonamenti.
 Plans:
 **Wave 1**
 
-- [ ] 83-01-PLAN.md — Year+direction category ranking DAL (getCategoryYearRanking), direction.hidden predicate flip, D-07 total invariant, RETIRE-05 re-run
+- [x] 83-01-PLAN.md — Year+direction category ranking DAL (getCategoryYearRanking), direction.hidden predicate flip, D-07 total invariant, RETIRE-05 re-run
 - [ ] 83-02-PLAN.md — Year/direction/sort URL contract (additive), buildDashboardTabHref year propagation, detail page year receipt
 - [ ] 83-03-PLAN.md — 4-state sparkline, categories skeleton, single-Covered-Month nudge, centrally-resolved direction copy
 
@@ -530,7 +530,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 80. dashboard-accrual-lens | v2.9 | 7/7 | Complete    | 2026-07-29 |
 | 81. inline-net-display-for-paired-transactions | v2.9 | 1/1 | Complete    | 2026-07-29 |
 | 82. number-engine-and-regression-gate | v3.0 | 0/3 | Complete    | 2026-07-30 |
-| 83. categories-list | v3.0 | 0/4 | Planned | - |
+| 83. categories-list | v3.0 | 0/4 | In Progress|  |
 | 84. category-detail-and-cleanup | v3.0 | 0/TBD | Not started | - |
 
 **Total shipped: 81 phases · 305 plans complete**

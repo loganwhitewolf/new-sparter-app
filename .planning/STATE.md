@@ -5,15 +5,15 @@ milestone_name: Categories Year View
 current_phase: 83
 current_phase_name: categories-list
 status: executing
-stopped_at: Phase 83 UI-SPEC approved
-last_updated: "2026-07-31T10:48:50.761Z"
-last_activity: 2026-07-30
-last_activity_desc: Phase 82 complete, transitioned to Phase 83
+stopped_at: Completed 83-01-PLAN.md
+last_updated: "2026-07-31T13:18:41.004Z"
+last_activity: 2026-07-31
+last_activity_desc: Phase 83 execution started
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 7
-  completed_plans: 3
+  completed_plans: 4
   percent: 25
 ---
 
@@ -24,15 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 82 — number-engine-and-regression-gate
+**Current focus:** Phase 83 — categories-list
 
 ## Current Position
 
-Phase: 83 — categories-list
-Plan: Not started
+Phase: 83 (categories-list) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
 Branch: `gsd/v3.0-categories-year-view` (synced with `origin/main` @ fe8273f9 — PR #65)
-Last activity: 2026-07-30 — Phase 82 complete, transitioned to Phase 83
+Last activity: 2026-07-31 — Phase 83 execution started
 
 Preceding activity on `main` (merged into this branch): 2026-07-30 — completed quick task
 260730-n2z (Amort UX: Visualizza ammortamento, Tutti=all, vendita/rimborso copy) and quick task
@@ -542,6 +542,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: buildDashboardTabHref drops the dead tag param, keeps lens propagation unchanged (D-13/D-14)
 - [Phase ?]: 82-03: buildYearSeries's total is structurally the reduce-sum of its own months array — never re-derived independently — proven with a rounding-exposing fixture where the naive total ('100.00') diverges from the structurally-correct one ('99.99')
 - [Phase ?]: 82-03: isPartialMonth compares only (year, month) equality against today, no day-of-month arithmetic at all — D-03's explicit no-presumption rule
+- [Phase ?]: getCategoryYearRanking is additive alongside getCategoryRanking (never a reshape) to protect v2.8/v2.9 regression baselines
+- [Phase ?]: D-09 predicate flip (direction.hidden=false) surfaces the allocation direction for the first time in the new Categories year-view code path
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -690,11 +692,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/83-categories-list/83-UI-SPEC.md
+**Resume file:** None
 
-**Stopped at:** Phase 83 UI-SPEC approved
+**Stopped at:** Completed 83-01-PLAN.md
 
-Last session: 2026-07-31T10:03:22.287Z
+Last session: 2026-07-31T13:18:40.985Z
 
 **Next:** `/gsd-discuss-phase 82` or `/gsd-plan-phase 82` to begin Phase 82 (number-engine-and-regression-gate).
 
@@ -798,3 +800,4 @@ Last session: 2026-07-31T10:03:22.287Z
 | Phase 82 P01 | 35min | 2 tasks | 4 files |
 | Phase 82 P02 | 25min | 2 tasks | 5 files |
 | Phase 82 P03 | 25min | 2 tasks | 2 files |
+| Phase 83 P01 | 48min | 2 tasks | 2 files |
