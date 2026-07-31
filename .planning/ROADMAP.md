@@ -138,7 +138,7 @@ Plans:
 
 **Wave 3** *(gap closure, blocked on Wave 2 completion)*
 
-- [ ] 83-05-PLAN.md — Gap closure: allocation direction sign-preservation end-to-end (CR-01), estimated-bar zero-height fallback (WR-02), preset-mode allocation type fix (WR-01)
+- [x] 83-05-PLAN.md — Gap closure: allocation direction sign-preservation end-to-end (CR-01), estimated-bar zero-height fallback (WR-02), preset-mode allocation type fix (WR-01)
 
 **UI hint**: yes
 
