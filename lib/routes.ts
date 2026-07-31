@@ -1,4 +1,8 @@
-import type { DashboardPreset, DashboardSort } from '@/lib/validations/dashboard'
+import type {
+  CategoryYearSort,
+  DashboardPreset,
+  DashboardSort,
+} from '@/lib/validations/dashboard'
 import type { LensPassthrough } from '@/lib/utils/search-params'
 
 export const APP_ROUTES = {
@@ -26,10 +30,15 @@ export const ONBOARDING_AFTER_PRIVATE_PLATFORM_CREATION_ROUTE =
 
 type DashboardCategoryFilters = {
   preset?: DashboardPreset
-  type?: 'in' | 'out'
-  sort?: DashboardSort
+  type?: 'in' | 'out' | 'allocation'
+  sort?: DashboardSort | CategoryYearSort
   defaultPreset?: DashboardPreset
   defaultSort?: DashboardSort
+  // D-12 (Phase 83) — additive year mode. When set, buildDashboardCategoriesHref and
+  // buildDashboardCategoryDetailHref emit a `?year=` href instead of the preset-based one below;
+  // omitted, both functions behave exactly as before. Callers in year mode are expected never to
+  // also pass `preset`.
+  year?: number
   // Phase 82, D-12+D-13 (review fix WR-03): `lens` here is a raw, UNVALIDATED passthrough
   // value threaded through Categories' own hrefs (sort toggle, row click-through, detail back
   // link) purely so the tab nav's `?lens=` survives a round trip through Categories instead of
@@ -41,7 +50,32 @@ type DashboardCategoryFilters = {
   lens?: LensPassthrough
 }
 
+/** Builds the `?year=...` query string shared by the two Categories href builders (D-12). */
+function buildYearModeSearch(filters: DashboardCategoryFilters & { year: number }): string {
+  const params = new URLSearchParams()
+  params.set('year', String(filters.year))
+
+  if (filters.type && filters.type !== 'out') {
+    params.set('type', filters.type)
+  }
+
+  if (filters.sort && filters.sort !== 'amount') {
+    params.set('sort', filters.sort)
+  }
+
+  if (filters.lens) {
+    params.set('lens', filters.lens)
+  }
+
+  return params.toString()
+}
+
 export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters = {}) {
+  if (filters.year !== undefined) {
+    const search = buildYearModeSearch({ ...filters, year: filters.year })
+    return APP_ROUTES.dashboardCategories + (search ? `?${search}` : '')
+  }
+
   const params = new URLSearchParams()
   const defaultPreset = filters.defaultPreset ?? 'this-year'
   const defaultSort: DashboardSort = filters.defaultSort ?? 'amount'
@@ -117,6 +151,11 @@ export function buildDashboardCategoryDetailHref(
   id: number | string,
   filters: DashboardCategoryFilters = {}
 ) {
+  if (filters.year !== undefined) {
+    const search = buildYearModeSearch({ ...filters, year: filters.year })
+    return dashboardCategoryDetail(id) + (search ? `?${search}` : '')
+  }
+
   const params = new URLSearchParams()
   const defaultPreset = filters.defaultPreset ?? 'this-year'
   const defaultSort: DashboardSort = filters.defaultSort ?? 'amount'
