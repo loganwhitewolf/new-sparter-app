@@ -42,7 +42,14 @@ import {
   type LedgerRowSource,
 } from '@/lib/dal/dashboard-filters'
 import { getCoveredMonthsInYear, type CoveredMonth } from '@/lib/dal/covered-months'
-import { buildYearSeries } from '@/lib/services/pace-and-projection'
+import {
+  buildCoveredMonthSeries,
+  buildYearSeries,
+  computeCurrentMonthHybrid,
+  computePaceAndProjection,
+  isPartialMonth,
+  MIN_COVERED_MONTHS_FOR_PACE,
+} from '@/lib/services/pace-and-projection'
 
 export { DASHBOARD_TOTAL_EXPENSE_STATUSES }
 
@@ -769,15 +776,28 @@ export function buildCategoryRankingData(input: {
 }
 
 /**
- * Phase 83 (CLIST-01, CLIST-04, D-07, D-09) — NEW, additive alongside buildCategoryRankingData
- * above (never a reshape of it). Zero-fills a 12-entry-per-category sparkline for `input.year`,
- * mirroring buildCategoryRankingData's emptySparkline()/accumulation pattern, except each point
- * additionally carries a `state` derived from `input.coveredMonths` — 'covered' when the month is
- * in the account-wide Covered Month set, 'uncovered' otherwise. At this stage every point starts
- * this way; Task 2 refines 'current'/'estimated' and composes pace/projection.
+ * Phase 83 (CLIST-01, CLIST-02, CLIST-04, CLIST-06, D-07, D-09, D-15) — NEW, additive alongside
+ * buildCategoryRankingData above (never a reshape of it). Zero-fills a 12-entry-per-category
+ * sparkline for `input.year`, mirroring buildCategoryRankingData's emptySparkline()/accumulation
+ * pattern, except each point additionally carries an explicit `state` — 'covered'/'current'/
+ * 'estimated'/'uncovered' — computed ONCE (shared across every category, not recomputed per
+ * category) from `input.coveredMonths` and today's calendar month:
+ *   - the calendar-current month is always 'current' (never 'covered'), regardless of coverage;
+ *   - a month strictly after the current month within the selected year is 'estimated' — its
+ *     `amount` stays '0.00' forever, since no transaction can exist yet for a month that has not
+ *     happened (a fabricated pace-derived value would violate D-07 by leaking into the summed
+ *     total);
+ *   - every other month is 'covered' when in the account-wide Covered Month set, 'uncovered'
+ *     otherwise.
  *
- * `amount` is set to `buildYearSeries(...).total` — the D-07 structural invariant: the category's
- * total is the reduce-sum of its own displayed sparkline, never independently computed.
+ * For the current month only, when the year has >= MIN_COVERED_MONTHS_FOR_PACE pace-eligible
+ * (non-Partial) Covered Months, that ONE point's displayed amount is replaced by
+ * computeCurrentMonthHybrid(rawAmount, categoryPace) — never below the already-observed raw
+ * amount (D-06 "current month = max(spent so far, pace)"). `amount` is then set to
+ * `buildYearSeries(...).total` computed AFTER that substitution, so D-07 holds against the
+ * DISPLAYED series, never the pre-hybrid one. `projection`/`pace` are both `null` whenever the
+ * category's own pace-eligible series is insufficient (D-15) — computePaceAndProjection's
+ * 'insufficient' branch is consumed directly, never coerced to a number or a zero.
  */
 export function buildCategoryYearRankingData(input: {
   year: number
@@ -791,6 +811,29 @@ export function buildCategoryYearRankingData(input: {
   const monthKeySet = new Set(monthKeys)
   const coveredSet = new Set(input.coveredMonths.map((m) => m.yearMonth))
 
+  const today = new Date()
+  // Shared, once-computed classification map — identical across every category row for this year
+  // (never recomputed per category).
+  const monthStateByKey = new Map<string, CategoryYearSparklinePoint['state']>()
+  for (const month of monthKeys) {
+    if (isPartialMonth(month, today)) {
+      monthStateByKey.set(month, 'current')
+      continue
+    }
+    const [monthYear, monthNumber] = month.split('-').map(Number) as [number, number]
+    const isFutureMonth =
+      monthYear > today.getFullYear() ||
+      (monthYear === today.getFullYear() && monthNumber > today.getMonth() + 1)
+    monthStateByKey.set(
+      month,
+      isFutureMonth ? 'estimated' : coveredSet.has(month) ? 'covered' : 'uncovered'
+    )
+  }
+
+  // Account-wide pace eligibility, computed once — a Partial (current) Covered Month never
+  // counts toward MIN_COVERED_MONTHS_FOR_PACE.
+  const paceEligibleMonths = input.coveredMonths.filter((m) => !isPartialMonth(m.yearMonth, today))
+
   const emptySparkline = () =>
     new Map<string, CategoryYearSparklinePoint>(
       monthKeys.map((month) => [
@@ -799,7 +842,7 @@ export function buildCategoryYearRankingData(input: {
           month,
           label: monthLabel(month),
           amount: ZERO_AMOUNT,
-          state: coveredSet.has(month) ? ('covered' as const) : ('uncovered' as const),
+          state: monthStateByKey.get(month) ?? 'uncovered',
         },
       ])
     )
@@ -851,10 +894,29 @@ export function buildCategoryYearRankingData(input: {
   }
 
   for (const item of categoriesById.values()) {
-    // D-07: the total is the reduce-sum of the exact 12 displayed points, never re-derived.
+    // Pace/projection composed from THIS category's raw (pre-hybrid) series, restricted to the
+    // account-wide Covered Months and excluding the Partial current month (D-15).
+    const categoryPaceSeries = buildCoveredMonthSeries(
+      input.coveredMonths,
+      item.sparkline.map((point) => ({ yearMonth: point.month, amount: point.amount }))
+    ).filter((month) => !isPartialMonth(month.yearMonth, today))
+    const paceResult = computePaceAndProjection(categoryPaceSeries)
+
+    if (paceEligibleMonths.length >= MIN_COVERED_MONTHS_FOR_PACE && paceResult.status === 'complete') {
+      const currentPoint = item.sparkline.find((point) => point.state === 'current')
+      if (currentPoint) {
+        currentPoint.amount = computeCurrentMonthHybrid(currentPoint.amount, paceResult.pace)
+      }
+    }
+
+    // D-07: the total is the reduce-sum of the DISPLAYED series (post current-month-hybrid
+    // substitution), never re-derived independently.
     item.amount = buildYearSeries(
       item.sparkline.map((point) => ({ yearMonth: point.month, amount: point.amount }))
     ).total
+
+    item.projection = paceResult.status === 'complete' ? paceResult.projection : null
+    item.pace = paceResult.status === 'complete' ? paceResult.pace : null
   }
 
   return computeBreakdownPercentages(Array.from(categoriesById.values()))

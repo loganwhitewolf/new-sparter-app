@@ -277,3 +277,180 @@ describeIfReachable(
     })
   },
 )
+
+describeIfReachable(
+  'Month-state classification and projection composition (CLIST-01, CLIST-02, CLIST-06, D-15)',
+  () => {
+    it('computes projection/pace from >= 2 pace-eligible Covered Months in a past year, with every month covered/uncovered (never current/estimated)', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+
+      await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-400.00',
+        occurredAt: new Date(2024, 0, 15),
+        title: 'Month 1',
+      })
+      await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-420.00',
+        occurredAt: new Date(2024, 1, 15),
+        title: 'Month 2',
+      })
+      await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-410.00',
+        occurredAt: new Date(2024, 2, 15),
+        title: 'Month 3',
+      })
+
+      vi.doMock('@/lib/db', () => ({ db }))
+      vi.resetModules()
+      const dashboardModule = await import('@/lib/dal/dashboard')
+
+      const result = await dashboardModule.getCategoryYearRanking(2024, 'out')
+      expect(result).toHaveLength(1)
+      const item = result[0]!
+
+      expect(toDecimal(item.pace ?? '0').equals(toDecimal('410.00'))).toBe(true)
+      expect(toDecimal(item.projection ?? '0').equals(toDecimal('4920.00'))).toBe(true)
+      expect(toDecimal(item.amount).equals(toDecimal('1230.00'))).toBe(true)
+
+      for (const point of item.sparkline) {
+        expect(['covered', 'uncovered']).toContain(point.state)
+      }
+    })
+
+    it('leaves projection/pace both null with exactly 1 Covered Month (D-15)', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+
+      await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-150.00',
+        occurredAt: new Date(2024, 0, 10),
+        title: 'Only Covered Month',
+      })
+
+      vi.doMock('@/lib/db', () => ({ db }))
+      vi.resetModules()
+      const dashboardModule = await import('@/lib/dal/dashboard')
+
+      const result = await dashboardModule.getCategoryYearRanking(2024, 'out')
+      expect(result).toHaveLength(1)
+      expect(result[0]!.projection).toBeNull()
+      expect(result[0]!.pace).toBeNull()
+    })
+
+    it('returns [] with zero Covered Months, never throwing', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      await seedMinimalTaxonomy(db, userId)
+      // Deliberately no transactions seeded — a category with no transactions never appears in
+      // the ranking at all, so this is the same observable outcome as the empty-year case.
+
+      vi.doMock('@/lib/db', () => ({ db }))
+      vi.resetModules()
+      const dashboardModule = await import('@/lib/dal/dashboard')
+
+      const result = await dashboardModule.getCategoryYearRanking(2024, 'out')
+      expect(result).toEqual([])
+    })
+
+    it('classifies the current calendar month as current (hybrid amount) and future months as estimated (D-06, D-07)', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+
+      const today = new Date()
+      const currentYear = today.getFullYear()
+      const currentMonthIndex = today.getMonth()
+
+      // Requires the current month to be April or later, so 3 whole past months exist within
+      // the same calendar year (this environment's fixed date is 2026-07-31 — current month
+      // July, index 6).
+      expect(currentMonthIndex).toBeGreaterThanOrEqual(3)
+
+      const pastMonthIndexes = [currentMonthIndex - 3, currentMonthIndex - 2, currentMonthIndex - 1]
+      for (const monthIndex of pastMonthIndexes) {
+        await seedExpenseWithTransaction(db, {
+          userId,
+          subCategoryId: taxonomy.essentialSubCategoryId,
+          amount: '-300.00',
+          occurredAt: new Date(currentYear, monthIndex, 10),
+          title: `Past month ${monthIndex}`,
+        })
+      }
+      // Current month: spent so far is well below the pace, so the hybrid must show the pace.
+      // Noon (not midnight) avoids a local-timezone-vs-UTC month-boundary shift for day 1 (a
+      // CEST midnight on the 1st stores as 22:00 UTC the previous day, landing in the prior
+      // month's aggregation — noon stays safely within the same UTC calendar day everywhere).
+      await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-50.00',
+        occurredAt: new Date(currentYear, currentMonthIndex, 1, 12, 0, 0),
+        title: 'Current month spend so far',
+      })
+
+      vi.doMock('@/lib/db', () => ({ db }))
+      vi.resetModules()
+      const dashboardModule = await import('@/lib/dal/dashboard')
+
+      const result = await dashboardModule.getCategoryYearRanking(currentYear, 'out')
+      expect(result).toHaveLength(1)
+      const item = result[0]!
+
+      // 3 pace-eligible Covered Months at -300.00 each -> pace 300.00, projection 3600.00.
+      expect(toDecimal(item.pace ?? '0').equals(toDecimal('300.00'))).toBe(true)
+      expect(toDecimal(item.projection ?? '0').equals(toDecimal('3600.00'))).toBe(true)
+
+      const monthKey = (monthIndex: number) =>
+        `${currentYear}-${String(monthIndex + 1).padStart(2, '0')}`
+
+      const currentPoint = item.sparkline.find((point) => point.month === monthKey(currentMonthIndex))!
+      expect(currentPoint.state).toBe('current')
+      // Hybrid: max(50.00 spent so far, 300.00 pace) = 300.00 — never below the observed fact,
+      // never a per-day pro-rate (D-06).
+      expect(toDecimal(currentPoint.amount).equals(toDecimal('300.00'))).toBe(true)
+
+      for (const monthIndex of pastMonthIndexes) {
+        const point = item.sparkline.find((p) => p.month === monthKey(monthIndex))!
+        expect(point.state).toBe('covered')
+        expect(toDecimal(point.amount).equals(toDecimal('300.00'))).toBe(true)
+      }
+
+      for (let monthIndex = currentMonthIndex + 1; monthIndex <= 11; monthIndex++) {
+        const point = item.sparkline.find((p) => p.month === monthKey(monthIndex))!
+        expect(point.state).toBe('estimated')
+        // D-07: an estimated (future) month never carries a fabricated pace-derived amount — it
+        // stays '0.00'.
+        expect(point.amount).toBe('0.00')
+      }
+
+      // D-07: the displayed total is the exact reduce-sum of the DISPLAYED (post-hybrid) series.
+      const reSummed = item.sparkline
+        .reduce((sum, point) => sum.plus(toDecimal(point.amount)), toDecimal('0'))
+        .toFixed(2)
+      expect(reSummed).toBe(item.amount)
+    })
+  },
+)
