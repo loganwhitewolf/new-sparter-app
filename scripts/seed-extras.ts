@@ -13,10 +13,14 @@ import {
   categorizationPattern,
   category,
   expense,
+  expenseClassificationHistory,
+  expenseGroup,
   importFormatVersion,
   nature,
   platform,
+  reimbursementRefundSnapshot,
   subCategory,
+  userSubcategoryOverride,
 } from '../lib/db/schema'
 import {
   DISSOLVED_CATEGORY_SLUGS,
@@ -1301,8 +1305,220 @@ async function insertPacchettoVacanze(database: Db): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Registry — append new taxonomy migration steps here (not regex patterns — see seed-patterns.ts)
+// Step: split-carburante-e-ricarica (quick 260731-hhv / D-04)
+// Split merged transport subcategory into Carburante + Ricarica auto elettrica.
+// Do NOT restore historical slug elettricita-per-auto. Ambiguity → carburante;
+// EV merchant/description keywords → ricarica-auto-elettrica. Idempotent.
 // ---------------------------------------------------------------------------
+
+/**
+ * Case-insensitive Postgres regex (~*) for EV charging merchants/tokens.
+ * Ambiguous rows stay on carburante (majority historical bucket).
+ */
+const EV_CHARGE_REGEX =
+  '(ricarica\\s*elettr|ricarica\\s*auto|enel\\s*x|enelx|tesla|supercharger|ev\\s*-?\\s*charge|evcharge|ionity|be\\s*charge|becharge|eway|duferco|nextev|plugsurfing|nextcharge|wallbox|colonnina|\\bcharging\\b)'
+
+async function ensureSystemSubcategory(
+  database: Db,
+  opts: { slug: string; name: string; categoryId: number; natureCode: string },
+): Promise<number> {
+  const existing = await database
+    .select({ id: subCategory.id, isActive: subCategory.isActive })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, opts.slug), isNull(subCategory.userId)))
+    .limit(1)
+
+  if (existing.length > 0) {
+    const row = existing[0]!
+    if (!row.isActive) {
+      await database
+        .update(subCategory)
+        .set({ isActive: true, name: opts.name })
+        .where(eq(subCategory.id, row.id))
+      console.log(`    ensure ${opts.slug}: reactivated id=${row.id}`)
+    } else {
+      console.log(`    ensure ${opts.slug}: already active id=${row.id}`)
+    }
+    return row.id
+  }
+
+  const inserted = await database
+    .insert(subCategory)
+    .values({
+      categoryId: opts.categoryId,
+      name: opts.name,
+      slug: opts.slug,
+      natureId: sql`(SELECT id FROM ${nature} WHERE ${nature.code} = ${opts.natureCode})`,
+      displayOrder: 0,
+      isActive: true,
+    })
+    .returning({ id: subCategory.id })
+
+  const id = inserted[0]!.id
+  console.log(`    ensure ${opts.slug}: inserted id=${id}`)
+  return id
+}
+
+async function splitCarburanteERicarica(database: Db): Promise<void> {
+  const fuelId = await ensureSystemSubcategory(database, {
+    slug: 'carburante',
+    name: 'carburante',
+    categoryId: 7,
+    natureCode: 'essential',
+  })
+  const evId = await ensureSystemSubcategory(database, {
+    slug: 'ricarica-auto-elettrica',
+    name: 'ricarica auto elettrica',
+    categoryId: 7,
+    natureCode: 'essential',
+  })
+
+  const oldRows = await database
+    .select({ id: subCategory.id, isActive: subCategory.isActive })
+    .from(subCategory)
+    .where(and(eq(subCategory.slug, 'carburante-e-ricarica'), isNull(subCategory.userId)))
+    .limit(1)
+
+  if (oldRows.length === 0) {
+    console.log('    split-carburante-e-ricarica: old slug absent — taxonomy already split, skip migrate')
+    return
+  }
+
+  const oldId = oldRows[0]!.id
+
+  // Expenses: EV keywords (title or linked transaction description) → ricarica; else → carburante.
+  const evExpenseResult = await database.execute(sql`
+    UPDATE expense e
+    SET sub_category_id = ${evId}
+    WHERE e.sub_category_id = ${oldId}
+      AND (
+        e.title ~* ${EV_CHARGE_REGEX}
+        OR EXISTS (
+          SELECT 1 FROM "transaction" t
+          WHERE t.expense_id = e.id
+            AND t.description ~* ${EV_CHARGE_REGEX}
+        )
+      )
+  `)
+  const evExpenseCount = (evExpenseResult as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(`    migrate expenses → ricarica-auto-elettrica (EV keywords): ${evExpenseCount} rows`)
+
+  const fuelExpenseResult = await database
+    .update(expense)
+    .set({ subCategoryId: fuelId })
+    .where(eq(expense.subCategoryId, oldId))
+  const fuelExpenseCount = (fuelExpenseResult as unknown as { rowCount?: number }).rowCount ?? 0
+  console.log(`    migrate expenses → carburante (default): ${fuelExpenseCount} rows`)
+
+  const evGroupResult = await database
+    .update(expenseGroup)
+    .set({ subCategoryId: evId })
+    .where(
+      and(eq(expenseGroup.subCategoryId, oldId), sql`${expenseGroup.title} ~* ${EV_CHARGE_REGEX}`),
+    )
+  console.log(
+    `    migrate expense_groups → ricarica-auto-elettrica: ${(evGroupResult as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+  const fuelGroupResult = await database
+    .update(expenseGroup)
+    .set({ subCategoryId: fuelId })
+    .where(eq(expenseGroup.subCategoryId, oldId))
+  console.log(
+    `    migrate expense_groups → carburante (default): ${(fuelGroupResult as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+
+  const evPatResult = await database
+    .update(categorizationPattern)
+    .set({ subCategoryId: evId })
+    .where(
+      and(
+        eq(categorizationPattern.subCategoryId, oldId),
+        sql`${categorizationPattern.pattern} ~* ${EV_CHARGE_REGEX}`,
+      ),
+    )
+  console.log(
+    `    migrate patterns → ricarica-auto-elettrica: ${(evPatResult as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+
+  const patConflictDelete = await database
+    .delete(categorizationPattern)
+    .where(
+      and(
+        eq(categorizationPattern.subCategoryId, oldId),
+        sql`${categorizationPattern.pattern} IN (SELECT pattern FROM categorization_pattern WHERE sub_category_id = ${fuelId})`,
+      ),
+    )
+  console.log(
+    `    delete conflicting patterns before fuel remap: ${(patConflictDelete as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+
+  const fuelPatResult = await database
+    .update(categorizationPattern)
+    .set({ subCategoryId: fuelId })
+    .where(eq(categorizationPattern.subCategoryId, oldId))
+  console.log(
+    `    migrate patterns → carburante (default): ${(fuelPatResult as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+
+  const histFrom = await database
+    .update(expenseClassificationHistory)
+    .set({ fromSubCategoryId: fuelId })
+    .where(eq(expenseClassificationHistory.fromSubCategoryId, oldId))
+  console.log(
+    `    migrate history.from → carburante: ${(histFrom as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+  const histTo = await database
+    .update(expenseClassificationHistory)
+    .set({ toSubCategoryId: fuelId })
+    .where(eq(expenseClassificationHistory.toSubCategoryId, oldId))
+  console.log(
+    `    migrate history.to → carburante: ${(histTo as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+
+  const snapResult = await database
+    .update(reimbursementRefundSnapshot)
+    .set({ expenseSubCategoryId: fuelId })
+    .where(eq(reimbursementRefundSnapshot.expenseSubCategoryId, oldId))
+  console.log(
+    `    migrate refund snapshots → carburante: ${(snapResult as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+
+  const overrideConflict = await database.execute(sql`
+    DELETE FROM user_subcategory_override o_old
+    USING user_subcategory_override o_fuel
+    WHERE o_old.sub_category_id = ${oldId}
+      AND o_fuel.sub_category_id = ${fuelId}
+      AND o_old.user_id = o_fuel.user_id
+  `)
+  console.log(
+    `    delete conflicting user overrides: ${(overrideConflict as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+  const overrideResult = await database
+    .update(userSubcategoryOverride)
+    .set({ subCategoryId: fuelId })
+    .where(eq(userSubcategoryOverride.subCategoryId, oldId))
+  console.log(
+    `    migrate user overrides → carburante: ${(overrideResult as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+
+  const deactivate = await database
+    .update(subCategory)
+    .set({ isActive: false })
+    .where(and(eq(subCategory.slug, 'carburante-e-ricarica'), isNull(subCategory.userId)))
+  console.log(
+    `    deactivate carburante-e-ricarica: ${(deactivate as unknown as { rowCount?: number }).rowCount ?? 0} rows`,
+  )
+  console.log(
+    JSON.stringify({
+      event: 'split_carburante_e_ricarica_counts',
+      expensesToEv: evExpenseCount,
+      expensesToFuel: fuelExpenseCount,
+      fuelId,
+      evId,
+      oldId,
+    }),
+  )
+}
 
 // Quick 260731-hhv / bug 3.7: seed inserts categories with explicit ids but historically
 // skipped setval on category_id_seq. Repair existing DBs so user-owned creates do not
@@ -1340,6 +1556,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'merge-duplicate-fineco-platforms', run: mergeDuplicateFinecoPlatforms },
   { name: 'ensure-fineco-moneymap-global-format', run: ensureFinecoMoneymapGlobalFormat },
   { name: 'insert-pacchetto-vacanze', run: insertPacchettoVacanze },
+  { name: 'split-carburante-e-ricarica', run: splitCarburanteERicarica },
   { name: 'sync-category-serial-sequences', run: syncCategorySerialSequences },
 ]
 
