@@ -1333,6 +1333,14 @@ export const getCategoryYearRanking = cache(
     const from = new Date(year, 0, 1)
     const to = new Date(year, 11, 31, 23, 59, 59, 999)
     const monthSql = sql<string>`to_char(${ledgerRowSource.occurredAt}, 'YYYY-MM')`
+    // CR-01 gap-closure (83-05): the allocation direction admits a net-divestment month
+    // (negative monthly sum) — abs() would destroy that sign before it ever reaches the
+    // sparkline's negative-domain marker (D-09, UI-SPEC E2). 'in'/'out' keep the pre-existing
+    // abs(sum(...)) untouched — those directions' sums are already uniformly signed.
+    const amountSql =
+      directionCode === 'allocation'
+        ? sql<string>`coalesce(sum(${ledgerRowSource.amount}), 0)::text`
+        : sql<string>`coalesce(abs(sum(${ledgerRowSource.amount})), 0)::text`
 
     let rows: CategoryYearRankingAggregateRow[] = []
 
@@ -1344,7 +1352,7 @@ export const getCategoryYearRanking = cache(
           categorySlug: category.slug,
           month: monthSql,
           count: countDistinct(expense.id),
-          amount: sql<string>`coalesce(abs(sum(${ledgerRowSource.amount})), 0)::text`,
+          amount: amountSql,
         })
         .from(ledgerRowSource)
         .innerJoin(expense, eq(ledgerRowSource.expenseId, expense.id))

@@ -187,6 +187,73 @@ describeIfReachable(
       expect(result[0]!.type).toBe('allocation')
     })
 
+    it('preserves the signed monthly sum for the allocation direction — a net-divestment month stays negative, an exact-zero month never triggers the marker (CR-01)', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      await seedMinimalTaxonomy(db, userId)
+      const allocationTaxonomy = await seedAllocationTaxonomy(db, userId)
+
+      // January: net deposit +200.00.
+      await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: allocationTaxonomy.subCategoryId,
+        amount: '200.00',
+        occurredAt: new Date(2024, 0, 15),
+        title: 'January deposit',
+      })
+      // May: net divestment -450.00 — must NOT be abs()'d away.
+      await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: allocationTaxonomy.subCategoryId,
+        amount: '-450.00',
+        occurredAt: new Date(2024, 4, 10),
+        title: 'May divestment',
+      })
+      // June: two transactions netting to exactly zero.
+      await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: allocationTaxonomy.subCategoryId,
+        amount: '300.00',
+        occurredAt: new Date(2024, 5, 5),
+        title: 'June deposit',
+      })
+      await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: allocationTaxonomy.subCategoryId,
+        amount: '-300.00',
+        occurredAt: new Date(2024, 5, 20),
+        title: 'June divestment',
+      })
+
+      vi.doMock('@/lib/db', () => ({ db }))
+      vi.resetModules()
+      const dashboardModule = await import('@/lib/dal/dashboard')
+
+      const result = await dashboardModule.getCategoryYearRanking(2024, 'allocation')
+
+      expect(result).toHaveLength(1)
+      const item = result[0]!
+
+      const jan = item.sparkline.find((point) => point.month === '2024-01')!
+      const may = item.sparkline.find((point) => point.month === '2024-05')!
+      const jun = item.sparkline.find((point) => point.month === '2024-06')!
+
+      expect(toDecimal(jan.amount).equals(toDecimal('200.00'))).toBe(true)
+      expect(toDecimal(may.amount).equals(toDecimal('-450.00'))).toBe(true)
+      expect(jun.amount).toBe('0.00')
+
+      // D-07 holds against a NEGATIVE total too: the Totale is the exact Decimal.js sum of the
+      // signed 12-point series, never independently re-derived or re-abs'd.
+      expect(toDecimal(item.amount).equals(toDecimal('-250.00'))).toBe(true)
+      const reSummed = item.sparkline
+        .reduce((sum, point) => sum.plus(toDecimal(point.amount)), toDecimal('0'))
+        .toFixed(2)
+      expect(reSummed).toBe(item.amount)
+    })
+
     it('returns [] on a year with zero out transactions, never throwing', async () => {
       const db = requireHarnessDb()
       await resetReimbursementFixtures(db)
