@@ -134,7 +134,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 83-04-PLAN.md — Categories list page + row assembly (direction filter, sort toggle, five-field row, sort-by-projection, single-Covered-Month state), full phase regression
+- [x] 83-04-PLAN.md — Categories list page + row assembly (direction filter, sort toggle, five-field row, sort-by-projection, single-Covered-Month state), full phase regression
 
 **UI hint**: yes
 

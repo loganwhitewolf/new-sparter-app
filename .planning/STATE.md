@@ -4,17 +4,17 @@ milestone: v3.0
 milestone_name: Categories Year View
 current_phase: 83
 current_phase_name: categories-list
-status: executing
-stopped_at: Completed 83-03-PLAN.md
-last_updated: "2026-07-31T13:35:34.948Z"
+status: verifying
+stopped_at: Completed 83-04-PLAN.md
+last_updated: "2026-07-31T13:52:37.103Z"
 last_activity: 2026-07-31
 last_activity_desc: Phase 83 execution started
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 6
-  percent: 25
+  completed_plans: 7
+  percent: 50
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 Phase: 83 (categories-list) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Branch: `gsd/v3.0-categories-year-view` (synced with `origin/main` @ fe8273f9 — PR #65)
 Last activity: 2026-07-31 — Phase 83 execution started
 
@@ -546,6 +546,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: D-09 predicate flip (direction.hidden=false) surfaces the allocation direction for the first time in the new Categories year-view code path
 - [Phase ?]: 83-02: DashboardCategoryFilters.type/.sort widened additively to carry CLIST-04 allocation direction + CLIST-03 projection sort at the type level
 - [Phase ?]: resolveCategoryDirectionCopy has no default/fallback switch case — a future 4th direction cannot ship with partial copy
+- [Phase ?]: Phase 83 Plan 04: DirectionFilter/SortToggle/NoYearsEmptyState extracted into components/dashboard/category-list-controls.tsx — Next.js App Router route-typing rejects any named export from page.tsx beyond its allowed route exports
+- [Phase ?]: Phase 83 Plan 04: Categories list mobile layout simplified — sparkline/projection columns hidden below sm: breakpoint via Tailwind rather than duplicated into a separate mobile-only block (Claude's Discretion, 83-CONTEXT.md)
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -696,9 +698,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 83-03-PLAN.md
+**Stopped at:** Completed 83-04-PLAN.md
 
-Last session: 2026-07-31T13:35:34.933Z
+Last session: 2026-07-31T13:52:37.089Z
 
 **Next:** `/gsd-discuss-phase 82` or `/gsd-plan-phase 82` to begin Phase 82 (number-engine-and-regression-gate).
 
@@ -805,3 +807,4 @@ Last session: 2026-07-31T13:35:34.933Z
 | Phase 83 P01 | 48min | 2 tasks | 2 files |
 | Phase 83 P02 | 7min | 2 tasks | 5 files |
 | Phase 83 P03 | 8min | 2 tasks | 7 files |
+| Phase 83 P04 | 32min | 3 tasks | 7 files |
