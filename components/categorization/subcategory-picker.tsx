@@ -473,7 +473,7 @@ const SearchInput = React.forwardRef<
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Cerca sottocategoria…"
-        className="pl-8"
+        className="pl-8 placeholder:text-secondary-readable"
       />
     </div>
   )
