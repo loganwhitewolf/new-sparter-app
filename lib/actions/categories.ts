@@ -6,9 +6,13 @@ import {
   CategoryMutationError,
   createUserCategory,
   createUserSubcategory,
+  deactivateUserCategory,
+  deactivateUserSubcategory,
   deleteUserCategory,
   deleteUserSubcategory,
   isSubCategoryVisibleToUser,
+  reactivateUserCategory,
+  reactivateUserSubcategory,
   renameUserCategory,
   renameUserSubcategory,
   upsertSubcategoryNatureOverride,
@@ -17,8 +21,12 @@ import {
 import {
   CreateCategorySchema,
   CreateSubcategorySchema,
+  DeactivateCategorySchema,
+  DeactivateSubcategorySchema,
   DeleteCategorySchema,
   DeleteSubcategorySchema,
+  ReactivateCategorySchema,
+  ReactivateSubcategorySchema,
   RenameCategorySchema,
   RenameSubcategorySchema,
   SetSubcategoryNatureSchema,
@@ -34,6 +42,10 @@ const GENERIC_ERROR = 'Si è verificato un errore. Riprova tra qualche secondo.'
 const NOT_FOUND_ERROR = 'Elemento non trovato o accesso negato.'
 const DUPLICATE_ERROR = 'Esiste già una categoria o sottocategoria con questo nome.'
 const SYSTEM_DELETE_ERROR = 'Non puoi eliminare una categoria o sottocategoria di sistema.'
+const SYSTEM_DEACTIVATE_ERROR = 'Non puoi disattivare una categoria o sottocategoria di sistema.'
+const SYSTEM_REACTIVATE_ERROR = 'Non puoi riattivare una categoria o sottocategoria di sistema.'
+const PARENT_INACTIVE_ERROR =
+  'Riattiva prima la categoria padre, poi la sottocategoria.'
 
 function firstValidationError(error: { issues: Array<{ message: string }> }) {
   return error.issues[0]?.message ?? 'Dati non validi.'
@@ -58,6 +70,7 @@ function mapKnownCategoryError(error: unknown): ActionState | null {
     }
   }
   if (error.code === 'system_row') return { error: SYSTEM_DELETE_ERROR }
+  if (error.code === 'parent_inactive') return { error: PARENT_INACTIVE_ERROR }
   return { error: NOT_FOUND_ERROR }
 }
 
@@ -113,6 +126,44 @@ export async function renameCategoryAction(
       slug: parsed.data.slug,
     })
     if (!updated) return { error: NOT_FOUND_ERROR }
+  } catch (error) {
+    return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
+  }
+
+  return successAfterRevalidation()
+}
+
+export async function deactivateCategoryAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await verifySession()
+  const parsed = DeactivateCategorySchema.safeParse({ id: formData.get('id') })
+
+  if (!parsed.success) return { error: firstValidationError(parsed.error) }
+
+  try {
+    const deactivated = await deactivateUserCategory(parsed.data.id, userId)
+    if (!deactivated) return { error: SYSTEM_DEACTIVATE_ERROR }
+  } catch (error) {
+    return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
+  }
+
+  return successAfterRevalidation()
+}
+
+export async function reactivateCategoryAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await verifySession()
+  const parsed = ReactivateCategorySchema.safeParse({ id: formData.get('id') })
+
+  if (!parsed.success) return { error: firstValidationError(parsed.error) }
+
+  try {
+    const reactivated = await reactivateUserCategory(parsed.data.id, userId)
+    if (!reactivated) return { error: SYSTEM_REACTIVATE_ERROR }
   } catch (error) {
     return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
   }
@@ -218,6 +269,44 @@ export async function renameSubcategoryAction(
     if (!updated) {
       await upsertSystemSubcategoryOverride(userId, parsed.data.id, parsed.data.name)
     }
+  } catch (error) {
+    return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
+  }
+
+  return successAfterRevalidation()
+}
+
+export async function deactivateSubcategoryAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await verifySession()
+  const parsed = DeactivateSubcategorySchema.safeParse({ id: formData.get('id') })
+
+  if (!parsed.success) return { error: firstValidationError(parsed.error) }
+
+  try {
+    const deactivated = await deactivateUserSubcategory(parsed.data.id, userId)
+    if (!deactivated) return { error: SYSTEM_DEACTIVATE_ERROR }
+  } catch (error) {
+    return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
+  }
+
+  return successAfterRevalidation()
+}
+
+export async function reactivateSubcategoryAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await verifySession()
+  const parsed = ReactivateSubcategorySchema.safeParse({ id: formData.get('id') })
+
+  if (!parsed.success) return { error: firstValidationError(parsed.error) }
+
+  try {
+    const reactivated = await reactivateUserSubcategory(parsed.data.id, userId)
+    if (!reactivated) return { error: SYSTEM_REACTIVATE_ERROR }
   } catch (error) {
     return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
   }

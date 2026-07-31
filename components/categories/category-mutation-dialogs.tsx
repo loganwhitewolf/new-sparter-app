@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useRef, useState } from 'react'
-import { AlertCircle, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
+import { AlertCircle, Ban, Loader2, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -27,8 +27,12 @@ import {
 import {
   createCategoryAction,
   createSubcategoryAction,
+  deactivateCategoryAction,
+  deactivateSubcategoryAction,
   deleteCategoryAction,
   deleteSubcategoryAction,
+  reactivateCategoryAction,
+  reactivateSubcategoryAction,
   renameCategoryAction,
   renameSubcategoryAction,
 } from '@/lib/actions/categories'
@@ -301,6 +305,74 @@ export function RenameSubcategoryDialog({ subCategory }: { subCategory: Subcateg
   )
 }
 
+export function DeactivateCategoryDialog({ category }: { category: CategoryWithSubCategories }) {
+  const { open, setOpen, state, submit, isPending } = useDialogAction(
+    deactivateCategoryAction,
+    'Categoria disattivata.',
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="ghost" size="icon-xs" aria-label={`Disattiva categoria ${category.name}`}>
+          <ClientMountIcon icon={Ban} ariaHidden className="h-3 w-3" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Disattiva categoria personale</DialogTitle>
+          <DialogDescription>
+            Resta in elenco come Disabilitata (opaca) e sparisce dai selettori. Lo storico
+            delle spese resta intatto. Consentita anche con spese collegate.
+          </DialogDescription>
+        </DialogHeader>
+        <form action={submit} className="flex flex-col gap-4">
+          <input type="hidden" name="id" value={category.id} />
+          <ActionError error={state.error} />
+          <DialogFooter>
+            <DialogClose asChild><Button type="button" variant="ghost">Annulla</Button></DialogClose>
+            <SubmitButton isPending={isPending} variant="destructive">Disattiva</SubmitButton>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function ReactivateCategoryDialog({ category }: { category: CategoryWithSubCategories }) {
+  const { open, setOpen, state, submit, isPending } = useDialogAction(
+    reactivateCategoryAction,
+    'Categoria riattivata.',
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="ghost" size="icon-xs" aria-label={`Riattiva categoria ${category.name}`}>
+          <ClientMountIcon icon={RotateCcw} ariaHidden className="h-3 w-3" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Riattiva categoria personale</DialogTitle>
+          <DialogDescription>
+            Torna disponibile nei selettori. Le sottocategorie disabilitate restano disabilitate:
+            riattivale una per una se serve.
+          </DialogDescription>
+        </DialogHeader>
+        <form action={submit} className="flex flex-col gap-4">
+          <input type="hidden" name="id" value={category.id} />
+          <ActionError error={state.error} />
+          <DialogFooter>
+            <DialogClose asChild><Button type="button" variant="ghost">Annulla</Button></DialogClose>
+            <SubmitButton isPending={isPending}>Riattiva</SubmitButton>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export function DeleteCategoryDialog({ category }: { category: CategoryWithSubCategories }) {
   const { open, setOpen, state, submit, isPending } = useDialogAction(
     deleteCategoryAction,
@@ -318,7 +390,8 @@ export function DeleteCategoryDialog({ category }: { category: CategoryWithSubCa
         <DialogHeader>
           <DialogTitle>Elimina categoria personale</DialogTitle>
           <DialogDescription>
-            La categoria verrà disattivata. Se contiene sottocategorie collegate a spese, l'operazione verrà bloccata.
+            Rimozione definitiva dal database. Bloccata se ci sono spese collegate: in quel caso
+            usa Disattiva. Dopo l'eliminazione puoi ricreare una categoria con lo stesso nome.
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="flex flex-col gap-4">
@@ -327,6 +400,73 @@ export function DeleteCategoryDialog({ category }: { category: CategoryWithSubCa
           <DialogFooter>
             <DialogClose asChild><Button type="button" variant="ghost">Annulla</Button></DialogClose>
             <SubmitButton isPending={isPending} variant="destructive">Elimina</SubmitButton>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function DeactivateSubcategoryDialog({ subCategory }: { subCategory: Subcategory }) {
+  const { open, setOpen, state, submit, isPending } = useDialogAction(
+    deactivateSubcategoryAction,
+    'Sottocategoria disattivata.',
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="ghost" size="icon-xs" aria-label={`Disattiva sottocategoria ${subCategory.name}`}>
+          <ClientMountIcon icon={Ban} ariaHidden className="h-3 w-3" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Disattiva sottocategoria personale</DialogTitle>
+          <DialogDescription>
+            Resta in elenco come Disabilitata (opaca) e sparisce dai selettori. Resta collegata alle
+            spese già categorizzate. Consentita anche con spese collegate.
+          </DialogDescription>
+        </DialogHeader>
+        <form action={submit} className="flex flex-col gap-4">
+          <input type="hidden" name="id" value={subCategory.id} />
+          <ActionError error={state.error} />
+          <DialogFooter>
+            <DialogClose asChild><Button type="button" variant="ghost">Annulla</Button></DialogClose>
+            <SubmitButton isPending={isPending} variant="destructive">Disattiva</SubmitButton>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function ReactivateSubcategoryDialog({ subCategory }: { subCategory: Subcategory }) {
+  const { open, setOpen, state, submit, isPending } = useDialogAction(
+    reactivateSubcategoryAction,
+    'Sottocategoria riattivata.',
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="ghost" size="icon-xs" aria-label={`Riattiva sottocategoria ${subCategory.name}`}>
+          <ClientMountIcon icon={RotateCcw} ariaHidden className="h-3 w-3" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Riattiva sottocategoria personale</DialogTitle>
+          <DialogDescription>
+            Torna disponibile nei selettori. Se la categoria padre è disabilitata, riattivala prima.
+          </DialogDescription>
+        </DialogHeader>
+        <form action={submit} className="flex flex-col gap-4">
+          <input type="hidden" name="id" value={subCategory.id} />
+          <ActionError error={state.error} />
+          <DialogFooter>
+            <DialogClose asChild><Button type="button" variant="ghost">Annulla</Button></DialogClose>
+            <SubmitButton isPending={isPending}>Riattiva</SubmitButton>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -351,7 +491,7 @@ export function DeleteSubcategoryDialog({ subCategory }: { subCategory: Subcateg
         <DialogHeader>
           <DialogTitle>Elimina sottocategoria personale</DialogTitle>
           <DialogDescription>
-            Le sottocategorie collegate a spese non possono essere eliminate: il blocco evita categorie mancanti nello storico.
+            Rimozione definitiva. Bloccata se collegata a spese: in quel caso usa Disattiva.
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="flex flex-col gap-4">

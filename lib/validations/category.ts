@@ -69,6 +69,10 @@ export const DeleteCategorySchema = z.object({
   id: IdSchema,
 })
 
+/** Same payload as delete — deactivate is soft-disable, delete is hard-remove. */
+export const DeactivateCategorySchema = DeleteCategorySchema
+export const ReactivateCategorySchema = DeleteCategorySchema
+
 export const SetSubcategoryNatureSchema = z.object({
   subCategoryId: z.coerce.number().int().positive(),
   nature: NatureSchema.nullable(),
@@ -95,6 +99,9 @@ export const RenameSubcategorySchema = z.object({
 export const DeleteSubcategorySchema = z.object({
   id: IdSchema,
 })
+
+export const DeactivateSubcategorySchema = DeleteSubcategorySchema
+export const ReactivateSubcategorySchema = DeleteSubcategorySchema
 
 export type CreateCategoryInput = z.infer<typeof CreateCategorySchema>
 export type RenameCategoryInput = z.infer<typeof RenameCategorySchema>

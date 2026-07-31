@@ -4,25 +4,35 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
-  getCategories: vi.fn(),
+  getCategoriesForSettings: vi.fn(),
   createCategoryAction: vi.fn(),
   renameCategoryAction: vi.fn(),
+  deactivateCategoryAction: vi.fn(),
+  reactivateCategoryAction: vi.fn(),
   deleteCategoryAction: vi.fn(),
   createSubcategoryAction: vi.fn(),
   renameSubcategoryAction: vi.fn(),
+  deactivateSubcategoryAction: vi.fn(),
+  reactivateSubcategoryAction: vi.fn(),
   deleteSubcategoryAction: vi.fn(),
   setSubcategoryNatureAction: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/dal/auth', () => ({ verifySession: mocks.verifySession }))
-vi.mock('@/lib/dal/categories', () => ({ getCategories: mocks.getCategories }))
+vi.mock('@/lib/dal/categories', () => ({
+  getCategoriesForSettings: mocks.getCategoriesForSettings,
+}))
 vi.mock('@/lib/actions/categories', () => ({
   createCategoryAction: mocks.createCategoryAction,
   renameCategoryAction: mocks.renameCategoryAction,
+  deactivateCategoryAction: mocks.deactivateCategoryAction,
+  reactivateCategoryAction: mocks.reactivateCategoryAction,
   deleteCategoryAction: mocks.deleteCategoryAction,
   createSubcategoryAction: mocks.createSubcategoryAction,
   renameSubcategoryAction: mocks.renameSubcategoryAction,
+  deactivateSubcategoryAction: mocks.deactivateSubcategoryAction,
+  reactivateSubcategoryAction: mocks.reactivateSubcategoryAction,
   deleteSubcategoryAction: mocks.deleteSubcategoryAction,
   setSubcategoryNatureAction: mocks.setSubcategoryNatureAction,
 }))
@@ -37,6 +47,7 @@ const categories = [
     type: 'out' as const,
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 10,
@@ -45,6 +56,7 @@ const categories = [
         originalName: 'Alimentari',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: true,
         customName: 'Alimentari speciali',
         effectiveNature: 'essential' as const,
@@ -56,6 +68,7 @@ const categories = [
         originalName: 'Casa vacanze',
         userId: 'user-abc',
         isOwned: true,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: 'discretionary' as const,
@@ -69,6 +82,7 @@ const categories = [
     type: 'in' as const,
     userId: 'user-abc',
     isOwned: true,
+    isActive: true,
     subCategories: [],
   },
 ]
@@ -87,7 +101,7 @@ describe('/settings/categories UI', () => {
       subscriptionPlan: 'basic',
       role: 'user',
     })
-    mocks.getCategories.mockResolvedValue(categories)
+    mocks.getCategoriesForSettings.mockResolvedValue(categories)
   })
 
   it('renders the category heading, create affordance, ownership badges, override hints, and delete warning', async () => {
@@ -100,7 +114,7 @@ describe('/settings/categories UI', () => {
     expect(html).toContain('Alimentari speciali')
     expect(html).toContain('Nome originale: Alimentari')
     expect(html).toContain('Questo nome vale solo per te')
-    expect(html).toContain('Le eliminazioni sono disponibili solo per voci personali')
+    expect(html).toContain('Disattiva lascia la voce in elenco')
     expect(html).toContain('data-testid="subcategory-row-10"')
   })
 

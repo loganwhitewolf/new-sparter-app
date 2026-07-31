@@ -9,6 +9,7 @@ function makeCategory(
     slug: overrides.name.toLowerCase(),
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [],
     ...overrides,
   }

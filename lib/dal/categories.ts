@@ -13,6 +13,8 @@ export type CategoryWithSubCategories = {
   type: 'in' | 'out' | 'allocation' | 'transfer' | null
   userId: string | null
   isOwned: boolean
+  /** false = soft-disabled; still visible in settings, hidden from pickers. */
+  isActive: boolean
   subCategories: Array<{
     id: number
     name: string
@@ -20,6 +22,7 @@ export type CategoryWithSubCategories = {
     originalName: string
     userId: string | null
     isOwned: boolean
+    isActive: boolean
     hasOverride: boolean
     customName: string | null
     effectiveNature: FlowNature | null
@@ -31,6 +34,7 @@ export type CategoryMutationErrorCode =
   | 'system_row'
   | 'duplicate'
   | 'linked_expenses'
+  | 'parent_inactive'
 
 export class CategoryMutationError extends Error {
   constructor(
@@ -91,17 +95,22 @@ async function syncCategoryIdSequence(database: DbOrTx) {
   )
 }
 
-const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithSubCategories[]> => {
+const getCategoriesForUser = cache(async (
+  userId: string,
+  includeInactive: boolean,
+): Promise<CategoryWithSubCategories[]> => {
   const rows = await db
     .select({
       categoryId: category.id,
       categoryName: category.name,
       categorySlug: category.slug,
       categoryUserId: category.userId,
+      categoryIsActive: category.isActive,
       subCategoryId: subCategory.id,
       subCategoryName: subCategory.name,
       subCategorySlug: subCategory.slug,
       subCategoryUserId: subCategory.userId,
+      subCategoryIsActive: subCategory.isActive,
       overrideCustomName: userSubcategoryOverride.customName,
       overrideNatureId: userSubcategoryOverride.natureId,
       subCategoryNatureId: subCategory.natureId,
@@ -130,7 +139,7 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
       subCategory,
       and(
         eq(subCategory.categoryId, category.id),
-        eq(subCategory.isActive, true),
+        ...(includeInactive ? [] : [eq(subCategory.isActive, true)]),
         or(isNull(subCategory.userId), eq(subCategory.userId, userId)),
       ),
     )
@@ -143,7 +152,7 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
     )
     .where(
       and(
-        eq(category.isActive, true),
+        ...(includeInactive ? [] : [eq(category.isActive, true)]),
         or(isNull(category.userId), eq(category.userId, userId)),
       ),
     )
@@ -164,6 +173,7 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
         type: row.storedDirectionCode ?? row.derivedDirectionCode,
         userId: row.categoryUserId,
         isOwned: row.categoryUserId === userId,
+        isActive: row.categoryIsActive,
         subCategories: [],
       })
     }
@@ -176,6 +186,7 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
         originalName: row.subCategoryName!,
         userId: row.subCategoryUserId,
         isOwned: row.subCategoryUserId === userId,
+        isActive: row.subCategoryIsActive ?? true,
         hasOverride: row.overrideCustomName !== null,
         customName: row.overrideCustomName,
         effectiveNature: row.effectiveNatureCode,
@@ -186,15 +197,24 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
   return Array.from(map.values())
 })
 
+/** Active taxonomy for pickers / categorization (inactive personal rows excluded). */
 export async function getCategories(): Promise<CategoryWithSubCategories[]> {
   const session = await verifySession()
-  return getCategoriesForUser(session.userId)
+  return getCategoriesForUser(session.userId, false)
+}
+
+/** Settings management view — includes soft-disabled personal categories/subcategories. */
+export async function getCategoriesForSettings(): Promise<CategoryWithSubCategories[]> {
+  const session = await verifySession()
+  return getCategoriesForUser(session.userId, true)
 }
 
 export async function createUserCategory(
   input: { userId: string, name: string, slug: string, directionId: number },
   database: DbOrTx = db,
 ) {
+  await purgeInactiveOwnedCategoryBySlug(input.userId, input.slug, database)
+
   const insertOnce = () =>
     mapSlugDuplicate(
       database
@@ -264,21 +284,15 @@ export async function countLinkedExpensesForCategory(
   return Number(rows[0]?.count ?? 0)
 }
 
-export async function deleteUserCategory(
+/**
+ * Soft-hide a personal category (and its personal children). Allowed even with linked expenses —
+ * historical spending keeps its subcategory FKs; the taxonomy just stops appearing in pickers.
+ */
+export async function deactivateUserCategory(
   id: number,
   userId: string,
   database: DbOrTx = db,
 ): Promise<boolean> {
-  // Same guard as subcategory delete — any expense on any child blocks the category.
-  const linkedExpenses = await countLinkedExpensesForCategory(userId, id, database)
-  if (linkedExpenses > 0) {
-    throw new CategoryMutationError(
-      'linked_expenses',
-      `Category has ${linkedExpenses} linked expenses`,
-      linkedExpenses,
-    )
-  }
-
   const rows = await database
     .update(category)
     .set({ isActive: false })
@@ -293,8 +307,6 @@ export async function deleteUserCategory(
 
   if (rows.length === 0) return false
 
-  // Soft-delete personal children so they do not linger as active orphans.
-  // Category row first: if ownership check fails we never touch subcategories.
   await database
     .update(subCategory)
     .set({ isActive: false })
@@ -305,9 +317,101 @@ export async function deleteUserCategory(
         eq(subCategory.isActive, true),
       ),
     )
-    .returning({ id: subCategory.id })
 
   return true
+}
+
+/**
+ * Re-enable a personal category. Owned children stay as-is (reactivate separately).
+ */
+export async function reactivateUserCategory(
+  id: number,
+  userId: string,
+  database: DbOrTx = db,
+): Promise<boolean> {
+  const rows = await database
+    .update(category)
+    .set({ isActive: true })
+    .where(
+      and(
+        eq(category.id, id),
+        eq(category.userId, userId),
+        eq(category.isActive, false),
+      ),
+    )
+    .returning({ id: category.id })
+
+  return rows.length > 0
+}
+
+/**
+ * Hard-delete a personal category. Blocked when any child subcategory has linked expenses.
+ * DB cascade removes child subcategories; frees the (userId, slug) unique slot for recreate.
+ */
+export async function deleteUserCategory(
+  id: number,
+  userId: string,
+  database: DbOrTx = db,
+): Promise<boolean> {
+  const linkedExpenses = await countLinkedExpensesForCategory(userId, id, database)
+  if (linkedExpenses > 0) {
+    throw new CategoryMutationError(
+      'linked_expenses',
+      `Category has ${linkedExpenses} linked expenses`,
+      linkedExpenses,
+    )
+  }
+
+  const rows = await database
+    .delete(category)
+    .where(
+      and(
+        eq(category.id, id),
+        eq(category.userId, userId),
+      ),
+    )
+    .returning({ id: category.id })
+
+  return rows.length > 0
+}
+
+/** Remove an inactive owned category with the same slug so recreate is not blocked by soft-delete leftovers. */
+async function purgeInactiveOwnedCategoryBySlug(
+  userId: string,
+  slug: string,
+  database: DbOrTx,
+): Promise<void> {
+  const inactive = await database
+    .select({ id: category.id })
+    .from(category)
+    .where(
+      and(
+        eq(category.userId, userId),
+        eq(category.slug, slug),
+        eq(category.isActive, false),
+      ),
+    )
+    .limit(1)
+
+  if (!inactive[0]) return
+
+  const linkedExpenses = await countLinkedExpensesForCategory(userId, inactive[0].id, database)
+  if (linkedExpenses > 0) {
+    throw new CategoryMutationError(
+      'duplicate',
+      'Inactive category with this slug still has linked expenses',
+      linkedExpenses,
+    )
+  }
+
+  await database
+    .delete(category)
+    .where(
+      and(
+        eq(category.id, inactive[0].id),
+        eq(category.userId, userId),
+      ),
+    )
 }
 
 export async function createUserSubcategory(
@@ -329,6 +433,13 @@ export async function createUserSubcategory(
   if (!categoryRows[0]) {
     throw new CategoryMutationError('not_found', 'Category not found')
   }
+
+  await purgeInactiveOwnedSubcategoryBySlug(
+    input.userId,
+    input.categoryId,
+    input.slug,
+    database,
+  )
 
   const rows = await mapSlugDuplicate(
     database
@@ -462,6 +573,76 @@ export async function isSubCategoryVisibleToUser(
   return rows.length > 0
 }
 
+/**
+ * Soft-hide a personal subcategory. Allowed even with linked expenses.
+ */
+export async function deactivateUserSubcategory(
+  id: number,
+  userId: string,
+  database: DbOrTx = db,
+): Promise<boolean> {
+  const rows = await database
+    .update(subCategory)
+    .set({ isActive: false })
+    .where(
+      and(
+        eq(subCategory.id, id),
+        eq(subCategory.userId, userId),
+        eq(subCategory.isActive, true),
+      ),
+    )
+    .returning({ id: subCategory.id })
+
+  return rows.length > 0
+}
+
+export async function reactivateUserSubcategory(
+  id: number,
+  userId: string,
+  database: DbOrTx = db,
+): Promise<boolean> {
+  const parent = await database
+    .select({
+      categoryId: subCategory.categoryId,
+      categoryActive: category.isActive,
+    })
+    .from(subCategory)
+    .innerJoin(category, eq(category.id, subCategory.categoryId))
+    .where(
+      and(
+        eq(subCategory.id, id),
+        eq(subCategory.userId, userId),
+        eq(subCategory.isActive, false),
+      ),
+    )
+    .limit(1)
+
+  if (!parent[0]) return false
+  if (!parent[0].categoryActive) {
+    throw new CategoryMutationError(
+      'parent_inactive',
+      'Reactivate the parent category before reactivating this subcategory',
+    )
+  }
+
+  const rows = await database
+    .update(subCategory)
+    .set({ isActive: true })
+    .where(
+      and(
+        eq(subCategory.id, id),
+        eq(subCategory.userId, userId),
+        eq(subCategory.isActive, false),
+      ),
+    )
+    .returning({ id: subCategory.id })
+
+  return rows.length > 0
+}
+
+/**
+ * Hard-delete a personal subcategory. Blocked when linked expenses exist.
+ */
 export async function deleteUserSubcategory(
   id: number,
   userId: string,
@@ -477,16 +658,54 @@ export async function deleteUserSubcategory(
   }
 
   const rows = await database
-    .update(subCategory)
-    .set({ isActive: false })
+    .delete(subCategory)
     .where(
       and(
         eq(subCategory.id, id),
         eq(subCategory.userId, userId),
-        eq(subCategory.isActive, true),
       ),
     )
     .returning({ id: subCategory.id })
 
   return rows.length > 0
+}
+
+async function purgeInactiveOwnedSubcategoryBySlug(
+  userId: string,
+  categoryId: number,
+  slug: string,
+  database: DbOrTx,
+): Promise<void> {
+  const inactive = await database
+    .select({ id: subCategory.id })
+    .from(subCategory)
+    .where(
+      and(
+        eq(subCategory.userId, userId),
+        eq(subCategory.categoryId, categoryId),
+        eq(subCategory.slug, slug),
+        eq(subCategory.isActive, false),
+      ),
+    )
+    .limit(1)
+
+  if (!inactive[0]) return
+
+  const linkedExpenses = await countLinkedExpensesForSubcategory(userId, inactive[0].id, database)
+  if (linkedExpenses > 0) {
+    throw new CategoryMutationError(
+      'duplicate',
+      'Inactive subcategory with this slug still has linked expenses',
+      linkedExpenses,
+    )
+  }
+
+  await database
+    .delete(subCategory)
+    .where(
+      and(
+        eq(subCategory.id, inactive[0].id),
+        eq(subCategory.userId, userId),
+      ),
+    )
 }

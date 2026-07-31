@@ -13,9 +13,11 @@ const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   createUserCategory: vi.fn(),
   renameUserCategory: vi.fn(),
+  deactivateUserCategory: vi.fn(),
   deleteUserCategory: vi.fn(),
   createUserSubcategory: vi.fn(),
   renameUserSubcategory: vi.fn(),
+  deactivateUserSubcategory: vi.fn(),
   deleteUserSubcategory: vi.fn(),
   upsertSystemSubcategoryOverride: vi.fn(),
   upsertSubcategoryNatureOverride: vi.fn(),
@@ -36,9 +38,11 @@ vi.mock('@/lib/dal/categories', async () => {
     CategoryMutationError: actual.CategoryMutationError,
     createUserCategory: mocks.createUserCategory,
     renameUserCategory: mocks.renameUserCategory,
+    deactivateUserCategory: mocks.deactivateUserCategory,
     deleteUserCategory: mocks.deleteUserCategory,
     createUserSubcategory: mocks.createUserSubcategory,
     renameUserSubcategory: mocks.renameUserSubcategory,
+    deactivateUserSubcategory: mocks.deactivateUserSubcategory,
     deleteUserSubcategory: mocks.deleteUserSubcategory,
     upsertSystemSubcategoryOverride: mocks.upsertSystemSubcategoryOverride,
     upsertSubcategoryNatureOverride: mocks.upsertSubcategoryNatureOverride,
@@ -49,9 +53,11 @@ vi.mock('@/lib/dal/categories', async () => {
 const {
   createCategoryAction,
   renameCategoryAction,
+  deactivateCategoryAction,
   deleteCategoryAction,
   createSubcategoryAction,
   renameSubcategoryAction,
+  deactivateSubcategoryAction,
   deleteSubcategoryAction,
   setSubcategoryNatureAction,
 } = await import('../lib/actions/categories')
@@ -76,10 +82,12 @@ describe('category Server Actions', () => {
     mocks.verifySession.mockResolvedValue({ userId: 'user-1', subscriptionPlan: 'basic' })
     mocks.createUserCategory.mockResolvedValue({ id: 1 })
     mocks.renameUserCategory.mockResolvedValue({ id: 1 })
+    mocks.deactivateUserCategory.mockResolvedValue(true)
     mocks.deleteUserCategory.mockResolvedValue(true)
     mocks.createUserSubcategory.mockResolvedValue({ id: 10 })
     mocks.upsertSubcategoryNatureOverride.mockResolvedValue({ id: 20 })
     mocks.renameUserSubcategory.mockResolvedValue({ id: 10 })
+    mocks.deactivateUserSubcategory.mockResolvedValue(true)
     mocks.deleteUserSubcategory.mockResolvedValue(true)
     mocks.upsertSystemSubcategoryOverride.mockResolvedValue({ id: 20 })
   })
@@ -287,6 +295,22 @@ describe('category Server Actions', () => {
       "Non puoi eliminare: c'è 1 spesa collegata a questa categoria o sottocategoria.",
     )
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('deactivates a category without a linked-expense guard', async () => {
+    const result = await deactivateCategoryAction({ error: null }, makeFormData({ id: '9' }))
+
+    expect(result).toEqual({ error: null })
+    expect(mocks.deactivateUserCategory).toHaveBeenCalledWith(9, 'user-1')
+    expectExactCategoryRevalidationRoutes()
+  })
+
+  it('deactivates a subcategory without a linked-expense guard', async () => {
+    const result = await deactivateSubcategoryAction({ error: null }, makeFormData({ id: '10' }))
+
+    expect(result).toEqual({ error: null })
+    expect(mocks.deactivateUserSubcategory).toHaveBeenCalledWith(10, 'user-1')
+    expectExactCategoryRevalidationRoutes()
   })
 
   it('collapses unexpected DAL errors without leaking details or revalidating', async () => {
