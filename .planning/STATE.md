@@ -5,15 +5,15 @@ milestone_name: Categories Year View
 current_phase: 83
 current_phase_name: categories-list
 status: executing
-stopped_at: Completed 83-02-PLAN.md
-last_updated: "2026-07-31T13:27:14.956Z"
+stopped_at: Completed 83-03-PLAN.md
+last_updated: "2026-07-31T13:35:34.948Z"
 last_activity: 2026-07-31
 last_activity_desc: Phase 83 execution started
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 25
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 83 (categories-list) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Branch: `gsd/v3.0-categories-year-view` (synced with `origin/main` @ fe8273f9 — PR #65)
 Last activity: 2026-07-31 — Phase 83 execution started
@@ -545,6 +545,7 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: getCategoryYearRanking is additive alongside getCategoryRanking (never a reshape) to protect v2.8/v2.9 regression baselines
 - [Phase ?]: D-09 predicate flip (direction.hidden=false) surfaces the allocation direction for the first time in the new Categories year-view code path
 - [Phase ?]: 83-02: DashboardCategoryFilters.type/.sort widened additively to carry CLIST-04 allocation direction + CLIST-03 projection sort at the type level
+- [Phase ?]: resolveCategoryDirectionCopy has no default/fallback switch case — a future 4th direction cannot ship with partial copy
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -695,9 +696,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 83-02-PLAN.md
+**Stopped at:** Completed 83-03-PLAN.md
 
-Last session: 2026-07-31T13:27:14.942Z
+Last session: 2026-07-31T13:35:34.933Z
 
 **Next:** `/gsd-discuss-phase 82` or `/gsd-plan-phase 82` to begin Phase 82 (number-engine-and-regression-gate).
 
@@ -803,3 +804,4 @@ Last session: 2026-07-31T13:27:14.942Z
 | Phase 82 P03 | 25min | 2 tasks | 2 files |
 | Phase 83 P01 | 48min | 2 tasks | 2 files |
 | Phase 83 P02 | 7min | 2 tasks | 5 files |
+| Phase 83 P03 | 8min | 2 tasks | 7 files |

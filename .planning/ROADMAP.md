@@ -130,7 +130,7 @@ Plans:
 
 - [x] 83-01-PLAN.md — Year+direction category ranking DAL (getCategoryYearRanking), direction.hidden predicate flip, D-07 total invariant, RETIRE-05 re-run
 - [x] 83-02-PLAN.md — Year/direction/sort URL contract (additive), buildDashboardTabHref year propagation, detail page year receipt
-- [ ] 83-03-PLAN.md — 4-state sparkline, categories skeleton, single-Covered-Month nudge, centrally-resolved direction copy
+- [x] 83-03-PLAN.md — 4-state sparkline, categories skeleton, single-Covered-Month nudge, centrally-resolved direction copy
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
