@@ -1,172 +1,123 @@
-import Link from 'next/link'
 import { Suspense } from 'react'
+import { CategoryCoverageNudge } from '@/components/dashboard/category-coverage-nudge'
+import {
+  DirectionFilter,
+  NoYearsEmptyState,
+  SortToggle,
+} from '@/components/dashboard/category-list-controls'
 import { CategoryRankingList } from '@/components/dashboard/category-ranking-list'
-import { CategoryRankingSkeleton } from '@/components/dashboard/category-ranking-skeleton'
-import { DashboardFilters } from '@/components/dashboard/dashboard-filters'
-import { getCategoryDeviations, getCategoryRanking } from '@/lib/dal/dashboard'
+import { CategoryYearRankingSkeleton } from '@/components/dashboard/category-year-ranking-skeleton'
+import { CategoryYearSelect } from '@/components/dashboard/category-year-select'
+import { resolveYear } from '@/components/dashboard/overview/resolve-year'
 import { verifySession } from '@/lib/dal/auth'
-import { buildDashboardCategoriesHref } from '@/lib/routes'
-import { cn } from '@/lib/utils'
+import { getCategoryYearRanking } from '@/lib/dal/dashboard'
+import { getCoveredMonthsInYear } from '@/lib/dal/covered-months'
+import { getYearsWithData } from '@/lib/dal/overview'
+import { resolveCategoryDirectionCopy } from '@/lib/services/category-direction-copy'
+import { isPartialMonth, MIN_COVERED_MONTHS_FOR_PACE } from '@/lib/services/pace-and-projection'
 import { extractLensPassthrough, type LensPassthrough } from '@/lib/utils/search-params'
 import {
-  parseDashboardFilters,
-  type DashboardFilters as ParsedDashboardFilters,
-  type DashboardSort,
+  parseCategoryYearDirection,
+  parseCategoryYearSort,
+  type CategoryYearDirection,
+  type CategoryYearSort,
 } from '@/lib/validations/dashboard'
 
-const CATEGORIES_DEFAULT_PRESET = 'last-3-months' as const
-const CATEGORIES_DEFAULT_SORT: DashboardSort = 'deviation'
-const categoryTypeOptions = [
-  { value: 'out' as const, label: 'Uscite' },
-  { value: 'in' as const, label: 'Entrate' },
-]
-
-function CategoryFiltersFallback() {
-  return (
-    <div className="flex flex-wrap items-center gap-2" aria-hidden="true">
-      <div className="h-9 w-40 animate-pulse rounded-md bg-muted" />
-      <div className="h-9 w-[170px] animate-pulse rounded-md bg-muted" />
-      <div className="h-9 w-40 animate-pulse rounded-md bg-muted" />
-    </div>
-  )
-}
-
-type CategoryDashboardFilters = ParsedDashboardFilters & {
-  preset: typeof CATEGORIES_DEFAULT_PRESET | ParsedDashboardFilters['preset']
-  type: 'in' | 'out'
-  sort: DashboardSort
-}
-
+// D-12: the Categories list's own URL contract — year is the ONLY container param (D-01). No
+// `preset`/`period` key anywhere in this type, pin-by-construction, matching Phase 82's precedent
+// for `?lens=` on this same page.
 type Props = {
   searchParams: Promise<{
-    preset?: string | string[]
-    period?: string | string[]
+    year?: string | string[]
     type?: string | string[]
     sort?: string | string[]
-    // Phase 82 D-13 (review fix WR-03): forwarded only, never parsed into a validated Lens or
-    // resolved to a ledgerRowSource here — Categories always reads cassa (D-12).
     lens?: string | string[]
   }>
 }
 
-function parseCategoryDashboardFilters(
-  params: Awaited<Props['searchParams']>
-): CategoryDashboardFilters {
-  const filters = parseDashboardFilters(params, {
-    defaultPreset: CATEGORIES_DEFAULT_PRESET,
-    defaultSort: CATEGORIES_DEFAULT_SORT,
-  })
-
-  return {
-    ...filters,
-    type: filters.type === 'in' ? 'in' : 'out',
-  }
-}
-
-function SortToggle({
-  filters,
-  lens,
-}: {
-  filters: CategoryDashboardFilters
-  lens?: LensPassthrough
-}) {
-  const options: Array<{ value: DashboardSort; label: string }> = [
-    { value: 'deviation', label: 'Deviazione' },
-    { value: 'amount', label: 'Importo' },
-  ]
-
-  return (
-    <div className="flex items-center gap-2" role="group" aria-label="Ordina classifica">
-      {options.map((option) => {
-        const isActive = filters.sort === option.value
-        const href = buildDashboardCategoriesHref({
-          preset: filters.preset,
-          type: filters.type,
-          sort: option.value,
-          defaultPreset: CATEGORIES_DEFAULT_PRESET,
-          defaultSort: CATEGORIES_DEFAULT_SORT,
-          lens,
-        })
-        return (
-          <Link
-            key={option.value}
-            href={href}
-            aria-pressed={isActive}
-            className={cn(
-              'inline-flex items-center rounded-md border px-3 py-1.5 text-sm transition-colors',
-              isActive
-                ? 'border-primary text-primary'
-                : 'border-border text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {option.label}
-          </Link>
-        )
-      })}
-    </div>
-  )
-}
-
 async function CategoryRankingContent({
-  filters,
+  year,
+  direction,
+  sort,
   lens,
+  coveredMonthCount,
 }: {
-  filters: CategoryDashboardFilters
+  year: number
+  direction: CategoryYearDirection
+  sort: CategoryYearSort
   lens?: LensPassthrough
+  coveredMonthCount: number
 }) {
-  const [data, deviations] = await Promise.all([
-    getCategoryRanking(filters),
-    getCategoryDeviations({ type: filters.type }),
-  ])
+  const data = await getCategoryYearRanking(year, direction)
 
   return (
-    <CategoryRankingList
-      data={data}
-      preset={filters.preset}
-      type={filters.type}
-      defaultPreset={CATEGORIES_DEFAULT_PRESET}
-      sort={filters.sort}
-      deviations={deviations}
-      lens={lens}
-    />
+    <>
+      <CategoryRankingList
+        data={data}
+        year={year}
+        direction={direction}
+        sort={sort}
+        lens={lens}
+        copy={resolveCategoryDirectionCopy(direction)}
+      />
+      {/* D-14/UI-SPEC E8: appears together with the resolved list, never during the skeleton —
+          this component lives inside the same Suspense-resolved boundary as the list above. */}
+      {coveredMonthCount === 1 ? <CategoryCoverageNudge coveredMonthCount={1} year={year} /> : null}
+    </>
   )
 }
 
 export default async function DashboardCategoriesPage({ searchParams }: Props) {
   await verifySession()
   const params = await searchParams
-  const filters = parseCategoryDashboardFilters(params)
   // Phase 82 D-12+D-13 (review fix WR-03): raw, unvalidated passthrough — forwarded through this
   // page's own hrefs so the tab nav's ?lens= survives a Categories round trip, WITHOUT being
-  // consumed for aggregation. getCategoryRanking above receives only `filters` (no lens/
-  // ledgerRowSource argument), so it always falls through to cassa (D-12); `lens`'s
-  // LensPassthrough type makes handing it to resolveLedgerRowSource a type error.
+  // consumed for aggregation. getCategoryYearRanking below never receives it — Categories always
+  // reads cassa (D-12).
   const lens = extractLensPassthrough(params.lens)
+  const years = await getYearsWithData('cassa')
+  const year = resolveYear(Array.isArray(params.year) ? params.year[0] : params.year, years)
+  const direction = parseCategoryYearDirection(params.type)
+  const sort = parseCategoryYearSort(params.sort)
+
+  if (year === null) {
+    return <NoYearsEmptyState />
+  }
+
+  const coveredMonths = await getCoveredMonthsInYear(year)
+  const paceEligibleCount = coveredMonths.filter((m) => !isPartialMonth(m.yearMonth)).length
+  const projectionSortAvailable = paceEligibleCount >= MIN_COVERED_MONTHS_FOR_PACE
+  const subheading = resolveCategoryDirectionCopy(direction).pageSubheading.replace('{year}', String(year))
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-1 text-xl font-semibold">Categorie</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Classifica delle categorie per importo e andamento mensile.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{subheading}</p>
         </div>
+        <CategoryYearSelect year={year} years={years} />
       </div>
 
-      <Suspense fallback={<CategoryFiltersFallback />}>
-        <DashboardFilters
-          preset={filters.preset}
-          type={filters.type}
-          defaultPreset={CATEGORIES_DEFAULT_PRESET}
-          typeOptions={categoryTypeOptions}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <DirectionFilter year={year} direction={direction} sort={sort} lens={lens} />
+        <SortToggle
+          year={year}
+          direction={direction}
+          sort={sort}
+          lens={lens}
+          projectionSortAvailable={projectionSortAvailable}
         />
-      </Suspense>
+      </div>
 
-      <SortToggle filters={filters} lens={lens} />
-
-      <Suspense fallback={<CategoryRankingSkeleton />}>
-        <CategoryRankingContent filters={filters} lens={lens} />
+      <Suspense fallback={<CategoryYearRankingSkeleton />}>
+        <CategoryRankingContent
+          year={year}
+          direction={direction}
+          sort={sort}
+          lens={lens}
+          coveredMonthCount={coveredMonths.length}
+        />
       </Suspense>
     </div>
   )
