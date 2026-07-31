@@ -239,6 +239,15 @@ describe('dashboard category list routes', () => {
       })
     ).toBe('/dashboard/categories?preset=last-3-months&type=in&sort=amount')
   })
+
+  test('preserves allocation type for list hrefs in preset mode (WR-01)', () => {
+    expect(
+      buildDashboardCategoriesHref({
+        preset: 'last-3-months',
+        type: 'allocation',
+      })
+    ).toBe('/dashboard/categories?preset=last-3-months&type=allocation')
+  })
 })
 
 describe('dashboard category detail routes', () => {
@@ -262,6 +271,15 @@ describe('dashboard category detail routes', () => {
         type: 'in',
       })
     ).toBe('/dashboard/categories/42?preset=last-3-months&type=in')
+  })
+
+  test('preserves allocation type for detail hrefs in preset mode (WR-01)', () => {
+    expect(
+      buildDashboardCategoryDetailHref(42, {
+        preset: 'last-3-months',
+        type: 'allocation',
+      })
+    ).toBe('/dashboard/categories/42?preset=last-3-months&type=allocation')
   })
 })
 

@@ -84,7 +84,7 @@ export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters =
     params.set('preset', filters.preset)
   }
 
-  if (filters.type === 'in') {
+  if (filters.type && filters.type !== 'out') {
     params.set('type', filters.type)
   }
 
@@ -164,7 +164,7 @@ export function buildDashboardCategoryDetailHref(
     params.set('preset', filters.preset)
   }
 
-  if (filters.type === 'in') {
+  if (filters.type && filters.type !== 'out') {
     params.set('type', filters.type)
   }
 
