@@ -106,16 +106,16 @@ async function deleteUnlinkedSubcategory(page: Page, seed: CategorySettingsSeed)
 
 async function createPatternFromPatternsPage(page: Page, seed: CategorySettingsSeed) {
   await page.goto('/patterns')
-  await page.getByRole('button', { name: 'Nuovo pattern' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Nuovo pattern personalizzato' })
+  await page.getByRole('button', { name: 'Nuova regola' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Nuova regola automatica' })
   await expect(dialog).toBeVisible()
 
-  await dialog.getByLabel('Pattern regex').fill(seed.pattern)
+  await dialog.getByLabel('Testo da riconoscere').fill(seed.pattern)
   await chooseRadixOption(page, dialog.getByRole('combobox').nth(0), seed.createdCategoryRenamedName)
   await chooseRadixOption(page, dialog.getByRole('combobox').nth(1), seed.createdSubcategoryRenamedName)
   await dialog.getByLabel('Descrizione').fill(seed.patternDescription)
 
-  await submitDialog(dialog, 'Crea pattern')
+  await submitDialog(dialog, 'Crea regola')
 
   const patternRow = page.getByRole('row').filter({ hasText: seed.pattern })
   await expect(patternRow).toBeVisible()

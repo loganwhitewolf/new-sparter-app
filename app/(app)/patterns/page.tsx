@@ -3,7 +3,7 @@ import { getCategories } from '@/lib/dal/categories'
 import { getUserPatterns } from '@/lib/dal/patterns'
 import { CategoryPatternPanel } from '@/components/categories/category-pattern-panel'
 
-export const metadata = { title: 'Pattern' }
+export const metadata = { title: 'Regole automatiche' }
 
 export default async function PatternsPage() {
   const { userId, subscriptionPlan } = await verifySession()
@@ -17,9 +17,9 @@ export default async function PatternsPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Pattern</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Regole automatiche</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Crea e gestisci i pattern di categorizzazione automatica delle transazioni.
+          Crea e gestisci le regole di categorizzazione automatica delle transazioni.
         </p>
       </div>
 

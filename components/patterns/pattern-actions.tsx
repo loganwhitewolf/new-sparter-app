@@ -108,17 +108,16 @@ export function PatternActions({
       {/* Edit dialog */}
       <Dialog open={editOpen} onOpenChange={handleEditOpenChange}>
         <DialogTrigger asChild>
-          <Button type="button" variant="ghost" size="icon-sm" aria-label="Modifica pattern">
+          <Button type="button" variant="ghost" size="icon-sm" aria-label="Modifica regola">
             <ClientMountIcon icon={Pencil} ariaHidden className="h-4 w-4" />
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Modifica pattern</DialogTitle>
+            <DialogTitle>Modifica regola</DialogTitle>
             <DialogDescription>
-              Aggiorna la regex e la sottocategoria associata. Sono accettati sia
-              <span className="font-mono"> netflix</span> sia <span className="font-mono">/netflix/i</span>;
-              il pattern resta salvato in forma canonica.
+              Aggiorna la regola e la sottocategoria associata. Scrivi il testo da riconoscere,
+              ad esempio <span className="font-mono">netflix</span>.
             </DialogDescription>
           </DialogHeader>
 
@@ -135,18 +134,17 @@ export function PatternActions({
 
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium" htmlFor={`pattern-regex-${id}`}>
-                Pattern regex
+                Testo da riconoscere
               </label>
               <Input
                 id={`pattern-regex-${id}`}
                 name="pattern"
                 defaultValue={pattern}
-                placeholder="es. netflix oppure /netflix/i"
+                placeholder="es. netflix"
                 required
               />
               <p className="text-xs text-muted-foreground">
-                La forma <span className="font-mono">/pattern/i</span> viene normalizzata alla sola sorgente e
-                usata con match case-insensitive.
+                Esempio: <span className="font-mono">netflix</span>. Maiuscole e minuscole non contano.
               </p>
             </div>
 
@@ -205,15 +203,15 @@ export function PatternActions({
       {/* Delete dialog — unchanged */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogTrigger asChild>
-          <Button type="button" variant="ghost" size="icon-sm" aria-label="Elimina pattern">
+          <Button type="button" variant="ghost" size="icon-sm" aria-label="Elimina regola">
             <ClientMountIcon icon={Trash2} ariaHidden className="h-4 w-4" />
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Elimina pattern</DialogTitle>
+            <DialogTitle>Elimina regola</DialogTitle>
             <DialogDescription>
-              Il pattern verrà disattivato e non sarà più usato nelle nuove importazioni.
+              La regola verrà disattivata e non sarà più usata nelle nuove importazioni.
             </DialogDescription>
           </DialogHeader>
           <form

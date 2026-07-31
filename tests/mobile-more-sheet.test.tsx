@@ -44,7 +44,7 @@ vi.mock('lucide-react', () => ({
 const { MobileMoreSheet } = await import('@/components/layout/mobile-more-sheet')
 
 describe('MobileMoreSheet', () => {
-  it('renders links to Categorie, Tag, Pattern, Profilo with their canonical routes', () => {
+  it('renders links to Categorie, Tag, Regole automatiche, Profilo with their canonical routes', () => {
     const html = renderToStaticMarkup(
       createElement(MobileMoreSheet, { open: true, onOpenChange: vi.fn() })
     )
@@ -56,7 +56,7 @@ describe('MobileMoreSheet', () => {
 
     expect(html).toContain('Categorie')
     expect(html).toContain('Tag')
-    expect(html).toContain('Pattern')
+    expect(html).toContain('Regole automatiche')
     expect(html).toContain('Profilo')
   })
 
