@@ -193,7 +193,7 @@ export function AmortizationReimburseDialog({
         <DialogHeader>
           <DialogTitle>Aggiungi rimborso</DialogTitle>
           <DialogDescription>
-            Questa transazione ha un piano di ammortamento aperto. Scegli una transazione e come
+            Questa transazione ha un spesa dilazionata aperta. Scegli una transazione e come
             vuoi collegarla.
           </DialogDescription>
         </DialogHeader>

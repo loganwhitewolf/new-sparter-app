@@ -12,6 +12,7 @@ import {
   reimbursementRefundSnapshot,
   transaction,
 } from '@/lib/db/schema'
+import { reverseOpenPlanReduceForRefundUnlinkTx } from '@/lib/services/amortization-plan-amount'
 import {
   assertInflowRefundAmount,
   assertOutflowAnchorAmount,
@@ -552,7 +553,8 @@ async function restoreRefundBaseline(
  * discard the snapshots that make restore possible, permanently losing each refund's pre-link
  * categorization. The delete is `userId`-scoped for defense-in-depth.
  */
-async function restoreRefundsAndDeleteReimbursement(
+/** Shared by unlink/delete-reimbursement and hard-delete cleanup of anchor transactions/expenses. */
+export async function restoreRefundsAndDeleteReimbursement(
   tx: DbOrTx,
   input: { reimbursementId: number; userId: string },
 ): Promise<void> {
@@ -560,6 +562,14 @@ async function restoreRefundsAndDeleteReimbursement(
     .select({ transactionId: reimbursementRefund.transactionId })
     .from(reimbursementRefund)
     .where(eq(reimbursementRefund.reimbursementId, input.reimbursementId))
+
+  // Reverse any open-plan reduce for each refund BEFORE restores/deletes (same order as link).
+  for (const { transactionId } of refundRows) {
+    await reverseOpenPlanReduceForRefundUnlinkTx(tx, {
+      userId: input.userId,
+      refundTransactionId: transactionId,
+    })
+  }
 
   // Restore EVERY linked refund IN ORDER before any delete (T-75-08) — never just the last one.
   for (const { transactionId } of refundRows) {
@@ -619,6 +629,13 @@ export async function deletePairByTransactionId(input: {
     const refundRow = refundRows[0]
 
     if (refundRow) {
+      // If this refund reduced an open amortization plan (reducePlanTx), reverse the re-spread
+      // BEFORE deleting the link — otherwise competenza keeps showing the reimbursed schedule.
+      await reverseOpenPlanReduceForRefundUnlinkTx(tx, {
+        userId: input.userId,
+        refundTransactionId: input.transactionId,
+      })
+
       // Refund side (D-10): restore baseline BEFORE deleting the link row — restore reads the
       // snapshot via the still-existing reimbursement_refund row.
       await restoreRefundBaseline(tx, { refundTransactionId: input.transactionId, userId: input.userId })

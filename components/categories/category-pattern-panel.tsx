@@ -45,10 +45,10 @@ export function CategoryPatternPanel({
   categories,
   patterns,
   isPaid,
-  heading = 'Pattern personalizzati',
-  description = 'Regole regex per la categorizzazione automatica delle transazioni.',
-  emptyPaidMessage = 'Nessun pattern personalizzato. Crea il primo pattern per iniziare.',
-  emptyFreeMessage = 'Aggiorna il tuo piano per creare pattern personalizzati.',
+  heading = 'Regole automatiche',
+  description = 'Regole automatiche per la categorizzazione delle transazioni.',
+  emptyPaidMessage = 'Nessuna regola personalizzata. Crea la prima regola per iniziare.',
+  emptyFreeMessage = 'Aggiorna il tuo piano per creare regole automatiche personalizzate.',
   wrapInCard = true,
   action,
 }: CategoryPatternPanelProps) {
@@ -75,7 +75,7 @@ export function CategoryPatternPanel({
           {/* Phase 46: amountSign column removed (ADR 0012) — patterns are sign-agnostic */}
           <TableHeader>
             <TableRow>
-              <TableHead>Pattern (regex)</TableHead>
+              <TableHead>Regola</TableHead>
               <TableHead>Destinazione</TableHead>
               <TableHead>Confidenza</TableHead>
               <TableHead>Descrizione</TableHead>

@@ -19,9 +19,9 @@ export function OnboardingShell({ step, theme = 'dark', children, footer }: Onbo
       data-theme={theme === 'dark' ? 'onboarding-dark' : 'onboarding-light'}
       className="fixed inset-0 z-50 overflow-y-auto bg-background text-foreground"
     >
-      {/* Header — wordmark + progress dots */}
-      <div className="flex items-center justify-between px-6 pt-6 pb-4">
-        <span className="text-sm font-semibold tracking-wide text-foreground/90">
+      {/* Header — wordmark left; stepper centered at top (≥16px label in ProgressDots) */}
+      <div className="relative flex items-center justify-center px-6 pt-6 pb-4">
+        <span className="absolute left-6 text-sm font-semibold tracking-wide text-foreground/90">
           Sparter
         </span>
         <ProgressDots current={step} theme={theme} />

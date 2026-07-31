@@ -190,7 +190,7 @@ describe('pattern Server Actions', () => {
     it('returns unsupported flag validation errors without writing for /netflix/g', async () => {
       const result = await createPatternAction({ error: null }, validCreateForm({ pattern: '/netflix/g' }))
 
-      expect(result.error).toMatch(/Flag regex non supportati/)
+      expect(result.error).toMatch(/Formato non supportato/)
       expect(mocks.createPattern).not.toHaveBeenCalled()
       expect(mocks.revalidatePath).not.toHaveBeenCalled()
     })
@@ -198,7 +198,7 @@ describe('pattern Server Actions', () => {
     it('returns malformed regex validation errors without writing', async () => {
       const result = await createPatternAction({ error: null }, validCreateForm({ pattern: '([' }))
 
-      expect(result.error).toBe('Pattern regex non valido.')
+      expect(result.error).toBe('Regola non valida.')
       expect(mocks.createPattern).not.toHaveBeenCalled()
       expect(mocks.revalidatePath).not.toHaveBeenCalled()
     })
@@ -261,7 +261,7 @@ describe('pattern Server Actions', () => {
     it('returns validation errors without writing for unsupported flags', async () => {
       const result = await updatePatternAction({ error: null }, validUpdateForm({ pattern: '/netflix/g' }))
 
-      expect(result.error).toMatch(/Flag regex non supportati/)
+      expect(result.error).toMatch(/Formato non supportato/)
       expect(mocks.updatePattern).not.toHaveBeenCalled()
       expect(mocks.revalidatePath).not.toHaveBeenCalled()
     })
@@ -269,7 +269,7 @@ describe('pattern Server Actions', () => {
     it('returns validation errors without writing for malformed regex', async () => {
       const result = await updatePatternAction({ error: null }, validUpdateForm({ pattern: '([' }))
 
-      expect(result.error).toBe('Pattern regex non valido.')
+      expect(result.error).toBe('Regola non valida.')
       expect(mocks.updatePattern).not.toHaveBeenCalled()
       expect(mocks.revalidatePath).not.toHaveBeenCalled()
     })
@@ -399,13 +399,13 @@ describe('pattern Server Actions', () => {
       expect(mocks.revalidatePath).not.toHaveBeenCalled()
     })
 
-    it('returns "Pattern regex non valido." for malformed pattern source', async () => {
+    it('returns "Regola non valida." for malformed pattern source', async () => {
       const result = await promoteSuggestionAction(
         { error: null },
         validPromoteForm({ pattern: '([' }),
       )
 
-      expect(result.error).toBe('Pattern regex non valido.')
+      expect(result.error).toBe('Regola non valida.')
       expect(mocks.createPattern).not.toHaveBeenCalled()
       expect(mocks.revalidatePath).not.toHaveBeenCalled()
     })

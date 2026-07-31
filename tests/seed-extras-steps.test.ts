@@ -69,6 +69,20 @@ describe('seed-extras STEPS registry', () => {
     expect(STEP_NAMES.indexOf('insert-pacchetto-vacanze')).toBeGreaterThan(
       STEP_NAMES.indexOf('ensure-fineco-moneymap-global-format'),
     )
-    expect(STEP_NAMES.indexOf('insert-pacchetto-vacanze')).toBe(STEP_NAMES.length - 1)
+  })
+
+  it('registers split-carburante-e-ricarica after insert-pacchetto-vacanze (D-04 / append-only)', () => {
+    expect(STEP_NAMES).toContain('split-carburante-e-ricarica')
+    expect(STEP_NAMES.indexOf('split-carburante-e-ricarica')).toBeGreaterThan(
+      STEP_NAMES.indexOf('insert-pacchetto-vacanze'),
+    )
+  })
+
+  it('registers sync-category-serial-sequences last (bug 3.7 / append-only)', () => {
+    expect(STEP_NAMES).toContain('sync-category-serial-sequences')
+    expect(STEP_NAMES.indexOf('sync-category-serial-sequences')).toBeGreaterThan(
+      STEP_NAMES.indexOf('split-carburante-e-ricarica'),
+    )
+    expect(STEP_NAMES.indexOf('sync-category-serial-sequences')).toBe(STEP_NAMES.length - 1)
   })
 })

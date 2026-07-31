@@ -213,13 +213,22 @@ describe('SubcategoryPicker (R-UP-01, R-UP-02, R-UP-03, R-UP-08)', () => {
     expect(html).toContain('Entrate')
   })
 
-  it('R-UP-02: TYPE_FILTERS renders exactly 4 chip buttons — Tutte, Entrate, Uscite, Trasferimenti', () => {
+  it('R-UP-02: TYPE_FILTERS renders Tutte, Entrate, Uscite, Accantonamenti, Trasferimenti', () => {
     const html = renderPicker()
 
     expect(html).toContain('Tutte')
     expect(html).toContain('Entrate')
     expect(html).toContain('Uscite')
+    expect(html).toContain('Accantonamenti')
     expect(html).toContain('Trasferimenti')
+    expect(html).not.toContain('Abbonamenti')
+  })
+
+  it('inactive type chips use secondary-readable contrast utility', () => {
+    const html = renderPicker()
+
+    // Inactive Chip branch (defaultType=null → Tutte active; others inactive)
+    expect(html).toContain('text-secondary-readable')
   })
 
   it('R-UP-02: "Sistema" text does NOT appear anywhere in the rendered output (D-03 — no system chip)', () => {

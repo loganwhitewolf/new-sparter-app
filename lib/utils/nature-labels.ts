@@ -60,3 +60,50 @@ export const NATURE_ID_BY_CODE: Record<FlowNature, number> = {
   savings: 7,
   investment: 8,
 }
+
+/** Ledger direction codes (nature.direction_id → direction.code). */
+export type DirectionCode = 'in' | 'out' | 'allocation' | 'transfer'
+
+export const DIRECTION_LABELS: Record<DirectionCode, string> = {
+  in: 'Entrate',
+  out: 'Uscite',
+  allocation: 'Accantonamenti',
+  transfer: 'Trasferimenti',
+}
+
+export const DIRECTION_ORDER: readonly DirectionCode[] = [
+  'out',
+  'in',
+  'allocation',
+  'transfer',
+]
+
+/** Natures that belong to each direction (seed nature.direction_id). */
+export const NATURES_BY_DIRECTION: Record<DirectionCode, readonly FlowNature[]> = {
+  in: ['income', 'income_extraordinary'],
+  out: ['essential', 'discretionary', 'debt'],
+  allocation: ['savings', 'investment'],
+  transfer: ['transfer'],
+}
+
+/**
+ * Default nature when adding a subcategory under a direction-scoped category.
+ */
+export const DEFAULT_NATURE_BY_DIRECTION: Record<DirectionCode, FlowNature> = {
+  in: 'income',
+  out: 'discretionary',
+  allocation: 'savings',
+  transfer: 'transfer',
+}
+
+/** Stable seed ids for direction.code (scripts/seed-data.ts). */
+export const DIRECTION_ID_BY_CODE: Record<DirectionCode, number> = {
+  in: 1,
+  out: 2,
+  allocation: 3,
+  transfer: 4,
+}
+
+export function isDirectionCode(value: string | null | undefined): value is DirectionCode {
+  return value === 'in' || value === 'out' || value === 'allocation' || value === 'transfer'
+}

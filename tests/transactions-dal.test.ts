@@ -312,17 +312,17 @@ describe("transaction DAL query helpers", () => {
     });
   });
 
-  it("maps parsed URL filters to DAL filters including direction", () => {
+  it("maps parsed URL filters to DAL filters including directions", () => {
     expect(
       mapParsedTransactionFiltersToDal({
         sort: "description",
         dir: "asc",
-        type: "out",
+        directions: ["out"],
       }),
     ).toEqual({
       sort: "description",
       dir: "asc",
-      direction: "out",
+      directions: ["out"],
     });
   });
 

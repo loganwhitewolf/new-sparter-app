@@ -6,9 +6,13 @@ import {
   CategoryMutationError,
   createUserCategory,
   createUserSubcategory,
+  deactivateUserCategory,
+  deactivateUserSubcategory,
   deleteUserCategory,
   deleteUserSubcategory,
   isSubCategoryVisibleToUser,
+  reactivateUserCategory,
+  reactivateUserSubcategory,
   renameUserCategory,
   renameUserSubcategory,
   upsertSubcategoryNatureOverride,
@@ -17,19 +21,31 @@ import {
 import {
   CreateCategorySchema,
   CreateSubcategorySchema,
+  DeactivateCategorySchema,
+  DeactivateSubcategorySchema,
   DeleteCategorySchema,
   DeleteSubcategorySchema,
+  ReactivateCategorySchema,
+  ReactivateSubcategorySchema,
   RenameCategorySchema,
   RenameSubcategorySchema,
   SetSubcategoryNatureSchema,
   type ActionState,
 } from '@/lib/validations/category'
-import { NATURE_ID_BY_CODE, type FlowNature } from '@/lib/utils/nature-labels'
+import {
+  DIRECTION_ID_BY_CODE,
+  NATURE_ID_BY_CODE,
+  type FlowNature,
+} from '@/lib/utils/nature-labels'
 
 const GENERIC_ERROR = 'Si è verificato un errore. Riprova tra qualche secondo.'
 const NOT_FOUND_ERROR = 'Elemento non trovato o accesso negato.'
 const DUPLICATE_ERROR = 'Esiste già una categoria o sottocategoria con questo nome.'
 const SYSTEM_DELETE_ERROR = 'Non puoi eliminare una categoria o sottocategoria di sistema.'
+const SYSTEM_DEACTIVATE_ERROR = 'Non puoi disattivare una categoria o sottocategoria di sistema.'
+const SYSTEM_REACTIVATE_ERROR = 'Non puoi riattivare una categoria o sottocategoria di sistema.'
+const PARENT_INACTIVE_ERROR =
+  'Riattiva prima la categoria padre, poi la sottocategoria.'
 
 function firstValidationError(error: { issues: Array<{ message: string }> }) {
   return error.issues[0]?.message ?? 'Dati non validi.'
@@ -41,10 +57,20 @@ function mapKnownCategoryError(error: unknown): ActionState | null {
   if (error.code === 'duplicate') return { error: DUPLICATE_ERROR }
   if (error.code === 'linked_expenses') {
     const count = error.count ?? 0
-    const noun = count === 1 ? 'spesa' : 'spese'
-    return { error: `Non puoi eliminare questa sottocategoria: è collegata a ${count} ${noun}.` }
+    // Shared by category + subcategory delete — taxonomy is linked via expense.subCategoryId.
+    // Domain: Transaction categorization lives on Expense (not the bank tx row).
+    if (count === 1) {
+      return {
+        error:
+          "Non puoi eliminare: c'è 1 spesa collegata a questa categoria o sottocategoria.",
+      }
+    }
+    return {
+      error: `Non puoi eliminare: ci sono ${count} spese collegate a questa categoria o sottocategoria.`,
+    }
   }
   if (error.code === 'system_row') return { error: SYSTEM_DELETE_ERROR }
+  if (error.code === 'parent_inactive') return { error: PARENT_INACTIVE_ERROR }
   return { error: NOT_FOUND_ERROR }
 }
 
@@ -60,12 +86,21 @@ export async function createCategoryAction(
   const { userId } = await verifySession()
   const parsed = CreateCategorySchema.safeParse({
     name: formData.get('name'),
+    direction: formData.get('direction'),
   })
 
   if (!parsed.success) return { error: firstValidationError(parsed.error) }
 
+  const directionId = DIRECTION_ID_BY_CODE[parsed.data.direction]
+
   try {
-    await createUserCategory({ ...parsed.data, userId })
+    // Category only — nature belongs on subcategories the user creates next.
+    await createUserCategory({
+      userId,
+      name: parsed.data.name,
+      slug: parsed.data.slug,
+      directionId,
+    })
   } catch (error) {
     return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
   }
@@ -91,6 +126,44 @@ export async function renameCategoryAction(
       slug: parsed.data.slug,
     })
     if (!updated) return { error: NOT_FOUND_ERROR }
+  } catch (error) {
+    return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
+  }
+
+  return successAfterRevalidation()
+}
+
+export async function deactivateCategoryAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await verifySession()
+  const parsed = DeactivateCategorySchema.safeParse({ id: formData.get('id') })
+
+  if (!parsed.success) return { error: firstValidationError(parsed.error) }
+
+  try {
+    const deactivated = await deactivateUserCategory(parsed.data.id, userId)
+    if (!deactivated) return { error: SYSTEM_DEACTIVATE_ERROR }
+  } catch (error) {
+    return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
+  }
+
+  return successAfterRevalidation()
+}
+
+export async function reactivateCategoryAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await verifySession()
+  const parsed = ReactivateCategorySchema.safeParse({ id: formData.get('id') })
+
+  if (!parsed.success) return { error: firstValidationError(parsed.error) }
+
+  try {
+    const reactivated = await reactivateUserCategory(parsed.data.id, userId)
+    if (!reactivated) return { error: SYSTEM_REACTIVATE_ERROR }
   } catch (error) {
     return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
   }
@@ -125,13 +198,25 @@ export async function createSubcategoryAction(
   const parsed = CreateSubcategorySchema.safeParse({
     categoryId: formData.get('categoryId'),
     name: formData.get('name'),
-    natureId: formData.get('natureId'),
+    nature: formData.get('nature'),
   })
 
   if (!parsed.success) return { error: firstValidationError(parsed.error) }
 
+  // Same resolution as setSubcategoryNatureAction — form sends FlowNature code, DAL stores FK id.
+  const natureId = NATURE_ID_BY_CODE[parsed.data.nature]
+  if (natureId === undefined) {
+    return { error: 'Seleziona una natura valida.' }
+  }
+
   try {
-    await createUserSubcategory({ ...parsed.data, userId })
+    await createUserSubcategory({
+      userId,
+      categoryId: parsed.data.categoryId,
+      name: parsed.data.name,
+      slug: parsed.data.slug,
+      natureId,
+    })
   } catch (error) {
     return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
   }
@@ -184,6 +269,44 @@ export async function renameSubcategoryAction(
     if (!updated) {
       await upsertSystemSubcategoryOverride(userId, parsed.data.id, parsed.data.name)
     }
+  } catch (error) {
+    return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
+  }
+
+  return successAfterRevalidation()
+}
+
+export async function deactivateSubcategoryAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await verifySession()
+  const parsed = DeactivateSubcategorySchema.safeParse({ id: formData.get('id') })
+
+  if (!parsed.success) return { error: firstValidationError(parsed.error) }
+
+  try {
+    const deactivated = await deactivateUserSubcategory(parsed.data.id, userId)
+    if (!deactivated) return { error: SYSTEM_DEACTIVATE_ERROR }
+  } catch (error) {
+    return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
+  }
+
+  return successAfterRevalidation()
+}
+
+export async function reactivateSubcategoryAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { userId } = await verifySession()
+  const parsed = ReactivateSubcategorySchema.safeParse({ id: formData.get('id') })
+
+  if (!parsed.success) return { error: firstValidationError(parsed.error) }
+
+  try {
+    const reactivated = await reactivateUserSubcategory(parsed.data.id, userId)
+    if (!reactivated) return { error: SYSTEM_REACTIVATE_ERROR }
   } catch (error) {
     return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }
   }

@@ -7,6 +7,7 @@ import {
   buildTypeNatureMap,
   buildCategorySubcategoryMap,
   buildDirectionNatureMap,
+  unionFilterOptions,
 } from '@/lib/utils/cascade-options'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 
@@ -19,6 +20,7 @@ const fixture: CategoryWithSubCategories[] = [
     type: 'out',
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 10,
@@ -27,6 +29,7 @@ const fixture: CategoryWithSubCategories[] = [
         originalName: 'Supermercato',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: 'essential',
@@ -38,6 +41,7 @@ const fixture: CategoryWithSubCategories[] = [
         originalName: 'Ristorante',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: 'discretionary',
@@ -51,6 +55,7 @@ const fixture: CategoryWithSubCategories[] = [
     type: 'in',
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 20,
@@ -59,6 +64,7 @@ const fixture: CategoryWithSubCategories[] = [
         originalName: 'Stipendio mensile',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: 'income',
@@ -72,6 +78,7 @@ const fixture: CategoryWithSubCategories[] = [
     type: null,
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 30,
@@ -80,6 +87,7 @@ const fixture: CategoryWithSubCategories[] = [
         originalName: 'Ignorato',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: null,
@@ -93,6 +101,7 @@ const fixture: CategoryWithSubCategories[] = [
     type: 'transfer',
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 40,
@@ -101,6 +110,7 @@ const fixture: CategoryWithSubCategories[] = [
         originalName: 'Bonifico',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: 'transfer',
@@ -222,6 +232,7 @@ const directionFixture: CategoryWithSubCategories[] = [
     type: 'out',
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 101,
@@ -230,6 +241,7 @@ const directionFixture: CategoryWithSubCategories[] = [
         originalName: 'Spesa quotidiana',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: 'essential',
@@ -241,6 +253,7 @@ const directionFixture: CategoryWithSubCategories[] = [
         originalName: 'Bio vino e gourmet',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: 'discretionary',
@@ -255,6 +268,7 @@ const directionFixture: CategoryWithSubCategories[] = [
     type: 'allocation',
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 201,
@@ -263,6 +277,7 @@ const directionFixture: CategoryWithSubCategories[] = [
         originalName: 'Conto risparmio',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: 'savings',
@@ -276,6 +291,7 @@ const directionFixture: CategoryWithSubCategories[] = [
     type: 'allocation',
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 211,
@@ -284,6 +300,7 @@ const directionFixture: CategoryWithSubCategories[] = [
         originalName: 'Titoli e fondi',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: 'investment',
@@ -298,6 +315,7 @@ const directionFixture: CategoryWithSubCategories[] = [
     type: 'in',
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 301,
@@ -306,6 +324,7 @@ const directionFixture: CategoryWithSubCategories[] = [
         originalName: 'Stipendio base',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: 'income',
@@ -320,6 +339,7 @@ const directionFixture: CategoryWithSubCategories[] = [
     type: null,
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 401,
@@ -328,6 +348,7 @@ const directionFixture: CategoryWithSubCategories[] = [
         originalName: 'Ignorato',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: null,
@@ -342,6 +363,7 @@ const directionFixture: CategoryWithSubCategories[] = [
     type: null,
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 501,
@@ -350,6 +372,7 @@ const directionFixture: CategoryWithSubCategories[] = [
         originalName: 'Sub senza tipo',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: 'essential',
@@ -416,5 +439,22 @@ describe('buildDirectionNatureMap (Phase 49 — CAT-01)', () => {
   it('returns empty object for empty input', () => {
     const result = buildDirectionNatureMap([])
     expect(result).toEqual({})
+  })
+})
+
+describe('unionFilterOptions', () => {
+  it('unions and dedupes by value across parent keys', () => {
+    const map = {
+      in: [{ value: 'income', label: 'Reddito' }],
+      out: [
+        { value: 'essential', label: 'Essenziale' },
+        { value: 'income', label: 'Reddito dup' },
+      ],
+      transfer: [{ value: 'transfer', label: 'Trasferimento' }],
+    }
+    const result = unionFilterOptions(map, ['in', 'out'])
+    expect(result.map((o) => o.value)).toEqual(['income', 'essential'])
+    expect(result.find((o) => o.value === 'income')?.label).toBe('Reddito')
+    expect(result.some((o) => o.value === 'transfer')).toBe(false)
   })
 })

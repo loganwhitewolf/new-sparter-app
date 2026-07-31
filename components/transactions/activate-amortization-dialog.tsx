@@ -111,7 +111,7 @@ export function ActivateAmortizationDialog({
       return
     }
 
-    toast.success(`Transazione ammortizzata su ${months} mesi.`)
+    toast.success(`Transazione dilazionata su ${months} mesi.`)
     onOpenChange(false)
     onSuccess({
       planId: result.planId,
@@ -126,7 +126,7 @@ export function ActivateAmortizationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Ammortizza transazione</DialogTitle>
+          <DialogTitle>Dilaziona transazione</DialogTitle>
           <DialogDescription>
             Distribuisci il costo su più mesi. Ogni rata sarà uniforme, a partire dalla data di
             acquisto.
@@ -194,7 +194,7 @@ export function ActivateAmortizationDialog({
             </Button>
           </DialogClose>
           <Button type="button" onClick={handleConfirm} disabled={pending || !validation.valid}>
-            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ammortizza'}
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Dilaziona'}
           </Button>
         </DialogFooter>
       </DialogContent>

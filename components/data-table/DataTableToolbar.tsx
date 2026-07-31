@@ -6,7 +6,7 @@
  * Layout:
  *   1. Inline search <Input> (when config.search is non-null), debounced 500ms
  *   2. "Filtri (n)" <Popover> trigger — count = active non-search filter params
- *   3. <PopoverContent> renders one control per config.filters entry
+ *   3. <PopoverContent> two-column FilterPanel, max-height + overflow scroll (viewport-safe)
  *   4. <ChipsRow> below, one chip per active filter param, "Cancella tutto" batch-clears
  *   5. Desktop sort exposed via useToolbarSort() + HeaderSortButton (caller wires)
  *   6. Mobile "Ordina" <Button> + <Sheet side="bottom"> listing sortable columns
@@ -40,6 +40,8 @@ import { ChipsRow } from '@/components/data-table/ChipsRow'
 import { nextSort } from '@/components/data-table/HeaderSortButton'
 import { monthLabel, MonthMultiPicker } from '@/components/data-table/MonthMultiPicker'
 import { useTableUrl } from '@/components/data-table/use-table-url'
+import { unionFilterOptions } from '@/lib/utils/cascade-options'
+import { sameDirectionSet } from '@/lib/utils/transaction-directions'
 import type { FilterField, TableConfig } from '@/lib/utils/table-config'
 
 // ---- Types -----------------------------------------------------------------
@@ -82,6 +84,50 @@ function countActiveFilters(searchParams: URLSearchParams, filters: FilterField[
   return count
 }
 
+
+// ---- Cascade / multi-select helpers ----------------------------------------
+
+function parentKeysForCascade(
+  parentField: FilterField | undefined,
+  parentRaw: string | null,
+): string[] {
+  if (parentRaw != null && parentRaw !== '') {
+    return parentRaw.split(',').filter(Boolean)
+  }
+  if (parentField?.implicitDefault && parentField.implicitDefault.length > 0) {
+    return [...parentField.implicitDefault]
+  }
+  return ['']
+}
+
+function encodeMultiSelectValue(
+  selected: string[],
+  implicitDefault?: string[],
+): string | null {
+  if (selected.length === 0) return null
+  if (implicitDefault && sameDirectionSet(selected, implicitDefault)) return null
+  return selected.join(',')
+}
+
+function resolveCascadeOptions(
+  field: FilterField,
+  searchParams: URLSearchParams,
+  dependentOptions: DependentOptions | undefined,
+  parentField: FilterField | undefined,
+  fallbackOptions?: { value: string; label: string }[],
+): { value: string; label: string }[] {
+  if (!field.dependsOn || !dependentOptions?.[field.key]) {
+    return fallbackOptions ?? field.options ?? []
+  }
+  const keys = parentKeysForCascade(parentField, searchParams.get(field.dependsOn))
+  const unioned = unionFilterOptions(dependentOptions[field.key], keys)
+  if (unioned.length > 0) return unioned
+  if (!parentField?.implicitDefault) {
+    return dependentOptions[field.key][''] ?? fallbackOptions ?? field.options ?? []
+  }
+  return unioned
+}
+
 // ---- Filter field renderer -------------------------------------------------
 
 function FilterField({
@@ -93,6 +139,7 @@ function FilterField({
   onChange,
   onParamChange,
   dependentOptions,
+  parentField,
 }: {
   field: FilterField
   value: string | null
@@ -102,22 +149,54 @@ function FilterField({
   onChange: (v: string | null) => void
   onParamChange: (key: string, v: string | null) => void
   dependentOptions?: DependentOptions
+  parentField?: FilterField
 }) {
-  if (field.type === 'select' || field.type === 'multi-select') {
-    // Cascade-aware option resolution: if this field has a parent (dependsOn), resolve
-    // options from the parent's current URL value. Fall back to '' all-bucket when absent.
-    let resolvedOptions: { value: string; label: string }[]
-    if (field.dependsOn && dependentOptions?.[field.key]) {
-      const parentValue = searchParams.get(field.dependsOn) ?? ''
-      resolvedOptions =
-        dependentOptions[field.key][parentValue] ??
-        dependentOptions[field.key][''] ??
-        options ??
-        field.options ??
-        []
-    } else {
-      resolvedOptions = options ?? field.options ?? []
-    }
+  if (field.type === 'multi-select') {
+    const resolvedOptions = options ?? field.options ?? []
+    const selected =
+      value != null && value !== ''
+        ? value.split(',').filter(Boolean)
+        : [...(field.implicitDefault ?? [])]
+    const selectedSet = new Set(selected)
+
+    return (
+      <div className="grid gap-1.5">
+        <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
+        <ul className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-md border p-2">
+          {resolvedOptions.map((opt) => {
+            const checked = selectedSet.has(opt.value)
+            return (
+              <li key={opt.value}>
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="size-4 shrink-0"
+                    checked={checked}
+                    onChange={() => {
+                      const next = checked
+                        ? selected.filter((v) => v !== opt.value)
+                        : [...selected, opt.value]
+                      onChange(encodeMultiSelectValue(next, field.implicitDefault))
+                    }}
+                  />
+                  <span className="leading-tight">{opt.label}</span>
+                </label>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+    )
+  }
+
+  if (field.type === 'select') {
+    const resolvedOptions = resolveCascadeOptions(
+      field,
+      searchParams,
+      dependentOptions,
+      parentField,
+      options,
+    )
     return (
       <div className="grid gap-1.5">
         <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
@@ -142,8 +221,6 @@ function FilterField({
   }
 
   if (field.type === 'status') {
-    // Use custom options when provided (e.g. 3-bucket processing status for Files)
-    // Fall back to the default 2-state categorization options for Transactions/Expenses
     const statusOptions = field.options ?? [
       { value: 'categorized', label: 'Categorizzate' },
       { value: 'uncategorized', label: 'Da categorizzare' },
@@ -241,33 +318,29 @@ function FilterPanel({
    * Parent + child clear happen in one URL write (avoids a stale intermediate render).
    */
   function handleFieldChange(field: FilterField, newValue: string | null) {
-    // Find children that depend on this field
     const dependentChildren = config.filters.filter(
       (f) => f.dependsOn === field.key,
     )
 
     if (dependentChildren.length === 0 || !dependentOptions) {
-      // No children — simple single-key write
       updateParam(field.key, newValue)
       return
     }
 
-    // Build the multi-key update: parent value + any invalidated child clears
     const entries: Record<string, string | null> = { [field.key]: newValue }
+    const parentKeys = parentKeysForCascade(field, newValue)
 
     for (const child of dependentChildren) {
       const currentChildValue = searchParams.get(child.key)
       if (!currentChildValue) continue
 
-      // Resolve the child options for the new parent value
-      const parentValue = newValue ?? ''
-      const childOpts =
-        dependentOptions[child.key]?.[parentValue] ??
-        dependentOptions[child.key]?.[''] ??
-        child.options ??
-        []
-
-      const childValueValid = childOpts.some((o) => o.value === currentChildValue)
+      const childOpts = unionFilterOptions(dependentOptions[child.key] ?? {}, parentKeys)
+      const fallback =
+        !field.implicitDefault
+          ? (dependentOptions[child.key]?.[''] ?? child.options ?? [])
+          : []
+      const opts = childOpts.length > 0 ? childOpts : fallback
+      const childValueValid = opts.some((o) => o.value === currentChildValue)
       if (!childValueValid) {
         entries[child.key] = null
       }
@@ -276,21 +349,37 @@ function FilterPanel({
     updateParams(entries)
   }
 
+  // Wide controls span both columns. Months stays half-width so it can share a row with
+  // Piattaforma (transactions config orders them adjacent).
+  function fieldSpansFullWidth(field: FilterField): boolean {
+    return field.type === 'multi-select' || field.type === 'amount-range'
+  }
+
   return (
-    <div className="space-y-3">
-      {config.filters.map((field) => (
-        <FilterField
-          key={field.key}
-          field={field}
-          value={searchParams.get(field.key)}
-          options={filterOptions?.[field.key]}
-          monthsWithData={monthsWithData}
-          searchParams={searchParams}
-          onChange={(v) => handleFieldChange(field, v)}
-          onParamChange={updateParam}
-          dependentOptions={dependentOptions}
-        />
-      ))}
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {config.filters.map((field) => {
+        const parentField = field.dependsOn
+          ? config.filters.find((f) => f.key === field.dependsOn)
+          : undefined
+        return (
+          <div
+            key={field.key}
+            className={fieldSpansFullWidth(field) ? 'sm:col-span-2' : undefined}
+          >
+            <FilterField
+              field={field}
+              value={searchParams.get(field.key)}
+              options={filterOptions?.[field.key]}
+              monthsWithData={monthsWithData}
+              searchParams={searchParams}
+              onChange={(v) => handleFieldChange(field, v)}
+              onParamChange={updateParam}
+              dependentOptions={dependentOptions}
+              parentField={parentField}
+            />
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -342,6 +431,20 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions,
           onRemove: () => {
             const remaining = months.filter((m) => m !== ym)
             updateParam('months', remaining.length ? remaining.join(',') : null)
+          },
+        }))
+      }
+      if (field.type === 'multi-select') {
+        const tokens = raw.split(',').filter(Boolean)
+        return tokens.map((token) => ({
+          key: `${field.key}:${token}`,
+          label: field.toChip(token),
+          onRemove: () => {
+            const remaining = tokens.filter((t) => t !== token)
+            updateParam(
+              field.key,
+              encodeMultiSelectValue(remaining, field.implicitDefault),
+            )
           },
         }))
       }
@@ -436,9 +539,14 @@ export function DataTableToolbar({ config, route, monthsWithData, filterOptions,
                 {activeCount > 0 ? `Filtri (${activeCount})` : 'Filtri'}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-80">
-              {/* Popover header with title and explicit close button */}
-              <div className="mb-3 flex items-center justify-between">
+            <PopoverContent
+              align="end"
+              collisionPadding={16}
+              className="w-[min(40rem,calc(100vw-2rem))] max-h-[min(70vh,36rem)] overflow-y-auto"
+            >
+              {/* Popover header with title and explicit close button — sticky so it stays
+                  visible while the two-column filter grid scrolls underneath. */}
+              <div className="sticky top-0 z-10 mb-3 flex items-center justify-between bg-popover pb-1">
                 <span className="text-sm font-semibold">Filtri</span>
                 <Button
                   variant="ghost"

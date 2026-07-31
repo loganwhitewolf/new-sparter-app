@@ -108,7 +108,7 @@ describeIfReachable('getAmortizationEligibility (Phase 77, D-04..D-07 + outflow-
     await expect(
       activatePlanTx(db, { userId, transactionId: refundTransactionId, months: 3 }),
     ).rejects.toThrow(
-      'Non puoi ammortizzare una transazione coinvolta in un rimborso. Scollega il rimborso prima.',
+      'Non puoi dilazionare una transazione coinvolta in un rimborso. Scollega il rimborso prima.',
     )
     expect(await amortizationPlanCountFor(db, refundTransactionId)).toBe(0)
   })
@@ -212,7 +212,7 @@ describeIfReachable('getAmortizationEligibility (Phase 77, D-04..D-07 + outflow-
     expect(result).toEqual({ eligible: false, reason: 'expense-group' })
 
     await expect(activatePlanTx(db, { userId, transactionId, months: 3 })).rejects.toThrow(
-      'Non puoi ammortizzare una transazione che fa parte di un gruppo di spese. Rimuovila dal gruppo prima.',
+      'Non puoi dilazionare una transazione che fa parte di un gruppo di spese. Rimuovila dal gruppo prima.',
     )
     expect(await amortizationPlanCountFor(db, transactionId)).toBe(0)
   })
@@ -237,7 +237,7 @@ describeIfReachable('getAmortizationEligibility (Phase 77, D-04..D-07 + outflow-
     expect(result).toEqual({ eligible: false, reason: 'not-outflow' })
 
     await expect(activatePlanTx(db, { userId, transactionId, months: 3 })).rejects.toThrow(
-      'Puoi ammortizzare solo transazioni in uscita.',
+      'Puoi dilazionare solo transazioni in uscita.',
     )
     expect(await amortizationPlanCountFor(db, transactionId)).toBe(0)
   })
@@ -263,7 +263,7 @@ describeIfReachable('getAmortizationEligibility (Phase 77, D-04..D-07 + outflow-
     expect(result).toEqual({ eligible: false, reason: 'too-small', requiredPerMonth: '0.00' })
 
     await expect(activatePlanTx(db, { userId, transactionId, months: 2 })).rejects.toThrow(
-      'Importo troppo piccolo. Ammortizzare su 2 mesi richiederebbe rate di €0.00, impossibili.',
+      'Importo troppo piccolo. Dilazionare su 2 mesi richiederebbe rate di €0.00, impossibili.',
     )
     expect(await amortizationPlanCountFor(db, transactionId)).toBe(0)
   })

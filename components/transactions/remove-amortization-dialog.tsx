@@ -36,11 +36,11 @@ export function RemoveAmortizationDialog({ open, onOpenChange, planId, onSuccess
     setPending(false)
 
     if (result.error) {
-      toast.error(`Errore nel rimuovere l'ammortamento: ${result.error}`)
+      toast.error(`Errore nel rimuovere la spesa dilazionata: ${result.error}`)
       return
     }
 
-    toast.success('Ammortamento rimosso. Transazione ripristinata.')
+    toast.success('Spesa dilazionata rimossa. Transazione ripristinata.')
     onOpenChange(false)
     onSuccess()
   }
@@ -49,7 +49,7 @@ export function RemoveAmortizationDialog({ open, onOpenChange, planId, onSuccess
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Rimuovi ammortamento</DialogTitle>
+          <DialogTitle>Rimuovi spesa dilazionata</DialogTitle>
           <DialogDescription>
             Questa azione eliminerà la pianificazione e tutte le rate associate. La transazione
             tornerà nella spesa condivisa per descrizione.
@@ -63,7 +63,7 @@ export function RemoveAmortizationDialog({ open, onOpenChange, planId, onSuccess
             </Button>
           </DialogClose>
           <Button type="button" variant="destructive" onClick={handleConfirm} disabled={pending}>
-            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Rimuovi ammortamento'}
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Rimuovi spesa dilazionata'}
           </Button>
         </DialogFooter>
       </DialogContent>

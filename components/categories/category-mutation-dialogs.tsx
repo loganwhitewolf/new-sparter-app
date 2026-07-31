@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useRef, useState } from 'react'
-import { AlertCircle, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
+import { AlertCircle, Ban, Loader2, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -27,13 +27,26 @@ import {
 import {
   createCategoryAction,
   createSubcategoryAction,
+  deactivateCategoryAction,
+  deactivateSubcategoryAction,
   deleteCategoryAction,
   deleteSubcategoryAction,
+  reactivateCategoryAction,
+  reactivateSubcategoryAction,
   renameCategoryAction,
   renameSubcategoryAction,
 } from '@/lib/actions/categories'
 import type { CategoryWithSubCategories } from '@/lib/dal/categories'
-import { NATURE_LABELS, NATURE_ORDER } from '@/lib/utils/nature-labels'
+import {
+  DEFAULT_NATURE_BY_DIRECTION,
+  DIRECTION_LABELS,
+  DIRECTION_ORDER,
+  NATURE_LABELS,
+  NATURES_BY_DIRECTION,
+  isDirectionCode,
+  type DirectionCode,
+  type FlowNature,
+} from '@/lib/utils/nature-labels'
 import type { ActionState } from '@/lib/validations/category'
 
 function useDialogAction(
@@ -85,10 +98,24 @@ function ActionError({ error }: { error: string | null }) {
   )
 }
 
+function naturesForCategoryDirection(type: CategoryWithSubCategories['type']): FlowNature[] {
+  if (isDirectionCode(type)) {
+    return [...NATURES_BY_DIRECTION[type]]
+  }
+  return Object.values(NATURES_BY_DIRECTION).flat()
+}
+
+function defaultNatureForCategory(type: CategoryWithSubCategories['type']): FlowNature {
+  if (isDirectionCode(type)) return DEFAULT_NATURE_BY_DIRECTION[type]
+  return 'discretionary'
+}
+
 export function CreateCategoryDialog() {
+  const [direction, setDirection] = useState<DirectionCode>('out')
   const { open, setOpen, state, submit, isPending } = useDialogAction(
     createCategoryAction,
     'Categoria creata.',
+    () => setDirection('out'),
   )
 
   return (
@@ -103,13 +130,30 @@ export function CreateCategoryDialog() {
         <DialogHeader>
           <DialogTitle>Nuova categoria personale</DialogTitle>
           <DialogDescription>
-            Crea una categoria personale per organizzare entrate o uscite. Le categorie di sistema restano condivise.
+            Scegli la direzione (Entrate, Uscite, Accantonamenti o Trasferimenti). Le sottocategorie
+            e la loro natura le aggiungi dopo.
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="flex flex-col gap-4">
+          <input type="hidden" name="direction" value={direction} />
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" htmlFor="category-name-new">Nome categoria</label>
             <Input id="category-name-new" name="name" required placeholder="es. Casa vacanze" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" htmlFor="category-direction-new">Direzione</label>
+            <Select value={direction} onValueChange={(v) => setDirection(v as DirectionCode)}>
+              <SelectTrigger id="category-direction-new" className="w-full" aria-label="Direzione categoria">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DIRECTION_ORDER.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {DIRECTION_LABELS[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <ActionError error={state.error} />
           <DialogFooter>
@@ -123,11 +167,12 @@ export function CreateCategoryDialog() {
 }
 
 export function CreateSubcategoryDialog({ category }: { category: CategoryWithSubCategories }) {
-  const [nature, setNature] = useState<string>('discretionary')
+  const natureOptions = naturesForCategoryDirection(category.type)
+  const [nature, setNature] = useState<string>(() => defaultNatureForCategory(category.type))
   const { open, setOpen, state, submit, isPending } = useDialogAction(
     createSubcategoryAction,
     'Sottocategoria creata.',
-    () => setNature('discretionary'),
+    () => setNature(defaultNatureForCategory(category.type)),
   )
 
   return (
@@ -142,7 +187,8 @@ export function CreateSubcategoryDialog({ category }: { category: CategoryWithSu
         <DialogHeader>
           <DialogTitle>Nuova sottocategoria</DialogTitle>
           <DialogDescription>
-            Aggiungi una sottocategoria personale sotto "{category.name}".
+            Aggiungi una sottocategoria personale sotto "{category.name}". Qui scegli la natura
+            (es. Essenziale, Entrate ricorrenti).
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="flex flex-col gap-4">
@@ -159,9 +205,9 @@ export function CreateSubcategoryDialog({ category }: { category: CategoryWithSu
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {NATURE_ORDER.filter(Boolean).map((key) => (
-                  <SelectItem key={key!} value={key!}>
-                    {NATURE_LABELS[key!]}
+                {natureOptions.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {NATURE_LABELS[key]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -259,6 +305,74 @@ export function RenameSubcategoryDialog({ subCategory }: { subCategory: Subcateg
   )
 }
 
+export function DeactivateCategoryDialog({ category }: { category: CategoryWithSubCategories }) {
+  const { open, setOpen, state, submit, isPending } = useDialogAction(
+    deactivateCategoryAction,
+    'Categoria disattivata.',
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="ghost" size="icon-xs" aria-label={`Disattiva categoria ${category.name}`}>
+          <ClientMountIcon icon={Ban} ariaHidden className="h-3 w-3" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Disattiva categoria personale</DialogTitle>
+          <DialogDescription>
+            Resta in elenco come Disabilitata (opaca) e sparisce dai selettori. Lo storico
+            delle spese resta intatto. Consentita anche con spese collegate.
+          </DialogDescription>
+        </DialogHeader>
+        <form action={submit} className="flex flex-col gap-4">
+          <input type="hidden" name="id" value={category.id} />
+          <ActionError error={state.error} />
+          <DialogFooter>
+            <DialogClose asChild><Button type="button" variant="ghost">Annulla</Button></DialogClose>
+            <SubmitButton isPending={isPending} variant="destructive">Disattiva</SubmitButton>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function ReactivateCategoryDialog({ category }: { category: CategoryWithSubCategories }) {
+  const { open, setOpen, state, submit, isPending } = useDialogAction(
+    reactivateCategoryAction,
+    'Categoria riattivata.',
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="ghost" size="icon-xs" aria-label={`Riattiva categoria ${category.name}`}>
+          <ClientMountIcon icon={RotateCcw} ariaHidden className="h-3 w-3" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Riattiva categoria personale</DialogTitle>
+          <DialogDescription>
+            Torna disponibile nei selettori. Le sottocategorie disabilitate restano disabilitate:
+            riattivale una per una se serve.
+          </DialogDescription>
+        </DialogHeader>
+        <form action={submit} className="flex flex-col gap-4">
+          <input type="hidden" name="id" value={category.id} />
+          <ActionError error={state.error} />
+          <DialogFooter>
+            <DialogClose asChild><Button type="button" variant="ghost">Annulla</Button></DialogClose>
+            <SubmitButton isPending={isPending}>Riattiva</SubmitButton>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export function DeleteCategoryDialog({ category }: { category: CategoryWithSubCategories }) {
   const { open, setOpen, state, submit, isPending } = useDialogAction(
     deleteCategoryAction,
@@ -276,7 +390,8 @@ export function DeleteCategoryDialog({ category }: { category: CategoryWithSubCa
         <DialogHeader>
           <DialogTitle>Elimina categoria personale</DialogTitle>
           <DialogDescription>
-            La categoria verrà disattivata. Se contiene sottocategorie collegate a spese, l'operazione verrà bloccata.
+            Rimozione definitiva dal database. Bloccata se ci sono spese collegate: in quel caso
+            usa Disattiva. Dopo l'eliminazione puoi ricreare una categoria con lo stesso nome.
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="flex flex-col gap-4">
@@ -285,6 +400,73 @@ export function DeleteCategoryDialog({ category }: { category: CategoryWithSubCa
           <DialogFooter>
             <DialogClose asChild><Button type="button" variant="ghost">Annulla</Button></DialogClose>
             <SubmitButton isPending={isPending} variant="destructive">Elimina</SubmitButton>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function DeactivateSubcategoryDialog({ subCategory }: { subCategory: Subcategory }) {
+  const { open, setOpen, state, submit, isPending } = useDialogAction(
+    deactivateSubcategoryAction,
+    'Sottocategoria disattivata.',
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="ghost" size="icon-xs" aria-label={`Disattiva sottocategoria ${subCategory.name}`}>
+          <ClientMountIcon icon={Ban} ariaHidden className="h-3 w-3" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Disattiva sottocategoria personale</DialogTitle>
+          <DialogDescription>
+            Resta in elenco come Disabilitata (opaca) e sparisce dai selettori. Resta collegata alle
+            spese già categorizzate. Consentita anche con spese collegate.
+          </DialogDescription>
+        </DialogHeader>
+        <form action={submit} className="flex flex-col gap-4">
+          <input type="hidden" name="id" value={subCategory.id} />
+          <ActionError error={state.error} />
+          <DialogFooter>
+            <DialogClose asChild><Button type="button" variant="ghost">Annulla</Button></DialogClose>
+            <SubmitButton isPending={isPending} variant="destructive">Disattiva</SubmitButton>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function ReactivateSubcategoryDialog({ subCategory }: { subCategory: Subcategory }) {
+  const { open, setOpen, state, submit, isPending } = useDialogAction(
+    reactivateSubcategoryAction,
+    'Sottocategoria riattivata.',
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="ghost" size="icon-xs" aria-label={`Riattiva sottocategoria ${subCategory.name}`}>
+          <ClientMountIcon icon={RotateCcw} ariaHidden className="h-3 w-3" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Riattiva sottocategoria personale</DialogTitle>
+          <DialogDescription>
+            Torna disponibile nei selettori. Se la categoria padre è disabilitata, riattivala prima.
+          </DialogDescription>
+        </DialogHeader>
+        <form action={submit} className="flex flex-col gap-4">
+          <input type="hidden" name="id" value={subCategory.id} />
+          <ActionError error={state.error} />
+          <DialogFooter>
+            <DialogClose asChild><Button type="button" variant="ghost">Annulla</Button></DialogClose>
+            <SubmitButton isPending={isPending}>Riattiva</SubmitButton>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -309,7 +491,7 @@ export function DeleteSubcategoryDialog({ subCategory }: { subCategory: Subcateg
         <DialogHeader>
           <DialogTitle>Elimina sottocategoria personale</DialogTitle>
           <DialogDescription>
-            Le sottocategorie collegate a spese non possono essere eliminate: il blocco evita categorie mancanti nello storico.
+            Rimozione definitiva. Bloccata se collegata a spese: in quel caso usa Disattiva.
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="flex flex-col gap-4">

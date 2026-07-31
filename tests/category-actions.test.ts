@@ -13,9 +13,11 @@ const mocks = vi.hoisted(() => ({
   verifySession: vi.fn(),
   createUserCategory: vi.fn(),
   renameUserCategory: vi.fn(),
+  deactivateUserCategory: vi.fn(),
   deleteUserCategory: vi.fn(),
   createUserSubcategory: vi.fn(),
   renameUserSubcategory: vi.fn(),
+  deactivateUserSubcategory: vi.fn(),
   deleteUserSubcategory: vi.fn(),
   upsertSystemSubcategoryOverride: vi.fn(),
   upsertSubcategoryNatureOverride: vi.fn(),
@@ -36,9 +38,11 @@ vi.mock('@/lib/dal/categories', async () => {
     CategoryMutationError: actual.CategoryMutationError,
     createUserCategory: mocks.createUserCategory,
     renameUserCategory: mocks.renameUserCategory,
+    deactivateUserCategory: mocks.deactivateUserCategory,
     deleteUserCategory: mocks.deleteUserCategory,
     createUserSubcategory: mocks.createUserSubcategory,
     renameUserSubcategory: mocks.renameUserSubcategory,
+    deactivateUserSubcategory: mocks.deactivateUserSubcategory,
     deleteUserSubcategory: mocks.deleteUserSubcategory,
     upsertSystemSubcategoryOverride: mocks.upsertSystemSubcategoryOverride,
     upsertSubcategoryNatureOverride: mocks.upsertSubcategoryNatureOverride,
@@ -49,9 +53,11 @@ vi.mock('@/lib/dal/categories', async () => {
 const {
   createCategoryAction,
   renameCategoryAction,
+  deactivateCategoryAction,
   deleteCategoryAction,
   createSubcategoryAction,
   renameSubcategoryAction,
+  deactivateSubcategoryAction,
   deleteSubcategoryAction,
   setSubcategoryNatureAction,
 } = await import('../lib/actions/categories')
@@ -76,18 +82,20 @@ describe('category Server Actions', () => {
     mocks.verifySession.mockResolvedValue({ userId: 'user-1', subscriptionPlan: 'basic' })
     mocks.createUserCategory.mockResolvedValue({ id: 1 })
     mocks.renameUserCategory.mockResolvedValue({ id: 1 })
+    mocks.deactivateUserCategory.mockResolvedValue(true)
     mocks.deleteUserCategory.mockResolvedValue(true)
     mocks.createUserSubcategory.mockResolvedValue({ id: 10 })
     mocks.upsertSubcategoryNatureOverride.mockResolvedValue({ id: 20 })
     mocks.renameUserSubcategory.mockResolvedValue({ id: 10 })
+    mocks.deactivateUserSubcategory.mockResolvedValue(true)
     mocks.deleteUserSubcategory.mockResolvedValue(true)
     mocks.upsertSystemSubcategoryOverride.mockResolvedValue({ id: 20 })
   })
 
-  it('creates a user-owned category using the session user and normalized slug', async () => {
+  it('creates a user-owned category with direction and no automatic subcategory', async () => {
     const result = await createCategoryAction(
       { error: null },
-      makeFormData({ name: '  Entrate  Extra ', type: 'in', userId: 'attacker' }),
+      makeFormData({ name: '  Entrate  Extra ', direction: 'in', userId: 'attacker' }),
     )
 
     expect(result).toEqual({ error: null })
@@ -95,8 +103,21 @@ describe('category Server Actions', () => {
       userId: 'user-1',
       name: 'Entrate Extra',
       slug: 'entrate-extra',
+      directionId: 1,
     })
+    expect(mocks.createUserSubcategory).not.toHaveBeenCalled()
     expectExactCategoryRevalidationRoutes()
+  })
+
+  it('rejects category create without direction', async () => {
+    const result = await createCategoryAction(
+      { error: null },
+      makeFormData({ name: 'Casa vacanze' }),
+    )
+
+    expect(result.error).not.toBeNull()
+    expect(mocks.createUserCategory).not.toHaveBeenCalled()
+    expect(mocks.createUserSubcategory).not.toHaveBeenCalled()
   })
 
   it('renames a user-owned category and ignores attacker userId fields', async () => {
@@ -120,16 +141,27 @@ describe('category Server Actions', () => {
     )
 
     expect(result).toEqual({ error: null })
-    // Phase 46: natureId deferred to Phase 49 — not passed to DAL
-    expect(mocks.createUserSubcategory).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: 'user-1',
-        categoryId: 2,
-        name: 'Affitto',
-        slug: 'affitto',
-      })
-    )
+    // Form posts nature code; action resolves via NATURE_ID_BY_CODE (essential → 3)
+    expect(mocks.createUserSubcategory).toHaveBeenCalledWith({
+      userId: 'user-1',
+      categoryId: 2,
+      name: 'Affitto',
+      slug: 'affitto',
+      natureId: 3,
+    })
     expectExactCategoryRevalidationRoutes()
+  })
+
+  it('resolves income nature so new subcategories can sit under Entrate', async () => {
+    const result = await createSubcategoryAction(
+      { error: null },
+      makeFormData({ categoryId: '2', name: 'Stipendio extra', nature: 'income' }),
+    )
+
+    expect(result).toEqual({ error: null })
+    expect(mocks.createUserSubcategory).toHaveBeenCalledWith(
+      expect.objectContaining({ natureId: 1, slug: 'stipendio-extra' }),
+    )
   })
 
   it('renames a user-owned subcategory without creating an override', async () => {
@@ -176,14 +208,16 @@ describe('category Server Actions', () => {
   it('prevents mutation when auth lookup fails', async () => {
     mocks.verifySession.mockRejectedValueOnce(new Error('NEXT_REDIRECT'))
 
-    await expect(createCategoryAction({ error: null }, makeFormData({ name: 'Casa', type: 'out' }))).rejects.toThrow('NEXT_REDIRECT')
+    await expect(
+      createCategoryAction({ error: null }, makeFormData({ name: 'Casa', direction: 'out' })),
+    ).rejects.toThrow('NEXT_REDIRECT')
     expect(mocks.createUserCategory).not.toHaveBeenCalled()
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
   })
 
   it('returns validation errors without writing for malformed names and ids', async () => {
     await expect(
-      createCategoryAction({ error: null }, makeFormData({ name: '   ', type: 'out' })),
+      createCategoryAction({ error: null }, makeFormData({ name: '   ', direction: 'out' })),
     ).resolves.toEqual({ error: 'Inserisci un nome.' })
     await expect(
       renameSubcategoryAction({ error: null }, makeFormData({ id: '0', name: 'Casa' })),
@@ -200,11 +234,31 @@ describe('category Server Actions', () => {
 
     const result = await createCategoryAction(
       { error: null },
-      makeFormData({ name: 'Casa', type: 'out' }),
+      makeFormData({ name: 'Casa', direction: 'out' }),
     )
 
     expect(result.error).toBe('Esiste già una categoria o sottocategoria con questo nome.')
     expect(result.error).not.toContain('unique')
+    expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('does not mislabel primary-key sequence collisions as duplicate names (bug 3.7)', async () => {
+    // DAL should heal category_pkey / stale serial and succeed; if a raw pkey error
+    // ever escapes, the action must not map it to the slug-duplicate Italian copy.
+    mocks.createUserCategory.mockRejectedValueOnce(
+      Object.assign(new Error('duplicate key value violates unique constraint "category_pkey"'), {
+        code: '23505',
+        constraint: 'category_pkey',
+      }),
+    )
+
+    const result = await createCategoryAction(
+      { error: null },
+      makeFormData({ name: 'Casa vacanze', direction: 'out' }),
+    )
+
+    expect(result.error).toBe('Si è verificato un errore. Riprova tra qualche secondo.')
+    expect(result.error).not.toBe('Esiste già una categoria o sottocategoria con questo nome.')
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
   })
 
@@ -224,8 +278,39 @@ describe('category Server Actions', () => {
 
     const result = await deleteSubcategoryAction({ error: null }, makeFormData({ id: '10' }))
 
-    expect(result.error).toBe('Non puoi eliminare questa sottocategoria: è collegata a 3 spese.')
+    expect(result.error).toBe(
+      'Non puoi eliminare: ci sono 3 spese collegate a questa categoria o sottocategoria.',
+    )
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('blocks linked-expense category deletion with the shared Italian message', async () => {
+    mocks.deleteUserCategory.mockRejectedValueOnce(
+      new CategoryMutationError('linked_expenses', 'linked expenses', 1),
+    )
+
+    const result = await deleteCategoryAction({ error: null }, makeFormData({ id: '9' }))
+
+    expect(result.error).toBe(
+      "Non puoi eliminare: c'è 1 spesa collegata a questa categoria o sottocategoria.",
+    )
+    expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('deactivates a category without a linked-expense guard', async () => {
+    const result = await deactivateCategoryAction({ error: null }, makeFormData({ id: '9' }))
+
+    expect(result).toEqual({ error: null })
+    expect(mocks.deactivateUserCategory).toHaveBeenCalledWith(9, 'user-1')
+    expectExactCategoryRevalidationRoutes()
+  })
+
+  it('deactivates a subcategory without a linked-expense guard', async () => {
+    const result = await deactivateSubcategoryAction({ error: null }, makeFormData({ id: '10' }))
+
+    expect(result).toEqual({ error: null })
+    expect(mocks.deactivateUserSubcategory).toHaveBeenCalledWith(10, 'user-1')
+    expectExactCategoryRevalidationRoutes()
   })
 
   it('collapses unexpected DAL errors without leaking details or revalidating', async () => {
@@ -303,15 +388,15 @@ describe('createSubcategoryAction nature requirement (R-FN-09 action layer)', ()
     }
   })
 
-  it('createSubcategoryAction succeeds without nature (Phase 46: natureId deferred to Phase 49)', async () => {
+  it('createSubcategoryAction requires nature code from the form', async () => {
     const fd = new FormData()
     fd.append('name', 'Test Sub')
     fd.append('categoryId', '1')
-    // intentionally omit nature field — Phase 46 defers nature requirement to Phase 49
+    // omit nature — UI always posts it; missing value must not silently create unclassified rows
 
     const { createSubcategoryAction } = await import('../lib/actions/categories')
     const result = await createSubcategoryAction({ error: null }, fd)
-    // Phase 46: nature is no longer required at action layer; natureId defaults to null
-    expect(result.error).toBeNull()
+    expect(result.error).not.toBeNull()
+    expect(mocks.createUserSubcategory).not.toHaveBeenCalled()
   })
 })

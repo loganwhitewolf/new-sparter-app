@@ -98,12 +98,12 @@ export function SubcategoryCombobox({
       <div className="rounded-2xl bg-success/10 border border-success/20 p-4 flex items-center gap-3">
         <CheckCircle className="h-4 w-4 text-success shrink-0" aria-hidden="true" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-foreground/60 truncate">{expenseTitle}</p>
+          <p className="text-sm text-secondary-readable truncate">{expenseTitle}</p>
           {initialSubcategoryName ? (
-            <p className="text-xs text-foreground/40 truncate">{initialSubcategoryName}</p>
+            <p className="text-xs text-secondary-readable truncate">{initialSubcategoryName}</p>
           ) : null}
         </div>
-        <p className="text-sm shrink-0 text-foreground/50">{formatAmount(expenseAmount)}</p>
+        <p className="text-sm shrink-0 text-secondary-readable">{formatAmount(expenseAmount)}</p>
       </div>
     )
   }
@@ -141,7 +141,7 @@ export function SubcategoryCombobox({
         {isPending ? (
           <Loader2 className="mr-2 size-4 shrink-0 animate-spin opacity-70" />
         ) : null}
-        <span className="truncate text-muted-foreground">
+        <span className="truncate text-secondary-readable">
           {isPending ? 'Salvataggio…' : 'Seleziona categoria...'}
         </span>
       </Button>

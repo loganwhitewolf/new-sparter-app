@@ -72,7 +72,7 @@ export function TransactionFormDialog({ categories, mostUsed }: Props) {
     if (submittedRef.current && state.error === null) {
       setOpen(false)
       if (state.amortized && submittedMonthsRef.current !== null) {
-        toast.success(`Transazione creata e ammortizzata su ${submittedMonthsRef.current} mesi.`)
+        toast.success(`Transazione creata e dilazionata su ${submittedMonthsRef.current} mesi.`)
       } else {
         toast.success('Transazione creata con successo.')
       }
@@ -257,7 +257,7 @@ export function TransactionFormDialog({ categories, mostUsed }: Props) {
                 onCheckedChange={(checked) => handleAmortizationCheckedChange(checked === true)}
               />
               <label className="text-sm font-medium" htmlFor="tx-amortize">
-                Ammortizza questa transazione
+                Dilaziona questa transazione
               </label>
             </div>
             <input
@@ -294,7 +294,7 @@ export function TransactionFormDialog({ categories, mostUsed }: Props) {
                 explanation for the later generic "Minimo 2 mesi." error. */}
             {amortizationEnabled && !isNegativeAmount && (
               <p className="pl-6 text-xs text-destructive">
-                Puoi ammortizzare solo transazioni in uscita.
+                Puoi dilazionare solo transazioni in uscita.
               </p>
             )}
 
@@ -355,7 +355,7 @@ export function TransactionFormDialog({ categories, mostUsed }: Props) {
               }
             >
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {amortizationEnabled ? 'Crea e ammortizza' : 'Crea transazione'}
+              {amortizationEnabled ? 'Crea e dilaziona' : 'Crea transazione'}
             </Button>
           </DialogFooter>
         </form>

@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { getExpenses, getUncategorizedExpenseCount } from '@/lib/dal/expenses'
 import { getCategories } from '@/lib/dal/categories'
 import { getTransactionPlatforms } from '@/lib/dal/transactions'
+import { getMonthsWithData } from '@/lib/dal/months-with-data'
 import { getMostUsedSubcategories } from '@/lib/dal/subcategory-usage'
 import { parseExpenseFilters, type ExpenseSearchParams } from '@/lib/validations/expense'
 import type { ExpenseFilters as ExpenseListFilters } from '@/lib/dal/expenses'
@@ -16,7 +17,19 @@ import { APP_ROUTES } from '@/lib/routes'
 
 /** Returns true when any filter param that narrows results is active */
 function hasActiveExpenseFilters(params: ExpenseSearchParams): boolean {
-  const keys = ['q', 'category', 'subCategory', 'platform', 'status', 'amountMin', 'amountMax', 'nature', 'type']
+  const keys = [
+    'q',
+    'category',
+    'subCategory',
+    'platform',
+    'status',
+    'amountMin',
+    'amountMax',
+    'nature',
+    'type',
+    'direction',
+    'months',
+  ]
   return keys.some((k) => {
     const v = params[k]
     return Array.isArray(v) ? v.length > 0 : Boolean(v)
@@ -36,6 +49,7 @@ function buildExpenseTableKey(filters: ExpenseListFilters, expenses: Awaited<Ret
     filters.nature ?? '',
     filters.direction ?? '',
     filters.subCategoryId ?? '',
+    (filters.months ?? []).join(','),
   ].join(':')
   const dataKey = expenses
     .map((expense) => [
@@ -68,18 +82,20 @@ export default async function ExpensesPage({
     amountMax: parsed.amountMax,
     sort: parsed.sort,
     dir: parsed.dir,
-    // No period — D-05: default view is all-time
+    // Absent months → all-time (D-05); months from toolbar month-multi (260731-hhv 3.5)
+    months: parsed.months,
     nature: parsed.nature,
     direction: parsed.type,
     subCategoryId: parsed.subCategoryId,
   }
 
-  const [expenses, categories, platforms, mostUsed, uncategorizedCount] = await Promise.all([
+  const [expenses, categories, platforms, mostUsed, uncategorizedCount, monthsWithData] = await Promise.all([
     getExpenses(filters),
     getCategories(),
     getTransactionPlatforms(),
     getMostUsedSubcategories(['in', 'out', 'transfer', 'allocation']),
     getUncategorizedExpenseCount(),
+    getMonthsWithData('expenses'),
   ])
 
   const categoryOptions = categories
@@ -134,6 +150,7 @@ export default async function ExpensesPage({
       <Suspense fallback={<div className="h-10 rounded-md bg-muted animate-pulse" />}>
         <ExpensesToolbar
           route={APP_ROUTES.expenses}
+          monthsWithData={monthsWithData}
           filterOptions={{
             category: categoryOptions,
             platform: platformOptions,

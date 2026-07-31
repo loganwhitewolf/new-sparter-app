@@ -128,10 +128,18 @@ export const systemCategorizationPatterns: SystemCategorizationPatternSeed[] = [
   {
     pattern:
       "(?:\\beni\\b(?!.*plenitude)|\\besso\\b|\\bshell\\b|\\bq8\\b|\\btamoil\\b|\\bcarburante\\b|\\bbenzina\\b|\\bdiesel\\b|\\bgasolio\\b)",
-    subCategorySlug: "carburante-e-ricarica",
+    subCategorySlug: "carburante",
     confidence: 0.95,
     priority: 10,
     description: "Gas stations and fuel",
+  },
+  {
+    pattern:
+      "(?:\\briccarica\\s*elettr|\\briccarica\\s*auto\\b|\\benel\\s*x\\b|\\benelx\\b|\\btesla\\b|\\bsupercharger\\b|\\bev\\s*-?\\s*charge\\b|\\bevcharge\\b|\\bionity\\b|\\bbe\\s*charge\\b|\\bbecharge\\b|\\beway\\b|\\bduferco\\b|\\bplugsurfing\\b|\\bwallbox\\b|\\bcolonnina\\b)",
+    subCategorySlug: "ricarica-auto-elettrica",
+    confidence: 0.95,
+    priority: 8,
+    description: "EV charging networks and electric vehicle top-ups",
   },
   {
     pattern:

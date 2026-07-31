@@ -15,7 +15,7 @@ export const MORE_SHEET_ROUTES = [
 const moreSheetItems = [
   { href: APP_ROUTES.categorySettings, label: 'Categorie', icon: FolderTree },
   { href: APP_ROUTES.tags, label: 'Tag', icon: Tags },
-  { href: APP_ROUTES.patterns, label: 'Pattern', icon: Regex },
+  { href: APP_ROUTES.patterns, label: 'Regole automatiche', icon: Regex },
   { href: APP_ROUTES.profileSettings, label: 'Profilo', icon: User },
 ]
 

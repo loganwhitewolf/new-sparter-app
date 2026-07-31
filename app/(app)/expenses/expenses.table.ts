@@ -13,8 +13,9 @@ const DIRECTION_LABELS: Record<string, string> = {
  * Declarative table config for the Expenses table (Wave 4, cascade extension lcp-01).
  * Consumed by DataTableToolbar — defines search, filters, sortable columns, and defaultSort.
  *
- * Field inventory (LOCKED per D-11, D-19..D-25; extended lcp-01, D-08):
+ * Field inventory (LOCKED per D-11, D-19..D-25; extended lcp-01, D-08; overridden 260731-hhv 3.5):
  *   - search: q (title)
+ *   - months: month-multi (member transaction occurredAt — contract feedback 3.5)
  *   - amount: amount-range (absolute value on totalAmount, D-20)
  *   - direction: select (direction code in/out/allocation/transfer/unclassified, D-08)
  *   - nature: select (FlowNature via subCategory, dependsOn:'direction')
@@ -22,13 +23,20 @@ const DIRECTION_LABELS: Record<string, string> = {
  *   - subCategory: select (dependsOn:'category')
  *   - platform: select (via file join)
  *   - status: removed from toolbar — quick CTA in page header (quick-260630-dhw)
- *   - NO month-multi filter (D-11 — Expenses have no temporal filter; aggregate entity)
+ *   - month-multi: D-11 previously locked "NO temporal filter"; quick 260731-hhv / contract 3.5
+ *     overrides that lock — same month-multi UX as Transactions; absent months = all-time
  *   - sortable: every displayed column (D-17)
  */
 export const expensesTableConfig: TableConfig = {
   id: 'expenses',
   search: { key: 'q', placeholder: 'Titolo…' },
   filters: [
+    {
+      key: 'months',
+      label: 'Mesi',
+      type: 'month-multi',
+      toChip: (v) => `Mesi: ${v}`,
+    },
     {
       key: 'amountMin',
       label: 'Importo (€)',

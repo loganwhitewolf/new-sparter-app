@@ -232,21 +232,39 @@ describe('suggestions page', () => {
 
   // --- empty state ---
 
-  it('empty state: renders inline message when both lists empty', async () => {
+  it('empty state: hides empty pattern box and keeps proceed CTA (3.3)', async () => {
     mocks.discoverRegexCandidates.mockResolvedValue(makeEmptyDiscovery())
 
     const html = await renderPage()
 
-    expect(html).toContain(
-      'Nessun suggerimento trovato — tutte le transazioni risultano già categorizzate o non sono stati rilevati pattern ricorrenti.',
-    )
+    expect(html).not.toContain('Nessun suggerimento trovato')
     expect(html).not.toContain('Suggerimenti pattern (')
     expect(html).not.toContain('Transazioni identiche')
+    expect(html).toContain('Procedi — vai ai file importati')
   })
 
   // --- page copy assertion ---
 
-  it('D-08 copy: page contains required heading and subtitle', async () => {
+  it('D-08 copy: page contains required heading and subtitle when patterns exist', async () => {
+    mocks.discoverRegexCandidates.mockResolvedValue({
+      candidates: [
+        {
+          pattern: 'netflix',
+          sampleDescriptions: ['NETFLIX.COM'],
+          sampleAmounts: [null],
+          matchCount: 3,
+          stablePrefix: 'netflix',
+          strippedByNormalization: false,
+          residualVariablePart: '',
+          sampleNormalized: 'netflix',
+          descriptionHashes: ['h1', 'h2', 'h3'],
+        },
+      ],
+      singleCategorizationSuggestions: [],
+      totalUncategorized: 3,
+      platformId: PLATFORM_ID,
+    })
+
     const html = await renderPage()
 
     expect(html).toContain('Suggerimenti pattern')
@@ -352,17 +370,16 @@ describe('suggestions page', () => {
       expect(html).toContain('Escursione deserto')
     })
 
-    it('the pattern-suggestions empty-state still renders alongside a non-empty tag-suggestions block', async () => {
+    it('hides empty pattern box alongside a non-empty tag-suggestions block (3.3)', async () => {
       mocks.discoverRegexCandidates.mockResolvedValue(makeEmptyDiscovery())
       mocks.computeAllTagSuggestions.mockResolvedValue([makeTagSuggestionGroup()])
 
       const html = await renderPage()
 
-      expect(html).toContain(
-        'Nessun suggerimento trovato — tutte le transazioni risultano già categorizzate o non sono stati rilevati pattern ricorrenti.',
-      )
+      expect(html).not.toContain('Nessun suggerimento trovato')
       expect(html).toContain('Suggerimenti tag')
       expect(html).toContain('Sharm 2026')
+      expect(html).toContain('Procedi — vai ai file importati')
     })
   })
 })

@@ -9,6 +9,8 @@ import {
 import { resolveLedgerRowSource } from '@/lib/dal/dashboard-filters'
 import { hasAmortizationPlans } from '@/lib/dal/amortization'
 import { verifySession } from '@/lib/dal/auth'
+import { healOrphanedOpenPlanReduceDriftsForUser } from '@/lib/services/amortization-plan-amount'
+import { db } from '@/lib/db'
 import { resolveYear } from '@/components/dashboard/overview/resolve-year'
 import { OverviewEmptyState } from '@/components/dashboard/overview/overview-empty-state'
 import { OverviewHeader } from '@/components/dashboard/overview/overview-header'
@@ -72,6 +74,9 @@ async function OverviewDataSection({
   // re-call, not a second auth round-trip (the page-level verifySession() call stays).
   const { userId } = await verifySession()
 
+  // Heal plans left reduced after a pre-fix rimborso unlink (competenza reads instalment amounts).
+  await healOrphanedOpenPlanReduceDriftsForUser(db, userId)
+
   // Prior-year chart points feed the filtered YoY deltas on the KPI cards (260711-gfd):
   // deltas compare the SAME chip selection year-over-year. A prior year with no data
   // yields zero sums → null deltas (existing null handling). Both years read the SAME
@@ -130,6 +135,7 @@ async function OverviewDataSection({
         initialMoversOut={initialMoversOut}
         initialMoversAllocation={initialMoversAllocation}
         cashOverlayData={cashOverlayData}
+        lens={lens}
       />
     </div>
   )

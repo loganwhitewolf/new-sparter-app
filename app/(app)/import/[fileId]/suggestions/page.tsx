@@ -35,29 +35,33 @@ export default async function SuggestionsPage({
     computeAllTagSuggestions({ userId }),
   ])
 
+  const hasPatternSuggestions =
+    discovery.candidates.length > 0 || discovery.singleCategorizationSuggestions.length > 0
+  const hasTagSuggestions = tagSuggestionGroups.length > 0
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold">Suggerimenti pattern</h1>
+        <h1 className="text-xl font-semibold">
+          {hasPatternSuggestions ? 'Suggerimenti pattern' : "Dopo l'importazione"}
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          I suggerimenti sono stati rilevati dalle transazioni non categorizzate di questa piattaforma
-          dopo l&apos;importazione. Puoi ricontrollare i pattern in qualsiasi momento dal tab Importazioni.
+          {hasPatternSuggestions
+            ? "I suggerimenti sono stati rilevati dalle transazioni non categorizzate di questa piattaforma dopo l'importazione. Puoi ricontrollare i pattern in qualsiasi momento dal tab Importazioni."
+            : hasTagSuggestions
+              ? 'Non ci sono pattern ricorrenti da proporre. Puoi comunque rivedere i suggerimenti tag qui sotto o tornare alle importazioni.'
+              : 'Non ci sono suggerimenti da mostrare per questa piattaforma. Puoi tornare alle importazioni e continuare da lì.'}
         </p>
       </div>
-      {discovery.candidates.length === 0 && discovery.singleCategorizationSuggestions.length === 0 ? (
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">
-            Nessun suggerimento trovato — tutte le transazioni risultano già categorizzate o non sono stati rilevati pattern ricorrenti.
-          </p>
-          <ProceedToImportsCta />
-        </div>
-      ) : (
+      {hasPatternSuggestions ? (
         <SuggestionSection
           suggestions={discovery.candidates}
           singleSuggestions={discovery.singleCategorizationSuggestions}
           categories={categories}
           fileId={fileId}
         />
+      ) : (
+        <ProceedToImportsCta />
       )}
       <TagSuggestionSection groups={tagSuggestionGroups} />
     </div>

@@ -5,10 +5,21 @@ import {
   validateSystemCategorizationPatterns,
 } from '../scripts/seed-patterns-data'
 
+/** Slugs inserted only via seed-extras (additive) — not present in seed-data.ts baseline. */
+const ADDITIVE_SYSTEM_SUBCATEGORY_SLUGS = ['carburante', 'ricarica-auto-elettrica'] as const
+
+function knownSystemSubcategorySlugs(): Set<string> {
+  return new Set([
+    ...subCategories.map((row) => row.slug),
+    ...ADDITIVE_SYSTEM_SUBCATEGORY_SLUGS,
+  ])
+}
+
 describe('systemCategorizationPatterns', () => {
-  it('references only subcategory slugs from seed-data', () => {
-    const slugs = new Set(subCategories.map((row) => row.slug))
-    const { missingSlugs, duplicateKeys, invalidRegex } = validateSystemCategorizationPatterns(slugs)
+  it('references only subcategory slugs from seed-data + additive extras', () => {
+    const { missingSlugs, duplicateKeys, invalidRegex } = validateSystemCategorizationPatterns(
+      knownSystemSubcategorySlugs(),
+    )
 
     expect(missingSlugs).toEqual([])
     expect(duplicateKeys).toEqual([])
@@ -23,9 +34,20 @@ describe('systemCategorizationPatterns', () => {
   })
 
   it('keeps validateSystemCategorizationPatterns green after grocery hardening', () => {
-    const slugs = new Set(subCategories.map((row) => row.slug))
-    const result = validateSystemCategorizationPatterns(slugs)
+    const result = validateSystemCategorizationPatterns(knownSystemSubcategorySlugs())
     expect(result).toEqual({ missingSlugs: [], duplicateKeys: [], invalidRegex: [] })
+  })
+
+  it('splits fuel vs EV onto carburante and ricarica-auto-elettrica (D-04)', () => {
+    expect(
+      systemCategorizationPatterns.some((p) => p.subCategorySlug === 'carburante'),
+    ).toBe(true)
+    expect(
+      systemCategorizationPatterns.some((p) => p.subCategorySlug === 'ricarica-auto-elettrica'),
+    ).toBe(true)
+    expect(
+      systemCategorizationPatterns.some((p) => p.subCategorySlug === 'carburante-e-ricarica'),
+    ).toBe(false)
   })
 
   it('registers a travel-agency pattern mapped to pacchetto-vacanze', () => {

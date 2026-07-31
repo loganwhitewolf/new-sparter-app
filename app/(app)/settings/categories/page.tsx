@@ -1,5 +1,5 @@
 import { verifySession } from '@/lib/dal/auth'
-import { getCategories } from '@/lib/dal/categories'
+import { getCategoriesForSettings } from '@/lib/dal/categories'
 import { CategorySettingsPanel } from '@/components/categories/category-settings-panel'
 
 export const metadata = { title: 'Categorie' }
@@ -7,7 +7,7 @@ export const metadata = { title: 'Categorie' }
 export default async function CategoriesPage() {
   await verifySession()
 
-  const categories = await getCategories()
+  const categories = await getCategoriesForSettings()
 
   return (
     <div className="flex flex-col gap-6 p-6">

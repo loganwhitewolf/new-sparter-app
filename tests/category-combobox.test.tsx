@@ -17,6 +17,7 @@ const categories: CategoryWithSubCategories[] = [
     type: 'out',
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 10,
@@ -25,6 +26,7 @@ const categories: CategoryWithSubCategories[] = [
         originalName: 'Ristoranti',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: true,
         customName: 'Ristoranti speciali',
         effectiveNature: null,
@@ -36,6 +38,7 @@ const categories: CategoryWithSubCategories[] = [
         originalName: 'Casa vacanze',
         userId: 'user-abc',
         isOwned: true,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: null,
@@ -49,6 +52,7 @@ const categories: CategoryWithSubCategories[] = [
     type: 'in',
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 20,
@@ -57,6 +61,7 @@ const categories: CategoryWithSubCategories[] = [
         originalName: 'Stipendio',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: null,
@@ -70,6 +75,7 @@ const categories: CategoryWithSubCategories[] = [
     type: 'transfer',
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 30,
@@ -78,6 +84,7 @@ const categories: CategoryWithSubCategories[] = [
         originalName: 'Bonifico',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: null,
@@ -91,6 +98,7 @@ const categories: CategoryWithSubCategories[] = [
     type: 'out',
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [],
   },
 ]

@@ -3,6 +3,10 @@ import 'server-only'
 import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { expense, expenseGroupMembership, transaction as transactionTable } from '@/lib/db/schema'
+import {
+  cleanupFinanceLinksForExpenses,
+  deleteEmptyReimbursementsForUser,
+} from '@/lib/services/linked-finance-cleanup'
 
 export type DeleteExpensesResult = {
   deletedExpenseIds: string[]
@@ -49,20 +53,29 @@ export async function deleteExpensesWithOptions(input: {
       )
     }
 
+    const linkedTransactions = await tx
+      .select({ id: transactionTable.id })
+      .from(transactionTable)
+      .where(
+        and(
+          eq(transactionTable.userId, input.userId),
+          inArray(transactionTable.expenseId, expenseIdsToDelete),
+        ),
+      )
+
+    const linkedTransactionIds = linkedTransactions.map((row) => row.id)
+
+    // Always drop plans + reimbursements tied to this expense / its txs (even if txs are kept).
+    await cleanupFinanceLinksForExpenses(tx, {
+      userId: input.userId,
+      expenseIds: expenseIdsToDelete,
+      linkedTransactionIds,
+    })
+
     let deletedTransactionIds: string[] = []
 
     if (input.deleteLinkedTransactions) {
-      const linkedTransactions = await tx
-        .select({ id: transactionTable.id })
-        .from(transactionTable)
-        .where(
-          and(
-            eq(transactionTable.userId, input.userId),
-            inArray(transactionTable.expenseId, expenseIdsToDelete),
-          ),
-        )
-
-      deletedTransactionIds = linkedTransactions.map((row) => row.id)
+      deletedTransactionIds = linkedTransactionIds
 
       if (deletedTransactionIds.length > 0) {
         await tx
@@ -79,6 +92,8 @@ export async function deleteExpensesWithOptions(input: {
     await tx
       .delete(expense)
       .where(and(eq(expense.userId, input.userId), inArray(expense.id, expenseIdsToDelete)))
+
+    await deleteEmptyReimbursementsForUser(tx, input.userId)
 
     return { deletedExpenseIds: expenseIdsToDelete, deletedTransactionIds }
   })

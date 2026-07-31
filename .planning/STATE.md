@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Amortization
 status: Awaiting next milestone
-stopped_at: Completed 260730-e6z-01-PLAN.md (transactions footer net totals)
-last_updated: "2026-07-30T08:29:05.934Z"
-last_activity: 2026-07-30
-last_activity_desc: "Completed quick task 260730-bfa: Riorganizzare il menu laterale in sezioni distinte per tipologia di feature"
+stopped_at: Completed quick task 260731-hhv (UX contratto feedback waves 01-03)
+last_updated: "2026-07-31T10:55:00.000Z"
+last_activity: 2026-07-31
+last_activity_desc: "Completed quick task 260731-hhv: UX contratto feedback Sparter (PRONTO + bug 3.7)"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 Phase: Milestone v2.9 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-07-30 - Completed quick task 260730-n2z: Amort UX (Visualizza ammortamento, Tutti=all, vendita/rimborso copy)
+Last activity: 2026-07-31 - Completed quick task 260731-hhv: UX contratto feedback Sparter (PRONTO + bug 3.7; deferred 2.4/3.8/3.9)
 
 ## Roadmap (v2.9 — Phases 77-81) — SHIPPED 2026-07-29
 
@@ -536,6 +536,8 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260730-g3b | Lens selector redesign (LSD-01..05, `.planning/lens-selector-DECISIONS.md`): pill segmented control → dropdown integrato nel titolo pagina con voci descritte; overlay tratteggiato "Uscite (cassa)" sul grafico overview solo con lente competenza (secondo fetch gated); controllo nascosto senza piani di ammortamento (`hasAmortizationPlans`) e rimosso da /dashboard/tags. Verifica visiva in-browser passata 2026-07-30 | 2026-07-30 | 4bbafc63 |
 | 260730-m2x | Fix amortizzazione: collegamento rimborso come vendita (`reducePlanTx`→`createPairTx`); ri-ammortizzabilità dopo "Rimuovi ammortamento" (clear stale `reimbursementId`/pairing client-side); link dashboard movers → `/transactions?months=YYYY-MM` | 2026-07-30 | 963f213b |
 | 260730-n2z | Amort UX: detail→Visualizza ammortamento (`?transactionId=`); Tutti mostra aperti+chiusi; copy Chiudi con vendita/rimborso | 2026-07-30 | 71351519 |
+| 260730-o82 | Transactions: direzione multi-select; default implicito in+out+allocation+unclassified (no transfer, no chips); cascade senza transfer finché non attivato | 2026-07-30 | bf578c48 |
+| 260731-hhv | UX contratto feedback Sparter: PRONTO + bug 3.7 (contrast/onboarding, welcome/dashboard, taxonomy split + pattern copy + Spese dilazionate); deferred 2.4/3.8/3.9 | 2026-07-31 | a92ef98a |
 
 ## Deferred Items
 
@@ -564,16 +566,19 @@ Items acknowledged and postponed:
 | quick_task | 260615-dtm-reusable-regex-discovery-tool-bank-agnos | reconciled 2026-07-07 — complete (d737b8e), SUMMARY lacked status field |
 | quick_task | 260615-n3t-fix-recurring-onboarding-catalogazione-s | reconciled 2026-07-07 — complete (1434308), SUMMARY lacked status field |
 | quick_task | 260703-na4-full-description-tooltip-widen-expense-t | reconciled 2026-07-07 — was fully executed 2026-07-03, SUMMARY.md was missing |
+| contratto_ux | 2.4 subcategory hover/selected / Più usate IA | deferred — needs colleague confirmation (260731-hhv) |
+| contratto_ux | 3.8 first-dashboard visual hierarchy | deferred — needs mockup (260731-hhv) |
+| contratto_ux | 3.9 Bilancio tasso / soglia 20% domain definition | deferred — needs CONTEXT.md write-up (260731-hhv) |
 
 ## Session Continuity
 
 **Resume file:** None
 
-**Stopped at:** Completed 260730-e6z-01-PLAN.md (transactions footer net totals)
+**Stopped at:** Completed quick task 260731-hhv (UX contratto feedback — 3 waves on branch `gsd/quick-260730-o82-tx-direction-multi`)
 
-Last session: 2026-07-30T08:28:52.442Z
+Last session: 2026-07-31
 
-**Next:** `/gsd-complete-milestone v2.9` to archive the milestone and prepare for the next.
+**Next:** Manual UAT on contratto PRONTO items; deferred 2.4 / 3.8 / 3.9 still open. Milestone archive: `/gsd-complete-milestone v2.9` when ready.
 
 ## Operator Next Steps
 
