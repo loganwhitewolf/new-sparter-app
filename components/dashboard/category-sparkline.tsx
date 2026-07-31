@@ -2,10 +2,14 @@
 
 import type { CategorySparklinePoint } from '@/lib/dal/dashboard'
 
+type PointState = 'covered' | 'current' | 'estimated' | 'uncovered'
+
 type Props = {
   points: CategorySparklinePoint[]
-  type: 'in' | 'out'
+  type: 'in' | 'out' | 'allocation'
   label?: string
+  pointStates?: PointState[]
+  estimatedHeightHint?: string | null
 }
 
 type ChartPoint = {
@@ -17,9 +21,12 @@ const width = 112
 const height = 36
 const padding = 3
 
+// D-09: the allocation direction admits net-divestment months (negative amounts) — the
+// clamp that used to flatten them to zero is removed. 'in'/'out' callers are unaffected: their
+// query-level abs(sum(...)) never produces a negative value in the first place.
 function parseAmount(value: string): number {
   const parsed = Number(value)
-  return Number.isFinite(parsed) ? Math.max(parsed, 0) : 0
+  return Number.isFinite(parsed) ? parsed : 0
 }
 
 function buildPolylinePoints(points: CategorySparklinePoint[]): ChartPoint[] {
@@ -44,9 +51,86 @@ function buildPolylinePoints(points: CategorySparklinePoint[]): ChartPoint[] {
   })
 }
 
-export function CategorySparkline({ points, type, label = 'Andamento mensile' }: Props) {
+type BarFillStyle = {
+  height: string
+  backgroundColor?: string
+  backgroundImage?: string
+  opacity?: number
+}
+
+// UI-SPEC `## Sparkline Visual States` — one fill style per per-month state. 'estimated' and
+// 'uncovered' never render a flat/zero-height bar: 'estimated' is normalized like any other bar,
+// 'uncovered' is pinned to 100% height regardless of its (always '0.00') amount, so a data gap
+// never reads as a month of zero spending.
+function resolveBarFillStyle(state: PointState, heightPercent: number, color: string): BarFillStyle {
+  switch (state) {
+    case 'covered':
+      return { height: `${heightPercent}%`, backgroundColor: color, opacity: 0.45 }
+    case 'current':
+      return { height: `${heightPercent}%`, backgroundColor: color, opacity: 1 }
+    case 'estimated':
+      return {
+        height: `${heightPercent}%`,
+        backgroundImage: `repeating-linear-gradient(135deg, ${color} 0 3px, transparent 3px 6px)`,
+      }
+    case 'uncovered':
+      return {
+        height: '100%',
+        backgroundImage: 'repeating-linear-gradient(45deg, transparent 0 3px, rgba(120,120,120,0.35) 3px 6px)',
+      }
+  }
+}
+
+export function CategorySparkline({
+  points,
+  type,
+  label = 'Andamento mensile',
+  pointStates,
+  estimatedHeightHint,
+}: Props) {
+  const color =
+    type === 'in' ? 'var(--total-in)' : type === 'allocation' ? 'var(--total-allocation)' : 'var(--total-out)'
+
+  // Path B (D-06/CLIST-06): 4-state bar rendering, opted into only when pointStates is provided
+  // and matches points 1:1. The single-point case ALWAYS stays on Path A's circle branch below,
+  // regardless of pointStates, so CLIST-06's one-Covered-Month series never falls through here.
+  const useBarRendering = points.length > 1 && pointStates !== undefined && pointStates.length === points.length
+
+  if (useBarRendering && pointStates) {
+    const referenceMagnitudes = points.map((point, index) => {
+      const state = pointStates[index]
+      const reference = state === 'estimated' ? Number(estimatedHeightHint ?? '0') : parseAmount(point.amount)
+      return Math.abs(reference)
+    })
+    const max = Math.max(...referenceMagnitudes)
+
+    return (
+      <div role="img" aria-label={label} className="flex h-9 w-28 shrink-0 items-end gap-[2px]">
+        {points.map((point, index) => {
+          const state = pointStates[index]
+          const rawAmount = parseAmount(point.amount)
+          const heightPercent = max === 0 ? 0 : (referenceMagnitudes[index] / max) * 100
+          const fillStyle = resolveBarFillStyle(state, heightPercent, color)
+          // Negative-domain backstop (D-09/UI-SPEC E2): a divestment month must never read
+          // identically to a same-height positive month. The marker sits on the track container,
+          // always opacity 1, independent of the fill's own state opacity above.
+          const isNegative = (state === 'covered' || state === 'current') && rawAmount < 0
+
+          return (
+            <div
+              key={point.month}
+              className="flex h-full flex-1 items-end"
+              style={isNegative ? { borderTop: `2px solid ${color}`, opacity: 1 } : undefined}
+            >
+              <div className="w-full rounded-[1px]" style={fillStyle} />
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   const chartPoints = buildPolylinePoints(points)
-  const color = type === 'in' ? 'var(--total-in)' : 'var(--total-out)'
   const path = chartPoints.map((point) => `${point.x},${point.y}`).join(' ')
   const isEmpty = chartPoints.length === 0
 
