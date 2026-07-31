@@ -123,7 +123,19 @@ directions including the previously-unreachable Accantonamenti.
      opens its detail on the same year, so the row's total and the detail page's total agree
      (CLIST-06, CLIST-07).
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 83-01-PLAN.md — Year+direction category ranking DAL (getCategoryYearRanking), direction.hidden predicate flip, D-07 total invariant, RETIRE-05 re-run
+- [ ] 83-02-PLAN.md — Year/direction/sort URL contract (additive), buildDashboardTabHref year propagation, detail page year receipt
+- [ ] 83-03-PLAN.md — 4-state sparkline, categories skeleton, single-Covered-Month nudge, centrally-resolved direction copy
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 83-04-PLAN.md — Categories list page + row assembly (direction filter, sort toggle, five-field row, sort-by-projection, single-Covered-Month state), full phase regression
+
 **UI hint**: yes
 
 #### Phase 84: category-detail-and-cleanup
@@ -518,7 +530,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 80. dashboard-accrual-lens | v2.9 | 7/7 | Complete    | 2026-07-29 |
 | 81. inline-net-display-for-paired-transactions | v2.9 | 1/1 | Complete    | 2026-07-29 |
 | 82. number-engine-and-regression-gate | v3.0 | 0/3 | Complete    | 2026-07-30 |
-| 83. categories-list | v3.0 | 0/TBD | Not started | - |
+| 83. categories-list | v3.0 | 0/4 | Planned | - |
 | 84. category-detail-and-cleanup | v3.0 | 0/TBD | Not started | - |
 
 **Total shipped: 81 phases · 305 plans complete**
