@@ -84,7 +84,7 @@ describe('category Server Actions', () => {
     mocks.upsertSystemSubcategoryOverride.mockResolvedValue({ id: 20 })
   })
 
-  it('creates a user-owned category plus initial subcategory from direction default nature', async () => {
+  it('creates a user-owned category with direction and no automatic subcategory', async () => {
     const result = await createCategoryAction(
       { error: null },
       makeFormData({ name: '  Entrate  Extra ', direction: 'in', userId: 'attacker' }),
@@ -95,15 +95,9 @@ describe('category Server Actions', () => {
       userId: 'user-1',
       name: 'Entrate Extra',
       slug: 'entrate-extra',
+      directionId: 1,
     })
-    // direction in → DEFAULT_NATURE_BY_DIRECTION.income → natureId 1
-    expect(mocks.createUserSubcategory).toHaveBeenCalledWith({
-      userId: 'user-1',
-      categoryId: 1,
-      name: 'Entrate Extra',
-      slug: 'entrate-extra',
-      natureId: 1,
-    })
+    expect(mocks.createUserSubcategory).not.toHaveBeenCalled()
     expectExactCategoryRevalidationRoutes()
   })
 

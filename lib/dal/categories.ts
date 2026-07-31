@@ -111,8 +111,14 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
         WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
         LIMIT 1
       )`,
-      // Direction code derived from the effective nature via the nature→direction FK chain
-      categoryType: sql<'in' | 'out' | 'allocation' | 'transfer' | null>`(
+      // Stored direction on personal categories (preferred for sidebar grouping)
+      storedDirectionCode: sql<'in' | 'out' | 'allocation' | 'transfer' | null>`(
+        SELECT d.code FROM direction d
+        WHERE d.id = ${category.directionId}
+        LIMIT 1
+      )`,
+      // Fallback: direction derived from the effective nature via nature→direction
+      derivedDirectionCode: sql<'in' | 'out' | 'allocation' | 'transfer' | null>`(
         SELECT d.code FROM direction d
         INNER JOIN nature n ON n.direction_id = d.id
         WHERE n.id = COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})
@@ -155,7 +161,7 @@ const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithS
         id: row.categoryId,
         name: row.categoryName,
         slug: row.categorySlug,
-        type: row.categoryType,
+        type: row.storedDirectionCode ?? row.derivedDirectionCode,
         userId: row.categoryUserId,
         isOwned: row.categoryUserId === userId,
         subCategories: [],
@@ -186,8 +192,7 @@ export async function getCategories(): Promise<CategoryWithSubCategories[]> {
 }
 
 export async function createUserCategory(
-  // TODO(Phase 49): type field removed — direction semantics derived from nature in Phase 49
-  input: { userId: string, name: string, slug: string },
+  input: { userId: string, name: string, slug: string, directionId: number },
   database: DbOrTx = db,
 ) {
   const insertOnce = () =>
@@ -198,6 +203,7 @@ export async function createUserCategory(
           userId: input.userId,
           name: input.name,
           slug: input.slug,
+          directionId: input.directionId,
           isActive: true,
         })
         .returning(),

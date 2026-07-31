@@ -87,15 +87,21 @@ export const NATURES_BY_DIRECTION: Record<DirectionCode, readonly FlowNature[]> 
 }
 
 /**
- * Default nature when creating a personal category under a direction.
- * Category has no direction column — the initial subcategory carries this nature
- * so the sidebar can group the category.
+ * Default nature when adding a subcategory under a direction-scoped category.
  */
 export const DEFAULT_NATURE_BY_DIRECTION: Record<DirectionCode, FlowNature> = {
   in: 'income',
   out: 'discretionary',
   allocation: 'savings',
   transfer: 'transfer',
+}
+
+/** Stable seed ids for direction.code (scripts/seed-data.ts). */
+export const DIRECTION_ID_BY_CODE: Record<DirectionCode, number> = {
+  in: 1,
+  out: 2,
+  allocation: 3,
+  transfer: 4,
 }
 
 export function isDirectionCode(value: string | null | undefined): value is DirectionCode {

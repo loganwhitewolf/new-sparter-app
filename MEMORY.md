@@ -42,15 +42,15 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
-### 2026-07-31 — Personal category create = direction; nature only on subcategory
+### 2026-07-31 — Personal category create = direction only (no auto subcategory)
 
-**Decided:** Create categoria = nome + **Direzione** (`in|out|allocation|transfer`). Nature is chosen only on sottocategoria. Create still seeds an initial subcategory (same name) with `DEFAULT_NATURE_BY_DIRECTION` so the sidebar can group (category has no direction column). Subcategory create/edit nature options are filtered to natures of the parent category direction.
+**Decided:** Create categoria = nome + **Direzione**. Persist `category.direction_id` (migration 0034). Do **not** auto-create a subcategory. Nature only on sottocategoria; nature pickers filtered by parent direction. Sidebar type = stored direction ?? derived from first subcategory nature.
 
-**Why:** Product mental model: category = Entrate/Uscite/…; subcategory = Essenziale/Discrezionale/…. Corrects the earlier “nature on category create” choice.
+**Why:** Category ≠ subcategory; seeding a same-name subcategory was wrong UX. Direction must live on the category row if we ask for it at create without a child.
 
 **Rejected:**
-- Nature select on category create — wrong layer
-- Persisting `category.direction` column — deferred; default-nature seed is enough for grouping
+- Auto initial subcategory with default nature — user rejected
+- Nature on category create — wrong layer
 
 ### 2026-07-31 — UX contratto quick on existing branch (260731-hhv)
 

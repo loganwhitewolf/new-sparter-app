@@ -50,8 +50,7 @@ export const DirectionSchema = z.enum(['in', 'out', 'allocation', 'transfer'])
 
 export const CreateCategorySchema = z.object({
   name: NameSchema,
-  // User picks direction; action maps to a default nature on the initial subcategory
-  // (category table has no direction column — see DEFAULT_NATURE_BY_DIRECTION).
+  // Persisted on category.direction_id; nature stays on subcategories only.
   direction: DirectionSchema,
 }).transform((input) => ({
   ...input,

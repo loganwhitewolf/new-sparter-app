@@ -150,10 +150,16 @@ export const category = pgTable(
     slug: varchar("slug", { length: 100 }).notNull(),
     displayOrder: integer("display_order").default(0),
     isActive: boolean("is_active").default(true).notNull(),
+    // Personal categories: user-chosen ledger direction. System rows stay null and
+    // derive sidebar grouping from subcategory natures (legacy Phase 49 behavior).
+    directionId: integer("direction_id").references(() => direction.id, {
+      onDelete: "set null",
+    }),
   },
   (table) => [
     index("category_userId_idx").on(table.userId),
     index("category_slug_idx").on(table.slug),
+    index("category_directionId_idx").on(table.directionId),
     uniqueIndex("category_system_slug_unique")
       .on(table.slug)
       .where(sql`${table.userId} IS NULL`),
@@ -1012,6 +1018,10 @@ export const categoryRelations = relations(category, ({ one, many }) => ({
     fields: [category.userId],
     references: [user.id],
   }),
+  direction: one(direction, {
+    fields: [category.directionId],
+    references: [direction.id],
+  }),
   subCategories: many(subCategory),
 }));
 
@@ -1053,6 +1063,7 @@ export const userSubcategoryOverrideRelations = relations(
 
 export const directionRelations = relations(direction, ({ many }) => ({
   natures: many(nature),
+  categories: many(category),
 }));
 
 export const natureRelations = relations(nature, ({ one, many }) => ({

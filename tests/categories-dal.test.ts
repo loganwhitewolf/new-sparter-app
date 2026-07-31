@@ -39,7 +39,8 @@ type CategoryRowFixture = {
   overrideNatureId: number | null
   subCategoryNatureId: number | null
   effectiveNatureCode: FlowNature | null
-  categoryType: DirectionCode
+  storedDirectionCode: DirectionCode
+  derivedDirectionCode: DirectionCode
 }
 
 function nextSelectResult() {
@@ -129,7 +130,8 @@ function systemCategoryRow(overrides: Partial<CategoryRowFixture> = {}): Categor
     overrideNatureId: null,
     subCategoryNatureId: null,
     effectiveNatureCode: null,
-    categoryType: null,
+    storedDirectionCode: null,
+    derivedDirectionCode: null,
     ...overrides,
   }
 }
@@ -435,15 +437,15 @@ describe('categories DAL mutations', () => {
     mocks.execute.mockReset()
   })
 
-  it('creates user-owned categories with owner metadata', async () => {
-    // Phase 46: category.type removed (ADR 0012)
-    await createUserCategory({ userId: 'user-1', name: 'Casa', slug: 'casa' })
+  it('creates user-owned categories with owner metadata and direction', async () => {
+    await createUserCategory({ userId: 'user-1', name: 'Casa', slug: 'casa', directionId: 2 })
 
     expect(mocks.insertArgs[0]).toMatchObject({ id: 'category.id' })
     expect(mocks.insertValues[0]).toEqual({
       userId: 'user-1',
       name: 'Casa',
       slug: 'casa',
+      directionId: 2,
       isActive: true,
     })
   })
@@ -457,7 +459,12 @@ describe('categories DAL mutations', () => {
     mocks.insertReturningQueue.push(pkeyError, [{ id: 34, name: 'Casa', slug: 'casa' }])
     mocks.execute.mockResolvedValueOnce(undefined)
 
-    const created = await createUserCategory({ userId: 'user-1', name: 'Casa', slug: 'casa' })
+    const created = await createUserCategory({
+      userId: 'user-1',
+      name: 'Casa',
+      slug: 'casa',
+      directionId: 2,
+    })
 
     expect(created).toEqual({ id: 34, name: 'Casa', slug: 'casa' })
     expect(mocks.execute).toHaveBeenCalledTimes(1)
@@ -473,7 +480,9 @@ describe('categories DAL mutations', () => {
     })
     mocks.insertReturningQueue.push(slugError)
 
-    await expect(createUserCategory({ userId: 'user-1', name: 'Casa', slug: 'casa' })).rejects.toMatchObject({
+    await expect(
+      createUserCategory({ userId: 'user-1', name: 'Casa', slug: 'casa', directionId: 2 }),
+    ).rejects.toMatchObject({
       name: 'CategoryMutationError',
       code: 'duplicate',
     })

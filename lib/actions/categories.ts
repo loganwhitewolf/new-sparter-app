@@ -25,7 +25,7 @@ import {
   type ActionState,
 } from '@/lib/validations/category'
 import {
-  DEFAULT_NATURE_BY_DIRECTION,
+  DIRECTION_ID_BY_CODE,
   NATURE_ID_BY_CODE,
   type FlowNature,
 } from '@/lib/utils/nature-labels'
@@ -78,25 +78,15 @@ export async function createCategoryAction(
 
   if (!parsed.success) return { error: firstValidationError(parsed.error) }
 
-  // Nature is chosen only on subcategories; category create picks direction and seeds
-  // an initial subcategory with the canonical default nature for that direction.
-  const defaultNature = DEFAULT_NATURE_BY_DIRECTION[parsed.data.direction]
-  const natureId = NATURE_ID_BY_CODE[defaultNature]
+  const directionId = DIRECTION_ID_BY_CODE[parsed.data.direction]
 
   try {
-    const created = await createUserCategory({
+    // Category only — nature belongs on subcategories the user creates next.
+    await createUserCategory({
       userId,
       name: parsed.data.name,
       slug: parsed.data.slug,
-    })
-    if (!created) return { error: GENERIC_ERROR }
-
-    await createUserSubcategory({
-      userId,
-      categoryId: created.id,
-      name: parsed.data.name,
-      slug: parsed.data.slug,
-      natureId,
+      directionId,
     })
   } catch (error) {
     return mapKnownCategoryError(error) ?? { error: GENERIC_ERROR }

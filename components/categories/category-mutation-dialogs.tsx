@@ -126,9 +126,8 @@ export function CreateCategoryDialog() {
         <DialogHeader>
           <DialogTitle>Nuova categoria personale</DialogTitle>
           <DialogDescription>
-            Scegli la direzione (Entrate, Uscite, Accantonamenti o Trasferimenti). Viene creata
-            anche una prima sottocategoria con lo stesso nome; la natura la imposti dopo sulle
-            sottocategorie.
+            Scegli la direzione (Entrate, Uscite, Accantonamenti o Trasferimenti). Le sottocategorie
+            e la loro natura le aggiungi dopo.
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="flex flex-col gap-4">
