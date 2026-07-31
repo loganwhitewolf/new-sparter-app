@@ -120,6 +120,21 @@ describe('CategorySparkline', () => {
       expect(html).toContain('height:100%')
     })
 
+    test('estimated bars never collapse to a flat 0% height when estimatedHeightHint is null and every other amount is also zero (WR-02)', () => {
+      const amounts = Array(12).fill('0.00')
+      const pointStates: Array<'covered' | 'estimated'> = Array(12).fill('estimated')
+      pointStates[0] = 'covered'
+      const points = buildPoints(amounts)
+      const html = renderToStaticMarkup(
+        <CategorySparkline points={points} type="out" pointStates={pointStates} estimatedHeightHint={null} />
+      )
+      // Exactly the 11 estimated bars render at 100% (they become the sole positive reference
+      // magnitude and normalize to 100% of themselves) — the one true-zero covered bar at index 0
+      // stays at 0% (real, verified data, correctly represented).
+      expect(html.split('height:100%').length - 1).toBe(11)
+      expect(html).toContain('repeating-linear-gradient(135deg')
+    })
+
     test('a covered bar renders at 45% opacity and a current bar at 100% opacity of the direction colour', () => {
       const points = buildPoints(Array(12).fill('100.00'))
       const pointStates: Array<'covered' | 'current'> = Array(12).fill('covered')

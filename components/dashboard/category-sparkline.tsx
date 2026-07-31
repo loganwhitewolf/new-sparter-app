@@ -62,6 +62,36 @@ type BarFillStyle = {
 // 'uncovered' never render a flat/zero-height bar: 'estimated' is normalized like any other bar,
 // 'uncovered' is pinned to 100% height regardless of its (always '0.00') amount, so a data gap
 // never reads as a month of zero spending.
+// WR-02 gap-closure (83-05): whenever estimatedHeightHint is null, this fallback becomes the
+// ONLY positive reference magnitude among referenceMagnitudes, so it always normalizes to 100%
+// of itself regardless of its exact value — it exists solely to satisfy resolveBarFillStyle's own
+// "never a flat/zero-height bar" contract above for the null-hint case.
+const ESTIMATED_HEIGHT_FALLBACK = 1
+
+/**
+ * Resolves the reference magnitude an 'estimated' (future) bar normalizes against. When
+ * estimatedHeightHint (the category's pace) is available, behavior is byte-identical to before
+ * this fix. When it is null (insufficient pace-eligible Covered Months), falls back first to the
+ * series' own observed covered/current magnitude, then to a fixed positive constant — never 0.
+ */
+function resolveEstimatedReference(
+  points: CategorySparklinePoint[],
+  pointStates: PointState[],
+  estimatedHeightHint?: string | null
+): number {
+  if (estimatedHeightHint != null) {
+    return Number(estimatedHeightHint)
+  }
+
+  const observedMagnitudes = points
+    .map((point, index) => ({ state: pointStates[index], amount: point.amount }))
+    .filter((entry) => entry.state !== 'estimated')
+    .map((entry) => Math.abs(parseAmount(entry.amount)))
+  const observedMax = observedMagnitudes.length > 0 ? Math.max(...observedMagnitudes) : 0
+
+  return observedMax > 0 ? observedMax : ESTIMATED_HEIGHT_FALLBACK
+}
+
 function resolveBarFillStyle(state: PointState, heightPercent: number, color: string): BarFillStyle {
   switch (state) {
     case 'covered':
@@ -97,9 +127,10 @@ export function CategorySparkline({
   const useBarRendering = points.length > 1 && pointStates !== undefined && pointStates.length === points.length
 
   if (useBarRendering && pointStates) {
+    const estimatedReference = resolveEstimatedReference(points, pointStates, estimatedHeightHint)
     const referenceMagnitudes = points.map((point, index) => {
       const state = pointStates[index]
-      const reference = state === 'estimated' ? Number(estimatedHeightHint ?? '0') : parseAmount(point.amount)
+      const reference = state === 'estimated' ? estimatedReference : parseAmount(point.amount)
       return Math.abs(reference)
     })
     const max = Math.max(...referenceMagnitudes)
