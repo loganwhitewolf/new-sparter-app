@@ -16,26 +16,22 @@ describe('Step5Outro (R-OB-08)', () => {
     expect(html).toContain('Benvenuto in Sparter!')
   })
 
-  it("R-OB-08 renders a link to /dashboard with text 'Vai alla dashboard'", () => {
+  it("R-OB-08 renders a single CTA link to /dashboard with text 'Vai alla dashboard'", () => {
     const html = renderOutro()
 
     expect(html).toContain('href="/dashboard"')
     expect(html).toContain('Vai alla dashboard')
+    expect(html).not.toContain('Personalizza le categorie')
+    expect(html).not.toContain('href="/settings/categories"')
+    expect((html.match(/<a /g) ?? []).length).toBe(1)
   })
 
-  it("R-OB-08 renders a link to /settings/categories with text 'Personalizza le categorie'", () => {
-    const html = renderOutro()
-
-    expect(html).toContain('href="/settings/categories"')
-    expect(html).toContain('Personalizza le categorie')
-  })
-
-  it('uses hard navigation for settings categories so the app shell sidebar is restored', () => {
+  it('uses hard navigation for the dashboard CTA so the app shell sidebar is restored', () => {
     expect(source).not.toContain("from 'next/link'")
-    expect(source).toContain('<a href={APP_ROUTES.categorySettings}>')
+    expect(source).toContain('<a href={APP_ROUTES.dashboard}>')
   })
 
-  it('R-OB-08 does not append a firstRun query parameter to either CTA', () => {
+  it('R-OB-08 does not append a firstRun query parameter to the CTA', () => {
     const html = renderOutro()
 
     expect(html).not.toContain('firstRun')

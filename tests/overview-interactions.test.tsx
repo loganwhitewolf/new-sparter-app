@@ -596,6 +596,17 @@ describe('overview nudge (NUDGE-01..04, NUDGE-03)', () => {
     )
     expect(html).toBe('')
   })
+
+  it('3.2 / D-01: OverviewNudge CTA targets uncategorized transactions with year months', async () => {
+    const source = await import('node:fs').then((fs) =>
+      fs.readFileSync('components/dashboard/overview/overview-nudge.tsx', 'utf8'),
+    )
+    expect(source).toContain("status: 'uncategorized'")
+    expect(source).toContain('buildMonthsParam')
+    expect(source).toContain('APP_ROUTES.transactions')
+    expect(source).toContain('<Link')
+    expect(source).toContain('Movimenti da categorizzare')
+  })
 })
 
 describe('overview chart education (EDU-01, EDU-02)', () => {
