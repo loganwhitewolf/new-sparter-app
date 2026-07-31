@@ -17,6 +17,9 @@ const mocks = vi.hoisted(() => ({
   returningArgs: [] as unknown[],
   returningResult: [] as unknown[],
   countResult: [] as unknown[],
+  execute: vi.fn(),
+  /** Queue of returning() outcomes: value resolves, Error rejects (consumed FIFO). */
+  insertReturningQueue: [] as Array<unknown[] | Error>,
 }))
 
 type FlowNature = 'essential' | 'discretionary' | 'operational' | 'financial' | 'debt' | 'extraordinary'
@@ -79,6 +82,11 @@ function makeInsertChain() {
     }),
     returning: vi.fn((arg?: unknown) => {
       mocks.returningArgs.push(arg)
+      if (mocks.insertReturningQueue.length > 0) {
+        const next = mocks.insertReturningQueue.shift()!
+        if (next instanceof Error) return Promise.reject(next)
+        return Promise.resolve(next)
+      }
       return Promise.resolve(mocks.returningResult)
     }),
   }
@@ -163,6 +171,7 @@ vi.mock('@/lib/db', () => ({
       mocks.updateArgs.push(table)
       return makeUpdateChain()
     },
+    execute: (...args: unknown[]) => mocks.execute(...args),
   },
 }))
 vi.mock('drizzle-orm', () => ({
@@ -171,7 +180,7 @@ vi.mock('drizzle-orm', () => ({
   eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
   isNull: (column: unknown) => ({ op: 'isNull', column }),
   or: (...args: unknown[]) => ({ op: 'or', args }),
-  sql: () => 'sql.count',
+  sql: Object.assign((strings: TemplateStringsArray, ...values: unknown[]) => ({ op: 'sql', strings, values }), {}),
 }))
 vi.mock('@/lib/db/schema', () => ({
   category: {
@@ -417,6 +426,8 @@ describe('categories DAL mutations', () => {
     mocks.returningArgs.length = 0
     mocks.returningResult = [{ id: 1 }]
     mocks.queryResult = []
+    mocks.insertReturningQueue.length = 0
+    mocks.execute.mockReset()
   })
 
   it('creates user-owned categories with owner metadata', async () => {
@@ -430,6 +441,39 @@ describe('categories DAL mutations', () => {
       slug: 'casa',
       isActive: true,
     })
+  })
+
+  it('heals stale category_id_seq on category_pkey conflict then retries insert (bug 3.7)', async () => {
+    const { CategoryMutationError } = await import('@/lib/dal/categories')
+    const pkeyError = Object.assign(new Error('duplicate key value violates unique constraint "category_pkey"'), {
+      code: '23505',
+      constraint: 'category_pkey',
+    })
+    mocks.insertReturningQueue.push(pkeyError, [{ id: 34, name: 'Casa', slug: 'casa' }])
+    mocks.execute.mockResolvedValueOnce(undefined)
+
+    const created = await createUserCategory({ userId: 'user-1', name: 'Casa', slug: 'casa' })
+
+    expect(created).toEqual({ id: 34, name: 'Casa', slug: 'casa' })
+    expect(mocks.execute).toHaveBeenCalledTimes(1)
+    expect(mocks.insertValues).toHaveLength(2)
+    expect(CategoryMutationError).toBeDefined()
+  })
+
+  it('maps only slug unique conflicts to CategoryMutationError duplicate', async () => {
+    const { CategoryMutationError } = await import('@/lib/dal/categories')
+    const slugError = Object.assign(new Error('duplicate key'), {
+      code: '23505',
+      constraint: 'category_user_slug_unique',
+    })
+    mocks.insertReturningQueue.push(slugError)
+
+    await expect(createUserCategory({ userId: 'user-1', name: 'Casa', slug: 'casa' })).rejects.toMatchObject({
+      name: 'CategoryMutationError',
+      code: 'duplicate',
+    })
+    expect(CategoryMutationError).toBeDefined()
+    expect(mocks.execute).not.toHaveBeenCalled()
   })
 
   it('includes userId and active predicates when renaming a user-owned category', async () => {

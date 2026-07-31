@@ -43,24 +43,52 @@ export class CategoryMutationError extends Error {
   }
 }
 
-function isUniqueConflict(error: unknown) {
-  return Boolean(
-    error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      (error as { code?: unknown }).code === '23505',
-  )
+const CATEGORY_SLUG_UNIQUE = new Set([
+  'category_user_slug_unique',
+  'category_system_slug_unique',
+])
+
+const SUBCATEGORY_SLUG_UNIQUE = new Set([
+  'sub_category_user_category_slug_unique',
+  'sub_category_system_category_slug_unique',
+])
+
+function pgConstraintError(error: unknown): { code?: string; constraint?: string } {
+  if (!error || typeof error !== 'object') return {}
+  const candidate = error as { code?: unknown; constraint?: unknown }
+  return {
+    code: typeof candidate.code === 'string' ? candidate.code : undefined,
+    constraint: typeof candidate.constraint === 'string' ? candidate.constraint : undefined,
+  }
 }
 
-async function mapDuplicate<T>(operation: Promise<T>): Promise<T> {
+function isUniqueConstraint(error: unknown, constraint: string) {
+  const meta = pgConstraintError(error)
+  return meta.code === '23505' && meta.constraint === constraint
+}
+
+function isSlugUniqueConflict(error: unknown, slugConstraints: Set<string>) {
+  const meta = pgConstraintError(error)
+  return meta.code === '23505' && meta.constraint !== undefined && slugConstraints.has(meta.constraint)
+}
+
+async function mapSlugDuplicate<T>(operation: Promise<T>, slugConstraints: Set<string>): Promise<T> {
   try {
     return await operation
   } catch (error) {
-    if (isUniqueConflict(error)) {
+    if (isSlugUniqueConflict(error, slugConstraints)) {
       throw new CategoryMutationError('duplicate', 'Duplicate category name')
     }
     throw error
   }
+}
+
+async function syncCategoryIdSequence(database: DbOrTx) {
+  // Seeds insert system categories with explicit ids and historically omitted setval.
+  // A stale category_id_seq yields 23505 on category_pkey for every user create.
+  await database.execute(
+    sql`select setval('category_id_seq', coalesce((select max(${category.id}) from ${category}), 0) + 1, false)`,
+  )
 }
 
 const getCategoriesForUser = cache(async (userId: string): Promise<CategoryWithSubCategories[]> => {
@@ -162,19 +190,29 @@ export async function createUserCategory(
   input: { userId: string, name: string, slug: string },
   database: DbOrTx = db,
 ) {
-  const rows = await mapDuplicate(
-    database
-      .insert(category)
-      .values({
-        userId: input.userId,
-        name: input.name,
-        slug: input.slug,
-        isActive: true,
-      })
-      .returning(),
-  )
+  const insertOnce = () =>
+    mapSlugDuplicate(
+      database
+        .insert(category)
+        .values({
+          userId: input.userId,
+          name: input.name,
+          slug: input.slug,
+          isActive: true,
+        })
+        .returning(),
+      CATEGORY_SLUG_UNIQUE,
+    )
 
-  return rows[0] ?? null
+  try {
+    const rows = await insertOnce()
+    return rows[0] ?? null
+  } catch (error) {
+    if (!isUniqueConstraint(error, 'category_pkey')) throw error
+    await syncCategoryIdSequence(database)
+    const rows = await insertOnce()
+    return rows[0] ?? null
+  }
 }
 
 export async function renameUserCategory(
@@ -183,7 +221,7 @@ export async function renameUserCategory(
   input: { name: string, slug: string },
   database: DbOrTx = db,
 ) {
-  const rows = await mapDuplicate(
+  const rows = await mapSlugDuplicate(
     database
       .update(category)
       .set({ name: input.name, slug: input.slug })
@@ -195,6 +233,7 @@ export async function renameUserCategory(
         ),
       )
       .returning(),
+    CATEGORY_SLUG_UNIQUE,
   )
 
   return rows[0] ?? null
@@ -240,7 +279,7 @@ export async function createUserSubcategory(
     throw new CategoryMutationError('not_found', 'Category not found')
   }
 
-  const rows = await mapDuplicate(
+  const rows = await mapSlugDuplicate(
     database
       .insert(subCategory)
       .values({
@@ -252,6 +291,7 @@ export async function createUserSubcategory(
         natureId: input.natureId ?? null,
       })
       .returning(),
+    SUBCATEGORY_SLUG_UNIQUE,
   )
 
   return rows[0] ?? null
@@ -279,7 +319,7 @@ export async function renameUserSubcategory(
   input: { name: string, slug: string },
   database: DbOrTx = db,
 ) {
-  const rows = await mapDuplicate(
+  const rows = await mapSlugDuplicate(
     database
       .update(subCategory)
       .set({ name: input.name, slug: input.slug })
@@ -291,6 +331,7 @@ export async function renameUserSubcategory(
         ),
       )
       .returning(),
+    SUBCATEGORY_SLUG_UNIQUE,
   )
 
   return rows[0] ?? null

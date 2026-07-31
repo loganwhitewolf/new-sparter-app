@@ -208,6 +208,26 @@ describe('category Server Actions', () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
   })
 
+  it('does not mislabel primary-key sequence collisions as duplicate names (bug 3.7)', async () => {
+    // DAL should heal category_pkey / stale serial and succeed; if a raw pkey error
+    // ever escapes, the action must not map it to the slug-duplicate Italian copy.
+    mocks.createUserCategory.mockRejectedValueOnce(
+      Object.assign(new Error('duplicate key value violates unique constraint "category_pkey"'), {
+        code: '23505',
+        constraint: 'category_pkey',
+      }),
+    )
+
+    const result = await createCategoryAction(
+      { error: null },
+      makeFormData({ name: 'Casa vacanze' }),
+    )
+
+    expect(result.error).toBe('Si è verificato un errore. Riprova tra qualche secondo.')
+    expect(result.error).not.toBe('Esiste già una categoria o sottocategoria con questo nome.')
+    expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  })
+
   it('rejects system deletion and does not revalidate', async () => {
     mocks.deleteUserSubcategory.mockResolvedValueOnce(false)
 

@@ -1304,6 +1304,19 @@ async function insertPacchettoVacanze(database: Db): Promise<void> {
 // Registry — append new taxonomy migration steps here (not regex patterns — see seed-patterns.ts)
 // ---------------------------------------------------------------------------
 
+// Quick 260731-hhv / bug 3.7: seed inserts categories with explicit ids but historically
+// skipped setval on category_id_seq. Repair existing DBs so user-owned creates do not
+// collide with category_pkey (mis-surfaced as "duplicate name").
+async function syncCategorySerialSequences(database: Db): Promise<void> {
+  await database.execute(
+    sql`select setval('category_id_seq', coalesce((select max(${category.id}) from ${category}), 0) + 1, false)`,
+  )
+  await database.execute(
+    sql`select setval('sub_category_id_seq', coalesce((select max(${subCategory.id}) from ${subCategory}), 0) + 1, false)`,
+  )
+  console.log('    sync-category-serial-sequences: category_id_seq + sub_category_id_seq aligned to max(id)')
+}
+
 const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'set-subcategory-nature', run: setSubcategoryNature },
   { name: 'set-fineco-description-strip-pattern', run: setFinecoDescriptionStripPattern },
@@ -1327,6 +1340,7 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'merge-duplicate-fineco-platforms', run: mergeDuplicateFinecoPlatforms },
   { name: 'ensure-fineco-moneymap-global-format', run: ensureFinecoMoneymapGlobalFormat },
   { name: 'insert-pacchetto-vacanze', run: insertPacchettoVacanze },
+  { name: 'sync-category-serial-sequences', run: syncCategorySerialSequences },
 ]
 
 export const STEP_NAMES = STEPS.map((step) => step.name)
