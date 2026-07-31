@@ -18,7 +18,7 @@ import type { Lens } from '@/lib/utils/search-params'
  * userId is parameterized via the sql template; column/format strings are static.
  */
 export const getMonthsWithData = cache(
-  async (table: 'transactions' | 'files', lens: Lens = 'cassa'): Promise<string[]> => {
+  async (table: 'transactions' | 'files' | 'expenses', lens: Lens = 'cassa'): Promise<string[]> => {
     const { userId } = await verifySession()
 
     if (table === 'transactions') {
@@ -40,6 +40,19 @@ export const getMonthsWithData = cache(
         SELECT DISTINCT TO_CHAR(occurred_at, 'YYYY-MM') AS ym
         FROM transaction
         WHERE user_id = ${userId}
+        ORDER BY ym DESC
+      `)
+      const rows = result.rows as { ym: string }[]
+      return rows.map((row) => row.ym)
+    }
+
+    if (table === 'expenses') {
+      // Months that have at least one expense-linked transaction — matches getExpenses months filter.
+      const result = await db.execute(sql`
+        SELECT DISTINCT TO_CHAR(occurred_at, 'YYYY-MM') AS ym
+        FROM transaction
+        WHERE user_id = ${userId}
+          AND expense_id IS NOT NULL
         ORDER BY ym DESC
       `)
       const rows = result.rows as { ym: string }[]

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { parseAmount, parseStatus } from '@/lib/utils/search-params'
+import { parseAmount, parseMonths, parseStatus } from '@/lib/utils/search-params'
 
 export const CreateExpenseSchema = z.object({
   title: z
@@ -152,6 +152,8 @@ export type ParsedExpenseFilters = {
   type?: string
   /** Subcategory id derived from subCategory URL param (positive integer). */
   subCategoryId?: number
+  /** YYYY-MM months from month-multi (contract 3.5 / quick 260731-hhv). Absent = all-time. */
+  months?: string[]
 }
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -180,7 +182,8 @@ function firstTrimmed(value: string | string[] | undefined): string | undefined 
 
 /**
  * Total function — never throws. Drops invalid tokens silently.
- * D-05: period is NOT included; expenses default to all-time view.
+ * D-05: legacy `period` is NOT parsed here; default view is all-time.
+ * Contract 3.5 / quick 260731-hhv: optional `months` (month-multi) narrows by member tx months.
  */
 export function parseExpenseFilters(input: ExpenseSearchParams): ParsedExpenseFilters {
   const rawQ = firstTrimmed(input.q)
@@ -217,6 +220,7 @@ export function parseExpenseFilters(input: ExpenseSearchParams): ParsedExpenseFi
     Number.isInteger(parsedSubCategoryId) && parsedSubCategoryId > 0
       ? parsedSubCategoryId
       : undefined
+  const months = parseMonths(input.months)
 
   return {
     ...(q ? { q } : {}),
@@ -230,5 +234,6 @@ export function parseExpenseFilters(input: ExpenseSearchParams): ParsedExpenseFi
     ...(nature ? { nature } : {}),
     ...(type ? { type } : {}),
     ...(subCategoryId ? { subCategoryId } : {}),
+    ...(months.length > 0 ? { months } : {}),
   }
 }
