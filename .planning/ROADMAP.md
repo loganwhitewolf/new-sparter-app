@@ -198,7 +198,7 @@ Plans:
 
 **Wave 4** *(retirement part 2, blocked on Wave 3 completion)*
 
-- [ ] 84-04-PLAN.md — Hard deletion of dashboard-filters.tsx/deviation-badge.tsx/etc. (D-14), lib/utils/date.ts and lib/validations/dashboard.ts preset symbols, lib/routes.ts preset branch, CONTEXT.md Confronto glossary entry (D-18), D-19 exit gate
+- [x] 84-04-PLAN.md — Hard deletion of dashboard-filters.tsx/deviation-badge.tsx/etc. (D-14), lib/utils/date.ts and lib/validations/dashboard.ts preset symbols, lib/routes.ts preset branch, CONTEXT.md Confronto glossary entry (D-18), D-19 exit gate
 
 **UI hint**: yes
 

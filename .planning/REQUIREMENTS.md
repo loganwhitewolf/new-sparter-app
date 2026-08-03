@@ -38,7 +38,7 @@ Design source of truth: `.planning/dashboard-categories-DECISIONS.md` (19 locked
 
 ### Retirement and cleanup
 
-- [ ] **RETIRE-01**: The Deviation, Baseline and Noise Threshold disappear from the interface and from the codebase, with no dead references left behind (D15)
+- [x] **RETIRE-01**: The Deviation, Baseline and Noise Threshold disappear from the interface and from the codebase, with no dead references left behind (D15)
 - [x] **RETIRE-02**: The Preset temporal filter is removed from Categories together with its shared machinery, with no regression on any surface that used its helpers (D1, D15)
 - [x] **RETIRE-03**: The cassa/competenza lens switch renders only on Overview; Categories always reads cassa and Tags no longer displays a disabled switch (D6)
 - [x] **RETIRE-04**: Dashboard tab navigation carries only the parameters that are actually read, dropping the `tag` parameter dead since v2.7 (D7)
@@ -91,7 +91,7 @@ Acknowledged, deliberately not in this milestone.
 | CDET-05 | Phase 84 | Complete |
 | CDET-06 | Phase 84 | Complete |
 | CDET-07 | Phase 84 | Complete |
-| RETIRE-01 | Phase 84 | Pending |
+| RETIRE-01 | Phase 84 | Complete |
 | RETIRE-02 | Phase 84 | Complete |
 | RETIRE-03 | Phase 82 | Complete |
 | RETIRE-04 | Phase 82 | Complete |
