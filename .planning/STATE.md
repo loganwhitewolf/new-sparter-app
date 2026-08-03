@@ -717,13 +717,13 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Milestone v3.0 archived and shipped — PR #67 open against `main` (merge of `main` into the branch resolved: only `.planning/STATE.md` conflicted; `transaction-table.tsx` auto-merged)
+**Stopped at:** Milestone v3.0 **merged and tagged**. PR #67 merged into `main` as `fa7d5b8a` (merge commit — history preserved so the `ba039ba4..2e526817` range cited in MILESTONES.md stays reachable), tagged **v3.0**.
 
 Last session: 2026-08-03T15:53:07.336Z
 
-**Next:** merge PR #67, then tag — `v3.0` on the merge commit and `v2.9` on a `main` commit around `fe8273f9` (v2.9's content reached main via PRs #64/#65, so it has no merge point of its own).
+**Tag state (corrected):** v2.8 and v2.9 were already tagged at their own merge commits (`91299769` / `68796fe1`, plus v2.9.1–v2.9.3). An earlier note here claimed `v2.9` was pending and that v2.9's content had reached main via PRs #64/#65 — both wrong. v2.9 had its own milestone merge (PR #59); #64/#65/#66 were later patch and quick-task work. Nothing is pending.
 
-Then `/gsd-new-milestone` for the cleanup milestone. Agreed shape: unblock `proxy.ts` / e2e **first and alone** (it converts unarticulated v3.0 complaints into a list, and fixing blind is what produced v3.0's defects), then test-suite integrity, `knip`, the `lib/dal/dashboard.ts` decomposition behind the RETIRE-05 byte-identical gate, and the remaining test-quality items.
+**Next:** `/gsd-new-milestone` for the cleanup milestone. Agreed shape: unblock `proxy.ts` / e2e **first and alone** (it converts unarticulated v3.0 complaints into a list, and fixing blind is what produced v3.0's defects), then test-suite integrity, `knip`, the `lib/dal/dashboard.ts` decomposition behind the RETIRE-05 byte-identical gate, and the remaining test-quality items.
 
 **Still open from the quick-task queue:** contratto items deferred 2.4 / 3.8 / 3.9 (from `260731-hhv`) — manual UAT never performed.
 

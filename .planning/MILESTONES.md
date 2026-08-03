@@ -62,8 +62,18 @@ at close rather than fixed (decision 2026-08-03).
   `toContain('<a')` substring matching instead of DOM assertion (IN-04).
 
 **Carried from v2.8 / v2.9:** operator deploy R038 / R039 / R041 with live migrations 0028–0033 and
-the seed run order (still the next candidate milestone); Phase 78 browser UAT; `git tag v2.9` still
-pending on main post-merge.
+the seed run order (still the next candidate milestone); Phase 78 browser UAT.
+
+**Correction (2026-08-03, at merge time):** the audit and the notes above inherited a claim that
+`git tag v2.9` was still pending. It was not — v2.8 and v2.9 were both tagged when they merged
+(`v2.8` → PR #52 merge `91299769`, `v2.9` → PR #59 merge `68796fe1`, plus patch tags v2.9.1–v2.9.3).
+The claim survived because every milestone close writes "tag pending post-merge" and nothing clears
+it once the tag exists. Corrected across PROJECT.md, ROADMAP.md and STATE.md.
+
+**Shipped:** merged into `main` as `fa7d5b8a` (merge commit, history preserved) and tagged **v3.0**.
+Merging `main` in first surfaced a silent CLIST-05 violation in the Overview KPI deep-links, plus 19
+typecheck errors and 11 test failures PR #66 had left red on `main` — all fixed before the merge.
+Final state: 188 files / 2263 tests passed / 0 failed.
 
 ### Process Lesson
 
