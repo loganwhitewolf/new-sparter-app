@@ -4,9 +4,21 @@ const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   select: vi.fn(),
   delete: vi.fn(),
+  cleanupFinanceLinksForExpenses: vi.fn(),
+  deleteEmptyReimbursementsForUser: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
+
+// PR #66 routes expense deletion through cleanupFinanceLinksForExpenses, which drops amortization
+// plans and reimbursements tied to the expense or its transactions. Stubbed here rather than
+// teaching this file's minimal schema mock the whole reimbursement/amortization surface — the
+// subject of these tests is expense deletion's own ordering and return shape. The call itself is
+// asserted below so the wiring cannot silently disappear.
+vi.mock('@/lib/services/linked-finance-cleanup', () => ({
+  cleanupFinanceLinksForExpenses: mocks.cleanupFinanceLinksForExpenses,
+  deleteEmptyReimbursementsForUser: mocks.deleteEmptyReimbursementsForUser,
+}))
 
 vi.mock('@/lib/db', () => ({
   db: {
@@ -68,6 +80,9 @@ describe('deleteExpensesWithOptions', () => {
   it('deletes only expenses when deleteLinkedTransactions is false', async () => {
     makeSelectChain([{ id: 'expense-1' }])
     makeSelectChain([]) // CR-01: no grouped members among the target ids
+    // PR #66: the linked-transaction lookup is now UNCONDITIONAL — plans/reimbursements must be
+    // cleaned up even when the transactions themselves are kept — so it runs on this path too.
+    makeSelectChain([{ id: 'txn-kept' }])
     makeDeleteChain()
 
     const result = await deleteExpensesWithOptions({
@@ -80,8 +95,15 @@ describe('deleteExpensesWithOptions', () => {
       deletedExpenseIds: ['expense-1'],
       deletedTransactionIds: [],
     })
-    expect(mocks.select).toHaveBeenCalledTimes(2)
+    expect(mocks.select).toHaveBeenCalledTimes(3)
+    // Only the expenses are deleted — the linked transaction survives...
     expect(mocks.delete).toHaveBeenCalledTimes(1)
+    // ...but its finance links are still cleaned up (that is the point of the unconditional lookup).
+    expect(mocks.cleanupFinanceLinksForExpenses).toHaveBeenCalledWith(expect.anything(), {
+      userId: 'user-1',
+      expenseIds: ['expense-1'],
+      linkedTransactionIds: ['txn-kept'],
+    })
   })
 
   it('deletes linked transactions before expenses when deleteLinkedTransactions is true', async () => {
