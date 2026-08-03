@@ -174,7 +174,7 @@ function resolvePairRole(transaction: TransactionListRow): 'anchor' | 'counterpa
   return toDecimal(transaction.amount).isNegative() ? 'anchor' : 'counterpart'
 }
 
-/** Mirrors the movementLabel pattern in components/dashboard/category-detail-summary.tsx. */
+/** Pluralizes a transaction count for Italian UI copy. */
 function transactionCountLabel(count: number): string {
   return count === 1 ? '1 transazione' : `${count} transazioni`
 }
