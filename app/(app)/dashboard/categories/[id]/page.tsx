@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import { CategoryDetailEmptyState } from '@/components/dashboard/category-detail-empty-state'
 import { CategoryDetailSkeleton } from '@/components/dashboard/category-detail-skeleton'
 import { CategoryDetailTable } from '@/components/dashboard/category-detail-table'
+import { CategoryDetailWindowControls } from '@/components/dashboard/category-detail-window-controls'
 import { CategoryYearSelect } from '@/components/dashboard/category-year-select'
 import { resolveYear } from '@/components/dashboard/overview/resolve-year'
 import { verifySession } from '@/lib/dal/auth'
@@ -86,7 +87,10 @@ export default async function DashboardCategoryDetailPage({ params, searchParams
               Andamento mensile, ritmo e confronto con la finestra omologa dell&apos;anno precedente.
             </p>
           </div>
-          <CategoryYearSelect year={year} years={years} />
+          <div className="flex flex-wrap items-center gap-2">
+            <CategoryYearSelect year={year} years={years} />
+            <CategoryDetailWindowControls year={year} window={window} />
+          </div>
         </div>
       </div>
 
