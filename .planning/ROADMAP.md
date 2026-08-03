@@ -123,7 +123,7 @@ directions including the previously-unreachable Accantonamenti.
      opens its detail on the same year, so the row's total and the detail page's total agree
      (CLIST-06, CLIST-07).
 
-**Plans**: 5 plans
+**Plans**: 6 plans
 
 Plans:
 **Wave 1**
@@ -139,6 +139,10 @@ Plans:
 **Wave 3** *(gap closure, blocked on Wave 2 completion)*
 
 - [x] 83-05-PLAN.md — Gap closure: allocation direction sign-preservation end-to-end (CR-01), estimated-bar zero-height fallback (WR-02), preset-mode allocation type fix (WR-01)
+
+**Wave 4** *(gap closure, blocked on Wave 3 completion)*
+
+- [ ] 83-06-PLAN.md — Gap closure: guard allocation-direction row Link so no `?type=allocation` URL the detail page cannot honour is ever produced (CR-01 NEW)
 
 **UI hint**: yes
 
