@@ -103,4 +103,14 @@ describe('getMonthsWithData', () => {
       expect(result).toEqual([])
     })
   })
+
+  describe("table = 'expenses'", () => {
+    it('returns distinct YYYY-MM strings from expense-linked transactions', async () => {
+      mocks.executeResult.rows = [{ ym: '2026-07' }, { ym: '2026-04' }]
+      const { getMonthsWithData } = await import('@/lib/dal/months-with-data')
+      const result = await getMonthsWithData('expenses')
+      expect(result).toEqual(['2026-07', '2026-04'])
+      expect(mocks.verifySession).toHaveBeenCalledOnce()
+    })
+  })
 })

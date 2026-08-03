@@ -137,6 +137,11 @@ vi.mock("@/lib/logger", () => ({
     error: mocks.loggerError,
   },
 }));
+// Real cleanup needs amortization/reimbursement tables; covered by linked-finance-cleanup.test.ts.
+vi.mock("@/lib/services/linked-finance-cleanup", () => ({
+  cleanupFinanceLinksForTransactions: vi.fn(async () => undefined),
+  deleteEmptyReimbursementsForUser: vi.fn(async () => undefined),
+}));
 
 let fakeDb: FakeDb;
 

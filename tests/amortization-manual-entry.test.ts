@@ -164,7 +164,7 @@ describeIfReachable('createTransaction manual-entry create+amortize (Phase 77, D
       }),
     )
 
-    expect(result.error).toBe('Puoi ammortizzare solo transazioni in uscita.')
+    expect(result.error).toBe('Puoi dilazionare solo transazioni in uscita.')
     expect(await transactionCountForDescription(db, userId, description)).toBe(0)
   })
 

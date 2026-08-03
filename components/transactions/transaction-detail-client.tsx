@@ -379,9 +379,9 @@ export function TransactionDetailClient({
             Spesa a sé (non aggregare)
           </Button>
         ) : null}
-        {/* Amortization: "Ammortizza" when eligible; once a plan exists, lifecycle actions live
+        {/* Amortization: "Dilaziona" when eligible; once a plan exists, lifecycle actions live
             on /amortizations — detail only offers Visualizza (deep-link by transactionId).
-            Skip the disabled Ammortizza when already amortized (Visualizza replaces that dead end). */}
+            Skip the disabled Dilaziona when already amortized (Visualizza replaces that dead end). */}
         {amortizationEligibility.eligible ? (
           <Button
             type="button"
@@ -390,7 +390,7 @@ export function TransactionDetailClient({
             onClick={() => setAmortizeOpen(true)}
           >
             <CalendarClock className="h-4 w-4" />
-            Ammortizza
+            Dilaziona
           </Button>
         ) : transaction.amortizationPlanId == null ? (
           <TooltipProvider>
@@ -399,7 +399,7 @@ export function TransactionDetailClient({
                 <span className="block">
                   <Button type="button" variant="outline" className="w-full justify-start" disabled>
                     <CalendarClock className="h-4 w-4" />
-                    Ammortizza
+                    Dilaziona
                   </Button>
                 </span>
               </TooltipTrigger>
@@ -411,7 +411,7 @@ export function TransactionDetailClient({
           <Button type="button" variant="outline" className="w-full justify-start" asChild>
             <Link href={amortizationsByTransactionHref(transaction.id)}>
               <CalendarClock className="h-4 w-4" />
-              Visualizza ammortamento
+              Visualizza spesa dilazionata
             </Link>
           </Button>
         ) : null}

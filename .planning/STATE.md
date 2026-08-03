@@ -678,6 +678,8 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260730-g3b | Lens selector redesign (LSD-01..05, `.planning/lens-selector-DECISIONS.md`): pill segmented control → dropdown integrato nel titolo pagina con voci descritte; overlay tratteggiato "Uscite (cassa)" sul grafico overview solo con lente competenza (secondo fetch gated); controllo nascosto senza piani di ammortamento (`hasAmortizationPlans`) e rimosso da /dashboard/tags. Verifica visiva in-browser passata 2026-07-30 | 2026-07-30 | 4bbafc63 |
 | 260730-m2x | Fix amortizzazione: collegamento rimborso come vendita (`reducePlanTx`→`createPairTx`); ri-ammortizzabilità dopo "Rimuovi ammortamento" (clear stale `reimbursementId`/pairing client-side); link dashboard movers → `/transactions?months=YYYY-MM` | 2026-07-30 | 963f213b |
 | 260730-n2z | Amort UX: detail→Visualizza ammortamento (`?transactionId=`); Tutti mostra aperti+chiusi; copy Chiudi con vendita/rimborso | 2026-07-30 | 71351519 |
+| 260730-o82 | Transactions: direzione multi-select; default implicito in+out+allocation+unclassified (no transfer, no chips); cascade senza transfer finché non attivato | 2026-07-30 | bf578c48 |
+| 260731-hhv | UX contratto feedback Sparter: PRONTO + bug 3.7 (contrast/onboarding, welcome/dashboard, taxonomy split + pattern copy + Spese dilazionate); deferred 2.4/3.8/3.9 | 2026-07-31 | a92ef98a |
 | 260803-e9w | Chiusura WR-01/WR-02 di 83-REVIEW.md: nome accessibile per la riga Accantonamenti (testo `sr-only` nello `<span>` inerte — `aria-label` scartato perché il ruolo implicito `generic` non ammette naming da autore) via nuovo `rowAccessibleSuffix` nella copy service centralizzata (D-11); ripristinato il commento di razionale D-13/CLIST-07 sopra l'href del `<Link>`. Nessun cambiamento visivo | 2026-08-03 | 64403c6a |
 
 ## Deferred Items
@@ -707,16 +709,25 @@ Items acknowledged and postponed:
 | quick_task | 260615-dtm-reusable-regex-discovery-tool-bank-agnos | reconciled 2026-07-07 — complete (d737b8e), SUMMARY lacked status field |
 | quick_task | 260615-n3t-fix-recurring-onboarding-catalogazione-s | reconciled 2026-07-07 — complete (1434308), SUMMARY lacked status field |
 | quick_task | 260703-na4-full-description-tooltip-widen-expense-t | reconciled 2026-07-07 — was fully executed 2026-07-03, SUMMARY.md was missing |
+| contratto_ux | 2.4 subcategory hover/selected / Più usate IA | deferred — needs colleague confirmation (260731-hhv) |
+| contratto_ux | 3.8 first-dashboard visual hierarchy | deferred — needs mockup (260731-hhv) |
+| contratto_ux | 3.9 Bilancio tasso / soglia 20% domain definition | deferred — needs CONTEXT.md write-up (260731-hhv) |
 
 ## Session Continuity
 
 **Resume file:** None
 
-**Stopped at:** Completed 84-04-PLAN.md
+**Stopped at:** Milestone v3.0 archived and shipped — PR #67 open against `main` (merge of `main` into the branch resolved: only `.planning/STATE.md` conflicted; `transaction-table.tsx` auto-merged)
 
-Last session: 2026-08-03T13:21:38.165Z
+Last session: 2026-08-03T15:53:07.336Z
 
-**Next:** `/gsd-discuss-phase 82` or `/gsd-plan-phase 82` to begin Phase 82 (number-engine-and-regression-gate).
+**Next:** merge PR #67, then tag — `v3.0` on the merge commit and `v2.9` on a `main` commit around `fe8273f9` (v2.9's content reached main via PRs #64/#65, so it has no merge point of its own).
+
+Then `/gsd-new-milestone` for the cleanup milestone. Agreed shape: unblock `proxy.ts` / e2e **first and alone** (it converts unarticulated v3.0 complaints into a list, and fixing blind is what produced v3.0's defects), then test-suite integrity, `knip`, the `lib/dal/dashboard.ts` decomposition behind the RETIRE-05 byte-identical gate, and the remaining test-quality items.
+
+**Still open from the quick-task queue:** contratto items deferred 2.4 / 3.8 / 3.9 (from `260731-hhv`) — manual UAT never performed.
+
+**Two open broken windows** (both from v2.8 Phase 73, `transaction_pair` backfill): #1 is a deliberate D-03 exclusion; **#2 is a real deploy risk** — the backfill migration was never proven numerically against real historical rows (the local dev DB had 0 at execution time), and that migration is in the 0028–0033 batch the pending operator deploy will run.
 
 ## Operator Next Steps
 

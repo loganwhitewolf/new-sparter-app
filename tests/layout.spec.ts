@@ -108,6 +108,6 @@ test.describe('Layout - DS-03: (app) route group', () => {
     await bottomNav.getByRole('button', { name: 'Altro' }).click()
     await expect(page.getByRole('heading', { name: 'Altro' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Tag' })).toHaveAttribute('href', '/tags')
-    await expect(page.getByRole('link', { name: 'Pattern' })).toHaveAttribute('href', '/patterns')
+    await expect(page.getByRole('link', { name: 'Regole automatiche' })).toHaveAttribute('href', '/patterns')
   })
 })

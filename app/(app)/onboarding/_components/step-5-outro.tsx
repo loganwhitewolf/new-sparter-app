@@ -11,7 +11,7 @@ export function Step5Outro() {
 
       <h1 className="mb-3 text-4xl font-bold">Benvenuto in Sparter!</h1>
       <p className="mb-12 max-w-xs text-base text-muted-foreground">
-        Il tuo primo estratto è pronto. Cosa vuoi fare adesso?
+        Il tuo primo estratto è pronto. Puoi esplorare la dashboard quando vuoi.
       </p>
 
       <div className="flex w-full max-w-sm flex-col gap-3">
@@ -21,11 +21,6 @@ export function Step5Outro() {
           <a href={APP_ROUTES.dashboard}>
             Vai alla dashboard
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
-          </a>
-        </Button>
-        <Button asChild variant="outline" size="lg" className="w-full">
-          <a href={APP_ROUTES.categorySettings}>
-            Personalizza le categorie
           </a>
         </Button>
       </div>

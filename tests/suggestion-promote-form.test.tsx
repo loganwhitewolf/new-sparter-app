@@ -29,6 +29,7 @@ const categories = [
     type: 'out' as const,
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 42,
@@ -37,6 +38,7 @@ const categories = [
         originalName: 'Streaming',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: null,

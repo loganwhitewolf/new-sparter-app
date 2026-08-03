@@ -491,6 +491,30 @@ describe('KpiRow dashboard-wide filter wiring (260711-gfd)', () => {
     // Uscite total without debt: 2400
     expect(html).toMatch(/2\.400|2400/)
   })
+
+  it('3.6: Entrate and Uscite cards link to categories detail; Bilancio stays non-link', () => {
+    const html = renderToStaticMarkup(
+      <KpiRow
+        data={kpiPoints}
+        prevData={[]}
+        includedIncome={allIncome}
+        includedOut={allOut}
+        includedAllocation={allAllocation}
+        year={2026}
+      />
+    )
+    expect(html).toContain('aria-label="Entrate: apri il dettaglio"')
+    expect(html).toContain('aria-label="Uscite: apri il dettaglio"')
+    // v3.0 (D-17/CLIST-05): the deep-link carries the YEAR the card was read from — the retired
+    // `?preset=` contract is gone. `type=out` is the builder's default and is omitted. The lens is
+    // deliberately absent: Overview is its only reader (D-12) and Categories always reads cassa.
+    expect(html).toContain('href="/dashboard/categories?year=2026&amp;type=in"')
+    expect(html).toContain('href="/dashboard/categories?year=2026"')
+    expect(html).not.toContain('preset=')
+    expect(html).not.toContain('lens=')
+    expect(html).not.toContain('aria-label="Bilancio: apri il dettaglio"')
+    expect(html).toContain('Tasso 48%')
+  })
 })
 
 describe('deriveNatureBreakdown (FRU-FIX-02)', () => {
@@ -595,6 +619,17 @@ describe('overview nudge (NUDGE-01..04, NUDGE-03)', () => {
       <OverviewNudge uncategorizedCount={5} year={2024} />
     )
     expect(html).toBe('')
+  })
+
+  it('3.2 / D-01: OverviewNudge CTA targets uncategorized transactions with year months', async () => {
+    const source = await import('node:fs').then((fs) =>
+      fs.readFileSync('components/dashboard/overview/overview-nudge.tsx', 'utf8'),
+    )
+    expect(source).toContain("status: 'uncategorized'")
+    expect(source).toContain('buildMonthsParam')
+    expect(source).toContain('APP_ROUTES.transactions')
+    expect(source).toContain('<Link')
+    expect(source).toContain('Movimenti da categorizzare')
   })
 })
 

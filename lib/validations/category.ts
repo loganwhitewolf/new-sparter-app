@@ -34,8 +34,24 @@ const IdSchema = z.preprocess(
   z.number({ message: ID_REQUIRED_MESSAGE }).int('ID non valido.').positive('ID non valido.'),
 )
 
+// Phase 46: FlowNature v2.0 — 8 codes (operational→dissolved, financial→investment, extraordinary→savings)
+export const NatureSchema = z.enum([
+  'essential',
+  'discretionary',
+  'income',
+  'income_extraordinary',
+  'debt',
+  'transfer',
+  'savings',
+  'investment',
+])
+
+export const DirectionSchema = z.enum(['in', 'out', 'allocation', 'transfer'])
+
 export const CreateCategorySchema = z.object({
   name: NameSchema,
+  // Persisted on category.direction_id; nature stays on subcategories only.
+  direction: DirectionSchema,
 }).transform((input) => ({
   ...input,
   slug: deriveCategorySlug(input.name),
@@ -53,17 +69,9 @@ export const DeleteCategorySchema = z.object({
   id: IdSchema,
 })
 
-// Phase 46: FlowNature v2.0 — 8 codes (operational→dissolved, financial→investment, extraordinary→savings)
-export const NatureSchema = z.enum([
-  'essential',
-  'discretionary',
-  'income',
-  'income_extraordinary',
-  'debt',
-  'transfer',
-  'savings',
-  'investment',
-])
+/** Same payload as delete — deactivate is soft-disable, delete is hard-remove. */
+export const DeactivateCategorySchema = DeleteCategorySchema
+export const ReactivateCategorySchema = DeleteCategorySchema
 
 export const SetSubcategoryNatureSchema = z.object({
   subCategoryId: z.coerce.number().int().positive(),
@@ -73,10 +81,8 @@ export const SetSubcategoryNatureSchema = z.object({
 export const CreateSubcategorySchema = z.object({
   categoryId: IdSchema,
   name: NameSchema,
-  natureId: z.preprocess(
-    (v) => (v === null || v === undefined || v === '' ? null : Number(v)),
-    z.number().int().positive().nullable().optional(),
-  ).default(null),
+  // Form posts nature *code* (hidden input name="nature"); action resolves to natureId.
+  nature: NatureSchema,
 }).transform((input) => ({
   ...input,
   slug: deriveCategorySlug(input.name),
@@ -93,6 +99,9 @@ export const RenameSubcategorySchema = z.object({
 export const DeleteSubcategorySchema = z.object({
   id: IdSchema,
 })
+
+export const DeactivateSubcategorySchema = DeleteSubcategorySchema
+export const ReactivateSubcategorySchema = DeleteSubcategorySchema
 
 export type CreateCategoryInput = z.infer<typeof CreateCategorySchema>
 export type RenameCategoryInput = z.infer<typeof RenameCategorySchema>

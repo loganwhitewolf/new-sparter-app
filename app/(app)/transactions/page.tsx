@@ -15,6 +15,10 @@ import {
   type TransactionSearchParams,
 } from '@/lib/validations/transactions'
 import { NATURE_LABELS, NATURE_ORDER } from '@/lib/utils/nature-labels'
+import {
+  TRANSACTION_DIRECTION_ALLOWED,
+  TRANSACTION_DIRECTION_LABELS,
+} from '@/lib/utils/transaction-directions'
 import { buildDirectionNatureMap, buildCategorySubcategoryMap, buildDirectionCategoryMap } from '@/lib/utils/cascade-options'
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { TransactionFormDialog } from '@/components/transactions/transaction-form-dialog'
@@ -26,7 +30,7 @@ import { APP_ROUTES } from '@/lib/routes'
 function hasActiveTransactionFilters(params: TransactionSearchParams): boolean {
   // 'tag' included (71-01): with the toolbar tag control, a tag filter matching zero rows must
   // render the "no-result" empty state, not the "no-data" ("import a file") one.
-  const keys = ['q', 'name', 'months', 'amountMin', 'amountMax', 'platform', 'category', 'subCategory', 'status', 'nature', 'type', 'tag']
+  const keys = ['q', 'name', 'months', 'amountMin', 'amountMax', 'platform', 'category', 'subCategory', 'status', 'nature', 'direction', 'type', 'tag']
   return keys.some((k) => {
     const v = params[k]
     return Array.isArray(v) ? v.length > 0 : Boolean(v)
@@ -135,13 +139,10 @@ export default async function TransactionsPage({
   ]
 
   // Direction filter options: In/Out/Accantonamenti/Trasferimenti + 'Non classificato' (D-08)
-  const directionOptions = [
-    { value: 'in', label: 'Entrate' },
-    { value: 'out', label: 'Uscite' },
-    { value: 'allocation', label: 'Accantonamenti' },
-    { value: 'transfer', label: 'Trasferimenti' },
-    { value: 'unclassified', label: 'Non classificato' },
-  ]
+  const directionOptions = TRANSACTION_DIRECTION_ALLOWED.map((code) => ({
+    value: code,
+    label: TRANSACTION_DIRECTION_LABELS[code],
+  }))
 
   // Cascade-derived option maps: direction→nature, direction→category, category→subcategory
   const dependentOptions = {

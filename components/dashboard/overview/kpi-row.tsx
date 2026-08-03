@@ -1,4 +1,5 @@
 import type { OverviewChartPoint } from '@/lib/dal/overview'
+import { buildDashboardCategoriesHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
 import { toDecimal } from '@/lib/utils/decimal'
 import { NATURE_LABELS } from '@/lib/utils/nature-labels'
@@ -85,10 +86,26 @@ type KpiRowProps = {
  * lives in the reading. Under the sustainability default (extraordinary excluded) Bilancio's
  * hero IS the structural balance.
  */
-export function KpiRow({ data, prevData, includedIncome, includedOut, includedAllocation, year }: KpiRowProps) {
+export function KpiRow({
+  data,
+  prevData,
+  includedIncome,
+  includedOut,
+  includedAllocation,
+  year,
+}: KpiRowProps) {
   const prevYear = year - 1
   const kpis = deriveFilteredKpis(data, prevData, includedIncome, includedOut, includedAllocation)
   const balanceNumeric = Number(kpis.balance)
+  // v3.0 (D-12/D-17): Categories reads the year-mode contract only — the retired `preset`/
+  // `defaultPreset`/`defaultSort` fields are gone, and `year` is what keeps the KPI deep-link
+  // landing on the same period the card was read from (CLIST-05). The lens is deliberately NOT
+  // forwarded: Overview is its only reader (D-12), Categories always aggregates cassa, and the
+  // tab nav propagates `?lens=` on its own — so minting a `LensPassthrough` from a validated
+  // `Lens` here would punch a hole in exactly the boundary D-12 exists to enforce.
+  const categoriesHrefBase = { year } as const
+  const entrateHref = buildDashboardCategoriesHref({ ...categoriesHrefBase, type: 'in' })
+  const usciteHref = buildDashboardCategoriesHref({ ...categoriesHrefBase, type: 'out' })
 
   // ── Entrate: composition of the INCLUDED income keys (single key → honest 100% bar).
   // Shade is key-fixed (recurring solid, extraordinary lighter) — see Uscite note below.
@@ -161,6 +178,7 @@ export function KpiRow({ data, prevData, includedIncome, includedOut, includedAl
         goodWhenPositive
         prevYear={prevYear}
         className="min-h-0"
+        href={entrateHref}
       />
       <ReadingKpiCard
         label="Uscite"
@@ -170,6 +188,7 @@ export function KpiRow({ data, prevData, includedIncome, includedOut, includedAl
         goodWhenPositive={false}
         prevYear={prevYear}
         className="min-h-0"
+        href={usciteHref}
       />
       <ReadingKpiCard
         label="Bilancio"

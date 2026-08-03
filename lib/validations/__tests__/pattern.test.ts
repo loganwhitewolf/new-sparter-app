@@ -11,7 +11,7 @@ describe('normalizePatternInput — ReDoS guard (H-3)', () => {
 
   it('rejects patterns longer than the length cap', () => {
     const long = 'a'.repeat(201)
-    expect(() => normalizePatternInput(long)).toThrow(/troppo lungo/)
+    expect(() => normalizePatternInput(long)).toThrow(/troppo lung/)
   })
 
   it('accepts legitimate merchant patterns unchanged', () => {

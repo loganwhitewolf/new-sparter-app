@@ -90,11 +90,14 @@ async function seed() {
   console.log('Seeding categories...')
   // Phase 46: category.type column removed (ADR 0012 — direction is now derived from nature, not category)
   await db.insert(category).values(categories.map(({ type: _type, ...rest }) => rest) as Array<typeof category.$inferInsert>).onConflictDoNothing()
+  // Explicit seed ids leave category_id_seq behind — without setval, "Crea categoria" hits category_pkey 23505.
+  await db.execute(sql`select setval('category_id_seq', coalesce((select max(${category.id}) from ${category}), 0) + 1, false)`)
   console.log(`  ${categories.length} categories inserted (or already present).`)
 
   console.log('Seeding subcategories...')
   // v2 literals include natureId; cast passes it through to sub_category.nature_id (D-11, D-13)
   await db.insert(subCategory).values(subCategories as Array<typeof subCategory.$inferInsert>).onConflictDoNothing()
+  await db.execute(sql`select setval('sub_category_id_seq', coalesce((select max(${subCategory.id}) from ${subCategory}), 0) + 1, false)`)
   console.log(`  ${subCategories.length} sottocategories inserted (or already present).`)
 
   // Phase 49: exclude_from_totals column dropped (D-10); transfer exclusion now via direction.included_in_totals

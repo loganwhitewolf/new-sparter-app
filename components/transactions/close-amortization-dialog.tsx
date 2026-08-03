@@ -37,11 +37,11 @@ export function CloseAmortizationDialog({ open, onOpenChange, planId, onSuccess 
     setPending(false)
 
     if (result.error) {
-      toast.error(`Errore nel chiudere l'ammortamento: ${result.error}`)
+      toast.error(`Errore nel chiudere la spesa dilazionata: ${result.error}`)
       return
     }
 
-    toast.success('Ammortamento chiuso.')
+    toast.success('Spesa dilazionata chiusa.')
     onOpenChange(false)
     onSuccess()
   }
@@ -50,7 +50,7 @@ export function CloseAmortizationDialog({ open, onOpenChange, planId, onSuccess 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Chiudi ammortamento</DialogTitle>
+          <DialogTitle>Chiudi spesa dilazionata</DialogTitle>
           <DialogDescription>
             Le rate future verranno raggruppate in un&apos;unica rata nel mese corrente. Le rate
             già passate non verranno modificate.
@@ -64,7 +64,7 @@ export function CloseAmortizationDialog({ open, onOpenChange, planId, onSuccess 
             </Button>
           </DialogClose>
           <Button type="button" variant="outline" onClick={handleConfirm} disabled={pending}>
-            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Chiudi ammortamento'}
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Chiudi spesa dilazionata'}
           </Button>
         </DialogFooter>
       </DialogContent>

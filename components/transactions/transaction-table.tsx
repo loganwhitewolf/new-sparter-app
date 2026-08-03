@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarClock, ExternalLink, MoreHorizontal, Split, Tag, Trash2, Unlink } from 'lucide-react'
+import { CalendarClock, ExternalLink, MoreHorizontal, Split, Tag, Unlink } from 'lucide-react'
 import { formatAbsoluteAmount, formatSignedAmount } from '@/lib/utils/format-amount'
 import { toDecimal } from '@/lib/utils/decimal'
 import { computeTransactionTotals } from '@/lib/utils/transaction-totals'
@@ -15,8 +15,6 @@ import { CounterpartPickerDialog } from '@/components/transactions/counterpart-p
 import { AmortizationReimburseDialog } from '@/components/transactions/amortization-reimburse-dialog'
 import { DetachExpenseDialog } from '@/components/transactions/detach-expense-dialog'
 import { ActivateAmortizationDialog } from '@/components/transactions/activate-amortization-dialog'
-import { RemoveAmortizationDialog } from '@/components/transactions/remove-amortization-dialog'
-import { CloseAmortizationDialog } from '@/components/transactions/close-amortization-dialog'
 import { ReimbursementRowIndicator } from '@/components/transactions/reimbursement-row-indicator'
 import { PairedReductionBadge } from '@/components/transactions/paired-reduction-badge'
 import { ExpenseCategorizeDialog } from '@/components/expenses/expense-categorize-dialog'
@@ -63,7 +61,11 @@ import type { CategoryWithSubCategories } from '@/lib/dal/categories'
 import type { MostUsedSubcategory } from '@/lib/dal/subcategory-usage'
 import type { TagRow } from '@/lib/dal/tags'
 import type { TransactionSearchParams } from '@/lib/validations/transactions'
-import { importFileDetailHref, transactionDetailHref } from '@/lib/routes'
+import {
+  amortizationsByTransactionHref,
+  importFileDetailHref,
+  transactionDetailHref,
+} from '@/lib/routes'
 import { amountToneClass } from '@/lib/utils/amount-tone'
 import { cn } from '@/lib/utils'
 import { minimumTwoMonthInstalment, validateMonthsForAmount } from '@/lib/services/amortization-math'
@@ -189,13 +191,36 @@ function transactionRowLabel(transaction: TransactionListRow) {
 }
 
 /**
- * Pure helper backing `markAmortizationRemoved`'s optimistic update (D-09 undo, Bug 2 fix):
- * clears amortizationPlanId AND the reimbursement/pairing fields on the target row —
- * reverseDetachTx deletes the plan's standalone expense, which cascades away any reimbursement
- * anchored to it (Task 1's fix makes this reachable via "rimborso", not just "vendita"). The
- * refund/sale counterpart row (found via pairedWithId, same lookup-then-map pattern
- * handleUnpair already uses) has its own pairing fields cleared too, but keeps its OWN
- * amortizationPlanId untouched — it is a separate transaction, not the amortized one.
+ * Pure helper backing `markTransactionAmortized`'s optimistic update (D-03 activation):
+ * points the row at the Standalone Expense, marks the plan open, and leaves category
+ * fields alone — `activatePlanTx` copies `subCategoryId` onto that expense. Clearing
+ * `expenseCategoryName` / status here was a UI-only bug that made it look as though
+ * spreading a cost stripped the category, until a full reload proved otherwise.
+ */
+export function applyAmortizationActivatedUpdate(
+  transactions: TransactionListRow[],
+  transactionId: string,
+  newExpense: { id: string; planId: string },
+): TransactionListRow[] {
+  return transactions.map((t) =>
+    t.id === transactionId
+      ? {
+          ...t,
+          expenseId: newExpense.id,
+          expenseTransactionCount: 1,
+          amortizationPlanId: newExpense.planId,
+          amortizationPlanStatus: 'open',
+        }
+      : t,
+  )
+}
+
+/**
+ * Pure helper for D-09 undo optimistic updates (kept for unit coverage / future registry
+ * client state): clears amortizationPlanId AND the reimbursement/pairing fields on the target
+ * row — reverseDetachTx deletes the plan's standalone expense, which cascades away any
+ * reimbursement anchored to it. The refund/sale counterpart row (found via pairedWithId) has
+ * its own pairing fields cleared too, but keeps its OWN amortizationPlanId untouched.
  */
 export function applyAmortizationRemovedUpdate(
   transactions: TransactionListRow[],
@@ -284,16 +309,6 @@ export function TransactionTable({
     transactionId: string
     amount: string
     occurredAt: Date
-  } | null>(null)
-  // Undo (D-09) row-action target: set when "Rimuovi ammortamento" is selected.
-  const [removeAmortizeTarget, setRemoveAmortizeTarget] = useState<{
-    planId: string
-    transactionId: string
-  } | null>(null)
-  // Close (D-01, Phase 78) row-action target: set when "Chiudi ammortamento" is selected.
-  const [closeAmortizeTarget, setCloseAmortizeTarget] = useState<{
-    planId: string
-    transactionId: string
   } | null>(null)
 
   const router = useRouter()
@@ -454,45 +469,16 @@ export function TransactionTable({
   }
 
   /**
-   * Optimistically reflects the activation's forced detach (D-03) in the local list: the
-   * transaction now points at a new Standalone Expense, same shape as markExpenseDetached.
+   * Optimistically reflects the activation's forced detach + plan write (D-03) in the local
+   * list. Category names/status stay on the row — the server preserves subCategoryId on the
+   * Standalone Expense; wiping them here was a client-only regression.
    */
-  function markTransactionAmortized(transactionId: string, newExpense: { id: string }) {
+  function markTransactionAmortized(
+    transactionId: string,
+    newExpense: { id: string; planId: string },
+  ) {
     setLoadedTransactions((prev) =>
-      prev.map((t) =>
-        t.id === transactionId
-          ? {
-              ...t,
-              expenseId: newExpense.id,
-              expenseStatus: '1' as const,
-              expenseCategoryName: null,
-              expenseSubCategoryName: null,
-              expenseTransactionCount: 1,
-            }
-          : t,
-      ),
-    )
-  }
-
-  /**
-   * Optimistically clears the row's amortization gate (D-09 undo) so the menu flips back to
-   * "Ammortizza" immediately. The re-attached expense's title/category/status are refreshed via
-   * router.refresh() (called alongside this) rather than guessed locally — removeAmortizationPlan
-   * intentionally returns no expense payload, since the target may be a brand-new OR an existing
-   * shared Expense.
-   */
-  function markAmortizationRemoved(transactionId: string) {
-    setLoadedTransactions((prev) => applyAmortizationRemovedUpdate(prev, transactionId))
-  }
-
-  /**
-   * Optimistically flips the row's amortization plan status to 'closed' (D-01) so the "Chiudi
-   * ammortamento" entry disappears immediately without waiting for a reload; "Rimuovi
-   * ammortamento" stays available unchanged (gated only on amortizationPlanId, not status).
-   */
-  function markAmortizationClosed(transactionId: string) {
-    setLoadedTransactions((prev) =>
-      prev.map((t) => (t.id === transactionId ? { ...t, amortizationPlanStatus: 'closed' } : t)),
+      applyAmortizationActivatedUpdate(prev, transactionId, newExpense),
     )
   }
 
@@ -904,12 +890,10 @@ export function TransactionTable({
                           Spesa a sé (non aggregare)
                         </DropdownMenuItem>
                       )}
-                      {/* Amortization row action (Phase 77, D-01/D-04..D-08). Entry shown only
-                          when an expense is linked (mirrors "Spesa a sé"'s own gate); within
-                          that, eligibility is derived synchronously from row fields already
-                          loaded (no loading flash, D-08) — ineligible renders disabled with a
-                          Tooltip carrying the one specific guard reason. The server action
-                          independently re-checks every guard before any write. */}
+                      {/* Amortization activation (Phase 77) stays here; lifecycle (close /
+                          realize / remove) lives only on /amortizations — parity with the
+                          transaction detail page. Skip disabled Dilaziona when a plan already
+                          exists (Visualizza replaces that dead end). */}
                       {amortizationEligibility &&
                         (amortizationEligibility.eligible ? (
                           <DropdownMenuItem
@@ -925,9 +909,9 @@ export function TransactionTable({
                             className="flex items-center gap-2"
                           >
                             <CalendarClock className="h-4 w-4" />
-                            Ammortizza
+                            Dilaziona
                           </DropdownMenuItem>
-                        ) : (
+                        ) : transaction.amortizationPlanId == null ? (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -938,7 +922,7 @@ export function TransactionTable({
                                     className="flex items-center gap-2"
                                   >
                                     <CalendarClock className="h-4 w-4" />
-                                    Ammortizza
+                                    Dilaziona
                                   </DropdownMenuItem>
                                 </span>
                               </TooltipTrigger>
@@ -947,42 +931,13 @@ export function TransactionTable({
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                        ))}
-                      {/* Close entry (D-01, Phase 78, AMORT-04): shown only while the plan is
-                          still open — a closed plan has nothing left to collapse. */}
-                      {transaction.amortizationPlanId != null &&
-                        transaction.amortizationPlanStatus === 'open' && (
-                          <DropdownMenuItem
-                            onSelect={(e) => {
-                              e.preventDefault()
-                              setCloseAmortizeTarget({
-                                planId: transaction.amortizationPlanId!,
-                                transactionId: transaction.id,
-                              })
-                              setOpenDropdownId(null)
-                            }}
-                            className="flex items-center gap-2"
-                          >
-                            <CalendarClock className="h-4 w-4" />
-                            Chiudi ammortamento
-                          </DropdownMenuItem>
-                        )}
-                      {/* Undo entry (D-09, Entry Point Visibility Matrix: "Active plan exists" ->
-                          Undo shown). Shown only when an active plan exists on this transaction. */}
+                        ) : null)}
                       {transaction.amortizationPlanId != null && (
-                        <DropdownMenuItem
-                          onSelect={(e) => {
-                            e.preventDefault()
-                            setRemoveAmortizeTarget({
-                              planId: transaction.amortizationPlanId!,
-                              transactionId: transaction.id,
-                            })
-                            setOpenDropdownId(null)
-                          }}
-                          className="flex items-center gap-2 text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Rimuovi ammortamento
+                        <DropdownMenuItem asChild className="flex items-center gap-2">
+                          <Link href={amortizationsByTransactionHref(transaction.id)}>
+                            <CalendarClock className="h-4 w-4" />
+                            Visualizza spesa dilazionata
+                          </Link>
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />
@@ -1252,34 +1207,9 @@ export function TransactionTable({
         transactionId={amortizeTarget.transactionId}
         amount={amortizeTarget.amount}
         occurredAt={amortizeTarget.occurredAt}
-        onSuccess={({ expenseId }) => {
-          markTransactionAmortized(amortizeTarget.transactionId, { id: expenseId })
+        onSuccess={({ expenseId, planId }) => {
+          markTransactionAmortized(amortizeTarget.transactionId, { id: expenseId, planId })
           setAmortizeTarget(null)
-        }}
-      />
-    )}
-
-    {removeAmortizeTarget && (
-      <RemoveAmortizationDialog
-        open={Boolean(removeAmortizeTarget)}
-        onOpenChange={(open) => { if (!open) setRemoveAmortizeTarget(null) }}
-        planId={removeAmortizeTarget.planId}
-        onSuccess={() => {
-          markAmortizationRemoved(removeAmortizeTarget.transactionId)
-          setRemoveAmortizeTarget(null)
-          router.refresh()
-        }}
-      />
-    )}
-
-    {closeAmortizeTarget && (
-      <CloseAmortizationDialog
-        open={Boolean(closeAmortizeTarget)}
-        onOpenChange={(open) => { if (!open) setCloseAmortizeTarget(null) }}
-        planId={closeAmortizeTarget.planId}
-        onSuccess={() => {
-          markAmortizationClosed(closeAmortizeTarget.transactionId)
-          setCloseAmortizeTarget(null)
           router.refresh()
         }}
       />

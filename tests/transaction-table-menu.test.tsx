@@ -67,7 +67,11 @@ vi.mock('@/components/ui/dropdown-menu', async () => {
 })
 
 const { TransactionTable } = await import('../components/transactions/transaction-table')
-const { transactionDetailHref, importFileDetailHref } = await import('../lib/routes')
+const {
+  amortizationsByTransactionHref,
+  transactionDetailHref,
+  importFileDetailHref,
+} = await import('../lib/routes')
 import type { TransactionListRow } from '../lib/dal/transactions'
 
 const TRANSACTION_ID = 'aabbccdd-0000-4000-8000-aabbccddeeff'
@@ -202,5 +206,27 @@ describe('TransactionTable — file column link (D-05/D-16 repoint)', () => {
 
     expect(html).toContain(`href="${importFileDetailHref('file-1')}"`)
     expect(html).not.toContain('?fileId=')
+  })
+})
+
+describe('TransactionTable — amortized row lifecycle ownership', () => {
+  it('offers Visualizza spesa dilazionata and hides Chiudi/Rimuovi when a plan exists', () => {
+    const html = render([
+      makeTransaction({
+        expenseId: 'expense-1',
+        expenseStatus: '3',
+        expenseTitle: 'Laptop',
+        expenseCategoryName: 'Tecnologia',
+        expenseSubCategoryName: 'Elettronica',
+        amortizationPlanId: 'plan-1',
+        amortizationPlanStatus: 'open',
+      }),
+    ])
+
+    expect(html).toContain('Visualizza spesa dilazionata')
+    expect(html).toContain(`href="${amortizationsByTransactionHref(TRANSACTION_ID)}"`)
+    expect(html).not.toContain('Chiudi spesa dilazionata')
+    expect(html).not.toContain('Rimuovi spesa dilazionata')
+    expect(html).not.toContain('Dilaziona')
   })
 })

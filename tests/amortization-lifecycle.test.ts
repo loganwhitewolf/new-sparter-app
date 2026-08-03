@@ -12,6 +12,7 @@ import {
   realizePlanTx,
   reducePlanTx,
 } from '@/lib/services/amortization-lifecycle'
+import { reverseOpenPlanReduceForRefundUnlinkTx } from '@/lib/services/amortization-plan-amount'
 import {
   amortizationInstalment as amortizationInstalmentTable,
   amortizationPlan as amortizationPlanTable,
@@ -727,6 +728,52 @@ describeIfReachable('reducePlanTx (Phase 78, D-03/AMORT-06)', () => {
     const { reimbursements, refunds } = await countReimbursementRows(db)
     expect(reimbursements).toBe(1)
     expect(refunds).toBe(1)
+  })
+
+  it('unlink after reduce restores plan.totalAmount and future instalments (dashboard competenza drift)', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    const taxonomy = await seedMinimalTaxonomy(db, userId)
+    const { planId, instalments } = await seedSubscriptionPlan(db, {
+      userId,
+      subCategoryId: taxonomy.essentialSubCategoryId,
+    })
+
+    const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
+      userId,
+      subCategoryId: null,
+      amount: '300.00',
+      occurredAt: currentMonthStart(),
+      title: 'Partial credit',
+    })
+
+    await reducePlanTx(db, { userId, planId, refundTransactionId })
+    expect(toDecimal((await loadPlanTotalAmount(db, planId))!).equals(toDecimal('-900.00'))).toBe(true)
+
+    const applied = await db.transaction(async (tx) =>
+      reverseOpenPlanReduceForRefundUnlinkTx(tx, { userId, refundTransactionId }),
+    )
+    expect(applied).toBe(true)
+
+    expect(toDecimal((await loadPlanTotalAmount(db, planId))!).equals(toDecimal('-1200.00'))).toBe(true)
+
+    const future = (await loadInstalments(db, planId)).filter(
+      (row) => row.occurredAt.getTime() >= currentMonthStart().getTime(),
+    )
+    expect(future).toHaveLength(9)
+    const futureSum = future.reduce((acc, row) => acc.plus(toDecimal(row.amount)), toDecimal('0'))
+    expect(futureSum.equals(toDecimal('-900.00'))).toBe(true)
+
+    // Restored schedule matches the pre-reduce future slice (instalments 4–12).
+    const expected = materializeInstalments('-900.00', instalments[3]!.date, 9)
+    const sortedFuture = [...future].sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime())
+    for (const [index, expectedInstalment] of expected.entries()) {
+      expect(toDecimal(sortedFuture[index]!.amount).equals(toDecimal(expectedInstalment.amount))).toBe(
+        true,
+      )
+    }
   })
 
   it('exact-residual boundary: refund exactly equals the residual — ALLOWED, every re-spread instalment materializes to 0.00, plan stays open', async () => {

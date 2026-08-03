@@ -79,16 +79,16 @@ describe('normalizePatternInput', () => {
   })
 
   it('rejects empty pattern sources', () => {
-    expect(() => normalizePatternInput('   ')).toThrow('Pattern regex non valido.')
-    expect(() => normalizePatternInput('//i')).toThrow('Pattern regex non valido.')
+    expect(() => normalizePatternInput('   ')).toThrow('Regola non valida.')
+    expect(() => normalizePatternInput('//i')).toThrow('Regola non valida.')
   })
 
   it('rejects malformed regex sources as validation failures', () => {
-    expect(() => normalizePatternInput('([')).toThrow('Pattern regex non valido.')
+    expect(() => normalizePatternInput('([')).toThrow('Regola non valida.')
   })
 
   it('rejects unsupported slash-delimited flags before storage', () => {
-    expect(() => normalizePatternInput('/netflix/g')).toThrow('Flag regex non supportati. Usa solo /pattern/i oppure pattern.')
+    expect(() => normalizePatternInput('/netflix/g')).toThrow('Formato non supportato. Inserisci solo il testo da riconoscere (es. netflix).')
   })
 
   it('treats raw strings containing slashes as raw regex sources unless they are slash-delimited wrappers', () => {

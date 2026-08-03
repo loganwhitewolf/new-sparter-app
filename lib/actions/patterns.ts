@@ -112,14 +112,14 @@ export async function createPatternAction(
       err instanceof Error &&
       /invalid|valido/i.test(err.message + causeMsg)
     ) {
-      return { error: "Pattern regex non valido." };
+      return { error: "Regola non valida." };
     }
     if (
       causeCode === "23505" ||
       (err instanceof Error &&
         /unique.*constraint|duplicate key/i.test(err.message + causeMsg))
     ) {
-      return { error: "Un pattern identico esiste già." };
+      return { error: "Una regola identica esiste già." };
     }
     console.error(
       "[createPatternAction] createPattern error:",
@@ -286,14 +286,14 @@ export async function promoteSuggestionAction(
       err instanceof Error &&
       /invalid|valido/i.test(err.message + causeMsg)
     ) {
-      return { error: "Pattern regex non valido." };
+      return { error: "Regola non valida." };
     }
     if (
       causeCode === "23505" ||
       (err instanceof Error &&
         /unique.*constraint|duplicate key/i.test(err.message + causeMsg))
     ) {
-      return { error: "Un pattern identico esiste già." };
+      return { error: "Una regola identica esiste già." };
     }
     return { error: "Si è verificato un errore. Riprova tra qualche secondo." };
   }

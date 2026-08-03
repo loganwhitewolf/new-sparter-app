@@ -14,8 +14,12 @@ import type { CategoryWithSubCategories } from "@/lib/dal/categories";
 import {
   CreateCategoryDialog,
   CreateSubcategoryDialog,
+  DeactivateCategoryDialog,
+  DeactivateSubcategoryDialog,
   DeleteCategoryDialog,
   DeleteSubcategoryDialog,
+  ReactivateCategoryDialog,
+  ReactivateSubcategoryDialog,
   RenameCategoryDialog,
   RenameSubcategoryDialog,
 } from "./category-mutation-dialogs";
@@ -67,6 +71,7 @@ function CategorySidebar({
                 "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
                 selectedId === cat.id &&
                   "bg-accent text-accent-foreground font-medium",
+                !cat.isActive && "opacity-50",
               )}
               aria-current={selectedId === cat.id ? "true" : undefined}
             >
@@ -97,9 +102,15 @@ function SubcategoryList({
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 id="subcategory-list-heading" className="text-lg font-semibold">
+            <h3
+              id="subcategory-list-heading"
+              className={cn("text-lg font-semibold", !category.isActive && "opacity-50")}
+            >
               {category.name}
             </h3>
+            {!category.isActive && (
+              <Badge variant="outline">Disabilitata</Badge>
+            )}
             {category.isOwned ? (
               <Badge variant="secondary">Personale</Badge>
             ) : (
@@ -109,14 +120,19 @@ function SubcategoryList({
           <p className="mt-1 text-sm text-muted-foreground">
             {!category.isOwned
               ? "Categoria condivisa: puoi personalizzare solo il nome delle sottocategorie."
-              : "Categoria personale: puoi rinominare, aggiungere sottocategorie e, se non ci sono spese collegate, eliminarla."}
+              : "Categoria personale: puoi disabilitare (resta in lista, fuori dai selettori), riattivare, o eliminare del tutto se non ha spese collegate."}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <CreateSubcategoryDialog category={category} />
+          {category.isActive && <CreateSubcategoryDialog category={category} />}
           {category.isOwned && (
             <>
               <RenameCategoryDialog category={category} />
+              {category.isActive ? (
+                <DeactivateCategoryDialog category={category} />
+              ) : (
+                <ReactivateCategoryDialog category={category} />
+              )}
               <DeleteCategoryDialog category={category} />
             </>
           )}
@@ -132,7 +148,10 @@ function SubcategoryList({
           category.subCategories.map((subCategory) => (
             <div
               key={subCategory.id}
-              className="flex items-start justify-between gap-3 rounded-md bg-muted/40 px-4 py-3"
+              className={cn(
+                "flex items-start justify-between gap-3 rounded-md bg-muted/40 px-4 py-3",
+                !subCategory.isActive && "opacity-50",
+              )}
               data-testid={`subcategory-row-${subCategory.id}`}
               aria-label={`Sottocategoria ${subCategory.name}`}
             >
@@ -141,6 +160,11 @@ function SubcategoryList({
                   <span className="font-medium text-sm">
                     {subCategory.name}
                   </span>
+                  {!subCategory.isActive && (
+                    <Badge variant="outline" className="text-[10px]">
+                      Disabilitata
+                    </Badge>
+                  )}
                   {subCategory.isOwned ? (
                     <Badge variant="secondary" className="text-[10px]">
                       Personale
@@ -164,13 +188,23 @@ function SubcategoryList({
                 ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                <SubcategoryNatureSelect
-                  subCategoryId={subCategory.id}
-                  effectiveNature={subCategory.effectiveNature}
-                />
+                {subCategory.isActive && (
+                  <SubcategoryNatureSelect
+                    subCategoryId={subCategory.id}
+                    effectiveNature={subCategory.effectiveNature}
+                    direction={category.type}
+                  />
+                )}
                 <RenameSubcategoryDialog subCategory={subCategory} />
                 {subCategory.isOwned && (
-                  <DeleteSubcategoryDialog subCategory={subCategory} />
+                  <>
+                    {subCategory.isActive ? (
+                      <DeactivateSubcategoryDialog subCategory={subCategory} />
+                    ) : (
+                      <ReactivateSubcategoryDialog subCategory={subCategory} />
+                    )}
+                    <DeleteSubcategoryDialog subCategory={subCategory} />
+                  </>
                 )}
               </div>
             </div>
@@ -228,9 +262,9 @@ export function CategorySettingsPanel({
           </div>
         )}
         <p className="mt-4 text-xs text-muted-foreground border-t pt-3">
-          Le eliminazioni sono disponibili solo per voci personali. Le
-          sottocategorie collegate a spese vengono bloccate per proteggere lo
-          storico.
+          Disattiva lascia la voce in elenco (opaca, etichetta Disabilitata) e la
+          esclude dai selettori. Elimina la rimuove dal database e richiede che
+          non ci siano spese collegate.
         </p>
       </CardContent>
     </Card>

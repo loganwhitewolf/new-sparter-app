@@ -4,6 +4,10 @@ import { and, eq, inArray, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { expense, transaction as transactionTable } from '@/lib/db/schema'
 import { reconcileExpensesAfterTransactionRemoval } from '@/lib/services/expense-reconciliation'
+import {
+  cleanupFinanceLinksForTransactions,
+  deleteEmptyReimbursementsForUser,
+} from '@/lib/services/linked-finance-cleanup'
 
 export type DeleteTransactionsResult = {
   deletedTransactionIds: string[]
@@ -76,11 +80,18 @@ export async function deleteTransactionsAndReconcileExpenses(input: {
       }
     }
 
+    await cleanupFinanceLinksForTransactions(tx, {
+      userId: input.userId,
+      transactionIds: idsToDelete,
+    })
+
     await tx
       .delete(transactionTable)
       .where(
         and(eq(transactionTable.userId, input.userId), inArray(transactionTable.id, idsToDelete)),
       )
+
+    await deleteEmptyReimbursementsForUser(tx, input.userId)
 
     if (affectedExpenseIds.length === 0) {
       return { deletedTransactionIds: idsToDelete }

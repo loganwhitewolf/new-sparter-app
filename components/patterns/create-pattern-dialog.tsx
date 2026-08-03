@@ -67,16 +67,15 @@ export function CreatePatternDialog({ categories }: Props) {
       <DialogTrigger asChild>
         <Button size="sm">
           <ClientMountIcon icon={Plus} ariaHidden className="mr-2 h-4 w-4" />
-          Nuovo pattern
+          Nuova regola
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Nuovo pattern personalizzato</DialogTitle>
+          <DialogTitle>Nuova regola automatica</DialogTitle>
           <DialogDescription>
-            Crea una regola regex da applicare prima dei pattern di sistema. Puoi inserire
-            <span className="font-mono"> netflix</span> oppure <span className="font-mono">/netflix/i</span>:
-            verrà salvata la sorgente canonica.
+            Crea una regola da applicare prima di quelle di sistema. Scrivi il testo da riconoscere,
+            ad esempio <span className="font-mono">netflix</span>: maiuscole e minuscole non contano.
           </DialogDescription>
         </DialogHeader>
 
@@ -92,18 +91,17 @@ export function CreatePatternDialog({ categories }: Props) {
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" htmlFor="pattern-regex">
-              Pattern regex <span className="text-destructive">*</span>
+              Testo da riconoscere <span className="text-destructive">*</span>
             </label>
             <Input
               id="pattern-regex"
               name="pattern"
-              placeholder="es. netflix oppure /netflix/i"
+              placeholder="es. netflix"
               required
             />
             <p className="text-xs text-muted-foreground">
-              Scrivi una sorgente regex come <span className="font-mono">netflix</span> oppure la forma
-              <span className="font-mono"> /netflix/i</span>; viene salvata senza delimitatori e valutata
-              senza distinzione tra maiuscole e minuscole.
+              Esempio: <span className="font-mono">netflix</span>. La regola viene applicata senza
+              distinzione tra maiuscole e minuscole.
             </p>
           </div>
 
@@ -152,7 +150,7 @@ export function CreatePatternDialog({ categories }: Props) {
             </DialogClose>
             <Button type="submit" disabled={isPending || !subCategoryId}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Crea pattern
+              Crea regola
             </Button>
           </DialogFooter>
         </form>

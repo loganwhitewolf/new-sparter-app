@@ -1,6 +1,20 @@
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+
+/**
+ * True only for a path that exists AND is a regular file. `existsSync` alone is not enough: a
+ * module specifier like `@/lib/db` names a DIRECTORY (`lib/db/`), which exists, so accepting it
+ * would hand a directory to readFileSync and throw EISDIR mid-walk. Guarding on isFile() makes the
+ * resolver skip the bare-directory candidate and fall through to `index.ts`/`index.tsx`.
+ */
+function isFile(candidate: string): boolean {
+  try {
+    return statSync(resolve(process.cwd(), candidate)).isFile()
+  } catch {
+    return false
+  }
+}
 
 // Source-inspection test (not a rendered component tree): this repo's Node-only test env has
 // no jsdom for a full RSC render, so D-12/RETIRE-03's "renders no LensSwitch" claim is verified
@@ -55,7 +69,7 @@ function resolveImportPath(importPath: string, sourceDir: string): string | null
   ]
 
   for (const candidate of candidates) {
-    if (existsSync(resolve(process.cwd(), candidate))) return candidate
+    if (isFile(candidate)) return candidate
   }
 
   return null

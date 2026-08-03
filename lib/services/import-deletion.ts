@@ -10,6 +10,10 @@ import {
 } from "@/lib/db/schema";
 import { logger } from "@/lib/logger";
 import { toDbDecimal, toDecimal } from "@/lib/utils/decimal";
+import {
+  cleanupFinanceLinksForTransactions,
+  deleteEmptyReimbursementsForUser,
+} from "@/lib/services/linked-finance-cleanup";
 
 const MANUAL_PRESERVE_SOURCES = ["manual", "override"] as const;
 const ZERO_AMOUNT = "0.00";
@@ -480,6 +484,23 @@ export async function deleteImport(input: {
         phase: "delete.load",
       });
 
+      const fileTransactionIds = (
+        await tx
+          .select({ id: transactionTable.id })
+          .from(transactionTable)
+          .where(
+            and(
+              eq(transactionTable.userId, input.userId),
+              eq(transactionTable.fileId, input.fileId),
+            ),
+          )
+      ).map((row) => row.id);
+
+      await cleanupFinanceLinksForTransactions(tx, {
+        userId: input.userId,
+        transactionIds: fileTransactionIds,
+      });
+
       await tx
         .delete(transactionTable)
         .where(
@@ -488,6 +509,8 @@ export async function deleteImport(input: {
             eq(transactionTable.fileId, input.fileId),
           ),
         );
+
+      await deleteEmptyReimbursementsForUser(tx, input.userId);
 
       await updateRecalculatedExpenses(tx, plan, input.userId);
       await preserveEmptyManualExpenses(tx, plan, input.userId);

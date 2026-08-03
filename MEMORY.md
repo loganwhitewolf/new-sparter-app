@@ -42,6 +42,68 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
+### 2026-07-31 — Amortization lifecycle owned by /amortizations registry
+
+**Decided:** Transactions menu keeps only activation (`Dilaziona`) + deep-link `Visualizza spesa dilazionata`. Close / close-with-sale-or-refund / remove live exclusively on `/amortizations` open-plan row actions. `Collega rimborso` on an open amortized outflow may still open the intent dialog from the tx table (pragmatic exception).
+
+**Why:** Detail page already redirected lifecycle to the registry; tx table still exposed Chiudi/Rimuovi. User wants one owner surface for managing dilazioni.
+
+**Rejected:**
+- B — also block Collega rimborso → registry only (extra click; deferred)
+- C — duplicate lifecycle on both surfaces
+
+### 2026-07-31 — Hard-delete expense/tx/import cascades amort + reimbursement
+
+**Decided:** Before deleting transactions/expenses/imports, `cleanupFinanceLinksForTransactions` / `cleanupFinanceLinksForExpenses` tear down open amortization plans and reimbursements (restore refund baselines). FK alone is insufficient: reimbursement is expense-keyed (anchor tx delete left orphans); expense delete without linked txs wiped instalments via expenseId but left `amortization_plan`.
+
+**Why:** User saw plans/rimborsi survive after deleting spese/tx/file.
+
+**Rejected:**
+- Relying only on ON DELETE CASCADE — wrong anchor table for reimbursement
+- Deleting refund transactions when the anchor is removed — keep inflows, drop the link
+
+### 2026-07-31 — Unlink rimborso must reverse open-plan reduce (AMORT-06)
+
+**Decided:** `deletePairByTransactionId` / delete-reimbursement call `reverseOpenPlanReduceForRefundUnlinkTx` before dropping the refund link, restoring `amortization_plan.totalAmount` + future instalments. Accrual overview reads instalment amounts with no SQL netting — unlink without reverse left competenza “still reimbursed”. Also heal orphaned drift (open plan, no live reimbursement, totalAmount ≠ original tx) on overview + amortizations page load.
+
+**Why:** `reducePlanTx` dual-writes pair + re-spread; v2.8 unlink only restored expense baseline.
+
+**Rejected:**
+- Re-netting in `ledger_entry_accrual` — would double-net while a refund is linked
+- Silent reverse on closed (realize) plans — needs dedicated undo
+
+### 2026-07-31 — Personal category create = direction only (no auto subcategory)
+
+**Decided:** Create categoria = nome + **Direzione**. Persist `category.direction_id` (migration 0034). Do **not** auto-create a subcategory. Nature only on sottocategoria; nature pickers filtered by parent direction. Sidebar type = stored direction ?? derived from first subcategory nature.
+
+**Why:** Category ≠ subcategory; seeding a same-name subcategory was wrong UX. Direction must live on the category row if we ask for it at create without a child.
+
+**Rejected:**
+- Auto initial subcategory with default nature — user rejected
+- Nature on category create — wrong layer
+
+### 2026-07-31 — UX contratto quick on existing branch (260731-hhv)
+
+**Decided:** Execute quick `260731-hhv` (UX contratto feedback waves 01–03) on the already-open branch `gsd/quick-260730-o82-tx-direction-multi`. No new quick branch and no git worktree isolation for this run.
+
+**Why:** Branch already carries related product work; user does not want additional branches for this bugfix set.
+
+**Rejected:**
+- Fresh `gsd/quick-260731-hhv-*` from `origin/main` — cleaner history, but splits WIP
+- Worktree-isolated execute — would fork off remote HEAD and fight the local branch choice
+
+
+### 2026-07-30 — Transactions direction multi-select, transfer off by default (260730-o82)
+
+**Decided:** Direzione is multi-select. Absent URL `direction` ⇒ effective `in,out,allocation,unclassified` (hide transfers) with **no chips**. Chips only after user changes the filter; selecting the default set again clears the param. Cascade nature/category = union of selected directions (no transfer until opted in). Transactions only.
+
+**Why:** Transfers are low-signal noise in the default ledger view; chips should reflect user intent, not system defaults.
+
+**Rejected:**
+- Writing default into URL on first render (chip noise)
+- Changing Expenses the same way (out of scope)
+- Using `q=` / status “Da categorizzare” instead of direction `unclassified`
+
 ### 2026-07-30 — Amort UX: Visualizza on detail + Tutti=all (260730-n2z)
 
 **Decided:** (1) Detail amortized txs: only Visualizza → `/amortizations?transactionId=`; Chiudi/Rimuovi only on registry. (2) Status Tutti = open+closed (override former D-C1 open-default). (3) CTA copy Chiudi con vendita/rimborso.

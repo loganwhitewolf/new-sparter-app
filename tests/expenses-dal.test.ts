@@ -129,6 +129,12 @@ vi.mock('@/lib/db/schema', () => ({
     subCategoryId: 'userSubcategoryOverride.subCategoryId',
     userId: 'userSubcategoryOverride.userId',
   },
+  transaction: {
+    id: 'transaction.id',
+    expenseId: 'transaction.expenseId',
+    occurredAt: 'transaction.occurredAt',
+    userId: 'transaction.userId',
+  },
 }))
 
 const {
@@ -302,6 +308,20 @@ describe('expense DAL list pagination', () => {
         (arg as { op?: string }).op === 'gte',
     )
     expect(hasGte).toBe(true)
+  })
+
+  it('months filter adds EXISTS over member transaction occurredAt (3.5)', async () => {
+    await getExpenses({ months: ['2026-04', '2026-05'] })
+
+    const where = mocks.whereArgs[0] as { op: string; args: unknown[] }
+    const sqlPredicate = where.args.find(
+      (arg) => typeof arg === 'object' && arg !== null && (arg as { op?: string }).op === 'sql',
+    ) as { op: string; strings: TemplateStringsArray; values: unknown[] } | undefined
+    expect(sqlPredicate).toBeDefined()
+    expect(sqlPredicate!.strings.join('')).toMatch(/exists/i)
+    expect(JSON.stringify(sqlPredicate!.values)).toContain('transaction.expenseId')
+    expect(JSON.stringify(sqlPredicate!.values)).toContain('2026-04')
+    expect(JSON.stringify(sqlPredicate!.values)).toContain('2026-05')
   })
 
   // ── Wave 4: status 4 → uncategorized bucket (O-01) ────────────────────────

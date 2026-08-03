@@ -31,6 +31,7 @@ async function createCategory(page: Page, seed: CategorySettingsSeed) {
   const dialog = page.getByRole('dialog', { name: 'Nuova categoria personale' })
   await expect(dialog).toBeVisible()
   await dialog.getByLabel('Nome categoria').fill(seed.createdCategoryName)
+  // Default direction is Uscite (out); no automatic subcategory.
   await submitDialog(dialog, 'Crea categoria')
   await expect(categoryRow(page, seed.createdCategoryName)).toBeVisible()
 }
@@ -88,7 +89,9 @@ async function assertLinkedDeleteBlocked(page: Page, seed: CategorySettingsSeed)
   const dialog = page.getByRole('dialog', { name: 'Elimina sottocategoria personale' })
   await expect(dialog).toBeVisible()
   await dialog.getByRole('button', { name: 'Elimina' }).click()
-  await expect(dialog.getByText('Non puoi eliminare questa sottocategoria: è collegata a 1 spesa.')).toBeVisible()
+  await expect(
+    dialog.getByText("Non puoi eliminare: c'è 1 spesa collegata a questa categoria o sottocategoria."),
+  ).toBeVisible()
   await expect(row).toBeVisible()
   await dialog.getByRole('button', { name: 'Annulla' }).click()
   await expect(dialog).toBeHidden()
@@ -106,16 +109,16 @@ async function deleteUnlinkedSubcategory(page: Page, seed: CategorySettingsSeed)
 
 async function createPatternFromPatternsPage(page: Page, seed: CategorySettingsSeed) {
   await page.goto('/patterns')
-  await page.getByRole('button', { name: 'Nuovo pattern' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Nuovo pattern personalizzato' })
+  await page.getByRole('button', { name: 'Nuova regola' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Nuova regola automatica' })
   await expect(dialog).toBeVisible()
 
-  await dialog.getByLabel('Pattern regex').fill(seed.pattern)
+  await dialog.getByLabel('Testo da riconoscere').fill(seed.pattern)
   await chooseRadixOption(page, dialog.getByRole('combobox').nth(0), seed.createdCategoryRenamedName)
   await chooseRadixOption(page, dialog.getByRole('combobox').nth(1), seed.createdSubcategoryRenamedName)
   await dialog.getByLabel('Descrizione').fill(seed.patternDescription)
 
-  await submitDialog(dialog, 'Crea pattern')
+  await submitDialog(dialog, 'Crea regola')
 
   const patternRow = page.getByRole('row').filter({ hasText: seed.pattern })
   await expect(patternRow).toBeVisible()

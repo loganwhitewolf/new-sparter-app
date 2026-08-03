@@ -209,3 +209,23 @@ export function buildCategorySubcategoryMap(
 
   return result
 }
+
+/**
+ * Union option lists for the given parent keys (dedupe by value, first label wins).
+ * Used when a multi-select parent (e.g. direction) drives cascade children.
+ */
+export function unionFilterOptions(
+  map: Record<string, FilterOption[]>,
+  keys: string[],
+): FilterOption[] {
+  const seen = new Set<string>()
+  const out: FilterOption[] = []
+  for (const key of keys) {
+    for (const opt of map[key] ?? []) {
+      if (seen.has(opt.value)) continue
+      seen.add(opt.value)
+      out.push(opt)
+    }
+  }
+  return out
+}

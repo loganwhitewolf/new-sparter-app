@@ -123,7 +123,7 @@ export async function updateTransaction(
       (input.amount !== undefined || input.occurredAt !== undefined) &&
       row.amortizationPlanId != null
     ) {
-      throw new Error('Rimuovi ammortamento per modificare l\'importo o la data della transazione.')
+      throw new Error('Rimuovi spesa dilazionata per modificare l\'importo o la data della transazione.')
     }
 
     if (input.amount !== undefined) {

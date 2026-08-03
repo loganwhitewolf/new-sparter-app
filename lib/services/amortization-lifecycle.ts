@@ -5,6 +5,7 @@ import type Decimal from 'decimal.js'
 import { and, asc, eq, gte } from 'drizzle-orm'
 import type { DbOrTx } from '@/lib/db'
 import { amortizationInstalment, amortizationPlan, transaction } from '@/lib/db/schema'
+import { applySignedDeltaToOpenPlanTx } from '@/lib/services/amortization-plan-amount'
 import { materializeInstalments } from '@/lib/services/amortization-math'
 import { createPairTx } from '@/lib/services/transaction-pairs'
 import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
@@ -347,8 +348,6 @@ export async function reducePlanTx(tx: DbOrTx, input: ReducePlanInput): Promise<
     )
   }
 
-  const newTotalAmount = toDecimal(plan.totalAmount).plus(refundAmount)
-
   // Link the refund exactly like realizePlanTx links its sale — same anchor shape, same v2.8
   // mechanism — the only difference is the plan stays open here instead of closing.
   await createPairTx(tx, {
@@ -357,67 +356,11 @@ export async function reducePlanTx(tx: DbOrTx, input: ReducePlanInput): Promise<
     counterpartId: input.refundTransactionId,
   })
 
-  if (futureInstalments.length === 0) {
-    // Residual is 0 here (an empty future set sums to 0), so the guard above already forced
-    // refundMagnitude to also be 0 — nothing to delete or re-spread, only the (unchanged) base
-    // to record.
-    await tx
-      .update(amortizationPlan)
-      .set({ totalAmount: toDbDecimal(newTotalAmount), updatedAt: new Date() })
-      .where(eq(amortizationPlan.id, plan.id))
-
-    return { newTotalAmount: toDbDecimal(newTotalAmount), reSpreadInstalments: [] }
-  }
-
-  const remainingSumSigned = futureInstalments.reduce(
-    (acc, instalment) => acc.plus(toDecimal(instalment.amount)),
-    toDecimal('0'),
-  )
-  const newFutureSum = remainingSumSigned.plus(refundAmount)
-
-  await tx
-    .delete(amortizationInstalment)
-    .where(
-      and(
-        eq(amortizationInstalment.planId, plan.id),
-        gte(amortizationInstalment.occurredAt, boundaryMonthStart),
-      ),
-    )
-
-  const cancelledCount = futureInstalments.length
-  const earliestCancelled = futureInstalments[0]!
-  const minInstalmentNumber = Math.min(...futureInstalments.map((instalment) => instalment.instalmentNumber))
-
-  const reSpread = materializeInstalments(
-    toDbDecimal(newFutureSum),
-    earliestCancelled.occurredAt,
-    cancelledCount,
-  )
-
-  const rowsToInsert = reSpread.map((instalment, index) => ({
-    id: randomUUID(),
+  // Amount + future re-spread shared with unlink reverse (amortization-plan-amount.ts).
+  return applySignedDeltaToOpenPlanTx(tx, {
     userId: input.userId,
-    planId: plan.id,
-    instalmentNumber: minInstalmentNumber + index,
-    expenseId: earliestCancelled.expenseId,
-    amount: instalment.amount,
-    occurredAt: instalment.date,
-  }))
-
-  await tx.insert(amortizationInstalment).values(rowsToInsert)
-
-  await tx
-    .update(amortizationPlan)
-    .set({ totalAmount: toDbDecimal(newTotalAmount), updatedAt: new Date() })
-    .where(eq(amortizationPlan.id, plan.id))
-
-  return {
-    newTotalAmount: toDbDecimal(newTotalAmount),
-    reSpreadInstalments: rowsToInsert.map((row) => ({
-      id: row.id,
-      instalmentNumber: row.instalmentNumber,
-      amount: row.amount,
-      occurredAt: row.occurredAt,
-    })),
-  }
+    plan: { id: plan.id, totalAmount: plan.totalAmount },
+    signedDelta: refundAmount,
+    boundaryMonthStart,
+  })
 }

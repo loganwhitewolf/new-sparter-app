@@ -128,7 +128,7 @@ describe('/patterns UI', () => {
     })
 
     const html = await renderPatternsPage()
-    expect(html).toContain('Pattern')
+    expect(html).toContain('Regole automatiche')
   })
 
   it('renders the create action and pattern row content for a paid plan', async () => {
@@ -141,7 +141,7 @@ describe('/patterns UI', () => {
 
     const html = await renderPatternsPage()
 
-    expect(html).toContain('Nuovo pattern')
+    expect(html).toContain('Nuova regola')
     expect(html).toContain('Spese → Alimentari speciali')
     expect(html).toContain('Sottocategoria non trovata (#999)')
     expect(html).toContain('90%')
@@ -158,7 +158,7 @@ describe('/patterns UI', () => {
 
     const html = await renderPatternsPage()
 
-    expect(html).not.toContain('Nuovo pattern')
+    expect(html).not.toContain('Nuova regola')
     expect(html).toContain('Disponibile con piano Basic o Pro.')
   })
 })

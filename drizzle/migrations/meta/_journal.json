@@ -239,6 +239,13 @@
       "when": 1785230848265,
       "tag": "0033_loud_layla_miller",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1785503504038,
+      "tag": "0034_burly_revanche",
+      "breakpoints": true
     }
   ]
 }

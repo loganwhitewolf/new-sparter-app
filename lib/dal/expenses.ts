@@ -26,7 +26,7 @@ export type ExpenseFilters = {
   /**
    * Optional period filter — kept for backwards compatibility with any existing callers.
    * D-05: the expenses page no longer defaults to any period; this is only applied when
-   * explicitly provided. D-11: Expenses toolbar does not expose a temporal filter at all.
+   * explicitly provided. Prefer `months` (month-multi) for the toolbar path (260731-hhv 3.5).
    */
   period?: 'last-3-months' | 'last-6-months' | 'this-year' | 'last-year'
   name?: string
@@ -45,6 +45,11 @@ export type ExpenseFilters = {
   direction?: string
   /** Subcategory id filter — narrows to a specific subCategory.id. */
   subCategoryId?: number
+  /**
+   * YYYY-MM months — when non-empty, keep expenses that have at least one linked
+   * transaction whose occurredAt falls in one of those months (contract 3.5).
+   */
+  months?: string[]
 }
 
 export type ExpensePagination = {
@@ -323,6 +328,19 @@ export const getExpenses = cache(async (
   if (filters.period) {
     const { from, to } = periodToDateRange(filters.period)
     conditions.push(gte(expense.createdAt, from), lte(expense.createdAt, to))
+  }
+
+  // Month-multi: domain-correct filter on member transaction occurredAt (not expense.createdAt)
+  if (filters.months && filters.months.length > 0) {
+    conditions.push(
+      sql`exists (
+        select 1 from ${transaction}
+        where ${transaction.expenseId} = ${expense.id}
+          and (${or(
+            ...filters.months.map((ym) => sql`TO_CHAR(${transaction.occurredAt}, 'YYYY-MM') = ${ym}`),
+          )})
+      )`,
+    )
   }
 
   // O-01: status 4 → uncategorized bucket (conservative mapping)
