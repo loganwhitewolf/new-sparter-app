@@ -68,10 +68,52 @@ describe('CategoryRankingList', () => {
   test("row href carries the SAME year via buildDashboardCategoryDetailHref(id, { year, type, lens })", () => {
     const category = { ...baseCategory, id: 7 }
     const html = renderToStaticMarkup(
-      <CategoryRankingList data={[category]} year={2026} direction="allocation" sort="amount" copy={resolveCategoryDirectionCopy('allocation')} />
+      <CategoryRankingList data={[category]} year={2026} direction="in" sort="amount" copy={resolveCategoryDirectionCopy('in')} />
     )
 
-    expect(html).toContain('href="/dashboard/categories/7?year=2026&amp;type=allocation"')
+    expect(html).toContain('href="/dashboard/categories/7?year=2026&amp;type=in"')
+  })
+
+  test('an allocation-direction row renders no anchor element while out/in rows keep their existing link (CR-01 NEW guard)', () => {
+    const outHtml = renderToStaticMarkup(
+      <CategoryRankingList
+        data={[{ ...baseCategory, id: 10 }]}
+        year={2026}
+        direction="out"
+        sort="amount"
+        copy={resolveCategoryDirectionCopy('out')}
+      />
+    )
+    expect(outHtml).toContain('<a')
+    expect(outHtml).toContain('/dashboard/categories/10?year=2026"')
+
+    const inHtml = renderToStaticMarkup(
+      <CategoryRankingList
+        data={[{ ...baseCategory, id: 11 }]}
+        year={2026}
+        direction="in"
+        sort="amount"
+        copy={resolveCategoryDirectionCopy('in')}
+      />
+    )
+    expect(inHtml).toContain('<a')
+    expect(inHtml).toContain('/dashboard/categories/11?year=2026&amp;type=in')
+
+    const allocationHtml = renderToStaticMarkup(
+      <CategoryRankingList
+        data={[{ ...baseCategory, id: 12 }]}
+        year={2026}
+        direction="allocation"
+        sort="amount"
+        copy={resolveCategoryDirectionCopy('allocation')}
+      />
+    )
+    expect(allocationHtml).not.toContain('<a')
+    expect(allocationHtml).toContain(baseCategory.name)
+    expect(allocationHtml).toContain('Totale')
+    expect(allocationHtml).toContain(`aria-label="Andamento mensile ${baseCategory.name}"`)
+    expect(allocationHtml).toContain('aria-disabled="true"')
+    expect(allocationHtml).not.toContain('type=allocation')
   })
 
   test('sorting by projection reorders rows, falling back to amount for a null projection', () => {

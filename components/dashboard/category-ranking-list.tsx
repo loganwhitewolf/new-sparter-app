@@ -76,10 +76,6 @@ export function CategoryRankingList({ data, year, direction, sort, lens, copy }:
       aria-label="Classifica categorie"
     >
       {sortedData.map((category, index) => {
-        // D-13/CLIST-07: the row's link carries the SAME year the row's own total was computed
-        // from — the coherence test "clicking a row must not change the numbers" holds by
-        // construction.
-        const href = buildDashboardCategoryDetailHref(category.id, { year, type: direction, lens })
         const percentage = Math.max(0, Math.min(category.percentage, 100))
         const shareLabel = copy.shareLabel.replace('{P}', String(category.percentage))
         const shareAriaLabel = shareLabel.replace(/^[·•]\s*/, '')
@@ -97,14 +93,27 @@ export function CategoryRankingList({ data, year, direction, sort, lens, copy }:
 
               {/* Column 2 — name, metadata, % bar */}
               <div className="min-w-0 space-y-2">
-                <Link
-                  href={href}
-                  className="block truncate text-base font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={`${category.name}: apri dettaglio categoria`}
-                  title={category.name}
-                >
-                  {category.name}
-                </Link>
+                {/* CR-01 (NEW), 83-VERIFICATION.md LOCKED DECISION: the allocation direction has
+                    no detail page yet (Phase 84 scope) — its branch computes no href at all, so
+                    no ?type=allocation URL the detail page can't honour is ever constructed. */}
+                {direction === 'allocation' ? (
+                  <span
+                    className="block truncate text-base font-semibold text-foreground"
+                    aria-disabled="true"
+                    title={category.name}
+                  >
+                    {category.name}
+                  </span>
+                ) : (
+                  <Link
+                    href={buildDashboardCategoryDetailHref(category.id, { year, type: direction, lens })}
+                    className="block truncate text-base font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`${category.name}: apri dettaglio categoria`}
+                    title={category.name}
+                  >
+                    {category.name}
+                  </Link>
+                )}
                 <p className="text-xs text-muted-foreground">
                   {movementLabel(category.count)} {shareLabel}
                 </p>
