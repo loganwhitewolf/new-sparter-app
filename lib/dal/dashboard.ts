@@ -24,12 +24,9 @@ import {
   transaction as transactionTable,
   userSubcategoryOverride,
 } from '@/lib/db/schema'
-import type { DashboardFilters, DashboardPreset } from '@/lib/validations/dashboard'
-import type { DateRange } from '@/lib/utils/date'
-import { dashboardPresetToDateRange, monthLabel, monthsBetween } from '@/lib/utils/date'
+import { monthLabel, monthsBetween } from '@/lib/utils/date'
 import type { FlowNature } from '@/lib/utils/nature-labels'
 import {
-  buildDeviationMap,
   computeBreakdownPercentages,
   computeDeltaPercent,
   computeSavingsRate,
@@ -204,22 +201,6 @@ export type MonthlyNatureTrendPoint = {
   totalIgn: number
 }
 
-export type DeviationData = {
-  deviation: number | null
-  isNew: boolean
-  belowNoiseThreshold: boolean
-}
-
-export type DeviationDateRanges = {
-  reference: DateRange
-  baseline: DateRange
-}
-
-export type CategoryDeviationsInput = {
-  type: 'in' | 'out' | 'all'
-  categoryId?: number
-}
-
 type BreakdownCategoryDraft = Omit<BreakdownCategory, 'percentage' | 'subCategories'> & {
   subCategories: Array<Omit<BreakdownSubCategory, 'percentage'>>
 }
@@ -322,88 +303,6 @@ type CategoryDetailTopTransactionRow = {
 }
 
 const ZERO_AMOUNT = '0.00'
-
-function previousDashboardPresetDateRange(preset: DashboardPreset, now = new Date()) {
-  switch (preset) {
-    case 'last-3-months':
-      return {
-        from: new Date(now.getFullYear(), now.getMonth() - 5, 1),
-        to: new Date(now.getFullYear(), now.getMonth() - 2, 0, 23, 59, 59, 999),
-      }
-    case 'last-6-months':
-      return {
-        from: new Date(now.getFullYear(), now.getMonth() - 11, 1),
-        to: new Date(now.getFullYear(), now.getMonth() - 5, 0, 23, 59, 59, 999),
-      }
-    case 'this-year':
-      return {
-        from: new Date(now.getFullYear() - 1, 0, 1),
-        to: new Date(now.getFullYear() - 1, now.getMonth() + 1, 0, 23, 59, 59, 999),
-      }
-    case 'last-year':
-      return {
-        from: new Date(now.getFullYear() - 2, 0, 1),
-        to: new Date(now.getFullYear() - 2, 11, 31, 23, 59, 59, 999),
-      }
-    case 'last-month':
-    default: {
-      const comparisonMonth = new Date(now.getFullYear(), now.getMonth() - 2, 1)
-      return {
-        from: comparisonMonth,
-        to: new Date(comparisonMonth.getFullYear(), comparisonMonth.getMonth() + 1, 0, 23, 59, 59, 999),
-      }
-    }
-  }
-}
-
-export function getOverviewComparisonRanges(preset: DashboardPreset, now = new Date()) {
-  return {
-    current: dashboardPresetToDateRange(preset, now),
-    previous: previousDashboardPresetDateRange(preset, now),
-  }
-}
-
-const DEVIATION_NOISE_THRESHOLD = '15.00'
-
-export function getDeviationDateRanges(now: Date = new Date()): DeviationDateRanges {
-  const year = now.getFullYear()
-  const month = now.getMonth()
-  return {
-    reference: {
-      from: new Date(year, month - 1, 1),
-      to: new Date(year, month, 0, 23, 59, 59, 999),
-    },
-    baseline: {
-      from: new Date(year, month - 4, 1),
-      to: new Date(year, month - 1, 0, 23, 59, 59, 999),
-    },
-  }
-}
-
-export function buildDeviationDataset(input: {
-  referenceRows: Array<{ id: number; amount: string }>
-  baselineRows: Array<{ id: number; month: string; amount: string }>
-  noiseThreshold?: string
-}): Map<number, DeviationData> {
-  const threshold = toDecimal(input.noiseThreshold ?? DEVIATION_NOISE_THRESHOLD)
-
-  const numericMap = buildDeviationMap({
-    referenceRows: input.referenceRows,
-    baselineRows: input.baselineRows,
-    noiseThreshold: input.noiseThreshold ?? DEVIATION_NOISE_THRESHOLD,
-  })
-
-  const result = new Map<number, DeviationData>()
-  for (const ref of input.referenceRows) {
-    const refAmount = toDecimal(ref.amount).abs()
-    const belowNoiseThreshold = refAmount.lt(threshold)
-    const numericValue = numericMap.get(ref.id)
-    const isNew = numericValue === 'new'
-    const deviation = typeof numericValue === 'number' ? numericValue : null
-    result.set(ref.id, { deviation, isNew, belowNoiseThreshold })
-  }
-  return result
-}
 
 function normalizeAmount(value: string | number | null | undefined): string {
   return toDecimal(value ?? 0).toFixed(2)
@@ -1158,35 +1057,14 @@ export function buildCategoryDetailData(input: {
   }
 }
 
-export const getOverview = cache(async (preset: DashboardPreset = 'last-month'): Promise<OverviewData> => {
-  const { userId } = await verifySession()
-  const { current, previous } = getOverviewComparisonRanges(preset)
-
-  const [currentTotals, previousTotals, currentUncategorizedCount, previousUncategorizedCount] =
-    await Promise.all([
-      getOverviewAmountTotals(userId, current.from, current.to),
-      getOverviewAmountTotals(userId, previous.from, previous.to),
-      getUncategorizedCount(userId, current.from, current.to),
-      getUncategorizedCount(userId, previous.from, previous.to),
-    ])
-
-  return buildOverviewData({
-    current: currentTotals,
-    previous: previousTotals,
-    currentUncategorizedCount,
-    previousUncategorizedCount,
-  })
-})
-
 export const getCategoriesBreakdown = cache(
   async (
-    filters: DashboardFilters,
+    { from, to, type }: { from: Date; to: Date; type: 'in' | 'out' | 'all' },
     ledgerRowSource: LedgerRowSource = ledgerEntryCash,
   ): Promise<BreakdownCategory[]> => {
     const { userId } = await verifySession()
-    const { from, to } = dashboardPresetToDateRange(filters.preset)
     // Direction filter: use direction.code when a specific type is selected
-    const typeFilter = filters.type === 'all' ? undefined : eq(direction.code, filters.type)
+    const typeFilter = type === 'all' ? undefined : eq(direction.code, type)
 
     let rows: BreakdownAggregateRow[] = []
 
@@ -1245,14 +1123,13 @@ export const getCategoriesBreakdown = cache(
 
 export const getCategoryRanking = cache(
   async (
-    filters: DashboardFilters,
+    { from, to, type }: { from: Date; to: Date; type: 'in' | 'out' | 'all' },
     ledgerRowSource: LedgerRowSource = ledgerEntryCash,
   ): Promise<CategoryRankingItem[]> => {
     const { userId } = await verifySession()
-    const { from, to } = dashboardPresetToDateRange(filters.preset)
     const monthSql = sql<string>`to_char(${ledgerRowSource.occurredAt}, 'YYYY-MM')`
     // Direction filter: use direction.code when a specific type is selected
-    const typeFilter = filters.type === 'all' ? undefined : eq(direction.code, filters.type)
+    const typeFilter = type === 'all' ? undefined : eq(direction.code, type)
 
     let rows: CategoryRankingAggregateRow[] = []
 
@@ -1394,127 +1271,16 @@ export const getCategoryYearRanking = cache(
   }
 )
 
-export const getCategoryDeviations = cache(
-  async (
-    input: CategoryDeviationsInput,
-    ledgerRowSource: LedgerRowSource = ledgerEntryCash,
-  ): Promise<Map<number, DeviationData>> => {
-    const { userId } = await verifySession()
-    const { reference, baseline } = getDeviationDateRanges()
-    // Direction filter: use direction.code when a specific type is selected
-    const typeFilter = input.type === 'all' ? undefined : eq(direction.code, input.type)
-    const groupColumn = input.categoryId !== undefined ? subCategory.id : category.id
-    const categoryScope =
-      input.categoryId !== undefined ? eq(category.id, input.categoryId) : undefined
-
-    let referenceRows: Array<{ id: number; amount: string }> = []
-    let baselineRows: Array<{ id: number; month: string; amount: string }> = []
-
-    try {
-      const monthSql = sql<string>`to_char(${ledgerRowSource.occurredAt}, 'YYYY-MM')`
-
-      const [refResult, baseResult] = await Promise.all([
-        db
-          .select({
-            id: groupColumn,
-            amount: sql<string>`coalesce(abs(sum(${ledgerRowSource.amount})), 0)::text`,
-          })
-          .from(ledgerRowSource)
-          .innerJoin(expense, eq(ledgerRowSource.expenseId, expense.id))
-          .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
-          .innerJoin(category, eq(subCategory.categoryId, category.id))
-          .leftJoin(
-            userSubcategoryOverride,
-            and(
-              eq(userSubcategoryOverride.subCategoryId, subCategory.id),
-              eq(userSubcategoryOverride.userId, userId),
-            ),
-          )
-          .innerJoin(
-            nature,
-            eq(
-              nature.id,
-              sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
-            )
-          )
-          .innerJoin(direction, eq(nature.directionId, direction.id))
-          .where(
-            and(
-              // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
-              // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
-              dateScopedTransactions(ledgerRowSource, userId, reference.from, reference.to),
-              expenseStatusIncludedInDashboardTotals(),
-              eq(direction.includedInTotals, true),
-              typeFilter,
-              categoryScope
-            )
-          )
-          .groupBy(groupColumn),
-        db
-          .select({
-            id: groupColumn,
-            month: monthSql,
-            amount: sql<string>`coalesce(abs(sum(${ledgerRowSource.amount})), 0)::text`,
-          })
-          .from(ledgerRowSource)
-          .innerJoin(expense, eq(ledgerRowSource.expenseId, expense.id))
-          .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
-          .innerJoin(category, eq(subCategory.categoryId, category.id))
-          .leftJoin(
-            userSubcategoryOverride,
-            and(
-              eq(userSubcategoryOverride.subCategoryId, subCategory.id),
-              eq(userSubcategoryOverride.userId, userId),
-            ),
-          )
-          .innerJoin(
-            nature,
-            eq(
-              nature.id,
-              sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
-            )
-          )
-          .innerJoin(direction, eq(nature.directionId, direction.id))
-          .where(
-            and(
-              // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
-              // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
-              dateScopedTransactions(ledgerRowSource, userId, baseline.from, baseline.to),
-              expenseStatusIncludedInDashboardTotals(),
-              eq(direction.includedInTotals, true),
-              typeFilter,
-              categoryScope
-            )
-          )
-          .groupBy(groupColumn, monthSql),
-      ])
-
-      referenceRows = refResult.map((row) => ({
-        id: Number(row.id),
-        amount: String(row.amount),
-      }))
-      baselineRows = baseResult.map((row) => ({
-        id: Number(row.id),
-        month: String(row.month),
-        amount: String(row.amount),
-      }))
-    } catch {
-      referenceRows = []
-      baselineRows = []
-    }
-
-    return buildDeviationDataset({ referenceRows, baselineRows })
-  }
-)
-
 export const getCategoryDetail = cache(
   async (
     categoryId: number,
-    filters: DashboardFilters,
+    // `type` is accepted for signature symmetry with getCategoriesBreakdown/getCategoryRanking
+    // but genuinely unused here — this function never read `filters.type` before this change
+    // either (D-15, Plan 84-03 Task 1).
+    { from, to, type: _type }: { from: Date; to: Date; type: 'in' | 'out' | 'all' },
     ledgerRowSource: LedgerRowSource = ledgerEntryCash,
   ): Promise<CategoryDetailData> => {
     const { userId } = await verifySession()
-    const { from, to } = dashboardPresetToDateRange(filters.preset)
     const emptyData = () => emptyCategoryDetailData(null, from, to)
 
     let categoryData: CategoryDetailCategory | null = null
@@ -1754,11 +1520,10 @@ export const getCategoryDetail = cache(
 )
 
 export const getMonthlyTrendByNature = cache(async (
-  preset: DashboardPreset,
+  { from, to }: { from: Date; to: Date },
   ledgerRowSource: LedgerRowSource = ledgerEntryCash,
 ): Promise<MonthlyNatureTrendPoint[]> => {
   const { userId } = await verifySession()
-  const { from, to } = dashboardPresetToDateRange(preset)
   const monthSql = sql<string>`to_char(${ledgerRowSource.occurredAt}, 'YYYY-MM')`
   // Direction-aware nature grouping: resolve effective nature via override.natureId or sub.natureId → nature.code
   const natureSql = sql<FlowNature | null>`(
