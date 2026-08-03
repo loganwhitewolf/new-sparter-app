@@ -86,62 +86,76 @@ export function CategorySubcategoryBreakdown({ contributions, year, type = 'out'
     .toFixed(2)
 
   return (
-    <Table aria-label="Ripartizione sottocategorie">
-      <TableHeader>
-        <TableRow>
-          <TableHead>Sottocategoria</TableHead>
-          <TableHead className="min-w-[140px]">Peso</TableHead>
-          <TableHead className="text-right">Totale {year}</TableHead>
-          <TableHead className="text-right">Contributo alla differenza</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {contributions.map((row) => {
-          const percentage = safePercentage(row.weightPercentage)
-          const suffix = presenceSuffix(row.presence, year)
-          const judgement = resolveComparisonJudgement(row.contribution, type)
-          const isGone = row.presence === 'previous-only'
+    <div className="space-y-2">
+      <Table aria-label="Ripartizione sottocategorie">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Sottocategoria</TableHead>
+            <TableHead className="min-w-[140px]">Peso</TableHead>
+            <TableHead className="text-right">Totale {year}</TableHead>
+            <TableHead className="text-right">Contributo alla differenza</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {contributions.map((row) => {
+            const percentage = safePercentage(row.weightPercentage)
+            const suffix = presenceSuffix(row.presence, year)
+            const judgement = resolveComparisonJudgement(row.contribution, type)
+            const isGone = row.presence === 'previous-only'
 
-          return (
-            <TableRow key={row.id} className={isGone ? 'text-muted-foreground' : undefined}>
-              <TableCell className="max-w-0">
-                <span className="truncate" title={row.name}>
-                  {row.name}
-                </span>
-                {suffix ? <span className="ml-1 text-xs text-muted-foreground">{suffix}</span> : null}
-              </TableCell>
-              <TableCell>
-                <div
-                  className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
-                  role="img"
-                  aria-label={`${percentage}% del totale categoria`}
+            return (
+              <TableRow key={row.id} className={isGone ? 'text-muted-foreground' : undefined}>
+                <TableCell className="max-w-0">
+                  <span className="truncate" title={row.name}>
+                    {row.name}
+                  </span>
+                  {suffix ? <span className="ml-1 text-xs text-muted-foreground">{suffix}</span> : null}
+                </TableCell>
+                <TableCell>
+                  <div
+                    className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                    role="img"
+                    aria-label={`${percentage}% del totale categoria`}
+                  >
+                    <div className={cn('h-full rounded-full', barColor)} style={{ width: `${percentage}%` }} />
+                  </div>
+                </TableCell>
+                <TableCell className="text-right font-mono text-sm tabular-nums">
+                  {formatAmount(row.currentAmount)} · {percentage}%
+                </TableCell>
+                <TableCell
+                  className={cn('text-right font-mono text-sm tabular-nums', judgementClassName(judgement))}
                 >
-                  <div className={cn('h-full rounded-full', barColor)} style={{ width: `${percentage}%` }} />
-                </div>
-              </TableCell>
-              <TableCell className="text-right font-mono text-sm tabular-nums">
-                {formatAmount(row.currentAmount)} · {percentage}%
-              </TableCell>
-              <TableCell className={cn('text-right font-mono text-sm tabular-nums', judgementClassName(judgement))}>
-                {formatDeltaWords(row.contribution)}
-              </TableCell>
-            </TableRow>
-          )
-        })}
-        <TableRow className="border-t-2 border-foreground font-semibold">
-          <TableCell>Totale</TableCell>
-          <TableCell />
-          <TableCell className="text-right font-mono text-sm tabular-nums">{formatAmount(totalCurrentAmount)}</TableCell>
-          <TableCell
-            className={cn(
-              'text-right font-mono text-sm tabular-nums',
-              judgementClassName(resolveComparisonJudgement(totalContribution, type)),
-            )}
-          >
-            {formatDeltaWords(totalContribution)}
-          </TableCell>
-        </TableRow>
-      </TableBody>
-    </Table>
+                  {formatDeltaWords(row.contribution)}
+                </TableCell>
+              </TableRow>
+            )
+          })}
+          <TableRow className="border-t-2 border-foreground font-semibold">
+            <TableCell>Totale</TableCell>
+            <TableCell />
+            <TableCell className="text-right font-mono text-sm tabular-nums">
+              {formatAmount(totalCurrentAmount)}
+            </TableCell>
+            <TableCell
+              className={cn(
+                'text-right font-mono text-sm tabular-nums',
+                judgementClassName(resolveComparisonJudgement(totalContribution, type)),
+              )}
+            >
+              {formatDeltaWords(totalContribution)}
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+      {/* CR-01 fix (84-REVIEW.md): this table's "Contributo alla differenza" sums to the RAW,
+          non-projected difference (previousYear.rawTotalDifference) — never the pace/hybrid-
+          projected "Differenza" shown in the table above. Without this qualifier the two figures
+          look like the same number and can silently disagree whenever the window includes the
+          current or a future month. */}
+      <p className="text-xs text-muted-foreground">
+        Confronto su mesi osservati: esclude le proiezioni sui mesi futuri della finestra.
+      </p>
+    </div>
   )
 }

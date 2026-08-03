@@ -46,6 +46,7 @@ describe('CategoryDetailDifferenceChart (D-08/D-09, Task 3)', () => {
             },
             totalDifference: { status: 'shown', value: '-20.00' },
             averageDifference: '-10.00',
+            rawTotalDifference: { status: 'shown', value: '-20.00' },
           },
         })}
       />,
@@ -84,6 +85,7 @@ describe('CategoryDetailDifferenceChart (D-08/D-09, Task 3)', () => {
             },
             totalDifference: { status: 'shown', value: '67.90' },
             averageDifference: '33.95',
+            rawTotalDifference: { status: 'shown', value: '67.90' },
           },
         })}
       />,

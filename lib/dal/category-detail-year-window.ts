@@ -157,6 +157,18 @@ export type CategoryDetailPreviousYearComparison =
       series: CategoryDetailPreviousYearSeries
       totalDifference: CategoryDetailPreviousYearTotalDifference
       averageDifference: string
+      /**
+       * CR-01 fix (review 84-REVIEW.md): the RAW (non-projected) current-window total minus the
+       * raw previous-window total, over the SAME window as `totalDifference` above — this, NOT
+       * `totalDifference`, is the figure `subcategories[].contribution` is guaranteed to sum to
+       * exactly. `totalDifference` is derived from `total` (row-1's pace/hybrid-projected total,
+       * see `CategoryDetailWindowSeries.total`), while `getSubcategoryWindowAmounts` is a plain
+       * raw SQL sum with no pace/hybrid concept — pairing the subcategory sums against a
+       * projected total would break the telescoping identity whenever the window includes a
+       * 'current' or 'estimated' month. The UI must label the subcategory block's own
+       * "Differenza" as observed-months-only so the two figures are never confused.
+       */
+      rawTotalDifference: CategoryDetailPreviousYearTotalDifference
     }
 
 /** Where a subcategory's contribution comes from relative to the two compared windows (D-16). */
@@ -502,6 +514,20 @@ export const getCategoryDetailYearWindow = cache(
       coveredMonthCountInWindow > 0 ? toDbDecimal(toDecimal(total).dividedBy(coveredMonthCountInWindow)) : '0.00'
     const uncoveredMonthLabels = windowMonths.filter((m) => m.state === 'uncovered').map((m) => m.label)
 
+    // CR-01 fix: RAW (non-projected) current-window total, over the exact same window slice as
+    // `total` above but reading `amountByMonth` directly instead of the hybrid/pace-substituted
+    // `windowMonths[].amount`. Mirrors what `getSubcategoryWindowAmounts` actually sums (a plain
+    // SQL sum over the continuous [windowFrom, windowTo] date range, with no month-state
+    // awareness at all) — an uncovered month contributes its real amount, which is always 0.00
+    // because Mese Coperto is account-wide (CONTEXT.md): if the account has zero transactions
+    // that month, this category has none either.
+    const rawCurrentTotal = toDbDecimal(
+      windowMonths.reduce(
+        (sum, month) => sum.plus(toDecimal(amountByMonth.get(month.yearMonth) ?? '0.00')),
+        toDecimal(0),
+      ),
+    )
+
     // Previous-year comparison row (D-11/D-12/CDET-02/CDET-04/CDET-07).
     const previousMonthKeys = monthsBetween(
       new Date(previousYearNumber, 0, 1),
@@ -537,6 +563,15 @@ export const getCategoryDetailYearWindow = cache(
         ? { status: 'shown', value: computeComparison(total, previousTotal) }
         : { status: 'insufficient', coveredMonthCount: previousFilteredCoveredCount }
 
+      // CR-01 fix: same gate as `totalDifference` (previous-year data reliability), but paired
+      // with `rawCurrentTotal` instead of the pace/hybrid-projected `total` — see
+      // `CategoryDetailPreviousYearComparison.rawTotalDifference`'s doc comment above.
+      const rawTotalDifference: CategoryDetailPreviousYearTotalDifference = canShowPreviousYearTotalDifference(
+        previousFilteredCoveredCount,
+      )
+        ? { status: 'shown', value: computeComparison(rawCurrentTotal, previousTotal) }
+        : { status: 'insufficient', coveredMonthCount: previousFilteredCoveredCount }
+
       previousYear = {
         status: 'available',
         series: {
@@ -547,13 +582,19 @@ export const getCategoryDetailYearWindow = cache(
         },
         totalDifference,
         averageDifference: computeComparison(average, previousAverage),
+        rawTotalDifference,
       }
     }
 
     // Subcategory contributions (CDET-05/D-16): union of every subcategory id appearing in
-    // EITHER window, contribution = current - previous via computeComparison, exact-sum by
-    // construction (telescoping: sum(current_i - previous_i) = sum(current_i) - sum(previous_i)
-    // when every term already carries exactly 2 decimal places, per CLAUDE.md's Decimal.js rule).
+    // EITHER window, contribution = current - previous via computeComparison. This sums EXACTLY
+    // to `previousYear.rawTotalDifference` (when available) by construction (telescoping:
+    // sum(current_i - previous_i) = sum(current_i) - sum(previous_i) when every term already
+    // carries exactly 2 decimal places, per CLAUDE.md's Decimal.js rule) — NOT to
+    // `previousYear.totalDifference`, which is derived from the pace/hybrid-projected `total`
+    // and therefore diverges from this sum whenever the window includes a 'current' or
+    // 'estimated' month (CR-01, 84-REVIEW.md). `getSubcategoryWindowAmounts` is a raw SQL sum
+    // with no pace/hybrid concept, so its telescoping partner must be equally raw.
     const currentSubMap = new Map(currentSubcategoryRows.map((row) => [row.subCategoryId, row]))
     const previousSubMap = new Map(previousSubcategoryRows.map((row) => [row.subCategoryId, row]))
     const subcategoryIds = new Set<number>([...currentSubMap.keys(), ...previousSubMap.keys()])

@@ -349,36 +349,58 @@ describe('getCategoryDetailYearWindow (D-06/D-07/D-10, Task 1)', () => {
   })
 
   describe('subcategories (D-16, Task 2 prep)', () => {
-    test('exact-sum: a previous-only and a current-only subcategory both contribute, summing exactly to computeComparison(current.total, previous.total)', async () => {
+    // CR-01 fix (84-REVIEW.md): the OLD version of this test derived `expectedDifference` from
+    // `data.subcategories` itself (currentTotal/previousTotal summed from the very array under
+    // test) — a tautology that could never catch the divergence between the subcategory sum and
+    // the parent category's own difference. This fixture instead makes the mocked subcategory
+    // rows a genuine partition of the category-level RAW (non-pace-projected) window totals:
+    // current raw total 2510.30 = sum of RAW_AMOUNTS_2026's Jan-Jul (412.50+388.20+455.80+401.10
+    // +372.40+480.30, March excluded/uncovered contributes 0, Aug-Dec not-yet-happened contribute
+    // 0 raw) = 2280.30 (id 1) + 230.00 (id 4); previous raw total 4200.00 (12 x 350.00) =
+    // 3970.00 (id 1) + 230.00 (id 5). The window (whole year 2026, system time fixed to
+    // 2026-07-15) deliberately includes the calendar-current month AND future 'estimated' months,
+    // so `data.current.total` (row 1, pace/hybrid-projected) is 4540.30 — provably NOT what the
+    // subcategory contributions sum to; `previousYear.rawTotalDifference` IS.
+    test('exact-sum (CR-01 fix): contributions sum to the RAW parent difference (previousYear.rawTotalDifference), never the pace/hybrid-projected current.total, for a window including the calendar-current month', async () => {
       subcategoryRowsQueue.queue = [
-        // current window
+        // current window — a genuine partition of the RAW current total (2510.30)
         [
-          { subCategoryId: 1, subCategoryName: 'Spesa quotidiana', subCategorySlug: 'spesa-quotidiana', amount: '2480.00' },
+          { subCategoryId: 1, subCategoryName: 'Spesa quotidiana', subCategorySlug: 'spesa-quotidiana', amount: '2280.30' },
           { subCategoryId: 4, subCategoryName: 'Consegna a domicilio', subCategorySlug: 'consegna-a-domicilio', amount: '230.00' },
         ],
-        // previous (homologous) window
+        // previous (homologous) window — a genuine partition of the RAW previous total (4200.00)
         [
+          { subCategoryId: 1, subCategoryName: 'Spesa quotidiana', subCategorySlug: 'spesa-quotidiana', amount: '3970.00' },
           { subCategoryId: 5, subCategoryName: 'Mensa aziendale', subCategorySlug: 'mensa-aziendale', amount: '230.00' },
         ],
       ]
 
       const data = await getCategoryDetailYearWindow(42, 2026, { months: 12, from: '2026-01' })
 
+      // Sanity: row 1's own total is pace/hybrid-projected (includes Aug-Dec pace) — deliberately
+      // NOT what the subcategory block is checked against below (that mismatch was the CR-01 bug).
+      expect(data.current.total).toBe('4540.30')
+
       const currentOnly = data.subcategories.find((s) => s.id === 4)
       const previousOnly = data.subcategories.find((s) => s.id === 5)
       expect(currentOnly).toMatchObject({ presence: 'current-only', contribution: '230.00' })
       expect(previousOnly).toMatchObject({ presence: 'previous-only', contribution: '-230.00', weightPercentage: 0 })
 
-      const currentTotal = data.subcategories.reduce((sum, s) => sum + Number(s.currentAmount), 0)
-      const previousTotal = data.subcategories.reduce((sum, s) => sum + Number(s.previousAmount), 0)
-      const expectedDifference = (currentTotal - previousTotal).toFixed(2)
+      expect(data.previousYear.status).toBe('available')
+      if (data.previousYear.status !== 'available') throw new Error('unreachable')
+      // The parent-level RAW difference (CR-01 fix): 2510.30 - 4200.00 = -1689.70. Computed by
+      // the DAL from `amountByMonth` (the month-level fixture), entirely independent of
+      // `data.subcategories` — never a self-referential derivation.
+      expect(data.previousYear.rawTotalDifference).toEqual({ status: 'shown', value: '-1689.70' })
+      const { rawTotalDifference } = data.previousYear
+      if (rawTotalDifference.status !== 'shown') throw new Error('unreachable')
 
       const { toDecimal } = await import('@/lib/utils/decimal')
       const summed = data.subcategories
         .reduce((sum, s) => sum.plus(toDecimal(s.contribution)), toDecimal(0))
         .toFixed(2)
 
-      expect(summed).toBe(expectedDifference)
+      expect(summed).toBe(rawTotalDifference.value)
     })
 
     test('sorted by currentAmount descending', async () => {

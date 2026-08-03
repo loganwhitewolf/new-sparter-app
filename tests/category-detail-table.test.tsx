@@ -163,6 +163,7 @@ describe('CategoryDetailTable — previous-year row and Differenza row (D-11/D-1
             },
             totalDifference: { status: 'shown', value: '50.00' },
             averageDifference: '25.00',
+            rawTotalDifference: { status: 'shown', value: '50.00' },
           },
         })}
       />,
@@ -192,6 +193,7 @@ describe('CategoryDetailTable — previous-year row and Differenza row (D-11/D-1
             },
             totalDifference: { status: 'insufficient', coveredMonthCount: 3 },
             averageDifference: '41.67',
+            rawTotalDifference: { status: 'insufficient', coveredMonthCount: 3 },
           },
         })}
       />,
@@ -221,6 +223,7 @@ describe('CategoryDetailTable — previous-year row and Differenza row (D-11/D-1
             },
             totalDifference: { status: 'shown', value: '-250.00' },
             averageDifference: '41.67',
+            rawTotalDifference: { status: 'shown', value: '-250.00' },
           },
         })}
       />,
