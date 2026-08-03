@@ -190,7 +190,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion — shared DAL/page files)*
 
-- [ ] 84-02-PLAN.md — Previous-year row + gated Differenza summary (D-10…D-12), subcategory contribution rewrite (D-16), difference chart (D-08/D-09), window-scoped top transactions (D-05)
+- [x] 84-02-PLAN.md — Previous-year row + gated Differenza summary (D-10…D-12), subcategory contribution rewrite (D-16), difference chart (D-08/D-09), window-scoped top transactions (D-05)
 
 **Wave 3** *(retirement part 1, blocked on Wave 2 completion — D-17 build-first)*
 

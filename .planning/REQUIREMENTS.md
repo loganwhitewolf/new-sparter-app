@@ -29,12 +29,12 @@ Design source of truth: `.planning/dashboard-categories-DECISIONS.md` (19 locked
 ### Category detail
 
 - [x] **CDET-01**: The user reads the category as a 12-month table with the month-over-month difference inside each month's cell (D19, D14)
-- [ ] **CDET-02**: A previous-year row lets the user compare month by month, not only in aggregate (D19)
+- [x] **CDET-02**: A previous-year row lets the user compare month by month, not only in aggregate (D19)
 - [x] **CDET-03**: The user can narrow the window to 9, 6 or 3 months from a chosen start month, and every figure on the page then refers to that window (D14)
-- [ ] **CDET-04**: A summary column closes the series with the period total, the monthly average, and the difference against the homologous window of the previous year (D13, D14)
-- [ ] **CDET-05**: Subcategories are ordered by weight and each carries its contribution to the difference, the contributions summing exactly to the parent category's difference — including subcategories present only in the previous period (D16)
+- [x] **CDET-04**: A summary column closes the series with the period total, the monthly average, and the difference against the homologous window of the previous year (D13, D14)
+- [x] **CDET-05**: Subcategories are ordered by weight and each carries its contribution to the difference, the contributions summing exactly to the parent category's difference — including subcategories present only in the previous period (D16)
 - [x] **CDET-06**: Covered, current and estimated months are visually distinguishable from each other and from uncovered months, which are explicitly marked rather than left as gaps (D11, D12)
-- [ ] **CDET-07**: When the previous year is not sufficiently covered the total difference is replaced by a stated reason, while the average comparison still shows (D13, D18)
+- [x] **CDET-07**: When the previous year is not sufficiently covered the total difference is replaced by a stated reason, while the average comparison still shows (D13, D18)
 
 ### Retirement and cleanup
 
@@ -85,12 +85,12 @@ Acknowledged, deliberately not in this milestone.
 | CLIST-06 | Phase 83 | Complete |
 | CLIST-07 | Phase 83 | Complete |
 | CDET-01 | Phase 84 | Complete |
-| CDET-02 | Phase 84 | Pending |
+| CDET-02 | Phase 84 | Complete |
 | CDET-03 | Phase 84 | Complete |
-| CDET-04 | Phase 84 | Pending |
-| CDET-05 | Phase 84 | Pending |
+| CDET-04 | Phase 84 | Complete |
+| CDET-05 | Phase 84 | Complete |
 | CDET-06 | Phase 84 | Complete |
-| CDET-07 | Phase 84 | Pending |
+| CDET-07 | Phase 84 | Complete |
 | RETIRE-01 | Phase 84 | Pending |
 | RETIRE-02 | Phase 84 | Pending |
 | RETIRE-03 | Phase 82 | Complete |
