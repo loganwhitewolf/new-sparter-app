@@ -5,15 +5,15 @@ milestone_name: Categories Year View
 current_phase: 84
 current_phase_name: category-detail-and-cleanup
 status: executing
-stopped_at: Phase 84 context gathered
-last_updated: "2026-08-03T11:49:20.317Z"
+stopped_at: Completed 84-01-PLAN.md
+last_updated: "2026-08-03T12:22:49.111Z"
 last_activity: 2026-08-03
-last_activity_desc: Completed quick task 260803-e9w (WR-01/WR-02 closure); Phase 83 complete, transitioned to Phase 84
+last_activity_desc: Phase 84 execution started
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 13
-  completed_plans: 9
+  completed_plans: 10
   percent: 50
 ---
 
@@ -24,15 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 83 — categories-list
+**Current focus:** Phase 84 — category-detail-and-cleanup
 
 ## Current Position
 
-Phase: 84 — category-detail-and-cleanup
-Plan: Not started
+Phase: 84 (category-detail-and-cleanup) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
 Branch: `gsd/v3.0-categories-year-view` (synced with `origin/main` @ fe8273f9 — PR #65)
-Last activity: 2026-08-03 — Completed quick task 260803-e9w (WR-01/WR-02 closure); Phase 83 complete, transitioned to Phase 84
+Last activity: 2026-08-03 — Phase 84 execution started
 
 Preceding activity on `main` (merged into this branch): 2026-07-30 — completed quick task
 260730-n2z (Amort UX: Visualizza ammortamento, Tutti=all, vendita/rimborso copy) and quick task
@@ -551,6 +551,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 83-05: getCategoryYearRanking branches amountSql on directionCode (signed sum for allocation, abs(sum) unchanged for in/out) rather than removing abs() globally
 - [Phase ?]: 83-05: resolveEstimatedReference falls back to observed covered/current magnitude, then a fixed ESTIMATED_HEIGHT_FALLBACK=1 constant, only when estimatedHeightHint is null
 - [Phase ?]: 83-06: guarded allocation-direction Categories row against broken detail link (CR-01 NEW) by rendering a non-interactive span with no href computed, per locked user decision
+- [Phase ?]: getCategoryDetailMeta replicates getCategoryDetail's metadata subquery verbatim (same allocation-category gap) — widening it is out of Plan 84-01's scope
+- [Phase ?]: Window's first column (index 0) never renders a delta line, not even 'nessun confronto' — it has no in-window predecessor by definition
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -700,11 +702,11 @@ Items acknowledged and postponed:
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/84-category-detail-and-cleanup/84-CONTEXT.md
+**Resume file:** None
 
-**Stopped at:** Phase 84 context gathered
+**Stopped at:** Completed 84-01-PLAN.md
 
-Last session: 2026-08-03T10:20:13.229Z
+Last session: 2026-08-03T12:22:49.099Z
 
 **Next:** `/gsd-discuss-phase 82` or `/gsd-plan-phase 82` to begin Phase 82 (number-engine-and-regression-gate).
 
@@ -814,3 +816,4 @@ Last session: 2026-08-03T10:20:13.229Z
 | Phase 83 P04 | 32min | 3 tasks | 7 files |
 | Phase 83 P05 | 3min | 3 tasks | 7 files |
 | Phase 83 P06 | 12min | 1 tasks | 2 files |
+| Phase 84 P1 | 40min | 2 tasks | 9 files |
