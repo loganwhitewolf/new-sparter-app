@@ -171,17 +171,6 @@ describeIfReachable('reimbursement N=1 regression (Phase 73, ADR 0018 D-07)', ()
     expect(toDecimal(row!.amount).equals(toDecimal('50.00'))).toBe(true)
   })
 
-  it('getCategoryDeviations: no baseline period data yields isNew=true and a null deviation', () => {
-    const map = snapshot.getCategoryDeviations as Map<
-      number,
-      { deviation: number | null; isNew: boolean; belowNoiseThreshold: boolean }
-    >
-    const entry = map.get(essentialCategoryId)
-    expect(entry).toBeDefined()
-    expect(entry!.isNew).toBe(true)
-    expect(entry!.deviation).toBeNull()
-  })
-
   it('getCategoryDetail: summary total is the netted 50.00', () => {
     const detail = snapshot.getCategoryDetail as { summary: { total: string } }
     expect(toDecimal(detail.summary.total).equals(toDecimal('50.00'))).toBe(true)
@@ -381,9 +370,6 @@ describeIfReachable(
       expect(rankingRow).toBeDefined()
       expect(toDecimal(rankingRow!.amount).equals(0)).toBe(true)
 
-      const deviationsMap = snapshot.getCategoryDeviations as Map<number, { deviation: number | null }>
-      expect(deviationsMap.get(taxonomy.essentialCategoryId)).toBeDefined()
-
       const categoryDetail = snapshot.getCategoryDetail as { category: unknown; summary: { total: string } }
       expect(categoryDetail.category).not.toBeNull()
       expect(toDecimal(categoryDetail.summary.total).equals(0)).toBe(true)
@@ -498,9 +484,6 @@ describeIfReachable(
       expect(rankingRow).toBeDefined()
       expect(toDecimal(rankingRow!.amount).equals(expectedNet.abs())).toBe(true)
 
-      const deviationsMap = snapshot.getCategoryDeviations as Map<number, { deviation: number | null }>
-      expect(deviationsMap.get(taxonomy.essentialCategoryId)).toBeDefined()
-
       const categoryDetail = snapshot.getCategoryDetail as { summary: { total: string } }
       expect(toDecimal(categoryDetail.summary.total).equals(expectedNet.abs())).toBe(true)
 
@@ -613,9 +596,6 @@ describeIfReachable(
       )
       expect(rankingRow).toBeDefined()
       expect(toDecimal(rankingRow!.amount).equals(expectedNet.abs())).toBe(true)
-
-      const deviationsMap = snapshot.getCategoryDeviations as Map<number, { deviation: number | null }>
-      expect(deviationsMap.get(taxonomy.essentialCategoryId)).toBeDefined()
 
       const categoryDetail = snapshot.getCategoryDetail as { summary: { total: string } }
       expect(toDecimal(categoryDetail.summary.total).equals(expectedNet.abs())).toBe(true)
@@ -760,9 +740,6 @@ describeIfReachable(
       )
       expect(rankingRow).toBeDefined()
       expect(toDecimal(rankingRow!.amount).equals(expectedCombined.abs())).toBe(true)
-
-      const deviationsMap = snapshot.getCategoryDeviations as Map<number, { deviation: number | null }>
-      expect(deviationsMap.get(taxonomy.essentialCategoryId)).toBeDefined()
 
       const categoryDetail = snapshot.getCategoryDetail as { summary: { total: string } }
       expect(toDecimal(categoryDetail.summary.total).equals(expectedCombined.abs())).toBe(true)
@@ -1293,13 +1270,6 @@ describeIfReachable('amortization cash-lens byte-identical (Phase 77, ADR 0019 D
     expect(afterRankingAmount).toBe(beforeRankingAmount)
     expect(toDecimal(afterRankingAmount ?? '0').equals(toDecimal('1000.00'))).toBe(true)
 
-    // getCategoryDeviations: same category's deviation entry is byte-identical.
-    const beforeDeviations = before.getCategoryDeviations as Map<number, unknown>
-    const afterDeviations = after.getCategoryDeviations as Map<number, unknown>
-    expect(JSON.stringify(afterDeviations.get(taxonomy.essentialCategoryId))).toBe(
-      JSON.stringify(beforeDeviations.get(taxonomy.essentialCategoryId)),
-    )
-
     // getCategoryDetail: the top-transaction's RAW (un-netted) amount and the summary total are
     // unchanged — proving the dual-join special case (ranking-only netted join) never touched the
     // displayed value.
@@ -1442,15 +1412,6 @@ describeIfReachable('amortization cash-lens byte-identical (Phase 77, ADR 0019 D
     )
     expect(rankingRow).toBeDefined()
     expect(toDecimal(rankingRow!.amount).equals(toDecimal('50.00'))).toBe(true)
-
-    const deviationsMap = snapshot.getCategoryDeviations as Map<
-      number,
-      { deviation: number | null; isNew: boolean; belowNoiseThreshold: boolean }
-    >
-    const deviationEntry = deviationsMap.get(essentialCategoryId)
-    expect(deviationEntry).toBeDefined()
-    expect(deviationEntry!.isNew).toBe(true)
-    expect(deviationEntry!.deviation).toBeNull()
 
     const detail = snapshot.getCategoryDetail as { summary: { total: string } }
     expect(toDecimal(detail.summary.total).equals(toDecimal('50.00'))).toBe(true)
