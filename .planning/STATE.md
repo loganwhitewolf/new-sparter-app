@@ -4,15 +4,15 @@ milestone: v3.0
 milestone_name: Categories Year View
 current_phase: 84
 current_phase_name: category-detail-and-cleanup
-status: planning
+status: executing
 stopped_at: Phase 84 context gathered
-last_updated: "2026-08-03T10:20:13.248Z"
+last_updated: "2026-08-03T11:49:20.317Z"
 last_activity: 2026-08-03
 last_activity_desc: Completed quick task 260803-e9w (WR-01/WR-02 closure); Phase 83 complete, transitioned to Phase 84
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 9
+  total_plans: 13
   completed_plans: 9
   percent: 50
 ---
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 Phase: 84 — category-detail-and-cleanup
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Branch: `gsd/v3.0-categories-year-view` (synced with `origin/main` @ fe8273f9 — PR #65)
 Last activity: 2026-08-03 — Completed quick task 260803-e9w (WR-01/WR-02 closure); Phase 83 complete, transitioned to Phase 84
 
