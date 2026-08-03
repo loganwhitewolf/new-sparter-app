@@ -44,7 +44,7 @@ Tags read, so Phase 82 builds the engine and proves Overview/Tags totals byte-id
 
 - [x] **Phase 82: number-engine-and-regression-gate** (PACE-01…06, RETIRE-03, RETIRE-04, RETIRE-05) — Mese Coperto/Parziale, Ritmo, Proiezione and the current−previous sign convention built and proven; lens confined to Overview, dead `tag` param dropped; Overview/Tags totals byte-identical before any Categories UI changes (completed 2026-07-30)
 - [x] **Phase 83: categories-list** (CLIST-01…07) — Categories list rewritten on year + direction (Uscite/Entrate/Accantonamenti) with total, share, sparkline, projection, sort toggle and first-import state (completed 2026-08-03)
-- [ ] **Phase 84: category-detail-and-cleanup** (CDET-01…07, RETIRE-01, RETIRE-02) — Category detail rewritten as a 12-month table (deltas, previous-year row, window, subcategory contributions, coverage states); Deviation/Preset machinery fully retired, no dead references
+- [x] **Phase 84: category-detail-and-cleanup** (CDET-01…07, RETIRE-01, RETIRE-02) — Category detail rewritten as a 12-month table (deltas, previous-year row, window, subcategory contributions, coverage states); Deviation/Preset machinery fully retired, no dead references (completed 2026-08-03)
 
 #### Phase 82: number-engine-and-regression-gate
 
@@ -557,7 +557,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 81. inline-net-display-for-paired-transactions | v2.9 | 1/1 | Complete    | 2026-07-29 |
 | 82. number-engine-and-regression-gate | v3.0 | 0/3 | Complete    | 2026-07-30 |
 | 83. categories-list | v3.0 | 6/6 | Complete    | 2026-08-03 |
-| 84. category-detail-and-cleanup | v3.0 | 0/4 | In Progress|  |
+| 84. category-detail-and-cleanup | v3.0 | 0/4 | Complete    | 2026-08-03 |
 
 **Total shipped: 81 phases · 305 plans complete**
 **Latest shipped: v2.9 Amortization — Phases 77–81 (2026-07-29, model locked ADR 0019). All AMORT-01…07, REG-01…03, LENS-01…05 delivered: materialised amortization_plan/amortization_instalment schema + dual ledger_entry (cash/accrual) VIEW seam, three activation entry points detaching into a Standalone Expense, plan lifecycle (close/collapse, realize-via-sale reusing v2.8 pairing, reduce+re-spread on reimbursement, edit guard), /amortizations registry, and the global cassa/competenza dashboard lens. Phase 81 closed the Phase 78 UAT gap with inline net display in the transactions table. Audit passed 15/15; full suite 1953 passed + 1 todo.**
