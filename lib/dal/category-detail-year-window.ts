@@ -3,6 +3,7 @@ import { cache } from 'react'
 import { and, desc, eq, isNull, or, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { verifySession } from '@/lib/dal/auth'
+import { logger } from '@/lib/logger'
 import {
   category,
   direction,
@@ -87,7 +88,14 @@ export const getCategoryDetailMeta = cache(
       }
 
       return { id: row.id, name: row.name, slug: row.slug, type: (row.type ?? 'out') as 'in' | 'out' }
-    } catch {
+    } catch (error) {
+      // WR-04 fix (84-REVIEW.md): log before the empty fallback so a production incident is
+      // diagnosable instead of silently redirecting to the empty state with no trace.
+      logger.error({
+        event: 'category_detail_meta_query_failed',
+        categoryId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      })
       return null
     }
   },
@@ -287,7 +295,15 @@ async function getSubcategoryWindowAmounts(
         },
       ]
     })
-  } catch {
+  } catch (error) {
+    // WR-04 fix (84-REVIEW.md): log before the empty fallback — otherwise a transient query
+    // failure silently renders "Nessuna sottocategoria nel periodo" while the category-level
+    // totals above it keep showing real, non-zero figures, with no trace to diagnose why.
+    logger.error({
+      event: 'category_detail_subcategory_window_query_failed',
+      categoryId,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    })
     return []
   }
 }
@@ -369,7 +385,14 @@ async function getWindowTopTransactions(
         },
       ]
     })
-  } catch {
+  } catch (error) {
+    // WR-04 fix (84-REVIEW.md): log before the empty fallback so a production incident is
+    // diagnosable instead of silently rendering an empty top-transactions block.
+    logger.error({
+      event: 'category_detail_top_transactions_query_failed',
+      categoryId,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    })
     return []
   }
 }

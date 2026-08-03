@@ -12,6 +12,11 @@ vi.mock('react', () => ({ cache: <T extends (...args: never[]) => unknown>(fn: T
 vi.mock('@/lib/dal/auth', () => ({
   verifySession: vi.fn(async () => ({ userId: 'user-1' })),
 }))
+// WR-04 fix (84-REVIEW.md): the DAL now logs before its empty-fallback catch blocks — mocked
+// here so a real pino/next-headers/auth import chain never runs under vitest.
+vi.mock('@/lib/logger', () => ({
+  logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+}))
 
 const coveredMonthsMocks = vi.hoisted(() => ({
   getCoveredMonthsInYear: vi.fn(),
