@@ -194,7 +194,7 @@ Plans:
 
 **Wave 3** *(retirement part 1, blocked on Wave 2 completion — D-17 build-first)*
 
-- [ ] 84-03-PLAN.md — DAL signature change (D-15), regression harness rewiring (D-16), dead getOverview/Deviation-chain removal from lib/dal/dashboard.ts
+- [x] 84-03-PLAN.md — DAL signature change (D-15), regression harness rewiring (D-16), dead getOverview/Deviation-chain removal from lib/dal/dashboard.ts
 
 **Wave 4** *(retirement part 2, blocked on Wave 3 completion)*
 

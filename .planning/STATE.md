@@ -5,15 +5,15 @@ milestone_name: Categories Year View
 current_phase: 84
 current_phase_name: category-detail-and-cleanup
 status: executing
-stopped_at: Completed 84-02-PLAN.md
-last_updated: "2026-08-03T12:52:11.662Z"
+stopped_at: Completed 84-03-PLAN.md
+last_updated: "2026-08-03T13:04:42.140Z"
 last_activity: 2026-08-03
 last_activity_desc: Phase 84 execution started
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
   percent: 50
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 84 (category-detail-and-cleanup) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Branch: `gsd/v3.0-categories-year-view` (synced with `origin/main` @ fe8273f9 — PR #65)
 Last activity: 2026-08-03 — Phase 84 execution started
@@ -555,6 +555,8 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: Window's first column (index 0) never renders a delta line, not even 'nessun confronto' — it has no in-window predecessor by definition
 - [Phase ?]: 84-02: chart delta null-guards both sides (current uncovered OR previous uncovered), not just the whole previousYear row unavailable — corrects the plan's own '?? 0.00' pseudocode that would fabricate a comparison against an uncovered month
 - [Phase ?]: 84-02: CategorySubcategoryBreakdown gained an explicit year prop beyond the plan's declared props — Totale {year}/nuova nel {year} copy needs the window's year, not system current year
+- [Phase ?]: Plan 84-03: dropped unused DateRange import from lib/dal/dashboard.ts once DeviationDateRanges (its only consumer) was deleted
+- [Phase ?]: Plan 84-03: getCategoryDetail's new type field destructured but unused (_type), for signature symmetry with getCategoriesBreakdown/getCategoryRanking per D-15
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -706,9 +708,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 84-02-PLAN.md
+**Stopped at:** Completed 84-03-PLAN.md
 
-Last session: 2026-08-03T12:52:11.649Z
+Last session: 2026-08-03T13:04:42.126Z
 
 **Next:** `/gsd-discuss-phase 82` or `/gsd-plan-phase 82` to begin Phase 82 (number-engine-and-regression-gate).
 
@@ -820,3 +822,4 @@ Last session: 2026-08-03T12:52:11.649Z
 | Phase 83 P06 | 12min | 1 tasks | 2 files |
 | Phase 84 P1 | 40min | 2 tasks | 9 files |
 | Phase 84 P02 | 30min | 3 tasks | 11 files |
+| Phase 84 P03 | 25min | 3 tasks | 5 files |
