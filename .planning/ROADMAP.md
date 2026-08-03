@@ -181,7 +181,25 @@ entry point, though the detail computation itself only requires Phase 82
      dead references and no regression on any surface that used their shared helpers (RETIRE-01,
      RETIRE-02).
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 84-01-PLAN.md — Year+window URL contract (D-01…D-04), year-window DAL tracer (current-year series), table row 1 end-to-end, window controls UI
+
+**Wave 2** *(blocked on Wave 1 completion — shared DAL/page files)*
+
+- [ ] 84-02-PLAN.md — Previous-year row + gated Differenza summary (D-10…D-12), subcategory contribution rewrite (D-16), difference chart (D-08/D-09), window-scoped top transactions (D-05)
+
+**Wave 3** *(retirement part 1, blocked on Wave 2 completion — D-17 build-first)*
+
+- [ ] 84-03-PLAN.md — DAL signature change (D-15), regression harness rewiring (D-16), dead getOverview/Deviation-chain removal from lib/dal/dashboard.ts
+
+**Wave 4** *(retirement part 2, blocked on Wave 3 completion)*
+
+- [ ] 84-04-PLAN.md — Hard deletion of dashboard-filters.tsx/deviation-badge.tsx/etc. (D-14), lib/utils/date.ts and lib/validations/dashboard.ts preset symbols, lib/routes.ts preset branch, CONTEXT.md Confronto glossary entry (D-18), D-19 exit gate
+
 **UI hint**: yes
 
 <details>
@@ -539,7 +557,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 81. inline-net-display-for-paired-transactions | v2.9 | 1/1 | Complete    | 2026-07-29 |
 | 82. number-engine-and-regression-gate | v3.0 | 0/3 | Complete    | 2026-07-30 |
 | 83. categories-list | v3.0 | 6/6 | Complete    | 2026-08-03 |
-| 84. category-detail-and-cleanup | v3.0 | 0/TBD | Not started | - |
+| 84. category-detail-and-cleanup | v3.0 | 0/4 | Planned    | - |
 
 **Total shipped: 81 phases · 305 plans complete**
 **Latest shipped: v2.9 Amortization — Phases 77–81 (2026-07-29, model locked ADR 0019). All AMORT-01…07, REG-01…03, LENS-01…05 delivered: materialised amortization_plan/amortization_instalment schema + dual ledger_entry (cash/accrual) VIEW seam, three activation entry points detaching into a Standalone Expense, plan lifecycle (close/collapse, realize-via-sale reusing v2.8 pairing, reduce+re-spread on reimbursement, edit guard), /amortizations registry, and the global cassa/competenza dashboard lens. Phase 81 closed the Phase 78 UAT gap with inline net display in the transactions table. Audit passed 15/15; full suite 1953 passed + 1 todo.**
