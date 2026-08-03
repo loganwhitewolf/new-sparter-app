@@ -102,13 +102,15 @@ export function CategoryRankingList({ data, year, direction, sort, lens, copy }:
                     aria-disabled="true"
                     title={category.name}
                   >
-                    {category.name}
+                    {category.name} <span className="sr-only">{copy.rowAccessibleSuffix}</span>
                   </span>
                 ) : (
+                  // D-13/CLIST-07: the row's link carries the SAME year the row's own total was computed from —
+                  // the coherence test "clicking a row must not change the numbers" holds by construction.
                   <Link
                     href={buildDashboardCategoryDetailHref(category.id, { year, type: direction, lens })}
                     className="block truncate text-base font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
-                    aria-label={`${category.name}: apri dettaglio categoria`}
+                    aria-label={`${category.name}: ${copy.rowAccessibleSuffix}`}
                     title={category.name}
                   >
                     {category.name}

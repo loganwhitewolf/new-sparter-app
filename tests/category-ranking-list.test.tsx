@@ -116,6 +116,42 @@ describe('CategoryRankingList', () => {
     expect(allocationHtml).not.toContain('type=allocation')
   })
 
+  test('WR-01: out/in rows carry the copy-service aria-label; allocation row carries sr-only accessible text and stays aria-disabled', () => {
+    const outHtml = renderToStaticMarkup(
+      <CategoryRankingList
+        data={[{ ...baseCategory, id: 20 }]}
+        year={2026}
+        direction="out"
+        sort="amount"
+        copy={resolveCategoryDirectionCopy('out')}
+      />
+    )
+    expect(outHtml).toContain(`aria-label="${baseCategory.name}: apri dettaglio categoria"`)
+
+    const inHtml = renderToStaticMarkup(
+      <CategoryRankingList
+        data={[{ ...baseCategory, id: 21 }]}
+        year={2026}
+        direction="in"
+        sort="amount"
+        copy={resolveCategoryDirectionCopy('in')}
+      />
+    )
+    expect(inHtml).toContain(`aria-label="${baseCategory.name}: apri dettaglio categoria"`)
+
+    const allocationHtml = renderToStaticMarkup(
+      <CategoryRankingList
+        data={[{ ...baseCategory, id: 22 }]}
+        year={2026}
+        direction="allocation"
+        sort="amount"
+        copy={resolveCategoryDirectionCopy('allocation')}
+      />
+    )
+    expect(allocationHtml).toContain('<span class="sr-only">dettaglio non disponibile</span>')
+    expect(allocationHtml).toContain('aria-disabled="true"')
+  })
+
   test('sorting by projection reorders rows, falling back to amount for a null projection', () => {
     const items: CategoryYearRankingItem[] = [
       { ...baseCategory, id: 1, name: 'Row A', amount: '100.00', projection: '50.00' },
