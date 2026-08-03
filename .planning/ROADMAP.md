@@ -142,7 +142,7 @@ Plans:
 
 **Wave 4** *(gap closure, blocked on Wave 3 completion)*
 
-- [ ] 83-06-PLAN.md — Gap closure: guard allocation-direction row Link so no `?type=allocation` URL the detail page cannot honour is ever produced (CR-01 NEW)
+- [x] 83-06-PLAN.md — Gap closure: guard allocation-direction row Link so no `?type=allocation` URL the detail page cannot honour is ever produced (CR-01 NEW)
 
 **UI hint**: yes
 
@@ -538,7 +538,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 80. dashboard-accrual-lens | v2.9 | 7/7 | Complete    | 2026-07-29 |
 | 81. inline-net-display-for-paired-transactions | v2.9 | 1/1 | Complete    | 2026-07-29 |
 | 82. number-engine-and-regression-gate | v3.0 | 0/3 | Complete    | 2026-07-30 |
-| 83. categories-list | v3.0 | 0/4 | In Progress|  |
+| 83. categories-list | v3.0 | 6/6 | Complete | 2026-08-03 |
 | 84. category-detail-and-cleanup | v3.0 | 0/TBD | Not started | - |
 
 **Total shipped: 81 phases · 305 plans complete**

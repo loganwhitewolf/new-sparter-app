@@ -5,15 +5,15 @@ milestone_name: Categories Year View
 current_phase: 83
 current_phase_name: categories-list
 status: executing
-stopped_at: Completed 83-05-PLAN.md
-last_updated: "2026-07-31T20:01:46.948Z"
-last_activity: 2026-07-31
-last_activity_desc: Phase 83 execution started
+stopped_at: Completed 83-06-PLAN.md (Phase 83 categories-list complete, 6/6 plans)
+last_updated: "2026-08-03T07:34:36.522Z"
+last_activity: 2026-08-03
+last_activity_desc: Phase 83 (categories-list) completed, plan 83-06 (gap-closure)
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 9
+  completed_plans: 9
   percent: 50
 ---
 
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 ## Current Position
 
-Phase: 83 (categories-list) — EXECUTING
-Plan: 2 of 5
-Status: Ready to execute
+Phase: 83 (categories-list) — COMPLETE (6/6 plans)
+Plan: 6 of 6
+Status: Phase 83 complete — CR-01 (NEW) gap closed (83-06); ready for Phase 84 (category-detail-and-cleanup)
 Branch: `gsd/v3.0-categories-year-view` (synced with `origin/main` @ fe8273f9 — PR #65)
-Last activity: 2026-07-31 — Phase 83 execution started
+Last activity: 2026-08-03 — Phase 83 (categories-list) completed, plan 83-06 (gap-closure)
 
 Preceding activity on `main` (merged into this branch): 2026-07-30 — completed quick task
 260730-n2z (Amort UX: Visualizza ammortamento, Tutti=all, vendita/rimborso copy) and quick task
@@ -550,6 +550,7 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: Phase 83 Plan 04: Categories list mobile layout simplified — sparkline/projection columns hidden below sm: breakpoint via Tailwind rather than duplicated into a separate mobile-only block (Claude's Discretion, 83-CONTEXT.md)
 - [Phase ?]: 83-05: getCategoryYearRanking branches amountSql on directionCode (signed sum for allocation, abs(sum) unchanged for in/out) rather than removing abs() globally
 - [Phase ?]: 83-05: resolveEstimatedReference falls back to observed covered/current magnitude, then a fixed ESTIMATED_HEIGHT_FALLBACK=1 constant, only when estimatedHeightHint is null
+- [Phase ?]: 83-06: guarded allocation-direction Categories row against broken detail link (CR-01 NEW) by rendering a non-interactive span with no href computed, per locked user decision
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -700,9 +701,9 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed 83-05-PLAN.md
+**Stopped at:** Completed 83-06-PLAN.md (Phase 83 categories-list complete, 6/6 plans)
 
-Last session: 2026-07-31T20:01:46.937Z
+Last session: 2026-08-03T07:34:36.509Z
 
 **Next:** `/gsd-discuss-phase 82` or `/gsd-plan-phase 82` to begin Phase 82 (number-engine-and-regression-gate).
 
@@ -811,3 +812,4 @@ Last session: 2026-07-31T20:01:46.937Z
 | Phase 83 P03 | 8min | 2 tasks | 7 files |
 | Phase 83 P04 | 32min | 3 tasks | 7 files |
 | Phase 83 P05 | 3min | 3 tasks | 7 files |
+| Phase 83 P06 | 12min | 1 tasks | 2 files |
