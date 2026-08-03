@@ -122,6 +122,23 @@ Neither fix was implemented in 83-05.
 
 The phase goal says: "filterable across all three directions including the previously-unreachable Accantonamenti." Accantonamenti is now reachable and visible in the list, but it's not fully functional because clicking it breaks the page.
 
+**LOCKED DECISION (user, 2026-08-03) — how CR-01 is to be closed:**
+
+Option 1 is chosen: **guard the row Link for the allocation direction inside Phase 83**. In
+`components/dashboard/category-ranking-list.tsx`, an `allocation` row renders as a
+non-interactive element (a `<span>`, `aria-disabled`) instead of a `<Link>`, so no
+`?type=allocation` URL the detail page cannot honour is ever produced. Full allocation support on
+the detail page stays Phase 84 scope, where that page is rewritten anyway.
+
+Explicitly NOT chosen, and not to be re-opened by the gap-closure planner:
+- Widening `DashboardTypeSchema` / `categoryTypeOptions` / `getCategoryDetail` in Phase 83 —
+  rejected as medium-risk churn on a schema shared with Overview, in a file Phase 84 replaces.
+- Deferring the whole thing to Phase 84 — rejected: it would mark Phase 83 complete with
+  criterion 5 knowingly violated.
+
+Required test coverage for the fix: an allocation row must emit no `<a>` element, while `out` and
+`in` rows keep their existing links. This closes the coverage gap noted below.
+
 ## Requirements Traceability
 
 | Requirement | Phase | Expected | Verified | Status |
