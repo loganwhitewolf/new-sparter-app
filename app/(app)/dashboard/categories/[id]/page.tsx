@@ -1,11 +1,13 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
+import { CategoryDetailDifferenceChart } from '@/components/dashboard/category-detail-difference-chart'
 import { CategoryDetailEmptyState } from '@/components/dashboard/category-detail-empty-state'
 import { CategoryDetailSkeleton } from '@/components/dashboard/category-detail-skeleton'
 import { CategoryDetailTable } from '@/components/dashboard/category-detail-table'
 import { CategoryDetailWindowControls } from '@/components/dashboard/category-detail-window-controls'
 import { CategorySubcategoryBreakdown } from '@/components/dashboard/category-subcategory-breakdown'
+import { CategoryTopTransactions } from '@/components/dashboard/category-top-transactions'
 import { CategoryYearSelect } from '@/components/dashboard/category-year-select'
 import { resolveYear } from '@/components/dashboard/overview/resolve-year'
 import { verifySession } from '@/lib/dal/auth'
@@ -39,8 +41,10 @@ async function CategoryDetailContent({
   const data = await getCategoryDetailYearWindow(categoryId, year, window)
   return (
     <div className="flex flex-col gap-6">
+      <CategoryDetailDifferenceChart data={data} />
       <CategoryDetailTable data={data} />
       <CategorySubcategoryBreakdown contributions={data.subcategories} year={year} type={data.category?.type} />
+      <CategoryTopTransactions transactions={data.topTransactions} />
     </div>
   )
 }
