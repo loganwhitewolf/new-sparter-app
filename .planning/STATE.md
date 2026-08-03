@@ -32,7 +32,7 @@ Phase: 84 — category-detail-and-cleanup
 Plan: Not started
 Status: Ready to plan
 Branch: `gsd/v3.0-categories-year-view` (synced with `origin/main` @ fe8273f9 — PR #65)
-Last activity: 2026-08-03 — Phase 83 complete, transitioned to Phase 84
+Last activity: 2026-08-03 — Completed quick task 260803-e9w (WR-01/WR-02 closure); Phase 83 complete, transitioned to Phase 84
 
 Preceding activity on `main` (merged into this branch): 2026-07-30 — completed quick task
 260730-n2z (Amort UX: Visualizza ammortamento, Tutti=all, vendita/rimborso copy) and quick task
@@ -668,6 +668,7 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260730-g3b | Lens selector redesign (LSD-01..05, `.planning/lens-selector-DECISIONS.md`): pill segmented control → dropdown integrato nel titolo pagina con voci descritte; overlay tratteggiato "Uscite (cassa)" sul grafico overview solo con lente competenza (secondo fetch gated); controllo nascosto senza piani di ammortamento (`hasAmortizationPlans`) e rimosso da /dashboard/tags. Verifica visiva in-browser passata 2026-07-30 | 2026-07-30 | 4bbafc63 |
 | 260730-m2x | Fix amortizzazione: collegamento rimborso come vendita (`reducePlanTx`→`createPairTx`); ri-ammortizzabilità dopo "Rimuovi ammortamento" (clear stale `reimbursementId`/pairing client-side); link dashboard movers → `/transactions?months=YYYY-MM` | 2026-07-30 | 963f213b |
 | 260730-n2z | Amort UX: detail→Visualizza ammortamento (`?transactionId=`); Tutti mostra aperti+chiusi; copy Chiudi con vendita/rimborso | 2026-07-30 | 71351519 |
+| 260803-e9w | Chiusura WR-01/WR-02 di 83-REVIEW.md: nome accessibile per la riga Accantonamenti (testo `sr-only` nello `<span>` inerte — `aria-label` scartato perché il ruolo implicito `generic` non ammette naming da autore) via nuovo `rowAccessibleSuffix` nella copy service centralizzata (D-11); ripristinato il commento di razionale D-13/CLIST-07 sopra l'href del `<Link>`. Nessun cambiamento visivo | 2026-08-03 | 64403c6a |
 
 ## Deferred Items
 
