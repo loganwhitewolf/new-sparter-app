@@ -12,8 +12,10 @@ async function openDashboardPath(page: Page, path: string) {
 }
 
 async function expectCategoryDetailContentOrEmptyState(page: Page) {
+  // CR-02 fix (84-REVIEW.md): Phase 84 retired CategoryDetailSummary ("Totale categoria") in
+  // favour of CategoryDetailTable's sticky summary column (D-07), exposed via a stable aria-label.
   await expect(
-    page.getByText(/Totale categoria|Nessun dato per questa categoria/)
+    page.getByRole('table', { name: 'Andamento categoria' }).or(page.getByText('Nessun dato per questa categoria'))
   ).toBeVisible()
 }
 
@@ -85,7 +87,11 @@ test.describe('Dashboard - LENS: cassa/competenza switch', () => {
     await expect(page.getByRole('button', { name: 'Competenza' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Cassa' })).toHaveCount(0)
     await expectCategoryDetailContentOrEmptyState(page)
-    const summary = page.getByRole('region', { name: 'Riepilogo categoria' })
+    // CR-02 fix (84-REVIEW.md): CategoryDetailSummary ("Riepilogo categoria" region) was retired
+    // by this same phase — the D-12 lens-invariance snapshot now targets CategoryDetailTable
+    // (aria-label "Andamento categoria", D-07's sticky summary column), the surviving surface
+    // that carries the same total/average/comparison figures.
+    const summary = page.getByRole('table', { name: 'Andamento categoria' })
     const cassaDetailSnapshot = (await summary.count()) > 0 ? await summary.innerText() : null
 
     await openDashboardPath(page, `${detailPath}?lens=competenza`)

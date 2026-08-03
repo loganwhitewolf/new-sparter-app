@@ -14,7 +14,7 @@ import { toDecimal } from '@/lib/utils/decimal'
 const amountFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' })
 
 function formatAmount(value: string): string {
-  const amount = Number(value)
+  const amount = toDecimal(value).toNumber()
   return amountFormatter.format(Number.isFinite(amount) ? amount : 0)
 }
 
@@ -82,7 +82,7 @@ export function CategoryDetailTable({ data }: Props) {
   const previousYearLabel = String(Number(rowHeadYear) - 1)
 
   return (
-    <Table className="min-w-[1040px] border-separate border-spacing-0">
+    <Table aria-label="Andamento categoria" className="min-w-[1040px] border-separate border-spacing-0">
       <TableHeader>
         <TableRow>
           <TableHead className="sticky left-0 z-20 min-w-[148px] bg-card text-left">
