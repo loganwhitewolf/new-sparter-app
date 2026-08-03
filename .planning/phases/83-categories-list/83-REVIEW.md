@@ -11,8 +11,24 @@ findings:
   warning: 2
   info: 2
   total: 4
-status: issues_found
+status: resolved
+resolved_by: 260803-e9w
+resolved_at: 2026-08-03T10:31:00Z
 ---
+
+> **Closure note (2026-08-03).** Both warnings below — **WR-01** (allocation row gives screen-reader
+> users no explanation) and **WR-02** (deleted `D-13/CLIST-07` rationale comment) — were closed by
+> quick task `260803-e9w` (commits `19ea3e86`, `64403c6a`). See
+> `.planning/quick/260803-e9w-allocation-row-accessible-name-and-d13/`.
+>
+> WR-01's fix does **not** use the `aria-label` this review implicitly suggested: a bare `<span>` has
+> implicit role `generic`, which the ARIA spec prohibits from carrying an author-supplied name, so an
+> `aria-label` there would never have been exposed. The row instead nests visually-hidden `sr-only`
+> text, sourced from the centralized copy service (`rowAccessibleSuffix`, per D-11). `role="link"` was
+> considered and rejected; `aria-disabled="true"` is unchanged per the user's locked decision.
+>
+> **IN-03** and **IN-04** remain open by choice — both are test-assertion nitpicks, neither affects
+> behaviour.
 
 # Phase 83: Code Review Report (re-review after 83-06 gap closure)
 
