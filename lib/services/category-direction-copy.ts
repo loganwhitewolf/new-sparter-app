@@ -10,6 +10,11 @@ export type CategoryDirectionCopy = {
   emptyStateHeading: string
   emptyStateBody: string
   directionLabel: string
+  // WR-01 closure: consumed two ways depending on the row's direction branch — as a full
+  // `aria-label` override (`${category.name}: ${suffix}`) on the out/in <Link>, and as sr-only
+  // text appended after the visible name inside the allocation <span> (which cannot carry an
+  // author-supplied name at all — see category-ranking-list.tsx).
+  rowAccessibleSuffix: string
 }
 
 /**
@@ -31,6 +36,7 @@ export function resolveCategoryDirectionCopy(direction: 'in' | 'out' | 'allocati
         emptyStateBody:
           "Non ci sono transazioni importate per questa direzione in {year}. Prova un altro anno o un'altra direzione.",
         directionLabel: 'Uscite',
+        rowAccessibleSuffix: 'apri dettaglio categoria',
       }
     case 'in':
       return {
@@ -40,6 +46,7 @@ export function resolveCategoryDirectionCopy(direction: 'in' | 'out' | 'allocati
         emptyStateBody:
           "Non ci sono transazioni importate per questa direzione in {year}. Prova un altro anno o un'altra direzione.",
         directionLabel: 'Entrate',
+        rowAccessibleSuffix: 'apri dettaglio categoria',
       }
     case 'allocation':
       return {
@@ -49,6 +56,7 @@ export function resolveCategoryDirectionCopy(direction: 'in' | 'out' | 'allocati
         emptyStateBody:
           "Non ci sono transazioni importate per questa direzione in {year}. Prova un altro anno o un'altra direzione.",
         directionLabel: 'Accantonamenti',
+        rowAccessibleSuffix: 'dettaglio non disponibile',
       }
   }
 }

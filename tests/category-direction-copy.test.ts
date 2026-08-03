@@ -12,6 +12,7 @@ describe('resolveCategoryDirectionCopy', () => {
     expect(copy.shareLabel).toBe('· {P}% del totale')
     expect(copy.emptyStateHeading).toBe('Nessuna spesa')
     expect(copy.directionLabel).toBe('Uscite')
+    expect(copy.rowAccessibleSuffix).toBe('apri dettaglio categoria')
   })
 
   test('in (Entrate)', () => {
@@ -20,6 +21,7 @@ describe('resolveCategoryDirectionCopy', () => {
     expect(copy.shareLabel).toBe('· {P}% del totale ricevuto')
     expect(copy.emptyStateHeading).toBe('Nessuna entrata')
     expect(copy.directionLabel).toBe('Entrate')
+    expect(copy.rowAccessibleSuffix).toBe('apri dettaglio categoria')
   })
 
   test('allocation (Accantonamenti)', () => {
@@ -28,6 +30,16 @@ describe('resolveCategoryDirectionCopy', () => {
     expect(copy.shareLabel).toBe('· {P}% del totale destinato')
     expect(copy.emptyStateHeading).toBe('Nessun accantonamento')
     expect(copy.directionLabel).toBe('Accantonamenti')
+    expect(copy.rowAccessibleSuffix).toBe('dettaglio non disponibile')
+  })
+
+  test('out and in share the identical rowAccessibleSuffix; allocation differs', () => {
+    const out = resolveCategoryDirectionCopy('out')
+    const inCopy = resolveCategoryDirectionCopy('in')
+    const allocation = resolveCategoryDirectionCopy('allocation')
+
+    expect(out.rowAccessibleSuffix).toBe(inCopy.rowAccessibleSuffix)
+    expect(allocation.rowAccessibleSuffix).not.toBe(out.rowAccessibleSuffix)
   })
 
   test('each direction returns distinct shareLabel/emptyStateHeading/emptyStateBody — never a shared fallback', () => {
