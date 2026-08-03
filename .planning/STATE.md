@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Categories Year View
-current_phase: 84
-status: completed
+status: Awaiting next milestone
 stopped_at: Completed 84-04-PLAN.md
-last_updated: "2026-08-03T14:26:57.902Z"
+last_updated: "2026-08-03T15:25:44.904Z"
 last_activity: 2026-08-03
-last_activity_desc: Phase 84 complete
+last_activity_desc: Milestone v3.0 completed and archived
 progress:
-  total_phases: 4
+  total_phases: 3
   completed_phases: 3
   total_plans: 13
   completed_plans: 13
-  percent: 75
+  percent: 100
+current_phase: 84
 current_phase_name: category-detail-and-cleanup
 ---
 
@@ -21,30 +21,32 @@ current_phase_name: category-detail-and-cleanup
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-30)
+See: .planning/PROJECT.md (updated 2026-08-03 after the v3.0 milestone)
 
-**Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Phase 84 — category-detail-and-cleanup
+**Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and read each category's rhythm across the year — what it costs per month, where it is heading by year end, and how it moved against the month and the year before. *(Rewritten at v3.0 close: the previous "spot deviations from baseline spending" promise was retired with the Deviation mechanism itself — ADR 0020.)*
+**Current focus:** Planning the next milestone — run `/gsd-new-milestone`. Standing candidate: operator deploy (R038 / R039 / R041 + live migrations 0028–0033 and the seed run order).
 
 ## Current Position
 
-Phase: 84
-Plan: Not started
-Status: All phases complete
-Branch: `gsd/v3.0-categories-year-view` (synced with `origin/main` @ fe8273f9 — PR #65)
-Last activity: 2026-08-03 — Phase 84 complete
+Phase: Milestone v3.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-03 — Milestone v3.0 completed and archived
 
-Preceding activity on `main` (merged into this branch): 2026-07-30 — completed quick task
-260730-n2z (Amort UX: Visualizza ammortamento, Tutti=all, vendita/rimborso copy) and quick task
-260730-m2x (amortization reimbursement linking / re-amortizability), shipped as PR #65.
-
-## Roadmap (v3.0 — Phases 82-84)
+## Roadmap (v3.0 — Phases 82-84) — SHIPPED 2026-08-03
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 82 | number-engine-and-regression-gate | PACE-01, PACE-02, PACE-03, PACE-04, PACE-05, PACE-06, RETIRE-03, RETIRE-04, RETIRE-05 | Not started |
-| 83 | categories-list | CLIST-01, CLIST-02, CLIST-03, CLIST-04, CLIST-05, CLIST-06, CLIST-07 | Not started |
-| 84 | category-detail-and-cleanup | CDET-01, CDET-02, CDET-03, CDET-04, CDET-05, CDET-06, CDET-07, RETIRE-01, RETIRE-02 | Not started |
+| 82 | number-engine-and-regression-gate | PACE-01, PACE-02, PACE-03, PACE-04, PACE-05, PACE-06, RETIRE-03, RETIRE-04, RETIRE-05 | Complete (verified, 3/3 plans) |
+| 83 | categories-list | CLIST-01, CLIST-02, CLIST-03, CLIST-04, CLIST-05, CLIST-06, CLIST-07 | Complete (verified, 6/6 plans) |
+| 84 | category-detail-and-cleanup | CDET-01, CDET-02, CDET-03, CDET-04, CDET-05, CDET-06, CDET-07, RETIRE-01, RETIRE-02 | Complete (verified, 4/4 plans) |
+
+**Closed:** audit 25/25 requirements · 3/3 phase verifications · 5/5 integration checks · 4/4 E2E
+flows · Nyquist 3/3 compliant. Archived to `milestones/v3.0-ROADMAP.md`,
+`milestones/v3.0-REQUIREMENTS.md`, `milestones/v3.0-MILESTONE-AUDIT.md`, phase dirs to
+`milestones/v3.0-phases/`. Accepted as tech debt at close: no v3.0 flow proven in a browser
+(pre-existing `proxy.ts` `ERR_TOO_MANY_REDIRECTS`, now two consecutive milestones) and Accantonamenti
+reachable but not drillable. `git tag v3.0` pending on main post-merge.
 
 **Coverage:** 25/25 v3.0 requirements mapped across Phases 82-84, none orphaned. Design **LOCKED
 in ADR 0020** (amends LENS-01 of ADR 0019) + `.planning/dashboard-categories-DECISIONS.md` (19
@@ -718,7 +720,7 @@ Last session: 2026-08-03T13:21:38.165Z
 
 ## Operator Next Steps
 
-- v3.0 roadmap created (Phases 82-84). Continue with `/gsd-discuss-phase 82` or `/gsd-plan-phase 82`.
+- Start the next milestone with /gsd-new-milestone
 
 ## Performance Metrics
 
