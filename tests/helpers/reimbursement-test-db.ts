@@ -251,6 +251,17 @@ export async function resetReimbursementFixtures(db: ReimbursementTestDb): Promi
 // 73-01-SUMMARY.md / 73-02-SUMMARY.md (test run 177d200 / 8306086); this harness now only proves
 // the CURRENT reimbursement/reimbursement_refund read path.
 
+// Test-local replacement for lib/utils/date.ts's dashboardPresetToDateRange('last-month') branch
+// (D-15/D-16, Plan 84-03 Task 2) — byte-identical arithmetic, copied verbatim rather than
+// "simplified", since D-16 forbids any change in the covered period this regression harness
+// exercises.
+export function lastMonthRange(now: Date = new Date()): { from: Date; to: Date } {
+  return {
+    from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+    to: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999),
+  }
+}
+
 export type CaptureAggregationSnapshotInput = {
   harnessDb: ReimbursementTestDb
   userId: string
@@ -290,7 +301,7 @@ export async function captureAggregationSnapshot(
   const overviewModule = await import('@/lib/dal/overview')
   const tagsModule = await import('@/lib/dal/tags')
 
-  const filters = { preset: 'last-month' as const, type: 'all' as const, sort: 'amount' as const }
+  const range = { from: dateRange.from, to: dateRange.to, type: 'all' as const }
   const year = dateRange.from.getFullYear()
   const monthIndex = dateRange.from.getMonth()
 
@@ -298,7 +309,6 @@ export async function captureAggregationSnapshot(
     overviewAmountTotals,
     categoriesBreakdown,
     categoryRanking,
-    categoryDeviations,
     categoryDetail,
     monthlyTrendByNature,
     monthOverMonthCategoryChanges,
@@ -307,11 +317,10 @@ export async function captureAggregationSnapshot(
     tagDetail,
   ] = await Promise.all([
     dashboardModule.getOverviewAmountTotals(userId, dateRange.from, dateRange.to, ledgerRowSource),
-    dashboardModule.getCategoriesBreakdown(filters),
-    dashboardModule.getCategoryRanking(filters),
-    dashboardModule.getCategoryDeviations({ type: 'all' }),
-    dashboardModule.getCategoryDetail(categoryId, filters),
-    dashboardModule.getMonthlyTrendByNature(filters.preset),
+    dashboardModule.getCategoriesBreakdown(range),
+    dashboardModule.getCategoryRanking(range),
+    dashboardModule.getCategoryDetail(categoryId, range),
+    dashboardModule.getMonthlyTrendByNature({ from: dateRange.from, to: dateRange.to }),
     overviewModule.getMonthOverMonthCategoryChanges(year, monthIndex, 'out', 10),
     overviewModule.getOverviewChart(year),
     tagsModule.getTagTotals(userId),
@@ -322,7 +331,6 @@ export async function captureAggregationSnapshot(
     getOverviewAmountTotals: overviewAmountTotals,
     getCategoriesBreakdown: categoriesBreakdown,
     getCategoryRanking: categoryRanking,
-    getCategoryDeviations: categoryDeviations,
     getCategoryDetail: categoryDetail,
     getMonthlyTrendByNature: monthlyTrendByNature,
     getMonthOverMonthCategoryChanges: monthOverMonthCategoryChanges,
