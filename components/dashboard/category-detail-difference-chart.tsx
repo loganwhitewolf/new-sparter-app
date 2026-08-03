@@ -13,7 +13,7 @@ type ChartBar = {
 const currencyFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' })
 
 function formatAmount(value: string | number): string {
-  const amount = typeof value === 'number' ? value : Number(value)
+  const amount = typeof value === 'number' ? value : toDecimal(value).toNumber()
   return currencyFormatter.format(Number.isFinite(amount) ? amount : 0)
 }
 

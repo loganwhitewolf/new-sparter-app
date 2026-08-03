@@ -21,7 +21,7 @@ const currencyFormatter = new Intl.NumberFormat('it-IT', {
 })
 
 function formatAmount(value: string): string {
-  const amount = Number(value)
+  const amount = toDecimal(value).toNumber()
   return currencyFormatter.format(Number.isFinite(amount) ? Math.abs(amount) : 0)
 }
 
