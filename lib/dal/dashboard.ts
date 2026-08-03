@@ -42,6 +42,7 @@ import { getCoveredMonthsInYear, type CoveredMonth } from '@/lib/dal/covered-mon
 import {
   buildCoveredMonthSeries,
   buildYearSeries,
+  classifyMonthStates,
   computeCurrentMonthHybrid,
   computePaceAndProjection,
   isPartialMonth,
@@ -708,26 +709,12 @@ export function buildCategoryYearRankingData(input: {
   const to = new Date(input.year, 11, 31, 23, 59, 59, 999)
   const monthKeys = monthsBetween(from, to)
   const monthKeySet = new Set(monthKeys)
-  const coveredSet = new Set(input.coveredMonths.map((m) => m.yearMonth))
 
   const today = new Date()
   // Shared, once-computed classification map — identical across every category row for this year
-  // (never recomputed per category).
-  const monthStateByKey = new Map<string, CategoryYearSparklinePoint['state']>()
-  for (const month of monthKeys) {
-    if (isPartialMonth(month, today)) {
-      monthStateByKey.set(month, 'current')
-      continue
-    }
-    const [monthYear, monthNumber] = month.split('-').map(Number) as [number, number]
-    const isFutureMonth =
-      monthYear > today.getFullYear() ||
-      (monthYear === today.getFullYear() && monthNumber > today.getMonth() + 1)
-    monthStateByKey.set(
-      month,
-      isFutureMonth ? 'estimated' : coveredSet.has(month) ? 'covered' : 'uncovered'
-    )
-  }
+  // (never recomputed per category). WR-03 fix (84-REVIEW.md): extracted to
+  // classifyMonthStates, shared verbatim with getCategoryDetailYearWindow.
+  const monthStateByKey = classifyMonthStates(monthKeys, input.coveredMonths, today)
 
   // Account-wide pace eligibility, computed once — a Partial (current) Covered Month never
   // counts toward MIN_COVERED_MONTHS_FOR_PACE.

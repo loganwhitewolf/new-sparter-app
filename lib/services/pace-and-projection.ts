@@ -85,6 +85,44 @@ export function isPartialMonth(yearMonth: string, today: Date = new Date()): boo
   return year === today.getFullYear() && month === today.getMonth() + 1
 }
 
+/** The four month states shared by the Categories list and detail pages (D-06/CDET-06). */
+export type MonthState = 'covered' | 'current' | 'estimated' | 'uncovered'
+
+/**
+ * Classifies every entry of `monthKeys` into one of the four shared month states (WR-03 fix,
+ * 84-REVIEW.md): extracted from `buildCategoryYearRankingData` (lib/dal/dashboard.ts) and
+ * `getCategoryDetailYearWindow` (lib/dal/category-detail-year-window.ts), which had copy-pasted
+ * this identical loop — any future change to the classification rule now has exactly one call
+ * site to update.
+ *
+ * - the calendar-current month is always `'current'`, regardless of coverage;
+ * - a month strictly after today's calendar month is `'estimated'`;
+ * - every other month is `'covered'` when present in `coveredMonths`, `'uncovered'` otherwise.
+ *
+ * Pure function of (monthKeys, coveredMonths, today) — no DB/network/await inside its body.
+ */
+export function classifyMonthStates(
+  monthKeys: string[],
+  coveredMonths: CoveredMonth[],
+  today: Date,
+): Map<string, MonthState> {
+  const coveredSet = new Set(coveredMonths.map((m) => m.yearMonth))
+  const monthStateByKey = new Map<string, MonthState>()
+
+  for (const month of monthKeys) {
+    if (isPartialMonth(month, today)) {
+      monthStateByKey.set(month, 'current')
+      continue
+    }
+    const [monthYear, monthNumber] = month.split('-').map(Number) as [number, number]
+    const isFutureMonth =
+      monthYear > today.getFullYear() || (monthYear === today.getFullYear() && monthNumber > today.getMonth() + 1)
+    monthStateByKey.set(month, isFutureMonth ? 'estimated' : coveredSet.has(month) ? 'covered' : 'uncovered')
+  }
+
+  return monthStateByKey
+}
+
 /**
  * D-06: the current month is valued at `max(spent so far, pace)` — a hybrid, never a value below
  * an already-observed fact. `Decimal.max` compares the two UNROUNDED Decimal instances; the single

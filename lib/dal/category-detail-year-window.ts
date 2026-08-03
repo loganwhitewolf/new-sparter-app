@@ -23,6 +23,7 @@ import {
   buildCoveredMonthSeries,
   buildYearSeries,
   canShowPreviousYearTotalDifference,
+  classifyMonthStates,
   computeComparison,
   computeCurrentMonthHybrid,
   computePaceAndProjection,
@@ -377,10 +378,10 @@ async function getWindowTopTransactions(
  * Builds a category's year+window payload (D-01..D-16). `ledgerRowSource` defaults to
  * `ledgerEntryCash` — Categories reads cassa only (D-12/Phase 82).
  *
- * Month-state classification mirrors buildCategoryYearRankingData's account-wide pattern
- * (lib/dal/dashboard.ts) for a single category: the calendar-current month is always 'current';
- * a future month in `year` is 'estimated'; every other month is 'covered' when in
- * getCoveredMonthsInYear(year), 'uncovered' otherwise.
+ * Month-state classification calls the SAME `classifyMonthStates` helper buildCategoryYearRankingData
+ * (lib/dal/dashboard.ts) uses (WR-03 fix, 84-REVIEW.md — previously copy-pasted): the
+ * calendar-current month is always 'current'; a future month in `year` is 'estimated'; every
+ * other month is 'covered' when in getCoveredMonthsInYear(year), 'uncovered' otherwise.
  *
  * Pace/projection are computed ONCE from the FULL YEAR's pace-eligible Covered Months (never the
  * window, D-06) — an 'estimated' month's amount is that pace (or null when insufficient); the
@@ -441,21 +442,11 @@ export const getCategoryDetailYearWindow = cache(
     const from = new Date(year, 0, 1)
     const to = new Date(year, 11, 31, 23, 59, 59, 999)
     const monthKeys = monthsBetween(from, to)
-    const coveredSet = new Set(coveredMonths.map((m) => m.yearMonth))
     const amountByMonth = new Map(categoryMonths.map((m) => [m.yearMonth, m.amount]))
 
-    const monthStateByKey = new Map<string, CategoryDetailMonthState>()
-    for (const month of monthKeys) {
-      if (isPartialMonth(month, today)) {
-        monthStateByKey.set(month, 'current')
-        continue
-      }
-      const [monthYear, monthNumber] = month.split('-').map(Number) as [number, number]
-      const isFutureMonth =
-        monthYear > today.getFullYear() ||
-        (monthYear === today.getFullYear() && monthNumber > today.getMonth() + 1)
-      monthStateByKey.set(month, isFutureMonth ? 'estimated' : coveredSet.has(month) ? 'covered' : 'uncovered')
-    }
+    // WR-03 fix (84-REVIEW.md): shared verbatim with buildCategoryYearRankingData
+    // (lib/dal/dashboard.ts) via classifyMonthStates — was previously copy-pasted here.
+    const monthStateByKey: Map<string, CategoryDetailMonthState> = classifyMonthStates(monthKeys, coveredMonths, today)
 
     // Account-wide pace/projection, computed ONCE from the full year's pace-eligible (non-Partial)
     // Covered Months — never the window (D-06).
