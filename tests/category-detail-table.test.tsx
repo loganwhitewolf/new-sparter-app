@@ -18,7 +18,7 @@ function buildFixture(overrides?: Partial<CategoryDetailYearWindowData>): Catego
       coveredMonthCountInWindow: 2,
       uncoveredMonthLabels: ['mar'],
     },
-    previousYear: null,
+    previousYear: { status: 'unavailable' },
     pace: '375.00',
     projection: '4500.00',
     subcategories: [],
@@ -134,5 +134,100 @@ describe('CategoryDetailTable (D-06/D-10, Task 1)', () => {
     )
 
     expect(html).not.toContain('mesi coperti')
+  })
+})
+
+describe('CategoryDetailTable — previous-year row and Differenza row (D-11/D-12/CDET-02/CDET-04/CDET-07, Task 2)', () => {
+  test('a previousYear: unavailable fixture renders a stated-reason line and zero per-month amounts in that row, and no Differenza row at all', () => {
+    const html = renderToStaticMarkup(<CategoryDetailTable data={buildFixture()} />)
+
+    expect(html).toContain('Nessun mese coperto nel 2025 per questa finestra')
+    expect(html).not.toContain('Differenza')
+  })
+
+  test('a previousYear: available fixture renders row 2 as plain amounts with no delta line', () => {
+    const html = renderToStaticMarkup(
+      <CategoryDetailTable
+        data={buildFixture({
+          previousYear: {
+            status: 'available',
+            series: {
+              months: [
+                { yearMonth: '2025-01', label: 'gen', amount: '380.00', state: 'covered' },
+                { yearMonth: '2025-02', label: 'feb', amount: '320.00', state: 'covered' },
+                { yearMonth: '2025-03', label: 'mar', amount: null, state: 'uncovered' },
+              ],
+              total: '700.00',
+              average: '350.00',
+              coveredMonthCountInWindow: 2,
+            },
+            totalDifference: { status: 'shown', value: '50.00' },
+            averageDifference: '25.00',
+          },
+        })}
+      />,
+    )
+
+    expect(html).toContain('2025 (stessa finestra)')
+    expect(html).toContain('380,00')
+    expect(html).toContain('320,00')
+    expect(html).toContain('non importato')
+  })
+
+  test("a totalDifference: {status:'insufficient', coveredMonthCount:3} fixture renders a stated reason containing '3' in the Totale cell AND a real magnitude+word value in the Media cell", () => {
+    const html = renderToStaticMarkup(
+      <CategoryDetailTable
+        data={buildFixture({
+          previousYear: {
+            status: 'available',
+            series: {
+              months: [
+                { yearMonth: '2025-01', label: 'gen', amount: '380.00', state: 'covered' },
+                { yearMonth: '2025-02', label: 'feb', amount: '320.00', state: 'covered' },
+                { yearMonth: '2025-03', label: 'mar', amount: '300.00', state: 'covered' },
+              ],
+              total: '1000.00',
+              average: '333.33',
+              coveredMonthCountInWindow: 3,
+            },
+            totalDifference: { status: 'insufficient', coveredMonthCount: 3 },
+            averageDifference: '41.67',
+          },
+        })}
+      />,
+    )
+
+    expect(html).toContain('Differenza')
+    expect(html).toContain('Dati insufficienti nel 2025: 3 mesi')
+    expect(html).toContain('41,67')
+    expect(html).toContain('in più')
+  })
+
+  test('a totalDifference: shown fixture renders a real magnitude+word value labelled "Rispetto al 2025" for both Totale and Media', () => {
+    const html = renderToStaticMarkup(
+      <CategoryDetailTable
+        data={buildFixture({
+          previousYear: {
+            status: 'available',
+            series: {
+              months: [
+                { yearMonth: '2025-01', label: 'gen', amount: '380.00', state: 'covered' },
+                { yearMonth: '2025-02', label: 'feb', amount: '320.00', state: 'covered' },
+                { yearMonth: '2025-03', label: 'mar', amount: '300.00', state: 'covered' },
+              ],
+              total: '1000.00',
+              average: '333.33',
+              coveredMonthCountInWindow: 3,
+            },
+            totalDifference: { status: 'shown', value: '-250.00' },
+            averageDifference: '41.67',
+          },
+        })}
+      />,
+    )
+
+    expect(html.match(/Rispetto al 2025/g)?.length).toBe(2)
+    expect(html).toContain('250,00')
+    expect(html).toContain('in meno')
   })
 })

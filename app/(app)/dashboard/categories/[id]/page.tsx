@@ -5,6 +5,7 @@ import { CategoryDetailEmptyState } from '@/components/dashboard/category-detail
 import { CategoryDetailSkeleton } from '@/components/dashboard/category-detail-skeleton'
 import { CategoryDetailTable } from '@/components/dashboard/category-detail-table'
 import { CategoryDetailWindowControls } from '@/components/dashboard/category-detail-window-controls'
+import { CategorySubcategoryBreakdown } from '@/components/dashboard/category-subcategory-breakdown'
 import { CategoryYearSelect } from '@/components/dashboard/category-year-select'
 import { resolveYear } from '@/components/dashboard/overview/resolve-year'
 import { verifySession } from '@/lib/dal/auth'
@@ -36,7 +37,12 @@ async function CategoryDetailContent({
   window: CategoryDetailWindow
 }) {
   const data = await getCategoryDetailYearWindow(categoryId, year, window)
-  return <CategoryDetailTable data={data} />
+  return (
+    <div className="flex flex-col gap-6">
+      <CategoryDetailTable data={data} />
+      <CategorySubcategoryBreakdown contributions={data.subcategories} year={year} type={data.category?.type} />
+    </div>
+  )
 }
 
 export default async function DashboardCategoryDetailPage({ params, searchParams }: Props) {
