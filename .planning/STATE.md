@@ -2,11 +2,10 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Categories Year View
-status: Awaiting next milestone
+status: "Milestone v3.0 shipped — PR #67"
 stopped_at: Completed 84-04-PLAN.md
-last_updated: "2026-08-03T15:25:44.904Z"
+last_updated: "2026-08-03T15:53:07.336Z"
 last_activity: 2026-08-03
-last_activity_desc: Milestone v3.0 completed and archived
 progress:
   total_phases: 3
   completed_phases: 3
@@ -15,6 +14,7 @@ progress:
   percent: 100
 current_phase: 84
 current_phase_name: category-detail-and-cleanup
+last_activity_desc: "Milestone v3.0 archived and shipped — PR #67 open against main"
 ---
 
 # Project State
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-08-03 after the v3.0 milestone)
 
 Phase: Milestone v3.0 complete
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-08-03 — Milestone v3.0 completed and archived
+Status: Milestone v3.0 shipped — PR #67
+Last activity: 2026-08-03
 
 ## Roadmap (v3.0 — Phases 82-84) — SHIPPED 2026-08-03
 
