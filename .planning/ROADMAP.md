@@ -2,6 +2,7 @@
 
 ## Milestones
 
+- ✅ **v3.0: Categories Year View** — Phases 82–84 (shipped 2026-08-03) · design locked [ADR 0020](../docs/adr/0020-categories-year-view-retires-deviation.md) · [archive](milestones/v3.0-ROADMAP.md)
 - ✅ **v2.9: Amortization** — Phases 77–81 (shipped 2026-07-29) · model locked ADR 0019 · [archive](milestones/v2.9-ROADMAP.md)
 - ✅ **v2.8: Reimbursements 1:N** — Phases 73–76 (shipped 2026-07-27) · [archive](milestones/v2.8-ROADMAP.md)
 - ✅ **M001–M006** — Foundation → Dashboard Insight Suite (Phases 1–23, shipped ~2026-05)
@@ -24,6 +25,33 @@
 - ✅ **v2.7: Tag Dedicated View** — Phases 69–72 (shipped 2026-07-22, tag v2.7) · [archive](milestones/v2.7-ROADMAP.md)
 
 ## Phases
+
+<details>
+<summary>✅ v3.0: Categories Year View (Phases 82–84) — SHIPPED 2026-08-03 (design locked ADR 0020)</summary>
+
+Rewrote the Categories dashboard section on a coherent yearly axis — monthly **Ritmo** and year-end
+**Proiezione** replacing the rolling-preset model — and retired the Deviation, Baseline, Noise
+Threshold and Preset vocabulary from both the interface and the codebase. Locked in
+**[ADR 0020](../docs/adr/0020-categories-year-view-retires-deviation.md)** (amends LENS-01 of ADR
+0019 — the cassa/competenza lens is no longer dashboard-global, confined to Overview) and
+`.planning/dashboard-categories-DECISIONS.md` (19 decisions, D1–D19). The 12-month table (variant A)
+was locked over a chart, which cannot render a month-over-month delta as a word inside a 60px bar.
+Sequencing mirrored the v2.8 netting gate / v2.9 LENS-03 pattern: Phase 82 built the engine and
+proved Overview/Tags totals byte-identical (RETIRE-05) **before** any Categories UI shipped. Audit
+**25/25 requirements, 3/3 phases, 5/5 integration, 4/4 flows, Nyquist 3/3**; suite 183 files / 2194
+tests green.
+
+- [x] **Phase 82: number-engine-and-regression-gate** (PACE-01…06, RETIRE-03, RETIRE-04, RETIRE-05) — Mese Coperto/Parziale, Ritmo, Proiezione and the current−previous sign convention built and proven; lens confined to Overview, dead `tag` param dropped; Overview/Tags totals byte-identical before any Categories UI changes (completed 2026-07-30, 3/3 plans)
+- [x] **Phase 83: categories-list** (CLIST-01…07) — Categories list rewritten on year + direction (Uscite/Entrate/Accantonamenti) with total, share, sparkline, projection, sort toggle and first-import state (completed 2026-08-03, 6/6 plans)
+- [x] **Phase 84: category-detail-and-cleanup** (CDET-01…07, RETIRE-01, RETIRE-02) — Category detail rewritten as a 12-month table (deltas, previous-year row, window, subcategory contributions, coverage states); Deviation/Preset machinery fully retired, no dead references (completed 2026-08-03, 4/4 plans)
+
+**Accepted at close:** no v3.0 flow exercised in a browser (pre-existing `proxy.ts` redirect loop,
+second consecutive milestone), and Accantonamenti reachable but not drillable — Phase 83's
+non-interactive-span guard is now the permanent contract. See `.planning/MILESTONES.md`.
+
+Full details: `.planning/milestones/v3.0-ROADMAP.md`
+
+</details>
 
 <details>
 <summary>✅ v2.9: Amortization (Phases 77–81) — SHIPPED 2026-07-29 (model locked ADR 0019)</summary>
@@ -64,52 +92,6 @@ any UI. Audit **passed 11/11**; full suite green (149 files, 1834 tests).
 Full details: `.planning/milestones/v2.8-ROADMAP.md`
 
 </details>
-
-### Phase 81: Inline net display for paired transactions
-
-> **v2.9 closure phase.** Closes the non-blocking UAT gap flagged in the v2.9 milestone audit
-> (`.planning/v2.9-MILESTONE-AUDIT.md`, Phase 78 item): "chiudi per vendita" (and, by the same
-> mechanism, every v2.8 reimbursement) nets correctly on the detail page and dashboard, but the
-> transactions **table row** still shows only the gross `transaction.amount`, and the
-> sale/refund counterpart reads as a plain positive inflow with nothing marking it as a
-> reduction of another transaction. Design decisions LOCKED 2026-07-29 (memory
-> `project_paired_tx_inline_net_display`).
-
-**Goal:** In the transactions table, a paired anchor (amortization-sale or v2.8 reimbursement)
-shows its **net** amount prominently with the gross initial amount struck-through/dimmed beneath
-it, and the paired counterpart row carries a "riduzione di …" badge linking to its anchor with an
-attenuated amount — so a user reading the table alone understands the real net without opening the
-detail page. Purely presentational: `effectiveAmount()`, netting, and all totals stay unchanged.
-**Requirements**: closes the Phase 78 UAT item (AMORT-05 realization readability); no new REQ-ID.
-**Depends on:** Phase 80
-
-**Success Criteria** (what must be TRUE):
-
-  1. A paired outflow anchor (amortization closed-for-sale OR v2.8 reimbursement) renders in the
-     transactions table with the net amount as the primary figure and the gross initial amount
-     struck-through/opaque beneath it — for **all** pairing types, not just amortization.
-
-  2. The counterpart row (the sale/refund positive) shows a "riduzione di …" badge that links to
-     its anchor transaction and renders its amount attenuated, so it no longer reads as a plain
-     asset/inflow.
-
-  3. No change to any total, `effectiveAmount()` result, netting math, or dashboard/lens figure —
-     the full test suite (incl. LENS-03 byte-identical regression) stays green.
-
-**Scope note:** single surface — the row render in `transaction-table.tsx`, extending/replacing
-`ReimbursementRowIndicator`. `lib/dal/transactions.ts` is unmodified: net + anchor link are already
-exposed (`pairedNetAmount`/`pairedWithId`/`pairedDescription`), and anchor-vs-counterpart role is
-resolved client-side from the sign of `amount` (safe because `assertOutflowAnchorAmount`/
-`assertInflowRefundAmount` already enforce that invariant at write time) — zero DAL change. The
-table is cash-only (not lens-aware): the net shown is the cash net (initial − sale/refund).
-
-**Plans:** 1/1 plans complete
-
-Plans:
-
-- [x] 81-01-PLAN.md — Anchor net-primary + struck-through gross, counterpart reduction badge + attenuated amount (D-N1..D-N4)
-
----
 
 <details>
 <summary>✅ v2.7: Tag Dedicated View (Phases 69–72) — SHIPPED 2026-07-22 (tag v2.7)</summary>
@@ -378,8 +360,11 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 79. amortizations-registry | v2.9 | 2/2 | Complete    | 2026-07-28 |
 | 80. dashboard-accrual-lens | v2.9 | 7/7 | Complete    | 2026-07-29 |
 | 81. inline-net-display-for-paired-transactions | v2.9 | 1/1 | Complete    | 2026-07-29 |
+| 82. number-engine-and-regression-gate | v3.0 | 3/3 | Complete    | 2026-07-30 |
+| 83. categories-list | v3.0 | 6/6 | Complete    | 2026-08-03 |
+| 84. category-detail-and-cleanup | v3.0 | 4/4 | Complete    | 2026-08-03 |
 
-**Total shipped: 81 phases · 305 plans complete**
-**Latest shipped: v2.9 Amortization — Phases 77–81 (2026-07-29, model locked ADR 0019). All AMORT-01…07, REG-01…03, LENS-01…05 delivered: materialised amortization_plan/amortization_instalment schema + dual ledger_entry (cash/accrual) VIEW seam, three activation entry points detaching into a Standalone Expense, plan lifecycle (close/collapse, realize-via-sale reusing v2.8 pairing, reduce+re-spread on reimbursement, edit guard), /amortizations registry, and the global cassa/competenza dashboard lens. Phase 81 closed the Phase 78 UAT gap with inline net display in the transactions table. Audit passed 15/15; full suite 1953 passed + 1 todo.**
+**Total shipped: 84 phases · 318 plans complete**
+**Latest shipped: v3.0 Categories Year View — Phases 82–84 (2026-08-03, design locked ADR 0020). All PACE-01…06, CLIST-01…07, CDET-01…07, RETIRE-01…05 delivered: Covered/Partial Month classification with monthly Ritmo and year-end Proiezione (hybrid current month, total-equals-sum-of-series invariant, one shared current−previous comparison), the cassa/competenza lens confined to Overview by construction, the Categories list rebuilt on year + direction (share, sparkline, projection, sort toggle, Accantonamenti reachable), the category detail rebuilt as a 12-month table (in-cell deltas, previous-year row, re-anchorable 9/6/3 window, subcategory contributions summing to the parent difference), and the Deviation/Baseline/Noise-Threshold/Preset vocabulary retired outright behind a 25-test guard. Audit 25/25 requirements · 3/3 phases · 5/5 integration · 4/4 flows · Nyquist 3/3; suite 183 files / 2194 tests green.**
 
-**Next: `/gsd-new-milestone` to open the next cycle. Carried tech debt: operator deploy (v2.8 R038/R039/R041 + live migrations 0028-0032, plus v2.9 migration 0033 + seed run order); P78 browser UAT + P80 Playwright LENS suite (blocked by pre-existing proxy.ts redirect loop) — see .planning/milestones/v2.9-MILESTONE-AUDIT.md.**
+**Next: no milestone planned — run `/gsd-new-milestone`. Leading candidate remains the operator deploy (v2.8 R038/R039/R041 + live migrations 0028–0033 and the seed run order). Carried tech debt: no v3.0 or v2.9 flow proven in a browser (pre-existing proxy.ts `ERR_TOO_MANY_REDIRECTS` now blocking e2e across two consecutive milestones — compounding); Accantonamenti reachable but not drillable; 65 unguarded `describeIfReachable` skips that can report vacuous green in CI; `git tag v2.9` and `git tag v3.0` both pending on main post-merge — see .planning/milestones/v3.0-MILESTONE-AUDIT.md.**

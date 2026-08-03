@@ -1,17 +1,34 @@
 import { describe, expect, it } from "vitest"
 
+import { DEFAULT_TRANSACTION_DIRECTIONS } from "@/lib/utils/transaction-directions"
 import {
   UpdateTransactionCustomTitleSchema,
   getInclusiveToDate,
   parseTransactionFilters,
 } from "../transactions"
 
+// 260730-o82: a bare `/transactions` now applies an IMPLICIT direction default
+// (in + out + allocation + unclassified — transfer excluded), so `directions` is always present in
+// the parsed result even when no `?direction=` param was supplied. Spread from the exported
+// constant rather than restating the tokens, so a change to the default surfaces as one failure in
+// the direction module's own tests instead of silently agreeing with itself here.
+const IMPLICIT_DIRECTIONS = [...DEFAULT_TRANSACTION_DIRECTIONS]
+
 describe("parseTransactionFilters", () => {
   it("returns deterministic defaults for empty Next searchParams", () => {
     expect(parseTransactionFilters({})).toEqual({
+      directions: IMPLICIT_DIRECTIONS,
       sort: "occurredAt",
       dir: "desc",
     })
+  })
+
+  it("excludes transfer from the implicit default but still allows it explicitly (260730-o82)", () => {
+    expect(parseTransactionFilters({}).directions).not.toContain("transfer")
+    expect(parseTransactionFilters({ direction: "in,transfer" }).directions).toEqual([
+      "in",
+      "transfer",
+    ])
   })
 
   it("accepts trimmed valid filters from plain Next searchParams; legacy from/to are ignored (Wave 5 migration)", () => {
@@ -30,6 +47,7 @@ describe("parseTransactionFilters", () => {
       platform: "revolut-bank",
       categorySlug: "food-and-drinks",
       subCategoryId: 42,
+      directions: IMPLICIT_DIRECTIONS,
       sort: "amount",
       dir: "asc",
     })
@@ -48,6 +66,7 @@ describe("parseTransactionFilters", () => {
     })
 
     expect(parsed).toEqual({
+      directions: IMPLICIT_DIRECTIONS,
       sort: "occurredAt",
       dir: "desc",
     })
@@ -61,6 +80,7 @@ describe("parseTransactionFilters", () => {
         subCategory: "not-a-number",
       }),
     ).toEqual({
+      directions: IMPLICIT_DIRECTIONS,
       sort: "occurredAt",
       dir: "desc",
     })
@@ -128,6 +148,7 @@ describe("parseTransactionFilters", () => {
         dir: " ",
       }),
     ).toEqual({
+      directions: IMPLICIT_DIRECTIONS,
       sort: "occurredAt",
       dir: "desc",
     })
@@ -147,6 +168,7 @@ describe("parseTransactionFilters", () => {
         to: "2025-13-01",
       }),
     ).toEqual({
+      directions: IMPLICIT_DIRECTIONS,
       sort: "occurredAt",
       dir: "desc",
     })

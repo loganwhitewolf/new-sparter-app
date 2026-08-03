@@ -106,11 +106,43 @@ async function ensureTestDatabaseExists(connectionString: string): Promise<void>
 }
 
 /**
+ * Fails loudly when a real-Postgres harness is unreachable **in CI**, where a graceful skip is
+ * indistinguishable from a pass.
+ *
+ * The `{ ok: false }` + `describe.skip` pattern below is right on a developer machine without
+ * Docker: the suite steps aside instead of blocking unrelated work. In CI it is a trap — the
+ * file reports green with zero assertions executed, so a regression baseline that exists
+ * precisely to prove nothing moved would prove nothing at all, silently.
+ *
+ * Call this from any suite whose whole purpose is the assertions it makes against real Postgres
+ * (byte-identical regression gates above all). Suites that merely benefit from a real database
+ * can keep skipping unguarded.
+ *
+ * @param suiteName - Prefix for the thrown message, so CI logs name the suite that halted.
+ * @throws When the harness is unreachable and `process.env.CI` is set.
+ */
+export function assertHarnessReachableInCi(
+  harness: ReimbursementTestDbHandle,
+  suiteName: string,
+): void {
+  if (harness.ok || !process.env.CI) return
+
+  throw new Error(
+    `${suiteName}: Postgres is unreachable and CI is set. This suite's assertions are its ` +
+      'entire value, so skipping them in CI would report a vacuous green. Provision the test ' +
+      'database (yarn db:up) before running.',
+  )
+}
+
+/**
  * Connects to the local Postgres container, running the real migration set against it
  * (idempotent — safe against an already-migrated or a completely fresh container). Returns
  * `{ ok: false }` instead of throwing when the container is unreachable, so the calling test
  * file can skip gracefully (with a console warning) rather than fail the whole suite when
  * Docker is not running.
+ *
+ * A skip is silent by design. Suites whose assertions are load-bearing should pair this with
+ * {@link assertHarnessReachableInCi} so the skip cannot masquerade as a pass in CI.
  */
 export async function connectReimbursementTestDb(): Promise<ReimbursementTestDbHandle> {
   const connectionString = resolveConnectionString()
@@ -219,6 +251,17 @@ export async function resetReimbursementFixtures(db: ReimbursementTestDb): Promi
 // 73-01-SUMMARY.md / 73-02-SUMMARY.md (test run 177d200 / 8306086); this harness now only proves
 // the CURRENT reimbursement/reimbursement_refund read path.
 
+// Test-local last-month date range (D-15/D-16, Plan 84-03 Task 2) — replaces the now-retired
+// preset-to-range helper this harness used to call. Arithmetic copied verbatim rather than
+// "simplified", since D-16 forbids any change in the covered period this regression harness
+// exercises.
+export function lastMonthRange(now: Date = new Date()): { from: Date; to: Date } {
+  return {
+    from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+    to: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999),
+  }
+}
+
 export type CaptureAggregationSnapshotInput = {
   harnessDb: ReimbursementTestDb
   userId: string
@@ -258,7 +301,7 @@ export async function captureAggregationSnapshot(
   const overviewModule = await import('@/lib/dal/overview')
   const tagsModule = await import('@/lib/dal/tags')
 
-  const filters = { preset: 'last-month' as const, type: 'all' as const, sort: 'amount' as const }
+  const range = { from: dateRange.from, to: dateRange.to, type: 'all' as const }
   const year = dateRange.from.getFullYear()
   const monthIndex = dateRange.from.getMonth()
 
@@ -266,7 +309,6 @@ export async function captureAggregationSnapshot(
     overviewAmountTotals,
     categoriesBreakdown,
     categoryRanking,
-    categoryDeviations,
     categoryDetail,
     monthlyTrendByNature,
     monthOverMonthCategoryChanges,
@@ -275,11 +317,10 @@ export async function captureAggregationSnapshot(
     tagDetail,
   ] = await Promise.all([
     dashboardModule.getOverviewAmountTotals(userId, dateRange.from, dateRange.to, ledgerRowSource),
-    dashboardModule.getCategoriesBreakdown(filters),
-    dashboardModule.getCategoryRanking(filters),
-    dashboardModule.getCategoryDeviations({ type: 'all' }),
-    dashboardModule.getCategoryDetail(categoryId, filters),
-    dashboardModule.getMonthlyTrendByNature(filters.preset),
+    dashboardModule.getCategoriesBreakdown(range),
+    dashboardModule.getCategoryRanking(range),
+    dashboardModule.getCategoryDetail(categoryId, range),
+    dashboardModule.getMonthlyTrendByNature({ from: dateRange.from, to: dateRange.to }),
     overviewModule.getMonthOverMonthCategoryChanges(year, monthIndex, 'out', 10),
     overviewModule.getOverviewChart(year),
     tagsModule.getTagTotals(userId),
@@ -290,7 +331,6 @@ export async function captureAggregationSnapshot(
     getOverviewAmountTotals: overviewAmountTotals,
     getCategoriesBreakdown: categoriesBreakdown,
     getCategoryRanking: categoryRanking,
-    getCategoryDeviations: categoryDeviations,
     getCategoryDetail: categoryDetail,
     getMonthlyTrendByNature: monthlyTrendByNature,
     getMonthOverMonthCategoryChanges: monthOverMonthCategoryChanges,

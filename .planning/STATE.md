@@ -1,36 +1,114 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.9
-milestone_name: Amortization
-status: Awaiting next milestone
-stopped_at: Completed quick task 260731-hhv (UX contratto feedback waves 01-03)
-last_updated: "2026-07-31T10:55:00.000Z"
-last_activity: 2026-07-31
-last_activity_desc: "Completed quick task 260731-hhv: UX contratto feedback Sparter (PRONTO + bug 3.7)"
+milestone: v3.0
+milestone_name: Categories Year View
+status: "Milestone v3.0 shipped — PR #67"
+stopped_at: Completed 84-04-PLAN.md
+last_updated: "2026-08-03T15:53:07.336Z"
+last_activity: 2026-08-03
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-current_phase: 81
-current_phase_name: inline-net-display-for-paired-transactions
+  total_phases: 3
+  completed_phases: 3
+  total_plans: 13
+  completed_plans: 13
+  percent: 100
+current_phase: 84
+current_phase_name: category-detail-and-cleanup
+last_activity_desc: "Milestone v3.0 archived and shipped — PR #67 open against main"
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-29)
+See: .planning/PROJECT.md (updated 2026-08-03 after the v3.0 milestone)
 
-**Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and instantly spot deviations from their baseline spending.
-**Current focus:** Planning next milestone — v2.9 (Amortization) shipped & archived; run `/gsd-new-milestone`
+**Core value:** The user can safely import real bank transactions, see where their money goes categorized by month, and read each category's rhythm across the year — what it costs per month, where it is heading by year end, and how it moved against the month and the year before. *(Rewritten at v3.0 close: the previous "spot deviations from baseline spending" promise was retired with the Deviation mechanism itself — ADR 0020.)*
+**Current focus:** Planning the next milestone — run `/gsd-new-milestone`. Standing candidate: operator deploy (R038 / R039 / R041 + live migrations 0028–0033 and the seed run order).
 
 ## Current Position
 
-Phase: Milestone v2.9 complete
+Phase: Milestone v3.0 complete
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-31 - Completed quick task 260731-hhv: UX contratto feedback Sparter (PRONTO + bug 3.7; deferred 2.4/3.8/3.9)
+Status: Milestone v3.0 shipped — PR #67
+Last activity: 2026-08-03
+
+## Roadmap (v3.0 — Phases 82-84) — SHIPPED 2026-08-03
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 82 | number-engine-and-regression-gate | PACE-01, PACE-02, PACE-03, PACE-04, PACE-05, PACE-06, RETIRE-03, RETIRE-04, RETIRE-05 | Complete (verified, 3/3 plans) |
+| 83 | categories-list | CLIST-01, CLIST-02, CLIST-03, CLIST-04, CLIST-05, CLIST-06, CLIST-07 | Complete (verified, 6/6 plans) |
+| 84 | category-detail-and-cleanup | CDET-01, CDET-02, CDET-03, CDET-04, CDET-05, CDET-06, CDET-07, RETIRE-01, RETIRE-02 | Complete (verified, 4/4 plans) |
+
+**Closed:** audit 25/25 requirements · 3/3 phase verifications · 5/5 integration checks · 4/4 E2E
+flows · Nyquist 3/3 compliant. Archived to `milestones/v3.0-ROADMAP.md`,
+`milestones/v3.0-REQUIREMENTS.md`, `milestones/v3.0-MILESTONE-AUDIT.md`, phase dirs to
+`milestones/v3.0-phases/`. Accepted as tech debt at close: no v3.0 flow proven in a browser
+(pre-existing `proxy.ts` `ERR_TOO_MANY_REDIRECTS`, now two consecutive milestones) and Accantonamenti
+reachable but not drillable. `git tag v3.0` pending on main post-merge.
+
+**Coverage:** 25/25 v3.0 requirements mapped across Phases 82-84, none orphaned. Design **LOCKED
+in ADR 0020** (amends LENS-01 of ADR 0019) + `.planning/dashboard-categories-DECISIONS.md` (19
+decisions D1-D19): the Categories list reads a whole year + direction with no month selection; the
+detail page is a 12-month table (prototype variant A, chosen over a chart because a chart cannot
+render "€180 in meno" inside a 60px bar); the pace is the average of the year's Covered Months
+(months with zero transactions excluded from the denominator, months with zero category movement
+counted as €0); the current month is worth `max(spent so far, pace)`; the period total is always
+the sum of the displayed series; comparisons are stored `current − previous` and rendered as
+magnitude + word, never a sign; direction coverage widens to three (`direction.hidden = false`
+replaces `includedInTotals`); the cassa/competenza lens is confined to Overview (Categories is
+lens-invariant — amortization is a property of a transaction, not of a category's spending); and
+the Deviation/Baseline/Noise-Threshold/Preset vocabulary is retired (not re-anchored), replaced by
+the month-over-month delta, the homologous-window year comparison, and per-subcategory
+contribution to the difference.
+
+**Phase sequencing rationale:** mirrors the v2.8 netting gate / v2.9 LENS-03 pattern — the number
+engine and the `direction.hidden` predicate change touch the same shared dashboard aggregation
+infrastructure Overview and Tags read, so Phase 82 builds the engine, confines the lens, drops the
+dead `tag` param, and proves Overview/Tags totals byte-identical **before** any Categories UI
+ships. Phase 83 rewrites the list (the shallower surface, and the entry point into the detail
+page per CLIST-07). Phase 84 rewrites the detail page (the deeper 12-month-table surface) and,
+being the last remaining caller of the Deviation/Preset machinery, closes the milestone by
+retiring it with no dead references left — RETIRE-01/02 could not complete correctly any earlier,
+since both Categories pages read that machinery today (per ADR 0020: "referenced only by the two
+Categories pages"). This is a deliberate deviation from the orchestrator's suggested shape (which
+grouped all RETIRE-* into Phase 82): RETIRE-01/02 are moved to Phase 84 because their "no dead
+references left" / "no regression on any surface that used its helpers" acceptance criteria can
+only be verified once both consuming pages have migrated off the old machinery. RETIRE-03/04/05,
+which are either independent of the page rewrite or explicitly required to gate it, stay in
+Phase 82.
+
+**Left OPEN for the per-phase discuss/plan stage** (details, not architecture — do NOT resolve in
+the roadmap, per `.planning/dashboard-categories-DECISIONS.md` "Deliberately left open"):
+
+1. **Previous-year coverage threshold** for gating the total difference (proposed: ≥6 Covered
+   Months) → Phase 84.
+
+2. **Copy set and colour mapping per direction**, `allocation` included → Phase 83/84.
+3. **Name of the "annual estimate vs closed year" comparison** — not *delta* (reserved for KPI
+   period-over-period), not *deviation* (retired) → Phase 84.
+
+4. **Visual treatment of the three month states** (fact / current hybrid / estimate) and of
+   uncovered months → Phase 84.
+
+5. **URL shape of the detail window** (start month + length) → Phase 84.
+6. **Whether the tab nav preserves `?lens=` invisibly** across Categories navigation (recommended:
+   yes) → Phase 82/83.
+
+7. **Fate of the detail page's current `topTransactions` block** → Phase 84.
+8. **Whether the list also offers an acceleration ordering** (projection ÷ total) → Phase 83.
+
+**Out of scope** (no phases): month/window selection on the Categories list, the competenza lens on
+Categories, a `source` discriminator on the lens views, predictive forecasting, per-day pro-rating
+of the current month, re-anchoring the Deviation instead of retiring it, slow-drift detection
+(CDET-F01, accepted loss of D15), acceleration ordering as a shipped feature (CLIST-F01, deferred)
+— see REQUIREMENTS.md Future Requirements / Out of Scope.
+
+**Resolved during planning (2026-07-30), no longer open:** item 1 above (previous-year coverage
+threshold) landed in Phase 82 rather than 84 — the engine owns it, exported as
+`PREVIOUS_YEAR_TOTAL_DIFFERENCE_MIN_COVERED_MONTHS = 6` for Phases 83/84 to consume. Item 6
+(tab nav preserving `?lens=` invisibly) resolved **yes** as Phase 82 decision D-13.
 
 ## Roadmap (v2.9 — Phases 77-81) — SHIPPED 2026-07-29
 
@@ -169,12 +247,46 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 
 ### Roadmap Evolution
 
+- v3.0 roadmap created (2026-07-30): 3 phases (82-84) derived from 25 v3.0 requirements — number
+  engine + regression gate (82), categories list (83), category detail + retirement cleanup (84).
+  Deviated from the suggested shape by moving RETIRE-01/02 (Deviation/Preset code removal) from
+  Phase 82 to Phase 84 — both are used only by the two Categories pages per ADR 0020, so removal
+  cannot be proven dead-reference-free until both pages are rewritten off them. RETIRE-03/04/05
+  stayed in Phase 82 (independent of the page rewrite, or an explicit pre-UI gate).
+
 - Phase 81 added (2026-07-29): Inline net display for paired transactions — v2.9 UAT closure. Net
   + struck-through gross on all paired anchors (amortization-sale + v2.8 reimbursements),
   "riduzione di …" badge on the counterpart row. Presentational only, netting unchanged.
   Decisions locked in memory `project_paired_tx_inline_net_display`.
 
 ### Decisions
+
+**v3.0 milestone contract (locked at roadmap creation, 2026-07-30):**
+
+- **Categories is lens-invariant** — always cassa; the cassa/competenza switch is confined to
+  Overview (ADR 0020, amends LENS-01 of ADR 0019).
+
+- **Pace = average of Covered Months of the selected year**, never the window — a window can
+  legitimately contain zero Covered Months.
+
+- **Coverage is two-level**: a month with zero transactions is excluded from every denominator; a
+  Covered Month with zero category movement counts as €0.
+
+- **Current month = `max(spent so far, pace)`** — never below an observed fact, never a per-day
+  pro-rate.
+
+- **Period total = sum of the displayed series** — no independent projection formula.
+- **Signs live in the data (`current − previous`), words live in the UI** — never a sign glyph;
+  colour judgement resolved per direction, centrally.
+
+- **Direction coverage widens to three** — `direction.hidden = false` replaces
+  `direction.includedInTotals` as the Categories predicate, surfacing Accantonamenti.
+
+- **Detail page is a 12-month table (prototype variant A)** — locked over a chart, which cannot
+  render "€180 in meno" inside a bar.
+
+- **Deviation/Baseline/Noise Threshold/Preset are retired, not re-anchored** — replaced by
+  month-over-month delta + homologous-window year comparison + per-subcategory contribution.
 
 **v2.9 milestone contract (locked at roadmap creation, 2026-07-27):**
 
@@ -426,6 +538,29 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - [Phase ?]: 80-07: Marked LENS-01/LENS-02 complete — D-03's all-four-routes contract satisfied by 80-04+80-05+80-06 together; DAL/URL-wiring proven by real-Postgres+unit tests, live-browser proof blocked by unrelated environmental bug
 - [Phase ?]: 260730-e6z: transactions footer totals bucketed per currency (falsy/empty -> EUR), split by sign of pairedNetAmount ?? amount via Decimal.js, rendered only once hasMore is false and not loading
 - [Phase ?]: 260730-e6z: formatSignedAmount forces useGrouping: true explicitly — this Node/ICU build drops the thousands separator when signDisplay is non-default and useGrouping is left at 'auto'
+- [Phase ?]: 82-01: MonthlyValue amounts are magnitudes (abs), not signed transaction amounts — matches getCategoryRanking's abs(sum(...)) convention
+- [Phase ?]: 82-01: userId-scoping test reuses first taxonomy's essentialNatureId via seedSecondEssentialCategory rather than calling seedMinimalTaxonomy twice (direction/nature are global unique(code) lookup tables)
+- [Phase ?]: Categories pinned to cash by construction — pages stop parsing ?lens= entirely instead of parsing and pinning the result (D-12)
+- [Phase ?]: buildDashboardTabHref drops the dead tag param, keeps lens propagation unchanged (D-13/D-14)
+- [Phase ?]: 82-03: buildYearSeries's total is structurally the reduce-sum of its own months array — never re-derived independently — proven with a rounding-exposing fixture where the naive total ('100.00') diverges from the structurally-correct one ('99.99')
+- [Phase ?]: 82-03: isPartialMonth compares only (year, month) equality against today, no day-of-month arithmetic at all — D-03's explicit no-presumption rule
+- [Phase ?]: getCategoryYearRanking is additive alongside getCategoryRanking (never a reshape) to protect v2.8/v2.9 regression baselines
+- [Phase ?]: D-09 predicate flip (direction.hidden=false) surfaces the allocation direction for the first time in the new Categories year-view code path
+- [Phase ?]: 83-02: DashboardCategoryFilters.type/.sort widened additively to carry CLIST-04 allocation direction + CLIST-03 projection sort at the type level
+- [Phase ?]: resolveCategoryDirectionCopy has no default/fallback switch case — a future 4th direction cannot ship with partial copy
+- [Phase ?]: Phase 83 Plan 04: DirectionFilter/SortToggle/NoYearsEmptyState extracted into components/dashboard/category-list-controls.tsx — Next.js App Router route-typing rejects any named export from page.tsx beyond its allowed route exports
+- [Phase ?]: Phase 83 Plan 04: Categories list mobile layout simplified — sparkline/projection columns hidden below sm: breakpoint via Tailwind rather than duplicated into a separate mobile-only block (Claude's Discretion, 83-CONTEXT.md)
+- [Phase ?]: 83-05: getCategoryYearRanking branches amountSql on directionCode (signed sum for allocation, abs(sum) unchanged for in/out) rather than removing abs() globally
+- [Phase ?]: 83-05: resolveEstimatedReference falls back to observed covered/current magnitude, then a fixed ESTIMATED_HEIGHT_FALLBACK=1 constant, only when estimatedHeightHint is null
+- [Phase ?]: 83-06: guarded allocation-direction Categories row against broken detail link (CR-01 NEW) by rendering a non-interactive span with no href computed, per locked user decision
+- [Phase ?]: getCategoryDetailMeta replicates getCategoryDetail's metadata subquery verbatim (same allocation-category gap) — widening it is out of Plan 84-01's scope
+- [Phase ?]: Window's first column (index 0) never renders a delta line, not even 'nessun confronto' — it has no in-window predecessor by definition
+- [Phase ?]: 84-02: chart delta null-guards both sides (current uncovered OR previous uncovered), not just the whole previousYear row unavailable — corrects the plan's own '?? 0.00' pseudocode that would fabricate a comparison against an uncovered month
+- [Phase ?]: 84-02: CategorySubcategoryBreakdown gained an explicit year prop beyond the plan's declared props — Totale {year}/nuova nel {year} copy needs the window's year, not system current year
+- [Phase ?]: Plan 84-03: dropped unused DateRange import from lib/dal/dashboard.ts once DeviationDateRanges (its only consumer) was deleted
+- [Phase ?]: Plan 84-03: getCategoryDetail's new type field destructured but unused (_type), for signature symmetry with getCategoriesBreakdown/getCategoryRanking per D-15
+- [Phase ?]: buildDashboardCategoriesHref/buildDashboardCategoryDetailHref's omitted-year fallback returns the bare route (byte-identical to the old empty-filters case) instead of an implicit-undefined return path
+- [Phase ?]: MonthOverMonthChange's deleted Deviation-contrast sentence gets no replacement clause — the two measures operate at different scopes and a new cross-reference would reintroduce conflation risk
 
 ### Deferred (per ADR 0016 — not built now)
 
@@ -435,29 +570,32 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 
 ### Codebase facts relevant to the milestone
 
-- **Amortization plan + instalment schema (Phase 77)** — no existing schema entity; requires a new
-  plan table (transaction FK, months, start date, status open/closed) plus N materialised
-  instalment rows. Exact columns/indexes/constraint syntax and migration ordering left to
-  plan-phase (`gsd-pattern-mapper` against the live schema), per ADR 0019 Consequences.
+- **Categories list (Phase 83) / detail (Phase 84)** — currently read `getCategoryRanking` (filters
+  `direction.includedInTotals`), `getCategoryDeviations`/`getCategoryDetail` and the Preset helpers
+  (`parseDashboardFilters`, `dashboardPresetToDateRange`, `dashboard-filters.tsx`). Both are being
+  rewired off these in Phases 83/84; the underlying functions retire in Phase 84 once no caller
+  remains (ADR 0020: "referenced only by the two Categories pages").
 
-- **The `ledger_entry` seam (Phase 77)** — a Postgres view per lens (`ledger_entry_cash`,
-  `ledger_entry_accrual`), not a Drizzle CTE aliased as `transaction` (rejected — "clever, and
-  clever is the problem"). Ten aggregation functions across `lib/dal/dashboard.ts`,
-  `lib/dal/overview.ts`, `lib/dal/tags.ts` currently apply `isNotSecondary()`/`effectiveAmount()`
-  from `lib/dal/transaction-pairs-sql.ts` directly; after the seam lands they read `ledger.amount`
-  instead and stop calling those fragments at all (16 call sites collapse into one row source).
+- **Shared month-coverage plumbing (Phase 82)** — `getMonthsWithData`/`getYearsWithData` already
+  exist and are lens-aware (v2.9 Phase 80); the new "Mese Coperto" (D11) concept is a per-user,
+  any-category month coverage predicate that likely reuses/extends this same plumbing — the
+  reason RETIRE-05's Overview/Tags regression gate exists.
+
+- **Amortization plan + instalment schema (Phase 77, v2.9)** — plan table (transaction FK, months,
+  start date, status open/closed) + N materialised instalment rows, per ADR 0019.
+
+- **The `ledger_entry` seam (Phase 77, v2.9)** — a Postgres view per lens (`ledger_entry_cash`,
+  `ledger_entry_accrual`). Categories' number engine (Phase 82) reads only `ledger_entry_cash`
+  (D6/D-05 — Categories is lens-invariant); no new view or `source` discriminator column needed
+  (Out of Scope, per ADR 0020).
 
 - **Lens-adjacent navigation** — `getYearsWithData` (`overview.ts`) and `getMonthsWithData`
-  (`months-with-data.ts`) read `transaction` only; under the accrual lens they must also see
-  instalments (LENS-05), or the year/month selector will hide a year the dashboard could render.
-
-- **Duplicated predicates to extract (Phase 77 incidental cleanup)** — `dateScopedTransactions()`
-  and `expenseStatusIncludedInDashboardTotals()` are defined privately and identically in both
-  `dashboard.ts` and `overview.ts`.
+  (`months-with-data.ts`) read `transaction` only under cassa; under the accrual lens they also see
+  instalments (LENS-05, v2.9) — unaffected by v3.0, which is cash-only on Categories.
 
 - `lib/services/transaction-detach.ts` — `detachTransactionToDedicatedExpense({ userId, transactionId, title, subCategoryId })` (shipped v2.4/ADR 0016) is the reused detach mechanism for AMORT-02.
 - The v2.8 reimbursement mechanism (`reimbursement`/`reimbursement_refund`, `effectiveAmount()`) is reused as-is for realization (AMORT-05/06) — no new netting mechanism per ADR 0019.
-- `.scratch/amortization/assets/01-lens-seam.md` is the codebase survey backing the seam decision — read before planning Phase 77.
+- `.scratch/dashboard-categories/` — prototype assets backing D19 (12-month table variant A chosen over a chart); read before planning Phase 84.
 
 - **Expense Group (Phases 65-66)** — no existing schema entity; requires a new grouping table
   (group + membership) via `drizzle-kit generate` + `scripts/migrate.ts`. No migration touches
@@ -473,6 +611,10 @@ month→filtered-transactions navigation. 16/16 requirements, audit passed 16/16
 - Dashboard aggregation sites (8, per v2.0 `isNotSecondary()`/`effectiveAmount()` netting) are the surfaces GRP-09's invariant test and TAG-04's global filter must both leave structurally unchanged / correctly narrow.
 
 ### Blockers/Concerns
+
+No discovery to redo for v3.0 before planning Phase 82 — design locked in ADR 0020 +
+`.planning/dashboard-categories-DECISIONS.md`. See "Deliberately left open" list above for
+per-phase decisions still to make at discuss/plan time.
 
 Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidian design note) are locked — no discovery to redo before planning Phase 65.
 
@@ -538,6 +680,7 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260730-n2z | Amort UX: detail→Visualizza ammortamento (`?transactionId=`); Tutti mostra aperti+chiusi; copy Chiudi con vendita/rimborso | 2026-07-30 | 71351519 |
 | 260730-o82 | Transactions: direzione multi-select; default implicito in+out+allocation+unclassified (no transfer, no chips); cascade senza transfer finché non attivato | 2026-07-30 | bf578c48 |
 | 260731-hhv | UX contratto feedback Sparter: PRONTO + bug 3.7 (contrast/onboarding, welcome/dashboard, taxonomy split + pattern copy + Spese dilazionate); deferred 2.4/3.8/3.9 | 2026-07-31 | a92ef98a |
+| 260803-e9w | Chiusura WR-01/WR-02 di 83-REVIEW.md: nome accessibile per la riga Accantonamenti (testo `sr-only` nello `<span>` inerte — `aria-label` scartato perché il ruolo implicito `generic` non ammette naming da autore) via nuovo `rowAccessibleSuffix` nella copy service centralizzata (D-11); ripristinato il commento di razionale D-13/CLIST-07 sopra l'href del `<Link>`. Nessun cambiamento visivo | 2026-08-03 | 64403c6a |
 
 ## Deferred Items
 
@@ -574,11 +717,17 @@ Items acknowledged and postponed:
 
 **Resume file:** None
 
-**Stopped at:** Completed quick task 260731-hhv (UX contratto feedback — 3 waves on branch `gsd/quick-260730-o82-tx-direction-multi`)
+**Stopped at:** Milestone v3.0 archived and shipped — PR #67 open against `main` (merge of `main` into the branch resolved: only `.planning/STATE.md` conflicted; `transaction-table.tsx` auto-merged)
 
-Last session: 2026-07-31
+Last session: 2026-08-03T15:53:07.336Z
 
-**Next:** Manual UAT on contratto PRONTO items; deferred 2.4 / 3.8 / 3.9 still open. Milestone archive: `/gsd-complete-milestone v2.9` when ready.
+**Next:** merge PR #67, then tag — `v3.0` on the merge commit and `v2.9` on a `main` commit around `fe8273f9` (v2.9's content reached main via PRs #64/#65, so it has no merge point of its own).
+
+Then `/gsd-new-milestone` for the cleanup milestone. Agreed shape: unblock `proxy.ts` / e2e **first and alone** (it converts unarticulated v3.0 complaints into a list, and fixing blind is what produced v3.0's defects), then test-suite integrity, `knip`, the `lib/dal/dashboard.ts` decomposition behind the RETIRE-05 byte-identical gate, and the remaining test-quality items.
+
+**Still open from the quick-task queue:** contratto items deferred 2.4 / 3.8 / 3.9 (from `260731-hhv`) — manual UAT never performed.
+
+**Two open broken windows** (both from v2.8 Phase 73, `transaction_pair` backfill): #1 is a deliberate D-03 exclusion; **#2 is a real deploy risk** — the backfill migration was never proven numerically against real historical rows (the local dev DB had 0 at execution time), and that migration is in the 0028–0033 batch the pending operator deploy will run.
 
 ## Operator Next Steps
 
@@ -677,3 +826,16 @@ Last session: 2026-07-31
 | Phase 80 P05 | ~10min | 2 tasks | 2 files |
 | Phase 80 P07 | 35min | 2 tasks | 2 files |
 | Phase 260730-e6z P01 | 25min | 1 tasks | 6 files |
+| Phase 82 P01 | 35min | 2 tasks | 4 files |
+| Phase 82 P02 | 25min | 2 tasks | 5 files |
+| Phase 82 P03 | 25min | 2 tasks | 2 files |
+| Phase 83 P01 | 48min | 2 tasks | 2 files |
+| Phase 83 P02 | 7min | 2 tasks | 5 files |
+| Phase 83 P03 | 8min | 2 tasks | 7 files |
+| Phase 83 P04 | 32min | 3 tasks | 7 files |
+| Phase 83 P05 | 3min | 3 tasks | 7 files |
+| Phase 83 P06 | 12min | 1 tasks | 2 files |
+| Phase 84 P1 | 40min | 2 tasks | 9 files |
+| Phase 84 P02 | 30min | 3 tasks | 11 files |
+| Phase 84 P03 | 25min | 3 tasks | 5 files |
+| Phase 84 P4 | 15min | 3 tasks | 21 files |

@@ -135,7 +135,6 @@ async function OverviewDataSection({
         initialMoversOut={initialMoversOut}
         initialMoversAllocation={initialMoversAllocation}
         cashOverlayData={cashOverlayData}
-        lens={lens}
       />
     </div>
   )

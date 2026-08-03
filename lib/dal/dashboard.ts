@@ -24,12 +24,9 @@ import {
   transaction as transactionTable,
   userSubcategoryOverride,
 } from '@/lib/db/schema'
-import type { DashboardFilters, DashboardPreset } from '@/lib/validations/dashboard'
-import type { DateRange } from '@/lib/utils/date'
-import { dashboardPresetToDateRange, monthLabel, monthsBetween } from '@/lib/utils/date'
+import { monthLabel, monthsBetween } from '@/lib/utils/date'
 import type { FlowNature } from '@/lib/utils/nature-labels'
 import {
-  buildDeviationMap,
   computeBreakdownPercentages,
   computeDeltaPercent,
   computeSavingsRate,
@@ -41,6 +38,16 @@ import {
   expenseStatusIncludedInDashboardTotals,
   type LedgerRowSource,
 } from '@/lib/dal/dashboard-filters'
+import { getCoveredMonthsInYear, type CoveredMonth } from '@/lib/dal/covered-months'
+import {
+  buildCoveredMonthSeries,
+  buildYearSeries,
+  classifyMonthStates,
+  computeCurrentMonthHybrid,
+  computePaceAndProjection,
+  isPartialMonth,
+  MIN_COVERED_MONTHS_FOR_PACE,
+} from '@/lib/services/pace-and-projection'
 
 export { DASHBOARD_TOTAL_EXPENSE_STATUSES }
 
@@ -111,6 +118,30 @@ export type CategoryRankingItem = {
   sparkline: CategorySparklinePoint[]
 }
 
+// Phase 83 (CLIST-01, CLIST-02, CLIST-04, D-09) — NEW, additive types alongside
+// CategorySparklinePoint/CategoryRankingItem above. getCategoryYearRanking is a year+direction
+// scoped composition of the Phase 82 number engine; it never reshapes getCategoryRanking or its
+// types, which stay untouched for the v2.8/v2.9 regression suites (see the plan's prohibitions).
+export type CategoryYearSparklinePoint = {
+  month: string
+  label: string
+  amount: string
+  state: 'covered' | 'current' | 'estimated' | 'uncovered'
+}
+
+export type CategoryYearRankingItem = {
+  id: number
+  name: string
+  slug: string
+  type: 'in' | 'out' | 'allocation'
+  count: number
+  amount: string
+  percentage: number
+  sparkline: CategoryYearSparklinePoint[]
+  projection: string | null
+  pace: string | null
+}
+
 export type CategoryDetailTrendPoint = {
   month: string
   label: string
@@ -171,22 +202,6 @@ export type MonthlyNatureTrendPoint = {
   totalIgn: number
 }
 
-export type DeviationData = {
-  deviation: number | null
-  isNew: boolean
-  belowNoiseThreshold: boolean
-}
-
-export type DeviationDateRanges = {
-  reference: DateRange
-  baseline: DateRange
-}
-
-export type CategoryDeviationsInput = {
-  type: 'in' | 'out' | 'all'
-  categoryId?: number
-}
-
 type BreakdownCategoryDraft = Omit<BreakdownCategory, 'percentage' | 'subCategories'> & {
   subCategories: Array<Omit<BreakdownSubCategory, 'percentage'>>
 }
@@ -223,6 +238,18 @@ type CategoryRankingAggregateRow = {
   categoryName: string | null
   categorySlug: string | null
   categoryType: 'in' | 'out' | 'allocation' | 'system' | 'transfer' | null
+  month: string | null
+  count: number | string | null
+  amount: string | null
+}
+
+// Phase 83 — no categoryType column: getCategoryYearRanking is always scoped to one explicit
+// directionCode argument, so the output item's `type` is set directly from that argument, never
+// read off a row.
+type CategoryYearRankingAggregateRow = {
+  categoryId: number | null
+  categoryName: string | null
+  categorySlug: string | null
   month: string | null
   count: number | string | null
   amount: string | null
@@ -277,88 +304,6 @@ type CategoryDetailTopTransactionRow = {
 }
 
 const ZERO_AMOUNT = '0.00'
-
-function previousDashboardPresetDateRange(preset: DashboardPreset, now = new Date()) {
-  switch (preset) {
-    case 'last-3-months':
-      return {
-        from: new Date(now.getFullYear(), now.getMonth() - 5, 1),
-        to: new Date(now.getFullYear(), now.getMonth() - 2, 0, 23, 59, 59, 999),
-      }
-    case 'last-6-months':
-      return {
-        from: new Date(now.getFullYear(), now.getMonth() - 11, 1),
-        to: new Date(now.getFullYear(), now.getMonth() - 5, 0, 23, 59, 59, 999),
-      }
-    case 'this-year':
-      return {
-        from: new Date(now.getFullYear() - 1, 0, 1),
-        to: new Date(now.getFullYear() - 1, now.getMonth() + 1, 0, 23, 59, 59, 999),
-      }
-    case 'last-year':
-      return {
-        from: new Date(now.getFullYear() - 2, 0, 1),
-        to: new Date(now.getFullYear() - 2, 11, 31, 23, 59, 59, 999),
-      }
-    case 'last-month':
-    default: {
-      const comparisonMonth = new Date(now.getFullYear(), now.getMonth() - 2, 1)
-      return {
-        from: comparisonMonth,
-        to: new Date(comparisonMonth.getFullYear(), comparisonMonth.getMonth() + 1, 0, 23, 59, 59, 999),
-      }
-    }
-  }
-}
-
-export function getOverviewComparisonRanges(preset: DashboardPreset, now = new Date()) {
-  return {
-    current: dashboardPresetToDateRange(preset, now),
-    previous: previousDashboardPresetDateRange(preset, now),
-  }
-}
-
-const DEVIATION_NOISE_THRESHOLD = '15.00'
-
-export function getDeviationDateRanges(now: Date = new Date()): DeviationDateRanges {
-  const year = now.getFullYear()
-  const month = now.getMonth()
-  return {
-    reference: {
-      from: new Date(year, month - 1, 1),
-      to: new Date(year, month, 0, 23, 59, 59, 999),
-    },
-    baseline: {
-      from: new Date(year, month - 4, 1),
-      to: new Date(year, month - 1, 0, 23, 59, 59, 999),
-    },
-  }
-}
-
-export function buildDeviationDataset(input: {
-  referenceRows: Array<{ id: number; amount: string }>
-  baselineRows: Array<{ id: number; month: string; amount: string }>
-  noiseThreshold?: string
-}): Map<number, DeviationData> {
-  const threshold = toDecimal(input.noiseThreshold ?? DEVIATION_NOISE_THRESHOLD)
-
-  const numericMap = buildDeviationMap({
-    referenceRows: input.referenceRows,
-    baselineRows: input.baselineRows,
-    noiseThreshold: input.noiseThreshold ?? DEVIATION_NOISE_THRESHOLD,
-  })
-
-  const result = new Map<number, DeviationData>()
-  for (const ref of input.referenceRows) {
-    const refAmount = toDecimal(ref.amount).abs()
-    const belowNoiseThreshold = refAmount.lt(threshold)
-    const numericValue = numericMap.get(ref.id)
-    const isNew = numericValue === 'new'
-    const deviation = typeof numericValue === 'number' ? numericValue : null
-    result.set(ref.id, { deviation, isNew, belowNoiseThreshold })
-  }
-  return result
-}
 
 function normalizeAmount(value: string | number | null | undefined): string {
   return toDecimal(value ?? 0).toFixed(2)
@@ -730,6 +675,153 @@ export function buildCategoryRankingData(input: {
     })
 }
 
+/**
+ * Phase 83 (CLIST-01, CLIST-02, CLIST-04, CLIST-06, D-07, D-09, D-15) — NEW, additive alongside
+ * buildCategoryRankingData above (never a reshape of it). Zero-fills a 12-entry-per-category
+ * sparkline for `input.year`, mirroring buildCategoryRankingData's emptySparkline()/accumulation
+ * pattern, except each point additionally carries an explicit `state` — 'covered'/'current'/
+ * 'estimated'/'uncovered' — computed ONCE (shared across every category, not recomputed per
+ * category) from `input.coveredMonths` and today's calendar month:
+ *   - the calendar-current month is always 'current' (never 'covered'), regardless of coverage;
+ *   - a month strictly after the current month within the selected year is 'estimated' — its
+ *     `amount` stays '0.00' forever, since no transaction can exist yet for a month that has not
+ *     happened (a fabricated pace-derived value would violate D-07 by leaking into the summed
+ *     total);
+ *   - every other month is 'covered' when in the account-wide Covered Month set, 'uncovered'
+ *     otherwise.
+ *
+ * For the current month only, when the year has >= MIN_COVERED_MONTHS_FOR_PACE pace-eligible
+ * (non-Partial) Covered Months, that ONE point's displayed amount is replaced by
+ * computeCurrentMonthHybrid(rawAmount, categoryPace) — never below the already-observed raw
+ * amount (D-06 "current month = max(spent so far, pace)"). `amount` is then set to
+ * `buildYearSeries(...).total` computed AFTER that substitution, so D-07 holds against the
+ * DISPLAYED series, never the pre-hybrid one. `projection`/`pace` are both `null` whenever the
+ * category's own pace-eligible series is insufficient (D-15) — computePaceAndProjection's
+ * 'insufficient' branch is consumed directly, never coerced to a number or a zero.
+ */
+export function buildCategoryYearRankingData(input: {
+  year: number
+  directionCode: 'in' | 'out' | 'allocation'
+  coveredMonths: CoveredMonth[]
+  rows: CategoryYearRankingAggregateRow[]
+}): CategoryYearRankingItem[] {
+  const from = new Date(input.year, 0, 1)
+  const to = new Date(input.year, 11, 31, 23, 59, 59, 999)
+  const monthKeys = monthsBetween(from, to)
+  const monthKeySet = new Set(monthKeys)
+
+  const today = new Date()
+  // Shared, once-computed classification map — identical across every category row for this year
+  // (never recomputed per category). WR-03 fix (84-REVIEW.md): extracted to
+  // classifyMonthStates, shared verbatim with getCategoryDetailYearWindow.
+  const monthStateByKey = classifyMonthStates(monthKeys, input.coveredMonths, today)
+
+  // Account-wide pace eligibility, computed once — a Partial (current) Covered Month never
+  // counts toward MIN_COVERED_MONTHS_FOR_PACE.
+  const paceEligibleMonths = input.coveredMonths.filter((m) => !isPartialMonth(m.yearMonth, today))
+
+  const emptySparkline = () =>
+    new Map<string, CategoryYearSparklinePoint>(
+      monthKeys.map((month) => [
+        month,
+        {
+          month,
+          label: monthLabel(month),
+          amount: ZERO_AMOUNT,
+          state: monthStateByKey.get(month) ?? 'uncovered',
+        },
+      ])
+    )
+
+  const categoriesById = new Map<number, Omit<CategoryYearRankingItem, 'percentage'>>()
+
+  for (const row of input.rows) {
+    if (
+      row.categoryId === null ||
+      row.categoryName === null ||
+      row.categorySlug === null ||
+      row.month === null ||
+      !monthKeySet.has(row.month)
+    ) {
+      continue
+    }
+
+    const existing = categoriesById.get(row.categoryId)
+    const amount = normalizeAmount(row.amount)
+    const countValue = normalizeCount(row.count)
+
+    if (existing) {
+      existing.count += countValue
+      const bucket = existing.sparkline.find((point) => point.month === row.month)
+
+      if (bucket) {
+        bucket.amount = toDecimal(bucket.amount).plus(amount).toFixed(2)
+      }
+    } else {
+      const sparklineBuckets = emptySparkline()
+      const bucket = sparklineBuckets.get(row.month)
+
+      if (bucket) {
+        bucket.amount = amount
+      }
+
+      categoriesById.set(row.categoryId, {
+        id: row.categoryId,
+        name: row.categoryName,
+        slug: row.categorySlug,
+        type: input.directionCode,
+        count: countValue,
+        amount: ZERO_AMOUNT,
+        sparkline: Array.from(sparklineBuckets.values()),
+        projection: null,
+        pace: null,
+      })
+    }
+  }
+
+  for (const item of categoriesById.values()) {
+    // Pace/projection composed from THIS category's raw (pre-hybrid) series, restricted to the
+    // account-wide Covered Months and excluding the Partial current month (D-15).
+    const categoryPaceSeries = buildCoveredMonthSeries(
+      input.coveredMonths,
+      item.sparkline.map((point) => ({ yearMonth: point.month, amount: point.amount }))
+    ).filter((month) => !isPartialMonth(month.yearMonth, today))
+    const paceResult = computePaceAndProjection(categoryPaceSeries)
+
+    if (paceEligibleMonths.length >= MIN_COVERED_MONTHS_FOR_PACE && paceResult.status === 'complete') {
+      const currentPoint = item.sparkline.find((point) => point.state === 'current')
+      if (currentPoint) {
+        currentPoint.amount = computeCurrentMonthHybrid(currentPoint.amount, paceResult.pace)
+      }
+    }
+
+    // D-07: the total is the reduce-sum of the DISPLAYED series (post current-month-hybrid
+    // substitution), never re-derived independently.
+    item.amount = buildYearSeries(
+      item.sparkline.map((point) => ({ yearMonth: point.month, amount: point.amount }))
+    ).total
+
+    item.projection = paceResult.status === 'complete' ? paceResult.projection : null
+    item.pace = paceResult.status === 'complete' ? paceResult.pace : null
+  }
+
+  return computeBreakdownPercentages(Array.from(categoriesById.values()))
+    .sort((left, right) => {
+      const amountComparison = toDecimal(right.amount).comparedTo(toDecimal(left.amount))
+
+      if (amountComparison !== 0) {
+        return amountComparison
+      }
+
+      const nameComparison = left.name.localeCompare(right.name)
+
+      if (nameComparison !== 0) {
+        return nameComparison
+      }
+
+      return left.id - right.id
+    })
+}
 
 export function buildMonthlyTrendData(input: {
   from: Date
@@ -952,35 +1044,14 @@ export function buildCategoryDetailData(input: {
   }
 }
 
-export const getOverview = cache(async (preset: DashboardPreset = 'last-month'): Promise<OverviewData> => {
-  const { userId } = await verifySession()
-  const { current, previous } = getOverviewComparisonRanges(preset)
-
-  const [currentTotals, previousTotals, currentUncategorizedCount, previousUncategorizedCount] =
-    await Promise.all([
-      getOverviewAmountTotals(userId, current.from, current.to),
-      getOverviewAmountTotals(userId, previous.from, previous.to),
-      getUncategorizedCount(userId, current.from, current.to),
-      getUncategorizedCount(userId, previous.from, previous.to),
-    ])
-
-  return buildOverviewData({
-    current: currentTotals,
-    previous: previousTotals,
-    currentUncategorizedCount,
-    previousUncategorizedCount,
-  })
-})
-
 export const getCategoriesBreakdown = cache(
   async (
-    filters: DashboardFilters,
+    { from, to, type }: { from: Date; to: Date; type: 'in' | 'out' | 'all' },
     ledgerRowSource: LedgerRowSource = ledgerEntryCash,
   ): Promise<BreakdownCategory[]> => {
     const { userId } = await verifySession()
-    const { from, to } = dashboardPresetToDateRange(filters.preset)
     // Direction filter: use direction.code when a specific type is selected
-    const typeFilter = filters.type === 'all' ? undefined : eq(direction.code, filters.type)
+    const typeFilter = type === 'all' ? undefined : eq(direction.code, type)
 
     let rows: BreakdownAggregateRow[] = []
 
@@ -1039,14 +1110,13 @@ export const getCategoriesBreakdown = cache(
 
 export const getCategoryRanking = cache(
   async (
-    filters: DashboardFilters,
+    { from, to, type }: { from: Date; to: Date; type: 'in' | 'out' | 'all' },
     ledgerRowSource: LedgerRowSource = ledgerEntryCash,
   ): Promise<CategoryRankingItem[]> => {
     const { userId } = await verifySession()
-    const { from, to } = dashboardPresetToDateRange(filters.preset)
     const monthSql = sql<string>`to_char(${ledgerRowSource.occurredAt}, 'YYYY-MM')`
     // Direction filter: use direction.code when a specific type is selected
-    const typeFilter = filters.type === 'all' ? undefined : eq(direction.code, filters.type)
+    const typeFilter = type === 'all' ? undefined : eq(direction.code, type)
 
     let rows: CategoryRankingAggregateRow[] = []
 
@@ -1101,127 +1171,103 @@ export const getCategoryRanking = cache(
   }
 )
 
-export const getCategoryDeviations = cache(
+/**
+ * Phase 83 (CLIST-01, CLIST-04, D-09, D-10, T-83-01) — NEW, additive alongside getCategoryRanking
+ * above (never a reshape of it): getCategoryRanking's `eq(direction.includedInTotals, true)`
+ * predicate and its `typeFilter`/'all' branching stay completely untouched, because
+ * tests/reimbursement-regression.test.ts and tests/helpers/reimbursement-test-db.ts's
+ * captureAggregationSnapshot assert on that exact predicate/behavior across the v2.8/v2.9
+ * regression suites.
+ *
+ * This function always takes an explicit single `directionCode` (never 'all') and uses the D-09
+ * predicate flip: `eq(direction.hidden, false)` replaces `eq(direction.includedInTotals, true)`,
+ * which for the first time surfaces the `allocation` direction (seeded
+ * `includedInTotals: false`/`hidden: false` in scripts/seed-data.ts).
+ *
+ * Scoped to the authenticated session's userId via verifySession(), parameterized through
+ * drizzle's query builder (T-83-01).
+ */
+export const getCategoryYearRanking = cache(
   async (
-    input: CategoryDeviationsInput,
+    year: number,
+    directionCode: 'in' | 'out' | 'allocation',
     ledgerRowSource: LedgerRowSource = ledgerEntryCash,
-  ): Promise<Map<number, DeviationData>> => {
+  ): Promise<CategoryYearRankingItem[]> => {
     const { userId } = await verifySession()
-    const { reference, baseline } = getDeviationDateRanges()
-    // Direction filter: use direction.code when a specific type is selected
-    const typeFilter = input.type === 'all' ? undefined : eq(direction.code, input.type)
-    const groupColumn = input.categoryId !== undefined ? subCategory.id : category.id
-    const categoryScope =
-      input.categoryId !== undefined ? eq(category.id, input.categoryId) : undefined
+    const from = new Date(year, 0, 1)
+    const to = new Date(year, 11, 31, 23, 59, 59, 999)
+    const monthSql = sql<string>`to_char(${ledgerRowSource.occurredAt}, 'YYYY-MM')`
+    // CR-01 gap-closure (83-05): the allocation direction admits a net-divestment month
+    // (negative monthly sum) — abs() would destroy that sign before it ever reaches the
+    // sparkline's negative-domain marker (D-09, UI-SPEC E2). 'in'/'out' keep the pre-existing
+    // abs(sum(...)) untouched — those directions' sums are already uniformly signed.
+    const amountSql =
+      directionCode === 'allocation'
+        ? sql<string>`coalesce(sum(${ledgerRowSource.amount}), 0)::text`
+        : sql<string>`coalesce(abs(sum(${ledgerRowSource.amount})), 0)::text`
 
-    let referenceRows: Array<{ id: number; amount: string }> = []
-    let baselineRows: Array<{ id: number; month: string; amount: string }> = []
+    let rows: CategoryYearRankingAggregateRow[] = []
 
     try {
-      const monthSql = sql<string>`to_char(${ledgerRowSource.occurredAt}, 'YYYY-MM')`
-
-      const [refResult, baseResult] = await Promise.all([
-        db
-          .select({
-            id: groupColumn,
-            amount: sql<string>`coalesce(abs(sum(${ledgerRowSource.amount})), 0)::text`,
-          })
-          .from(ledgerRowSource)
-          .innerJoin(expense, eq(ledgerRowSource.expenseId, expense.id))
-          .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
-          .innerJoin(category, eq(subCategory.categoryId, category.id))
-          .leftJoin(
-            userSubcategoryOverride,
-            and(
-              eq(userSubcategoryOverride.subCategoryId, subCategory.id),
-              eq(userSubcategoryOverride.userId, userId),
-            ),
+      rows = await db
+        .select({
+          categoryId: category.id,
+          categoryName: category.name,
+          categorySlug: category.slug,
+          month: monthSql,
+          count: countDistinct(expense.id),
+          amount: amountSql,
+        })
+        .from(ledgerRowSource)
+        .innerJoin(expense, eq(ledgerRowSource.expenseId, expense.id))
+        .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
+        .innerJoin(category, eq(subCategory.categoryId, category.id))
+        .leftJoin(
+          userSubcategoryOverride,
+          and(
+            eq(userSubcategoryOverride.subCategoryId, subCategory.id),
+            eq(userSubcategoryOverride.userId, userId),
+          ),
+        )
+        .innerJoin(
+          nature,
+          eq(
+            nature.id,
+            sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
           )
-          .innerJoin(
-            nature,
-            eq(
-              nature.id,
-              sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
-            )
+        )
+        .innerJoin(direction, eq(nature.directionId, direction.id))
+        .where(
+          and(
+            dateScopedTransactions(ledgerRowSource, userId, from, to),
+            expenseStatusIncludedInDashboardTotals(),
+            // D-09 predicate flip: hidden=false replaces includedInTotals=true, which for the
+            // first time admits the allocation direction (Accantonamenti, CLIST-04).
+            eq(direction.hidden, false),
+            eq(direction.code, directionCode)
           )
-          .innerJoin(direction, eq(nature.directionId, direction.id))
-          .where(
-            and(
-              // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
-              // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
-              dateScopedTransactions(ledgerRowSource, userId, reference.from, reference.to),
-              expenseStatusIncludedInDashboardTotals(),
-              eq(direction.includedInTotals, true),
-              typeFilter,
-              categoryScope
-            )
-          )
-          .groupBy(groupColumn),
-        db
-          .select({
-            id: groupColumn,
-            month: monthSql,
-            amount: sql<string>`coalesce(abs(sum(${ledgerRowSource.amount})), 0)::text`,
-          })
-          .from(ledgerRowSource)
-          .innerJoin(expense, eq(ledgerRowSource.expenseId, expense.id))
-          .innerJoin(subCategory, eq(expense.subCategoryId, subCategory.id))
-          .innerJoin(category, eq(subCategory.categoryId, category.id))
-          .leftJoin(
-            userSubcategoryOverride,
-            and(
-              eq(userSubcategoryOverride.subCategoryId, subCategory.id),
-              eq(userSubcategoryOverride.userId, userId),
-            ),
-          )
-          .innerJoin(
-            nature,
-            eq(
-              nature.id,
-              sql`COALESCE(${userSubcategoryOverride.natureId}, ${subCategory.natureId})`
-            )
-          )
-          .innerJoin(direction, eq(nature.directionId, direction.id))
-          .where(
-            and(
-              // ledger_entry_cash's own WHERE NOT EXISTS already excludes refund rows —
-              // the legacy refund-exclusion check is redundant here and intentionally dropped (Phase 77, D-11).
-              dateScopedTransactions(ledgerRowSource, userId, baseline.from, baseline.to),
-              expenseStatusIncludedInDashboardTotals(),
-              eq(direction.includedInTotals, true),
-              typeFilter,
-              categoryScope
-            )
-          )
-          .groupBy(groupColumn, monthSql),
-      ])
-
-      referenceRows = refResult.map((row) => ({
-        id: Number(row.id),
-        amount: String(row.amount),
-      }))
-      baselineRows = baseResult.map((row) => ({
-        id: Number(row.id),
-        month: String(row.month),
-        amount: String(row.amount),
-      }))
+        )
+        .groupBy(category.id, monthSql)
+        .orderBy(category.id, monthSql)
     } catch {
-      referenceRows = []
-      baselineRows = []
+      rows = []
     }
 
-    return buildDeviationDataset({ referenceRows, baselineRows })
+    const coveredMonths = await getCoveredMonthsInYear(year)
+    return buildCategoryYearRankingData({ year, directionCode, coveredMonths, rows })
   }
 )
 
 export const getCategoryDetail = cache(
   async (
     categoryId: number,
-    filters: DashboardFilters,
+    // `type` is accepted for signature symmetry with getCategoriesBreakdown/getCategoryRanking
+    // but genuinely unused here — this function never read `filters.type` before this change
+    // either (D-15, Plan 84-03 Task 1).
+    { from, to, type: _type }: { from: Date; to: Date; type: 'in' | 'out' | 'all' },
     ledgerRowSource: LedgerRowSource = ledgerEntryCash,
   ): Promise<CategoryDetailData> => {
     const { userId } = await verifySession()
-    const { from, to } = dashboardPresetToDateRange(filters.preset)
     const emptyData = () => emptyCategoryDetailData(null, from, to)
 
     let categoryData: CategoryDetailCategory | null = null
@@ -1461,11 +1507,10 @@ export const getCategoryDetail = cache(
 )
 
 export const getMonthlyTrendByNature = cache(async (
-  preset: DashboardPreset,
+  { from, to }: { from: Date; to: Date },
   ledgerRowSource: LedgerRowSource = ledgerEntryCash,
 ): Promise<MonthlyNatureTrendPoint[]> => {
   const { userId } = await verifySession()
-  const { from, to } = dashboardPresetToDateRange(preset)
   const monthSql = sql<string>`to_char(${ledgerRowSource.occurredAt}, 'YYYY-MM')`
   // Direction-aware nature grouping: resolve effective nature via override.natureId or sub.natureId → nature.code
   const natureSql = sql<FlowNature | null>`(

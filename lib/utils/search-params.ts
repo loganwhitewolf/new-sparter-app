@@ -135,3 +135,31 @@ const LENS_ALLOWED = ['cassa', 'competenza'] as const
 export function parseLensParam(value: string | string[] | undefined): Lens {
   return parseStatus(value, LENS_ALLOWED) === 'competenza' ? 'competenza' : 'cassa'
 }
+
+/**
+ * A `?lens=` value forwarded through Categories' own hrefs (sort toggle, row click-through,
+ * detail back link) WITHOUT being consumed for aggregation (Phase 82 D-12+D-13, review fix
+ * WR-03). Categories always reads cassa; this type exists so a forwarded lens value can never be
+ * handed to a `Lens`-typed consumer such as `resolveLedgerRowSource` — the misuse D-12 forbids
+ * becomes a type error, not merely a code-review convention, because `LensPassthrough` is not
+ * assignable to `Lens` (and vice versa) without an explicit cast.
+ */
+export type LensPassthrough = string & { readonly __lensPassthrough: unique symbol }
+
+/**
+ * Extracts the raw `?lens=` value for forwarding purposes ONLY (D-13). Unlike parseLensParam,
+ * this does NOT validate against the Lens allowlist and NEVER defaults to `'cassa'` — it exists
+ * purely so Categories' own href builders can thread the tab nav's lens through a same-tab
+ * navigation without ever reading or resolving it. Absent/blank input returns undefined, never a
+ * default (mirrors firstTrimmed's own contract).
+ *
+ * @example
+ * extractLensPassthrough('competenza')  // 'competenza' as LensPassthrough
+ * extractLensPassthrough(undefined)     // undefined
+ * extractLensPassthrough('bogus')       // 'bogus' as LensPassthrough (never validated, never defaulted)
+ */
+export function extractLensPassthrough(
+  value: string | string[] | undefined,
+): LensPassthrough | undefined {
+  return firstTrimmed(value) as LensPassthrough | undefined
+}

@@ -10,12 +10,13 @@ import { eq } from 'drizzle-orm'
 import { afterAll, describe, expect, it, vi } from 'vitest'
 import { verifySession } from '@/lib/dal/auth'
 import { amortizationInstalment, ledgerEntryAccrual } from '@/lib/db/schema'
-import { dashboardPresetToDateRange, monthKey } from '@/lib/utils/date'
+import { monthKey } from '@/lib/utils/date'
 import { toDecimal } from '@/lib/utils/decimal'
 import { materializeInstalments } from '@/lib/services/amortization-math'
 import {
   captureAggregationSnapshot,
   connectReimbursementTestDb,
+  lastMonthRange,
   resetReimbursementFixtures,
   type ReimbursementTestDb,
 } from './helpers/reimbursement-test-db'
@@ -63,7 +64,7 @@ describeIfReachable('dashboard accrual lens — getOverviewAmountTotals seam (Ph
     const taxonomy = await seedMinimalTaxonomy(db, userId)
     const { tagId } = await seedTag(db, { userId, name: 'Lens probe' })
 
-    const dateRange = dashboardPresetToDateRange('last-month')
+    const dateRange = lastMonthRange()
     const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 14, 12, 0, 0)
 
     // A plain -1000.00 outflow, then activate a 3-month plan on it (fixture-inserted, mirroring
@@ -128,15 +129,13 @@ describeIfReachable(
       vi.mocked(verifySession).mockResolvedValue({ userId } as never)
       const taxonomy = await seedMinimalTaxonomy(db, userId)
 
-      const dateRange = dashboardPresetToDateRange('last-month')
+      const dateRange = lastMonthRange()
       const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 14, 12, 0, 0)
       const occurredMonthKey = monthKey(occurredAt)
       const title = 'Lens probe purchase (80-02)'
 
-      // -30.00 over 3 EQUAL monthly instalments (-10.00 each, no rounding remainder) — chosen
-      // so the accrual reference amount (10.00) falls BELOW DEVIATION_NOISE_THRESHOLD ('15.00')
-      // while the cash reference amount (30.00) stays above it, giving getCategoryDeviations an
-      // observable cash/accrual difference despite DeviationData carrying no raw amount field.
+      // -30.00 over 3 EQUAL monthly instalments (-10.00 each, no rounding remainder) — gives a
+      // clean cash-vs-accrual amount difference (30.00 vs 10.00) across every aggregation below.
       const { expenseId, transactionId } = await seedExpenseWithTransaction(db, {
         userId,
         subCategoryId: taxonomy.essentialSubCategoryId,
@@ -169,15 +168,14 @@ describeIfReachable(
       vi.resetModules()
       const dashboardModule = await import('@/lib/dal/dashboard')
 
-      const filters = { preset: 'last-month' as const, type: 'all' as const, sort: 'amount' as const }
+      const range = { from: dateRange.from, to: dateRange.to, type: 'all' as const }
 
       // (a) cassa (no 4th/2nd/3rd arg) — byte-identical to the full purchase amount.
-      const [breakdownCash, rankingCash, deviationsCash, detailCash, trendCash] = await Promise.all([
-        dashboardModule.getCategoriesBreakdown(filters),
-        dashboardModule.getCategoryRanking(filters),
-        dashboardModule.getCategoryDeviations({ type: 'all' }),
-        dashboardModule.getCategoryDetail(taxonomy.essentialCategoryId, filters),
-        dashboardModule.getMonthlyTrendByNature(filters.preset),
+      const [breakdownCash, rankingCash, detailCash, trendCash] = await Promise.all([
+        dashboardModule.getCategoriesBreakdown(range),
+        dashboardModule.getCategoryRanking(range),
+        dashboardModule.getCategoryDetail(taxonomy.essentialCategoryId, range),
+        dashboardModule.getMonthlyTrendByNature({ from: dateRange.from, to: dateRange.to }),
       ])
 
       const cashBreakdownAmount = breakdownCash.find((c) => c.id === taxonomy.essentialCategoryId)?.amount
@@ -185,9 +183,6 @@ describeIfReachable(
 
       const cashRankingAmount = rankingCash.find((c) => c.id === taxonomy.essentialCategoryId)?.amount
       expect(toDecimal(cashRankingAmount ?? '0').equals(toDecimal('30.00'))).toBe(true)
-
-      const cashDeviation = deviationsCash.get(taxonomy.essentialCategoryId)
-      expect(cashDeviation).toEqual({ deviation: null, isNew: true, belowNoiseThreshold: false })
 
       expect(toDecimal(detailCash.summary.total).equals(toDecimal('30.00'))).toBe(true)
       expect(detailCash.topTransactions[0]?.id).toBe(transactionId)
@@ -198,12 +193,11 @@ describeIfReachable(
       expect(toDecimal(cashTrendSegment ?? '0').abs().equals(toDecimal('30.00'))).toBe(true)
 
       // (b) competenza — every function now sums ONLY the in-range instalment(s): 10.00.
-      const [breakdownAccrual, rankingAccrual, deviationsAccrual, detailAccrual, trendAccrual] = await Promise.all([
-        dashboardModule.getCategoriesBreakdown(filters, ledgerEntryAccrual),
-        dashboardModule.getCategoryRanking(filters, ledgerEntryAccrual),
-        dashboardModule.getCategoryDeviations({ type: 'all' }, ledgerEntryAccrual),
-        dashboardModule.getCategoryDetail(taxonomy.essentialCategoryId, filters, ledgerEntryAccrual),
-        dashboardModule.getMonthlyTrendByNature(filters.preset, ledgerEntryAccrual),
+      const [breakdownAccrual, rankingAccrual, detailAccrual, trendAccrual] = await Promise.all([
+        dashboardModule.getCategoriesBreakdown(range, ledgerEntryAccrual),
+        dashboardModule.getCategoryRanking(range, ledgerEntryAccrual),
+        dashboardModule.getCategoryDetail(taxonomy.essentialCategoryId, range, ledgerEntryAccrual),
+        dashboardModule.getMonthlyTrendByNature({ from: dateRange.from, to: dateRange.to }, ledgerEntryAccrual),
       ])
 
       const accrualBreakdownAmount = breakdownAccrual.find((c) => c.id === taxonomy.essentialCategoryId)?.amount
@@ -211,12 +205,6 @@ describeIfReachable(
 
       const accrualRankingAmount = rankingAccrual.find((c) => c.id === taxonomy.essentialCategoryId)?.amount
       expect(toDecimal(accrualRankingAmount ?? '0').equals(toDecimal('10.00'))).toBe(true)
-
-      // D-07: no special-case logic — movers/deviations read whatever the row source supplies.
-      // The instalment's magnitude (10.00) falls below the noise threshold (15.00), unlike the
-      // full purchase (30.00) — an emergent consequence of the seam, not bespoke instalment code.
-      const accrualDeviation = deviationsAccrual.get(taxonomy.essentialCategoryId)
-      expect(accrualDeviation).toEqual({ deviation: null, isNew: false, belowNoiseThreshold: true })
 
       expect(toDecimal(detailAccrual.summary.total).equals(toDecimal('10.00'))).toBe(true)
       // The instalment row (no matching `transaction` row) surfaces via the LEFT JOIN, never the

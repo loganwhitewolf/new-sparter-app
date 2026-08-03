@@ -4,6 +4,106 @@ Living retrospective — one section per milestone, newest first.
 
 ---
 
+## Milestone: v3.0 — Categories Year View
+
+**Shipped:** 2026-08-03 (audit 25/25 requirements · 3/3 phases · 5/5 integration · 4/4 flows · Nyquist 3/3; git tag pending post-merge)
+**Phases:** 3 (82–84) | **Plans:** 13 | **Tasks:** 30
+**Volume:** 112 commits · 133 files · +22,490 / −2,489 · 4 days (2026-07-30 → 2026-08-03)
+
+### What Was Built
+
+The Categories dashboard section rewritten on a coherent yearly axis, and the Deviation retired with
+it (ADR 0020, amending LENS-01 of ADR 0019). A shared number engine classifies each month as Covered,
+Partial (the calendar-current one) or uncovered, derives **Ritmo** as the average over Covered
+Months, values the current month at `max(spent so far, pace)`, and builds every period total
+structurally as the sum of the already-rounded monthly series. Below 2 Covered Months no estimate is
+produced anywhere, and the insufficient-coverage outcome is *type-unreadable* so no caller can render
+one. The list ranks the year's categories by total with % share, a 12-month sparkline, a subordinate
+labelled projection, a sort-by-projection toggle and Accantonamenti selectable for the first time.
+The detail is a 12-month table with in-cell month-over-month deltas, a previous-year comparison row,
+a re-anchorable 9/6/3-month window, and weight-ordered subcategory contributions summing exactly to
+the parent's difference. Deviation, Baseline, Noise Threshold and Preset were re-signed out of the
+four shared aggregation functions, then hard-deleted.
+
+### What Worked
+
+- **Build-first, delete-last, behind a byte-identical gate (D-17/RETIRE-05).** Phase 82 *added* files
+  rather than modifying shared aggregation, so its regression baseline was preventive rather than
+  detective. Then 84-03 re-signed the four shared functions with every surviving expectation
+  byte-identical *before* 84-04 deleted anything. Had the deletion come first, a totals regression
+  would have been indistinguishable from an intended change. Third milestone running for the
+  risk-first gate (v2.8 netting, v2.9 LENS-03, v3.0 RETIRE-05) — this is now the house pattern.
+- **Making the invariant a type, not a convention.** Two of the milestone's best decisions are
+  compile-time: the branded `LensPassthrough` type lets Categories *forward* `?lens=` while making a
+  hand-off to `resolveLedgerRowSource` a compile error, and the insufficient-coverage outcome is
+  shaped so an absent estimate cannot be rendered. Neither relies on reviewer vigilance.
+- **The prototype settled a design argument cheaply.** Variant A (12-month table) beat the chart
+  because the delta must read as a *word* ("€180 in meno") and a chart can only fit a sign inside a
+  60px bar. Decided in `.scratch/`, before any production code.
+- **Locking 19 decisions before planning.** `dashboard-categories-DECISIONS.md` + ADR 0020 meant the
+  phases needed no discovery and re-litigated nothing across 13 plans.
+
+### What Was Inefficient
+
+- **Two of three phases needed a re-verification pass to catch a real defect the first pass had
+  signed off.** Phase 83's CR-01: allocation rows linked to a detail page that coerced
+  `?type=allocation` → `out`, showing €0 against a €500 row. Phase 84's CR-01 was worse — the first
+  PASSED verdict rested on a *tautological* test that derived its expected difference from the very
+  array under test, masking the fact that subcategory contributions could not sum to a projected
+  parent difference. Verification signed off on the exact class of defect it exists to catch.
+- **A deletion silently removed another phase's requirement coverage.**
+  `tests/dashboard-filters.test.ts` was deleted in Phase 84's retirement sweep because it was named
+  for the component beside it — but it was the only proof of Phase 82's RETIRE-04. Two verification
+  passes then cited a file that no longer existed. Only the Nyquist validation audit caught it.
+- **Two gap-closure waves in Phase 83** (83-05, 83-06) for allocation-direction sign and link
+  handling — the allocation direction was under-specified relative to the other two throughout.
+- **Nyquist validation, run last, found the milestone's most important coverage hole.** RETIRE-01 —
+  the retirement requirement itself — had no automated proof at all, only a manual grep. Running that
+  audit earlier would have surfaced it before two verification passes had already signed off.
+
+### Patterns Established
+
+- Requirement-critical assertions belong in files named for the **requirement or the function under
+  test**, never for the component they happen to sit beside — otherwise a legitimate deletion takes
+  unrelated coverage with it.
+- A guard test must derive its expectation **independently of the structure under test**; a test that
+  computes its expected value from that same structure passes vacuously.
+- Prefer a type that makes misuse uncompilable over a rule that makes misuse reviewable
+  (`LensPassthrough`, type-unreadable insufficient coverage).
+- Totals should be built as the **sum of what is displayed**, never computed in parallel — this is
+  the second milestone where an independently-computed aggregate was the bug risk.
+- Auditors and validators need a **positive control**: the first import-graph walk resolved 0 of 12
+  imports and passed vacuously; the first retired-vocabulary guard allowlisted the two files where a
+  regression would actually land. Both were caught only because someone asked "would this fail if the
+  thing came back?"
+
+### Key Lessons
+
+1. **A shipped feature can invalidate its own premise.** The Deviation worked as specified and still
+   answered the wrong question — a €15 noise threshold flagged noise and stayed silent on slow drift.
+   Retiring it required rewriting the project's Core Value, not just deleting code. Worth noticing
+   that the replacement gives up something real (slow-drift detection, CDET-F01) and that this was
+   accepted explicitly rather than glossed over.
+2. **Verification passes need adversarial framing.** Both re-verifications found defects a first pass
+   had blessed. The question that worked was never "does this test pass?" but "does this test fail
+   when I reintroduce the bug?" — mutation testing caught it in every case where it was applied.
+3. **Deleting code is a coverage event, not just a code event.** Removal-only diffs feel safe and
+   are not.
+4. **e2e debt compounds silently.** The `proxy.ts` redirect loop was noted as a known gap in v2.9 and
+   carried forward untouched; it has now blocked browser verification across two consecutive
+   milestones and 30+ plans. Nothing forced the decision because each individual phase had green
+   unit tests.
+
+### Cost Observations
+
+- Model profile: `budget` throughout.
+- 3 phases needed 5 verification passes total (82 ×3, 83 ×2, 84 ×2) plus 3 validation audits — the
+  correctness tail cost roughly as much attention as the build.
+- 4 calendar days for 13 plans, helped substantially by zero discovery work: all 19 design decisions
+  were locked before Phase 82 opened.
+
+---
+
 ## Milestone: v2.9 — Amortization
 
 **Shipped:** 2026-07-29 (audit passed 15/15; git tag pending post-merge)
@@ -581,12 +681,16 @@ Replaced the dual-axis `category.type` + `nature` classification with a single n
 | v1.8 | 1 | 4 | 1 | Deviation utils + chart focused redesign |
 | v1.9 | 3 | 9 | 2 | TDD Wave 0 + server-component config pattern |
 | v2.9 | 5 | 19 | 2 | Swap row source not param; risk-first LENS-03 tracer; reuse v2.4/v2.8 infra |
+| v3.0 | 3 | 13 | 4 | Build-first/delete-last behind a byte-identical gate; invariants as types; retirement as a coverage event |
 
-*(This table was maintained through v1.9, then lapsed; v2.9 added at close. Per-milestone detail lives in each section above.)*
+*(This table was maintained through v1.9, then lapsed; v2.9 and v3.0 added at close. Per-milestone detail lives in each section above.)*
 
 **Recurring observations:**
 - Wave 0 TDD scaffolding pays for itself on UI-heavy phases
 - Code review catches real issues (at least 3 per phase with review)
 - Inline SVG fallbacks needed when lucide-react lacks a brand icon
-- Risk-first tracer + real-Postgres regression gate is the repeated correctness pattern (v2.8, v2.9)
-- Structural impossibility &gt; per-call-site guard when a new accounting basis overlays shared aggregations (v2.9)
+- Risk-first tracer + real-Postgres regression gate is the repeated correctness pattern (v2.8, v2.9, v3.0 — now the house pattern)
+- Structural impossibility &gt; per-call-site guard when a new accounting basis overlays shared aggregations (v2.9); generalized in v3.0 to *invariants as types* (branded `LensPassthrough`, type-unreadable insufficient coverage)
+- Aggregates computed independently of the series they summarize are a repeated bug source; build totals as the sum of what is displayed (v2.9, v3.0)
+- A first verification pass is not reliable on its own — v3.0 needed re-verification on 2 of 3 phases, both times catching a real defect, one of them a tautological test. Mutation-test the guard: "does this fail if I reintroduce the bug?"
+- Removal-only diffs are coverage events: v3.0 deleted a test file named for its neighbouring component and silently took a *different* phase's requirement proof with it

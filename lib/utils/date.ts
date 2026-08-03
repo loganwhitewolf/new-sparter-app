@@ -1,12 +1,3 @@
-export const DASHBOARD_PRESETS = [
-  'last-month',
-  'last-3-months',
-  'last-6-months',
-  'this-year',
-  'last-year',
-] as const
-
-export type DashboardPreset = (typeof DASHBOARD_PRESETS)[number]
 export type ExpensePeriod =
   | 'this-month'
   | 'last-3-months'
@@ -36,33 +27,6 @@ export function periodToDateRange(period: ExpensePeriod | string, now = new Date
       }
     default:
       return { from: new Date(now.getFullYear(), now.getMonth(), 1), to }
-  }
-}
-
-export function dashboardPresetToDateRange(
-  preset: DashboardPreset | string,
-  now = new Date()
-): DateRange {
-  const to = endOfMonth(now.getFullYear(), now.getMonth())
-
-  switch (preset) {
-    case 'last-3-months':
-      return { from: new Date(now.getFullYear(), now.getMonth() - 2, 1), to }
-    case 'last-6-months':
-      return { from: new Date(now.getFullYear(), now.getMonth() - 5, 1), to }
-    case 'this-year':
-      return { from: new Date(now.getFullYear(), 0, 1), to }
-    case 'last-year':
-      return {
-        from: new Date(now.getFullYear() - 1, 0, 1),
-        to: new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999),
-      }
-    case 'last-month':
-    default:
-      return {
-        from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
-        to: endOfMonth(now.getFullYear(), now.getMonth() - 1),
-      }
   }
 }
 

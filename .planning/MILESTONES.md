@@ -1,5 +1,81 @@
 # Milestones
 
+## v3.0 Categories Year View (Shipped: 2026-08-03)
+
+**Delivered:** The Categories dashboard section reads on a coherent yearly axis — monthly pace and
+year-end projection replacing the rolling-preset model — with the Deviation, Baseline, Noise
+Threshold and Preset vocabulary retired from both the interface and the codebase.
+
+**Phases completed:** 3 phases (82–84), 13 plans, 30 tasks
+**Closeout:** verified_closeout — audit 25/25 requirements, 3/3 phase verifications, 5/5 integration
+checks, 4/4 E2E flows, Nyquist 3/3 compliant. Design locked in
+[ADR 0020](../docs/adr/0020-categories-year-view-retires-deviation.md) +
+`dashboard-categories-DECISIONS.md` (D1–D19).
+
+**Stats:** 112 commits (`ba039ba4`..`2e526817`) · 133 files · +22,490 / −2,489 · 4 days
+(2026-07-30 → 2026-08-03) · suite 183 files / 2194 tests green, 1 pre-existing todo
+
+**Key accomplishments:**
+
+- **Number engine on a yearly axis** — Covered/Partial Month classification, monthly pace, year-end
+  projection with a type-unreadable insufficient-coverage outcome, the hybrid current-month value
+  `max(spent so far, pace)`, and the total-equals-sum-of-series invariant. All pure Decimal.js,
+  proven against real Postgres before any UI shipped.
+- **Cassa/competenza lens confined to Overview** (amends LENS-01 of ADR 0019) — Categories is
+  pinned to cash *by construction*: no `ledgerRowSource` argument can reach the category DAL
+  functions from either page, and `LensSwitch` has exactly one render site.
+- **Categories list rewritten on year + direction** — ranking by total with % share, a 12-month
+  sparkline, a subordinate labelled year-end projection, a sort-by-projection toggle, and
+  Accantonamenti reachable for the first time.
+- **Category detail as a 12-month table** — month-over-month delta inside each cell, a previous-year
+  comparison row with D-11/D-12 stated-reason gates, a re-anchorable 9/6/3-month window scoping
+  every figure on the page, and subcategory contributions that provably sum to the parent's
+  difference (including subcategories present in only one period).
+- **Deviation/Baseline/Noise-Threshold/Preset retired outright** — the four cross-page aggregation
+  functions moved from preset-shaped `DashboardFilters` to an explicit `{from, to, type}` range; the
+  caller-less `getOverview`/Deviation chain, 4 components and 3 test files deleted; an
+  identifier-scoped exit grep and a 25-test `retired-vocabulary-guard.test.ts` keep it gone.
+- **RETIRE-05 regression gate held end to end** — Overview and Tags totals stayed byte-identical
+  across every engine and DAL signature change, re-run at each phase boundary.
+
+### Known Gaps
+
+None against the v3.0 requirement contract — all 25 satisfied with three-source agreement
+(traceability × VERIFICATION × SUMMARY frontmatter).
+
+### Technical Debt Accepted at Close
+
+Audit status was `tech_debt` rather than `passed`; the two headline items were consciously accepted
+at close rather than fixed (decision 2026-08-03).
+
+- **No v3.0 flow exercised in a browser.** Playwright (`tests/dashboard.spec.ts`) is blocked by a
+  pre-existing `proxy.ts` auth redirect loop (`ERR_TOO_MANY_REDIRECTS`) that also blocked v2.9's
+  Phases 78 and 80. Two consecutive milestones now — this debt is compounding. RETIRE-03 is proven
+  by unit tests plus a one-hop import-graph walk instead.
+- **Accantonamenti is reachable but not drillable.** Phase 83's non-interactive-span guard was
+  framed as temporary pending Phase 84, but Phase 84 shipped without an allocation detail page, so
+  the guard is now the de facto permanent contract. CLIST-04 is satisfied as written.
+- 65 occurrences of the unguarded `describeIfReachable` skip pattern can report vacuous green in CI;
+  only 2 files opted into `assertHarnessReachableInCi`.
+- Phase 83 accessibility/test-quality items: `aria-disabled` on a role-less `<span>` (WR-01), a
+  deleted D-13 rationale comment (WR-02), allocation row fields not asserted together (IN-03),
+  `toContain('<a')` substring matching instead of DOM assertion (IN-04).
+
+**Carried from v2.8 / v2.9:** operator deploy R038 / R039 / R041 with live migrations 0028–0033 and
+the seed run order (still the next candidate milestone); Phase 78 browser UAT; `git tag v2.9` still
+pending on main post-merge.
+
+### Process Lesson
+
+Deleting a component during Phase 84's retirement sweep silently deleted a *different* phase's
+requirement coverage — `tests/dashboard-filters.test.ts` was named for the component it sat beside
+rather than the requirement it guarded (RETIRE-04), and two verification passes then cited a file
+that no longer existed. Requirement-critical assertions should live in files named for the
+requirement or the function under test. Separately, two of three phases needed a re-verification
+pass to catch a real defect a first pass had signed off, one of them a self-referential assertion.
+
+---
+
 ## v2.9 Amortization (Shipped: 2026-07-29)
 
 **Phases completed:** 5 phases, 19 plans, 37 tasks

@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { dashboardPresetToDateRange } from '@/lib/utils/date'
 
 // Hoisted so the `@/lib/db` mock factory below (which is itself hoisted above
 // all imports by vi.mock) can close over shared mutable state: rowsQueue lets
@@ -113,12 +112,9 @@ const {
   buildBreakdownData,
   buildCategoryDetailData,
   buildCategoryRankingData,
-  buildDeviationDataset,
   buildMonthlyNatureTrendData,
   buildMonthlyTrendData,
   buildOverviewData,
-  getDeviationDateRanges,
-  getOverviewComparisonRanges,
 } = await import('../lib/dal/dashboard')
 
 const { verifySession } = await import('../lib/dal/auth')
@@ -129,38 +125,6 @@ beforeEach(() => {
 })
 
 describe('dashboard DAL amount mapping', () => {
-  it('uses the selected dashboard preset for KPI ranges and compares against the preceding range', () => {
-    const now = new Date(2026, 4, 15)
-
-    expect(getOverviewComparisonRanges('last-month', now)).toEqual({
-      current: {
-        from: new Date(2026, 3, 1),
-        to: new Date(2026, 3, 30, 23, 59, 59, 999),
-      },
-      previous: {
-        from: new Date(2026, 2, 1),
-        to: new Date(2026, 2, 31, 23, 59, 59, 999),
-      },
-    })
-    expect(getOverviewComparisonRanges('last-3-months', now)).toEqual({
-      current: {
-        from: new Date(2026, 2, 1),
-        to: new Date(2026, 4, 31, 23, 59, 59, 999),
-      },
-      previous: {
-        from: new Date(2025, 11, 1),
-        to: new Date(2026, 1, 28, 23, 59, 59, 999),
-      },
-    })
-  })
-
-  it('returns previous December when last-month is queried in January', () => {
-    expect(dashboardPresetToDateRange('last-month', new Date(2026, 0, 15))).toEqual({
-      from: new Date(2025, 11, 1),
-      to: new Date(2025, 11, 31, 23, 59, 59, 999),
-    })
-  })
-
   it('includes manually and automatically categorized expenses in dashboard totals', () => {
     expect(DASHBOARD_TOTAL_EXPENSE_STATUSES).toEqual(['1', '2', '3'])
   })
@@ -656,92 +620,6 @@ describe('dashboard DAL amount mapping', () => {
     expect(detail.subcategories.map((row) => row.slug)).toEqual(['a', 'b'])
     expect(detail.subcategories.map((row) => row.percentage)).toEqual([50, 50])
     expect(detail.topTransactions.map((row) => row.id)).toEqual(['tx-a', 'tx-b'])
-  })
-})
-
-describe('buildDeviationDataset (D-02, D-03, D-05)', () => {
-  const NOISE = '15.00'
-
-  it('computes signed deviation per id from reference total and baseline average', () => {
-    const map = buildDeviationDataset({
-      referenceRows: [{ id: 1, amount: '120.00' }],
-      baselineRows: [
-        { id: 1, month: '2026-01', amount: '100.00' },
-        { id: 1, month: '2026-02', amount: '100.00' },
-        { id: 1, month: '2026-03', amount: '100.00' },
-      ],
-      noiseThreshold: NOISE,
-    })
-    expect(map.get(1)).toEqual({ deviation: 20, isNew: false, belowNoiseThreshold: false })
-  })
-
-  it('marks isNew=true when reference exists and baseline is empty', () => {
-    const map = buildDeviationDataset({
-      referenceRows: [{ id: 7, amount: '50.00' }],
-      baselineRows: [],
-      noiseThreshold: NOISE,
-    })
-    expect(map.get(7)).toEqual({ deviation: null, isNew: true, belowNoiseThreshold: false })
-  })
-
-  it('marks belowNoiseThreshold=true and deviation=null when reference < €15', () => {
-    const map = buildDeviationDataset({
-      referenceRows: [{ id: 9, amount: '14.99' }],
-      baselineRows: [{ id: 9, month: '2026-01', amount: '100.00' }],
-      noiseThreshold: NOISE,
-    })
-    expect(map.get(9)).toEqual({ deviation: null, isNew: false, belowNoiseThreshold: true })
-  })
-
-  it('averages baseline over only the months that exist (fewer than 3 OK per D-03)', () => {
-    const map = buildDeviationDataset({
-      referenceRows: [{ id: 3, amount: '90.00' }],
-      baselineRows: [
-        { id: 3, month: '2026-02', amount: '60.00' },
-        { id: 3, month: '2026-03', amount: '60.00' },
-      ],
-      noiseThreshold: NOISE,
-    })
-    expect(map.get(3)?.deviation).toBe(50)
-  })
-
-  it('omits ids that appear only in baseline (no reference)', () => {
-    const map = buildDeviationDataset({
-      referenceRows: [],
-      baselineRows: [{ id: 99, month: '2026-01', amount: '100.00' }],
-      noiseThreshold: NOISE,
-    })
-    expect(map.has(99)).toBe(false)
-  })
-})
-
-describe('getDeviationDateRanges (D-02, D-03)', () => {
-  it('returns reference = previous calendar month and baseline = 3 months prior', () => {
-    const now = new Date(2026, 4, 15)
-    expect(getDeviationDateRanges(now)).toEqual({
-      reference: {
-        from: new Date(2026, 3, 1),
-        to: new Date(2026, 3, 30, 23, 59, 59, 999),
-      },
-      baseline: {
-        from: new Date(2026, 0, 1),
-        to: new Date(2026, 2, 31, 23, 59, 59, 999),
-      },
-    })
-  })
-
-  it('handles January (baseline window crosses year boundary)', () => {
-    const now = new Date(2026, 0, 15)
-    expect(getDeviationDateRanges(now)).toEqual({
-      reference: {
-        from: new Date(2025, 11, 1),
-        to: new Date(2025, 11, 31, 23, 59, 59, 999),
-      },
-      baseline: {
-        from: new Date(2025, 8, 1),
-        to: new Date(2025, 10, 30, 23, 59, 59, 999),
-      },
-    })
   })
 })
 

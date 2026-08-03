@@ -1,5 +1,6 @@
-import type { DashboardPreset, DashboardSort } from '@/lib/validations/dashboard'
-import type { Lens } from '@/lib/utils/search-params'
+import type { CategoryYearSort } from '@/lib/validations/dashboard'
+import type { CategoryDetailWindowLength } from '@/lib/validations/category-year-window'
+import type { LensPassthrough } from '@/lib/utils/search-params'
 
 export const APP_ROUTES = {
   dashboard: '/dashboard',
@@ -25,41 +26,65 @@ export const ONBOARDING_AFTER_PRIVATE_PLATFORM_CREATION_ROUTE =
   `${APP_ROUTES.onboarding}?step=${ONBOARDING_STEP_AFTER_PRIVATE_PLATFORM_CREATION}` as const
 
 type DashboardCategoryFilters = {
-  preset?: DashboardPreset
-  type?: 'in' | 'out'
-  sort?: DashboardSort
-  defaultPreset?: DashboardPreset
-  defaultSort?: DashboardSort
-  // Phase 80, CR-02: the global cash/accrual lens must survive same-tab category
-  // navigation (sort toggle, back link, row click-through) the same way preset/type/sort
-  // already do — only appended when non-default ('competenza'), mirroring how
-  // DashboardTabNav forwards `?lens=` from the current searchParams.
-  lens?: Lens
+  type?: 'in' | 'out' | 'allocation'
+  sort?: CategoryYearSort
+  // D-12 (Phase 83) — the year-mode URL contract (D-17, Phase 84: the sole remaining mode
+  // since the preset-mode branch was retired). Every live caller always sets `year`.
+  year?: number
+  // Phase 82, D-12+D-13 (review fix WR-03): `lens` here is a raw, UNVALIDATED passthrough
+  // value threaded through Categories' own hrefs (sort toggle, row click-through, detail back
+  // link) purely so the tab nav's `?lens=` survives a round trip through Categories instead of
+  // silently resetting to cassa on the way back to Overview (D-13). It is typed
+  // `LensPassthrough`, NOT `Lens`, specifically so it can never be handed to
+  // `resolveLedgerRowSource` (which only accepts a validated `Lens`) — Categories' own
+  // aggregation always falls through to its `ledgerEntryCash` default and never reads this
+  // value (D-12). Making that misuse a type error, not a review convention.
+  lens?: LensPassthrough
+  // D-01/D-04 (Phase 84) — the category DETAIL page's own window params. Structurally shared
+  // with buildDashboardCategoriesHref's type (like `sort` above), but the LIST has no window
+  // (D-04): only buildDashboardCategoryDetailHref callers ever set these.
+  months?: CategoryDetailWindowLength
+  from?: string
 }
 
-export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters = {}) {
+/** Builds the `?year=...` query string shared by the two Categories href builders (D-12). */
+function buildYearModeSearch(filters: DashboardCategoryFilters & { year: number }): string {
   const params = new URLSearchParams()
-  const defaultPreset = filters.defaultPreset ?? 'this-year'
-  const defaultSort: DashboardSort = filters.defaultSort ?? 'amount'
+  params.set('year', String(filters.year))
 
-  if (filters.preset && filters.preset !== defaultPreset) {
-    params.set('preset', filters.preset)
-  }
-
-  if (filters.type === 'in') {
+  if (filters.type && filters.type !== 'out') {
     params.set('type', filters.type)
   }
 
-  if (filters.sort && filters.sort !== defaultSort) {
+  if (filters.sort && filters.sort !== 'amount') {
     params.set('sort', filters.sort)
   }
 
-  if (filters.lens === 'competenza') {
+  if (filters.lens) {
     params.set('lens', filters.lens)
   }
 
-  const search = params.toString()
-  return APP_ROUTES.dashboardCategories + (search ? `?${search}` : '')
+  // D-01: a whole-year window (months === 12, or absent) omits both params entirely.
+  if (filters.months !== undefined && filters.months !== 12) {
+    params.set('months', String(filters.months))
+  }
+
+  // D-04: `from` is only emitted when it diverges from the implicit January default for this
+  // filters' own `year` — never a stale prior year's prefix.
+  if (filters.from !== undefined && filters.from !== `${filters.year}-01`) {
+    params.set('from', filters.from)
+  }
+
+  return params.toString()
+}
+
+export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters = {}) {
+  if (filters.year !== undefined) {
+    const search = buildYearModeSearch({ ...filters, year: filters.year })
+    return APP_ROUTES.dashboardCategories + (search ? `?${search}` : '')
+  }
+
+  return APP_ROUTES.dashboardCategories
 }
 
 export function dashboardCategoryDetail(id: number | string) {
@@ -113,26 +138,10 @@ export function buildDashboardCategoryDetailHref(
   id: number | string,
   filters: DashboardCategoryFilters = {}
 ) {
-  const params = new URLSearchParams()
-  const defaultPreset = filters.defaultPreset ?? 'this-year'
-  const defaultSort: DashboardSort = filters.defaultSort ?? 'amount'
-
-  if (filters.preset && filters.preset !== defaultPreset) {
-    params.set('preset', filters.preset)
+  if (filters.year !== undefined) {
+    const search = buildYearModeSearch({ ...filters, year: filters.year })
+    return dashboardCategoryDetail(id) + (search ? `?${search}` : '')
   }
 
-  if (filters.type === 'in') {
-    params.set('type', filters.type)
-  }
-
-  if (filters.sort && filters.sort !== defaultSort) {
-    params.set('sort', filters.sort)
-  }
-
-  if (filters.lens === 'competenza') {
-    params.set('lens', filters.lens)
-  }
-
-  const search = params.toString()
-  return dashboardCategoryDetail(id) + (search ? `?${search}` : '')
+  return dashboardCategoryDetail(id)
 }

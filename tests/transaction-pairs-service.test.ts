@@ -10,9 +10,21 @@ const mocks = vi.hoisted(() => ({
   dbDeleteChain: vi.fn(),
   dbUpdateChain: vi.fn(),
   applyDetachCleanupTx: vi.fn(),
+  reverseOpenPlanReduceForRefundUnlinkTx: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
+
+// PR #66 made unlink reverse an open amortization plan's reduce BEFORE restoring baselines (same
+// order as link). That helper issues its OWN db queries; left unmocked it eats this file's canned
+// `dbSelectChain` responses and desynchronizes every assertion downstream — the symptom was a
+// refund appearing to restore ANOTHER refund's snapshot, which reads as data corruption but is
+// purely an artifact of the fake db running out of scripted rows. Stubbed to a no-op so these
+// tests keep testing unlink/restore ordering, which is their subject; the reverse itself is
+// covered by the amortization suites. Ordering is still asserted below.
+vi.mock('@/lib/services/amortization-plan-amount', () => ({
+  reverseOpenPlanReduceForRefundUnlinkTx: mocks.reverseOpenPlanReduceForRefundUnlinkTx,
+}))
 
 // Mock schema so module imports resolve without real Drizzle types.
 // `reimbursement`/`reimbursementRefund` are reference-distinct objects so
@@ -1086,6 +1098,11 @@ describe('deletePairByTransactionId', () => {
 
       const order: string[] = []
       const restoredTitles: unknown[] = []
+      // PR #66 ordering contract: an open plan's reduce is reversed for EVERY refund before any
+      // baseline is restored — otherwise competenza keeps showing the reimbursed schedule.
+      mocks.reverseOpenPlanReduceForRefundUnlinkTx.mockImplementation(async () => {
+        order.push('reverse-plan')
+      })
       mocks.dbUpdateChain.mockImplementation(() =>
         makeUpdateChain((v) => {
           order.push('restore')
@@ -1110,8 +1127,10 @@ describe('deletePairByTransactionId', () => {
       // ...the reimbursement row is deleted exactly once...
       expect(deletedTables).toHaveLength(1)
       expect((deletedTables[0] as { title?: string }).title).toBe('reimbursement.title')
-      // ...and every restore runs BEFORE the delete (the delete cascades the snapshots away).
-      expect(order).toEqual(['restore', 'restore', 'delete'])
+      // ...both plan reverses run before any restore, and every restore runs BEFORE the delete
+      // (the delete cascades the snapshots away).
+      expect(order).toEqual(['reverse-plan', 'reverse-plan', 'restore', 'restore', 'delete'])
+      expect(mocks.reverseOpenPlanReduceForRefundUnlinkTx).toHaveBeenCalledTimes(2)
     })
 
     it('is a no-op when the transaction is neither a refund nor an anchor (already unpaired)', async () => {

@@ -1,0 +1,194 @@
+import Decimal from 'decimal.js'
+import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
+import type { CoveredMonth } from '@/lib/dal/covered-months'
+
+/**
+ * D-05: below this many Covered Months in the selected year, no pace and no projection is
+ * produced anywhere in the engine. Engine parameter, not a magic number — Phases 83/84 import it
+ * rather than re-declaring the threshold.
+ */
+export const MIN_COVERED_MONTHS_FOR_PACE = 2
+
+/** A single month's value in the engine's monthly series. Drizzle DECIMAL columns are strings. */
+export type MonthlyValue = { yearMonth: string; amount: string }
+
+/**
+ * The pace ("Ritmo") / year-end projection outcome. D-05's "no fragile number" contract is
+ * enforced at the type level: the `'insufficient'` member has NO `pace`/`projection` field at
+ * all, so no downstream caller can read or default-coerce a number out of it — TypeScript
+ * rejects any code path reading `.pace` without first narrowing on `status`.
+ */
+export type PaceResult =
+  | { status: 'complete'; pace: string; projection: string; coveredMonthCount: number }
+  | { status: 'insufficient'; coveredMonthCount: number }
+
+/**
+ * Computes the pace (average over the given monthly series) and its 12-month projection.
+ *
+ * Below MIN_COVERED_MONTHS_FOR_PACE entries (including the empty-array case, identically),
+ * returns the 'insufficient' outcome immediately — D-05.
+ *
+ * All arithmetic goes through Decimal.js (toDecimal/toDbDecimal) — D-11, never native JS
+ * `+ - * /` on the amount strings. Rounding relies on decimal.js's own default ROUND_HALF_UP,
+ * applied once at the toDbDecimal() return boundary — no explicit Decimal.set({rounding:...})
+ * override anywhere in this module.
+ */
+export function computePaceAndProjection(monthlyValues: MonthlyValue[]): PaceResult {
+  const coveredMonthCount = monthlyValues.length
+
+  if (coveredMonthCount < MIN_COVERED_MONTHS_FOR_PACE) {
+    return { status: 'insufficient', coveredMonthCount }
+  }
+
+  const total = monthlyValues.reduce((sum, m) => sum.plus(toDecimal(m.amount)), toDecimal('0'))
+  const pace = total.dividedBy(toDecimal(coveredMonthCount))
+  const projection = pace.times(toDecimal('12'))
+
+  return {
+    status: 'complete',
+    pace: toDbDecimal(pace),
+    projection: toDbDecimal(projection),
+    coveredMonthCount,
+  }
+}
+
+/**
+ * Composes a category's monthly series with the account's Covered Months (D-01/D-02). Pure,
+ * synchronous — no DB/network/await inside its body.
+ *
+ * A `categoryMonths` entry whose `yearMonth` is NOT in `coveredMonths` is dropped entirely
+ * (D-01: excluded, not zeroed — the month never existed on the account, so it cannot exist for
+ * this category either). Every entry whose `yearMonth` IS covered survives with whatever amount
+ * it already carries, including '0.00' (D-02: a Covered Month with no movement for this category
+ * still counts, pulling its average down).
+ */
+export function buildCoveredMonthSeries(
+  coveredMonths: CoveredMonth[],
+  categoryMonths: MonthlyValue[],
+): MonthlyValue[] {
+  const coveredSet = new Set(coveredMonths.map((m) => m.yearMonth))
+  return categoryMonths.filter((m) => coveredSet.has(m.yearMonth))
+}
+
+/**
+ * D-03: `Mese Parziale` is the current calendar month, always excluded from every average — no
+ * exceptions based on how much of the month has elapsed. A month whose data merely stopped
+ * earlier (e.g. no import since May, today is July) is a concluded Covered Month, never partial;
+ * this function makes no presumption in either direction (CONTEXT.md's two worked examples).
+ *
+ * Pure function of (yearMonth, today) — no day-of-month comparison at all, so it never throws and
+ * evaluates identically regardless of array order upstream (stateless per-month predicate, not a
+ * stateful reducer).
+ */
+export function isPartialMonth(yearMonth: string, today: Date = new Date()): boolean {
+  const [year, month] = yearMonth.split('-').map(Number)
+  return year === today.getFullYear() && month === today.getMonth() + 1
+}
+
+/** The four month states shared by the Categories list and detail pages (D-06/CDET-06). */
+export type MonthState = 'covered' | 'current' | 'estimated' | 'uncovered'
+
+/**
+ * Classifies every entry of `monthKeys` into one of the four shared month states (WR-03 fix,
+ * 84-REVIEW.md): extracted from `buildCategoryYearRankingData` (lib/dal/dashboard.ts) and
+ * `getCategoryDetailYearWindow` (lib/dal/category-detail-year-window.ts), which had copy-pasted
+ * this identical loop — any future change to the classification rule now has exactly one call
+ * site to update.
+ *
+ * - the calendar-current month is always `'current'`, regardless of coverage;
+ * - a month strictly after today's calendar month is `'estimated'`;
+ * - every other month is `'covered'` when present in `coveredMonths`, `'uncovered'` otherwise.
+ *
+ * Pure function of (monthKeys, coveredMonths, today) — no DB/network/await inside its body.
+ */
+export function classifyMonthStates(
+  monthKeys: string[],
+  coveredMonths: CoveredMonth[],
+  today: Date,
+): Map<string, MonthState> {
+  const coveredSet = new Set(coveredMonths.map((m) => m.yearMonth))
+  const monthStateByKey = new Map<string, MonthState>()
+
+  for (const month of monthKeys) {
+    if (isPartialMonth(month, today)) {
+      monthStateByKey.set(month, 'current')
+      continue
+    }
+    const [monthYear, monthNumber] = month.split('-').map(Number) as [number, number]
+    const isFutureMonth =
+      monthYear > today.getFullYear() || (monthYear === today.getFullYear() && monthNumber > today.getMonth() + 1)
+    monthStateByKey.set(month, isFutureMonth ? 'estimated' : coveredSet.has(month) ? 'covered' : 'uncovered')
+  }
+
+  return monthStateByKey
+}
+
+/**
+ * D-06: the current month is valued at `max(spent so far, pace)` — a hybrid, never a value below
+ * an already-observed fact. `Decimal.max` compares the two UNROUNDED Decimal instances; the single
+ * winner is rounded to cents via toDbDecimal exactly once, at this return boundary (D-11) — never
+ * per-operand, never twice.
+ */
+export function computeCurrentMonthHybrid(spentSoFar: string, pace: string): string {
+  return toDbDecimal(Decimal.max(toDecimal(spentSoFar), toDecimal(pace)))
+}
+
+/**
+ * D-07/PACE-05: the period total is the sum of the displayed monthly series — never an
+ * independently derived formula. `total` is built structurally as the reduce-sum of `months`
+ * itself, so any divergence between the two is impossible, not merely tested for. Each month's
+ * amount is assumed already rounded to cents (the caller's return boundary); this function rounds
+ * the accumulated sum once, via toDbDecimal, when it returns.
+ */
+export function buildYearSeries(months: MonthlyValue[]): { months: MonthlyValue[]; total: string } {
+  const total = months.reduce((sum, m) => sum.plus(toDecimal(m.amount)), toDecimal('0'))
+  return { months, total: toDbDecimal(total) }
+}
+
+/**
+ * D-08: every comparison is computed and stored as `current − previous` (negative = spent less),
+ * reusing the sign convention already documented in lib/dal/overview.ts's MonthOverMonthChange —
+ * this does not invent a new convention.
+ */
+export function computeComparison(current: string, previous: string): string {
+  return toDbDecimal(toDecimal(current).minus(toDecimal(previous)))
+}
+
+/** The three outcomes resolveComparisonJudgement can return — never a raw sign glyph. */
+export type ComparisonJudgement = 'better' | 'worse' | 'neutral'
+
+/**
+ * D-09: the single shared per-direction sign-to-judgement mapping — the ONLY place this resolution
+ * happens, never duplicated per widget. On `out`, more spending is worse; on `in`/`allocation`,
+ * more is better. A zero delta is always 'neutral', regardless of direction.
+ */
+export function resolveComparisonJudgement(
+  delta: string,
+  direction: 'in' | 'out' | 'allocation',
+): ComparisonJudgement {
+  const decimalDelta = toDecimal(delta)
+  if (decimalDelta.isZero()) {
+    return 'neutral'
+  }
+
+  const isPositive = decimalDelta.isPositive()
+  if (direction === 'out') {
+    return isPositive ? 'worse' : 'better'
+  }
+  return isPositive ? 'better' : 'worse'
+}
+
+/**
+ * D-10: the previous-year coverage threshold that gates ONLY the total-difference comparison — the
+ * average-vs-average comparison always renders regardless of this gate. Exported as a single named
+ * constant so Phases 83/84 both read the same value instead of each hardcoding 6.
+ */
+export const PREVIOUS_YEAR_TOTAL_DIFFERENCE_MIN_COVERED_MONTHS = 6
+
+/**
+ * D-10: whether the previous year had enough Covered Months to show the previous-year total
+ * difference. Gates only the total-difference figure — never the average comparison.
+ */
+export function canShowPreviousYearTotalDifference(previousYearCoveredMonthCount: number): boolean {
+  return previousYearCoveredMonthCount >= PREVIOUS_YEAR_TOTAL_DIFFERENCE_MIN_COVERED_MONTHS
+}

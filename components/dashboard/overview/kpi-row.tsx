@@ -2,7 +2,6 @@ import type { OverviewChartPoint } from '@/lib/dal/overview'
 import { buildDashboardCategoriesHref } from '@/lib/routes'
 import { cn } from '@/lib/utils'
 import { toDecimal } from '@/lib/utils/decimal'
-import type { Lens } from '@/lib/utils/search-params'
 import { NATURE_LABELS } from '@/lib/utils/nature-labels'
 import { formatEur } from './format'
 import { ReadingKpiCard, type BarSegment, type CardBar, type Reading, type ValueTone } from './kpi-card-reading'
@@ -66,16 +65,6 @@ function signTone(value: number): ValueTone {
   return value < 0 ? 'out' : 'in'
 }
 
-/** Categories list defaults — keep KPI deep-links aligned with /dashboard/categories. */
-const CATEGORIES_DEFAULT_PRESET = 'last-3-months' as const
-const CATEGORIES_DEFAULT_SORT = 'deviation' as const
-
-function overviewYearToPreset(year: number): 'this-year' | 'last-year' {
-  const currentYear = new Date().getFullYear()
-  if (year === currentYear - 1) return 'last-year'
-  return 'this-year'
-}
-
 type KpiRowProps = {
   /** Monthly chart points for the selected year — the single KPI data source (260711-gfd). */
   data: OverviewChartPoint[]
@@ -85,8 +74,6 @@ type KpiRowProps = {
   includedOut: ReadonlySet<OutKey>
   includedAllocation: ReadonlySet<AllocationKey>
   year: number
-  /** Cash/accrual lens from overview URL — forwarded into category detail hrefs (3.6). */
-  lens?: Lens
 }
 
 /**
@@ -106,17 +93,17 @@ export function KpiRow({
   includedOut,
   includedAllocation,
   year,
-  lens = 'cassa',
 }: KpiRowProps) {
   const prevYear = year - 1
   const kpis = deriveFilteredKpis(data, prevData, includedIncome, includedOut, includedAllocation)
   const balanceNumeric = Number(kpis.balance)
-  const categoriesHrefBase = {
-    preset: overviewYearToPreset(year),
-    defaultPreset: CATEGORIES_DEFAULT_PRESET,
-    defaultSort: CATEGORIES_DEFAULT_SORT,
-    lens,
-  } as const
+  // v3.0 (D-12/D-17): Categories reads the year-mode contract only — the retired `preset`/
+  // `defaultPreset`/`defaultSort` fields are gone, and `year` is what keeps the KPI deep-link
+  // landing on the same period the card was read from (CLIST-05). The lens is deliberately NOT
+  // forwarded: Overview is its only reader (D-12), Categories always aggregates cassa, and the
+  // tab nav propagates `?lens=` on its own — so minting a `LensPassthrough` from a validated
+  // `Lens` here would punch a hole in exactly the boundary D-12 exists to enforce.
+  const categoriesHrefBase = { year } as const
   const entrateHref = buildDashboardCategoriesHref({ ...categoriesHrefBase, type: 'in' })
   const usciteHref = buildDashboardCategoriesHref({ ...categoriesHrefBase, type: 'out' })
 

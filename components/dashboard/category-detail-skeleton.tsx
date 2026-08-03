@@ -1,38 +1,60 @@
+import { cn } from '@/lib/utils'
+
+// D-07: the KPI-card header no longer exists (subsumed by the table's sticky summary column) —
+// this skeleton mirrors the new layout: chart above the table, subcategory table below. Bars use
+// the `animate-pulse` placeholder-grid convention established by category-year-ranking-skeleton.tsx.
+const TABLE_MONTH_PLACEHOLDER_COUNT = 12
+const TABLE_ROW_COUNT = 3 // current / previous-year / Differenza
+const SUBCATEGORY_ROW_COUNT = 4
+
 export function CategoryDetailSkeleton() {
   return (
     <div className="space-y-6" aria-label="Caricamento dettaglio categoria">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="min-h-28 rounded-lg border bg-card p-4 shadow-sm">
-            <div className="h-3 w-24 animate-pulse rounded-md bg-muted" />
-            <div className="mt-6 h-7 w-32 animate-pulse rounded-md bg-muted" />
-          </div>
-        ))}
+      {/* Chart placeholder (D-08/D-09) — bar-height rectangles, zero-centered on a baseline. */}
+      <div className="min-h-[220px] rounded-xl border bg-card p-4 shadow-sm">
+        <div className="flex h-48 items-center gap-3" aria-hidden="true">
+          {Array.from({ length: 8 }).map((_, index) => {
+            const isAbove = index % 2 === 0
+            return (
+              <div key={index} className="flex h-full flex-1 flex-col justify-center">
+                <div
+                  className={cn('animate-pulse rounded-md bg-muted', isAbove ? 'self-end' : 'self-start')}
+                  style={{ height: `${20 + (index % 4) * 14}px` }}
+                />
+              </div>
+            )
+          })}
+        </div>
       </div>
 
-      <div className="min-h-[300px] rounded-xl border bg-card p-4 shadow-sm">
-        <div className="mb-6 h-4 w-44 animate-pulse rounded-md bg-muted" />
-        <div className="flex h-48 items-end gap-3">
-          {Array.from({ length: 8 }).map((_, index) => (
+      {/* Table placeholder — sticky first column + N month-column placeholders + summary column,
+          3 row-height bars (current / previous-year / Differenza, D-11/D-12). */}
+      <div className="overflow-x-auto rounded-xl border bg-card p-4 shadow-sm">
+        <div className="grid min-w-[1040px] gap-3" aria-hidden="true">
+          {Array.from({ length: TABLE_ROW_COUNT }).map((_, rowIndex) => (
             <div
-              key={index}
-              className="flex-1 animate-pulse rounded-md bg-muted"
-              style={{ height: `${40 + (index % 4) * 24}px` }}
-            />
+              key={rowIndex}
+              className="grid items-center gap-2"
+              style={{ gridTemplateColumns: `148px repeat(${TABLE_MONTH_PLACEHOLDER_COUNT}, minmax(0, 1fr)) 168px` }}
+            >
+              <div className="h-4 animate-pulse rounded-md bg-muted" />
+              {Array.from({ length: TABLE_MONTH_PLACEHOLDER_COUNT }).map((_, colIndex) => (
+                <div key={colIndex} className="h-4 animate-pulse rounded-md bg-muted" />
+              ))}
+              <div className="h-4 animate-pulse rounded-md bg-muted" />
+            </div>
           ))}
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {[0, 1].map((section) => (
-          <div key={section} className="space-y-3">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="rounded-xl border bg-card p-4 shadow-sm">
-                <div className="h-4 w-2/3 animate-pulse rounded-md bg-muted" />
-                <div className="mt-3 h-3 w-1/2 animate-pulse rounded-md bg-muted" />
-                <div className="mt-4 h-2 animate-pulse rounded-full bg-muted" />
-              </div>
-            ))}
+      {/* Subcategory table placeholder (D-16) — name / weight bar / amount / contribution columns. */}
+      <div className="space-y-3 rounded-xl border bg-card p-4 shadow-sm" aria-hidden="true">
+        {Array.from({ length: SUBCATEGORY_ROW_COUNT }).map((_, index) => (
+          <div key={index} className="grid grid-cols-[minmax(0,1fr)_140px_120px_140px] items-center gap-4">
+            <div className="h-4 animate-pulse rounded-md bg-muted" />
+            <div className="h-1.5 animate-pulse rounded-full bg-muted" />
+            <div className="ml-auto h-4 w-20 animate-pulse rounded-md bg-muted" />
+            <div className="ml-auto h-4 w-24 animate-pulse rounded-md bg-muted" />
           </div>
         ))}
       </div>

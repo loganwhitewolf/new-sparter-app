@@ -23,6 +23,7 @@ function makeSub(id: number, name: string, owned = false) {
     originalName: name,
     userId: owned ? 'user-1' : null,
     isOwned: owned,
+    isActive: true,
     hasOverride: false,
     customName: null,
     effectiveNature: null,

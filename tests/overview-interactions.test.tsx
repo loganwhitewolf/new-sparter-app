@@ -501,13 +501,17 @@ describe('KpiRow dashboard-wide filter wiring (260711-gfd)', () => {
         includedOut={allOut}
         includedAllocation={allAllocation}
         year={2026}
-        lens="competenza"
       />
     )
     expect(html).toContain('aria-label="Entrate: apri il dettaglio"')
     expect(html).toContain('aria-label="Uscite: apri il dettaglio"')
-    expect(html).toContain('href="/dashboard/categories?preset=this-year&amp;type=in&amp;lens=competenza"')
-    expect(html).toContain('href="/dashboard/categories?preset=this-year&amp;lens=competenza"')
+    // v3.0 (D-17/CLIST-05): the deep-link carries the YEAR the card was read from — the retired
+    // `?preset=` contract is gone. `type=out` is the builder's default and is omitted. The lens is
+    // deliberately absent: Overview is its only reader (D-12) and Categories always reads cassa.
+    expect(html).toContain('href="/dashboard/categories?year=2026&amp;type=in"')
+    expect(html).toContain('href="/dashboard/categories?year=2026"')
+    expect(html).not.toContain('preset=')
+    expect(html).not.toContain('lens=')
     expect(html).not.toContain('aria-label="Bilancio: apri il dettaglio"')
     expect(html).toContain('Tasso 48%')
   })

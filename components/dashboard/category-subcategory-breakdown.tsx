@@ -1,12 +1,18 @@
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import type { CategoryDetailSubcategoryContribution } from '@/lib/dal/category-detail-year-window'
+import { resolveComparisonJudgement, type ComparisonJudgement } from '@/lib/services/pace-and-projection'
 import { cn } from '@/lib/utils'
-import { DeviationBadge } from '@/components/dashboard/deviation-badge'
-import type { CategoryDetailSubcategory, DeviationData } from '@/lib/dal/dashboard'
-import type { DeviationResult } from '@/lib/utils/dashboard'
+import { toDecimal } from '@/lib/utils/decimal'
 
 type Props = {
-  subcategories: CategoryDetailSubcategory[]
+  contributions: CategoryDetailSubcategoryContribution[]
+  /**
+   * The selected window's year (Rule 2 auto-add: the plan's props list omitted this, but the
+   * "Totale {year}"/"nuova nel {year}"/"solo nel {year-1}" copy needs it — falling back to
+   * `new Date().getFullYear()` would mislabel every past year the user can select via `?year=`).
+   */
+  year: number
   type?: 'in' | 'out'
-  deviations?: Map<number, DeviationData>
 }
 
 const currencyFormatter = new Intl.NumberFormat('it-IT', {
@@ -15,20 +21,49 @@ const currencyFormatter = new Intl.NumberFormat('it-IT', {
 })
 
 function formatAmount(value: string): string {
-  const amount = Number(value)
+  const amount = toDecimal(value).toNumber()
   return currencyFormatter.format(Number.isFinite(amount) ? Math.abs(amount) : 0)
+}
+
+/** D-09/CONTEXT.md "Segno e verso dei confronti": magnitude + word, never a sign glyph. */
+function formatDeltaWords(delta: string): string {
+  const decimalDelta = toDecimal(delta)
+  const magnitude = formatAmount(decimalDelta.abs().toFixed(2))
+
+  if (decimalDelta.isZero()) return `${magnitude} invariato`
+  return decimalDelta.isPositive() ? `${magnitude} in più` : `${magnitude} in meno`
+}
+
+function judgementClassName(judgement: ComparisonJudgement): string {
+  switch (judgement) {
+    case 'better':
+      return 'text-[var(--total-in)]'
+    case 'worse':
+      return 'text-[var(--total-out)]'
+    default:
+      return 'text-muted-foreground'
+  }
 }
 
 function safePercentage(value: number): number {
   return Number.isFinite(value) ? Math.max(0, Math.min(value, 100)) : 0
 }
 
-function movementLabel(count: number): string {
-  return count === 1 ? '1 movimento' : `${count} movimenti`
+function presenceSuffix(presence: CategoryDetailSubcategoryContribution['presence'], year: number): string | null {
+  if (presence === 'current-only') return `— nuova nel ${year}`
+  if (presence === 'previous-only') return `— solo nel ${year - 1}`
+  return null
 }
 
-export function CategorySubcategoryBreakdown({ subcategories, type = 'out', deviations }: Props) {
-  if (subcategories.length === 0) {
+/**
+ * The subcategory contribution table (CDET-05/D-16): ordered by current-window weight, each row
+ * carrying its contribution to the parent category's total difference (current - previous). The
+ * Totale row is not decoration — it is the on-screen proof that the contributions sum EXACTLY to
+ * the parent's own total difference, computed here by summing the already-provided
+ * currentAmount/contribution strings via Decimal.js, never by re-deriving from previousYear.
+ */
+export function CategorySubcategoryBreakdown({ contributions, year, type = 'out' }: Props) {
+  if (contributions.length === 0) {
     return (
       <div className="flex min-h-[220px] items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 text-center">
         <div className="max-w-sm space-y-2">
@@ -43,55 +78,84 @@ export function CategorySubcategoryBreakdown({ subcategories, type = 'out', devi
 
   const barColor = type === 'in' ? 'bg-[var(--total-in)]' : 'bg-[var(--total-out)]'
 
+  const totalCurrentAmount = contributions
+    .reduce((sum, row) => sum.plus(toDecimal(row.currentAmount)), toDecimal(0))
+    .toFixed(2)
+  const totalContribution = contributions
+    .reduce((sum, row) => sum.plus(toDecimal(row.contribution)), toDecimal(0))
+    .toFixed(2)
+
   return (
-    <ul className="grid gap-3" aria-label="Ripartizione sottocategorie">
-      {subcategories.map((subcategory) => {
-        const percentage = safePercentage(subcategory.percentage)
-        const count = Number.isFinite(subcategory.count) ? Math.max(0, subcategory.count) : 0
+    <div className="space-y-2">
+      <Table aria-label="Ripartizione sottocategorie">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Sottocategoria</TableHead>
+            <TableHead className="min-w-[140px]">Peso</TableHead>
+            <TableHead className="text-right">Totale {year}</TableHead>
+            <TableHead className="text-right">Contributo alla differenza</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {contributions.map((row) => {
+            const percentage = safePercentage(row.weightPercentage)
+            const suffix = presenceSuffix(row.presence, year)
+            const judgement = resolveComparisonJudgement(row.contribution, type)
+            const isGone = row.presence === 'previous-only'
 
-        return (
-          <li key={subcategory.id} className="overflow-hidden rounded-xl border bg-card p-4 shadow-sm">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-foreground" title={subcategory.name}>
-                    {subcategory.name}
-                  </p>
-                  <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {movementLabel(count)} · {percentage}% del totale categoria
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <div className="flex w-12 justify-end">
-                    {deviations ? (
-                      <DeviationBadge
-                        deviation={(() => {
-                          const entry = deviations.get(subcategory.id)
-                          if (!entry) return null as DeviationResult
-                          if (entry.isNew) return 'new' as DeviationResult
-                          return entry.deviation as DeviationResult
-                        })()}
-                        categoryType={type}
-                      />
-                    ) : null}
+            return (
+              <TableRow key={row.id} className={isGone ? 'text-muted-foreground' : undefined}>
+                <TableCell className="max-w-0">
+                  <span className="truncate" title={row.name}>
+                    {row.name}
+                  </span>
+                  {suffix ? <span className="ml-1 text-xs text-muted-foreground">{suffix}</span> : null}
+                </TableCell>
+                <TableCell>
+                  <div
+                    className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                    role="img"
+                    aria-label={`${percentage}% del totale categoria`}
+                  >
+                    <div className={cn('h-full rounded-full', barColor)} style={{ width: `${percentage}%` }} />
                   </div>
-                  <p className="w-20 text-right font-mono text-sm font-semibold tabular-nums">
-                    {formatAmount(subcategory.amount)}
-                  </p>
-                </div>
-              </div>
-
-              <div
-                className="h-2 overflow-hidden rounded-full bg-muted"
-                role="img"
-                aria-label={`${percentage}% del totale categoria`}
-              >
-                <div className={cn('h-full rounded-full', barColor)} style={{ width: `${percentage}%` }} />
-              </div>
-            </div>
-          </li>
-        )
-      })}
-    </ul>
+                </TableCell>
+                <TableCell className="text-right font-mono text-sm tabular-nums">
+                  {formatAmount(row.currentAmount)} · {percentage}%
+                </TableCell>
+                <TableCell
+                  className={cn('text-right font-mono text-sm tabular-nums', judgementClassName(judgement))}
+                >
+                  {formatDeltaWords(row.contribution)}
+                </TableCell>
+              </TableRow>
+            )
+          })}
+          <TableRow className="border-t-2 border-foreground font-semibold">
+            <TableCell>Totale</TableCell>
+            <TableCell />
+            <TableCell className="text-right font-mono text-sm tabular-nums">
+              {formatAmount(totalCurrentAmount)}
+            </TableCell>
+            <TableCell
+              className={cn(
+                'text-right font-mono text-sm tabular-nums',
+                judgementClassName(resolveComparisonJudgement(totalContribution, type)),
+              )}
+            >
+              {formatDeltaWords(totalContribution)}
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+      {/* CR-01 fix (84-REVIEW.md): this table's "Contributo alla differenza" sums to the RAW,
+          non-projected difference (previousYear.rawTotalDifference) — never the pace/hybrid-
+          projected "Differenza" shown in the table above. Without this qualifier the two figures
+          look like the same number and can silently disagree whenever the window includes the
+          current or a future month. */}
+      <p className="text-xs text-muted-foreground">
+        Confronto su mesi osservati: esclude le proiezioni sui mesi futuri della finestra.
+      </p>
+    </div>
   )
 }

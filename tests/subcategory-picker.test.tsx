@@ -126,6 +126,7 @@ const categories = [
     type: 'out' as const,
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 10,
@@ -134,6 +135,7 @@ const categories = [
         originalName: 'Alimentari',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: 'essential' as const,
@@ -145,6 +147,7 @@ const categories = [
         originalName: 'Trasporti',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: null,
@@ -158,6 +161,7 @@ const categories = [
     type: 'in' as const,
     userId: null,
     isOwned: false,
+    isActive: true,
     subCategories: [
       {
         id: 20,
@@ -166,6 +170,7 @@ const categories = [
         originalName: 'Stipendio',
         userId: null,
         isOwned: false,
+        isActive: true,
         hasOverride: false,
         customName: null,
         effectiveNature: 'income' as const,

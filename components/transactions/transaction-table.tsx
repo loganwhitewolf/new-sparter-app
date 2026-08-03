@@ -176,7 +176,7 @@ function resolvePairRole(transaction: TransactionListRow): 'anchor' | 'counterpa
   return toDecimal(transaction.amount).isNegative() ? 'anchor' : 'counterpart'
 }
 
-/** Mirrors the movementLabel pattern in components/dashboard/category-detail-summary.tsx. */
+/** Pluralizes a transaction count for Italian UI copy. */
 function transactionCountLabel(count: number): string {
   return count === 1 ? '1 transazione' : `${count} transazioni`
 }
@@ -194,8 +194,8 @@ function transactionRowLabel(transaction: TransactionListRow) {
  * Pure helper backing `markTransactionAmortized`'s optimistic update (D-03 activation):
  * points the row at the Standalone Expense, marks the plan open, and leaves category
  * fields alone — `activatePlanTx` copies `subCategoryId` onto that expense. Clearing
- * `expenseCategoryName` / status here was a UI-only bug that looked like "dilaziona
- * toglie la categoria" until a full reload.
+ * `expenseCategoryName` / status here was a UI-only bug that made it look as though
+ * spreading a cost stripped the category, until a full reload proved otherwise.
  */
 export function applyAmortizationActivatedUpdate(
   transactions: TransactionListRow[],
