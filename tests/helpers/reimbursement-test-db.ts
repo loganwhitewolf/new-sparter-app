@@ -251,8 +251,8 @@ export async function resetReimbursementFixtures(db: ReimbursementTestDb): Promi
 // 73-01-SUMMARY.md / 73-02-SUMMARY.md (test run 177d200 / 8306086); this harness now only proves
 // the CURRENT reimbursement/reimbursement_refund read path.
 
-// Test-local replacement for lib/utils/date.ts's dashboardPresetToDateRange('last-month') branch
-// (D-15/D-16, Plan 84-03 Task 2) — byte-identical arithmetic, copied verbatim rather than
+// Test-local last-month date range (D-15/D-16, Plan 84-03 Task 2) — replaces the now-retired
+// preset-to-range helper this harness used to call. Arithmetic copied verbatim rather than
 // "simplified", since D-16 forbids any change in the covered period this regression harness
 // exercises.
 export function lastMonthRange(now: Date = new Date()): { from: Date; to: Date } {

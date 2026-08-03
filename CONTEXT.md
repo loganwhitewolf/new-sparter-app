@@ -226,8 +226,12 @@ _Avoid_: peso (è la quota sul totale, un'altra cosa), impatto
 Il periodo della vista dettaglio di una categoria: anno intero oppure 9/6/3 mesi con mese di partenza scelto. **Ogni numero della pagina si riferisce alla Finestra**, compreso il confronto annuale, che usa la **finestra omologa dell'anno precedente** (con Finestra = anno intero degenera nell'anno precedente intero: una regola sola, nessun caso speciale). La Finestra decide cosa si vede e cosa si somma, **non** su cosa si calcola il Ritmo.
 _Avoid_: preset (ritirato), intervallo, range
 
+**Confronto** (Comparison):
+Lo scostamento tra i valori della **Finestra** selezionata e la **finestra omologa dell'anno precedente**. Si calcola come `corrente − precedente` (mai un glifo di segno) e si rende sempre come modulo + parola, con l'etichetta **"Rispetto al {anno-1}"** — identica sia sulla colonna di riepilogo (Totale, Media) sia sulla colonna dei contributi di sottocategoria. È il termine canonico di glossario e di codice, già in uso dalla Fase 82 (`computeComparison`, `resolveComparisonJudgement`): non introduce vocabolario nuovo. Distinto da **delta** (riservato alla variazione KPI periodo-su-periodo) e dalla **Deviation** (ritirata, vedi Flagged ambiguities).
+_Avoid_: delta (è un'altra misura), deviation (ritirato), differenza (non usato come etichetta visibile)
+
 **MonthOverMonthChange** (Variazione mese su mese):
-Variazione della spesa di una categoria rispetto al mese di calendario precedente. Distinto dalla Deviation (che confronta vs la Baseline su 3 mesi). Query: `getMonthOverMonthCategoryChanges`. Copy UI: "Rispetto al mese scorso" / "Dove hai speso di più" / "Dove hai risparmiato". Campi: `{ categoryId, name, delta, isNew }` — `isNew = true` quando la spesa precedente era zero e quella attuale è positiva.
+Variazione della spesa di una categoria rispetto al mese di calendario precedente. Query: `getMonthOverMonthCategoryChanges`. Copy UI: "Rispetto al mese scorso" / "Dove hai speso di più" / "Dove hai risparmiato". Campi: `{ categoryId, name, delta, isNew }` — `isNew = true` quando la spesa precedente era zero e quella attuale è positiva.
 _Avoid_: "variazione" come termine generico (è il nome di *questa* misura)
 
 **Segno e verso dei confronti** (regola trasversale):
@@ -292,4 +296,4 @@ _Avoid_: vista di cassa vs accrual (mischiare le lingue), filtro competenza (non
 
 - "delta" era usato sia per variazioni KPI periodo-su-periodo sia per scostamento dalla media: risolto — **delta** = variazione KPI; lo scostamento dalla media (Deviation/Baseline) è stato **ritirato** dal prodotto (ADR 0020).
 - **Deviation**, **Baseline**, **Noise Threshold** e **Preset** erano termini di dominio fino alla riscrittura della sezione Categorie: **ritirati** con ADR 0020, sostituiti da MonthOverMonthChange (dentro la serie), confronto con la **Finestra** omologa dell'anno precedente e **Contributo alla differenza**. Il debito D-12 (Reference Period query-derived vs ultimo mese di calendario) si estingue con il motore che lo aveva. Non reintrodurre i quattro termini: erano non verificabili a occhio o ancorati a periodi che la pagina non nominava.
-- Il confronto "stima annuale vs anno precedente chiuso" **non ha ancora un nome**: non può chiamarsi *delta* (riservato) né *deviation* (ritirato). Da fissare in fase UI.
+- Il confronto "stima annuale vs anno precedente chiuso" ha ora un nome: **Confronto** (fissato in Fase 84, D-13). Non è *delta* (riservato alla variazione KPI) né *deviation* (ritirato).
