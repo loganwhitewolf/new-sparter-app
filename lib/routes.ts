@@ -1,8 +1,4 @@
-import type {
-  CategoryYearSort,
-  DashboardPreset,
-  DashboardSort,
-} from '@/lib/validations/dashboard'
+import type { CategoryYearSort } from '@/lib/validations/dashboard'
 import type { CategoryDetailWindowLength } from '@/lib/validations/category-year-window'
 import type { LensPassthrough } from '@/lib/utils/search-params'
 
@@ -30,15 +26,10 @@ export const ONBOARDING_AFTER_PRIVATE_PLATFORM_CREATION_ROUTE =
   `${APP_ROUTES.onboarding}?step=${ONBOARDING_STEP_AFTER_PRIVATE_PLATFORM_CREATION}` as const
 
 type DashboardCategoryFilters = {
-  preset?: DashboardPreset
   type?: 'in' | 'out' | 'allocation'
-  sort?: DashboardSort | CategoryYearSort
-  defaultPreset?: DashboardPreset
-  defaultSort?: DashboardSort
-  // D-12 (Phase 83) — additive year mode. When set, buildDashboardCategoriesHref and
-  // buildDashboardCategoryDetailHref emit a `?year=` href instead of the preset-based one below;
-  // omitted, both functions behave exactly as before. Callers in year mode are expected never to
-  // also pass `preset`.
+  sort?: CategoryYearSort
+  // D-12 (Phase 83) — the year-mode URL contract (D-17, Phase 84: the sole remaining mode
+  // since the preset-mode branch was retired). Every live caller always sets `year`.
   year?: number
   // Phase 82, D-12+D-13 (review fix WR-03): `lens` here is a raw, UNVALIDATED passthrough
   // value threaded through Categories' own hrefs (sort toggle, row click-through, detail back
@@ -93,28 +84,7 @@ export function buildDashboardCategoriesHref(filters: DashboardCategoryFilters =
     return APP_ROUTES.dashboardCategories + (search ? `?${search}` : '')
   }
 
-  const params = new URLSearchParams()
-  const defaultPreset = filters.defaultPreset ?? 'this-year'
-  const defaultSort: DashboardSort = filters.defaultSort ?? 'amount'
-
-  if (filters.preset && filters.preset !== defaultPreset) {
-    params.set('preset', filters.preset)
-  }
-
-  if (filters.type && filters.type !== 'out') {
-    params.set('type', filters.type)
-  }
-
-  if (filters.sort && filters.sort !== defaultSort) {
-    params.set('sort', filters.sort)
-  }
-
-  if (filters.lens) {
-    params.set('lens', filters.lens)
-  }
-
-  const search = params.toString()
-  return APP_ROUTES.dashboardCategories + (search ? `?${search}` : '')
+  return APP_ROUTES.dashboardCategories
 }
 
 export function dashboardCategoryDetail(id: number | string) {
@@ -173,26 +143,5 @@ export function buildDashboardCategoryDetailHref(
     return dashboardCategoryDetail(id) + (search ? `?${search}` : '')
   }
 
-  const params = new URLSearchParams()
-  const defaultPreset = filters.defaultPreset ?? 'this-year'
-  const defaultSort: DashboardSort = filters.defaultSort ?? 'amount'
-
-  if (filters.preset && filters.preset !== defaultPreset) {
-    params.set('preset', filters.preset)
-  }
-
-  if (filters.type && filters.type !== 'out') {
-    params.set('type', filters.type)
-  }
-
-  if (filters.sort && filters.sort !== defaultSort) {
-    params.set('sort', filters.sort)
-  }
-
-  if (filters.lens) {
-    params.set('lens', filters.lens)
-  }
-
-  const search = params.toString()
-  return dashboardCategoryDetail(id) + (search ? `?${search}` : '')
+  return dashboardCategoryDetail(id)
 }

@@ -10,11 +10,10 @@ import {
 } from '@/components/ui/chart'
 import { cn } from '@/lib/utils'
 import type { BreakdownCategory } from '@/lib/dal/dashboard'
-import type { DashboardType } from '@/lib/validations/dashboard'
 
 type Props = {
   data: BreakdownCategory[]
-  type: DashboardType
+  type: 'out' | 'in' | 'all'
 }
 
 type DisplayRow = {

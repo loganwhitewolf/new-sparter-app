@@ -71,12 +71,6 @@ describe('buildDashboardCategoriesHref / buildDashboardCategoryDetailHref — ye
     )
   })
 
-  test('no `year` key at all leaves the preset-based href completely unchanged', () => {
-    expect(buildDashboardCategoriesHref({ preset: 'last-3-months', type: 'in' })).toBe(
-      '/dashboard/categories?preset=last-3-months&type=in'
-    )
-  })
-
   test('year round-trips through the URL with no precision loss for any 4-digit year (CLIST-05 precision probe)', () => {
     for (const year of [2024, 2025, 2026]) {
       const href = buildDashboardCategoriesHref({ year })

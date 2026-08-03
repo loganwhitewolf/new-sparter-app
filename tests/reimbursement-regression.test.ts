@@ -28,11 +28,12 @@ import {
   transaction as transactionTable,
 } from '@/lib/db/schema'
 import type { createPair as CreatePair } from '@/lib/services/transaction-pairs'
-import { dashboardPresetToDateRange, monthKey } from '@/lib/utils/date'
+import { monthKey } from '@/lib/utils/date'
 import { toDecimal } from '@/lib/utils/decimal'
 import {
   captureAggregationSnapshot,
   connectReimbursementTestDb,
+  lastMonthRange,
   resetReimbursementFixtures,
   type AggregationSnapshot,
   type ReimbursementTestDb,
@@ -105,7 +106,7 @@ describeIfReachable('reimbursement N=1 regression (Phase 73, ADR 0018 D-07)', ()
     essentialCategoryId = taxonomy.essentialCategoryId
     const { tagId } = await seedTag(db, { userId, name: 'Amazon' })
 
-    const dateRange = dashboardPresetToDateRange('last-month')
+    const dateRange = lastMonthRange()
     const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 15, 12, 0, 0)
 
     // The Amazon order/refund case (N=1): one outflow (-100.00), one inflow refund (+50.00).
@@ -177,7 +178,7 @@ describeIfReachable('reimbursement N=1 regression (Phase 73, ADR 0018 D-07)', ()
   })
 
   it('getMonthlyTrendByNature: essential segment preserves sign (-50.00, net outflow)', () => {
-    const dateRange = dashboardPresetToDateRange('last-month')
+    const dateRange = lastMonthRange()
     const targetMonth = monthKey(dateRange.from)
     const point = (
       snapshot.getMonthlyTrendByNature as Array<{ month: string; segments: Record<string, string> }>
@@ -200,7 +201,7 @@ describeIfReachable('reimbursement N=1 regression (Phase 73, ADR 0018 D-07)', ()
   })
 
   it('getOverviewChart: out.essential is the abs()-bucketed 50.00', () => {
-    const dateRange = dashboardPresetToDateRange('last-month')
+    const dateRange = lastMonthRange()
     const targetMonth = monthKey(dateRange.from)
     const point = (
       snapshot.getOverviewChart as Array<{ month: string; out: { essential: string } }>
@@ -229,7 +230,7 @@ describeIfReachable('empty-refund probe (RMB-04)', () => {
     const { userId } = await seedUser(db)
     vi.mocked(verifySession).mockResolvedValue({ userId } as never)
     const taxonomy = await seedMinimalTaxonomy(db, userId)
-    const dateRange = dashboardPresetToDateRange('last-month')
+    const dateRange = lastMonthRange()
     const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 10, 12, 0, 0)
 
     const { expenseId, transactionId } = await seedExpenseWithTransaction(db, {
@@ -294,7 +295,7 @@ describeIfReachable(
       const taxonomy = await seedMinimalTaxonomy(db, userId)
       const { tagId } = await seedTag(db, { userId, name: 'Cena di gruppo' })
 
-      const dateRange = dashboardPresetToDateRange('last-month')
+      const dateRange = lastMonthRange()
       const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 12, 20, 0, 0)
 
       const { expenseId: anchorExpenseId, transactionId: anchorTransactionId } =
@@ -420,7 +421,7 @@ describeIfReachable(
       const { userId } = await seedUser(db)
       vi.mocked(verifySession).mockResolvedValue({ userId } as never)
       const taxonomy = await seedMinimalTaxonomy(db, userId)
-      const dateRange = dashboardPresetToDateRange('last-month')
+      const dateRange = lastMonthRange()
       const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 8, 12, 0, 0)
 
       const { expenseId: anchorExpenseId } = await seedExpenseWithTransaction(db, {
@@ -530,7 +531,7 @@ describeIfReachable(
       const { userId } = await seedUser(db)
       vi.mocked(verifySession).mockResolvedValue({ userId } as never)
       const taxonomy = await seedMinimalTaxonomy(db, userId)
-      const dateRange = dashboardPresetToDateRange('last-month')
+      const dateRange = lastMonthRange()
       const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 18, 12, 0, 0)
 
       const { expenseId: anchorExpenseId } = await seedExpenseWithTransaction(db, {
@@ -633,7 +634,7 @@ describeIfReachable(
       const { userId } = await seedUser(db)
       vi.mocked(verifySession).mockResolvedValue({ userId } as never)
       const taxonomy = await seedMinimalTaxonomy(db, userId)
-      const dateRange = dashboardPresetToDateRange('last-month')
+      const dateRange = lastMonthRange()
       const earlierOccurredAt = new Date(
         dateRange.from.getFullYear(),
         dateRange.from.getMonth(),
@@ -790,7 +791,7 @@ describeIfReachable(
         natureId: taxonomy.essentialNatureId,
       })
 
-      const dateRange = dashboardPresetToDateRange('last-month')
+      const dateRange = lastMonthRange()
       const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 12, 12, 0, 0)
 
       const { expenseId: member1ExpenseId } = await seedExpenseWithTransaction(db, {
@@ -886,7 +887,7 @@ describeIfReachable(
       const { userId } = await seedUser(db)
       vi.mocked(verifySession).mockResolvedValue({ userId } as never)
       const taxonomy = await seedMinimalTaxonomy(db, userId)
-      const dateRange = dashboardPresetToDateRange('last-month')
+      const dateRange = lastMonthRange()
 
       const day5 = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 5, 12, 0, 0)
       const day10 = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 10, 12, 0, 0)
@@ -978,7 +979,7 @@ describeIfReachable(
       const { userId } = await seedUser(db)
       vi.mocked(verifySession).mockResolvedValue({ userId } as never)
       const taxonomy = await seedMinimalTaxonomy(db, userId)
-      const dateRange = dashboardPresetToDateRange('last-month')
+      const dateRange = lastMonthRange()
       const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 12, 12, 0, 0)
 
       // Deliberately constructed to sum to exactly zero -- constructed directly via fixtures,
@@ -1071,7 +1072,7 @@ describeIfReachable(
 
       const { userId } = await seedUser(db)
       const taxonomy = await seedMinimalTaxonomy(db, userId)
-      const dateRange = dashboardPresetToDateRange('last-month')
+      const dateRange = lastMonthRange()
       const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 5, 12, 0, 0)
 
       const { expenseId: anchorExpenseId, transactionId: anchorTransactionId } =
@@ -1125,7 +1126,7 @@ describeIfReachable(
 
       const { userId } = await seedUser(db)
       const taxonomy = await seedMinimalTaxonomy(db, userId)
-      const dateRange = dashboardPresetToDateRange('last-month')
+      const dateRange = lastMonthRange()
       const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 5, 12, 0, 0)
 
       const { expenseId: anchorExpenseId, transactionId: anchorTransactionId } =
@@ -1200,7 +1201,7 @@ describeIfReachable('amortization cash-lens byte-identical (Phase 77, ADR 0019 D
     const taxonomy = await seedMinimalTaxonomy(db, userId)
     const { tagId } = await seedTag(db, { userId, name: 'Amortization probe' })
 
-    const dateRange = dashboardPresetToDateRange('last-month')
+    const dateRange = lastMonthRange()
     const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 14, 12, 0, 0)
 
     // A plain outflow transaction, no amortization yet.
@@ -1332,7 +1333,7 @@ describeIfReachable('amortization cash-lens byte-identical (Phase 77, ADR 0019 D
     const essentialCategoryId = taxonomy.essentialCategoryId
     const { tagId } = await seedTag(db, { userId, name: 'Amazon' })
 
-    const dateRange = dashboardPresetToDateRange('last-month')
+    const dateRange = lastMonthRange()
     const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 15, 12, 0, 0)
 
     // Byte-identical replica of the Phase 73 N=1 scenario (this file's very first
@@ -1461,7 +1462,7 @@ describeIfReachable('amortization lifecycle: close/collapse regression (Phase 78
     const taxonomy = await seedMinimalTaxonomy(db, userId)
     const { tagId } = await seedTag(db, { userId, name: 'Amortization close probe' })
 
-    const dateRange = dashboardPresetToDateRange('last-month')
+    const dateRange = lastMonthRange()
     const startDate = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth() - 5, 10, 12, 0, 0)
 
     const { expenseId, transactionId } = await seedExpenseWithTransaction(db, {
@@ -1671,7 +1672,7 @@ describeIfReachable('amortization lifecycle: realize/reduce regression (Phase 78
     // which the 3-consumed-months-before-today construction above guarantees overlaps one of this
     // plan's PAST (untouched-by-reducePlanTx) instalments, making the byte-identical assertion
     // non-trivial rather than a 0-vs-0 no-op.
-    const dateRange = dashboardPresetToDateRange('last-month')
+    const dateRange = lastMonthRange()
 
     const before = await captureAggregationSnapshot({
       harnessDb: db,

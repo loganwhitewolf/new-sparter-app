@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { dashboardPresetToDateRange } from '@/lib/utils/date'
 
 // Hoisted so the `@/lib/db` mock factory below (which is itself hoisted above
 // all imports by vi.mock) can close over shared mutable state: rowsQueue lets
@@ -126,13 +125,6 @@ beforeEach(() => {
 })
 
 describe('dashboard DAL amount mapping', () => {
-  it('returns previous December when last-month is queried in January', () => {
-    expect(dashboardPresetToDateRange('last-month', new Date(2026, 0, 15))).toEqual({
-      from: new Date(2025, 11, 1),
-      to: new Date(2025, 11, 31, 23, 59, 59, 999),
-    })
-  })
-
   it('includes manually and automatically categorized expenses in dashboard totals', () => {
     expect(DASHBOARD_TOTAL_EXPENSE_STATUSES).toEqual(['1', '2', '3'])
   })

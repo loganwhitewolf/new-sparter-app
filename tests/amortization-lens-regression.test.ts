@@ -10,12 +10,13 @@ import { eq } from 'drizzle-orm'
 import { afterAll, describe, expect, it, vi } from 'vitest'
 import { verifySession } from '@/lib/dal/auth'
 import { amortizationInstalment, ledgerEntryAccrual } from '@/lib/db/schema'
-import { dashboardPresetToDateRange, monthKey } from '@/lib/utils/date'
+import { monthKey } from '@/lib/utils/date'
 import { toDecimal } from '@/lib/utils/decimal'
 import { materializeInstalments } from '@/lib/services/amortization-math'
 import {
   captureAggregationSnapshot,
   connectReimbursementTestDb,
+  lastMonthRange,
   resetReimbursementFixtures,
   type ReimbursementTestDb,
 } from './helpers/reimbursement-test-db'
@@ -63,7 +64,7 @@ describeIfReachable('dashboard accrual lens — getOverviewAmountTotals seam (Ph
     const taxonomy = await seedMinimalTaxonomy(db, userId)
     const { tagId } = await seedTag(db, { userId, name: 'Lens probe' })
 
-    const dateRange = dashboardPresetToDateRange('last-month')
+    const dateRange = lastMonthRange()
     const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 14, 12, 0, 0)
 
     // A plain -1000.00 outflow, then activate a 3-month plan on it (fixture-inserted, mirroring
@@ -128,7 +129,7 @@ describeIfReachable(
       vi.mocked(verifySession).mockResolvedValue({ userId } as never)
       const taxonomy = await seedMinimalTaxonomy(db, userId)
 
-      const dateRange = dashboardPresetToDateRange('last-month')
+      const dateRange = lastMonthRange()
       const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 14, 12, 0, 0)
       const occurredMonthKey = monthKey(occurredAt)
       const title = 'Lens probe purchase (80-02)'
