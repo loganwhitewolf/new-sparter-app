@@ -1,143 +1,206 @@
 ---
 phase: 83-categories-list
-verified: 2026-07-31T20:20:00Z
-status: gaps_found
-score: 6/7 must-haves verified
+verified: 2026-08-03T10:45:00Z
+status: passed
+score: 7/7 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 re_verification: true
 previous_status: gaps_found
 previous_score: 6/7
 gaps_closed:
-  - "CR-01 (OLD): getCategoryYearRanking's abs(sum(...)) now branches on directionCode to preserve sign for allocation direction; real-Postgres tests prove the DAL boundary and component rendering of negative-domain marker"
-  - "WR-02: CategorySparkline's estimated bars now have a fallback reference magnitude when pace is unavailable"
-  - "WR-01: Preset-mode route builders now mirror year-mode's type check for allocation"
-gaps_remaining:
-  - "CR-01 (NEW): Clicking an allocation ('Accantonamenti') row produces a valid URL with ?type=allocation, but the detail page coerces it to ?type=out, showing empty data and a wrong back link — violates CLIST-07 (row total vs detail total agreement)"
+  - "CR-01 (NEW): allocation-direction row now renders a non-interactive <span aria-disabled=\"true\"> instead of a <Link>; no href is computed for that branch, so no ?type=allocation URL that the detail page cannot handle is ever constructed"
+gaps_remaining: []
 regressions: []
-gaps:
-  - truth: "Clicking a category opens its detail on the same period, so the row's total and the detail page's total agree (CLIST-07) — violated for allocation direction: user clicks allocation row with total €X, detail page receives ?type=allocation but coerces it to ?type=out, filters for direction.includedInTotals=true (false for allocation), shows €0 instead"
-    status: failed
-    reason: "Phase 83 made allocation rows fully clickable via CategoryRankingList (line 82: Link with href built by buildDashboardCategoryDetailHref). The href builder correctly emits ?type=allocation via buildYearModeSearch (lib/routes.ts line 58-59). But the detail page (app/(app)/dashboard/categories/[id]/page.tsx) only accepts DashboardType ('in'|'out'|'all'), not CategoryYearDirection ('in'|'out'|'allocation'). Line 67 coerces allocation to 'out': type: filters.type === 'in' ? 'in' : 'out'. This is a direct consequence of Phase 83's own code making allocation clickable without ensuring the detail page can handle it."
-    artifacts:
-      - path: "app/(app)/dashboard/categories/[id]/page.tsx"
-        issue: "Lines 22-25: categoryTypeOptions only lists Uscite/Entrate; lines 29, 67: CategoryDetailFilters.type narrowed to 'in'|'out'; coercion on line 67 silently converts allocation to 'out'"
-      - path: "lib/validations/dashboard.ts"
-        issue: "Line 5: DashboardTypeSchema = z.enum(['out','in','all']).default('out') — does not include 'allocation'. Line 53: CategoryYearDirectionSchema correctly includes 'allocation', but it's a separate schema only used for the Categories list, not the detail page"
-      - path: "components/dashboard/category-ranking-list.tsx"
-        issue: "Line 82: Link href built with 'allocation' type, which the detail page cannot accept. This creates a broken clickthrough for allocation rows"
-    missing:
-      - "EITHER: (Phase 83 scope) Extend the detail page's CategoryDetailFilters.type to accept 'allocation' (even if temporarily mapped to 'out' or left unimplemented, the schema must allow it to prevent silent coercion); OR (Phase 83 scope) Disable/guard the row Link for allocation rows until Phase 84 detail-page rewrite lands; OR (Phase 84 scope, with risk) defer to Phase 84 and accept broken allocation detail links as a known limitation"
-      - "If accepting allocation on detail page, update: (a) categoryTypeOptions to include allocation; (b) CategoryDetailFilters.type to accept 'allocation'; (c) getCategoryDetail queries to handle allocation direction (or explicitly document allocation is not supported on detail page and map it to a read-only state); (d) add test coverage for ?type=allocation round-trip on detail page"
-      - "If disabling allocation row links: guard the Link in CategoryRankingList to render a span or 'coming soon' affordance instead of a clickable link when direction === 'allocation'; document in a comment why allocation is not clickable in Phase 83"
+deferred: []
+behavior_unverified_items: []
 ---
 
-# Phase 83: categories-list RE-VERIFICATION Report
+# Phase 83: categories-list RE-VERIFICATION Report (Post-Gap-Closure)
 
 **Phase Goal:** The user reads the selected year's categories ranked by spend, each carrying its share of the total, a 12-month sparkline and a year-end projection, filterable across all three directions including the previously-unreachable Accantonamenti.
 
-**Verified:** 2026-07-31T20:20:00Z  
-**Status:** gaps_found (re-verification after Phase 83-05 gap-closure plan)  
-**Previous Status:** gaps_found (6/7 must-haves)  
-**Current Status:** gaps_found (6/7 must-haves; one old gap closed, one new gap found)
+**Verified:** 2026-08-03T10:45:00Z  
+**Status:** PASSED (re-verification after Phase 83-06 gap-closure plan)  
+**Previous Status:** gaps_found (6/7 must-haves; 1 gap: CR-01 NEW)  
+**Current Status:** passed (7/7 must-haves; CR-01 NEW closed)
 
 ## Summary
 
-Phase 83-05's gap-closure plan successfully fixed two of the three findings from the prior verification cycle and the code review:
+Phase 83-06 (commits `3edab68f` and `54832fa3`, executed 2026-08-03) successfully closed the single remaining verification gap **CR-01 (NEW)** from the prior verification (2026-07-31). The fix implements exactly the user-locked decision recorded in the previous VERIFICATION.md's "LOCKED DECISION" block:
 
-✓ **CR-01 (OLD):** `getCategoryYearRanking` now branches on `directionCode` to preserve sign for allocation direction, preventing the DAL from erasing net-divestment months via `abs()`. Real-Postgres tests prove the end-to-end flow from DAL → component → rendered negative-domain marker.
+> Option 1: **guard the row Link for the allocation direction inside Phase 83**. An allocation row renders as a non-interactive element (`<span>`, `aria-disabled`) instead of a `<Link>`, so no `?type=allocation` URL the detail page cannot honour is ever produced. Full allocation support on the detail page stays Phase 84 scope, where that page is rewritten anyway.
 
-✓ **WR-02:** `CategorySparkline.resolveEstimatedReference` now has a fallback reference magnitude when `estimatedHeightHint` is null, preventing estimated bars from collapsing to 0% height.
+**Implementation status:**
+- ✓ **CR-01 (NEW) closed:** `components/dashboard/category-ranking-list.tsx` now branches on `direction` — `allocation` renders a non-interactive `<span aria-disabled="true">`, while `out`/`in` render the original `<Link>` unchanged
+- ✓ **No ?type=allocation URL ever produced:** The unconditional `href` const was deleted; href computation now lives only inside the non-allocation JSX branch
+- ✓ **All 6 previously-verified must-haves remain intact:** No regressions to CLIST-01/02/03/04/05/06
+- ✓ **CLIST-07 now satisfied:** "clicking a category opens its detail on the same period, so the total read in the row is the total read on the page" holds for the two directions whose detail page already supports them (`in`/`out`); the third direction (`allocation`) is provably inert rather than silently broken
 
-✓ **WR-01:** `buildDashboardCategoriesHref` and `buildDashboardCategoryDetailHref` preset-mode branches now mirror year-mode's type check, no longer silently dropping `type: 'allocation'`.
+**Test verification:**
+- Phase 83-06 test suite: 9/9 passing in `tests/category-ranking-list.test.tsx`
+- Full suite: 2198 passing + 1 todo across 180 files (baseline was 2197; +1 is the new CR-01 guard test)
+- Zero failures, zero regressions
+- All protected regression gates pass (RETIRE-05, reimbursement v2.8/v2.9 baselines)
 
-**However, a fresh code review (83-REVIEW.md, committed 2026-07-31) identified a NEW CR-01: a critical defect in the interaction between Phase 83's new code (making allocation rows clickable) and the pre-existing detail page (which cannot accept `?type=allocation`).** Phase 83-05's plan scope did not include fixing this detail-page schema issue. It remains a blocker for CLIST-07 compliance.
+## Closed Gap: CR-01 (NEW) — Allocation Rows Link to Broken Detail Page
+
+**Previous Status (2026-07-31):** BLOCKER — violated CLIST-07
+
+**Current Status (2026-08-03):** CLOSED via guard-by-construction
+
+### What Changed
+
+**Before the fix:**
+- Allocation rows were fully clickable via `<Link href={buildDashboardCategoryDetailHref(..., { type: 'allocation', ... })}>` 
+- This produced a URL like `/dashboard/categories/[id]?year=2026&type=allocation`
+- The detail page (app/(app)/dashboard/categories/[id]/page.tsx) coerces `?type=allocation` to `?type=out` (line 67)
+- Result: user clicks allocation row with total €500, lands on detail page showing €0 with back link to wrong list
+- Violates CLIST-07 (row total ≠ detail page total)
+
+**After the fix:**
+- Allocation rows render a non-interactive `<span aria-disabled="true">` instead of a `<Link>`
+- The href building function is not called at all for the allocation branch — the URL class that was broken is now closed by construction
+- `out` and `in` rows keep their original `<Link>` byte-identical to pre-fix behavior
+- Result: allocation rows are visible and readable but provably non-interactive; no broken detail URL is ever produced
+
+### Implementation Details
+
+**File: `components/dashboard/category-ranking-list.tsx`**
+
+Lines 96-116 (the Column 2 name element):
+
+```tsx
+{/* CR-01 (NEW), 83-VERIFICATION.md LOCKED DECISION: the allocation direction has
+    no detail page yet (Phase 84 scope) — its branch computes no href at all, so
+    no ?type=allocation URL the detail page can't honour is ever constructed. */}
+{direction === 'allocation' ? (
+  <span
+    className="block truncate text-base font-semibold text-foreground"
+    aria-disabled="true"
+    title={category.name}
+  >
+    {category.name}
+  </span>
+) : (
+  <Link
+    href={buildDashboardCategoryDetailHref(category.id, { year, type: direction, lens })}
+    className="block truncate text-base font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
+    aria-label={`${category.name}: apri dettaglio categoria`}
+    title={category.name}
+  >
+    {category.name}
+  </Link>
+)}
+```
+
+**Key observations:**
+- The unconditional `const href = buildDashboardCategoryDetailHref(...)` that existed before this fix has been deleted entirely
+- The `buildDashboardCategoryDetailHref` function is now called only inside the non-allocation JSX branch (the `else` clause)
+- The allocation branch (the `if` clause) contains zero references to the route builder function
+- No href is ever computed for the allocation direction — the guard exists by construction, not by conditionally omitting a render
+
+**File: `tests/category-ranking-list.test.tsx`**
+
+Two changes:
+
+1. **Repointed the existing href test** (lines 68-75):
+   - Changed from `direction="allocation"` to `direction="in"`
+   - Updated the expected href assertion to match `in`-direction query string (`type=in` parameter present)
+   - Test continues to prove the year+type+lens href contract for a direction the detail page actually supports
+
+2. **Added new CR-01 (NEW) guard test** (lines 77-117):
+   - Renders three separate single-row lists: `direction="out"`, `direction="in"`, `direction="allocation"`
+   - For `out` (lines 78-88): asserts `<a` is present and href is `/dashboard/categories/{id}?year=2026` (no type= parameter, since 'out' is the default)
+   - For `in` (lines 90-100): asserts `<a` is present and href is `/dashboard/categories/{id}?year=2026&amp;type=in`
+   - For `allocation` (lines 102-117): asserts NO `<a` element, but all five D-04 fields are still present (name, Totale, share, sparkline aria-label, projection when non-null), carries `aria-disabled="true"`, and contains no `type=allocation` substring anywhere
+
+This matches exactly what 83-VERIFICATION.md's locked decision required: "an allocation row must emit no `<a>` element, while `out` and `in` rows keep their existing links."
+
+### Verification of Guard-by-Construction
+
+**Grep verification:**
+```bash
+$ grep -n "buildDashboardCategoryDetailHref" components/dashboard/category-ranking-list.tsx
+109:    href={buildDashboardCategoryDetailHref(category.id, { year, type: direction, lens })}
+```
+
+Only one occurrence in the entire file (line 109), and it sits inside the non-allocation JSX branch only. The allocation branch (lines 99-106) contains no reference to this function.
+
+**Test verification:**
+The new CR-01 (NEW) guard test explicitly asserts:
+- `expect(allocationHtml).not.toContain('<a')` — no anchor element
+- `expect(allocationHtml).not.toContain('type=allocation')` — no ?type=allocation URL parameter anywhere in the output
+
+Both assertions pass.
+
+**Full suite verification:**
+- `node_modules/.bin/vitest run tests/category-ranking-list.test.tsx` — 9/9 passing
+- `node_modules/.bin/vitest run` (full suite) — 2198 passed + 1 todo across 180 files; zero failures
+- No regressions to any other Categories test or protected regression gates
 
 ## Goal Achievement: Observable Truths Verification
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | For a selected year and direction, every category appears ranked by total, each row showing its % share of the total and a 12-month sparkline (CLIST-01) | ✓ VERIFIED | `getCategoryYearRanking` DAL query returns correctly-grouped category+month combinations; `CategoryRankingList` renders all five D-04 columns; real-Postgres tests in `tests/categories-ranking-dal.test.ts` prove the aggregation; component tests prove rendering |
-| 2 | Each row also shows the year-end projection, visually subordinate to and explicitly labelled apart from the total (CLIST-02); user can re-order by projection via existing sort control (CLIST-03) | ✓ VERIFIED | Projection rendered as "A questo passo" with visual weight hierarchy (500 vs 600 for total); entire pair absent when null per D-15; `compareByProjection` function sorts correctly with null fallback; both sort UI options available and functional |
-| 3 | The direction switch offers Uscite, Entrate and Accantonamenti — the last reachable here for the first time (CLIST-04) | ✓ REACHABLE BUT INCOMPLETE | D-09 predicate flip correctly implemented in `getCategoryYearRanking` (line 1374, `ne(direction.hidden, false)` instead of `includedInTotals=true`). Allocation direction is now reachable via `DirectionFilter` on the Categories list ✓. **BUT:** Phase 83 made allocation rows fully clickable (CategoryRankingList line 82 renders a Link for every row regardless of direction), which produces URLs with `?type=allocation`. The detail page cannot accept this value (see gap below), creating broken detail links for all allocation rows. CLIST-04's success criterion is "reachable," which ✓ holds; but the follow-on CLIST-07 requirement is violated. |
-| 4 | Moving between Overview and Categories preserves the selected year via the shared `?year=` parameter (CLIST-05) | ✓ VERIFIED | `buildDashboardTabHref` propagates year between tabs; Categories list page calls `resolveYear(params.year, years)`; test in `tests/category-detail-link.test.ts` proves the round trip |
-| 5 | With a single Covered Month, the list shows the certain figures (total, share, one-point series) plus an explicit statement of what's missing and how to get it; clicking a category opens its detail on the same year, so the row's total and the detail page's total agree (CLIST-06, CLIST-07) | ⚠️ PARTIAL VERIFIED / BLOCKED | **Single-Covered-Month nudge (CLIST-06):** ✓ Implemented and working. CategoryCoverageNudge rendered when `coveredMonthCount === 1`. **Detail link coherence (CLIST-07):** ✓ Works for Uscite/Entrate rows — href built with matching year via `buildDashboardCategoryDetailHref`, detail page receives same year, totals agree. **BLOCKED for allocation rows:** When a user clicks an allocation row, the href correctly includes `?type=allocation`, but the detail page coerces this to `?type=out` (line 67 of page.tsx: `type: filters.type === 'in' ? 'in' : 'out'`). Because allocation direction has `includedInTotals=false`, the filtered data is empty, and detail page shows €0 instead of the row's total. This violates CLIST-07. |
+| 1 | For a selected year and direction, every category appears ranked by total, each row showing its % share of the total and a 12-month sparkline (CLIST-01) | ✓ VERIFIED | `getCategoryYearRanking` DAL query returns correctly-grouped category+month combinations; `CategoryRankingList` renders all five D-04 columns; real-Postgres tests in `tests/categories-ranking-dal.test.ts` prove the aggregation; component tests prove rendering; no regression since previous verification |
+| 2 | Each row also shows the year-end projection, visually subordinate to and explicitly labelled apart from the total (CLIST-02); user can re-order by projection via existing sort control (CLIST-03) | ✓ VERIFIED | Projection rendered as "A questo passo" with visual weight hierarchy (500 vs 600 for total); entire pair absent when null per D-15; `compareByProjection` function sorts correctly with null fallback; both sort UI options available and functional; no regression since previous verification |
+| 3 | The direction switch offers Uscite, Entrate and Accantonamenti — the last reachable here for the first time (CLIST-04) | ✓ VERIFIED | D-09 predicate flip correctly implemented in `getCategoryYearRanking`. Allocation direction is reachable and visible via `DirectionFilter` on the Categories list. Allocation rows render fully readable with all five D-04 fields (name, Totale, share, sparkline, projection). **Change since previous verification:** rows are now provably non-interactive instead of silently broken, which satisfies the requirement even more reliably. |
+| 4 | Moving between Overview and Categories preserves the selected year via the shared `?year=` parameter (CLIST-05) | ✓ VERIFIED | `buildDashboardTabHref` propagates year between tabs; Categories list page calls `resolveYear(params.year, years)`; test in `tests/category-detail-link.test.ts` proves the round trip; no change since previous verification |
+| 5 | Clicking a category opens its detail on the same year, so the row's total and the detail page's total agree (CLIST-07) | ✓ VERIFIED | **For `in` and `out` directions:** href built with matching year via `buildDashboardCategoryDetailHref`, detail page receives same year, totals agree. Proven by `"row href carries the SAME year..."` test (repointed to `direction="in"` in 83-06). **For `allocation` direction:** row is now non-interactive; no detail link is produced. This satisfies CLIST-07 by ensuring the row total and the (non-existent) detail page total never diverge. The broken path that previously violated this requirement is now closed by construction. |
+| 6 | With a single Covered Month, the list shows the certain figures (total, share, one-point series) plus an explicit statement of what's missing and how to get it (CLIST-06) | ✓ VERIFIED | CategoryCoverageNudge rendered when `coveredMonthCount === 1`. No change since previous verification |
 
-## Critical Gap: CR-01 (NEW) — Allocation Rows Link to a Broken Detail Page
+**Score:** 7/7 must-haves verified (all originally-stated requirements + CR-01 NEW closed)
 
-**Severity:** BLOCKER — violates CLIST-07 (row total vs detail total agreement), a core success criterion
+## Code Quality Notes from Code Review (2026-08-03)
 
-**Files Involved:**
-- `app/(app)/dashboard/categories/[id]/page.tsx` — detail page (lines 22-25, 29, 67)
-- `lib/validations/dashboard.ts` — schema (lines 5, 53)
-- `components/dashboard/category-ranking-list.tsx` — row linking (line 82)
-- `lib/routes.ts` — href builder (lines 54-71, 150-181)
+The code review (83-REVIEW.md, re-review post-83-06) found **no Critical issues**. Two non-blocking quality observations are worth recording:
 
-**Issue Description:**
+### WR-01: `aria-disabled="true"` on a role-less `<span>` has limited value for assistive technology
 
-Phase 83 introduces three observable changes:
-1. **Categories list makes allocation rows clickable** via `CategoryRankingList` (line 82): every row, regardless of direction (including allocation), renders as a `Link` built by `buildDashboardCategoryDetailHref(category.id, { year, type: direction, lens })`.
-2. **Href builder correctly encodes allocation**: `buildYearModeSearch` (lines 58-59) checks `if (filters.type && filters.type !== 'out')` and emits `?type=allocation`.
-3. **Detail page rejects allocation**: The detail page was never updated to accept this value. Line 67 coerces it: `type: filters.type === 'in' ? 'in' : 'out'`. Allocation → 'out'.
+**Severity:** Warning (quality, not functional)
 
-**Observable Consequences:**
+**Issue:** The allocation row's name element is a bare `<span>` with implicit ARIA role `generic`. The `aria-disabled="true"` attribute is semantically defined for interactive widget roles (button, link, menuitem, etc.), where it meaningfully signals that the element *would otherwise* be operable. On a `generic` role, it communicates nothing to screen readers — NVDA/VoiceOver/JAWS commonly render it as plain text with no signal of prior interactivity or future availability.
 
-When a user clicks an allocation row showing total €500:
+Additionally, the previous `aria-label` (`"{name}: apri dettaglio categoria"`) that used to explain the row's clickability is now lost. A sighted keyboard user tabbing through the list has no way to learn *why* this row behaves differently from Uscite/Entrate rows — only that it silently doesn't respond.
 
-| Step | Expected | Actual |
-|------|----------|--------|
-| 1. Click allocation row | Navigate to `/dashboard/categories/[id]?year=2026&type=allocation` | ✓ Correct URL produced |
-| 2. Detail page receives query | Parse `type=allocation` and show allocation-specific data | ✗ Type coerced to 'out' |
-| 3. Filter by direction | Load transactions where allocation.includedInTotals=true | ✗ No allocation transactions match (allocation.includedInTotals=false) |
-| 4. Display total | Show €500 (matching the row's total) | ✗ Shows €0 (no data) |
-| 5. Back link | Return to Accantonamenti list | ✗ Returns to Uscite list (coerced type used in backHref line 163) |
+**Assessment:** This is exactly the tension flagged in the review brief — `aria-disabled` is defined for elements that *can* be disabled, and a plain `<span>` without a role isn't one of them. The tradeoff is intentional: the allocation row is now provably non-interactive and fully readable (name, Totale, share, sparkline, projection all render), so the accessibility goal of "no surprising behavior" is met, albeit without optimal explanation.
 
-This is a direct regression caused by Phase 83's own code: making allocation clickable without ensuring the destination can handle it.
+**Recommendation (Phase 84 scope, not a blocker for Phase 83):** Either (a) give the span `role="link"` so `aria-disabled` sits on a role that supports it; or (b) add a visually-hidden explanation, e.g.:
+```tsx
+<span className="sr-only"> — dettaglio non disponibile per Accantonamenti</span>
+```
 
-**Root Cause:** 
+### WR-02: The D-13/CLIST-07 rationale comment was deleted instead of relocated
 
-The detail page's `DashboardTypeSchema` (line 5) predates Phase 83 and is narrowly scoped to the three types needed by the Overview/Tags/detail-page preset-based view (`'out'`, `'in'`, `'all'`). Phase 83 introduced a new schema, `CategoryYearDirectionSchema` (line 53), which correctly includes `'allocation'`. However, the detail page still uses the old schema and lacks any handling for the allocation direction that Phase 83 just made reachable.
+**Severity:** Info (documentation)
 
-The code comment on lines 50-52 acknowledges this: "D-12 — the year-based Categories URL contract (Phase 83). Additive: does not touch any existing export above, which the category DETAIL page (Phase 84 scope)..." So the detail page rewrite is explicitly planned for Phase 84. But Phase 83's code (making allocation clickable) creates a link to a page that doesn't exist yet.
+**Issue:** The pre-fix code carried this comment directly above the unconditional `href` const:
+```
+// D-13/CLIST-07: the row's link carries the SAME year the row's own total was computed
+// from — the coherence test "clicking a row must not change the numbers" holds by
+// construction.
+```
 
-**Why Phase 83-05 Didn't Fix This:**
+This documented *why* `year` (and not some other value) must be threaded into `buildDashboardCategoryDetailHref`'s call — a locked design decision (D-13) whose rationale is not otherwise obvious from the call site alone. The 83-06 diff replaced it entirely with a comment about the CR-01 (NEW) guard. The D-13 rationale is now undocumented in this file.
 
-The 83-05 gap-closure plan (83-05-PLAN.md, 83-05-SUMMARY.md) focused on three specific defects identified by the prior verification and code review:
-- CR-01 (OLD): DAL's `abs()` sign destruction ✓ Fixed
-- WR-02: Estimated bars 0% height ✓ Fixed
-- WR-01: Preset-mode route builders ✓ Fixed
+A future edit during Phase 84 (when the detail page is rewritten) might revisit this component and accidentally drop the `year` parameter, losing the CLIST-07 coherence guarantee, with no in-file explanation of why it must match.
 
-The 83-05 plan did not include detail-page schema changes. The NEW CR-01 (detail page allocation) was identified by 83-REVIEW.md (committed 2026-07-31T00:00:00Z, a re-review of the phase), which marked it "Critical" and recommended one of two fixes:
+**Assessment:** The CR-01 guard explanation is essential and correct. The D-13 rationale is valuable institutional knowledge that should have been preserved alongside it, not replaced.
 
-> **Fix:** Pick one of:
-> - Disable/guard the row Link for allocation until Phase 84 detail-page work lands (e.g. render a non-interactive row or a "dettaglio in arrivo" affordance instead of a Link), so no URL that the detail page cannot handle is ever produced; or
-> - Widen CategoryDetailFilters['type'] and categoryTypeOptions to accept 'allocation', and update getCategoryDetail's direction predicate...
+**Recommendation (Phase 84 scope, not a blocker for Phase 83):** Restore the D-13/CLIST-07 comment above the `Link`'s inline `href=` expression in the non-allocation branch, in addition to the new CR-01 comment.
 
-Neither fix was implemented in 83-05.
+## LOCKED DECISION (User, 2026-08-03) — How CR-01 (NEW) Was Closed
 
-**Impact on Phase Goal:**
+**Decision:** Option 1 — guard the row Link for the allocation direction inside Phase 83.
 
-- **CLIST-04** ("switch between Uscite, Entrate and Accantonamenti") — ✓ Allocation is reachable. But...
-- **CLIST-07** ("clicking a category opens its detail on the same period, so the row's total and the detail page's total agree") — ✗ Fails for allocation. User clicks a €500 allocation row, lands on a €0 detail page.
+**Rationale:** Allocating row can now render as a non-interactive element (a `<span>`, `aria-disabled`) instead of a `<Link>`, so no `?type=allocation` URL — one the category detail page cannot yet honour — is ever produced by this surface. Full allocation support on the detail page stays explicit Phase 84 scope, where that page is rewritten anyway.
 
-The phase goal says: "filterable across all three directions including the previously-unreachable Accantonamenti." Accantonamenti is now reachable and visible in the list, but it's not fully functional because clicking it breaks the page.
+**Rejected alternatives:**
+- Widening `DashboardTypeSchema` / `categoryTypeOptions` / `getCategoryDetail` in Phase 83 — rejected as medium-risk churn on a schema shared with Overview, in a file Phase 84 replaces entirely.
+- Deferring the whole thing to Phase 84 — rejected: it would mark Phase 83 complete with criterion 5 (CLIST-07) knowingly violated.
 
-**LOCKED DECISION (user, 2026-08-03) — how CR-01 is to be closed:**
-
-Option 1 is chosen: **guard the row Link for the allocation direction inside Phase 83**. In
-`components/dashboard/category-ranking-list.tsx`, an `allocation` row renders as a
-non-interactive element (a `<span>`, `aria-disabled`) instead of a `<Link>`, so no
-`?type=allocation` URL the detail page cannot honour is ever produced. Full allocation support on
-the detail page stays Phase 84 scope, where that page is rewritten anyway.
-
-Explicitly NOT chosen, and not to be re-opened by the gap-closure planner:
-- Widening `DashboardTypeSchema` / `categoryTypeOptions` / `getCategoryDetail` in Phase 83 —
-  rejected as medium-risk churn on a schema shared with Overview, in a file Phase 84 replaces.
-- Deferring the whole thing to Phase 84 — rejected: it would mark Phase 83 complete with
-  criterion 5 knowingly violated.
-
-Required test coverage for the fix: an allocation row must emit no `<a>` element, while `out` and
-`in` rows keep their existing links. This closes the coverage gap noted below.
+**Implementation:** Executed by 83-06 (commits `3edab68f`, `54832fa3`). Allocation rows now render a non-interactive, fully-readable `<span aria-disabled="true">` instead of a broken `<Link>`, closing the "row €500 -> detail €0 -> wrong back link" bug by construction. The allocation direction remains reachable and visible in the list (CLIST-04 satisfied), and the allocation row carries all five D-04 fields (CLIST-01/02 satisfied). CLIST-07 is satisfied for the two directions with working detail pages (in/out); the third direction's row is provably inert rather than silently broken.
 
 ## Requirements Traceability
 
@@ -146,118 +209,51 @@ Required test coverage for the fix: an allocation row must emit no `<a>` element
 | CLIST-01 | Phase 83 | Categories ranked by total, with share and sparkline | ✓ Implemented and tested | ✓ VERIFIED |
 | CLIST-02 | Phase 83 | Projection inline, subordinate, labelled | ✓ Implemented and tested | ✓ VERIFIED |
 | CLIST-03 | Phase 83 | Re-order by projection | ✓ Implemented and tested | ✓ VERIFIED |
-| CLIST-04 | Phase 83 | Direction switch: Uscite / Entrate / Accantonamenti (new) | ✓ Allocation reachable in list; ✗ but clickthrough broken | ⚠️ PARTIAL (Reachable, non-functional) |
+| CLIST-04 | Phase 83 | Direction switch: Uscite / Entrate / Accantonamenti (new) | ✓ Allocation visible and reachable; rows fully readable with all five D-04 fields | ✓ VERIFIED |
 | CLIST-05 | Phase 83 | Year shared with Overview via `?year=` | ✓ Implemented and tested | ✓ VERIFIED |
 | CLIST-06 | Phase 83 | Single Covered Month: certain figures + nudge | ✓ Implemented and tested | ✓ VERIFIED |
-| CLIST-07 | Phase 83 | Row click opens detail on same year; totals agree | ✓ Works for in/out; ✗ Fails for allocation | ✗ FAILED (allocation rows) |
+| CLIST-07 | Phase 83 | Row click opens detail on same year; totals agree | ✓ Works for in/out; allocation rows now provably non-interactive, closing the broken-link class by construction | ✓ VERIFIED |
 
-**Unmapped requirements:** None. All 7 CLIST requirements are mapped to Phase 83.
+**Unmapped requirements:** None. All 7 CLIST requirements are mapped to Phase 83 and verified.
 
-## Implementation Verification
+## Testing Summary
 
-### Artifacts Checklist
+**Phase 83-06 (gap-closure plan) test results:**
+- `tests/category-ranking-list.test.tsx`: 9/9 passing
+  - Existing 8 tests: all pass (no regressions)
+  - New CR-01 (NEW) guard test: passes, explicitly asserts absence of `<a` for allocation direction
 
-| Artifact | Expected | Status | Notes |
-|---|---|---|---|
-| `lib/dal/dashboard.ts` — `getCategoryYearRanking` | ✓ New DAL query for year-scoped ranking | ✓ VERIFIED | Function branches on directionCode for amount column (allocation preserves sign, others use abs). D-09 predicate flip applied. Real-Postgres tests prove correctness. |
-| `tests/categories-ranking-dal.test.ts` | ✓ New test file with real-Postgres coverage | ✓ VERIFIED | Tests prove DAL predicate, totals, exact-zero boundary, and negative-domain facts. 1 passing. |
-| `tests/category-allocation-negative-domain.test.tsx` | ✓ New end-to-end tracer (Postgres → DAL → component render) | ✓ VERIFIED | Real-Postgres fixture (Jan +200, May -450, June 0), DAL boundary (May = "-450.00"), component rendering (border marker fires exactly once). Proves CR-01 (OLD) closed. |
-| `app/(app)/dashboard/categories/page.tsx` | ✓ New Categories list page | ✓ VERIFIED | Calls `getCategoryYearRanking`, resolves year/direction/sort, handles single-Covered-Month nudge. Does not parse `?preset=`. |
-| `components/dashboard/category-ranking-list.tsx` | ✓ New component rendering category rows | ✓ VERIFIED | Renders 5 columns per D-04. Links every row via `buildDashboardCategoryDetailHref` regardless of direction. **BUT:** links allocation rows to a broken destination. |
-| `components/dashboard/category-sparkline.tsx` | ✓ Supports allocation color + negative-domain marker | ✓ VERIFIED FOR DAL INTEGRATION | Negative-domain marker code present (lines 114-123). `resolveEstimatedReference` fallback prevents 0% height. All 11 estimated bars in test pass. Real-Postgres tracer proves negative marker fires for real data. **Status:** Feature works end-to-end with real DAL data (CR-01 OLD closed). |
-| `lib/routes.ts` — `buildDashboardCategoryDetailHref` | ✓ Year-mode href builder | ✓ VERIFIED | Correctly encodes `?year=` + `?type=` via `buildYearModeSearch`. Allocation type passed through. Test in `tests/category-detail-link.test.ts` line 33 proves href contains year + allocation type. **BUT:** No test verifies what detail page does when it receives `?type=allocation`. |
-| `lib/validations/dashboard.ts` | ✓ New `CategoryYearDirectionSchema` | ✓ VERIFIED | Correctly defines `['out', 'in', 'allocation']`. Separate from old `DashboardTypeSchema` which only has `['out', 'in', 'all']`. **Status:** Schema exists; detail page doesn't use it. |
-| Direction filter (3-way toggle) | ✓ Implemented | ✓ VERIFIED | `DirectionFilter` component renders three options. All three functionally reach the list correctly. |
-| Sort toggle (Totale / Proiezione) | ✓ Implemented | ✓ VERIFIED | Both options available, functional; Proiezione disabled when < 2 Covered Months (D-15). |
+**Full suite verification:**
+- Test files: 180 passed
+- Tests: 2198 passed | 1 todo
+- Duration: 16.15s
+- Exit code: 0 (success)
+- Zero failures, zero regressions
+- All protected regression gates pass: `tests/pace-engine-lens-regression.test.ts` (RETIRE-05), `tests/reimbursement-regression.test.ts` (v2.8/v2.9 baselines)
 
-### Data-Flow Trace
-
-The Categories list correctly flows data for all directions:
-
-- **Query:** `getCategoryYearRanking(year, directionCode)` selects allocation (or 'in'/'out') categories and groups by month ✓
-- **DAL → Component:** `buildCategoryYearRankingData` transforms rows into `CategoryYearRankingItem[]` with sparkline points ✓
-- **Component → UI:** `CategoryRankingList` renders rows with correct data and color per direction ✓
-- **Allocation-specific:** Sparkline receives signed amounts for allocation direction; negative-domain marker fires correctly ✓
-
-**Data flow for allocation detail page:** BROKEN
-- Detail page receives `?type=allocation` ✓
-- Schema validation coerces to `?type=out` ✗
-- Subsequent DAL queries filter for wrong direction ✗
-- Empty result set returned ✗
-
-### Code Quality Checks
-
-| Check | Status | Details |
-|---|---|---|
-| `getCategoryRanking`/`buildCategoryRankingData` untouched | ✓ PASS | Phase 83 adds new functions; v2.8/v2.9 baselines remain protected |
-| RETIRE-05 regression (Overview/Tags byte-identical) | ✓ PASS | New predicate doesn't affect Overview/Tags; they use `ne(direction.code, 'transfer')` |
-| D-07 invariant (total = sum of sparkline) | ✓ PASS | Verified for negative totals (allocation with net divestment) |
-| `yarn build` | ✓ PASS | No unused exports, type errors, or warnings |
-| Test suite: 180 files, 2197 passing | ✓ PASS | All tests pass, including protected regression gates |
-
-### Anti-Patterns Found
-
-| File | Pattern | Severity | Notes |
-|---|---|---|---|
-| `components/dashboard/category-ranking-list.tsx:34-42` | Duplicate `Intl.NumberFormat` + `formatAmount` (IN-01) | Info | Recreates cached formatter from `lib/utils/format-amount.ts` instead of reusing. Carried forward from prior phase. Pre-existing anti-pattern. |
-| `app/(app)/dashboard/categories/[id]/page.tsx:159-161` | `?year=0` treated as valid (IN-02) | Info | Edge case handling of invalid year values. Does not affect Phase 83 goal. Deferred to Phase 84 detail-page rewrite. |
-| Phase 83 commits | No debt markers (TBD/FIXME/XXX) | ✓ Clean | No unresolved technical debt in Phase 83 code. |
-
-## Behavioral Spot-Checks
-
-| Behavior | Test | Result | Status |
-|---|---|---|---|
-| Categories list returns non-empty for a year with data | DAL + page integration | ✓ Returns 26 categories for 2026 | ✓ PASS |
-| Allocation direction queries execute | `getCategoryYearRanking(year='2026', directionCode='allocation')` | ✓ Returns 2+ allocation categories | ✓ PASS |
-| Sparkline renders 12 points for all directions | Component test | ✓ All 12 months present, correct counts | ✓ PASS |
-| Negative-domain marker fires for real allocation negative month | `tests/category-allocation-negative-domain.test.tsx` | ✓ Border-top marker rendered exactly once | ✓ PASS |
-| Estimated bars render non-zero height when pace null | `tests/category-sparkline.test.tsx` WR-02 case | ✓ 11/11 estimated bars >= 100% | ✓ PASS |
-
-## Test Coverage
-
-- **Real-Postgres tests:** 3 (categories-ranking-dal.test.ts, category-allocation-negative-domain.test.tsx, plus regression gates)
-- **Unit tests:** 2197 total, all passing
-- **No tests for allocation detail-page handling:** ✗ Gap — `tests/category-detail-link.test.ts` only verifies href format, not detail-page behavior
-
-## Deferred Items
-
-No items are explicitly deferred to later phases within the v3.0 milestone per the REQUIREMENTS.md traceability table. All CLIST requirements (01-07) are mapped to Phase 83. Phase 84 covers CDET (detail page) and retirement cleanup.
-
-**However:** The allocation detail-page support issue is arguably Phase 84 scope (detail page rewrite), but Phase 83 created broken links to it. This creates a sequencing dependency that should have been resolved within Phase 83.
+**Build verification:**
+- `yarn build` — succeeded
+- `yarn check:language` — passed, no new Italian in developer-facing code/comments/tests
 
 ## Conclusion
 
-**Status:** `gaps_found` — Phase 83 achieves 6 of 7 must-haves. CLIST-07 is violated for allocation rows.
+**Phase 83 goal is ACHIEVED.**
 
-**What's Working:**
-- Categories list renders correctly for all three directions (CLIST-01) ✓
-- Projections are implemented and sortable (CLIST-02, CLIST-03) ✓
-- Allocation is reachable via the direction filter (CLIST-04 reachability) ✓
-- Year parameter preserved across tabs (CLIST-05) ✓
-- Single-Covered-Month nudge implemented (CLIST-06) ✓
-- Detail links work correctly for Uscite/Entrate (CLIST-07 for in/out) ✓
-- Allocation negative-domain rendering works end-to-end with real data (CR-01 OLD fixed) ✓
-- Estimated bars never collapse to 0% height (WR-02 fixed) ✓
+All 7 CLIST requirements are verified:
+- ✓ Categories list rewritten on the yearly axis, ranked by spend
+- ✓ Each row carries share, sparkline, and year-end projection
+- ✓ Projection sorting works as specified
+- ✓ Direction filter offers all three directions including allocation for the first time
+- ✓ Year parameter shared with Overview
+- ✓ Single-Covered-Month nudge implemented
+- ✓ Row detail links work correctly for the two supported directions (in/out); allocation rows are provably inert rather than silently broken
 
-**What's Broken:**
-- Clicking an allocation row produces a URL the detail page cannot accept (CR-01 NEW) — BLOCKER
-- This violates CLIST-07: row total (€500) ≠ detail page total (€0)
+The single blocker from the prior verification (**CR-01 NEW**: allocation rows linking to a broken detail page showing €0 instead of the row's total) is **closed by construction**. The allocation row is now non-interactive, all five D-04 fields remain fully readable and visible, and the broken URL class that violated CLIST-07 for that direction is eliminated.
 
-**Required Fix (one of):**
-
-1. **Phase 83 scope (recommended):** Disable allocation row links until Phase 84 lands — render a span or "coming soon" badge instead of a clickable Link in `CategoryRankingList` when `direction === 'allocation'`. Add a comment explaining this is temporary. Cost: ~5 min, low risk.
-
-2. **Phase 83 scope (alternative):** Widen the detail page's schema and add allocation support — update `DashboardTypeSchema` to include `'allocation'`, update `categoryTypeOptions`, handle allocation in `getCategoryDetail` (or map to 'out' temporarily with a comment). Cost: ~15 min, medium risk (might conflict with Phase 84's rewrite).
-
-3. **Phase 84 scope (not recommended):** Accept broken allocation links as a known limitation and defer both the fix and the detail-page rewrite to Phase 84. Risk: ships a broken feature to users.
-
-**Next Steps:**
-- Pick one of the above fixes and implement in a follow-up plan (or as part of Phase 84 if deferring)
-- Re-verify after implementing the fix
-- If deferring to Phase 84, add a comment in `CategoryRankingList` explaining why allocation rows are not clickable, and update the release notes to document the limitation
+Two non-blocking quality observations from code review (WR-01: aria-disabled on a role-less span; WR-02: D-13 rationale comment not relocated) are recorded for Phase 84 consideration but do not prevent Phase 83 from shipping.
 
 ---
 
-_Verified: 2026-07-31T20:20:00Z_  
+_Verified: 2026-08-03T10:45:00Z_  
 _Verifier: Claude (gsd-verifier)_  
-_Verification Depth: goal-backward, code-review findings incorporated, independent schema/wiring verification_
+_Verification Depth: goal-backward, code inspection, test execution, re-verification after gap closure_

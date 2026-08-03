@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Categories Year View
-current_phase: 83
-current_phase_name: categories-list
-status: executing
+current_phase: 84
+current_phase_name: category-detail-and-cleanup
+status: planning
 stopped_at: Completed 83-06-PLAN.md (Phase 83 categories-list complete, 6/6 plans)
-last_updated: "2026-08-03T07:34:36.522Z"
+last_updated: "2026-08-03T07:45:22.551Z"
 last_activity: 2026-08-03
-last_activity_desc: Phase 83 (categories-list) completed, plan 83-06 (gap-closure)
+last_activity_desc: Phase 83 complete, transitioned to Phase 84
 progress:
   total_phases: 4
   completed_phases: 2
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 ## Current Position
 
-Phase: 83 (categories-list) — COMPLETE (6/6 plans)
-Plan: 6 of 6
-Status: Phase 83 complete — CR-01 (NEW) gap closed (83-06); ready for Phase 84 (category-detail-and-cleanup)
+Phase: 84 — category-detail-and-cleanup
+Plan: Not started
+Status: Ready to plan
 Branch: `gsd/v3.0-categories-year-view` (synced with `origin/main` @ fe8273f9 — PR #65)
-Last activity: 2026-08-03 — Phase 83 (categories-list) completed, plan 83-06 (gap-closure)
+Last activity: 2026-08-03 — Phase 83 complete, transitioned to Phase 84
 
 Preceding activity on `main` (merged into this branch): 2026-07-30 — completed quick task
 260730-n2z (Amort UX: Visualizza ammortamento, Tutti=all, vendita/rimborso copy) and quick task

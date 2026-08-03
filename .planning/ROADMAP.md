@@ -43,7 +43,7 @@ Tags read, so Phase 82 builds the engine and proves Overview/Tags totals byte-id
 (RETIRE-05) **before** any Categories list or detail UI ships.
 
 - [x] **Phase 82: number-engine-and-regression-gate** (PACE-01…06, RETIRE-03, RETIRE-04, RETIRE-05) — Mese Coperto/Parziale, Ritmo, Proiezione and the current−previous sign convention built and proven; lens confined to Overview, dead `tag` param dropped; Overview/Tags totals byte-identical before any Categories UI changes (completed 2026-07-30)
-- [ ] **Phase 83: categories-list** (CLIST-01…07) — Categories list rewritten on year + direction (Uscite/Entrate/Accantonamenti) with total, share, sparkline, projection, sort toggle and first-import state
+- [x] **Phase 83: categories-list** (CLIST-01…07) — Categories list rewritten on year + direction (Uscite/Entrate/Accantonamenti) with total, share, sparkline, projection, sort toggle and first-import state (completed 2026-08-03)
 - [ ] **Phase 84: category-detail-and-cleanup** (CDET-01…07, RETIRE-01, RETIRE-02) — Category detail rewritten as a 12-month table (deltas, previous-year row, window, subcategory contributions, coverage states); Deviation/Preset machinery fully retired, no dead references
 
 #### Phase 82: number-engine-and-regression-gate
@@ -538,7 +538,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 80. dashboard-accrual-lens | v2.9 | 7/7 | Complete    | 2026-07-29 |
 | 81. inline-net-display-for-paired-transactions | v2.9 | 1/1 | Complete    | 2026-07-29 |
 | 82. number-engine-and-regression-gate | v3.0 | 0/3 | Complete    | 2026-07-30 |
-| 83. categories-list | v3.0 | 6/6 | Complete | 2026-08-03 |
+| 83. categories-list | v3.0 | 6/6 | Complete    | 2026-08-03 |
 | 84. category-detail-and-cleanup | v3.0 | 0/TBD | Not started | - |
 
 **Total shipped: 81 phases · 305 plans complete**
