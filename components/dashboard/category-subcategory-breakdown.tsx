@@ -1,5 +1,9 @@
+import Link from 'next/link'
+import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { CategoryDetailSubcategoryContribution } from '@/lib/dal/category-detail-year-window'
+import { transactionsBySubcategoryHref } from '@/lib/routes'
 import { resolveComparisonJudgement, type ComparisonJudgement } from '@/lib/services/pace-and-projection'
 import { cn } from '@/lib/utils'
 import { toDecimal } from '@/lib/utils/decimal'
@@ -13,6 +17,13 @@ type Props = {
    */
   year: number
   type?: 'in' | 'out'
+  /**
+   * NAV-01/D-01: both `categorySlug` and `backHref` must be present for a row to become a link —
+   * the parent category's own detail-page href cannot be reconstructed from a subcategory row
+   * alone. When either is omitted, every row falls back to today's plain text.
+   */
+  categorySlug?: string
+  backHref?: string
 }
 
 const currencyFormatter = new Intl.NumberFormat('it-IT', {
@@ -49,10 +60,19 @@ function safePercentage(value: number): number {
   return Number.isFinite(value) ? Math.max(0, Math.min(value, 100)) : 0
 }
 
+/**
+ * The `previous-only` suffix only (NAV-05/D-06): `current-only` no longer returns an inline
+ * sentence here — it renders a "nuova" Badge+Tooltip instead (see `isNewInYear` below). Stays a
+ * single, clearly-total function for the still-needed `previous-only` case.
+ */
 function presenceSuffix(presence: CategoryDetailSubcategoryContribution['presence'], year: number): string | null {
-  if (presence === 'current-only') return `— nuova nel ${year}`
   if (presence === 'previous-only') return `— solo nel ${year - 1}`
   return null
+}
+
+/** NAV-05/D-06: a `current-only` row shows the "nuova" badge instead of the retired inline sentence. */
+function isNewInYear(presence: CategoryDetailSubcategoryContribution['presence']): boolean {
+  return presence === 'current-only'
 }
 
 /**
@@ -62,7 +82,13 @@ function presenceSuffix(presence: CategoryDetailSubcategoryContribution['presenc
  * the parent's own total difference, computed here by summing the already-provided
  * currentAmount/contribution strings via Decimal.js, never by re-deriving from previousYear.
  */
-export function CategorySubcategoryBreakdown({ contributions, year, type = 'out' }: Props) {
+export function CategorySubcategoryBreakdown({
+  contributions,
+  year,
+  type = 'out',
+  categorySlug,
+  backHref,
+}: Props) {
   if (contributions.length === 0) {
     return (
       <div className="flex min-h-[220px] items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 text-center">
@@ -106,9 +132,33 @@ export function CategorySubcategoryBreakdown({ contributions, year, type = 'out'
             return (
               <TableRow key={row.id} className={isGone ? 'text-muted-foreground' : undefined}>
                 <TableCell className="max-w-0">
-                  <span className="truncate" title={row.name}>
-                    {row.name}
-                  </span>
+                  {categorySlug && backHref ? (
+                    <Link
+                      href={transactionsBySubcategoryHref(row.id, categorySlug, year, backHref)}
+                      className="truncate underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                      title={row.name}
+                    >
+                      {row.name}
+                    </Link>
+                  ) : (
+                    <span className="truncate" title={row.name}>
+                      {row.name}
+                    </span>
+                  )}
+                  {isNewInYear(row.presence) ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="secondary" className="ml-1 align-middle">
+                            nuova
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          questa spesa compare per la prima volta nel {year}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : null}
                   {suffix ? <span className="ml-1 text-xs text-muted-foreground">{suffix}</span> : null}
                 </TableCell>
                 <TableCell>

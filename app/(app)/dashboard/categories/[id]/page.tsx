@@ -13,8 +13,12 @@ import { resolveYear } from '@/components/dashboard/overview/resolve-year'
 import { verifySession } from '@/lib/dal/auth'
 import { getCategoryDetailMeta, getCategoryDetailYearWindow } from '@/lib/dal/category-detail-year-window'
 import { getYearsWithData } from '@/lib/dal/overview'
-import { buildDashboardCategoriesHref } from '@/lib/routes'
-import { extractLensPassthrough, parsePositiveIntParam } from '@/lib/utils/search-params'
+import { buildDashboardCategoriesHref, buildDashboardCategoryDetailHref } from '@/lib/routes'
+import {
+  extractLensPassthrough,
+  parsePositiveIntParam,
+  type LensPassthrough,
+} from '@/lib/utils/search-params'
 import { parseCategoryDetailView, type CategoryDetailView } from '@/lib/validations/category-year-window'
 
 type Props = {
@@ -33,17 +37,31 @@ async function CategoryDetailContent({
   categoryId,
   year,
   view,
+  lens,
 }: {
   categoryId: number
   year: number
   view: CategoryDetailView
+  lens?: LensPassthrough
 }) {
   const data = await getCategoryDetailYearWindow(categoryId, year, view)
+  // NAV-01/D-01: this detail page's own href, threaded as the transactions page's ?back=
+  // target — computed from data already in scope, never re-fetched.
+  const categoryDetailOwnHref = data.category
+    ? buildDashboardCategoryDetailHref(data.category.id, { year, type: data.category.type, lens })
+    : undefined
+
   return (
     <div className="flex flex-col gap-6">
       <CategoryDetailAmountsChart data={data} />
       <CategoryDetailTable data={data} />
-      <CategorySubcategoryBreakdown contributions={data.subcategories} year={year} type={data.category?.type} />
+      <CategorySubcategoryBreakdown
+        contributions={data.subcategories}
+        year={year}
+        type={data.category?.type}
+        categorySlug={data.category?.slug}
+        backHref={categoryDetailOwnHref}
+      />
       <CategoryTopTransactions transactions={data.topTransactions} />
     </div>
   )
@@ -109,7 +127,7 @@ export default async function DashboardCategoryDetailPage({ params, searchParams
       </div>
 
       <Suspense fallback={<CategoryDetailSkeleton />}>
-        <CategoryDetailContent categoryId={categoryId} year={year} view={view} />
+        <CategoryDetailContent categoryId={categoryId} year={year} view={view} lens={lens} />
       </Suspense>
     </div>
   )

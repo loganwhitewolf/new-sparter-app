@@ -1,4 +1,6 @@
+import Link from 'next/link'
 import type { CategoryDetailTopTransaction } from '@/lib/dal/dashboard'
+import { transactionDetailHref } from '@/lib/routes'
 
 type Props = {
   transactions: CategoryDetailTopTransaction[]
@@ -54,8 +56,11 @@ export function CategoryTopTransactions({ transactions }: Props) {
         const description = transaction.description.trim()
 
         return (
-          <li key={transaction.id} className="overflow-hidden rounded-xl border bg-card p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-4">
+          <li key={transaction.id}>
+            <Link
+              href={transactionDetailHref(transaction.id)}
+              className="flex items-center justify-between gap-4 overflow-hidden rounded-xl border bg-card p-4 shadow-sm transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
               <div className="flex min-w-0 flex-1 items-start gap-3">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold tabular-nums text-muted-foreground">
                   {index + 1}
@@ -78,7 +83,7 @@ export function CategoryTopTransactions({ transactions }: Props) {
               <p className="w-20 shrink-0 text-right font-mono text-sm font-semibold tabular-nums text-total-out">
                 {formatAmount(transaction.amount)}
               </p>
-            </div>
+            </Link>
           </li>
         )
       })}

@@ -105,6 +105,32 @@ export function transactionsByTagHref(tagId: number | string) {
   return `${APP_ROUTES.transactions}?tag=${encodeURIComponent(String(tagId))}`
 }
 
+/** All twelve zero-padded `YYYY-01`..`YYYY-12` month tokens for `year`, comma-joined. */
+function buildAllMonthsInYear(year: number): string {
+  return Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}`).join(',')
+}
+
+// Transactions list narrowed to one subcategory + its parent category + the full year currently
+// viewed on the category detail page (260804-jog NAV-01/D-01). Reuses the transactions page's
+// existing subCategory/category/months filter contract verbatim (parseTransactionFilters,
+// already shipped) — no parallel filtering mechanism. `backHref` carries the originating category
+// detail page's own href, later validated by parseTransactionsBackParam (D-02) before it is ever
+// trusted as a navigation target — URLSearchParams is what correctly percent-encodes it.
+export function transactionsBySubcategoryHref(
+  subCategoryId: number,
+  categorySlug: string,
+  year: number,
+  backHref: string,
+): string {
+  const params = new URLSearchParams({
+    subCategory: String(subCategoryId),
+    category: categorySlug,
+    months: buildAllMonthsInYear(year),
+    back: backHref,
+  })
+  return `${APP_ROUTES.transactions}?${params.toString()}`
+}
+
 export function expenseDetailHref(id: string) {
   return `${APP_ROUTES.expenses}/${encodeURIComponent(id)}`
 }

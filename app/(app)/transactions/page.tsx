@@ -23,8 +23,10 @@ import { buildDirectionNatureMap, buildCategorySubcategoryMap, buildDirectionCat
 import { EmptyState } from '@/components/data-table/EmptyState'
 import { TransactionFormDialog } from '@/components/transactions/transaction-form-dialog'
 import { TransactionTable } from '@/components/transactions/transaction-table'
+import { TransactionsBackLink } from '@/components/transactions/transactions-back-link'
 import { TransactionsToolbar } from '@/app/(app)/transactions/TransactionsToolbar'
 import { APP_ROUTES } from '@/lib/routes'
+import { parseTransactionsBackParam } from '@/lib/utils/search-params'
 
 /** Returns true when any filter param that narrows results is active */
 function hasActiveTransactionFilters(params: TransactionSearchParams): boolean {
@@ -83,6 +85,7 @@ export default async function TransactionsPage({
 }) {
   const { userId } = await verifySession()
   const params = await searchParams
+  const backHref = parseTransactionsBackParam(params.back)
   const parsedFilters = parseTransactionFilters(params)
   // WR-04 — defense-in-depth: drop a non-owned ?tag= before it reaches the DAL (fail-closed),
   // mirroring the four dashboard pages. getTransactions already scopes by userId, so a forged
@@ -153,6 +156,7 @@ export default async function TransactionsPage({
 
   return (
     <div className="flex flex-col gap-6">
+      {backHref ? <TransactionsBackLink backHref={backHref} /> : null}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">Transazioni</h1>

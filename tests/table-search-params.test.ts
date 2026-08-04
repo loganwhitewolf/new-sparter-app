@@ -6,6 +6,7 @@ import {
   parseMonths,
   parseSortDir,
   parseStatus,
+  parseTransactionsBackParam,
 } from '../lib/utils/search-params'
 
 describe('YEAR_MONTH_RE', () => {
@@ -194,5 +195,48 @@ describe('parseSortDir', () => {
   it('never throws on any input', () => {
     expect(() => parseSortDir('garbage', 'garbage', allowed)).not.toThrow()
     expect(() => parseSortDir(undefined, undefined, allowed)).not.toThrow()
+  })
+})
+
+describe('parseTransactionsBackParam', () => {
+  it('passes through a valid /dashboard/categories/ value unchanged', () => {
+    expect(parseTransactionsBackParam('/dashboard/categories/7?year=2026')).toBe(
+      '/dashboard/categories/7?year=2026',
+    )
+  })
+
+  it('returns undefined for undefined input', () => {
+    expect(parseTransactionsBackParam(undefined)).toBeUndefined()
+  })
+
+  it('returns undefined for empty string', () => {
+    expect(parseTransactionsBackParam('')).toBeUndefined()
+  })
+
+  it('returns undefined for a foreign in-app path', () => {
+    expect(parseTransactionsBackParam('/expenses/1')).toBeUndefined()
+  })
+
+  it('returns undefined for an absolute URL', () => {
+    expect(parseTransactionsBackParam('https://evil.com')).toBeUndefined()
+  })
+
+  it('returns undefined for a protocol-relative value', () => {
+    expect(parseTransactionsBackParam('//evil.com')).toBeUndefined()
+  })
+
+  it('uses first-element semantics for array input', () => {
+    expect(
+      parseTransactionsBackParam(['/dashboard/categories/7', '/expenses/1']),
+    ).toBe('/dashboard/categories/7')
+    expect(
+      parseTransactionsBackParam(['/expenses/1', '/dashboard/categories/7']),
+    ).toBeUndefined()
+  })
+
+  it('never throws on any input', () => {
+    expect(() => parseTransactionsBackParam('garbage!')).not.toThrow()
+    expect(() => parseTransactionsBackParam(undefined)).not.toThrow()
+    expect(() => parseTransactionsBackParam(['a', 'b'])).not.toThrow()
   })
 })

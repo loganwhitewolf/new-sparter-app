@@ -1,9 +1,22 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
+import type * as React from 'react'
 import type { CategoryDetailTopTransaction } from '@/lib/dal/dashboard'
-import { CategoryDetailEmptyState } from '@/components/dashboard/category-detail-empty-state'
-import { CategoryDetailSkeleton } from '@/components/dashboard/category-detail-skeleton'
-import { CategoryTopTransactions } from '@/components/dashboard/category-top-transactions'
+import { transactionDetailHref } from '@/lib/routes'
+
+vi.mock('next/link', () => ({
+  default: ({ href, children, ...props }: React.ComponentProps<'a'>) => (
+    <a href={String(href)} {...props}>
+      {children}
+    </a>
+  ),
+}))
+
+const { CategoryDetailEmptyState } = await import(
+  '@/components/dashboard/category-detail-empty-state'
+)
+const { CategoryDetailSkeleton } = await import('@/components/dashboard/category-detail-skeleton')
+const { CategoryTopTransactions } = await import('@/components/dashboard/category-top-transactions')
 
 // CategorySubcategoryBreakdown's own coverage moved to tests/category-subcategory-breakdown.test.tsx
 // (Plan 84-02 Task 2) — its props were rewritten (contributions/year replace subcategories/deviations,
@@ -59,6 +72,13 @@ describe('category detail presentation components', () => {
   test('renders an explicit empty state for top transactions', () => {
     const topHtml = renderToStaticMarkup(<CategoryTopTransactions transactions={[]} />)
     expect(topHtml).toContain('Nessun movimento da mostrare')
+  })
+
+  test('each top-5 card is a real link to its own /transactions/[id] detail page (Task 3)', () => {
+    const html = renderToStaticMarkup(<CategoryTopTransactions transactions={transactions} />)
+
+    expect(html).toContain(`href="${transactionDetailHref('tx-1')}"`)
+    expect(html).toContain(`href="${transactionDetailHref('tx-2')}"`)
   })
 
   test('renders standalone empty and loading states', () => {
