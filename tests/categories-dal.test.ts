@@ -445,6 +445,34 @@ describe('categories DAL merged tree', () => {
     })
   })
 
+  it('scopes the settings-view subcategory join to active-OR-owned rows, never bare "all rows"', async () => {
+    await getCategoriesForSettings()
+
+    expect(mocks.leftJoinArgs[0]).toEqual({
+      table: expect.objectContaining({ id: 'subCategory.id', userId: 'subCategory.userId' }),
+      condition: {
+        op: 'and',
+        args: [
+          { op: 'eq', left: 'subCategory.categoryId', right: 'category.id' },
+          {
+            op: 'or',
+            args: [
+              { op: 'eq', left: 'subCategory.isActive', right: true },
+              { op: 'eq', left: 'subCategory.userId', right: 'user-1' },
+            ],
+          },
+          {
+            op: 'or',
+            args: [
+              { op: 'isNull', column: 'subCategory.userId' },
+              { op: 'eq', left: 'subCategory.userId', right: 'user-1' },
+            ],
+          },
+        ],
+      },
+    })
+  })
+
   it('scopes category, subcategory, and override reads to the verified user', async () => {
     await getCategories()
 

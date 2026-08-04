@@ -139,7 +139,13 @@ const getCategoriesForUser = cache(async (
       subCategory,
       and(
         eq(subCategory.categoryId, category.id),
-        ...(includeInactive ? [] : [eq(subCategory.isActive, true)]),
+        // Settings view (includeInactive=true) still hides disabled GLOBAL subcategories — only
+        // the user's own soft-disabled rows should surface for reactivation. Without the
+        // eq(userId, userId) branch this dropped the isActive filter entirely, exposing every
+        // globally-retired system subcategory to every user.
+        ...(includeInactive
+          ? [or(eq(subCategory.isActive, true), eq(subCategory.userId, userId))]
+          : [eq(subCategory.isActive, true)]),
         or(isNull(subCategory.userId), eq(subCategory.userId, userId)),
       ),
     )
