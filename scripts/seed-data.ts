@@ -421,6 +421,14 @@ export const subCategories = [
     isActive: true,
   },
   {
+    categoryId: 9,
+    name: "dispositivi medici",
+    slug: "dispositivi-medici",
+    natureId: 3,
+    displayOrder: 0,
+    isActive: true,
+  },
+  {
     categoryId: 13,
     name: "energia elettrica",
     slug: "energia-elettrica",
