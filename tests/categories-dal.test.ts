@@ -437,6 +437,13 @@ describe('categories DAL merged tree', () => {
         {
           op: 'or',
           args: [
+            { op: 'eq', left: 'category.isActive', right: true },
+            { op: 'eq', left: 'category.userId', right: 'user-1' },
+          ],
+        },
+        {
+          op: 'or',
+          args: [
             { op: 'isNull', column: 'category.userId' },
             { op: 'eq', left: 'category.userId', right: 'user-1' },
           ],
@@ -470,6 +477,30 @@ describe('categories DAL merged tree', () => {
           },
         ],
       },
+    })
+  })
+
+  it('scopes the settings-view category read to active-OR-owned rows, never bare "all rows"', async () => {
+    await getCategoriesForSettings()
+
+    expect(mocks.whereArgs[0]).toEqual({
+      op: 'and',
+      args: [
+        {
+          op: 'or',
+          args: [
+            { op: 'eq', left: 'category.isActive', right: true },
+            { op: 'eq', left: 'category.userId', right: 'user-1' },
+          ],
+        },
+        {
+          op: 'or',
+          args: [
+            { op: 'isNull', column: 'category.userId' },
+            { op: 'eq', left: 'category.userId', right: 'user-1' },
+          ],
+        },
+      ],
     })
   })
 

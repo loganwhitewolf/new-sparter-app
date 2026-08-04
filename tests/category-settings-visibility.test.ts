@@ -12,7 +12,7 @@
 // Harness pattern copied from tests/pace-engine-lens-regression.test.ts (host-guarded test db,
 // graceful local skip, fatal in CI).
 import { afterAll, describe, expect, it, vi } from 'vitest'
-import { subCategory as subCategoryTable } from '@/lib/db/schema'
+import { category as categoryTable, subCategory as subCategoryTable } from '@/lib/db/schema'
 import { verifySession } from '@/lib/dal/auth'
 import {
   assertHarnessReachableInCi,
@@ -131,5 +131,41 @@ describeIfReachable('getCategoriesForSettings — disabled subcategory visibilit
     const allSubCategoryIds = categories.flatMap((c) => c.subCategories.map((s) => s.id))
 
     expect(allSubCategoryIds).not.toContain(ownedDisabled.id)
+  })
+})
+
+describeIfReachable('getCategoriesForSettings — disabled CATEGORY visibility (parity fix)', () => {
+  it('hides a disabled GLOBAL category but shows a disabled OWNED one, for the same user', async () => {
+    const db = requireHarnessDb()
+    await resetReimbursementFixtures(db)
+
+    const { userId } = await seedUser(db)
+    vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+
+    // No system category is ever disabled in production today (verified against the real seed
+    // baseline) — this synthesizes the case directly so the fix has a live proof instead of
+    // waiting for the first real dissolved system category to expose it.
+    const [globalDisabled] = await db
+      .insert(categoryTable)
+      .values({ userId: null, name: 'Retired Global Category', slug: 'retired-global-category', isActive: false })
+      .returning({ id: categoryTable.id })
+
+    const [ownedDisabled] = await db
+      .insert(categoryTable)
+      .values({ userId, name: 'My Retired Category', slug: 'my-retired-category', isActive: false })
+      .returning({ id: categoryTable.id })
+
+    vi.doMock('@/lib/db', () => ({ db }))
+    vi.resetModules()
+    const categoriesModule = await import('@/lib/dal/categories')
+
+    const categories = await categoriesModule.getCategoriesForSettings()
+    const categoryIds = categories.map((c) => c.id)
+
+    expect(categoryIds).not.toContain(globalDisabled.id)
+    expect(categoryIds).toContain(ownedDisabled.id)
+
+    const ownedRow = categories.find((c) => c.id === ownedDisabled.id)
+    expect(ownedRow?.isActive).toBe(false)
   })
 })

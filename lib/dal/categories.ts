@@ -158,7 +158,14 @@ const getCategoriesForUser = cache(async (
     )
     .where(
       and(
-        ...(includeInactive ? [] : [eq(category.isActive, true)]),
+        // Same rule as the subCategory join above (quick 260804-br9 follow-up): the settings
+        // view still hides disabled GLOBAL categories — only the user's own soft-disabled
+        // categories surface, for reactivation. No currently-seeded system category is
+        // disabled, so this had no live symptom yet, but the bare isActive-drop was exactly the
+        // subcategory bug's shape and would leak the first global category ever retired.
+        ...(includeInactive
+          ? [or(eq(category.isActive, true), eq(category.userId, userId))]
+          : [eq(category.isActive, true)]),
         or(isNull(category.userId), eq(category.userId, userId)),
       ),
     )
