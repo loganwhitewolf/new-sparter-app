@@ -201,9 +201,20 @@ export const transactionListSelect = {
   // — correlated subqueries (no LEFT JOIN, to preserve buildTransactionOrderBy). See
   // pairedCounterpartIdExpr()/pairedReimbursementIdExpr() above for role-resolution rules.
   pairedWithId: sql<string | null>`${pairedCounterpartIdExpr()}`,
+  // Full reimbursement net = SUM(frozen anchor amounts) + SUM(refund amounts).
+  // Must aggregate anchors: migration 0031 / D-08 allow N>1 reimbursement_anchor_transaction
+  // rows per reimbursement; joining them without SUM/LIMIT makes this scalar subquery return
+  // multiple rows → Postgres 21000 ("more than one row returned by a subquery used as an
+  // expression"). Outer FROM is reimbursement alone (PK) so the expression is always ≤1 row.
   pairedNetAmount: sql<string | null>`(
     SELECT (
-      t_anchor.amount::numeric + COALESCE((
+      COALESCE((
+        SELECT SUM(t_anchor.amount::numeric)
+        FROM reimbursement_anchor_transaction rat
+        INNER JOIN transaction t_anchor ON t_anchor.id = rat.transaction_id
+        WHERE rat.reimbursement_id = r.id
+      ), 0)
+      + COALESCE((
         SELECT SUM(rt.amount::numeric)
         FROM reimbursement_refund rr
         INNER JOIN transaction rt ON rt.id = rr.transaction_id
@@ -211,8 +222,6 @@ export const transactionListSelect = {
       ), 0)
     )::text
     FROM reimbursement r
-    INNER JOIN reimbursement_anchor_transaction rat ON rat.reimbursement_id = r.id
-    INNER JOIN transaction t_anchor ON t_anchor.id = rat.transaction_id
     WHERE r.id = ${pairedReimbursementIdExpr()}
   )`,
   // Counterpart's OWN original amount (not the net) — shown as "Importo" in the pair popover.
@@ -234,14 +243,22 @@ export const transactionListSelect = {
   // any — a correlated subquery (not a LEFT JOIN, mirroring pairedWithId's own style exactly) so
   // buildTransactionOrderBy's grouping/sort shape is preserved. Non-null means "already-amortized"
   // (D-05 guard) client-side, with zero extra round-trips.
+  // UNIQUE(transaction_id) is the D-05 guard; LIMIT 1 keeps the scalar subquery safe even if
+  // that constraint were ever missing or violated in an environment.
   amortizationPlanId: sql<string | null>`(
-    SELECT ap.id FROM amortization_plan ap WHERE ap.transaction_id = ${transaction.id}
+    SELECT ap.id FROM amortization_plan ap
+    WHERE ap.transaction_id = ${transaction.id}
+    ORDER BY ap.created_at ASC, ap.id ASC
+    LIMIT 1
   )`,
   // Phase 78 (D-01, AMORT-04): the amortization_plan's own status ('open'/'closed'), gating the
   // "Chiudi ammortamento" action's visibility alongside amortizationPlanId — same
   // correlated-subquery style, one extra column, no join.
   amortizationPlanStatus: sql<string | null>`(
-    SELECT ap.status FROM amortization_plan ap WHERE ap.transaction_id = ${transaction.id}
+    SELECT ap.status FROM amortization_plan ap
+    WHERE ap.transaction_id = ${transaction.id}
+    ORDER BY ap.created_at ASC, ap.id ASC
+    LIMIT 1
   )`,
 }
 

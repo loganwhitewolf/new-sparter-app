@@ -860,6 +860,77 @@ describeIfReachable(
   },
 )
 
+describeIfReachable(
+  'transactions-list pairedNetAmount: multi-anchor frozen set must not raise PG 21000 (debug tx-list-subquery-multirow)',
+  () => {
+    it('getTransactions returns SUM(anchors)+SUM(refunds) when migration-0031-shaped multi-anchor reimbursement exists', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const dateRange = lastMonthRange()
+      const occurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 10, 12, 0, 0)
+
+      // Migration 0031 backfill shape: EVERY transaction under the anchor expense becomes a
+      // reimbursement_anchor_transaction row. seedReimbursement() defaults to that shape.
+      const { expenseId, transactionId: anchorAId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-100.00',
+        occurredAt,
+        title: 'Trade Republic multi-leg buy',
+      })
+
+      const anchorBId = randomUUID()
+      await db.insert(transactionTable).values({
+        id: anchorBId,
+        userId,
+        expenseId,
+        transactionHash: `hash-${anchorBId}`,
+        description: 'Trade Republic multi-leg buy',
+        descriptionHash: `dh-${anchorBId}`,
+        amount: '-50.00',
+        occurredAt,
+        rowIndex: 1,
+      })
+
+      const { transactionId: refundId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '30.00',
+        occurredAt,
+        title: 'Trade Republic refund',
+      })
+
+      await seedReimbursement(db, {
+        userId,
+        title: 'TR rimborso multi-anchor',
+        expenseId,
+        refundTransactionIds: [refundId],
+        // omit anchorTransactionIds → freeze BOTH expense txs (0031 backfill shape)
+      })
+
+      vi.doMock('@/lib/db', () => ({ db }))
+      vi.resetModules()
+      const transactionsModule = await import('@/lib/dal/transactions')
+
+      // Pre-fix: pairedNetAmount's rat join returned 2 rows → Postgres 21000.
+      const rows = await transactionsModule.getTransactions({})
+      const byId = new Map(rows.map((row) => [row.id, row]))
+
+      const expectedNet = toDecimal('-100.00').plus(toDecimal('-50.00')).plus(toDecimal('30.00'))
+      for (const id of [anchorAId, anchorBId, refundId]) {
+        const row = byId.get(id)
+        expect(row, `transaction ${id} missing from getTransactions()`).toBeDefined()
+        expect(row!.pairedNetAmount).not.toBeNull()
+        expect(toDecimal(row!.pairedNetAmount!).equals(expectedNet)).toBe(true)
+      }
+    })
+  },
+)
+
 // ---------------------------------------------------------------------------------------------
 // Phase 74 Plan 01 — Group-anchor regression matrix (D-01/D-02/D-05, RMB-02). The Expense-anchor
 // spread is already proven inert/correct above (N=1 scenarios + the Q3 N=2 case); these 3

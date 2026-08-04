@@ -1417,4 +1417,57 @@ describe("transaction pairing select-shape contract (Phase 50 — PAIR-02)", () 
     expect(fullText).toContain("reimbursement");
     expect(fullText).not.toContain("transaction_pair");
   });
+
+  // ── Debug tx-list-subquery-multirow: scalar subquery cardinality safety ──────
+  it("pairedNetAmount aggregates frozen-anchor amounts with SUM (never multiplies by rat join) so N>1 anchors cannot trigger PG 21000", () => {
+    const collectSqlText = (fragment: unknown): string => {
+      if (
+        fragment &&
+        typeof fragment === "object" &&
+        "strings" in (fragment as Record<string, unknown>)
+      ) {
+        const frag = fragment as { strings?: string[]; values?: unknown[] };
+        const own = (frag.strings ?? []).join("");
+        const nested = (frag.values ?? []).map(collectSqlText).join("");
+        return own + nested;
+      }
+      return "";
+    };
+
+    const fragment = (transactionListSelect as Record<string, unknown>).pairedNetAmount;
+    const fullText = collectSqlText(fragment);
+    // Must SUM anchor amounts — joining rat into the outer FROM without aggregate causes
+    // "more than one row returned by a subquery used as an expression" (PG 21000) when a
+    // reimbursement has multiple reimbursement_anchor_transaction rows (migration 0031).
+    expect(fullText).toMatch(/SUM\s*\(\s*t_anchor\.amount/i);
+    expect(fullText).toContain("reimbursement_anchor_transaction");
+    // Outer FROM must be reimbursement alone (not reimbursement JOIN rat).
+    expect(fullText).not.toMatch(
+      /FROM\s+reimbursement\s+r\s+INNER\s+JOIN\s+reimbursement_anchor_transaction/i,
+    );
+  });
+
+  it("amortizationPlanId and amortizationPlanStatus scalar subqueries use LIMIT 1", () => {
+    const collectSqlText = (fragment: unknown): string => {
+      if (
+        fragment &&
+        typeof fragment === "object" &&
+        "strings" in (fragment as Record<string, unknown>)
+      ) {
+        const frag = fragment as { strings?: string[]; values?: unknown[] };
+        const own = (frag.strings ?? []).join("");
+        const nested = (frag.values ?? []).map(collectSqlText).join("");
+        return own + nested;
+      }
+      return "";
+    };
+
+    for (const field of ["amortizationPlanId", "amortizationPlanStatus"] as const) {
+      const fullText = collectSqlText(
+        (transactionListSelect as Record<string, unknown>)[field],
+      );
+      expect(fullText).toMatch(/LIMIT\s+1/i);
+      expect(fullText).toContain("amortization_plan");
+    }
+  });
 });
