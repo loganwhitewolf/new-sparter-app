@@ -122,8 +122,8 @@ describe('CategorySubcategoryBreakdown (D-16/CDET-05, Task 2)', () => {
       <CategorySubcategoryBreakdown contributions={contributions} year={2026} type="out" />,
     )
 
-    // Exactly one 'current-only' row (its badge) and one 'previous-only' row (its suffix) in the
-    // fixture — the 'both' row ('Spesa quotidiana') contributes neither marker.
+    // Exactly one "current-only" row (its badge) and one "previous-only" row (its suffix) in the
+    // fixture — the "both" row (fixture id 1) contributes neither marker.
     expect(html.match(/>nuova</g)).toHaveLength(1)
     expect(html.match(/solo nel 2025/g)).toHaveLength(1)
   })
