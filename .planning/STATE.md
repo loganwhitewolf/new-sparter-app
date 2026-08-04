@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Categories Year View
-status: "Milestone v3.0 shipped — PR #67"
-stopped_at: Completed quick task 260804-br9 (category detail chart rework)
-last_updated: "2026-08-04T07:05:00.000Z"
+status: "Quick tasks batch shipped — PR #68 (category detail rework + reimbursement/category-visibility fixes + taxonomy cleanup)"
+stopped_at: Shipped PR #68 — awaiting merge (post-merge run yarn db:seed && yarn db:seed-extras)
+last_updated: "2026-08-04T13:05:00.000Z"
 last_activity: 2026-08-04
 progress:
   total_phases: 3
