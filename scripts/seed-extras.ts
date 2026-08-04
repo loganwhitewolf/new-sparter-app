@@ -203,26 +203,14 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
     console.log(`    sub32 rename trasferimento: ${(sub32RenameResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
   }
 
-  // --- Cat 32: insert "Prelievo contante" if not exists (idempotent via slug check) ---
-  const existingPrelievo = await database
-    .select({ id: subCategory.id })
-    .from(subCategory)
-    .where(and(eq(subCategory.slug, 'prelievo-contante'), isNull(subCategory.userId)))
-    .limit(1)
-  if (existingPrelievo.length === 0) {
-    // Phase 46: nature column removed — set via raw SQL after insert
-    // TODO(Phase 49): rewrite to set natureId once nature lookup rows seeded
-    await database.insert(subCategory).values({
-      categoryId: 32,
-      name: 'Prelievo contante',
-      slug: 'prelievo-contante',
-      displayOrder: 0,
-      isActive: true,
-    })
-    console.log('    sub32 insert prelievo-contante: 1 row inserted (nature deferred to v2-backfill-nature-id)')
-  } else {
-    console.log('    sub32 insert prelievo-contante: already exists, skipped')
-  }
+  // Quick 260804-br9 follow-up: the "insert Prelievo contante if missing" block that used to
+  // live here is gone. It only ever fed v2-migrate-merges-in-allocation-transfer's
+  // prelievo-contante → contante merge/rename downstream, and 'contante' is a core baseline
+  // subcategory present on every install — so that downstream step always found 'contante' and
+  // ran migrateSubcategoryMerge('prelievo-contante', 'contante'), which already no-ops
+  // gracefully when the source is absent ("skip merge ...: source or target absent"). Recreating
+  // Prelievo contante here just to have purge-orphan-global-disabled-subcategories delete it
+  // again at the end of every future run was pure churn with no reachable effect on any install.
 
   // --- Cat 28: deactivate category and its subcategories ---
   const cat28Result = await database
@@ -631,7 +619,16 @@ const CATEGORY_RENAMES: ReadonlyArray<{ source: string; target: string; name: st
 ]
 
 const SUB_RENAMES: ReadonlyArray<{ source: string; target: string; name: string }> = [
-  { source: 'carburante', target: 'carburante-e-ricarica', name: 'carburante e ricarica' },
+  // Quick 260804-br9: removed the 'carburante' → 'carburante-e-ricarica' entry that used to sit
+  // here. It was latent-dangerous, not just obsolete: renameSubcategoryGuarded's "rename" branch
+  // only fires when the TARGET is absent — and 'carburante-e-ricarica' has been permanently
+  // deleted since this quick task's purge step, not merely deactivated. With the target
+  // permanently gone, this entry would fire on every future run and hijack the live, permanent
+  // 'carburante' row (renaming it away to the retired slug), right before
+  // split-carburante-e-ricarica re-created a FRESH 'carburante' row to compensate — a silent,
+  // perpetual identity swap on every deploy. Safe to remove entirely: every install has been past
+  // the v1→v2 carburante rename for a long time (phase 260731-hhv split it further into
+  // carburante + ricarica-auto-elettrica), so this entry had no legitimate remaining work.
   { source: 'take-away', target: 'take-away-e-delivery', name: 'take-away e delivery' },
   { source: 'sport', target: 'sport-e-fitness', name: 'sport e fitness' },
   { source: 'commissioni-bancarie', target: 'commissioni-e-canone-conto', name: 'commissioni e canone conto' },

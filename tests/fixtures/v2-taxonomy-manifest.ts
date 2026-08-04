@@ -219,6 +219,13 @@ export const DROPPED_SUBCATEGORY_SLUGS = [
   // other pruned OUT subs
   'treno',
   'ristrutturazione', // casa — not in v2 remap; no expenses/patterns; deactivated via v2-deactivate-pruned
+  // Quick 260804-br9: hard-deleted (not just deactivated) — zero references anywhere, purged by
+  // scripts/seed-extras.ts's purge-orphan-global-disabled-subcategories step. Row no longer
+  // exists in scripts/seed-data.ts at all, so V2_SUBCATEGORY_MANIFEST's presence check exempts
+  // these slugs (see tests/seed-taxonomy.test.ts).
+  'carburante-e-ricarica', // split into carburante + ricarica-auto-elettrica (D-04)
+  'attivita-e-intrattenimento', // narrowed out of vacanze (Phase 67 TAG-06, D-11/D-13)
+  'cibo-e-bevande', // narrowed out of vacanze (Phase 67 TAG-06, D-11/D-13)
 ] as const
 
 /** Maps nature codes to seed-data natures array IDs (Phase 46 — do not modify) */

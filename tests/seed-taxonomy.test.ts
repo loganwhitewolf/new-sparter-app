@@ -42,8 +42,15 @@ describe('seed taxonomy contract (TAX-01/02/03)', () => {
 
   it('subcategory slugs and nature codes match manifest', () => {
     const subsBySlug = new Map(subCategories.map((s) => [s.slug, s]))
+    const droppedSlugs = new Set<string>(DROPPED_SUBCATEGORY_SLUGS)
 
     for (const entry of V2_SUBCATEGORY_MANIFEST) {
+      // A handful of v2-manifest slugs were later hard-deleted entirely (not just deactivated —
+      // see DROPPED_SUBCATEGORY_SLUGS' quick 260804-br9 entries). The manifest itself is a
+      // verbatim historical snapshot and is never edited; this presence check exempts slugs that
+      // moved from "exists but inactive" to "row physically gone" instead.
+      if (droppedSlugs.has(entry.slug)) continue
+
       const sub = subsBySlug.get(entry.slug)
       expect(sub, `missing subcategory: ${entry.slug}`).toBeDefined()
       expect(sub!.natureId, entry.slug).toBe(NATURE_ID_BY_CODE[entry.natureCode])
