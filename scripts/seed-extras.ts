@@ -1533,6 +1533,81 @@ async function syncCategorySerialSequences(database: Db): Promise<void> {
   console.log('    sync-category-serial-sequences: category_id_seq + sub_category_id_seq aligned to max(id)')
 }
 
+// Quick 260804-br9 follow-up: hard-delete already soft-disabled (isActive=false), global
+// (userId=null) subcategories that carry zero references anywhere — no linked expenses, no
+// expense_group, no categorization_pattern, no user override, no classification history, no
+// refund snapshot. These are pure taxonomy debris (retired long ago via v2-deactivate-pruned /
+// split-carburante-e-ricarica etc.) that never got physically removed.
+//
+// Deliberately re-checks every reference at runtime rather than a hardcoded slug list: a global
+// subcategory is safe to hard-delete only when NOTHING points at it, and that must be verified
+// against the actual target database, not assumed from what's true locally. If a candidate has
+// any reference, it is skipped and logged — never force-deleted.
+async function purgeOrphanGlobalDisabledSubcategories(database: Db): Promise<void> {
+  const candidates = await database
+    .select({ id: subCategory.id, slug: subCategory.slug })
+    .from(subCategory)
+    .where(and(eq(subCategory.isActive, false), isNull(subCategory.userId)))
+
+  let deletedCount = 0
+  for (const candidate of candidates) {
+    const [expenseRows, groupRows, patternRows, overrideRows, historyRows, refundSnapshotRows] =
+      await Promise.all([
+        database.select({ id: expense.id }).from(expense).where(eq(expense.subCategoryId, candidate.id)).limit(1),
+        database
+          .select({ id: expenseGroup.id })
+          .from(expenseGroup)
+          .where(eq(expenseGroup.subCategoryId, candidate.id))
+          .limit(1),
+        database
+          .select({ id: categorizationPattern.id })
+          .from(categorizationPattern)
+          .where(eq(categorizationPattern.subCategoryId, candidate.id))
+          .limit(1),
+        database
+          .select({ id: userSubcategoryOverride.id })
+          .from(userSubcategoryOverride)
+          .where(eq(userSubcategoryOverride.subCategoryId, candidate.id))
+          .limit(1),
+        database
+          .select({ id: expenseClassificationHistory.id })
+          .from(expenseClassificationHistory)
+          .where(
+            or(
+              eq(expenseClassificationHistory.fromSubCategoryId, candidate.id),
+              eq(expenseClassificationHistory.toSubCategoryId, candidate.id),
+            ),
+          )
+          .limit(1),
+        database
+          .select({ id: reimbursementRefundSnapshot.id })
+          .from(reimbursementRefundSnapshot)
+          .where(eq(reimbursementRefundSnapshot.expenseSubCategoryId, candidate.id))
+          .limit(1),
+      ])
+
+    const stillReferenced =
+      expenseRows.length > 0 ||
+      groupRows.length > 0 ||
+      patternRows.length > 0 ||
+      overrideRows.length > 0 ||
+      historyRows.length > 0 ||
+      refundSnapshotRows.length > 0
+
+    if (stillReferenced) {
+      console.log(`    skip (still referenced): ${candidate.slug}`)
+      continue
+    }
+
+    await database.delete(subCategory).where(eq(subCategory.id, candidate.id))
+    deletedCount += 1
+  }
+
+  console.log(
+    `    purge orphan global disabled subcategories: ${deletedCount}/${candidates.length} deleted`,
+  )
+}
+
 const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'set-subcategory-nature', run: setSubcategoryNature },
   { name: 'set-fineco-description-strip-pattern', run: setFinecoDescriptionStripPattern },
@@ -1557,6 +1632,9 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'ensure-fineco-moneymap-global-format', run: ensureFinecoMoneymapGlobalFormat },
   { name: 'insert-pacchetto-vacanze', run: insertPacchettoVacanze },
   { name: 'split-carburante-e-ricarica', run: splitCarburanteERicarica },
+  { name: 'purge-orphan-global-disabled-subcategories', run: purgeOrphanGlobalDisabledSubcategories },
+  // MUST stay last (bug 3.7 / append-only, enforced by test) — realigns id sequences to max(id)
+  // after every other step (including deletes) has run.
   { name: 'sync-category-serial-sequences', run: syncCategorySerialSequences },
 ]
 
