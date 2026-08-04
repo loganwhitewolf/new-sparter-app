@@ -1,5 +1,7 @@
 import Link from 'next/link'
+import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { CategoryDetailSubcategoryContribution } from '@/lib/dal/category-detail-year-window'
 import { transactionsBySubcategoryHref } from '@/lib/routes'
 import { resolveComparisonJudgement, type ComparisonJudgement } from '@/lib/services/pace-and-projection'
@@ -58,10 +60,19 @@ function safePercentage(value: number): number {
   return Number.isFinite(value) ? Math.max(0, Math.min(value, 100)) : 0
 }
 
+/**
+ * The `previous-only` suffix only (NAV-05/D-06): `current-only` no longer returns an inline
+ * sentence here — it renders a "nuova" Badge+Tooltip instead (see `isNewInYear` below). Stays a
+ * single, clearly-total function for the still-needed `previous-only` case.
+ */
 function presenceSuffix(presence: CategoryDetailSubcategoryContribution['presence'], year: number): string | null {
-  if (presence === 'current-only') return `— nuova nel ${year}`
   if (presence === 'previous-only') return `— solo nel ${year - 1}`
   return null
+}
+
+/** NAV-05/D-06: a `current-only` row shows the "nuova" badge instead of the retired inline sentence. */
+function isNewInYear(presence: CategoryDetailSubcategoryContribution['presence']): boolean {
+  return presence === 'current-only'
 }
 
 /**
@@ -134,6 +145,20 @@ export function CategorySubcategoryBreakdown({
                       {row.name}
                     </span>
                   )}
+                  {isNewInYear(row.presence) ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="secondary" className="ml-1 align-middle">
+                            nuova
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          questa spesa compare per la prima volta nel {year}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : null}
                   {suffix ? <span className="ml-1 text-xs text-muted-foreground">{suffix}</span> : null}
                 </TableCell>
                 <TableCell>

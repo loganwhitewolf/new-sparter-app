@@ -12,6 +12,16 @@ vi.mock('next/link', () => ({
   ),
 }))
 
+// Task 4 (NAV-05/D-06): Radix Tooltip content commonly renders via Portal and toggles
+// visibility via data-state/CSS at runtime, invisible to renderToStaticMarkup. Mirrors
+// tests/sidebar-sections.test.tsx's own established pattern for asserting tooltip content.
+vi.mock('@/components/ui/tooltip', () => ({
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+}))
+
 const { CategorySubcategoryBreakdown } = await import(
   '@/components/dashboard/category-subcategory-breakdown'
 )
@@ -80,13 +90,42 @@ describe('CategorySubcategoryBreakdown (D-16/CDET-05, Task 2)', () => {
     expect(html).toContain('width:0%')
   })
 
-  test("a presence: 'current-only' row renders its name suffixed with 'nuova nel 2026'", () => {
+  test("a presence: 'current-only' row renders a 'nuova' badge (not the old inline sentence) with a tooltip reading the full sentence for the actual year (Task 4/NAV-05)", () => {
     const html = renderToStaticMarkup(
       <CategorySubcategoryBreakdown contributions={contributions} year={2026} type="out" />,
     )
 
     expect(html).toContain('Consegna a domicilio')
-    expect(html).toContain('nuova nel 2026')
+    expect(html).toContain('nuova')
+    expect(html).not.toContain('nuova nel 2026')
+    expect(html).toContain('questa spesa compare per la prima volta nel 2026')
+  })
+
+  test("a presence: 'previous-only' row shows no badge/tooltip and keeps its existing suffix unaffected (Task 4/NAV-05)", () => {
+    const html = renderToStaticMarkup(
+      <CategorySubcategoryBreakdown contributions={contributions} year={2026} type="out" />,
+    )
+
+    expect(html).toContain('solo nel 2025')
+    // Exactly one 'current-only' row in the fixture -> exactly one tooltip sentence; the
+    // 'previous-only' row ("Mensa aziendale") contributes none of it.
+    expect(html.match(/questa spesa compare per la prima volta/g)).toHaveLength(1)
+    const mensaCellStart = html.indexOf('Mensa aziendale')
+    const mensaCellEnd = html.indexOf('</td>', mensaCellStart)
+    const mensaCellHtml = html.slice(mensaCellStart, mensaCellEnd)
+    expect(mensaCellHtml).not.toContain('data-slot="badge"')
+    expect(mensaCellHtml).not.toContain('questa spesa compare per la prima volta')
+  })
+
+  test("a presence: 'both' row renders neither badge nor suffix (Task 4/NAV-05)", () => {
+    const html = renderToStaticMarkup(
+      <CategorySubcategoryBreakdown contributions={contributions} year={2026} type="out" />,
+    )
+
+    // Exactly one 'current-only' row (its badge) and one 'previous-only' row (its suffix) in the
+    // fixture — the 'both' row ('Spesa quotidiana') contributes neither marker.
+    expect(html.match(/>nuova</g)).toHaveLength(1)
+    expect(html.match(/solo nel 2025/g)).toHaveLength(1)
   })
 
   test('renders an explicit empty state for zero contributions', () => {
