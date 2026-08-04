@@ -1320,7 +1320,7 @@ async function ensureSystemSubcategory(
   opts: { slug: string; name: string; categoryId: number; natureCode: string },
 ): Promise<number> {
   const existing = await database
-    .select({ id: subCategory.id, isActive: subCategory.isActive })
+    .select({ id: subCategory.id, isActive: subCategory.isActive, natureId: subCategory.natureId })
     .from(subCategory)
     .where(and(eq(subCategory.slug, opts.slug), isNull(subCategory.userId)))
     .limit(1)
@@ -1335,6 +1335,22 @@ async function ensureSystemSubcategory(
       console.log(`    ensure ${opts.slug}: reactivated id=${row.id}`)
     } else {
       console.log(`    ensure ${opts.slug}: already active id=${row.id}`)
+    }
+    // Quick 260804 follow-up: this branch used to only touch isActive/name, silently leaving a
+    // pre-existing (pre-nature/direction-model) row's natureId at NULL forever — 'carburante'
+    // predates the nature model and isn't in V2_SUBCATEGORY_MANIFEST (it's a later split-phase
+    // slug), so no backfill step ever touched it. Discovered in production with 22 expenses / 40
+    // transactions silently excluded from every nature/direction-joined aggregation (the category
+    // never renders complete totals and can disappear from nature-filtered rankings). Runs
+    // regardless of the active/inactive branch above — the repair is orthogonal to activation.
+    if (row.natureId === null) {
+      await database
+        .update(subCategory)
+        .set({
+          natureId: sql`(SELECT id FROM ${nature} WHERE ${nature.code} = ${opts.natureCode})`,
+        })
+        .where(eq(subCategory.id, row.id))
+      console.log(`    ensure ${opts.slug}: repaired NULL natureId id=${row.id}`)
     }
     return row.id
   }
@@ -1605,7 +1621,9 @@ async function purgeOrphanGlobalDisabledSubcategories(database: Db): Promise<voi
   )
 }
 
-const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
+// Exported (not just STEP_NAMES) so real-Postgres regression tests can run a single named step
+// against a harness db — see tests/seed-extras-nature-repair.test.ts.
+export const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'set-subcategory-nature', run: setSubcategoryNature },
   { name: 'set-fineco-description-strip-pattern', run: setFinecoDescriptionStripPattern },
   { name: 'reorganize-spesa-subcategories', run: reorganizeSpesaSubcategories },
