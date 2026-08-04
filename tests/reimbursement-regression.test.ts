@@ -769,6 +769,97 @@ describeIfReachable(
   },
 )
 
+describeIfReachable(
+  'transactions-list pairing badge: multi-transaction Expense anchor, non-earliest linked transaction (quick 260804)',
+  () => {
+    it('shows pairedWithId/pairedNetAmount on the FROZEN anchor transaction, not on its earlier unrelated sibling, and points the refund at the real anchor', async () => {
+      const db = requireHarnessDb()
+      await resetReimbursementFixtures(db)
+
+      const { userId } = await seedUser(db)
+      vi.mocked(verifySession).mockResolvedValue({ userId } as never)
+      const taxonomy = await seedMinimalTaxonomy(db, userId)
+      const dateRange = lastMonthRange()
+      const earlierOccurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 3, 9, 0, 0)
+      const laterOccurredAt = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), 20, 9, 0, 0)
+
+      // Same "one Expense, two transactions" shape as the Q3 scenario above (e.g. the merchant's
+      // description-hash grouping collapsed two separate coffee purchases into one Expense), but
+      // here only the LATER transaction ever gets reimbursed — the earlier one is an unrelated
+      // sibling purchase under the same Expense that must stay completely unpaired.
+      const { expenseId, transactionId: earlierTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '-12.00',
+        occurredAt: earlierOccurredAt,
+        title: 'Pasticceria Caffè Cavour',
+      })
+
+      const laterTransactionId = randomUUID()
+      await db.insert(transactionTable).values({
+        id: laterTransactionId,
+        userId,
+        expenseId,
+        transactionHash: `hash-${laterTransactionId}`,
+        description: 'Pasticceria Caffè Cavour',
+        descriptionHash: `dh-${laterTransactionId}`,
+        amount: '-12.00',
+        occurredAt: laterOccurredAt,
+        rowIndex: 1,
+      })
+
+      const { transactionId: refundTransactionId } = await seedExpenseWithTransaction(db, {
+        userId,
+        subCategoryId: taxonomy.essentialSubCategoryId,
+        amount: '2.60',
+        occurredAt: laterOccurredAt,
+        title: 'Rimborso per caffè Giancarlo C.',
+      })
+
+      // The REAL production write path (lib/services/transaction-pairs.ts createPair), not the
+      // seedReimbursement() test helper — this is what actually freezes ONE transaction into
+      // reimbursement_anchor_transaction (D-08). Sign resolution (D-02) picks whichever of the
+      // two ids is negative as the anchor, so passing laterTransactionId here reproduces exactly
+      // the "user reimbursed the second/later purchase, not the first" real-world case.
+      await createPair({
+        userId,
+        anchor: { transactionId: laterTransactionId },
+        counterpartId: refundTransactionId,
+      })
+
+      vi.doMock('@/lib/db', () => ({ db }))
+      vi.resetModules()
+      const transactionsModule = await import('@/lib/dal/transactions')
+
+      const rows = await transactionsModule.getTransactions({})
+      const byId = new Map(rows.map((row) => [row.id, row]))
+
+      const earlierRow = byId.get(earlierTransactionId)
+      const laterRow = byId.get(laterTransactionId)
+      const refundRow = byId.get(refundTransactionId)
+      expect(earlierRow, 'earlier sibling transaction missing from getTransactions()').toBeDefined()
+      expect(laterRow, 'later (frozen anchor) transaction missing from getTransactions()').toBeDefined()
+      expect(refundRow, 'refund transaction missing from getTransactions()').toBeDefined()
+
+      // The bug: the old earliest-transaction-of-the-Expense heuristic resolved the ANCHOR role
+      // against earlierTransactionId (wrong — it was never linked to anything), so laterRow (the
+      // real, frozen anchor) got NULL pairedWithId/pairedNetAmount — no badge/strikethrough at all
+      // on the "out" row, exactly the reported symptom.
+      expect(laterRow!.pairedWithId).toBe(refundTransactionId)
+      expect(toDecimal(laterRow!.pairedNetAmount!).equals('-9.40')).toBe(true)
+
+      // The earlier sibling was never part of any reimbursement — must stay fully unpaired.
+      expect(earlierRow!.pairedWithId).toBeNull()
+      expect(earlierRow!.pairedNetAmount).toBeNull()
+
+      // The refund's own counterpart must point at the REAL anchor (laterTransactionId), never
+      // at the earlier sibling the old heuristic would have guessed.
+      expect(refundRow!.pairedWithId).toBe(laterTransactionId)
+      expect(toDecimal(refundRow!.pairedNetAmount!).equals('-9.40')).toBe(true)
+    })
+  },
+)
+
 // ---------------------------------------------------------------------------------------------
 // Phase 74 Plan 01 — Group-anchor regression matrix (D-01/D-02/D-05, RMB-02). The Expense-anchor
 // spread is already proven inert/correct above (N=1 scenarios + the Q3 N=2 case); these 3

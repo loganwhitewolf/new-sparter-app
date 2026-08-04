@@ -1,8 +1,10 @@
 'use client'
 
+import { resolveBarFillStyle } from '@/components/dashboard/category-bar-fill'
+import type { BarFillState } from '@/components/dashboard/category-bar-fill'
 import type { CategorySparklinePoint } from '@/lib/dal/dashboard'
 
-type PointState = 'covered' | 'current' | 'estimated' | 'uncovered'
+type PointState = BarFillState
 
 type Props = {
   points: CategorySparklinePoint[]
@@ -51,17 +53,6 @@ function buildPolylinePoints(points: CategorySparklinePoint[]): ChartPoint[] {
   })
 }
 
-type BarFillStyle = {
-  height: string
-  backgroundColor?: string
-  backgroundImage?: string
-  opacity?: number
-}
-
-// UI-SPEC `## Sparkline Visual States` — one fill style per per-month state. 'estimated' and
-// 'uncovered' never render a flat/zero-height bar: 'estimated' is normalized like any other bar,
-// 'uncovered' is pinned to 100% height regardless of its (always '0.00') amount, so a data gap
-// never reads as a month of zero spending.
 // WR-02 gap-closure (83-05): whenever estimatedHeightHint is null, this fallback becomes the
 // ONLY positive reference magnitude among referenceMagnitudes, so it always normalizes to 100%
 // of itself regardless of its exact value — it exists solely to satisfy resolveBarFillStyle's own
@@ -90,25 +81,6 @@ function resolveEstimatedReference(
   const observedMax = observedMagnitudes.length > 0 ? Math.max(...observedMagnitudes) : 0
 
   return observedMax > 0 ? observedMax : ESTIMATED_HEIGHT_FALLBACK
-}
-
-function resolveBarFillStyle(state: PointState, heightPercent: number, color: string): BarFillStyle {
-  switch (state) {
-    case 'covered':
-      return { height: `${heightPercent}%`, backgroundColor: color, opacity: 0.45 }
-    case 'current':
-      return { height: `${heightPercent}%`, backgroundColor: color, opacity: 1 }
-    case 'estimated':
-      return {
-        height: `${heightPercent}%`,
-        backgroundImage: `repeating-linear-gradient(135deg, ${color} 0 3px, transparent 3px 6px)`,
-      }
-    case 'uncovered':
-      return {
-        height: '100%',
-        backgroundImage: 'repeating-linear-gradient(45deg, transparent 0 3px, rgba(120,120,120,0.35) 3px 6px)',
-      }
-  }
 }
 
 export function CategorySparkline({

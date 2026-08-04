@@ -1,5 +1,4 @@
 import type { CategoryYearSort } from '@/lib/validations/dashboard'
-import type { CategoryDetailWindowLength } from '@/lib/validations/category-year-window'
 import type { LensPassthrough } from '@/lib/utils/search-params'
 
 export const APP_ROUTES = {
@@ -40,11 +39,6 @@ type DashboardCategoryFilters = {
   // aggregation always falls through to its `ledgerEntryCash` default and never reads this
   // value (D-12). Making that misuse a type error, not a review convention.
   lens?: LensPassthrough
-  // D-01/D-04 (Phase 84) — the category DETAIL page's own window params. Structurally shared
-  // with buildDashboardCategoriesHref's type (like `sort` above), but the LIST has no window
-  // (D-04): only buildDashboardCategoryDetailHref callers ever set these.
-  months?: CategoryDetailWindowLength
-  from?: string
 }
 
 /** Builds the `?year=...` query string shared by the two Categories href builders (D-12). */
@@ -62,17 +56,6 @@ function buildYearModeSearch(filters: DashboardCategoryFilters & { year: number 
 
   if (filters.lens) {
     params.set('lens', filters.lens)
-  }
-
-  // D-01: a whole-year window (months === 12, or absent) omits both params entirely.
-  if (filters.months !== undefined && filters.months !== 12) {
-    params.set('months', String(filters.months))
-  }
-
-  // D-04: `from` is only emitted when it diverges from the implicit January default for this
-  // filters' own `year` — never a stale prior year's prefix.
-  if (filters.from !== undefined && filters.from !== `${filters.year}-01`) {
-    params.set('from', filters.from)
   }
 
   return params.toString()

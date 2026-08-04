@@ -10,9 +10,11 @@ const SUBCATEGORY_ROW_COUNT = 4
 export function CategoryDetailSkeleton() {
   return (
     <div className="space-y-6" aria-label="Caricamento dettaglio categoria">
-      {/* Chart placeholder (D-08/D-09) — bar-height rectangles, zero-centered on a baseline. */}
-      <div className="min-h-[220px] rounded-xl border bg-card p-4 shadow-sm">
-        <div className="flex h-48 items-center gap-3" aria-hidden="true">
+      {/* Chart placeholder (CDET-VIEW-01, 260804-br9) — compact bar-height rectangles matching
+          CategoryDetailAmountsChart's own h-16 geometry, so the loading skeleton doesn't
+          visually jump when the real compact chart mounts. */}
+      <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="flex h-16 items-center gap-3" aria-hidden="true">
           {Array.from({ length: 8 }).map((_, index) => {
             const isAbove = index % 2 === 0
             return (

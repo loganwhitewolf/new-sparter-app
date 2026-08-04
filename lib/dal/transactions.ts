@@ -84,17 +84,25 @@ export type TransactionFilters = {
  * Repoints the Phase 50 1:1 legacy-pair-table popover onto the generalized
  * `reimbursement`/`reimbursement_refund` tables.
  *
- * - Refund role (this id exists in reimbursement_refund): counterpart = the reimbursement's
- *   anchor transaction — the earliest transaction of the anchor Expense, the exact tie-break
- *   Plan 73-01 built into effectiveAmount() (lib/dal/transaction-pairs-sql.ts), reused here
- *   rather than inventing a second tie-break rule.
- * - Anchor role (a `reimbursement` row's expense_id matches this transaction's expense_id AND
- *   this transaction IS that earliest transaction — Q3 tie-break): counterpart = the
- *   earliest-LINKED refund (`reimbursement_refund.created_at ASC, transaction_id ASC` —
+ * Quick 260804 fix: anchor-role detection used to guess "the earliest transaction of the anchor
+ * Expense" instead of reading the D-08 frozen `reimbursement_anchor_transaction` set. Whenever the
+ * anchor Expense had more than one transaction AND the linked one wasn't the earliest by date, the
+ * guess missed — the anchor's own row silently got NULL pairedWithId/pairedNetAmount (no
+ * badge/strikethrough at all), while the refund row still resolved fine independently. Now both
+ * roles resolve directly off `reimbursement_anchor_transaction`, the same source of truth
+ * effectiveAmount() (lib/dal/transaction-pairs-sql.ts) and getReimbursementAnchorTransaction()
+ * (lib/dal/reimbursement.ts) already use — no more date-based guessing.
+ *
+ * - Refund role (this id exists in reimbursement_refund): counterpart = that reimbursement's
+ *   frozen anchor transaction.
+ * - Anchor role (this id IS the frozen anchor transaction of some reimbursement): counterpart =
+ *   the earliest-LINKED refund (`reimbursement_refund.created_at ASC, transaction_id ASC` —
  *   T-73-11, a documented single-counterpart display limitation: only ONE refund is shown
  *   here when N>1 exist; a full multi-refund popover is Phase 75/76 scope, not silently
  *   dropped — pairedNetAmount below is NOT limited this way).
- * - Neither role: NULL (unpaired, unchanged from today).
+ * - Neither role: NULL (unpaired, unchanged from today). Expense-Group anchors are out of scope
+ *   here too — D-08 never writes reimbursement_anchor_transaction for a Group anchor, matching
+ *   this function's pre-existing (expense_id-only) scope.
  */
 function pairedCounterpartIdExpr() {
   return sql`(
@@ -104,32 +112,21 @@ function pairedCounterpartIdExpr() {
         WHERE rr.transaction_id = ${transaction.id}
       )
       THEN (
-        SELECT t2.id
+        SELECT rat.transaction_id
         FROM reimbursement_refund rr
-        INNER JOIN reimbursement r ON r.id = rr.reimbursement_id
-        INNER JOIN transaction t2 ON t2.id = (
-          SELECT t3.id FROM transaction t3
-          WHERE t3.expense_id = r.expense_id
-          ORDER BY t3.occurred_at ASC, t3.id ASC
-          LIMIT 1
-        )
+        INNER JOIN reimbursement_anchor_transaction rat ON rat.reimbursement_id = rr.reimbursement_id
         WHERE rr.transaction_id = ${transaction.id}
+        LIMIT 1
       )
       WHEN EXISTS (
-        SELECT 1 FROM reimbursement r
-        WHERE r.expense_id = ${transaction.expenseId}
-        AND ${transaction.id} = (
-          SELECT t3.id FROM transaction t3
-          WHERE t3.expense_id = ${transaction.expenseId}
-          ORDER BY t3.occurred_at ASC, t3.id ASC
-          LIMIT 1
-        )
+        SELECT 1 FROM reimbursement_anchor_transaction rat
+        WHERE rat.transaction_id = ${transaction.id}
       )
       THEN (
         SELECT rr2.transaction_id
-        FROM reimbursement r2
-        INNER JOIN reimbursement_refund rr2 ON rr2.reimbursement_id = r2.id
-        WHERE r2.expense_id = ${transaction.expenseId}
+        FROM reimbursement_anchor_transaction rat2
+        INNER JOIN reimbursement_refund rr2 ON rr2.reimbursement_id = rat2.reimbursement_id
+        WHERE rat2.transaction_id = ${transaction.id}
         ORDER BY rr2.created_at ASC, rr2.transaction_id ASC
         LIMIT 1
       )
@@ -158,19 +155,13 @@ function pairedReimbursementIdExpr() {
         LIMIT 1
       )
       WHEN EXISTS (
-        SELECT 1 FROM reimbursement r
-        WHERE r.expense_id = ${transaction.expenseId}
-        AND ${transaction.id} = (
-          SELECT t3.id FROM transaction t3
-          WHERE t3.expense_id = ${transaction.expenseId}
-          ORDER BY t3.occurred_at ASC, t3.id ASC
-          LIMIT 1
-        )
+        SELECT 1 FROM reimbursement_anchor_transaction rat
+        WHERE rat.transaction_id = ${transaction.id}
       )
       THEN (
-        SELECT r2.id
-        FROM reimbursement r2
-        WHERE r2.expense_id = ${transaction.expenseId}
+        SELECT rat2.reimbursement_id
+        FROM reimbursement_anchor_transaction rat2
+        WHERE rat2.transaction_id = ${transaction.id}
         LIMIT 1
       )
       ELSE NULL
@@ -220,12 +211,8 @@ export const transactionListSelect = {
       ), 0)
     )::text
     FROM reimbursement r
-    INNER JOIN transaction t_anchor ON t_anchor.id = (
-      SELECT t2.id FROM transaction t2
-      WHERE t2.expense_id = r.expense_id
-      ORDER BY t2.occurred_at ASC, t2.id ASC
-      LIMIT 1
-    )
+    INNER JOIN reimbursement_anchor_transaction rat ON rat.reimbursement_id = r.id
+    INNER JOIN transaction t_anchor ON t_anchor.id = rat.transaction_id
     WHERE r.id = ${pairedReimbursementIdExpr()}
   )`,
   // Counterpart's OWN original amount (not the net) — shown as "Importo" in the pair popover.

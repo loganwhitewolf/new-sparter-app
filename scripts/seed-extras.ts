@@ -203,26 +203,14 @@ async function reorganizeTransferRimborsiCategories(database: Db): Promise<void>
     console.log(`    sub32 rename trasferimento: ${(sub32RenameResult as unknown as { rowCount?: number }).rowCount ?? 0} rows updated`)
   }
 
-  // --- Cat 32: insert "Prelievo contante" if not exists (idempotent via slug check) ---
-  const existingPrelievo = await database
-    .select({ id: subCategory.id })
-    .from(subCategory)
-    .where(and(eq(subCategory.slug, 'prelievo-contante'), isNull(subCategory.userId)))
-    .limit(1)
-  if (existingPrelievo.length === 0) {
-    // Phase 46: nature column removed — set via raw SQL after insert
-    // TODO(Phase 49): rewrite to set natureId once nature lookup rows seeded
-    await database.insert(subCategory).values({
-      categoryId: 32,
-      name: 'Prelievo contante',
-      slug: 'prelievo-contante',
-      displayOrder: 0,
-      isActive: true,
-    })
-    console.log('    sub32 insert prelievo-contante: 1 row inserted (nature deferred to v2-backfill-nature-id)')
-  } else {
-    console.log('    sub32 insert prelievo-contante: already exists, skipped')
-  }
+  // Quick 260804-br9 follow-up: the "insert Prelievo contante if missing" block that used to
+  // live here is gone. It only ever fed v2-migrate-merges-in-allocation-transfer's
+  // prelievo-contante → contante merge/rename downstream, and 'contante' is a core baseline
+  // subcategory present on every install — so that downstream step always found 'contante' and
+  // ran migrateSubcategoryMerge('prelievo-contante', 'contante'), which already no-ops
+  // gracefully when the source is absent ("skip merge ...: source or target absent"). Recreating
+  // Prelievo contante here just to have purge-orphan-global-disabled-subcategories delete it
+  // again at the end of every future run was pure churn with no reachable effect on any install.
 
   // --- Cat 28: deactivate category and its subcategories ---
   const cat28Result = await database
@@ -631,7 +619,16 @@ const CATEGORY_RENAMES: ReadonlyArray<{ source: string; target: string; name: st
 ]
 
 const SUB_RENAMES: ReadonlyArray<{ source: string; target: string; name: string }> = [
-  { source: 'carburante', target: 'carburante-e-ricarica', name: 'carburante e ricarica' },
+  // Quick 260804-br9: removed the 'carburante' → 'carburante-e-ricarica' entry that used to sit
+  // here. It was latent-dangerous, not just obsolete: renameSubcategoryGuarded's "rename" branch
+  // only fires when the TARGET is absent — and 'carburante-e-ricarica' has been permanently
+  // deleted since this quick task's purge step, not merely deactivated. With the target
+  // permanently gone, this entry would fire on every future run and hijack the live, permanent
+  // 'carburante' row (renaming it away to the retired slug), right before
+  // split-carburante-e-ricarica re-created a FRESH 'carburante' row to compensate — a silent,
+  // perpetual identity swap on every deploy. Safe to remove entirely: every install has been past
+  // the v1→v2 carburante rename for a long time (phase 260731-hhv split it further into
+  // carburante + ricarica-auto-elettrica), so this entry had no legitimate remaining work.
   { source: 'take-away', target: 'take-away-e-delivery', name: 'take-away e delivery' },
   { source: 'sport', target: 'sport-e-fitness', name: 'sport e fitness' },
   { source: 'commissioni-bancarie', target: 'commissioni-e-canone-conto', name: 'commissioni e canone conto' },
@@ -1323,7 +1320,7 @@ async function ensureSystemSubcategory(
   opts: { slug: string; name: string; categoryId: number; natureCode: string },
 ): Promise<number> {
   const existing = await database
-    .select({ id: subCategory.id, isActive: subCategory.isActive })
+    .select({ id: subCategory.id, isActive: subCategory.isActive, natureId: subCategory.natureId })
     .from(subCategory)
     .where(and(eq(subCategory.slug, opts.slug), isNull(subCategory.userId)))
     .limit(1)
@@ -1338,6 +1335,22 @@ async function ensureSystemSubcategory(
       console.log(`    ensure ${opts.slug}: reactivated id=${row.id}`)
     } else {
       console.log(`    ensure ${opts.slug}: already active id=${row.id}`)
+    }
+    // Quick 260804 follow-up: this branch used to only touch isActive/name, silently leaving a
+    // pre-existing (pre-nature/direction-model) row's natureId at NULL forever — 'carburante'
+    // predates the nature model and isn't in V2_SUBCATEGORY_MANIFEST (it's a later split-phase
+    // slug), so no backfill step ever touched it. Discovered in production with 22 expenses / 40
+    // transactions silently excluded from every nature/direction-joined aggregation (the category
+    // never renders complete totals and can disappear from nature-filtered rankings). Runs
+    // regardless of the active/inactive branch above — the repair is orthogonal to activation.
+    if (row.natureId === null) {
+      await database
+        .update(subCategory)
+        .set({
+          natureId: sql`(SELECT id FROM ${nature} WHERE ${nature.code} = ${opts.natureCode})`,
+        })
+        .where(eq(subCategory.id, row.id))
+      console.log(`    ensure ${opts.slug}: repaired NULL natureId id=${row.id}`)
     }
     return row.id
   }
@@ -1533,7 +1546,84 @@ async function syncCategorySerialSequences(database: Db): Promise<void> {
   console.log('    sync-category-serial-sequences: category_id_seq + sub_category_id_seq aligned to max(id)')
 }
 
-const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
+// Quick 260804-br9 follow-up: hard-delete already soft-disabled (isActive=false), global
+// (userId=null) subcategories that carry zero references anywhere — no linked expenses, no
+// expense_group, no categorization_pattern, no user override, no classification history, no
+// refund snapshot. These are pure taxonomy debris (retired long ago via v2-deactivate-pruned /
+// split-carburante-e-ricarica etc.) that never got physically removed.
+//
+// Deliberately re-checks every reference at runtime rather than a hardcoded slug list: a global
+// subcategory is safe to hard-delete only when NOTHING points at it, and that must be verified
+// against the actual target database, not assumed from what's true locally. If a candidate has
+// any reference, it is skipped and logged — never force-deleted.
+async function purgeOrphanGlobalDisabledSubcategories(database: Db): Promise<void> {
+  const candidates = await database
+    .select({ id: subCategory.id, slug: subCategory.slug })
+    .from(subCategory)
+    .where(and(eq(subCategory.isActive, false), isNull(subCategory.userId)))
+
+  let deletedCount = 0
+  for (const candidate of candidates) {
+    const [expenseRows, groupRows, patternRows, overrideRows, historyRows, refundSnapshotRows] =
+      await Promise.all([
+        database.select({ id: expense.id }).from(expense).where(eq(expense.subCategoryId, candidate.id)).limit(1),
+        database
+          .select({ id: expenseGroup.id })
+          .from(expenseGroup)
+          .where(eq(expenseGroup.subCategoryId, candidate.id))
+          .limit(1),
+        database
+          .select({ id: categorizationPattern.id })
+          .from(categorizationPattern)
+          .where(eq(categorizationPattern.subCategoryId, candidate.id))
+          .limit(1),
+        database
+          .select({ id: userSubcategoryOverride.id })
+          .from(userSubcategoryOverride)
+          .where(eq(userSubcategoryOverride.subCategoryId, candidate.id))
+          .limit(1),
+        database
+          .select({ id: expenseClassificationHistory.id })
+          .from(expenseClassificationHistory)
+          .where(
+            or(
+              eq(expenseClassificationHistory.fromSubCategoryId, candidate.id),
+              eq(expenseClassificationHistory.toSubCategoryId, candidate.id),
+            ),
+          )
+          .limit(1),
+        database
+          .select({ id: reimbursementRefundSnapshot.id })
+          .from(reimbursementRefundSnapshot)
+          .where(eq(reimbursementRefundSnapshot.expenseSubCategoryId, candidate.id))
+          .limit(1),
+      ])
+
+    const stillReferenced =
+      expenseRows.length > 0 ||
+      groupRows.length > 0 ||
+      patternRows.length > 0 ||
+      overrideRows.length > 0 ||
+      historyRows.length > 0 ||
+      refundSnapshotRows.length > 0
+
+    if (stillReferenced) {
+      console.log(`    skip (still referenced): ${candidate.slug}`)
+      continue
+    }
+
+    await database.delete(subCategory).where(eq(subCategory.id, candidate.id))
+    deletedCount += 1
+  }
+
+  console.log(
+    `    purge orphan global disabled subcategories: ${deletedCount}/${candidates.length} deleted`,
+  )
+}
+
+// Exported (not just STEP_NAMES) so real-Postgres regression tests can run a single named step
+// against a harness db — see tests/seed-extras-nature-repair.test.ts.
+export const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'set-subcategory-nature', run: setSubcategoryNature },
   { name: 'set-fineco-description-strip-pattern', run: setFinecoDescriptionStripPattern },
   { name: 'reorganize-spesa-subcategories', run: reorganizeSpesaSubcategories },
@@ -1557,6 +1647,9 @@ const STEPS: Array<{ name: string; run: (database: Db) => Promise<void> }> = [
   { name: 'ensure-fineco-moneymap-global-format', run: ensureFinecoMoneymapGlobalFormat },
   { name: 'insert-pacchetto-vacanze', run: insertPacchettoVacanze },
   { name: 'split-carburante-e-ricarica', run: splitCarburanteERicarica },
+  { name: 'purge-orphan-global-disabled-subcategories', run: purgeOrphanGlobalDisabledSubcategories },
+  // MUST stay last (bug 3.7 / append-only, enforced by test) — realigns id sequences to max(id)
+  // after every other step (including deletes) has run.
   { name: 'sync-category-serial-sequences', run: syncCategorySerialSequences },
 ]
 

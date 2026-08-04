@@ -1284,11 +1284,16 @@ export const getCategoryDetail = cache(
           // the includedInTotals filter on the data queries and rowMatchesCategory never rejects rows
           // because of a non-deterministic 'allocation'/'transfer' result.
           // ORDER BY d.id makes LIMIT 1 deterministic.
+          // The correlation MUST be the bound `categoryId`, never `${category.id}`: inside a
+          // select-list `sql` template Drizzle renders a column reference UNQUALIFIED (`"id"`), so
+          // `sc2.category_id = "id"` silently resolved against `sub_category sc2`'s own `id`
+          // column instead of the outer category — the subquery matched nothing and every category
+          // fell through to the 'out' fallback below.
           type: sql<'in' | 'out' | null>`(
             SELECT d.code FROM direction d
             INNER JOIN nature n ON n.direction_id = d.id
             INNER JOIN sub_category sc ON sc.id IN (
-              SELECT sc2.id FROM sub_category sc2 WHERE sc2.category_id = ${category.id}
+              SELECT sc2.id FROM sub_category sc2 WHERE sc2.category_id = ${categoryId}
             )
             LEFT JOIN user_subcategory_override uso
               ON uso.sub_category_id = sc.id AND uso.user_id = ${userId}

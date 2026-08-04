@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Categories Year View
-status: "Milestone v3.0 shipped — PR #67"
-stopped_at: Completed 84-04-PLAN.md
-last_updated: "2026-08-03T15:53:07.336Z"
-last_activity: 2026-08-03
+status: "Quick tasks batch shipped — PR #68 (category detail rework + reimbursement/category-visibility fixes + taxonomy cleanup)"
+stopped_at: Shipped PR #68 — awaiting merge (post-merge run yarn db:seed && yarn db:seed-extras)
+last_updated: "2026-08-04T13:05:00.000Z"
+last_activity: 2026-08-04
 progress:
   total_phases: 3
   completed_phases: 3
@@ -681,6 +681,7 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260730-o82 | Transactions: direzione multi-select; default implicito in+out+allocation+unclassified (no transfer, no chips); cascade senza transfer finché non attivato | 2026-07-30 | bf578c48 |
 | 260731-hhv | UX contratto feedback Sparter: PRONTO + bug 3.7 (contrast/onboarding, welcome/dashboard, taxonomy split + pattern copy + Spese dilazionate); deferred 2.4/3.8/3.9 | 2026-07-31 | a92ef98a |
 | 260803-e9w | Chiusura WR-01/WR-02 di 83-REVIEW.md: nome accessibile per la riga Accantonamenti (testo `sr-only` nello `<span>` inerte — `aria-label` scartato perché il ruolo implicito `generic` non ammette naming da autore) via nuovo `rowAccessibleSuffix` nella copy service centralizzata (D-11); ripristinato il commento di razionale D-13/CLIST-07 sopra l'href del `<Link>`. Nessun cambiamento visivo | 2026-08-03 | 64403c6a |
+| 260804-br9 | Rework grafico dettaglio categoria: barre di importo mensile compatte al posto del delta-vs-anno-precedente 640x220 (riusa `resolveBarFillStyle` della sparkline), finestra `?months`/`?from` sostituita da due sole viste `?view=ytd\|projection` che governano tutta la pagina (chart, tabella, sottocategorie, totali) — YTD senza proiezione né ibrido sul mese corrente, Proiezione = comportamento precedente; toggle nascosto sugli anni passati | 2026-08-04 | 2beac1e2 |
 
 ## Deferred Items
 
