@@ -1,7 +1,20 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, test } from 'vitest'
-import { CategorySubcategoryBreakdown } from '@/components/dashboard/category-subcategory-breakdown'
+import { describe, expect, test, vi } from 'vitest'
+import type * as React from 'react'
 import type { CategoryDetailSubcategoryContribution } from '@/lib/dal/category-detail-year-window'
+import { transactionsBySubcategoryHref } from '@/lib/routes'
+
+vi.mock('next/link', () => ({
+  default: ({ href, children, ...props }: React.ComponentProps<'a'>) => (
+    <a href={String(href)} {...props}>
+      {children}
+    </a>
+  ),
+}))
+
+const { CategorySubcategoryBreakdown } = await import(
+  '@/components/dashboard/category-subcategory-breakdown'
+)
 
 const contributions: CategoryDetailSubcategoryContribution[] = [
   {
@@ -79,5 +92,58 @@ describe('CategorySubcategoryBreakdown (D-16/CDET-05, Task 2)', () => {
   test('renders an explicit empty state for zero contributions', () => {
     const html = renderToStaticMarkup(<CategorySubcategoryBreakdown contributions={[]} year={2026} />)
     expect(html).toContain('Nessuna sottocategoria nel periodo')
+  })
+
+  test('with categorySlug+backHref provided, a row name renders as a real link built from transactionsBySubcategoryHref (Task 2)', () => {
+    const html = renderToStaticMarkup(
+      <CategorySubcategoryBreakdown
+        contributions={contributions}
+        year={2026}
+        type="out"
+        categorySlug="alimentari-e-ristorazione"
+        backHref="/dashboard/categories/7?year=2026"
+      />,
+    )
+
+    const expectedHref = transactionsBySubcategoryHref(
+      1,
+      'alimentari-e-ristorazione',
+      2026,
+      '/dashboard/categories/7?year=2026',
+    )
+
+    // renderToStaticMarkup HTML-escapes attribute values (& -> &amp;)
+    expect(html).toContain(`href="${expectedHref.replace(/&/g, '&amp;')}"`)
+  })
+
+  test('with categorySlug/backHref both omitted, rows render zero <a> elements (today\'s existing signature, Task 2)', () => {
+    const html = renderToStaticMarkup(
+      <CategorySubcategoryBreakdown contributions={contributions} year={2026} type="out" />,
+    )
+
+    expect(html).not.toContain('<a')
+  })
+
+  test("a presence: 'previous-only' row STILL renders a real link when categorySlug+backHref are provided (Task 2)", () => {
+    const html = renderToStaticMarkup(
+      <CategorySubcategoryBreakdown
+        contributions={contributions}
+        year={2026}
+        type="out"
+        categorySlug="alimentari-e-ristorazione"
+        backHref="/dashboard/categories/7?year=2026"
+      />,
+    )
+
+    const expectedHref = transactionsBySubcategoryHref(
+      5,
+      'alimentari-e-ristorazione',
+      2026,
+      '/dashboard/categories/7?year=2026',
+    )
+
+    expect(html).toContain('Mensa aziendale')
+    // renderToStaticMarkup HTML-escapes attribute values (& -> &amp;)
+    expect(html).toContain(`href="${expectedHref.replace(/&/g, '&amp;')}"`)
   })
 })

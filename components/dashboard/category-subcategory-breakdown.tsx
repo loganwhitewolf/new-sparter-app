@@ -1,5 +1,7 @@
+import Link from 'next/link'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { CategoryDetailSubcategoryContribution } from '@/lib/dal/category-detail-year-window'
+import { transactionsBySubcategoryHref } from '@/lib/routes'
 import { resolveComparisonJudgement, type ComparisonJudgement } from '@/lib/services/pace-and-projection'
 import { cn } from '@/lib/utils'
 import { toDecimal } from '@/lib/utils/decimal'
@@ -13,6 +15,13 @@ type Props = {
    */
   year: number
   type?: 'in' | 'out'
+  /**
+   * NAV-01/D-01: both `categorySlug` and `backHref` must be present for a row to become a link —
+   * the parent category's own detail-page href cannot be reconstructed from a subcategory row
+   * alone. When either is omitted, every row falls back to today's plain text.
+   */
+  categorySlug?: string
+  backHref?: string
 }
 
 const currencyFormatter = new Intl.NumberFormat('it-IT', {
@@ -62,7 +71,13 @@ function presenceSuffix(presence: CategoryDetailSubcategoryContribution['presenc
  * the parent's own total difference, computed here by summing the already-provided
  * currentAmount/contribution strings via Decimal.js, never by re-deriving from previousYear.
  */
-export function CategorySubcategoryBreakdown({ contributions, year, type = 'out' }: Props) {
+export function CategorySubcategoryBreakdown({
+  contributions,
+  year,
+  type = 'out',
+  categorySlug,
+  backHref,
+}: Props) {
   if (contributions.length === 0) {
     return (
       <div className="flex min-h-[220px] items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 text-center">
@@ -106,9 +121,19 @@ export function CategorySubcategoryBreakdown({ contributions, year, type = 'out'
             return (
               <TableRow key={row.id} className={isGone ? 'text-muted-foreground' : undefined}>
                 <TableCell className="max-w-0">
-                  <span className="truncate" title={row.name}>
-                    {row.name}
-                  </span>
+                  {categorySlug && backHref ? (
+                    <Link
+                      href={transactionsBySubcategoryHref(row.id, categorySlug, year, backHref)}
+                      className="truncate underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                      title={row.name}
+                    >
+                      {row.name}
+                    </Link>
+                  ) : (
+                    <span className="truncate" title={row.name}>
+                      {row.name}
+                    </span>
+                  )}
                   {suffix ? <span className="ml-1 text-xs text-muted-foreground">{suffix}</span> : null}
                 </TableCell>
                 <TableCell>
