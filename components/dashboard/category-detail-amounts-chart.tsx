@@ -1,4 +1,4 @@
-import { resolveBarFillStyle } from '@/components/dashboard/category-sparkline'
+import { resolveBarFillStyle } from '@/components/dashboard/category-bar-fill'
 import type {
   CategoryDetailWindowMonth,
   CategoryDetailYearWindowData,
