@@ -6,7 +6,8 @@ import type { CategoryDetailYearWindowData } from '@/lib/dal/category-detail-yea
 function buildFixture(overrides?: Partial<CategoryDetailYearWindowData>): CategoryDetailYearWindowData {
   return {
     category: { id: 1, name: 'Alimentari & Ristorazione', slug: 'alimentari-ristorazione', type: 'out' },
-    window: { months: 3, from: '2026-01' },
+    year: 2026,
+    view: 'projection' as const,
     current: {
       months: [
         { yearMonth: '2026-01', label: 'gen', amount: '400.00', state: 'covered', monthOverMonthDelta: null },
@@ -57,7 +58,8 @@ describe('CategoryDetailTable (D-06/D-10, Task 1)', () => {
             coveredMonthCountInWindow: 1,
             uncoveredMonthLabels: [],
           },
-          window: { months: 3, from: '2026-01' },
+          year: 2026,
+          view: 'projection' as const,
         })}
       />,
     )

@@ -74,8 +74,8 @@ const SUMMARY_CELL_CLASSNAME =
  * (D-12/CDET-07), rendered only when row 2 is available.
  */
 export function CategoryDetailTable({ data }: Props) {
-  const { category, window, current, previousYear } = data
-  const [rowHeadYear] = window.from.split('-')
+  const { category, year, current, previousYear } = data
+  const rowHeadYear = String(year)
   const direction = category?.type ?? 'out'
   const windowLength = current.months.length
   const hasReducedDenominator = current.coveredMonthCountInWindow < windowLength
