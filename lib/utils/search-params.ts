@@ -163,3 +163,30 @@ export function extractLensPassthrough(
 ): LensPassthrough | undefined {
   return firstTrimmed(value) as LensPassthrough | undefined
 }
+
+/**
+ * The only legitimate return route the `/transactions` back-navigation feature ever produces
+ * (260804-jog D-02/NAV-03).
+ */
+const DASHBOARD_CATEGORY_DETAIL_BACK_PREFIX = '/dashboard/categories/'
+
+/**
+ * Parses `?back=` on `/transactions` (260804-jog D-02, NAV-03). This is D-02's open-redirect
+ * hardening: the value is client-reflected, untrusted input used to construct a same-tab
+ * navigation target (an `<a href>` + `router.push`), so only the one legitimate return route this
+ * feature ever produces (`/dashboard/categories/...`) is trusted — an absolute URL, a
+ * protocol-relative `//host` string, or any path under a different in-app route can never resolve
+ * to an external host. Absent, empty, or non-matching input returns `undefined`. Never throws.
+ *
+ * @example
+ * parseTransactionsBackParam('/dashboard/categories/7?year=2026')  // '/dashboard/categories/7?year=2026'
+ * parseTransactionsBackParam(undefined)          // undefined
+ * parseTransactionsBackParam('/expenses/1')      // undefined (foreign in-app path)
+ * parseTransactionsBackParam('https://evil.com') // undefined (absolute URL)
+ * parseTransactionsBackParam('//evil.com')       // undefined (protocol-relative)
+ */
+export function parseTransactionsBackParam(value: string | string[] | undefined): string | undefined {
+  const raw = firstTrimmed(value)
+  if (!raw) return undefined
+  return raw.startsWith(DASHBOARD_CATEGORY_DETAIL_BACK_PREFIX) ? raw : undefined
+}
