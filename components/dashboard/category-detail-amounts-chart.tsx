@@ -1,14 +1,11 @@
-import type { CategoryDetailYearWindowData } from '@/lib/dal/category-detail-year-window'
-import { computeComparison, resolveComparisonJudgement } from '@/lib/services/pace-and-projection'
+import { resolveBarFillStyle } from '@/components/dashboard/category-sparkline'
+import type {
+  CategoryDetailWindowMonth,
+  CategoryDetailYearWindowData,
+} from '@/lib/dal/category-detail-year-window'
 import { toDecimal } from '@/lib/utils/decimal'
 
 type Props = { data: CategoryDetailYearWindowData }
-
-type ChartBar = {
-  yearMonth: string
-  label: string
-  delta: string | null
-}
 
 const currencyFormatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' })
 
@@ -17,122 +14,73 @@ function formatAmount(value: string | number): string {
   return currencyFormatter.format(Number.isFinite(amount) ? amount : 0)
 }
 
-/** D-09: magnitude + word, never a sign glyph — used for both the legend and every bar's tooltip. */
-function formatDeltaWords(delta: string, monthLabel: string, previousYearLabel: string): string {
-  const decimalDelta = toDecimal(delta)
-  const magnitude = formatAmount(decimalDelta.abs().toFixed(2))
-
-  if (decimalDelta.isZero()) {
-    return `${magnitude} invariato rispetto a ${monthLabel} ${previousYearLabel}`
+/**
+ * CDET-VIEW-01: the compact chart's own tooltip text, mirroring the table's cell content — never
+ * a delta/comparison figure (that vocabulary is retired from the chart, confined to the table).
+ */
+function buildTooltip(month: CategoryDetailWindowMonth, year: number): string {
+  if (month.state === 'uncovered') {
+    return `${month.label}: non importato`
   }
-  const word = decimalDelta.isPositive() ? 'in più' : 'in meno'
-  return `${magnitude} ${word} di ${monthLabel} ${previousYearLabel}`
-}
-
-function legendText(direction: 'in' | 'out', previousYearLabel: string): string {
-  return direction === 'in'
-    ? `Sopra la linea: incassato più che nel ${previousYearLabel}. Sotto: incassato meno.`
-    : `Sopra la linea: speso più che nel ${previousYearLabel}. Sotto: speso meno.`
-}
-
-function barFill(delta: string | null, direction: 'in' | 'out'): string {
-  if (delta === null) return 'var(--muted-foreground)'
-  switch (resolveComparisonJudgement(delta, direction)) {
-    case 'better':
-      return 'var(--total-in)'
-    case 'worse':
-      return 'var(--total-out)'
-    default:
-      return 'var(--muted-foreground)'
+  if (month.state === 'estimated') {
+    return `${month.label} ${year}: ${formatAmount(month.amount ?? '0')} (proiezione)`
   }
+  return `${month.label} ${year}: ${formatAmount(month.amount ?? '0')}`
 }
-
-const width = 640
-const height = 220
-const paddingX = 28
-const paddingY = 24
-const baselineY = height / 2
-const maxAmplitude = height / 2 - paddingY
-const MIN_BAR_HEIGHT = 2
 
 /**
- * Builds the chart's own bar series from `data.current.months`/`data.previousYear` — never a
- * second query (D-08): the SAME series the table renders. `delta` is `null` (a flat zero-height
- * marker, never omitted) whenever the previous year is unavailable, or either side's month has
- * no real amount — never a fabricated '0.00' comparison, per D-10's "never zero-fill an uncovered
- * month" precedent.
+ * CDET-VIEW-01: the category detail page's top chart — compact monthly-amounts bars, reusing the
+ * categories list sparkline's own per-state bar styling (resolveBarFillStyle) instead of
+ * re-deriving fill/hatch logic. Renders exactly one column per `data.current.months` entry,
+ * driven by the SAME series the table below renders (never a second query). Deliberately carries
+ * zero delta/comparison rendering — that vocabulary is retired from the chart entirely
+ * (CDET-VIEW-01) and confined to CategoryDetailTable.
+ *
+ * Deliberately NOT carried over from the sparkline's own negative-amount border marker: this
+ * page's categories are always 'in'/'out' and a negative monthly total is a rare edge case, out
+ * of scope for this rework — an explicit, not accidental, omission.
  */
-function buildBars(data: CategoryDetailYearWindowData): ChartBar[] {
-  return data.current.months.map((month, index): ChartBar => {
-    if (data.previousYear.status !== 'available') {
-      return { yearMonth: month.yearMonth, label: month.label, delta: null }
-    }
-    const previousMonth = data.previousYear.series.months[index]
-    if (month.amount === null || !previousMonth || previousMonth.amount === null) {
-      return { yearMonth: month.yearMonth, label: month.label, delta: null }
-    }
-    return {
-      yearMonth: month.yearMonth,
-      label: month.label,
-      delta: computeComparison(month.amount, previousMonth.amount),
-    }
-  })
-}
-
-export function CategoryDetailDifferenceChart({ data }: Props) {
+export function CategoryDetailAmountsChart({ data }: Props) {
   const direction = data.category?.type ?? 'out'
-  const [rowHeadYear] = data.window.from.split('-')
-  const previousYearLabel = String(Number(rowHeadYear) - 1)
-  const bars = buildBars(data)
+  const color = direction === 'in' ? 'var(--total-in)' : 'var(--total-out)'
+  const months = data.current.months
 
-  const maxAbsDelta = bars.reduce((max, bar) => {
-    if (bar.delta === null) return max
-    const abs = toDecimal(bar.delta).abs().toNumber()
+  const maxAbsAmount = months.reduce((max, month) => {
+    if (month.amount === null) return max
+    const abs = Math.abs(toDecimal(month.amount).toNumber())
     return abs > max ? abs : max
   }, 0)
 
-  const innerWidth = width - paddingX * 2
-  const step = bars.length > 0 ? innerWidth / bars.length : innerWidth
-  const barWidth = Math.max(step * 0.55, 4)
-
   return (
-    <div className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
-      <div className="overflow-x-auto">
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          role="img"
-          aria-label={`Differenza mese per mese rispetto al ${previousYearLabel}`}
-          className="min-h-[220px] w-full min-w-[520px] overflow-visible"
-          focusable="false"
-        >
-          <line x1={paddingX} x2={width - paddingX} y1={baselineY} y2={baselineY} stroke="var(--border)" strokeWidth="1" />
-          {bars.map((bar, index) => {
-            const x = paddingX + step * (index + 0.5) - barWidth / 2
-            const magnitude = bar.delta !== null ? toDecimal(bar.delta).abs().toNumber() : 0
-            const rawBarHeight = maxAbsDelta > 0 ? (magnitude / maxAbsDelta) * maxAmplitude : 0
-            const barHeight = Math.max(rawBarHeight, MIN_BAR_HEIGHT)
-            const isNegative = bar.delta !== null && toDecimal(bar.delta).isNegative()
-            const y = isNegative ? baselineY : baselineY - barHeight
-            const fill = barFill(bar.delta, direction)
-            const tooltip =
-              bar.delta !== null
-                ? formatDeltaWords(bar.delta, bar.label, previousYearLabel)
-                : `Nessun confronto disponibile per ${bar.label}`
+    <div className="space-y-2 rounded-xl border bg-card p-3 shadow-sm">
+      <div role="img" aria-label={`Andamento mensile ${data.category?.name ?? ''}`} className="flex h-16 items-end gap-1">
+        {months.map((month) => {
+          const heightPercent =
+            maxAbsAmount > 0 && month.amount !== null
+              ? (Math.abs(toDecimal(month.amount).toNumber()) / maxAbsAmount) * 100
+              : 0
+          const fillStyle = resolveBarFillStyle(month.state, heightPercent, color)
 
-            return (
-              <g key={bar.yearMonth}>
-                <rect x={x} y={y} width={barWidth} height={barHeight} rx="2" fill={fill}>
-                  <title>{tooltip}</title>
-                </rect>
-                <text x={x + barWidth / 2} y={height - 4} textAnchor="middle" className="fill-muted-foreground text-[11px]">
-                  {bar.label}
-                </text>
-              </g>
-            )
-          })}
-        </svg>
+          return (
+            <div
+              key={month.yearMonth}
+              data-month={month.yearMonth}
+              data-state={month.state}
+              title={buildTooltip(month, data.year)}
+              className="flex h-full flex-1 items-end"
+            >
+              <div className="w-full rounded-[1px]" style={fillStyle} />
+            </div>
+          )
+        })}
       </div>
-      <p className="text-xs text-muted-foreground">{legendText(direction, previousYearLabel)}</p>
+      <div className="flex gap-1">
+        {months.map((month) => (
+          <span key={month.yearMonth} className="flex-1 text-center text-[10px] text-muted-foreground">
+            {month.label}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }

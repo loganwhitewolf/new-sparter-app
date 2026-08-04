@@ -51,7 +51,7 @@ function buildPolylinePoints(points: CategorySparklinePoint[]): ChartPoint[] {
   })
 }
 
-type BarFillStyle = {
+export type BarFillStyle = {
   height: string
   backgroundColor?: string
   backgroundImage?: string
@@ -92,7 +92,7 @@ function resolveEstimatedReference(
   return observedMax > 0 ? observedMax : ESTIMATED_HEIGHT_FALLBACK
 }
 
-function resolveBarFillStyle(state: PointState, heightPercent: number, color: string): BarFillStyle {
+export function resolveBarFillStyle(state: PointState, heightPercent: number, color: string): BarFillStyle {
   switch (state) {
     case 'covered':
       return { height: `${heightPercent}%`, backgroundColor: color, opacity: 0.45 }
