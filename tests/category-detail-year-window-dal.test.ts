@@ -221,8 +221,8 @@ describe('getCategoryDetailYearWindow (D-06/D-07/D-10, Task 1)', () => {
     vi.useRealTimers()
   })
 
-  test('whole-year window: month states, hybrid current month, pace-derived estimates', async () => {
-    const data = await getCategoryDetailYearWindow(42, 2026, { months: 12, from: '2026-01' })
+  test('projection view: month states, hybrid current month, pace-derived estimates', async () => {
+    const data = await getCategoryDetailYearWindow(42, 2026, 'projection')
 
     expect(data.category).toEqual({
       id: 42,
@@ -245,16 +245,16 @@ describe('getCategoryDetailYearWindow (D-06/D-07/D-10, Task 1)', () => {
     expect(byMonth.get('2026-07')).toMatchObject({ state: 'current', amount: '480.30' })
   })
 
-  test('index 0 of any window slice has monthOverMonthDelta: null', async () => {
-    const data = await getCategoryDetailYearWindow(42, 2026, { months: 12, from: '2026-01' })
+  test('index 0 of any view has monthOverMonthDelta: null', async () => {
+    const data = await getCategoryDetailYearWindow(42, 2026, 'projection')
     expect(data.current.months[0].monthOverMonthDelta).toBeNull()
 
-    const windowed = await getCategoryDetailYearWindow(42, 2026, { months: 6, from: '2026-02' })
-    expect(windowed.current.months[0].monthOverMonthDelta).toBeNull()
+    const ytdData = await getCategoryDetailYearWindow(42, 2026, 'ytd')
+    expect(ytdData.current.months[0].monthOverMonthDelta).toBeNull()
   })
 
   test('a covered index i>0 whose predecessor is uncovered has monthOverMonthDelta: null, otherwise computeComparison(cur, prev)', async () => {
-    const data = await getCategoryDetailYearWindow(42, 2026, { months: 12, from: '2026-01' })
+    const data = await getCategoryDetailYearWindow(42, 2026, 'projection')
     const byMonth = new Map(data.current.months.map((m) => [m.yearMonth, m]))
 
     // April (index 3) follows uncovered March (index 2) -> no comparison.
@@ -269,7 +269,7 @@ describe('getCategoryDetailYearWindow (D-06/D-07/D-10, Task 1)', () => {
   })
 
   test('an estimated month never carries a monthOverMonthDelta', async () => {
-    const data = await getCategoryDetailYearWindow(42, 2026, { months: 12, from: '2026-01' })
+    const data = await getCategoryDetailYearWindow(42, 2026, 'projection')
     const estimatedMonths = data.current.months.filter((m) => m.state === 'estimated')
     expect(estimatedMonths.length).toBeGreaterThan(0)
     for (const month of estimatedMonths) {
@@ -278,24 +278,12 @@ describe('getCategoryDetailYearWindow (D-06/D-07/D-10, Task 1)', () => {
   })
 
   test('D-10: whole-year total/average exclude the uncovered month from both sum and denominator', async () => {
-    const data = await getCategoryDetailYearWindow(42, 2026, { months: 12, from: '2026-01' })
+    const data = await getCategoryDetailYearWindow(42, 2026, 'projection')
 
     expect(data.current.total).toBe('4540.30')
     expect(data.current.coveredMonthCountInWindow).toBe(11)
     expect(data.current.average).toBe('412.75')
     expect(data.current.uncoveredMonthLabels).toEqual(['mar'])
-  })
-
-  test('window slice re-derives indices from window.from/window.months without re-clamping', async () => {
-    const data = await getCategoryDetailYearWindow(42, 2026, { months: 6, from: '2026-02' })
-    expect(data.current.months.map((m) => m.yearMonth)).toEqual([
-      '2026-02',
-      '2026-03',
-      '2026-04',
-      '2026-05',
-      '2026-06',
-      '2026-07',
-    ])
   })
 
   test('an insufficient pace-eligible series leaves estimated amounts null and pace/projection null', async () => {
@@ -306,7 +294,7 @@ describe('getCategoryDetailYearWindow (D-06/D-07/D-10, Task 1)', () => {
       { yearMonth: '2026-07', from: new Date('2026-07-01'), to: new Date('2026-07-01') },
     ])
 
-    const data = await getCategoryDetailYearWindow(42, 2026, { months: 12, from: '2026-01' })
+    const data = await getCategoryDetailYearWindow(42, 2026, 'projection')
 
     expect(data.pace).toBeNull()
     expect(data.projection).toBeNull()
@@ -320,12 +308,12 @@ describe('getCategoryDetailYearWindow (D-06/D-07/D-10, Task 1)', () => {
         year === 2026 ? toCoveredRows(COVERED_MONTHS_2026) : [],
       )
 
-      const data = await getCategoryDetailYearWindow(42, 2026, { months: 12, from: '2026-01' })
+      const data = await getCategoryDetailYearWindow(42, 2026, 'projection')
       expect(data.previousYear).toEqual({ status: 'unavailable' })
     })
 
     test('whole-year window: 12 Covered Months in 2025 -> available, totalDifference shown', async () => {
-      const data = await getCategoryDetailYearWindow(42, 2026, { months: 12, from: '2026-01' })
+      const data = await getCategoryDetailYearWindow(42, 2026, 'projection')
 
       expect(data.previousYear.status).toBe('available')
       if (data.previousYear.status !== 'available') throw new Error('unreachable')
@@ -343,7 +331,7 @@ describe('getCategoryDetailYearWindow (D-06/D-07/D-10, Task 1)', () => {
         year === 2026 ? toCoveredRows(COVERED_MONTHS_2026) : toCoveredRows(['2025-01', '2025-02', '2025-03']),
       )
 
-      const data = await getCategoryDetailYearWindow(42, 2026, { months: 12, from: '2026-01' })
+      const data = await getCategoryDetailYearWindow(42, 2026, 'projection')
 
       expect(data.previousYear.status).toBe('available')
       if (data.previousYear.status !== 'available') throw new Error('unreachable')
@@ -380,7 +368,7 @@ describe('getCategoryDetailYearWindow (D-06/D-07/D-10, Task 1)', () => {
         ],
       ]
 
-      const data = await getCategoryDetailYearWindow(42, 2026, { months: 12, from: '2026-01' })
+      const data = await getCategoryDetailYearWindow(42, 2026, 'projection')
 
       // Sanity: row 1's own total is pace/hybrid-projected (includes Aug-Dec pace) — deliberately
       // NOT what the subcategory block is checked against below (that mismatch was the CR-01 bug).
@@ -417,7 +405,7 @@ describe('getCategoryDetailYearWindow (D-06/D-07/D-10, Task 1)', () => {
         [],
       ]
 
-      const data = await getCategoryDetailYearWindow(42, 2026, { months: 12, from: '2026-01' })
+      const data = await getCategoryDetailYearWindow(42, 2026, 'projection')
       expect(data.subcategories.map((s) => s.id)).toEqual([2, 1])
     })
   })
@@ -443,7 +431,7 @@ describe('getCategoryDetailYearWindow (D-06/D-07/D-10, Task 1)', () => {
         },
       ]
 
-      const data = await getCategoryDetailYearWindow(42, 2026, { months: 12, from: '2026-01' })
+      const data = await getCategoryDetailYearWindow(42, 2026, 'projection')
 
       expect(data.topTransactions).toEqual([
         { id: 'tx-1', title: 'PAGAMENTO POS ESSELUNGA', description: 'PAGAMENTO POS ESSELUNGA', date: '2026-07-10', amount: '45.30' },
@@ -454,11 +442,14 @@ describe('getCategoryDetailYearWindow (D-06/D-07/D-10, Task 1)', () => {
     test('is scoped to the WINDOW date range, never the full calendar year', async () => {
       dashboardFiltersMocks.dateScopedTransactions.mockClear()
 
-      await getCategoryDetailYearWindow(42, 2026, { months: 3, from: '2026-05' })
+      // Under 'ytd' with system time fixed to 2026-07-15, the window is Jan through July (the
+      // calendar-current month) — never the arbitrary May-July slice the old window param
+      // produced.
+      await getCategoryDetailYearWindow(42, 2026, 'ytd')
 
       const fullYearFrom = new Date(2026, 0, 1)
       const fullYearTo = new Date(2026, 11, 31, 23, 59, 59, 999)
-      const windowFrom = new Date(2026, 4, 1)
+      const windowFrom = new Date(2026, 0, 1)
       const windowTo = new Date(2026, 6, 31, 23, 59, 59, 999)
 
       const callArgs = dashboardFiltersMocks.dateScopedTransactions.mock.calls.map((call) => ({
@@ -469,6 +460,69 @@ describe('getCategoryDetailYearWindow (D-06/D-07/D-10, Task 1)', () => {
       expect(
         callArgs.some((c) => c.from.getTime() === fullYearFrom.getTime() && c.to.getTime() === fullYearTo.getTime()),
       ).toBe(false)
+    })
+  })
+
+  describe('ytd view (CDET-VIEW-02, 260804-br9 Task 1)', () => {
+    test('current.months has exactly 7 entries (2026-01..2026-07) and none is estimated', async () => {
+      const data = await getCategoryDetailYearWindow(42, 2026, 'ytd')
+
+      expect(data.current.months.map((m) => m.yearMonth)).toEqual([
+        '2026-01',
+        '2026-02',
+        '2026-03',
+        '2026-04',
+        '2026-05',
+        '2026-06',
+        '2026-07',
+      ])
+      expect(data.current.months.some((m) => m.state === 'estimated')).toBe(false)
+    })
+
+    test('pace and projection are both null', async () => {
+      const data = await getCategoryDetailYearWindow(42, 2026, 'ytd')
+
+      expect(data.pace).toBeNull()
+      expect(data.projection).toBeNull()
+    })
+
+    test('the current month (2026-07) is the RAW actual amount, never the pace hybrid', async () => {
+      coveredMonthsMocks.getCategoryMonthlyAmounts.mockImplementation(async (_categoryId: number, year: number) =>
+        year === 2026
+          ? toMonthRows({ ...RAW_AMOUNTS_2026, '2026-07': '300.00' })
+          : toMonthRows(RAW_AMOUNTS_2025),
+      )
+
+      // Below the fixture's pace of 406.00 — a 'projection' call against the same override
+      // instead yields the hybrid '406.00' (max(300.00, 406.00)), proving 'ytd' truly never
+      // substitutes it.
+      const ytdData = await getCategoryDetailYearWindow(42, 2026, 'ytd')
+      const projectionData = await getCategoryDetailYearWindow(42, 2026, 'projection')
+
+      expect(ytdData.current.months.find((m) => m.yearMonth === '2026-07')?.amount).toBe('300.00')
+      expect(projectionData.current.months.find((m) => m.yearMonth === '2026-07')?.amount).toBe('406.00')
+    })
+
+    test('total/average match the hand-computed sum over Jan-Jul raw amounts, excluding the uncovered March', async () => {
+      const data = await getCategoryDetailYearWindow(42, 2026, 'ytd')
+
+      // 412.50 + 388.20 + 455.80 + 401.10 + 372.40 + 480.30 (March excluded, uncovered) = 2510.30
+      expect(data.current.total).toBe('2510.30')
+      expect(data.current.coveredMonthCountInWindow).toBe(6)
+      expect(data.current.average).toBe('418.38')
+    })
+
+    test('totalDifference.value === rawTotalDifference.value — both derive from the same raw current total when no hybrid/pace substitution exists', async () => {
+      const data = await getCategoryDetailYearWindow(42, 2026, 'ytd')
+
+      expect(data.previousYear.status).toBe('available')
+      if (data.previousYear.status !== 'available') throw new Error('unreachable')
+      expect(data.previousYear.totalDifference.status).toBe('shown')
+      expect(data.previousYear.rawTotalDifference.status).toBe('shown')
+      if (data.previousYear.totalDifference.status !== 'shown' || data.previousYear.rawTotalDifference.status !== 'shown') {
+        throw new Error('unreachable')
+      }
+      expect(data.previousYear.totalDifference.value).toBe(data.previousYear.rawTotalDifference.value)
     })
   })
 })

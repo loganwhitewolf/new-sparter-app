@@ -32,7 +32,7 @@ import {
 } from '@/lib/services/pace-and-projection'
 import { toDbDecimal, toDecimal } from '@/lib/utils/decimal'
 import { monthLabel, monthsBetween } from '@/lib/utils/date'
-import type { CategoryDetailWindow } from '@/lib/validations/category-year-window'
+import type { CategoryDetailView } from '@/lib/validations/category-year-window'
 
 /** A category's metadata for the detail page header + back-link direction (D-06). */
 export type CategoryDetailMeta = { id: number; name: string; slug: string; type: 'in' | 'out' }
@@ -200,10 +200,11 @@ export type CategoryDetailSubcategoryContribution = {
   presence: CategoryDetailSubcategoryPresence
 }
 
-/** The full detail-page payload (D-01..D-16). */
+/** The full detail-page payload (D-01..D-16, CDET-VIEW-01..05). */
 export type CategoryDetailYearWindowData = {
   category: CategoryDetailMeta | null
-  window: CategoryDetailWindow
+  year: number
+  view: CategoryDetailView
   current: CategoryDetailWindowSeries
   previousYear: CategoryDetailPreviousYearComparison
   pace: string | null
@@ -398,8 +399,18 @@ async function getWindowTopTransactions(
 }
 
 /**
- * Builds a category's year+window payload (D-01..D-16). `ledgerRowSource` defaults to
- * `ledgerEntryCash` — Categories reads cassa only (D-12/Phase 82).
+ * Builds a category's year+view payload (CDET-VIEW-01..05, superseding D-01..D-04's arbitrary
+ * window). `ledgerRowSource` defaults to `ledgerEntryCash` — Categories reads cassa only
+ * (D-12/Phase 82).
+ *
+ * ONE DAL function, ONE return shape, a `view` discriminator — not two shapes forked by view.
+ * `view: 'ytd'` resolves to January through the current calendar month (no pace-filled future
+ * months, current month is the raw actual spent so far — never computeCurrentMonthHybrid).
+ * `view: 'projection'` resolves to the full 12 months (today's pre-existing whole-year
+ * behaviour: future months at pace, current month hybridized). For a PAST year both views
+ * resolve to the identical 12-month series by construction — classifyMonthStates never marks a
+ * past year's month 'current'/'estimated' — so no separate past-year branch exists anywhere in
+ * this function.
  *
  * Month-state classification calls the SAME `classifyMonthStates` helper buildCategoryYearRankingData
  * (lib/dal/dashboard.ts) uses (WR-03 fix, 84-REVIEW.md — previously copy-pasted): the
@@ -408,8 +419,11 @@ async function getWindowTopTransactions(
  *
  * Pace/projection are computed ONCE from the FULL YEAR's pace-eligible Covered Months (never the
  * window, D-06) — an 'estimated' month's amount is that pace (or null when insufficient); the
- * 'current' month's amount is computeCurrentMonthHybrid(rawSpent, pace) when pace-eligible, else
- * the raw observed amount.
+ * 'current' month's amount is computeCurrentMonthHybrid(rawSpent, pace) only under `view:
+ * 'projection'` and when pace-eligible, else the raw observed amount. Since the `ytd` slice never
+ * extends past the current month, no 'estimated' month can ever appear in `data.current.months`
+ * under that view — excluded by the slice itself, not by a separate branch. The returned
+ * `pace`/`projection` fields are nulled under `ytd` (CDET-VIEW-02's "no projection anywhere").
  *
  * `total`/`average` are computed over the WINDOW slice only (never the full year) via
  * buildYearSeries, excluding 'uncovered' months entirely from both sum and denominator (D-10) —
@@ -423,18 +437,20 @@ export const getCategoryDetailYearWindow = cache(
   async (
     categoryId: number,
     year: number,
-    window: CategoryDetailWindow,
+    view: CategoryDetailView,
     ledgerRowSource: LedgerRowSource = ledgerEntryCash,
   ): Promise<CategoryDetailYearWindowData> => {
     const { userId } = await verifySession()
 
-    // Window date boundaries computed ONCE, shared by the subcategory/top-transaction queries
-    // below. D-03 guarantees the window never crosses the year boundary, so the end month index
-    // is simply start + months - 1 — no modulo/carry arithmetic (84-RESEARCH.md Example 2's
-    // corrected reasoning).
-    const [, startMonthRaw] = window.from.split('-')
-    const startIndex = Number(startMonthRaw) - 1
-    const endIndex = startIndex + window.months - 1
+    const today = new Date()
+    // CDET-VIEW-02/05: the window always starts in January now — no arbitrary start month. Its
+    // length depends on the view: 'projection' is always all 12 months; 'ytd' stops at the
+    // calendar-current month for the current year, or is also all 12 months for a past year (the
+    // two views are provably identical there, per this function's own doc comment above).
+    const resolvedMonthCount =
+      view === 'projection' ? 12 : year === today.getFullYear() ? today.getMonth() + 1 : 12
+    const startIndex = 0
+    const endIndex = resolvedMonthCount - 1
     const windowFrom = new Date(year, startIndex, 1)
     const windowTo = new Date(year, endIndex + 1, 0, 23, 59, 59, 999)
     const previousYearNumber = year - 1
@@ -461,7 +477,6 @@ export const getCategoryDetailYearWindow = cache(
       getWindowTopTransactions(categoryId, userId, windowFrom, windowTo, ledgerRowSource),
     ])
 
-    const today = new Date()
     const from = new Date(year, 0, 1)
     const to = new Date(year, 11, 31, 23, 59, 59, 999)
     const monthKeys = monthsBetween(from, to)
@@ -493,7 +508,7 @@ export const getCategoryDetailYearWindow = cache(
           amount = pace
           break
         case 'current':
-          amount = pace !== null ? computeCurrentMonthHybrid(rawAmount, pace) : rawAmount
+          amount = view === 'projection' && pace !== null ? computeCurrentMonthHybrid(rawAmount, pace) : rawAmount
           break
         case 'covered':
         default:
@@ -504,10 +519,11 @@ export const getCategoryDetailYearWindow = cache(
       return { yearMonth: month, label: monthLabel(month), amount, state, monthOverMonthDelta: null }
     })
 
-    // Slice to the already-clamped window — re-derive the same indices parseCategoryDetailWindow
-    // computed from window.from/window.months, never re-clamp here.
+    // Slice to the view-resolved window — startIndex is always 0 (January), so this is simply
+    // the first `resolvedMonthCount` months. Under 'ytd' this excludes every 'estimated' month by
+    // construction (the slice never extends past the current month), not via a separate branch.
     const windowMonths = fullYearMonths
-      .slice(startIndex, startIndex + window.months)
+      .slice(startIndex, startIndex + resolvedMonthCount)
       .map((month, index, arr): CategoryDetailWindowMonth => {
         if (index === 0 || month.state === 'estimated' || month.amount === null) {
           return month
@@ -546,7 +562,7 @@ export const getCategoryDetailYearWindow = cache(
     const previousMonthKeys = monthsBetween(
       new Date(previousYearNumber, 0, 1),
       new Date(previousYearNumber, 11, 31, 23, 59, 59, 999),
-    ).slice(startIndex, startIndex + window.months)
+    ).slice(startIndex, startIndex + resolvedMonthCount)
     const previousCoveredSet = new Set(previousCoveredMonths.map((m) => m.yearMonth))
     const previousAmountByMonth = new Map(previousCategoryMonths.map((m) => [m.yearMonth, m.amount]))
     const previousFilteredCoveredCount = previousMonthKeys.filter((mk) => previousCoveredSet.has(mk)).length
@@ -649,7 +665,8 @@ export const getCategoryDetailYearWindow = cache(
 
     return {
       category: categoryMeta,
-      window,
+      year,
+      view,
       current: {
         months: windowMonths,
         total,
@@ -658,8 +675,11 @@ export const getCategoryDetailYearWindow = cache(
         uncoveredMonthLabels,
       },
       previousYear,
-      pace,
-      projection,
+      // CDET-VIEW-02: "no projection anywhere" under ytd — both fields are currently unread by
+      // every detail-page component (verified by grep), nulling them under ytd keeps the
+      // payload's own semantics honest for any future consumer.
+      pace: view === 'projection' ? pace : null,
+      projection: view === 'projection' ? projection : null,
       subcategories,
       topTransactions,
     }
