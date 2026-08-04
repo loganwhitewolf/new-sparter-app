@@ -57,11 +57,17 @@ export const getCategoryDetailMeta = cache(
           id: category.id,
           name: category.name,
           slug: category.slug,
+          // The correlation MUST be the bound `categoryId`, never `${category.id}`: inside a
+          // select-list `sql` template Drizzle renders a column reference UNQUALIFIED (`"id"`),
+          // so `sc2.category_id = "id"` silently resolved against `sub_category sc2`'s own `id`
+          // column instead of the outer category — the subquery matched nothing, `type` came back
+          // null, and every category fell through to the 'out' fallback below. That inverted the
+          // in/out colouring on every entrata (chart bars, per-cell deltas, subcategory weights).
           type: sql<'in' | 'out' | null>`(
             SELECT d.code FROM direction d
             INNER JOIN nature n ON n.direction_id = d.id
             INNER JOIN sub_category sc ON sc.id IN (
-              SELECT sc2.id FROM sub_category sc2 WHERE sc2.category_id = ${category.id}
+              SELECT sc2.id FROM sub_category sc2 WHERE sc2.category_id = ${categoryId}
             )
             LEFT JOIN user_subcategory_override uso
               ON uso.sub_category_id = sc.id AND uso.user_id = ${userId}
