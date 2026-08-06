@@ -42,6 +42,21 @@ Trigger phrases: "session end", "wrapping up", "let's stop here" (see developer-
 
 <!-- Add entries below, newest first -->
 
+### 2026-08-06 — Telegram capture bot planted as SEED-005 (17 decisions, not planned yet)
+
+**Decided:** Bot Telegram = cattura rapida delle sole spese **fuori estratto** (contante/mancia/pagato-a-mano), scrittura-sola con conferma prima di scrivere. Perimetro: mai ammortamento, warikan rinviato, solo uscite. Identità via tabella `telegram_account` + deep link con token monouso (mai `verifySession()` in un webhook, mai il bypass staging). Bozze in tabella `telegram_draft` (TTL 1h, `callback_data` = solo uuid per il limite di 64 byte), idempotenza dalla transizione `pending → confirmed`. Il path manuale si **allinea al get-or-create per `descriptionHash` dell'import** e diventa un servizio condiviso con la Server Action web; nuova colonna `transaction.source` (`import|manual|telegram`). Documentato in `.planning/seeds/SEED-005-telegram-capture-bot.md` (include il testo pronto di ADR 0021 e le due voci `CONTEXT.md` da applicare al build). **Stato: dormant — nessuna pianificazione avviata.**
+
+**Why:** `contante` è una sottocategoria `transfer`, quindi oggi le spese in contanti sono invisibili al modello. Il perimetro fuori-estratto è l'unico insieme **disgiunto** dagli import: evita di costruire una riconciliazione manuale↔import (nessun meccanismo impedisce oggi il doppio conteggio). Scoperta bloccante: `insertManualTransactionTx` inserisce sempre una nuova Expense contro `expense_userId_descriptionHash_unique` (`schema.ts:420`) → il **secondo** inserimento manuale con la stessa descrizione fallisce già oggi con PG 23505 sotto un messaggio d'errore generico; il contante ripetitivo lo renderebbe immediato. L'aggregazione per hash è anche ciò che rende vero il suggerimento ("come le volte precedenti"), perché i pattern Tier 1 sono nomi di esercente bancari e non matcheranno mai `caffè`/`pane`/`parcheggio`.
+
+**Rejected:**
+- Bot come cattura di *qualunque* spesa (carta inclusa) → richiede riconciliazione manuale↔import, è una milestone a sé
+- Bot come superficie mobile completa (riepiloghi, albero categorie in chat) → due front-end da mantenere; se il problema è "web app inusabile da telefono" la risposta è una PWA, non un bot
+- Bot come strumento di categorizzazione delle transazioni importate → altro prodotto; inline keyboard peggiore del `SubcategoryPicker`
+- Allowlist di chat id in env → non scala a migliaia di utenti e non prova la titolarità dell'account
+- Parsing LLM → comprerebbe solo la data in linguaggio naturale; non determinismo e dati finanziari a terzi
+- Expense standalone per voce manuale / write path dedicato al bot → due semantiche di aggregazione = numeri diversi in dashboard a seconda del canale
+- Tabella di dedup su `update_id`, rate limit per utente → escalation, non requisiti d'ingresso
+
 ### 2026-07-31 — Amortization lifecycle owned by /amortizations registry
 
 **Decided:** Transactions menu keeps only activation (`Dilaziona`) + deep-link `Visualizza spesa dilazionata`. Close / close-with-sale-or-refund / remove live exclusively on `/amortizations` open-plan row actions. `Collega rimborso` on an open amortized outflow may still open the intent dialog from the tx table (pragmatic exception).
