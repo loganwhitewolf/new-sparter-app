@@ -3,7 +3,7 @@ import { cache } from 'react'
 import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm'
 import { DETAIL_LINKED_TRANSACTIONS_PREVIEW_LIMIT } from '@/lib/constants/detail-page-limits'
 import { db, type DbOrTx } from '@/lib/db'
-import { toDecimal } from '@/lib/utils/decimal'
+import { toDecimal, toDbDecimal } from '@/lib/utils/decimal'
 import { verifySession } from '@/lib/dal/auth'
 import { tagScopedTransactions } from '@/lib/dal/transaction-tags-sql'
 import {
@@ -734,6 +734,13 @@ export type ManualTransactionData = {
  * inserts against the passed-in `tx` — no internal db.transaction call — so callers can compose it
  * inside a larger db.transaction (e.g. the combined create+amortize path, alongside activatePlanTx),
  * matching applyDetachCleanupTx's own tx-core-plus-thin-wrapper pattern.
+ *
+ * SEED-005 decision D14: performs a get-or-create of the Expense by
+ * `(userId, descriptionHash)` instead of unconditionally inserting a new one, mirroring
+ * `lib/services/import.ts`'s canonical get-or-create + accumulate behavior (its "Upsert expense
+ * by (userId, descriptionHash)" block, roughly lines 666-728). This closes the PG 23505
+ * unique-violation on `expense_userId_descriptionHash_unique` (`lib/db/schema.ts:420`) that a
+ * second manual entry with a repeated description used to hit.
  */
 export async function insertManualTransactionTx(
   tx: DbOrTx,
@@ -745,7 +752,6 @@ export async function insertManualTransactionTx(
 
   const descriptionHash = computeDescriptionHash(data.description)
   const transactionId = crypto.randomUUID()
-  const expenseId = crypto.randomUUID()
   const transactionHash = computeTransactionHash({
     userId: data.userId,
     occurredAt: data.occurredAt,
@@ -753,18 +759,77 @@ export async function insertManualTransactionTx(
     description: data.description,
   })
 
-  await tx.insert(expense).values({
-    id: expenseId,
-    userId: data.userId,
-    title: data.description,
-    descriptionHash,
-    subCategoryId: data.subCategoryId ?? null,
-    totalAmount: data.amount,
-    transactionCount: 1,
-    firstTransactionAt: data.occurredAt,
-    lastTransactionAt: data.occurredAt,
-    status: data.subCategoryId ? '3' : '1',
-  })
+  const existing = await tx
+    .select({
+      id: expense.id,
+      totalAmount: expense.totalAmount,
+      transactionCount: expense.transactionCount,
+      subCategoryId: expense.subCategoryId,
+      firstTransactionAt: expense.firstTransactionAt,
+      lastTransactionAt: expense.lastTransactionAt,
+    })
+    .from(expense)
+    .where(and(eq(expense.userId, data.userId), eq(expense.descriptionHash, descriptionHash)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null)
+
+  let expenseId: string
+  if (existing) {
+    expenseId = existing.id
+    // Manual lock (T-lod-02): an already-categorized expense's subCategoryId is never touched
+    // by a later manual insert; a caller-supplied subCategoryId is applied only when the
+    // existing expense has none yet.
+    const shouldApplySubCategory = existing.subCategoryId == null && data.subCategoryId != null
+
+    const firstTransactionAt =
+      existing.firstTransactionAt == null || data.occurredAt < existing.firstTransactionAt
+        ? data.occurredAt
+        : existing.firstTransactionAt
+    const lastTransactionAt =
+      existing.lastTransactionAt == null || data.occurredAt > existing.lastTransactionAt
+        ? data.occurredAt
+        : existing.lastTransactionAt
+
+    const updatePayload: {
+      totalAmount: string
+      transactionCount: number
+      firstTransactionAt: Date
+      lastTransactionAt: Date
+      updatedAt: Date
+      subCategoryId?: number | null
+      status?: '1' | '2' | '3' | '4'
+    } = {
+      totalAmount: toDbDecimal(toDecimal(existing.totalAmount).plus(toDecimal(data.amount))),
+      transactionCount: (existing.transactionCount ?? 0) + 1,
+      firstTransactionAt,
+      lastTransactionAt,
+      updatedAt: new Date(),
+    }
+
+    if (shouldApplySubCategory) {
+      updatePayload.subCategoryId = data.subCategoryId ?? null
+      updatePayload.status = '3'
+    }
+
+    await tx
+      .update(expense)
+      .set(updatePayload)
+      .where(and(eq(expense.id, expenseId), eq(expense.userId, data.userId)))
+  } else {
+    expenseId = crypto.randomUUID()
+    await tx.insert(expense).values({
+      id: expenseId,
+      userId: data.userId,
+      title: data.description,
+      descriptionHash,
+      subCategoryId: data.subCategoryId ?? null,
+      totalAmount: data.amount,
+      transactionCount: 1,
+      firstTransactionAt: data.occurredAt,
+      lastTransactionAt: data.occurredAt,
+      status: data.subCategoryId ? '3' : '1',
+    })
+  }
 
   await tx.insert(transaction).values({
     id: transactionId,
