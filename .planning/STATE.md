@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-08-03 after the v3.0 milestone)
 Phase: Milestone v3.0 complete
 Plan: —
 Status: Milestone v3.0 shipped — PR #67
-Last activity: 2026-08-03
+Last activity: 2026-08-06 - Completed quick task 260806-lod: fix PG 23505 on manual transaction creation (manual path now aggregates the Expense by descriptionHash like the import path, SEED-005 D14)
 
 ## Roadmap (v3.0 — Phases 82-84) — SHIPPED 2026-08-03
 
@@ -683,6 +683,7 @@ Both feature models (Expense Group via ADR 0017, Transaction Tags via the Obsidi
 | 260803-e9w | Chiusura WR-01/WR-02 di 83-REVIEW.md: nome accessibile per la riga Accantonamenti (testo `sr-only` nello `<span>` inerte — `aria-label` scartato perché il ruolo implicito `generic` non ammette naming da autore) via nuovo `rowAccessibleSuffix` nella copy service centralizzata (D-11); ripristinato il commento di razionale D-13/CLIST-07 sopra l'href del `<Link>`. Nessun cambiamento visivo | 2026-08-03 | 64403c6a |
 | 260804-br9 | Rework grafico dettaglio categoria: barre di importo mensile compatte al posto del delta-vs-anno-precedente 640x220 (riusa `resolveBarFillStyle` della sparkline), finestra `?months`/`?from` sostituita da due sole viste `?view=ytd\|projection` che governano tutta la pagina (chart, tabella, sottocategorie, totali) — YTD senza proiezione né ibrido sul mese corrente, Proiezione = comportamento precedente; toggle nascosto sugli anni passati | 2026-08-04 | 2beac1e2 |
 | 260804-jog | Sottocategorie/categorie e top-5 transazioni cliccabili su `/dashboard/categories/[id]` → `/transactions` filtrato (subCategory+category+mesi anno corrente) e `/transactions/[id]`; `?back=` validato (prefix-allowlist `/dashboard/categories/`) con "Torna indietro" su tabella transazioni, riuso dello smart-back già esistente su dettaglio transazione; badge "nuova" + tooltip al posto della frase inline "nuova nel {year}" | 2026-08-04 | d186a76d |
+| 260806-lod | Fix PG 23505 sull'inserimento manuale: `insertManualTransactionTx` fa get-or-create dell'Expense per `(userId, descriptionHash)` + accumulo (`totalAmount` via Decimal, `transactionCount`, min/max su `firstTransactionAt`/`lastTransactionAt`) invece di inserire sempre una nuova Expense contro `expense_userId_descriptionHash_unique` — il secondo inserimento manuale con la stessa descrizione falliva sempre dietro un messaggio d'errore "transitorio". Manual lock preservato (una `subCategoryId` già impostata non viene mai sovrascritta; quella del chiamante si applica solo se assente). Allineamento al path import (SEED-005 D14); firma e `{ transactionId, expenseId }` invariati, composizione con `activatePlanTx` intatta. Nuovo test su Postgres reale (4 casi) + `tests/amortization-manual-entry.test.ts` verde | 2026-08-06 | d819fed6 |
 
 ## Deferred Items
 
