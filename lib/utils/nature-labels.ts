@@ -10,6 +10,33 @@ export type FlowNature =
   | 'savings'
   | 'investment'
 
+// Compiler-enforced exhaustiveness anchor for NATURE_FILTER_VALUES below: adding a 9th
+// FlowNature member and forgetting to add its key here fails `tsc` with a missing-property
+// error; removing a member while leaving a stale key here fails `tsc` with an excess-property
+// error. This is what makes the ?nature= filter allowlist structurally impossible to drift out
+// of sync with FlowNature (dead codes lingering, live codes missing) the way it did before.
+const FLOW_NATURE_MEMBERS: Record<FlowNature, true> = {
+  essential: true,
+  discretionary: true,
+  income: true,
+  income_extraordinary: true,
+  debt: true,
+  transfer: true,
+  savings: true,
+  investment: true,
+}
+
+/**
+ * Single source of truth for the `?nature=` filter allowlist consumed by
+ * lib/validations/transactions.ts and lib/validations/expense.ts. Derived from FLOW_NATURE_MEMBERS
+ * plus the 'unclassified' sentinel (no category assigned) — never hand-maintained as a separate
+ * literal.
+ */
+export const NATURE_FILTER_VALUES: readonly string[] = [
+  ...Object.keys(FLOW_NATURE_MEMBERS),
+  'unclassified',
+]
+
 export const NATURE_LABELS: Record<FlowNature | 'unclassified', string> = {
   essential: 'Essenziale',
   discretionary: 'Discrezionale',
