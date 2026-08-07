@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { parseAmount, parseMonths, parseStatus } from '@/lib/utils/search-params'
+import { NATURE_FILTER_VALUES } from '@/lib/utils/nature-labels'
 
 export const CreateExpenseSchema = z.object({
   title: z
@@ -158,20 +159,6 @@ export type ParsedExpenseFilters = {
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
-// Allowlists mirroring lib/validations/transactions.ts — local const to avoid coupling.
-const NATURE_ALLOWED = [
-  'essential',
-  'discretionary',
-  'operational',
-  'financial',
-  'income',
-  'income_extraordinary',
-  'debt',
-  'extraordinary',
-  'transfer',
-  'unclassified',
-] as const
-
 const TYPE_ALLOWED = ['in', 'out', 'allocation', 'transfer', 'unclassified'] as const
 
 function firstTrimmed(value: string | string[] | undefined): string | undefined {
@@ -213,7 +200,7 @@ export function parseExpenseFilters(input: ExpenseSearchParams): ParsedExpenseFi
             ? 'category'
             : undefined
   const dir: 'asc' | 'desc' | undefined = rawDir === 'asc' ? 'asc' : rawDir === 'desc' ? 'desc' : undefined
-  const nature = parseStatus(input.nature, NATURE_ALLOWED)
+  const nature = parseStatus(input.nature, NATURE_FILTER_VALUES)
   const type = parseStatus(input.direction ?? input.type, TYPE_ALLOWED)
   const parsedSubCategoryId = rawSubCategory ? Number(rawSubCategory) : NaN
   const subCategoryId =

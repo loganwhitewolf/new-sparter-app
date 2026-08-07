@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { parseAmount, parseMonths, parseStatus } from '@/lib/utils/search-params'
+import { NATURE_FILTER_VALUES } from '@/lib/utils/nature-labels'
 import {
   TRANSACTION_DIRECTION_ALLOWED,
   resolveTransactionDirections,
@@ -150,20 +151,6 @@ const CATEGORY_SLUG_RE = PLATFORM_SLUG_RE
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-// Allowlists for category-derived filters (Task 1)
-const NATURE_ALLOWED = [
-  'essential',
-  'discretionary',
-  'operational',
-  'financial',
-  'income',
-  'income_extraordinary',
-  'debt',
-  'extraordinary',
-  'transfer',
-  'unclassified',
-] as const
-
 function firstRaw(value: string | string[] | undefined): string | undefined {
   if (value === undefined) return undefined
   return Array.isArray(value) ? value[0] : value
@@ -258,7 +245,7 @@ export function parseTransactionFilters(
     | 'categorized'
     | 'uncategorized'
     | undefined
-  const nature = parseStatus(input.nature, NATURE_ALLOWED)
+  const nature = parseStatus(input.nature, NATURE_FILTER_VALUES)
   // Direction: key presence matters — absent → implicit default (no transfer); present → CSV
   // (possibly empty). Legacy single `type` still accepted when `direction` is absent.
   const directionRaw = firstRaw(input.direction)
