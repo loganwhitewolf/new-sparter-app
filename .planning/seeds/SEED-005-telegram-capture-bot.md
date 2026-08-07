@@ -335,6 +335,18 @@ transaction
   quindi il Tier 2 non serve, il livello 1 della cascata (D15) lo precede sempre. Resta come rete
   innocua.
 - **Nessun OCR / foto dello scontrino.** Fuori perimetro.
+- **Finestra di gara sul get-or-create dell'Expense** (residuo noto dopo il fix di D14, quick task
+  `260806-lod`): il SELECT che cerca l'Expense per `(userId, descriptionHash)` non è `FOR UPDATE`,
+  quindi due scritture **concorrenti** della stessa descrizione per lo stesso utente possono non
+  trovarla entrambe e tentare due INSERT → una prende PG 23505. Non è il doppio click (il bottone
+  del dialog è già `disabled` mentre l'action è in volo): sono tab/device diversi, o bot + dialog
+  nello stesso istante. **Valutato e deliberatamente non risolto**: il vincolo unique fa il suo
+  lavoro, il fallimento è auto-riparante (l'utente ripete) e non produce dati sporchi — il rapporto
+  costo/beneficio non regge. Cambierebbe **solo** con un canale che scrive senza un umano che possa
+  ripetere (API, inserimento in blocco). La forma corretta, se servisse, è
+  `insert(...).onConflictDoNothing().returning()` + re-select sul ramo di accumulo, come già fa
+  `insertTransactionBatch` — **non** un try/catch né un retry, perché un 23505 dentro
+  `db.transaction` mette la transazione in stato aborted e ogni statement successivo fallisce.
 
 ## Scope Estimate
 
