@@ -1,11 +1,18 @@
 ---
 id: SEED-003
-status: dormant
+status: rejected
 planted: 2026-08-05
 planted_during: post-v3.0 (emersa dal grill di SEED-002)
-trigger_when: any milestone adding or renaming a nature, touching the overview chart filter chips, or refactoring the table-filter validation layer
+closed: 2026-08-07
+outcome: core idea (DB-driven vocabulary) REFUTED with measured evidence; the drift it complained about was harvested and fixed instead — quick task 260807-l2c, commits 8390805d + 7420b5f9
+trigger_when: do NOT surface for planning. Read it before proposing again that the nature vocabulary be read from the database — the counter-evidence is in "Esito" below
 scope: small-medium — a cross-cutting refactor of a shipped subsystem (16 files reference FlowNature), zero new user-facing behaviour
 ---
+
+> ⚠️ **Seed chiusa il 2026-08-07 come respinta.** Non è stata implementata e non va pianificata.
+> Il documento resta perché ha cambiato funzione: da proposta a **verbale di bocciatura con
+> evidenza misurata**. La deriva di cui si lamentava è stata invece riparata, in una forma diversa
+> da quella che proponeva. Leggi l'**Esito** in fondo prima di riproporre l'idea.
 
 # SEED-003: Il vocabolario delle nature è duplicato tra DB e codice
 
@@ -74,3 +81,55 @@ Il momento giusto è una milestone di manutenzione, oppure quando la deriva caus
 - `scripts/seed-data.ts:1397+` — le 8 righe `nature` con `labelIt`, `color`, `displayOrder`
 - 16 file referenziano `FlowNature` (misurato durante il grill di SEED-002)
 - Decisione di rimandare: [[SEED-002]] D30
+
+## Esito (2026-08-07)
+
+### Cosa è stato raccolto
+
+Il sospetto centrale della seed — *la duplicazione ha già prodotto deriva reale* — **era vero, e
+peggiore di come descritto qui**. Verificato sul codice il 2026-08-07:
+
+- `NATURE_ALLOWED` non era duplicato in `lib/validations/category.ts` (quello, `NatureSchema`, aveva
+  già gli 8 codici corretti) ma in **`lib/validations/transactions.ts`** e
+  **`lib/validations/expense.ts`**, con il commento *"local const to avoid coupling"* a descrivere la
+  duplicazione.
+- Entrambe le copie contenevano i 3 codici morti **e non contenevano `savings` e `investment`**.
+- Le *opzioni* del filtro arrivano invece da `NATURE_ORDER` (8 codici vivi), e `parseStatus`
+  (`lib/utils/search-params.ts:73-80`) scarta **in silenzio** ciò che non è in allowlist.
+- Quindi non era debito estetico: era un **bug visibile**. Su `/transactions` e `/expenses`
+  l'utente selezionava *Risparmio* o *Investimento* e la tabella restava non filtrata, senza errore.
+  Due nature su otto non filtravano.
+
+Riparato nel quick task **`260807-l2c`** (commit `8390805d` + `7420b5f9`), ma **non** nella forma
+proposta da questa seed: un unico `NATURE_FILTER_VALUES` in `lib/utils/nature-labels.ts` derivato da
+`FLOW_NATURE_MEMBERS: Record<FlowNature, true>` — cioè l'**ipotesi ibrida** che questo documento
+citava di sfuggita, non la lettura da DB che era la sua tesi.
+
+### Perché la tesi è stata respinta — la misura
+
+Il contro-argomento §1 della seed (*"si perde l'aiuto del compilatore"*) è stato **quantificato**
+durante l'esecuzione, aggiungendo temporaneamente una nona nature (`sinking_fund`) alla union e
+lanciando `tsc --noEmit`. La build è fallita in **più punti**, non solo nel nuovo:
+
+- `lib/dal/dashboard.ts:863` — `Record<FlowNature | 'unclassified', string>`
+- `lib/utils/nature-labels.ts:41, 65, 81` — `NATURE_LABELS`, `NATURE_COLORS`, `NATURE_ICONS`
+- `lib/utils/nature-labels.ts:19` — il nuovo `FLOW_NATURE_MEMBERS`
+
+Il vocabolario nature **era già protetto dal compilatore quasi ovunque**. L'allowlist del filtro era
+**l'unico buco**, perché era l'unico array scritto a mano — ed è esattamente lì che il bug è
+comparso, non altrove. Sostituire `FlowNature` con `string` per leggere da DB avrebbe smontato
+**tutte** quelle guardie per risparmiare ~1 punto su ~6 da toccare quando si aggiunge una nature:
+non un compromesso, un autogol. La correlazione bug↔punto-non-tipizzato è la prova diretta.
+
+### Cosa la riaprirebbe
+
+Solo uno scenario, e non è quello immaginato qui: se le **label** dovessero diventare
+**modificabili dall'utente a runtime** (per-utente, come `userSubcategoryOverride` fa per
+`natureId`), allora `NATURE_LABELS` non potrebbe più stare in codice. Ma quello sarebbe un requisito
+di prodotto nuovo, non un refactor di manutenzione — e riguarderebbe **solo** le label, mai la union
+né l'allowlist dei filtri, che devono restare tipizzate.
+
+Non la riaprono invece: notare di nuovo che `NATURE_LABELS` duplica `nature.labelIt` a DB
+(vero, e irrilevante: il costo è una riga per nature, il beneficio del tipo è una build rossa
+automatica), né aggiungere una nature nuova (con `FLOW_NATURE_MEMBERS` il compilatore ora elenca da
+sé tutti i punti da toccare).

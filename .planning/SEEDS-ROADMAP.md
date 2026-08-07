@@ -26,13 +26,28 @@ aggregazione unica: un secondo canale di scrittura lo consuma così com'è, quin
 |---|---|---|---|
 | **[[SEED-005]]** Bot Telegram | Alta | Media | L'unico che chiude un buco di **dato mancante**: il contante oggi non esiste nel modello (`contante` è sottocategoria `transfer`, esclusa dai totali). Zero modifiche al read layer, parser deterministico, prerequisito già pagato da `v3.1.1` |
 | **[[SEED-004]]** Abbonamenti | Alta | Media | «La Expense **è già** l'abbonamento» — `unique(user_id, description_hash)`: nessun codice di riconoscimento del rinnovo, nessun detach, **nessuna modifica al seam `ledger_entry`** né ai siti di aggregazione. Grande in superficie, economico in profondità |
-| **[[SEED-003]]** Vocabolario nature da DB | Bassa | Alta (solo il sottoinsieme) | Il seed si auto-demolisce: perdere `Record<FlowNature, …>` significa perdere la build rossa automatica sui punti dimenticati. Ma contiene **dati morti reali** da rimuovere |
+| ~~**[[SEED-003]]** Vocabolario nature da DB~~ | — | — | **Chiusa il 2026-08-07 (`rejected`).** Il sottoinsieme che valeva è stato raccolto (quick task `260807-l2c`, era un bug visibile); la tesi DB-driven è stata confutata con una misura sul compilatore |
 | **[[SEED-001]]** Modalità semplice/avanzata | Media | Media | Ottimizza l'onboarding di utenti **che non esistono ancora**; per un utente avanzato il valore è ~0. Collide con 004 (tipologie) e 002 (categorizzazione della quota imputata) |
 | **[[SEED-002]]** Warikan | Alta | Bassa | 6 tabelle, 2 nature nuove + 1 rename, terzo branch nella view accrual, e un sottosistema di propagazione cross-user con una Open Question architetturale **ancora aperta** (OQ1) |
 
 ## Sequenza
 
-### 1. Quick task — pulizia dei codici nature morti
+### 1. ~~Quick task — pulizia dei codici nature morti~~ — ✅ FATTO il 2026-08-07
+
+> Eseguito come quick task **`260807-l2c`** (commit `8390805d` + `7420b5f9`). Si è rivelato **un bug
+> visibile**, non debito estetico: `?nature=savings` e `?nature=investment` erano scartati in
+> silenzio su `/transactions` e `/expenses`, quindi due nature su otto non filtravano. Risolto con
+> `NATURE_FILTER_VALUES` derivato da `FLOW_NATURE_MEMBERS: Record<FlowNature, true>` (esaustività a
+> compile-time provata: una nona nature fa fallire `tsc`), le due copie locali cancellate, matrice di
+> test 9 accettati × 2 parser + 4 rifiutati × 2 parser.
+>
+> **[[SEED-003]] è chiusa come `rejected`**: la sua tesi (vocabolario da DB) è stata confutata con
+> una misura — aggiungendo una nona nature, `tsc` falliva già in `dashboard.ts:863` e in tre
+> `Record<FlowNature, …>`, cioè il compilatore proteggeva già quasi tutto e l'array scritto a mano
+> era l'unico buco. Il documento resta come verbale della bocciatura, non va pianificato.
+
+<details>
+<summary>Descrizione originale del passo (per storia)</summary>
 
 **Cosa:** rimuovere `operational` / `financial` / `extraordinary` da `NATURE_ALLOWED`
 (`lib/validations/transactions.ts:155-166`) e dal secondo elenco letterale
@@ -49,9 +64,11 @@ codici morti è costruire su un pavimento sporco.
 
 **Entry point:** `/gsd-quick` · **Stima:** mezza giornata
 
+</details>
+
 ---
 
-### 2. Milestone v3.2 — Bot Telegram (SEED-005)
+### 2. Milestone v3.2 — Bot Telegram (SEED-005) ← **prossimo**
 
 **Ordine interno:**
 1. Migration: `transaction.source` (`import|manual|telegram`) + backfill `fileId IS NULL → 'manual'`, `telegram_account`, `telegram_draft`
